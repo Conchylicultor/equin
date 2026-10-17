@@ -5,7 +5,7 @@ import { liveValue } from "@plugins/network/plugins/live/core";
 
 // The page a task was filed from, stored in the `tasks_ext_source_url`
 // entity-extension table (1:1 per task). Written once, when the draft form's
-// "Attach page URL" is on; never edited, and never inherited by subtasks.
+// the Page URL toggle is on; never edited, and never inherited by subtasks.
 export const taskSourceUrlShape = defineExtensionShape({
   key: "taskId",
   fields: { url: textField() },

@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-primitives-text-editor-composer",
-  "description": "Composer field: a TextEditor whose attach row and control bar live INSIDE its own border, via the editor's bottomSlot. One box, one focus ring.",
+  "description": "Composer field: a TextEditor whose control bar lives INSIDE its own border, via the editor's bottomSlot. One box, one focus ring.",
   "private": true,
   "version": "0.0.1"
 }

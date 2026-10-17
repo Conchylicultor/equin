@@ -60,7 +60,9 @@ hand-rolled its own checkmarks.
     - `PickerPillItemProps`
     - `PickerPillProps`
     - `PickerPillValueProps`
-  - Exports (values): `PickerPill`
+  - Exports (values):
+    - `PickerPill`
+    - `pillHighlightClass`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --accent`
@@ -69,6 +71,7 @@ hand-rolled its own checkmarks.
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/workspace/launch-option`
+    - `primitives/text-editor/composer`
     - `tasks/auto-start/launch-option`
     - `tasks/launch-options`
     - `tasks/task-draft-form`

@@ -33,9 +33,9 @@ anonymous index signature. See
     - `ui/tokens/color-palette` ×12
     - `ui/tokens/density` ×7
     - `ui/tokens/type-scale` ×6
-  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×21
-    - `primitives` ×8
+    - `primitives` ×7
     - `stats` ×5
     - `apps-core` ×3
     - `debug` ×3

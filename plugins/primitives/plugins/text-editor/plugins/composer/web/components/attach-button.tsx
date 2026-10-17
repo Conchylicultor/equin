@@ -1,64 +1,62 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   TooltipDoc,
   WithTooltip,
 } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { pillHighlightClass } from "@plugins/primitives/plugins/text-editor/plugins/composer/plugins/picker-pill/web";
 
 export interface ComposerAttachButtonProps {
-  /** Glyph shown while the button is off. */
   icon: IconRef;
-  /** Glyph shown while it is on. Defaults to {@link ComposerAttachButtonProps.icon}. */
-  activeIcon?: IconRef;
-  /** The one label. It is the SAME in both states — see below. */
+  /**
+   * What is attached ("Page URL") — the pill's text while on, and the
+   * tooltip title and accessible name in both states.
+   */
   label: string;
   active: boolean;
   onToggle: (next: boolean) => void;
   /**
    * What attaching does, shown under the label in the hover tooltip. Required:
-   * a label like "Attach page URL" names the button but does not tell a new
-   * user what it does. Like the label, it never changes with state.
+   * the bare icon it is while off says nothing to a new user on its own.
    */
   description: string;
   disabled?: boolean;
 }
 
 /**
- * A named attach toggle on the composer's attach row — "Attach page URL" and
- * its kin.
+ * An attach toggle on the composer's bar — "Page URL" and its kin — sitting
+ * beside the bar's other context actions (the element picker).
  *
- * **One label, one width, in both states.** Turning it on tints it and swaps
- * its glyph; it never prints what it attached and never grows. That is the
- * whole point of the control: a button that changed its own width on click
- * shoved every neighbour along the row, and a button that printed the attached
- * value turned a one-line row into two.
- *
- * Tinted rather than filled: these chips sit in a row of their own kind and are
- * flipped often, so a block of primary on each one reads as an alert rather
- * than as "this is attached".
+ * Off, it is a bare icon, like every bar control left on its default: an
+ * unattached thing should take no room. On, it becomes a filled pill naming
+ * what is attached, in the same highlight a set `PickerPill` wears — so
+ * the bar reads what will go with the prompt at a glance.
  */
 export function ComposerAttachButton({
   icon,
-  activeIcon,
   label,
   active,
   onToggle,
   description,
   disabled,
 }: ComposerAttachButtonProps) {
-  const glyph = active ? (activeIcon ?? icon) : icon;
   return (
     <WithTooltip content={<TooltipDoc title={label}>{description}</TooltipDoc>}>
-      <ToggleChip
-        active={active}
-        variant="tinted"
-        icon={<Icon icon={glyph} aria-hidden />}
+      <Button
+        shape="pill"
+        aspect={active ? "text" : "icon"}
+        variant={active ? "frame" : "ghost"}
+        aria-label={label}
+        aria-pressed={active}
         disabled={disabled}
         onClick={() => onToggle(!active)}
+        className={cn(active && pillHighlightClass)}
       >
-        {label}
-      </ToggleChip>
+        <Icon icon={icon} aria-hidden className="size-3.5" />
+        {active && <Text variant="control">{label}</Text>}
+      </Button>
     </WithTooltip>
   );
 }

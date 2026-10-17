@@ -18,6 +18,7 @@ import { Children, cloneElement, Fragment, isValidElement } from "react";
 
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { pillHighlightClass } from "./highlight";
 
 const checkIcon = symbol("check");
 const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
@@ -141,10 +142,7 @@ export function PickerPill({
               variant={highlight ? "frame" : "ghost"}
               disabled={disabled}
               aria-label={ariaLabel ?? placeholder}
-              className={cn(
-                highlight &&
-                  "border-accent/60 bg-accent text-accent-foreground hover:bg-accent hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground",
-              )}
+              className={cn(highlight && pillHighlightClass)}
             />
           }
         >

@@ -52,8 +52,8 @@ theme. Designed in the "Chrome popovers" prototype
 (`proto-1791550209-ma722m`, its `solid` surface).
 
 Its one accent is the signal blue (the build spinner, the focus ring): it is also the
-chrome's `primary`, so a primary action or a switched-on attach chip in a
-chrome popover (Improve's Create task, Attach page URL) lights in it. A text
+chrome's `primary`, so a primary action in a chrome popover (Improve's
+Create task) lights in it. A text
 field in a chrome popover is a well (`composer`: 22% black over the panel), a
 shade darker than the panel around it.
 

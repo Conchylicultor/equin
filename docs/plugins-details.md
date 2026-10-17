@@ -11836,7 +11836,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Uses tokens: `ui/tokens/shape --spacing`
+    - Uses tokens:
+      - `ui/tokens/shadow --shadow`
+      - `ui/tokens/shape --spacing`
     - Imported by: 104 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×23
       - `debug` ×14
@@ -34192,12 +34194,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `Cluster`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
               - `apps` ×22
               - `debug` ×11
               - `conversations` ×7
               - `plugin-meta` ×6
-              - `primitives` ×6
+              - `primitives` ×5
               - `fields` ×2
               - `page` ×2
               - `apps-core/surface/floating`
@@ -35168,10 +35170,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 366 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 367 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×97
               - `conversations` ×73
-              - `primitives` ×40
+              - `primitives` ×41
               - `debug` ×33
               - `page` ×21
               - `plugin-meta` ×14
@@ -35271,9 +35273,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/density` ×7
               - `ui/tokens/type-scale` ×6
-            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
               - `apps` ×21
-              - `primitives` ×8
+              - `primitives` ×7
               - `stats` ×5
               - `apps-core` ×3
               - `debug` ×3
@@ -40052,22 +40054,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/inline-page-link`
               - `page/math/inline`
               - `page/url-paste`
-        - **`composer`** — Composer field: a TextEditor whose attach row and control bar live INSIDE its own border, via the editor's bottomSlot. One box, one focus ring, one density.
+        - **`composer`** — Composer field: a TextEditor whose control bar lives INSIDE its own border, via the editor's bottomSlot. One box, one focus ring, one density.
           - Web:
             - Uses:
-              - `primitives/css/cluster.Cluster`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/rigid.Rigid`
               - `primitives/css/spacing.insetClass`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/toggle-chip.ToggleChip`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/overlay/tooltip.TooltipDoc`
               - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/text-editor.TextEditor`
               - `primitives/text-editor.TextEditorProps`
+              - `primitives/text-editor/composer/picker-pill.pillHighlightClass`
               - `primitives/text-editor/paste-images.AttachFilesButton`
               - `ui/icons.Icon`
             - Exports (types):
@@ -40111,7 +40113,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `PickerPillItemProps`
                   - `PickerPillProps`
                   - `PickerPillValueProps`
-                - Exports (values): `PickerPill`
+                - Exports (values):
+                  - `PickerPill`
+                  - `pillHighlightClass`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --accent`
@@ -40120,6 +40124,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape --spacing`
                 - Imported by:
                   - `conversations/workspace/launch-option`
+                  - `primitives/text-editor/composer`
                   - `tasks/auto-start/launch-option`
                   - `tasks/launch-options`
                   - `tasks/task-draft-form`
@@ -44287,7 +44292,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteTaskPreprompt`
           - `putTaskPreprompt`
           - `TaskPrepromptSchema`
-    - **`task-source-url`** — Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Attach page URL), stored as data rather than only as prompt text, and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
+    - **`task-source-url`** — Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Page URL toggle), stored as data rather than only as prompt text, and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
       - Server:
         - Contributes: `resource.declare` "task-source-url.by-attempt"
         - Uses:
@@ -46302,7 +46307,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 61 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 62 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×22
               - `primitives` ×17
               - `framework` ×4
@@ -46311,6 +46316,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×2
               - `screenshot` ×2
               - `tasks` ×2
+              - `config_v2`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `database/derived-tables`
               - `map`

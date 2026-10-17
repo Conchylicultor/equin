@@ -39,12 +39,12 @@ defined in exactly one place. The distinct export buys two things:
   - Exports (values): `Cluster`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×22
     - `debug` ×11
     - `conversations` ×7
     - `plugin-meta` ×6
-    - `primitives` ×6
+    - `primitives` ×5
     - `fields` ×2
     - `page` ×2
     - `apps-core/surface/floating`

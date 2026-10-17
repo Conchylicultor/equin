@@ -13,7 +13,6 @@ import { TaskDraftFormSlots } from "../slots";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
-const addIcon = symbol("add");
 const linkIcon = symbol("link");
 
 export interface TaskDraftComposerProps {
@@ -49,9 +48,9 @@ export interface TaskDraftComposerProps {
 }
 
 /**
- * One task's composer: the prose field, the URL attach toggle, and its bar —
- * the contributed prose actions (the element picker) and the launch-option
- * pills. Everything about the TASK, nothing about the chain card that holds it
+ * One task's composer: the prose field and its bar — the context it carries
+ * (the contributed prose actions such as the element picker, and the page-URL
+ * toggle) and the launch-option pills. Everything about the TASK, nothing about the chain card that holds it
  * (drag, remove): so it renders on its own, which is what the composer
  * exhibit does.
  */
@@ -99,20 +98,11 @@ export function TaskDraftComposer({
       maxHeight={isHead ? "20rem" : "8rem"}
       namespace={`task-draft-card-${cardId}`}
       insertRef={insertRef}
-      attach={
-        <ComposerAttachButton
-          icon={addIcon}
-          activeIcon={linkIcon}
-          label="Attach page URL"
-          description="Record the page you are on with the task, so the agent knows which screen it is about."
-          active={includeUrl}
-          onToggle={onToggleUrl}
-          disabled={disabled}
-        />
-      }
       barStart={
         <CardBarStart
           insertText={insertText}
+          includeUrl={includeUrl}
+          onToggleUrl={onToggleUrl}
           values={launchOptions}
           onChange={onLaunchOptionsChange}
           disabled={disabled}
@@ -132,43 +122,47 @@ export function TaskDraftComposer({
 }
 
 /**
- * The leading half of the card's bar: the contributed actions that write into
- * the prose (the element picker), then — past a hairline — the pills that
- * configure what submitting it does.
+ * The leading half of the card's bar: what the agent will see — the
+ * contributed actions that write into the prose (the element picker) and the
+ * page-URL toggle — then, past a hairline, the pills that configure what
+ * submitting it does.
  *
  * Every card carries the action slot, not just the head: each card owns its own
  * caret-insert handle, so a picked element lands in the prose you are actually
  * writing. (The HOST's funnel is the head card's alone — that is where an
  * insert fired from outside the form has to go, since it must pick one card.)
- *
- * It draws no hairline when nothing contributed to the slot: a rule with
- * nothing on one side of it is just a mark.
  */
 function CardBarStart({
   insertText,
+  includeUrl,
+  onToggleUrl,
   values,
   onChange,
   disabled,
   relate,
 }: {
   insertText: (text: string) => void;
+  includeUrl: boolean;
+  onToggleUrl: (v: boolean) => void;
   values: LaunchOptionValues;
   onChange: (next: LaunchOptionValues) => void;
   disabled: boolean;
   relate: TaskDraftComposerProps["relate"];
 }) {
-  const actions = TaskDraftFormSlots.Action.useContributions();
-  const showActions = actions.length > 0;
   return (
     <>
-      {showActions && (
-        <>
-          <TaskDraftFormSlots.Action.Render>
-            {(item) => <item.component insertText={insertText} />}
-          </TaskDraftFormSlots.Action.Render>
-          <ComposerRule />
-        </>
-      )}
+      <TaskDraftFormSlots.Action.Render>
+        {(item) => <item.component insertText={insertText} />}
+      </TaskDraftFormSlots.Action.Render>
+      <ComposerAttachButton
+        icon={linkIcon}
+        label="Page URL"
+        description="Record the page you are on with the task, so the agent knows which screen it is about."
+        active={includeUrl}
+        onToggle={onToggleUrl}
+        disabled={disabled}
+      />
+      <ComposerRule />
       {/* A bare icon while on its default: the card's bar is narrow, and an
           unset setting should take no room. */}
       <LaunchOptionPills

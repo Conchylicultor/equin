@@ -7,6 +7,6 @@ export type { ComposerAttachButtonProps } from "./components/attach-button";
 
 export default {
   description:
-    "Composer field: a TextEditor whose attach row and control bar live INSIDE its own border, via the editor's bottomSlot. One box, one focus ring, one density.",
+    "Composer field: a TextEditor whose control bar lives INSIDE its own border, via the editor's bottomSlot. One box, one focus ring, one density.",
   contributions: [],
 } satisfies PluginDefinition;

@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { PickerPill } from "./components/picker-pill";
+export { pillHighlightClass } from "./components/highlight";
 export type {
   PickerPillProps,
   PickerPillValueProps,

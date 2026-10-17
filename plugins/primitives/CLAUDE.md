@@ -158,7 +158,7 @@ relatives under an umbrella.
     - Plugins:
       - **`caret-motion`** — The caret-crossing channel for Lexical editors: a mover that relocates a caret ACROSS something announces it in the direction of travel, and every consumer of a synthesized caret position observes…
       - **`caret-trigger`** — Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text and a single-owner arbiter.
-      - **`composer`** — Composer field: a TextEditor whose attach row and control bar live INSIDE its own border, via the editor's bottomSlot. One box, one focus ring, one density.
+      - **`composer`** — Composer field: a TextEditor whose control bar lives INSIDE its own border, via the editor's bottomSlot. One box, one focus ring, one density.
         - Plugins:
           - **`picker-pill`** — Picker pill: a pill-shaped trigger reading `icon value(s) chevron` that opens one grouped menu. Several groups in one pill is the fused control — one trigger, one menu, one heading and one checked…
       - **`decorator-nav`** — Caret crossing over inline decorator nodes for Lexical editors: one ArrowLeft/ArrowRight steps to the far side instead of stalling on the contenteditable=false span.

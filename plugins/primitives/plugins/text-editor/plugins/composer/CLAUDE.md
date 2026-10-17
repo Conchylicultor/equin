@@ -1,8 +1,8 @@
 # composer
 
-The prompt field with its own controls inside it — one box holding the prose,
-an optional row of named attach toggles, and a bar of icon actions and pills
-that configure what submitting it will do. Used by the Improve popover and the
+The prompt field with its own controls inside it — one box holding the prose
+and a bar of icon actions, attach toggles and pills that configure what
+submitting it will do. Used by the Improve popover and the
 Launch popover.
 
 ## Why it is a wrapper, not an editor
@@ -14,19 +14,19 @@ insert and the inline chips all come for free; the composer only decides what
 sits under the prose.
 
 `ComposerFieldProps` therefore omits `bottomSlot` — the composer IS the bottom
-slot, and a caller handing in a second one would silently lose the attach row
-and the bar.
+slot, and a caller handing in a second one would silently lose the bar.
 
 ## The parts
 
-- **`attach`** — the wrapping row of toggles above the bar. Omit ⇒ no row.
 - **`barStart`** / **`barEnd`** — the two halves of the bar, slack between them.
   Pass neither ⇒ no bar.
 - **`ComposerRule`** — the hairline separating the bar's icon actions from its
   pills.
-- **`ComposerAttachButton`** — **one label and one width in both states**; only
-  the glyph swaps and it lights up. It never prints the value it attached. A
-  toggle that resized on click shoved every neighbour along the row.
+- **`ComposerAttachButton`** — an attach toggle ON the bar, beside the icon
+  actions (the element picker): a bare icon while off, a filled pill naming
+  what is attached ("Page URL") while on, in the same highlight a set pill
+  wears (`pillHighlightClass`). A row of its own under the prose cost the
+  field a whole line for one toggle.
 
 Density is declared once for the whole bottom slot (`sm`), so no control down
 there carries a size of its own.
@@ -39,22 +39,22 @@ The composer names no contributor: a host decides what goes on the bar.
 
 ## Plugin reference
 
-- Description: Composer field: a TextEditor whose attach row and control bar live INSIDE its own border, via the editor's bottomSlot. One box, one focus ring, one density.
+- Description: Composer field: a TextEditor whose control bar lives INSIDE its own border, via the editor's bottomSlot. One box, one focus ring, one density.
 - Web:
   - Uses:
-    - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.Rigid`
     - `primitives/css/spacing.insetClass`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/overlay/tooltip.TooltipDoc`
     - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/text-editor.TextEditor`
     - `primitives/text-editor.TextEditorProps`
+    - `primitives/text-editor/composer/picker-pill.pillHighlightClass`
     - `primitives/text-editor/paste-images.AttachFilesButton`
     - `ui/icons.Icon`
   - Exports (types):

@@ -403,7 +403,7 @@ export function TaskDraftPopover({
     setOpen(false);
   };
 
-  // On the open transition, snapshot the current URL (what "Attach page URL"
+  // On the open transition, snapshot the current URL (what the "Page URL" toggle
   // attaches), focus the last card, and re-arm focus return for this session.
   const wasOpenRef = useRef(false);
   useEffect(() => {
