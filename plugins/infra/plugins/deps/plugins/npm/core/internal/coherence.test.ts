@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { groupProblems, policyProblems, unrangedSpecs } from "./coherence";
+import {
+  groupProblems,
+  policyProblems,
+  unrangedSpecs,
+  wrappersUndeclared,
+} from "./coherence";
 import { parseSpec } from "./spec";
 import { parseLock, type Declared } from "./workspace";
 
@@ -129,5 +134,60 @@ describe("groupProblems over a lock", () => {
       expect.stringContaining("a is locked at 2 versions"),
       expect.stringContaining("must agree on version"),
     ]);
+  });
+});
+
+describe("wrappersUndeclared", () => {
+  const wraps = {
+    name: "Up",
+    tags: { repo: "https://example.com/up", pattern: "^v(\\d+)$" },
+    agree: "major" as const,
+    prerequisite: "publish it",
+  };
+  const policies = (withWraps: boolean) => [
+    { manifest: "package.json", policy: { ownScopes: ["@own"] } },
+    {
+      manifest: "sub/package.json",
+      policy: {
+        groups: [
+          {
+            id: "g",
+            members: ["@own/a", "@own/b"],
+            agree: "version" as const,
+            reason: "r",
+            ...(withWraps ? { wraps } : {}),
+          },
+        ],
+      },
+    },
+  ];
+  const deps = [
+    declared("@own/a", "^1.0.0"),
+    declared("@own/b", "^1.0.0"),
+    declared("@other/c", "^1.0.0"),
+  ];
+
+  test("a package in an own scope needs a group declaring what it wraps", () => {
+    expect(wrappersUndeclared(policies(true), deps)).toEqual([]);
+    expect(wrappersUndeclared(policies(false), deps)).toEqual([
+      expect.stringContaining("@own/a"),
+      expect.stringContaining("@own/b"),
+    ]);
+  });
+
+  test("ownScopes only at the root", () => {
+    expect(
+      policyProblems({
+        policyErrors: [],
+        declared: deps,
+        today: "2026-10-16",
+        policies: [
+          {
+            manifest: "sub/package.json",
+            policy: { ownScopes: ["@own"] },
+          },
+        ],
+      }),
+    ).toEqual([expect.stringContaining("root package.json")]);
   });
 });

@@ -106,7 +106,9 @@ Every version falls into one of these cases:
 2. In a group: it moves with the group, or the group is blocked, which is case 4.
 3. Held: the hold expires in ≤ 90 days (enforced by a check, measured from git),
    after which it is case 1 or 2, unless someone deliberately renews it in a reviewed diff.
-4. Blocked: it is listed in the weekly task as work to do.
+4. Blocked: it is listed in the weekly task as work to do. (A release only an
+   upstream of a wrapper we publish has made is reported through the group's
+   `wraps`: [2026-10-17-global-deps-npm-upstream-of-wrappers.md](./2026-10-17-global-deps-npm-upstream-of-wrappers.md).)
 
 None of these cases lets a version sit silently. The only way to get the old
 behaviour back would be an exact spec with no declaration, and

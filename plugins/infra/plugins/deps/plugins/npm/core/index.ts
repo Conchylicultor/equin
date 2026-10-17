@@ -16,4 +16,6 @@ export {
   groupProblems,
   policyProblems,
   unrangedSpecs,
+  wrappersUndeclared,
 } from "./internal/coherence";
+export { tagVersions, upstreamRows } from "./internal/upstream";

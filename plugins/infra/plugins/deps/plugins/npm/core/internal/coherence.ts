@@ -3,8 +3,8 @@
 // every lockstep group resolves to versions its members agree on.
 
 import { holdProblems } from "@plugins/infra/plugins/deps/plugins/updates/core";
-import type { Agree } from "./policy";
-import { versionParts } from "./spec";
+import { agreeKey } from "./spec";
+import { patternProblem } from "./upstream";
 import type { Declared, DeclaredPolicy, Lock, PolicyError } from "./workspace";
 
 /** Every declared spec that is not a `^`/`~` range or a workspace link. */
@@ -43,12 +43,23 @@ export function policyProblems(args: {
           `${manifest}: group "${g.id}" is also declared in ${seen}`,
         );
       ids.set(g.id, manifest);
+      if (g.wraps !== undefined) {
+        const bad = patternProblem(g.wraps.tags.pattern);
+        if (bad !== undefined)
+          problems.push(
+            `${manifest}: group "${g.id}" wraps.tags.pattern ${bad}`,
+          );
+      }
       for (const m of g.members)
         if (!names.has(m))
           problems.push(
             `${manifest}: group "${g.id}" names ${m}, which no package.json declares`,
           );
     }
+    if (policy.ownScopes !== undefined && manifest !== "package.json")
+      problems.push(
+        `${manifest}: ownScopes belongs in the root package.json's dependencyPolicy`,
+      );
     problems.push(...holdProblems(policy.holds ?? [], today, manifest));
     for (const h of policy.holds ?? []) {
       for (const p of h.names)
@@ -61,13 +72,32 @@ export function policyProblems(args: {
   return problems;
 }
 
-function key(version: string, agree: Agree): string {
-  const [major, minor] = versionParts(version);
-  return agree === "version"
-    ? version
-    : agree === "major.minor"
-      ? `${major}.${minor}`
-      : `${major}`;
+/**
+ * Dependencies in a scope we publish ourselves (the root's `ownScopes`) that
+ * no group declares the upstream of (`wraps`): nothing would ever notice that
+ * upstream shipping a release we have not wrapped.
+ */
+export function wrappersUndeclared(
+  policies: readonly DeclaredPolicy[],
+  declared: readonly Declared[],
+): string[] {
+  const scopes = policies.flatMap((p) => p.policy.ownScopes ?? []);
+  const wrapped = new Set(
+    policies.flatMap((p) =>
+      (p.policy.groups ?? []).flatMap((g) =>
+        g.wraps === undefined ? [] : g.members,
+      ),
+    ),
+  );
+  return declared
+    .filter(
+      (d) =>
+        scopes.some((s) => d.name.startsWith(`${s}/`)) && !wrapped.has(d.name),
+    )
+    .map(
+      (d) =>
+        `${d.manifest}: ${d.name} is in a scope we publish (${scopes.join(", ")}) but no dependencyPolicy group with \`wraps\` lists it`,
+    );
 }
 
 /**
@@ -90,7 +120,9 @@ export function groupProblems(
           );
         if (copies.length > 0) versions.set(m, copies[0]!);
       }
-      const keys = new Set([...versions.values()].map((v) => key(v, g.agree)));
+      const keys = new Set(
+        [...versions.values()].map((v) => agreeKey(v, g.agree)),
+      );
       if (keys.size > 1)
         problems.push(
           `group "${g.id}" (${manifest}) must agree on ${g.agree}: ${[...versions].map(([m, v]) => `${m}@${v}`).join(", ")}`,

@@ -62,6 +62,7 @@
     "vitest": "^4.1.4"
   },
   "dependencyPolicy": {
+    "ownScopes": ["@equin"],
     "groups": [
       {
         "id": "typescript-eslint",

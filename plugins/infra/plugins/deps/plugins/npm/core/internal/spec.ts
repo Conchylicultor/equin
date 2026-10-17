@@ -1,6 +1,8 @@
 // What a dependency spec in a package.json says, and the one rewrite the npm
 // updater makes to it.
 
+import type { Agree } from "./policy";
+
 /** The spec kinds a workspace may declare: a caret or tilde range, or a workspace link. */
 export type AllowedSpec =
   { kind: "range"; op: "^" | "~"; version: string } | { kind: "workspace" };
@@ -45,4 +47,17 @@ export function versionParts(version: string): [number, number, number] {
 
 export function isPrerelease(version: string): boolean {
   return /^\d+\.\d+\.\d+-/.test(version);
+}
+
+/** The part of `version` that `agree` compares: the whole, `major.minor` or `major`. */
+export function agreeKey(version: string, agree: Agree): string {
+  const [major, minor] = versionParts(version);
+  switch (agree) {
+    case "version":
+      return version;
+    case "major.minor":
+      return `${major}.${minor}`;
+    case "major":
+      return `${major}`;
+  }
 }

@@ -20,7 +20,16 @@
           "@equin/pg-client-linux-arm64"
         ],
         "agree": "version",
-        "reason": "one client-tools build per platform"
+        "reason": "one client-tools build per platform",
+        "wraps": {
+          "name": "PostgreSQL",
+          "tags": {
+            "repo": "https://github.com/postgres/postgres",
+            "pattern": "^REL_(\\d+)_(\\d+)$"
+          },
+          "agree": "major.minor",
+          "prerequisite": "publish @equin/pg-client-* for PostgreSQL <version> from github.com/equinai/pg-client-embedded (bump PG_VERSION in scripts/build.sh and EMBEDDED_POSTGRES_VERSION in the workflow, then tag v<version>; its CI smoke test needs the matching @embedded-postgres release), then upgrade"
+        }
       },
       {
         "id": "postgres-release",

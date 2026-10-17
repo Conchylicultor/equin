@@ -20,7 +20,16 @@
           "@equin/pgbouncer-linux-arm64"
         ],
         "agree": "version",
-        "reason": "one PgBouncer build per platform"
+        "reason": "one PgBouncer build per platform",
+        "wraps": {
+          "name": "PgBouncer",
+          "tags": {
+            "repo": "https://github.com/pgbouncer/pgbouncer",
+            "pattern": "^pgbouncer_(\\d+)_(\\d+)_(\\d+)$"
+          },
+          "agree": "major.minor",
+          "prerequisite": "publish @equin/pgbouncer-* for PgBouncer <version> from github.com/equinai/pgbouncer-embedded (bump the PgBouncer version in scripts/build.sh, then tag a release), then upgrade"
+        }
       }
     ]
   }

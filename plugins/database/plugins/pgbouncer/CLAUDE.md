@@ -6,6 +6,7 @@ This plugin ships:
 
 - The `@equin/pgbouncer-<platform>` binary as an optionalDependency in `package.json` so `bun install` lands the binary.
 - `scripts/start.ts` — standalone lifecycle script that handles binary resolution, config generation, and pgbouncer spawn. Invoked by the gateway's generic service supervisor via `~/.singularity/state/db-config/database.json`.
+- The `pgbouncer` lockstep group (`package.json` `dependencyPolicy`) keeps the four platforms on one version, and its `wraps` reads the `pgbouncer_<x>_<y>_<z>` tags of github.com/pgbouncer/pgbouncer: a PgBouncer `major.minor` no `@equin/pgbouncer-*` release wraps yet is listed BLOCKED in the weekly upgrade task, asking for the publish from github.com/equinai/pgbouncer-embedded. (The wrapper's patch numbers are its own — `@equin/pgbouncer` 1.25.7 has no upstream 1.25.7 — so only `major.minor` is compared.)
 - `shared/` constants (PGBOUNCER_PORT, PGBOUNCER_SOCKET_DIR, config/log/pid paths) reused by the database client layer.
 
 ## Connection routing

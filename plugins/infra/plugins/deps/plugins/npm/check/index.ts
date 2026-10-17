@@ -8,6 +8,7 @@ import {
   policyProblems,
   readWorkspace,
   unrangedSpecs,
+  wrappersUndeclared,
 } from "@plugins/infra/plugins/deps/plugins/npm/core";
 import { utcDay } from "@plugins/infra/plugins/deps/plugins/updates/core";
 
@@ -67,4 +68,23 @@ const groupsCoherent: Check = {
   },
 };
 
-export default [ranges, policy, groupsCoherent];
+/**
+ * Every package in a scope we publish (root `dependencyPolicy.ownScopes`)
+ * belongs to a group that declares the upstream it `wraps` — the registry never
+ * shows an upstream release we have not wrapped yet, so only that declaration
+ * lets detection ask for the publish.
+ */
+const wrappersDeclared: Check = {
+  id: "deps-npm:wrappers-declared",
+  description:
+    "every dependency in a scope we publish belongs to a dependencyPolicy group declaring the upstream it wraps",
+  async run() {
+    const ws = await readWorkspace(await getWorktreeRoot());
+    return verdict(
+      wrappersUndeclared(ws.policies, ws.declared),
+      "Add `wraps` (the upstream's release tags and the publish prerequisite) to the package's lockstep group — plugins/infra/plugins/deps/plugins/npm/CLAUDE.md.",
+    );
+  },
+};
+
+export default [ranges, policy, groupsCoherent, wrappersDeclared];

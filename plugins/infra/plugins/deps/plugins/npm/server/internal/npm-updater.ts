@@ -13,6 +13,8 @@ import {
   planNpm,
   rangeAt,
   readWorkspace,
+  tagVersions,
+  upstreamRows,
   workspaceManifests,
   type Packument,
   type Plan,
@@ -64,7 +66,28 @@ async function fetchAll(
   return out;
 }
 
-async function planNow(root: string): Promise<{ plan: Plan; ws: Workspace }> {
+/** The tag names of `repo` (`git ls-remote`: no credentials, no API rate limit). */
+async function fetchTags(repo: string): Promise<string[]> {
+  const result = await spawnCaptured(
+    ["git", "ls-remote", "--tags", "--refs", repo],
+    // Never a credential prompt: a public remote that asks for one has moved.
+    { timeoutMs: MINUTE, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } },
+  );
+  if (result.exitCode !== 0)
+    throw new Error(
+      `git ls-remote --tags ${repo} failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
+    );
+  return result.stdout
+    .split("\n")
+    .filter((l) => l.trim() !== "")
+    .map((l) => l.split("\t")[1]!.replace(/^refs\/tags\//, ""));
+}
+
+async function planNow(root: string): Promise<{
+  plan: Plan;
+  ws: Workspace;
+  packuments: Map<string, Packument>;
+}> {
   const ws = await readWorkspace(root);
   if (ws.policyErrors.length > 0) {
     throw new Error(
@@ -73,16 +96,17 @@ async function planNow(root: string): Promise<{ plan: Plan; ws: Workspace }> {
   }
   const installed = installedVersions(ws);
   const now = new Date();
+  const packuments = await fetchAll(installed.map((i) => i.name));
   const plan = planNpm({
     installed,
-    packuments: await fetchAll(installed.map((i) => i.name)),
+    packuments,
     groups: ws.policies.flatMap((p) => p.policy.groups ?? []),
     holds: ws.policies.flatMap((p) => p.policy.holds ?? []),
     patched: ws.lock.patched,
     cutoff: new Date(now.getTime() - NPM_COOLDOWN_DAYS * DAY_MS).toISOString(),
     today: utcDay(now),
   });
-  return { plan, ws };
+  return { plan, ws, packuments };
 }
 
 /** Rewrite one dependency's spec in every package.json that declares it. */
@@ -157,8 +181,30 @@ export const npmUpdater: Updater = {
     "Every npm package a workspace package.json declares: its range and bun.lock, moved to the newest release past a 3-day cooldown, lockstep groups together",
   files: async (root) => [...(await workspaceManifests(root)), "bun.lock"],
 
+  // Plus the upstream releases of the wrappers we publish: the registry cannot
+  // show one nobody has wrapped yet. Only detection asks — an upstream row has
+  // no move for `plan` to make.
   async detect(root): Promise<Outdated[]> {
-    return (await planNow(root)).plan.outdated;
+    const { plan, ws, packuments } = await planNow(root);
+    const groups = ws.policies.flatMap((p) => p.policy.groups ?? []);
+    const upstream = new Map<string, string[]>();
+    for (const g of groups)
+      if (g.wraps !== undefined)
+        upstream.set(
+          g.id,
+          tagVersions(await fetchTags(g.wraps.tags.repo), g.wraps.tags.pattern),
+        );
+    return [
+      ...plan.outdated,
+      ...upstreamRows({
+        groups,
+        packuments,
+        installed: new Map(
+          installedVersions(ws).map((i) => [i.name, i.current]),
+        ),
+        upstream,
+      }),
+    ];
   },
 
   async plan(root, only): Promise<Move[]> {

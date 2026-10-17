@@ -11,8 +11,8 @@ import {
   type Move,
   type Outdated,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
-import type { Agree, Group } from "./policy";
-import { isPrerelease, versionParts } from "./spec";
+import type { Group } from "./policy";
+import { agreeKey, isPrerelease } from "./spec";
 
 /** What the registry says about one package. */
 export interface Packument {
@@ -70,18 +70,6 @@ function candidates(pkg: Packument, current: string, cutoff: string): string[] {
     .map(([v]) => v);
   if (!out.includes(current)) out.push(current);
   return out.sort((a, b) => order(b, a));
-}
-
-function agreeKey(version: string, agree: Agree): string {
-  const [major, minor] = versionParts(version);
-  switch (agree) {
-    case "version":
-      return version;
-    case "major.minor":
-      return `${major}.${minor}`;
-    case "major":
-      return `${major}`;
-  }
 }
 
 /** Packages joined by any group, transitively: what must be decided together. */
