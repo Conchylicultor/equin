@@ -345,6 +345,10 @@ export const uvUpdater: Updater = {
       .map((o) => ({ name: o.name, from: o.current, to: o.latest }));
   },
 
+  // Nothing to undo: `apply` only rewrites `uv.lock` / `.python-version`, and
+  // every env is installed under the identity those files hash to.
+  sync: async () => {},
+
   async apply(root, moves, log) {
     const cutoff = uvCutoff(new Date());
     for (const project of await uvProjects(root)) {

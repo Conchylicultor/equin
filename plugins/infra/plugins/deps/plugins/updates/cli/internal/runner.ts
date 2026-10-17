@@ -12,15 +12,25 @@ import {
   newFailures,
   type GateResult,
 } from "../../core/internal/compare";
+import {
+  isBreakingMove,
+  narrow,
+  riskFirstSplit,
+  type ProbeOutcome,
+} from "./bisect";
 import type { Gates } from "./gates";
 import type { Move, Updater, UpdaterSmoke } from "../../core/internal/updater";
 
 /**
- * `running` until the end. `current`: nothing newer to move to. `upgraded`: the
- * files moved and nothing regressed. `regressed`: something only the moved
- * inputs fail, twice — the files were put back.
+ * `running` until the end, and only then: every run ends on one of the others.
+ * `current`: nothing newer to move to. `upgraded`: every planned move landed and
+ * nothing regressed. `partial`: some moves landed (proven together); the rest
+ * regressed (`culprits`) or were never decided (`untested`). `regressed`:
+ * nothing landed — the files were put back. `aborted`: the run itself failed
+ * before a verdict (`error`) — the files were put back.
  */
-export type UpgradeVerdict = "running" | "current" | "upgraded" | "regressed";
+export type UpgradeVerdict =
+  "running" | "current" | "upgraded" | "partial" | "regressed" | "aborted";
 
 /** One updater a run moves, restricted to `only` (names it knows) when given. */
 export interface UpgradeSelection {
@@ -33,6 +43,20 @@ export interface UpdaterMove extends Move {
   updater: string;
 }
 
+/** Moves that regressed together, and what they broke. */
+export interface UpgradeCulprit {
+  moves: UpdaterMove[];
+  regressions: GateResult[];
+}
+
+/** One gate run over a set of units: the full suites, or only the targeted failures. */
+export interface UpgradeProbe {
+  kind: "full" | "targeted";
+  units: string[];
+  passed: boolean;
+  failures: GateResult[];
+}
+
 /**
  * `deps-upgrade-<updater>.json` (one updater) or `deps-upgrade.json` (every
  * updater at once): what this run moved and what it proved.
@@ -43,13 +67,33 @@ export interface UpgradeReceipt {
   startedAt: string;
   finishedAt: string | null;
   verdict: UpgradeVerdict;
+  /** Why the run aborted (`aborted` only). */
+  error: string | null;
   /** What each updater's `prepare` recorded (mise: its own version before and after), by updater id. */
   notes: Record<string, Record<string, string>>;
+  /** Every move planned. */
   moves: UpdaterMove[];
   baseline: GateResult[] | null;
+  /**
+   * The baseline's failures: what already fails on the current releases, and so
+   * could not catch a regression. Not the upgrade's to fix — file it.
+   */
+  blind: GateResult[] | null;
+  /** The full gates over every planned move. */
   candidate: GateResult[] | null;
+  /** The candidate's failures the baseline did not have, confirmed by a retry. */
   regressions: GateResult[] | null;
+  /** The moves in the files now, proven together by the full gates. */
+  landed: UpdaterMove[];
+  culprits: UpgradeCulprit[];
+  untested: UpdaterMove[];
+  probes: UpgradeProbe[];
 }
+
+/** Targeted probes a run may spend narrowing regressions down. */
+export const MAX_PROBES = 40;
+/** Full-gate proofs of a narrowed set before giving up on landing any of it. */
+export const MAX_ROUNDS = 3;
 
 function writeReceipt(path: string, receipt: UpgradeReceipt): void {
   mkdirSync(dirname(path), { recursive: true });
@@ -103,25 +147,52 @@ function restore(
   }
 }
 
+/** Moves that land together: one lockstep unit of one updater. */
+interface Unit {
+  key: string;
+  moves: UpdaterMove[];
+}
+
+function unitsOf(moves: readonly UpdaterMove[]): Unit[] {
+  const units = new Map<string, Unit>();
+  for (const m of moves) {
+    const key = `${m.updater}:${m.unit ?? m.name}`;
+    const unit = units.get(key) ?? { key, moves: [] };
+    unit.moves.push(m);
+    units.set(key, unit);
+  }
+  return [...units.values()];
+}
+
+function firstLine(err: unknown): string {
+  const text = err instanceof Error ? err.message : String(err);
+  return text.split("\n")[0] ?? text;
+}
+
 /**
- * One upgrade, the gated way, over one or several updaters at once. The loop
- * `plugins/toolchain` proved, made generic over the updater:
+ * One upgrade, the gated way, over one or several updaters at once:
  *
  * 1. Each updater's `prepare` (mise updates itself), then `plan` the moves.
  *    None anywhere → `current`.
  * 2. BASELINE — every gate on the current inputs, so a failure the repo already
- *    has is not blamed on the new ones.
- * 3. MOVE — snapshot every updater's files, `apply` each updater's moves in turn.
- * 4. CANDIDATE — the same gates on the moved inputs.
- * 5. A failure only the candidate has is retried; one that fails AGAIN is a
- *    regression: every file is put back → `regressed`. Otherwise `upgraded`.
+ *    has is not blamed on the new ones (and is recorded as `blind`).
+ * 3. CANDIDATE — snapshot every updater's files, `apply` every move, the same
+ *    gates. A failure only the candidate has is retried; one that fails AGAIN
+ *    is a regression. An `apply` that throws is a regression too (its own
+ *    tooling crashing on the new release is the plainest kind). None →
+ *    `upgraded`.
+ * 4. NARROW — the moves are split into units (a lockstep group never splits)
+ *    and bisected: each probe applies a subset and re-runs only the confirmed
+ *    regressions (`gates.retry`), so it costs minutes, not the suites. Units
+ *    that pass are kept; one that fails alone is a culprit.
+ * 5. PROVE — the kept units get the full gates again; a regression only the
+ *    full run sees narrows again (at most {@link MAX_ROUNDS} proofs). Proven
+ *    and something left out → `partial`; nothing kept → `regressed`.
  *
- * Batching costs one baseline and one candidate however many updaters move;
- * the price is that a regression is not attributed — the caller narrows it by
- * running one updater, then one name, at a time.
- *
- * Any throw after the move puts the files back too: from the move until the
- * verdict, the files name releases nothing has proven yet.
+ * Every exit but `upgraded`/`partial` puts the files back AND runs each
+ * updater's `sync`, so the worktree's installs match its files again. Anything
+ * that throws ends as `aborted` with the error on the receipt — the receipt is
+ * never left `running`.
  *
  * Pure of process state: the caller resolves the checkout, the receipt path and
  * the gates (the real ones spawn `./singularity check` / `test`).
@@ -133,7 +204,7 @@ export async function runUpgrade(args: {
   gates: Gates;
   log: (line: string) => void;
 }): Promise<UpgradeReceipt> {
-  const { selection, root, receiptPath, gates, log } = args;
+  const { selection, receiptPath, log } = args;
   if (selection.length === 0) throw new Error("No updater to run.");
   const receipt: UpgradeReceipt = {
     updaters: selection.map((s) => s.updater.id),
@@ -141,43 +212,95 @@ export async function runUpgrade(args: {
     startedAt: new Date().toISOString(),
     finishedAt: null,
     verdict: "running",
+    error: null,
     notes: {},
     moves: [],
     baseline: null,
+    blind: null,
     candidate: null,
     regressions: null,
+    landed: [],
+    culprits: [],
+    untested: [],
+    probes: [],
   };
   writeReceipt(receiptPath, receipt);
   log(`Receipt: ${receiptPath}`);
 
+  // Set once the files are snapshotted: from then on, any exit that is not a
+  // landing puts them back.
+  const onAbort: { putBack: (() => Promise<void>) | null } = { putBack: null };
+  try {
+    await upgrade({
+      ...args,
+      receipt,
+      onSnapshot: (f) => {
+        onAbort.putBack = f;
+      },
+    });
+  } catch (err) {
+    receipt.verdict = "aborted";
+    receipt.error =
+      err instanceof Error ? (err.stack ?? err.message) : String(err);
+    log(`\nABORTED: ${firstLine(err)}`);
+    if (onAbort.putBack !== null) {
+      try {
+        await onAbort.putBack();
+      } catch (restoreErr) {
+        receipt.error +=
+          `\n\nPutting the files back failed too — the files may be back but not the installs ` +
+          `(run \`bun install\`): ${restoreErr instanceof Error ? restoreErr.message : String(restoreErr)}`;
+      }
+    }
+  }
+  receipt.finishedAt = new Date().toISOString();
+  writeReceipt(receiptPath, receipt);
+  return receipt;
+}
+
+async function upgrade(args: {
+  selection: readonly UpgradeSelection[];
+  root: string;
+  receiptPath: string;
+  gates: Gates;
+  log: (line: string) => void;
+  receipt: UpgradeReceipt;
+  onSnapshot: (putBack: () => Promise<void>) => void;
+}): Promise<void> {
+  const { selection, root, receiptPath, gates, log, receipt } = args;
+  const save = () => writeReceipt(receiptPath, receipt);
+
   // Every updater's moves, planned before any gate runs.
-  const planned: { updater: Updater; moves: Move[] }[] = [];
+  const planned: Updater[] = [];
   for (const { updater, only } of selection) {
     if (updater.prepare !== undefined) {
       receipt.notes[updater.id] = { ...(await updater.prepare(root, log)) };
-      writeReceipt(receiptPath, receipt);
+      save();
     }
     const moves = await updater.plan(root, only);
     if (moves.length === 0) {
       log(`${updater.id}: everything is on its latest release.`);
       continue;
     }
-    planned.push({ updater, moves });
+    planned.push(updater);
     receipt.moves.push(...moves.map((m) => ({ updater: updater.id, ...m })));
   }
   if (planned.length === 0) {
     receipt.verdict = "current";
-    receipt.finishedAt = new Date().toISOString();
-    writeReceipt(receiptPath, receipt);
     log("\nEverything is on its latest release. Nothing to prove.");
-    return receipt;
+    return;
   }
-  writeReceipt(receiptPath, receipt);
+  save();
   for (const m of receipt.moves) log(`  ${formatMove(m)}`);
 
   const smoke: UpdaterSmoke[] = [];
-  for (const { updater, moves } of planned)
-    smoke.push(...(await updater.smoke(root, moves)));
+  for (const updater of planned)
+    smoke.push(
+      ...(await updater.smoke(
+        root,
+        receipt.moves.filter((m) => m.updater === updater.id),
+      )),
+    );
   const dup = smoke.find(
     (s, i) => smoke.findIndex((t) => t.name === s.name) !== i,
   );
@@ -187,59 +310,174 @@ export async function runUpgrade(args: {
   }
 
   log("\n── Baseline: current releases ──");
-  receipt.baseline = await gates.all(smoke);
-  writeReceipt(receiptPath, receipt);
+  const baseline = await gates.all(smoke);
+  receipt.baseline = baseline;
+  receipt.blind = baseline.filter((g) => g.failures.length > 0);
+  save();
 
   const files: string[] = [];
-  for (const { updater } of planned) files.push(...(await updater.files(root)));
+  for (const updater of planned) files.push(...(await updater.files(root)));
   const saved = snapshot(root, [...new Set(files)]);
-  try {
-    log("\n── Moving ──");
-    for (const { updater, moves } of planned)
-      await updater.apply(root, moves, log);
-
-    log("\n── Candidate: new releases ──");
-    receipt.candidate = await gates.all(smoke);
-    writeReceipt(receiptPath, receipt);
-
-    const suspected = newFailures(receipt.baseline, receipt.candidate);
-    receipt.regressions =
-      suspected.length === 0
-        ? []
-        : confirmedFailures(suspected, await gates.retry(smoke, suspected));
-  } catch (err) {
+  const putBack = async (): Promise<void> => {
     restore(root, saved);
+    for (const updater of planned) await updater.sync(root, log);
     log(`\n${[...saved.keys()].join(", ")} put back.`);
-    throw err;
-  }
+  };
+  args.onSnapshot(putBack);
 
-  printGates(log, "Baseline (current releases):", receipt.baseline);
-  printGates(log, "Candidate (new releases):", receipt.candidate);
-  receipt.finishedAt = new Date().toISOString();
-
-  if (receipt.regressions.length > 0) {
+  /** Put the files back, then apply exactly `units`. A throw is the failure. */
+  const applyUnits = async (
+    units: readonly Unit[],
+  ): Promise<GateResult | null> => {
     restore(root, saved);
-    receipt.verdict = "regressed";
-    writeReceipt(receiptPath, receipt);
+    const moves = units.flatMap((u) => u.moves);
+    try {
+      for (const updater of planned) {
+        const mine = moves.filter((m) => m.updater === updater.id);
+        if (mine.length > 0) await updater.apply(root, mine, log);
+      }
+      return null;
+    } catch (err) {
+      log(`  apply failed: ${firstLine(err)}`);
+      return { gate: "apply", failures: [`apply: ${firstLine(err)}`] };
+    }
+  };
+
+  /** The full gates over `units`: the confirmed regressions against the baseline. */
+  const full = async (units: readonly Unit[]): Promise<GateResult[]> => {
+    log(`\n── Candidate: ${units.length} unit(s) ──`);
+    const crashed = await applyUnits(units);
+    let confirmed: GateResult[];
+    if (crashed !== null) {
+      confirmed = [crashed];
+    } else {
+      const results = await gates.all(smoke);
+      if (receipt.candidate === null) receipt.candidate = results;
+      const suspected = newFailures(baseline, results);
+      confirmed =
+        suspected.length === 0
+          ? []
+          : confirmedFailures(suspected, await gates.retry(smoke, suspected));
+    }
+    receipt.probes.push({
+      kind: "full",
+      units: units.map((u) => u.key),
+      passed: confirmed.length === 0,
+      failures: confirmed,
+    });
+    save();
+    return confirmed;
+  };
+
+  /** Only `targets`, over `units`: retried once before a failure counts. */
+  const targeted =
+    (targets: readonly GateResult[]) =>
+    async (units: readonly Unit[]): Promise<ProbeOutcome> => {
+      log(`\n── Probe: ${units.length} unit(s) ──`);
+      const crashed = await applyUnits(units);
+      let failures: GateResult[];
+      if (crashed !== null) {
+        failures = [crashed];
+      } else {
+        const rest = targets.filter((t) => t.gate !== "apply");
+        failures =
+          rest.length === 0
+            ? []
+            : confirmedFailures(rest, await gates.retry(smoke, rest));
+        if (failures.length > 0)
+          failures = confirmedFailures(
+            failures,
+            await gates.retry(smoke, failures),
+          );
+      }
+      receipt.probes.push({
+        kind: "targeted",
+        units: units.map((u) => u.key),
+        passed: failures.length === 0,
+        failures,
+      });
+      save();
+      return failures.length === 0
+        ? { passed: true }
+        : { passed: false, failures };
+    };
+
+  const all = unitsOf(receipt.moves);
+  let regressions = await full(all);
+  receipt.regressions = regressions;
+  save();
+
+  let kept: Unit[] = all;
+  let probes = 0;
+  const split = riskFirstSplit<Unit>((u) =>
+    u.moves.some((m) => isBreakingMove(m.from, m.to)),
+  );
+  for (let round = 1; regressions.length > 0; round++) {
     printGates(
       log,
       "REGRESSIONS (fail only on the new releases, twice):",
-      receipt.regressions,
+      regressions,
     );
-    log(
-      `\n${[...saved.keys()].join(", ")} put back. Find the input responsible ` +
-        (planned.length > 1
-          ? "by running one updater at a time, then `--only <name>`."
-          : "with `--only <name>`, one at a time."),
-    );
-    return receipt;
+    if (round > MAX_ROUNDS) {
+      log(`\nStill regressing after ${MAX_ROUNDS} proofs: nothing lands.`);
+      receipt.untested.push(...kept.flatMap((u) => u.moves));
+      kept = [];
+      break;
+    }
+    log(`\n── Narrowing ${kept.length} unit(s) down (round ${round}) ──`);
+    const narrowed = await narrow({
+      units: kept,
+      failures: regressions,
+      probe: targeted(regressions),
+      split,
+      budget: MAX_PROBES - probes,
+    });
+    probes += narrowed.probes;
+    for (const { unit, regressions: r } of narrowed.culprits)
+      receipt.culprits.push({ moves: unit.moves, regressions: r });
+    receipt.untested.push(...narrowed.untested.flatMap((u) => u.moves));
+    kept = narrowed.accepted;
+    save();
+    if (kept.length === 0) break;
+    regressions = await full(kept);
   }
 
-  receipt.verdict = "upgraded";
-  writeReceipt(receiptPath, receipt);
+  printGates(log, "Baseline (current releases):", baseline);
+  if (receipt.candidate !== null)
+    printGates(log, "Candidate (every new release):", receipt.candidate);
+  if (receipt.blind !== null && receipt.blind.length > 0) {
+    const n = receipt.blind.reduce((a, g) => a + g.failures.length, 0);
+    log(
+      `\n${n} failure(s) already on the baseline: those could not catch a regression. ` +
+        "File them (add_task); they are not this upgrade's to fix.",
+    );
+  }
+  for (const c of receipt.culprits)
+    log(
+      `\nCULPRIT ${c.moves.map(formatMove).join(", ")}: ` +
+        c.regressions
+          .flatMap((g) => g.failures)
+          .slice(0, 5)
+          .join("; "),
+    );
+  if (receipt.untested.length > 0)
+    log(
+      `\nUNTESTED (budget ran out; the next upgrade retries them): ${receipt.untested.map(formatMove).join(", ")}`,
+    );
+
+  if (kept.length === 0) {
+    await putBack();
+    receipt.verdict = "regressed";
+    log(
+      "\nREGRESSED: nothing landed. Fix or hold each culprit (the receipt names them), then upgrade again.",
+    );
+    return;
+  }
+  // The tree holds exactly `kept`: the last full run applied it and passed.
+  receipt.landed = kept.flatMap((u) => u.moves);
+  receipt.verdict = kept.length === all.length ? "upgraded" : "partial";
   log(
-    `\nUPGRADED: ${receipt.moves.map(formatMove).join(", ")}. ` +
+    `\n${receipt.verdict.toUpperCase()}: ${receipt.landed.map(formatMove).join(", ")}. ` +
       `No regression against the current releases. ${[...saved.keys()].join(", ")} updated — commit it.`,
   );
-  return receipt;
 }

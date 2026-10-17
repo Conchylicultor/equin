@@ -10,10 +10,9 @@ import { miseUpdater } from "@plugins/infra/plugins/deps/plugins/mise/core";
  * contributions).
  */
 const run: CliAction<[], { tool?: string }> = async (opts) => {
-  const receipt = await upgradeThisWorktree([
+  await upgradeThisWorktree([
     { updater: miseUpdater, only: opts.tool?.split(",").map((t) => t.trim()) },
   ]);
-  if (receipt.verdict === "regressed") process.exit(1);
 };
 
 export default run;

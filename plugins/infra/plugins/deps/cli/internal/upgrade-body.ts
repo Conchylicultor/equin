@@ -21,10 +21,7 @@ export async function upgrade(
         "`--only` names one updater's inputs: name the updater too.",
       );
     if (updaters.length === 0) throw new Error("No updater is declared.");
-    report(
-      updaters.map((u) => u.id).join(", "),
-      await upgradeThisWorktree(updaters.map((updater) => ({ updater }))),
-    );
+    await upgradeThisWorktree(updaters.map((updater) => ({ updater })));
     return;
   }
   const updater = updaters.find((u) => u.id === id);
@@ -33,14 +30,5 @@ export async function upgrade(
       `No updater ${JSON.stringify(id)}. Updaters: ${updaters.map((u) => u.id).join(", ") || "none"}.`,
     );
   }
-  report(id, await upgradeThisWorktree([{ updater, only }]));
-}
-
-function report(what: string, receipt: { verdict: string }): void {
-  console.log(`\nverdict: ${receipt.verdict}`);
-  if (receipt.verdict === "regressed") {
-    throw new Error(
-      `${what}: regressed — the locks were put back (see the receipt above).`,
-    );
-  }
+  await upgradeThisWorktree([{ updater, only }]);
 }

@@ -57,6 +57,12 @@ export interface Move {
   name: string;
   from: string | null;
   to: string;
+  /**
+   * Moves sharing a unit land together or not at all (a lockstep group): when
+   * the runner narrows a regressed batch down, it never splits one. Absent: the
+   * move is a unit of its own.
+   */
+  unit?: string;
 }
 
 /** A release not to move to, with the upstream issue that makes it broken. */
@@ -75,7 +81,8 @@ export interface Updater {
   readonly description: string;
   /**
    * The repo-relative files `apply` may rewrite. The runner snapshots them
-   * before the move and puts them back on any outcome but `upgraded`.
+   * before the move and puts them back (then calls `sync`) on any outcome
+   * that lands nothing; on `partial` they hold exactly the landed moves.
    */
   files(root: string): Promise<readonly string[]>;
   /**
@@ -102,6 +109,15 @@ export interface Updater {
     moves: readonly Move[],
     log: (line: string) => void,
   ): Promise<void>;
+  /**
+   * Bring what is installed or derived in `root` back in line with `files` as
+   * they are NOW (npm: `node_modules` and the generated files formatted through
+   * a moved package). The runner calls it after every put-back, so a regressed
+   * or aborted upgrade leaves nothing running on releases nothing proved. An
+   * updater whose installs live side by side, keyed by the lock, has nothing
+   * to do — and says why.
+   */
+  sync(root: string, log: (line: string) => void): Promise<void>;
   /** The smoke tests the moved inputs must pass, run before and after the move. */
   smoke(root: string, moves: readonly Move[]): Promise<readonly UpdaterSmoke[]>;
   /** Where the agent adds a hold (a release skipped on purpose) for this updater. */

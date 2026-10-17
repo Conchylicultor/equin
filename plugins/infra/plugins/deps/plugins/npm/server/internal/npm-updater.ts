@@ -125,6 +125,25 @@ async function bunInstall(
   }
 }
 
+async function regenGenerated(
+  root: string,
+  log: (line: string) => void,
+): Promise<void> {
+  log("  ./singularity regen-generated");
+  const regen = await spawnCaptured(
+    [join(root, "singularity"), "regen-generated"],
+    {
+      cwd: root,
+      timeoutMs: 20 * MINUTE,
+      mergeStderr: true,
+    },
+  );
+  if (regen.exitCode !== 0)
+    throw new Error(
+      `regen-generated failed (exit ${regen.exitCode}):\n${regen.stdout.trim().split("\n").slice(-30).join("\n")}`,
+    );
+}
+
 /**
  * Every directly declared npm package, across every workspace package.json, as
  * one updater: `bun.lock` and the specs that name each release. Moves to the
@@ -192,19 +211,14 @@ export const npmUpdater: Updater = {
     }
     // Generated artifacts formatted or derived through a moved package (prettier)
     // are regenerated, so the candidate's in-sync checks compare like with like.
-    log("  ./singularity regen-generated");
-    const regen = await spawnCaptured(
-      [join(root, "singularity"), "regen-generated"],
-      {
-        cwd: root,
-        timeoutMs: 20 * MINUTE,
-        mergeStderr: true,
-      },
-    );
-    if (regen.exitCode !== 0)
-      throw new Error(
-        `regen-generated failed (exit ${regen.exitCode}):\n${regen.stdout.trim().split("\n").slice(-30).join("\n")}`,
-      );
+    await regenGenerated(root, log);
+  },
+
+  // The manifests and bun.lock are back: reinstall from them, and regenerate
+  // what `apply` regenerated through the candidate packages.
+  async sync(root, log) {
+    await bunInstall(root, log);
+    await regenGenerated(root, log);
   },
 
   smoke: async () => [],

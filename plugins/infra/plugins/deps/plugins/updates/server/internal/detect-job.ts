@@ -55,7 +55,8 @@ async function legacyUpgradeTaskIds(): Promise<string[]> {
  * what is newer than its lock records and, when anything is, file ONE
  * auto-started task covering all of it, whose agent runs
  * `./singularity deps upgrade` (every updater at once) in its own worktree —
- * and pushes on an `upgraded` verdict as far as the Push setting allows.
+ * and pushes what landed on an `upgraded` or `partial` verdict as far as the
+ * Push setting allows.
  *
  * Detection only — it installs nothing and moves no lock. One updater failing
  * to detect does not stop the others: the task still covers the ones that

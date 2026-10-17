@@ -23,6 +23,10 @@ Design: `research/2026-10-16-global-deps-versions-always-move.md`.
   is newest at that moment. The lock is then verified to hold `to` in every
   declaring workspace, and `./singularity regen-generated` runs so generated
   files derived through a moved package (prettier) match.
+- **`sync`** (after the runner puts the files back) is `bun install` +
+  `regen-generated` again, so `node_modules` and the generated files leave the
+  candidate releases too. A group's moves share a `unit` (its first member), so
+  the runner's narrowing never splits a group.
 - Only **direct** dependencies are planned; a transitive one moves when its
   parent's new release asks for it.
 

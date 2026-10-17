@@ -177,14 +177,21 @@ module eval).
 ## Sub-plugins
 
 - `updates` — the `Updater` contract (`core/`) and the generic runner (its
-  `cli/` barrel, shared CLI machinery: baseline gates →
-  move → candidate gates → retry-to-confirm → verdict `current | upgraded |
-  regressed`, files put back on anything but `upgraded`), lifted from
-  `plugins/toolchain`. The runner takes a SELECTION of updaters: `./singularity
-  deps upgrade` with no updater moves every one behind one baseline and one
-  candidate run (receipt `deps-upgrade.json`); naming one moves only it
-  (`deps-upgrade-<updater>.json`, `--only` allowed) — how a batch regression is
-  narrowed down. The `UpdaterDeclare` registry and the **Dependency upgrades
+  `cli/` barrel, shared CLI machinery: baseline gates → move → candidate gates
+  → retry-to-confirm → narrow → prove → verdict `current | upgraded | partial |
+  regressed | aborted`), lifted from `plugins/toolchain`. A crash in `apply` is
+  a regression, not an abort; anything else that throws is `aborted`, and the
+  receipt always ends on a verdict. A regressed batch is bisected by unit (a
+  `Move.unit` — a lockstep group — never splits), each probe re-running only the
+  confirmed regressions; what passes is proven by the full gates and lands
+  (`partial`), each culprit is named with what it broke. Every exit that lands
+  nothing puts the files back and runs each updater's `sync` (npm: `bun
+  install` + `regen-generated`), so the installs match the files again. Design:
+  `research/2026-10-16-global-deps-upgrade-always-reaches-a-verdict.md`. The
+  runner takes a SELECTION of updaters: `./singularity
+  deps upgrade` with no updater moves every one behind one baseline
+  (receipt `deps-upgrade.json`); naming one moves only it
+  (`deps-upgrade-<updater>.json`, `--only` allowed). The `UpdaterDeclare` registry and the **Dependency upgrades
   automation** (`deps-upgrades`, a `tasks/automations` `defineAutomation`; its
   job `automation.deps-upgrades` runs on the schedule its automation config
   sets, weekly by default): ONE auto-started task covering every outdated

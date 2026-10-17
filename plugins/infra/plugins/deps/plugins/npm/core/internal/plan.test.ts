@@ -136,7 +136,7 @@ describe("planNpm", () => {
     { name: "srv-b", current: "18.3.0-beta.17" },
   ];
 
-  test("a group moves as one, to the newest release every member agrees on", () => {
+  test("a group moves as one unit, to the newest release every member agrees on", () => {
     const srv = pkg("18.4.0-beta.1", {
       "18.3.0-beta.17": OLD,
       "18.4.0-beta.1": OLD,
@@ -153,9 +153,19 @@ describe("planNpm", () => {
       }),
     );
     expect(plan.moves).toEqual([
-      { name: "cli", from: "18.3.0", to: "18.4.0" },
-      { name: "srv-a", from: "18.3.0-beta.17", to: "18.4.0-beta.1" },
-      { name: "srv-b", from: "18.3.0-beta.17", to: "18.4.0-beta.1" },
+      { name: "cli", from: "18.3.0", to: "18.4.0", unit: "cli" },
+      {
+        name: "srv-a",
+        from: "18.3.0-beta.17",
+        to: "18.4.0-beta.1",
+        unit: "cli",
+      },
+      {
+        name: "srv-b",
+        from: "18.3.0-beta.17",
+        to: "18.4.0-beta.1",
+        unit: "cli",
+      },
     ]);
   });
 

@@ -52,7 +52,7 @@ export function outdatedSections(batch: readonly OutdatedUpdater[]): string {
  * commits as the Dependency upgrades config's `prompt`. Fixed steps: the agent
  * never improvises the gate, it runs the one command that implements it.
  * `{{pushPolicy}}` is what the automation's Push setting allows, scoped by
- * step 2 to an `upgraded` verdict and an `ok` build.
+ * step 2 to an `upgraded` or `partial` verdict and an `ok` build.
  */
 export const DEPS_UPGRADE_PROMPT = `Newer releases are available (seen on main by the Dependency upgrades automation):
 
@@ -60,23 +60,27 @@ export const DEPS_UPGRADE_PROMPT = `Newer releases are available (seen on main b
 
 Move this worktree to them, all in this one task. You own proving it works.
 
-1. Run \`./singularity deps upgrade\` (in the background — it runs the full check and test suites twice).
-   With no updater named it moves EVERY updater together, behind one baseline and one candidate run: it compares
-   every check, test and the moved inputs' smoke tests on the current releases against the new ones, and writes its
-   verdict to \`deps-upgrade.json\` in this worktree's data dir (the command prints the path).
+1. Run \`./singularity deps upgrade\` (in the background — it runs the full check and test suites at least twice).
+   With no updater named it moves EVERY updater together, behind one baseline: it compares every check, test and
+   the moved inputs' smoke tests on the current releases against the new ones. When something regresses it narrows
+   the batch down on its own (a lockstep group is never split), keeps every release that passes, and names each
+   release responsible. Its verdict is in \`deps-upgrade.json\` in this worktree's data dir (the command prints the
+   path): \`landed\`, \`culprits\` (each with what it broke), \`untested\`, and \`blind\` (what already fails without
+   any upgrade — file it with \`add_task\`, it is not this task's to fix).
 
-2. Verdict \`upgraded\`: run \`./singularity build\` and confirm \`build-status.json\` says \`ok\`. Then:
+2. Verdict \`upgraded\` or \`partial\`: the files now hold exactly the \`landed\` releases. Run \`./singularity build\`
+   and confirm \`build-status.json\` says \`ok\`. Then:
    {{pushPolicy}}
-   A push's message names the moves: \`chore(deps): <updater> <name> <from> → <to>, …\`. Any authorization to push
-   covers the lock moves and any fix or hold you made for them, nothing else.
+   A push's message names the landed moves: \`chore(deps): <updater> <name> <from> → <to>, …\`. Any authorization to
+   push covers the lock moves and any fix or hold you made for them, nothing else. On \`partial\`, go on to step 3
+   for the culprits after pushing; \`untested\` releases are left to the next upgrade.
 
-3. Verdict \`regressed\`: every lock was put back. Find the release responsible — one updater at a time
-   (\`./singularity deps upgrade <updater>\`), then one input at a time within it
-   (\`./singularity deps upgrade <updater> --only <name>\`). For that release:
+3. Each culprit (verdict \`partial\` or \`regressed\`; on \`regressed\` every file was put back):
    - If the bug is ours (code relying on old behavior), fix it.
    - If it is upstream, find or file the upstream issue, then add a hold for that release in that updater's holds
      file (listed above) with the reason and the issue URL.
-   Then run \`./singularity deps upgrade\` again over everything, and go back to step 2 on its verdict.
+   - If it breaks only without another release it depends on, declare the two as one lockstep group.
+   Then run \`./singularity deps upgrade\` again, and go back to step 2 on its verdict.
 
 4. Verdict \`current\`: nothing to do. Everything is already on its latest release.
 
@@ -87,5 +91,6 @@ hold and let the upgrade move it. A hold you add or renew always carries a reaso
 days out (\`npm\` holds live in the \`dependencyPolicy\` of the package.json that declares the dependency); once it
 expires the updater stops honouring it.
 
-If you cannot reach a clear verdict (the command itself fails, a regression you cannot attribute, a flaky gate that
-never settles), do NOT push: raise a flag describing what you saw.`;
+If you cannot reach a clear verdict (verdict \`aborted\`: the command itself failed, its \`error\` says why; a
+regression you cannot attribute; a flaky gate that never settles), do NOT push: raise a flag describing what you
+saw.`;

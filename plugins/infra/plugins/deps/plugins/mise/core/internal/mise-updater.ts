@@ -196,6 +196,10 @@ export const miseUpdater: Updater = {
     }
   },
 
+  // Nothing to undo: `apply` installs side by side and the shims read
+  // `mise.lock`, which the runner has already put back.
+  sync: async () => {},
+
   smoke: async (_root, moves) =>
     TOOLS.filter((t) => moves.some((m) => m.name === t.name)).flatMap(
       (t) => t.smoke,

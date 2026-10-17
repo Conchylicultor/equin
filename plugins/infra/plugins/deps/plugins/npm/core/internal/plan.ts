@@ -209,7 +209,12 @@ export function planNpm(input: PlanInput): Plan {
         continue;
       }
       if (to !== from) {
-        moves.push({ name: m, from, to });
+        // A component lands whole: the runner never splits a unit.
+        moves.push(
+          members.length > 1
+            ? { name: m, from, to, unit: members[0]! }
+            : { name: m, from, to },
+        );
         outdated.push({ name: m, current: from, latest: to });
       }
       if (order(newestAllowed, to) > 0) {
