@@ -104,7 +104,7 @@ function ToolDetailBody({ tool }: { tool: McpCatalogTool }): ReactElement {
       <SectionCard
         title="Description"
         defaultOpen
-        actions={<CopyButton text={tool.description} title="Copy" />}
+        actions={<CopyButton text={tool.description} tooltip="Copy" />}
       >
         <Stack gap="sm">
           <Markdown>{tool.description}</Markdown>
@@ -133,7 +133,7 @@ function ToolDetailBody({ tool }: { tool: McpCatalogTool }): ReactElement {
 
       <SectionCard
         title="Input schema (as tools/list sends it)"
-        actions={<CopyButton text={schema} title="Copy" />}
+        actions={<CopyButton text={schema} tooltip="Copy" />}
       >
         <HighlightedCode code={schema} lang="json" />
       </SectionCard>
