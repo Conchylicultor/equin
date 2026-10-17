@@ -143,7 +143,7 @@ export function ExhibitDetail({
               </Text>
               <CopyButton
                 text={exhibit.id}
-                title="Copy exhibit id"
+                tooltip="Copy exhibit id"
                 aspect="inline"
               />
             </Stack>
