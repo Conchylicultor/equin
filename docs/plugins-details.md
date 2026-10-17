@@ -34481,9 +34481,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `Grid`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
+            - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
               - `apps` ×14
-              - `primitives` ×9
+              - `primitives` ×8
               - `ui` ×3
               - `conversations` ×2
               - `debug` ×2
@@ -34828,10 +34828,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×21
               - `conversations` ×21
-              - `primitives` ×17
+              - `primitives` ×18
               - `debug` ×10
               - `page` ×7
               - `tasks` ×6
@@ -38642,7 +38642,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/badge.Badge`
               - `primitives/css/cluster.Cluster`
-              - `primitives/css/grid.Grid`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.closestOverlayPanel`
