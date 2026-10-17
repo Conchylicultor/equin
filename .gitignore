@@ -35,6 +35,11 @@ dist.stats.html
 # config-git-layer-gen.ts); committing it would make every config edit a second,
 # conflicting generated diff.
 /.generated/
+# Its location before 25df26786e moved it there. Older checkouts can still hold
+# an untracked copy from a pre-move build; ignored so a push cannot commit it
+# (e69c28d9e9 did, and main's build — which deletes it — then failed its
+# read-only-checkout guard). Drop with the rmSync in config-git-layer-gen.ts.
+/plugins/config_v2/web/internal/git-layer.generated.ts
 
 # Composition build-gating: per-worktree filtered registries emitted only by
 # `./singularity build --hermetic --composition <name…>` (never committed;
