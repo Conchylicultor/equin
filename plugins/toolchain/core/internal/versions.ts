@@ -1,4 +1,9 @@
-import { HOLDS, TOOLS } from "./tools";
+import {
+  heldBy,
+  holdProblems,
+  type Hold,
+} from "@plugins/infra/plugins/deps/plugins/updates/core";
+import { HOLDS_FILE, TOOLS } from "./tools";
 
 /**
  * An exact release as mise names one: dot-separated numbers, the last of which
@@ -143,6 +148,10 @@ export function lockProblems(
   requests: ReadonlyMap<string, string>,
   locked: ReadonlyMap<string, readonly string[]>,
   opts: {
+    /** The holds to honour: `HOLDS`, which tests replace. */
+    holds: readonly Hold[];
+    /** `YYYY-MM-DD` (`utcDay`): a hold whose `until` is before it is inert. */
+    today: string;
     /**
      * Tools the caller is about to lock for the first time (the upgrade, when
      * `mise.toml` declares a tool the lock does not record yet): "no version
@@ -150,9 +159,9 @@ export function lockProblems(
      * pushed lock records every tool.
      */
     unlockedAllowed?: ReadonlySet<string>;
-  } = {},
+  },
 ): string[] {
-  const problems: string[] = [];
+  const problems = holdProblems(opts.holds, opts.today, HOLDS_FILE);
   const known = new Set(TOOLS.map((t) => t.name));
   for (const [tool, request] of requests) {
     if (!known.has(tool))
@@ -195,10 +204,10 @@ export function lockProblems(
       problems.push(
         `mise.lock records ${tool} ${version}, below its floor ${floor.version}: ${floor.reason}`,
       );
-    const hold = HOLDS.find((h) => h.tool === tool && h.version === version);
+    const hold = heldBy(opts.holds, tool, version, opts.today, compareVersions);
     if (hold !== undefined)
       problems.push(
-        `mise.lock records ${tool} ${version}, which is held: ${hold.reason} (${hold.issue})`,
+        `mise.lock records ${tool} ${version}, which is held until ${hold.until}: ${hold.reason}${hold.issue === undefined ? "" : ` (${hold.issue})`}`,
       );
   }
   for (const [tool] of locked) {
@@ -212,15 +221,18 @@ export function lockProblems(
 
 /**
  * The release an upgrade should move `tool` to: the newest exact release in
- * `available` that is not held. `null` when every release is held.
+ * `available` that no hold honoured on `today` covers. `null` when every
+ * release is held.
  */
 export function upgradeTarget(
   tool: string,
   available: readonly string[],
+  holds: readonly Hold[],
+  today: string,
 ): string | null {
   const candidates = available
     .filter(isExactRelease)
-    .filter((v) => !HOLDS.some((h) => h.tool === tool && h.version === v))
+    .filter((v) => heldBy(holds, tool, v, today, compareVersions) === undefined)
     .sort(compareVersions);
   return candidates.at(-1) ?? null;
 }

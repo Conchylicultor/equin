@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { planNpm, type Packument, type PlanInput } from "./plan";
-import type { Group, Hold } from "./policy";
+import type { Hold } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import type { Group } from "./policy";
 
 const OLD = "2026-01-01T00:00:00.000Z";
 const CUTOFF = "2026-10-13T00:00:00.000Z";
@@ -64,7 +65,7 @@ describe("planNpm", () => {
 
   test("a held release is reported HELD, the move stops below it", () => {
     const hold: Hold = {
-      packages: ["react"],
+      names: ["react"],
       below: "20.0.0",
       reason: "waits on x",
       until: "2026-12-01",
@@ -101,7 +102,7 @@ describe("planNpm", () => {
         ]),
         holds: [
           {
-            packages: ["react"],
+            names: ["react"],
             below: "20.0.0",
             reason: "r",
             until: "2026-10-15",

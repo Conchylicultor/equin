@@ -2,12 +2,11 @@
 // dependencies it constrains. It replaces the exact pin: a spec is always a
 // range, the lock is what fixes a version, and the npm updater is what moves the
 // lock — so the only things left to declare are the two reasons a move must be
-// shaped (a lockstep group) or waited for (a hold).
+// shaped (a lockstep group) or waited for (a hold — the shared bounded `Hold` of
+// infra/deps/updates, the same model the mise and uv updaters use).
 
 import { z } from "zod";
-
-/** The longest a hold may be set for, from the day it is set or renewed. */
-export const HOLD_MAX_DAYS = 90;
+import { HoldSchema } from "@plugins/infra/plugins/deps/plugins/updates/core";
 
 /** The package.json key. */
 export const POLICY_KEY = "dependencyPolicy";
@@ -38,30 +37,6 @@ export const GroupSchema = z
   .strict();
 export type Group = z.infer<typeof GroupSchema>;
 
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
-
-/**
- * Releases not to land yet: one broken `version`, or everything from `below` up.
- * Always bounded: `until` is a day at most {@link HOLD_MAX_DAYS} out when the
- * hold is set (the `deps-npm:policy` check), and on that day the hold goes
- * inert — the updater proposes the move again and the gates decide. Keeping it
- * longer is a renewal: a new `until` and reason, in a reviewed diff.
- */
-export const HoldSchema = z
-  .object({
-    packages: z.array(z.string().min(1)).min(1),
-    version: z.string().min(1).optional(),
-    below: z.string().min(1).optional(),
-    reason: z.string().min(1),
-    issue: z.string().url().optional(),
-    until: z.string().regex(DAY, "a YYYY-MM-DD day"),
-  })
-  .strict()
-  .refine((h) => (h.version === undefined) !== (h.below === undefined), {
-    message: "a hold names exactly one of `version` or `below`",
-  });
-export type Hold = z.infer<typeof HoldSchema>;
-
 export const PolicySchema = z
   .object({
     groups: z.array(GroupSchema).optional(),
@@ -69,19 +44,3 @@ export const PolicySchema = z
   })
   .strict();
 export type Policy = z.infer<typeof PolicySchema>;
-
-/** `YYYY-MM-DD` of `now`, UTC — the day a hold's `until` is compared with. */
-export function utcDay(now: Date): string {
-  return now.toISOString().slice(0, 10);
-}
-
-/** Whether `hold` is honoured on `today`: through its `until` day, inclusive. */
-export function holdActive(hold: Hold, today: string): boolean {
-  return hold.until >= today;
-}
-
-/** The latest `until` a hold set or renewed on `today` may carry. */
-export function latestUntil(today: string): string {
-  const t = Date.parse(`${today}T00:00:00Z`) + HOLD_MAX_DAYS * 86_400_000;
-  return new Date(t).toISOString().slice(0, 10);
-}

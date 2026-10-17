@@ -8,8 +8,8 @@ import {
   policyProblems,
   readWorkspace,
   unrangedSpecs,
-  utcDay,
 } from "@plugins/infra/plugins/deps/plugins/npm/core";
+import { utcDay } from "@plugins/infra/plugins/deps/plugins/updates/core";
 
 function verdict(problems: readonly string[], hint: string): CheckResult {
   return problems.length === 0

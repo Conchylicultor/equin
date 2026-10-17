@@ -14,7 +14,9 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
+import { utcDay } from "@plugins/infra/plugins/deps/plugins/updates/core";
 import {
+  HOLDS,
   TOOLS,
   lockProblems,
   parseMiseLock,
@@ -36,7 +38,7 @@ const check: Check = {
   id: "toolchain:resolved",
   cacheSignature: () => null,
   description:
-    "mise.toml requests every tool at latest, mise.lock records one exact release per tool within its floor and holds, and the runtime resolves each tool to that release — inside the checkout, and from outside any checkout under the toolchain pin",
+    "mise.toml requests every tool at latest, mise.lock records one exact release per tool within its floor and active holds, every hold bounded to 90 days, and the runtime resolves each tool to that release — inside the checkout, and from outside any checkout under the toolchain pin",
   async run(): Promise<CheckResult> {
     const root = await getWorktreeRoot();
     const requests = parseMiseToolRequests(
@@ -56,7 +58,10 @@ const check: Check = {
     }
     const locked = parseMiseLock(lockText);
 
-    const problems = lockProblems(requests, locked);
+    const problems = lockProblems(requests, locked, {
+      holds: HOLDS,
+      today: utcDay(new Date()),
+    });
     if (problems.length > 0) {
       return {
         ok: false,

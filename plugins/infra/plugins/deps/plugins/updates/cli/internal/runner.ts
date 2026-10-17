@@ -20,6 +20,7 @@ import {
 } from "./bisect";
 import type { Gates } from "./gates";
 import type { Move, Updater, UpdaterSmoke } from "../../core/internal/updater";
+import { assertHoldsBounded } from "../../core/internal/hold";
 
 /**
  * `running` until the end, and only then: every run ends on one of the others.
@@ -273,6 +274,7 @@ async function upgrade(args: {
   // Every updater's moves, planned before any gate runs.
   const planned: Updater[] = [];
   for (const { updater, only } of selection) {
+    await assertHoldsBounded(updater, root, new Date());
     if (updater.prepare !== undefined) {
       receipt.notes[updater.id] = { ...(await updater.prepare(root, log)) };
       save();

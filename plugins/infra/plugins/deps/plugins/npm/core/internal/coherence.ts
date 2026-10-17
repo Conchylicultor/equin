@@ -2,7 +2,8 @@
 // workspace read: specs are ranges, policies are well-formed and bounded, and
 // every lockstep group resolves to versions its members agree on.
 
-import { latestUntil, type Agree } from "./policy";
+import { holdProblems } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import type { Agree } from "./policy";
 import { versionParts } from "./spec";
 import type { Declared, DeclaredPolicy, Lock, PolicyError } from "./workspace";
 
@@ -18,8 +19,8 @@ export function unrangedSpecs(declared: readonly Declared[]): string[] {
 }
 
 /**
- * Policy problems: unparsable policies, a hold set beyond {@link latestUntil}
- * of `today`, a group or hold naming a package nothing declares, two groups
+ * Policy problems: unparsable policies, a hold set past its bound
+ * (`holdProblems`), a group or hold naming a package nothing declares, two groups
  * with one id.
  */
 export function policyProblems(args: {
@@ -34,7 +35,6 @@ export function policyProblems(args: {
     (e) => `${e.manifest}: dependencyPolicy does not parse — ${e.message}`,
   );
   const ids = new Map<string, string>();
-  const bound = latestUntil(today);
   for (const { manifest, policy } of policies) {
     for (const g of policy.groups ?? []) {
       const seen = ids.get(g.id);
@@ -49,12 +49,9 @@ export function policyProblems(args: {
             `${manifest}: group "${g.id}" names ${m}, which no package.json declares`,
           );
     }
+    problems.push(...holdProblems(policy.holds ?? [], today, manifest));
     for (const h of policy.holds ?? []) {
-      if (h.until > bound)
-        problems.push(
-          `${manifest}: the hold on ${h.packages.join(", ")} lasts until ${h.until}, past ${bound} — a hold is set for at most 90 days; renew it when it lapses`,
-        );
-      for (const p of h.packages)
+      for (const p of h.names)
         if (!names.has(p))
           problems.push(
             `${manifest}: a hold names ${p}, which no package.json declares`,

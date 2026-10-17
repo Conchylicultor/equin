@@ -4,11 +4,14 @@
 // (blocked). Every newer release ends up in exactly one of those three, so
 // nothing newer is ever silently skipped.
 
-import type {
-  Move,
-  Outdated,
+import {
+  heldBy,
+  heldWaiting,
+  type Hold,
+  type Move,
+  type Outdated,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
-import { holdActive, type Agree, type Group, type Hold } from "./policy";
+import type { Agree, Group } from "./policy";
 import { isPrerelease, versionParts } from "./spec";
 
 /** What the registry says about one package. */
@@ -67,22 +70,6 @@ function candidates(pkg: Packument, current: string, cutoff: string): string[] {
     .map(([v]) => v);
   if (!out.includes(current)) out.push(current);
   return out.sort((a, b) => order(b, a));
-}
-
-function heldBy(
-  name: string,
-  version: string,
-  holds: readonly Hold[],
-  today: string,
-): Hold | undefined {
-  return holds.find(
-    (h) =>
-      holdActive(h, today) &&
-      h.packages.includes(name) &&
-      (h.version !== undefined
-        ? h.version === version
-        : order(version, h.below!) >= 0),
-  );
 }
 
 function agreeKey(version: string, agree: Agree): string {
@@ -181,7 +168,9 @@ export function planNpm(input: PlanInput): Plan {
       all.set(m, c);
       allowed.set(
         m,
-        c.filter((v) => v === current.get(m) || !heldBy(m, v, holds, today)),
+        c.filter(
+          (v) => v === current.get(m) || !heldBy(holds, m, v, today, order),
+        ),
       );
     }
     const chosen = assign(members, allowed, groups);
@@ -233,12 +222,12 @@ export function planNpm(input: PlanInput): Plan {
           },
         });
       } else if (order(newest, newestAllowed) > 0) {
-        const hold = heldBy(m, newest, holds, today)!;
+        const hold = heldBy(holds, m, newest, today, order)!;
         outdated.push({
           name: m,
           current: from,
           latest: newest,
-          waiting: { kind: "held", reason: hold.reason, until: hold.until },
+          waiting: heldWaiting(hold),
         });
       }
     }

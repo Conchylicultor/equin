@@ -65,7 +65,7 @@ describe("policyProblems", () => {
         {
           manifest: "package.json",
           policy: {
-            holds: [{ packages: ["a"], below: "2.0.0", reason: "r", until }],
+            holds: [{ names: ["a"], below: "2.0.0", reason: "r", until }],
           },
         },
       ],

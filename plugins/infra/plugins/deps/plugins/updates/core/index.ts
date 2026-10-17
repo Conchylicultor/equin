@@ -6,10 +6,21 @@ export type {
   Outdated,
   OutdatedWaiting,
   Updater,
-  UpdaterHold,
   UpdaterSmoke,
 } from "./internal/updater";
 export { isActionable } from "./internal/updater";
+export type { Hold } from "./internal/hold";
+export {
+  HOLD_MAX_DAYS,
+  HoldSchema,
+  assertHoldsBounded,
+  heldBy,
+  heldWaiting,
+  holdActive,
+  holdProblems,
+  latestUntil,
+  utcDay,
+} from "./internal/hold";
 export type { GateResult } from "./internal/compare";
 export type { OutdatedUpdater } from "./internal/upgrade-prompt";
 export {

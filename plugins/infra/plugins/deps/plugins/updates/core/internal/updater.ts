@@ -8,6 +8,8 @@
  * tests the moved things must pass.
  */
 
+import type { Hold } from "./hold";
+
 /** One command a moved input must still pass, beyond the check and test suites. */
 export interface UpdaterSmoke {
   /** Stable name — the identity a failure is compared by, before and after. */
@@ -65,15 +67,6 @@ export interface Move {
   unit?: string;
 }
 
-/** A release not to move to, with the upstream issue that makes it broken. */
-export interface UpdaterHold {
-  name: string;
-  version: string;
-  reason: string;
-  /** Upstream issue or report URL. */
-  issue: string;
-}
-
 export interface Updater {
   /** Stable id: `./singularity deps upgrade <id>`, the receipt name, the task author. */
   readonly id: string;
@@ -120,9 +113,14 @@ export interface Updater {
   sync(root: string, log: (line: string) => void): Promise<void>;
   /** The smoke tests the moved inputs must pass, run before and after the move. */
   smoke(root: string, moves: readonly Move[]): Promise<readonly UpdaterSmoke[]>;
-  /** Where the agent adds a hold (a release skipped on purpose) for this updater. */
+  /** Where this updater's holds (releases skipped on purpose) live, and what they are. */
   readonly holds: {
-    /** Repo-relative file holding them, or where to find them. */
+    /** Repo-relative file the agent adds a hold to, or where to find them. */
     readonly file: string;
+    /**
+     * Every hold declared, expired ones included. The runner and the detect job
+     * refuse a hold set past its bound ({@link holdProblems}) before planning.
+     */
+    read(root: string): Promise<readonly Hold[]>;
   };
 }

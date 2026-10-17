@@ -66,6 +66,10 @@ They only shape it.
 
 ### B. Holds: always a reason, always an expiry
 
+> Superseded for single-release holds by
+> [2026-10-17-global-deps-bounded-holds-every-updater.md](./2026-10-17-global-deps-bounded-holds-every-updater.md):
+> every hold of every updater (npm, mise, uv) now carries a bounded `until`.
+
 A hold means "do not land version ≥ X yet". Today's `UpdaterHold` (skip one
 named broken release, with an issue URL) stays as it is. It already expires on
 its own: it names a single version, so the next release moves past it.

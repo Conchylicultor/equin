@@ -2,13 +2,21 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import type {
-  Move,
-  Outdated,
-  Updater,
-  UpdaterHold,
-  UpdaterSmoke,
+import {
+  heldBy,
+  heldWaiting,
+  isActionable,
+  utcDay,
+  type Hold,
+  type Move,
+  type Outdated,
+  type Updater,
+  type UpdaterSmoke,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
+import {
+  UV_HOLDS,
+  UV_HOLDS_FILE,
+} from "@plugins/infra/plugins/deps/plugins/python/plugins/uv-updater/core";
 import { uvEnv } from "@plugins/infra/plugins/deps/plugins/python/deps";
 
 const MINUTE = 60_000;
@@ -20,24 +28,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * security fixes within days.
  */
 export const UV_COOLDOWN_DAYS = 3;
-
-/**
- * Releases not to move to, each with the upstream issue that makes it broken.
- * Added by the agent running a `uv` upgrade when a new release regresses
- * something that is not ours to fix; remove it once a newer release ships past
- * it. The updater never plans a move onto a held release. A CPython release is
- * held by the name {@link CPYTHON} (`{ name: "cpython", version: "3.15.0" }`).
- */
-export const UV_HOLDS: readonly UpdaterHold[] = [
-  {
-    name: "cpython",
-    version: "3.15.0",
-    reason:
-      "torch 2.14 ships no cp315 wheels, so `uv sync` of audio-analysis fails on CPython 3.15; cp315 wheels arrive with torch 2.15 (GA 2026-10-28)",
-    issue:
-      "https://dev-discuss.pytorch.org/t/notice-python-3-10-support-is-being-removed-from-pytorch-2-15-2-14-is-the-last-release-with-3-10-wheels/3440",
-  },
-];
 
 /**
  * The newest upload a resolution may use: the start of today (UTC) minus the
@@ -172,16 +162,19 @@ export function parseCpythonDownloads(json: string): CpythonDownload[] {
 
 /**
  * The newest CPython published on or before `cutoff` (an ISO instant from
- * {@link uvCutoff}) and not held, or `null` when none is.
+ * {@link uvCutoff}) that no hold in `holds` honoured on `today` covers, or
+ * `null` when none is. Pass no holds for the newest release outright.
  */
 export function newestCpython(
   downloads: readonly CpythonDownload[],
   cutoff: string,
+  holds: readonly Hold[],
+  today: string,
 ): string | null {
   let best: string | null = null;
   for (const d of downloads) {
     if (`${d.published}T00:00:00.000Z` > cutoff) continue;
-    if (isHeld(CPYTHON, d.version)) continue;
+    if (heldBy(holds, CPYTHON, d.version, today, compareReleases)) continue;
     if (best === null || isNewerRelease(d.version, best)) best = d.version;
   }
   return best;
@@ -242,24 +235,29 @@ async function uvLock(
  * equal numbers (a pre-release suffix aside) are not newer.
  */
 export function isNewerRelease(to: string, from: string): boolean {
+  return compareReleases(to, from) > 0;
+}
+
+/**
+ * The order {@link isNewerRelease} and a `below` hold measure by: negative
+ * when `a` is older. A version the numbers cannot order counts as newer.
+ */
+export function compareReleases(a: string, b: string): number {
   const nums = (v: string) =>
     (/^\d+(?:\.\d+)*/.exec(v)?.[0] ?? "")
       .split(".")
       .filter(Boolean)
       .map(Number);
-  const a = nums(to);
-  const b = nums(from);
-  if (a.length === 0 || b.length === 0) return true;
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const x = a[i] ?? 0;
-    const y = b[i] ?? 0;
-    if (x !== y) return x > y;
+  const x = nums(a);
+  const y = nums(b);
+  if (x.length === 0 || y.length === 0) return 1;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const p = x[i] ?? 0;
+    const q = y[i] ?? 0;
+    if (p !== q) return p - q;
   }
-  return false;
+  return 0;
 }
-
-const isHeld = (pkg: string, version: string): boolean =>
-  UV_HOLDS.some((h) => h.name === pkg && h.version === version);
 
 /** A move's name: `<plugin>:<package>`, e.g. `audio-analysis:numpy`. */
 const moveName = (project: UvProject, pkg: string): string =>
@@ -289,8 +287,12 @@ export const uvUpdater: Updater = {
     ]),
 
   async detect(root): Promise<Outdated[]> {
-    const cutoff = uvCutoff(new Date());
-    const cpython = newestCpython(await cpythonDownloads(root), cutoff);
+    const now = new Date();
+    const cutoff = uvCutoff(now);
+    const today = utcDay(now);
+    const downloads = await cpythonDownloads(root);
+    const cpython = newestCpython(downloads, cutoff, UV_HOLDS, today);
+    const newest = newestCpython(downloads, cutoff, [], today);
     const out: Outdated[] = [];
     for (const project of await uvProjects(root)) {
       const pinned = readFileSync(
@@ -303,6 +305,15 @@ export const uvUpdater: Updater = {
           current: pinned,
           latest: cpython,
         });
+      } else if (newest !== null && isNewerRelease(newest, pinned)) {
+        // Nothing to move to but a held release: listed, so a hold is never silent.
+        const hold = heldBy(UV_HOLDS, CPYTHON, newest, today, compareReleases)!;
+        out.push({
+          name: moveName(project, CPYTHON),
+          current: pinned,
+          latest: newest,
+          waiting: heldWaiting(hold),
+        });
       }
       const output = await uvLock(root, project, [
         "--upgrade",
@@ -311,11 +322,13 @@ export const uvUpdater: Updater = {
         cutoff,
       ]);
       for (const u of parseLockUpdates(output)) {
-        if (isHeld(u.pkg, u.to) || !isNewerRelease(u.to, u.from)) continue;
+        if (!isNewerRelease(u.to, u.from)) continue;
+        const hold = heldBy(UV_HOLDS, u.pkg, u.to, today, compareReleases);
         out.push({
           name: moveName(project, u.pkg),
           current: u.from,
           latest: u.to,
+          ...(hold === undefined ? {} : { waiting: heldWaiting(hold) }),
         });
       }
     }
@@ -336,6 +349,7 @@ export const uvUpdater: Updater = {
       }
     }
     return outdated
+      .filter(isActionable)
       .filter(
         (o) =>
           only === undefined ||
@@ -407,6 +421,7 @@ export const uvUpdater: Updater = {
   },
 
   holds: {
-    file: "plugins/infra/plugins/deps/plugins/python/plugins/uv-updater/server/internal/uv-updater.ts",
+    file: UV_HOLDS_FILE,
+    read: async () => UV_HOLDS,
   },
 };

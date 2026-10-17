@@ -8,6 +8,8 @@
  * tool means saying how to probe and smoke-test it.
  */
 
+import type { Hold } from "@plugins/infra/plugins/deps/plugins/updates/core";
+
 /** One command a new version of a tool must still pass. Run from the repo root. */
 export interface ToolSmoke {
   /** Stable name — the identity a failure is compared by, before and after. */
@@ -133,24 +135,20 @@ export const TOOLS: readonly ToolSpec[] = [
   },
 ];
 
-/**
- * A release not to move to, with the upstream issue that makes it broken.
- *
- * Added by the agent running a toolchain upgrade when a new release regresses
- * something that is not ours to fix. `toolchain upgrade` skips a held release
- * (it takes the newest release that is not held), and `toolchain:resolved`
- * fails if the lock records one. Remove the entry once it no longer matters —
- * a newer release has shipped past it.
- */
-export interface ToolHold {
-  tool: string;
-  version: string;
-  reason: string;
-  /** Upstream issue or report URL. */
-  issue: string;
-}
+/** Where {@link HOLDS} is declared, named in a hold's messages. */
+export const HOLDS_FILE = "plugins/toolchain/core/internal/tools.ts";
 
-export const HOLDS: readonly ToolHold[] = [];
+/**
+ * Releases not to move to, as the shared bounded `Hold` of infra/deps/updates
+ * (`names` are tool names). Added by the agent running a toolchain upgrade when
+ * a new release regresses something that is not ours to fix, with the reason,
+ * the upstream issue and an `until` at most 90 days out. While active,
+ * `toolchain upgrade` skips a held release, detection lists it as HELD and
+ * `toolchain:resolved` fails if the lock records it; the day after `until` it is
+ * inert. Delete it once it no longer matters; renew it (a new `until` and
+ * reason) only when it still does.
+ */
+export const HOLDS: readonly Hold[] = [];
 
 /** The task category the upgrade tasks are filed under. */
 export const TOOLCHAIN_CATEGORY_ID = "toolchain";

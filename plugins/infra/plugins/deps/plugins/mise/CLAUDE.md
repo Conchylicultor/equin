@@ -10,9 +10,17 @@
   - Uses: `infra/deps/updates.UpdaterDeclare`
 - Core:
   - Uses:
+    - `infra/deps/updates.heldBy`
+    - `infra/deps/updates.heldWaiting`
+    - `infra/deps/updates.Move`
+    - `infra/deps/updates.Outdated`
+    - `infra/deps/updates.Updater`
+    - `infra/deps/updates.utcDay`
     - `infra/spawn.spawnCaptured`
     - `toolchain.addLockedTool`
+    - `toolchain.compareVersions`
     - `toolchain.HOLDS`
+    - `toolchain.HOLDS_FILE`
     - `toolchain.isExactRelease`
     - `toolchain.lockProblems`
     - `toolchain.miseBin`

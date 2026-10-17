@@ -3,7 +3,6 @@
 // `deps-npm:*` checks (core-only) and the updater share one reading of the
 // workspace. Never import it from `web/`.
 
-export { utcDay } from "./internal/policy";
 export { rangeAt } from "./internal/spec";
 export type { Workspace } from "./internal/workspace";
 export {

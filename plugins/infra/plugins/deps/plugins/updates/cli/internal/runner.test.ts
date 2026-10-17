@@ -6,6 +6,7 @@ import type { GateResult } from "../../core/internal/compare";
 import type { Gates } from "./gates";
 import { runUpgrade } from "./runner";
 import type { Move, Updater } from "../../core/internal/updater";
+import type { Hold } from "../../core/internal/hold";
 
 let root: string;
 let syncs: string[];
@@ -17,7 +18,7 @@ beforeEach(() => {
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 /** An updater that moves `pkg` in `fake.lock` from 1 to 2 (or nothing). */
-function fakeUpdater(moves: Move[]): Updater {
+function fakeUpdater(moves: Move[], holds: readonly Hold[] = []): Updater {
   return {
     id: "fake",
     description: "a test updater",
@@ -33,7 +34,7 @@ function fakeUpdater(moves: Move[]): Updater {
       syncs.push("fake");
     },
     smoke: async () => [{ name: "fake smoke", argv: ["true"], timeoutMs: 1 }],
-    holds: { file: "fake.ts" },
+    holds: { file: "fake.ts", read: async () => holds },
   };
 }
 
@@ -175,6 +176,27 @@ describe("runUpgrade verdicts", () => {
     expect(syncs).toEqual([]);
   });
 
+  test("a hold set past its bound aborts before anything is planned", async () => {
+    let planned = false;
+    const updater: Updater = {
+      ...fakeUpdater(PKG_MOVE, [
+        { names: ["pkg"], version: "2", reason: "r", until: "2999-01-01" },
+      ]),
+      plan: async () => {
+        planned = true;
+        return PKG_MOVE;
+      },
+    };
+    const gates = fakeGates({ before: clean, after: clean });
+    const receipt = await run(updater, gates);
+    expect(receipt.verdict).toBe("aborted");
+    expect(receipt.error).toContain(
+      "fake.ts: the hold on pkg lasts until 2999-01-01",
+    );
+    expect(planned).toBe(false);
+    expect(gates.calls).toEqual([]);
+  });
+
   test("an apply that crashes is a regression with a verdict, not an abort", async () => {
     const updater: Updater = {
       ...fakeUpdater(PKG_MOVE),
@@ -280,7 +302,7 @@ describe("runUpgrade narrows a regressed batch down", () => {
         syncs.push("many");
       },
       smoke: async () => [],
-      holds: { file: "many.ts" },
+      holds: { file: "many.ts", read: async () => [] },
     };
   }
 

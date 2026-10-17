@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { Hold } from "@plugins/infra/plugins/deps/plugins/updates/core";
 import {
   addLockedTool,
   compareVersions,
@@ -79,6 +80,15 @@ describe("parseMiseToolRequests", () => {
   });
 });
 
+const TODAY = "2026-10-17";
+const NO_HOLDS = { holds: [], today: TODAY };
+const bunHold = (until: string): Hold => ({
+  names: ["bun"],
+  version: "1.4.2",
+  reason: "broken",
+  until,
+});
+
 describe("lockProblems", () => {
   const all = (request: string) =>
     new Map(["bun", "go", "tmux", "rust", "uv"].map((t) => [t, request]));
@@ -91,17 +101,19 @@ describe("lockProblems", () => {
   ]);
 
   test("a sound pair has no problems", () => {
-    expect(lockProblems(all("latest"), locked)).toEqual([]);
+    expect(lockProblems(all("latest"), locked, NO_HOLDS)).toEqual([]);
   });
   test("a pin in mise.toml is a problem", () => {
     const requests = all("latest");
     requests.set("go", "1.24");
-    expect(lockProblems(requests, locked).join("\n")).toContain('go "1.24"');
+    expect(lockProblems(requests, locked, NO_HOLDS).join("\n")).toContain(
+      'go "1.24"',
+    );
   });
   test("a locked version below its floor is a problem", () => {
     const below = new Map(locked);
     below.set("bun", ["1.3.13"]);
-    expect(lockProblems(all("latest"), below).join("\n")).toContain(
+    expect(lockProblems(all("latest"), below, NO_HOLDS).join("\n")).toContain(
       "below its floor 1.4.0",
     );
   });
@@ -110,16 +122,19 @@ describe("lockProblems", () => {
     bad.delete("tmux");
     bad.set("go", ["1.24.13", "1.27.1"]);
     bad.set("rust", ["stable"]);
-    expect(lockProblems(all("latest"), bad)).toHaveLength(3);
+    expect(lockProblems(all("latest"), bad, NO_HOLDS)).toHaveLength(3);
   });
   test("a newly declared tool may be unlocked only when the caller allows it", () => {
     const fresh = new Map(locked);
     fresh.delete("uv");
-    expect(lockProblems(all("latest"), fresh).join("\n")).toContain(
+    expect(lockProblems(all("latest"), fresh, NO_HOLDS).join("\n")).toContain(
       "mise.lock records no version for uv",
     );
     expect(
-      lockProblems(all("latest"), fresh, { unlockedAllowed: new Set(["uv"]) }),
+      lockProblems(all("latest"), fresh, {
+        ...NO_HOLDS,
+        unlockedAllowed: new Set(["uv"]),
+      }),
     ).toEqual([]);
   });
   test("a declared tool the plugin does not list is a problem", () => {
@@ -127,9 +142,32 @@ describe("lockProblems", () => {
     requests.set("node", "latest");
     const withNode = new Map(locked);
     withNode.set("node", ["22.1.0"]);
-    expect(lockProblems(requests, withNode).join("\n")).toContain(
+    expect(lockProblems(requests, withNode, NO_HOLDS).join("\n")).toContain(
       '"node", which plugins/toolchain/core does not list',
     );
+  });
+
+  test("a locked release under an active hold is a problem; an expired hold is inert", () => {
+    expect(
+      lockProblems(all("latest"), locked, {
+        holds: [bunHold("2026-11-01")],
+        today: TODAY,
+      }).join("\n"),
+    ).toContain("bun 1.4.2, which is held until 2026-11-01: broken");
+    expect(
+      lockProblems(all("latest"), locked, {
+        holds: [bunHold("2026-10-16")],
+        today: TODAY,
+      }),
+    ).toEqual([]);
+  });
+  test("a hold set past 90 days is a problem", () => {
+    expect(
+      lockProblems(all("latest"), locked, {
+        holds: [bunHold("2027-06-01")],
+        today: TODAY,
+      }).join("\n"),
+    ).toContain("a hold is set for at most 90 days");
   });
 });
 
@@ -149,10 +187,24 @@ describe("addLockedTool", () => {
 describe("upgradeTarget", () => {
   test("takes the newest exact release, ignoring channels and prereleases", () => {
     expect(
-      upgradeTarget("bun", ["1.4.1", "1.4.2", "1.5.0-canary.1", "canary"]),
+      upgradeTarget(
+        "bun",
+        ["1.4.1", "1.4.2", "1.5.0-canary.1", "canary"],
+        [],
+        TODAY,
+      ),
+    ).toBe("1.4.2");
+  });
+  test("skips a release under an active hold, not under an expired one", () => {
+    const available = ["1.4.1", "1.4.2"];
+    expect(
+      upgradeTarget("bun", available, [bunHold("2026-11-01")], TODAY),
+    ).toBe("1.4.1");
+    expect(
+      upgradeTarget("bun", available, [bunHold("2026-10-16")], TODAY),
     ).toBe("1.4.2");
   });
   test("nothing to take is null", () => {
-    expect(upgradeTarget("bun", ["canary"])).toBeNull();
+    expect(upgradeTarget("bun", ["canary"], [], TODAY)).toBeNull();
   });
 });

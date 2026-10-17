@@ -52,18 +52,27 @@ delete it once none can be open.
 - Core:
   - Exports (types):
     - `GateResult`
+    - `Hold`
     - `Move`
     - `Outdated`
     - `OutdatedUpdater`
     - `OutdatedWaiting`
     - `Updater`
-    - `UpdaterHold`
     - `UpdaterSmoke`
   - Exports (values):
+    - `assertHoldsBounded`
     - `DEPS_UPGRADE_PROMPT`
+    - `heldBy`
+    - `heldWaiting`
+    - `HOLD_MAX_DAYS`
+    - `holdActive`
+    - `holdProblems`
+    - `HoldSchema`
     - `isActionable`
+    - `latestUntil`
     - `outdatedSections`
     - `upgradeTaskTitle`
+    - `utcDay`
 - Cli:
   - Exports (values): `upgradeThisWorktree`
 

@@ -3,8 +3,10 @@ import { join } from "node:path";
 import { z } from "zod";
 import {
   HOLDS,
+  HOLDS_FILE,
   TOOLS,
   addLockedTool,
+  compareVersions,
   isExactRelease,
   lockProblems,
   parseMiseLock,
@@ -12,10 +14,13 @@ import {
   setLockedVersion,
   upgradeTarget,
 } from "@plugins/toolchain/core";
-import type {
-  Move,
-  Outdated,
-  Updater,
+import {
+  heldBy,
+  heldWaiting,
+  utcDay,
+  type Move,
+  type Outdated,
+  type Updater,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
 import { mise } from "./mise";
 
@@ -68,6 +73,8 @@ function assertSound(root: string): {
   const locked = parseMiseLock(readFileSync(join(root, "mise.lock"), "utf8"));
   const fresh = newlyDeclared(root, locked);
   const problems = lockProblems(readRequests(root), locked, {
+    holds: HOLDS,
+    today: utcDay(new Date()),
     unlockedAllowed: fresh,
   });
   if (problems.length > 0) {
@@ -106,8 +113,8 @@ export const miseUpdater: Updater = {
     return { miseBefore: before, miseAfter: after };
   },
 
-  // A held latest release is not "outdated": there is nothing newer to move
-  // to past it until upstream ships again.
+  // A held latest release is still reported, as HELD: a hold gates landing,
+  // never seeing.
   //
   // mise itself is reported too. It has no lock entry, so no tool move ever
   // says it is behind — and `prepare` (its self-update) only runs inside an
@@ -123,19 +130,20 @@ export const miseUpdater: Updater = {
         ? [{ name: "mise", current: running, latest: self.latest }]
         : [];
     const raw = await mise(root, ["outdated", "--json"], 5 * MINUTE);
+    const today = utcDay(new Date());
     return miseRow.concat(
       Object.entries(OutdatedSchema.parse(JSON.parse(raw)))
         .filter(([tool]) => TOOLS.some((t) => t.name === tool))
         .filter(([, o]) => isExactRelease(o.latest))
-        .filter(
-          ([tool, o]) =>
-            !HOLDS.some((h) => h.tool === tool && h.version === o.latest),
-        )
-        .map(([tool, o]) => ({
-          name: tool,
-          current: o.current,
-          latest: o.latest,
-        })),
+        .map(([tool, o]) => {
+          const hold = heldBy(HOLDS, tool, o.latest, today, compareVersions);
+          return {
+            name: tool,
+            current: o.current,
+            latest: o.latest,
+            ...(hold === undefined ? {} : { waiting: heldWaiting(hold) }),
+          };
+        }),
     );
   },
 
@@ -147,6 +155,7 @@ export const miseUpdater: Updater = {
       );
     }
     const { locked, fresh } = assertSound(root);
+    const today = utcDay(new Date());
     const moves: Move[] = [];
     for (const spec of TOOLS) {
       if (only !== undefined && !only.includes(spec.name)) continue;
@@ -156,7 +165,7 @@ export const miseUpdater: Updater = {
       const available = (await mise(root, ["ls-remote", spec.name], 5 * MINUTE))
         .split("\n")
         .map((l) => l.trim());
-      const to = upgradeTarget(spec.name, available);
+      const to = upgradeTarget(spec.name, available, HOLDS, today);
       if (to === null)
         throw new Error(
           `mise lists no usable release of ${spec.name} (every exact release is held, or ls-remote returned none).`,
@@ -206,6 +215,7 @@ export const miseUpdater: Updater = {
     ),
 
   holds: {
-    file: "plugins/toolchain/core/internal/tools.ts",
+    file: HOLDS_FILE,
+    read: async () => HOLDS,
   },
 };

@@ -25416,9 +25416,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `infra/deps/updates.UpdaterDeclare`
           - Core:
             - Uses:
+              - `infra/deps/updates.heldBy`
+              - `infra/deps/updates.heldWaiting`
+              - `infra/deps/updates.Move`
+              - `infra/deps/updates.Outdated`
+              - `infra/deps/updates.Updater`
+              - `infra/deps/updates.utcDay`
               - `infra/spawn.spawnCaptured`
               - `toolchain.addLockedTool`
+              - `toolchain.compareVersions`
               - `toolchain.HOLDS`
+              - `toolchain.HOLDS_FILE`
               - `toolchain.isExactRelease`
               - `toolchain.lockProblems`
               - `toolchain.miseBin`
@@ -25437,7 +25445,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `updater` "npm"
             - Uses: `infra/deps/updates.UpdaterDeclare`
           - Core:
-            - Uses: `infra/spawn.spawnCaptured`
+            - Uses:
+              - `infra/deps/updates.heldBy`
+              - `infra/deps/updates.heldWaiting`
+              - `infra/deps/updates.Hold`
+              - `infra/deps/updates.holdProblems`
+              - `infra/deps/updates.HoldSchema`
+              - `infra/deps/updates.Move`
+              - `infra/deps/updates.Outdated`
+              - `infra/spawn.spawnCaptured`
             - Exports (types):
               - `Packument`
               - `Plan`
@@ -25450,7 +25466,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `rangeAt`
               - `readWorkspace`
               - `unrangedSpecs`
-              - `utcDay`
               - `workspaceManifests`
         - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
           - Cross-plugin:
@@ -25496,6 +25511,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Contributes: `updater` "uv"
                 - Uses: `infra/deps/updates.UpdaterDeclare`
+              - Core:
+                - Exports (values):
+                  - `UV_HOLDS`
+                  - `UV_HOLDS_FILE`
         - **`sweep`** — The daily deps.sweep job: removes installed optional-dependency identities that no checkout of this repo declares and that sat unused for 14 days (sweepUnusedDeps over the git worktree list).
           - Server:
             - Uses:
@@ -25535,18 +25554,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Exports (types):
               - `GateResult`
+              - `Hold`
               - `Move`
               - `Outdated`
               - `OutdatedUpdater`
               - `OutdatedWaiting`
               - `Updater`
-              - `UpdaterHold`
               - `UpdaterSmoke`
             - Exports (values):
+              - `assertHoldsBounded`
               - `DEPS_UPGRADE_PROMPT`
+              - `heldBy`
+              - `heldWaiting`
+              - `HOLD_MAX_DAYS`
+              - `holdActive`
+              - `holdProblems`
+              - `HoldSchema`
               - `isActionable`
+              - `latestUntil`
               - `outdatedSections`
               - `upgradeTaskTitle`
+              - `utcDay`
           - Cli:
             - Exports (values): `upgradeThisWorktree`
     - **`endpoints`** — Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
@@ -45033,9 +45061,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes: `taskCategory` "toolchain"
     - Uses: `tasks/task-category.TaskCategory`
   - Core:
-    - Uses: `infra/paths.HOME_DIR`
+    - Uses:
+      - `infra/deps/updates.heldBy`
+      - `infra/deps/updates.Hold`
+      - `infra/deps/updates.holdProblems`
+      - `infra/paths.HOME_DIR`
     - Exports (types):
-      - `ToolHold`
       - `ToolSmoke`
       - `ToolSpec`
     - Exports (values):
@@ -45043,6 +45074,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `compareVersions`
       - `findMiseBin`
       - `HOLDS`
+      - `HOLDS_FILE`
       - `isExactRelease`
       - `lockProblems`
       - `miseBin`

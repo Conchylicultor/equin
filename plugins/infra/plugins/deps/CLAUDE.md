@@ -191,7 +191,15 @@ module eval).
   runner takes a SELECTION of updaters: `./singularity
   deps upgrade` with no updater moves every one behind one baseline
   (receipt `deps-upgrade.json`); naming one moves only it
-  (`deps-upgrade-<updater>.json`, `--only` allowed). The `UpdaterDeclare` registry and the **Dependency upgrades
+  (`deps-upgrade-<updater>.json`, `--only` allowed). **Holds** are one model
+  for every updater (`Hold` in `core/`: `names`, `version` | `below`, `reason`,
+  `issue?`, required `until` at most 90 days out, inert the day after): each
+  updater exposes its own through `holds.read`, the runner and the detect job
+  refuse one set past the bound before asking the updater anything, each
+  updater's check holds the bound statically (`deps-npm:policy`,
+  `toolchain:resolved`, `deps-uv:holds`), and a held release is always
+  detected as a HELD row (`heldWaiting`), never dropped. Design:
+  `research/2026-10-17-global-deps-bounded-holds-every-updater.md`. The `UpdaterDeclare` registry and the **Dependency upgrades
   automation** (`deps-upgrades`, a `tasks/automations` `defineAutomation`; its
   job `automation.deps-upgrades` runs on the schedule its automation config
   sets, weekly by default): ONE auto-started task covering every outdated

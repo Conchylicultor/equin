@@ -2,17 +2,17 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import type {
-  Move,
-  Outdated,
-  Updater,
+import {
+  utcDay,
+  type Move,
+  type Outdated,
+  type Updater,
 } from "@plugins/infra/plugins/deps/plugins/updates/core";
 import {
   installedVersions,
   planNpm,
   rangeAt,
   readWorkspace,
-  utcDay,
   workspaceManifests,
   type Packument,
   type Plan,
@@ -225,5 +225,7 @@ export const npmUpdater: Updater = {
 
   holds: {
     file: "package.json (the `dependencyPolicy.holds` of the package.json that declares the dependency)",
+    read: async (root) =>
+      (await readWorkspace(root)).policies.flatMap((p) => p.policy.holds ?? []),
   },
 };

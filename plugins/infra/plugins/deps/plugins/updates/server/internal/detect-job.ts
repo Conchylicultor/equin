@@ -7,6 +7,7 @@ import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { tasksCategory } from "@plugins/tasks/plugins/task-category/server";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
 import {
+  assertHoldsBounded,
   isActionable,
   outdatedSections,
   upgradeTaskTitle,
@@ -87,6 +88,7 @@ export const depsUpgradesAutomation = defineAutomation({
     for (const updater of declaredUpdaters()) {
       if (!included.has(updater.id)) continue;
       try {
+        await assertHoldsBounded(updater, REPO_ROOT, new Date());
         const outdated = await updater.detect(REPO_ROOT);
         // Held rows ride along with work but never file a task on their own:
         // a hold is bounded by its `until`, after which its row is actionable.

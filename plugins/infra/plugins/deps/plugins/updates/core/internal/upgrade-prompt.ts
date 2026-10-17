@@ -78,7 +78,7 @@ Move this worktree to them, all in this one task. You own proving it works.
 3. Each culprit (verdict \`partial\` or \`regressed\`; on \`regressed\` every file was put back):
    - If the bug is ours (code relying on old behavior), fix it.
    - If it is upstream, find or file the upstream issue, then add a hold for that release in that updater's holds
-     file (listed above) with the reason and the issue URL.
+     file (listed above) with the reason, the issue URL and an \`until\` date at most 90 days out.
    - If it breaks only without another release it depends on, declare the two as one lockstep group.
    Then run \`./singularity deps upgrade\` again, and go back to step 2 on its verdict.
 
@@ -87,9 +87,9 @@ Move this worktree to them, all in this one task. You own proving it works.
 A row marked BLOCKED is a release the upgrade cannot move to on its own: do the prerequisite it names (or, when it
 is not doable from this worktree, file it as a task with \`add_task\` and say so), then upgrade again. A row marked
 HELD is listed so a hold is never silent: leave it unless its reason no longer stands, in which case delete the
-hold and let the upgrade move it. A hold you add or renew always carries a reason and an \`until\` date at most 90
-days out (\`npm\` holds live in the \`dependencyPolicy\` of the package.json that declares the dependency); once it
-expires the updater stops honouring it.
+hold and let the upgrade move it. Every updater's holds share one shape — \`names\`, one
+\`version\` or everything from \`below\` up, a \`reason\`, the upstream \`issue\` URL, and an \`until\` date at most 90
+days out — and the day after \`until\` the updater stops honouring it (renew it only if its reason still stands).
 
 If you cannot reach a clear verdict (verdict \`aborted\`: the command itself failed, its \`error\` says why; a
 regression you cannot attribute; a flaky gate that never settles), do NOT push: raise a flag describing what you

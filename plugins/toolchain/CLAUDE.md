@@ -7,11 +7,13 @@ every move proven before it lands.
   the exact release that runs. mise reads it through its shims, per checkout, so
   a worktree can run a new release while main keeps its own.
 - `core/`: `TOOLS` (how to probe each tool's version, its `floor` with the
-  reason, its smoke tests) and `HOLDS` (releases to skip, each with an upstream
-  issue). Plus the pure lock parsing (`lockProblems`, `setLockedVersion`,
+  reason, its smoke tests) and `HOLDS` (releases to skip: the shared bounded `Hold`
+  of `infra/deps/updates`, each with a reason, an upstream issue and an `until`
+  at most 90 days out, inert the day after). Plus the pure lock parsing (`lockProblems`, `setLockedVersion`,
   `addLockedTool` for a tool `mise.toml` has just started declaring).
 - `check/`: `toolchain:resolved`. Every tool requests `latest`. The lock records
-  one exact release per tool, at or above its floor and not held. The runtime
+  one exact release per tool, at or above its floor and not under an active
+  hold, and every hold ends within 90 days. The runtime
   PATH resolves each tool to that release. A tool absent from the runtime PATH
   is reported with the rest, never thrown. With no mise shims on PATH the hint
   says to activate mise rather than blaming something that shadows it. Whether a
@@ -56,9 +58,12 @@ every move proven before it lands.
   - Contributes: `taskCategory` "toolchain"
   - Uses: `tasks/task-category.TaskCategory`
 - Core:
-  - Uses: `infra/paths.HOME_DIR`
+  - Uses:
+    - `infra/deps/updates.heldBy`
+    - `infra/deps/updates.Hold`
+    - `infra/deps/updates.holdProblems`
+    - `infra/paths.HOME_DIR`
   - Exports (types):
-    - `ToolHold`
     - `ToolSmoke`
     - `ToolSpec`
   - Exports (values):
@@ -66,6 +71,7 @@ every move proven before it lands.
     - `compareVersions`
     - `findMiseBin`
     - `HOLDS`
+    - `HOLDS_FILE`
     - `isExactRelease`
     - `lockProblems`
     - `miseBin`
