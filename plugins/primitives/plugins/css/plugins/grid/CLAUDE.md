@@ -74,8 +74,8 @@ Shared (both paths):
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×14
-    - `primitives` ×8
-    - `ui` ×4
+    - `primitives` ×9
+    - `ui` ×3
     - `conversations` ×2
     - `debug` ×2
     - `stats` ×2

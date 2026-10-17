@@ -81,6 +81,10 @@
 // it is picked). Its width decides how many lines each description wraps to, so
 // a theme sizes it apart from a plain menu of one-word rows — the Pages theme
 // draws its section menu at 248px and its kind menu at 300px.
+//
+// `card` is a hover card (`overlay/hover-card`): one subject described in a
+// title, a sentence, chips and a footer. Fixed, so moving the pointer down a
+// menu's rows swaps the card's content without resizing it.
 export type PopoverWidth =
   | "content"
   | "fit"
@@ -92,6 +96,7 @@ export type PopoverWidth =
   | "described"
   | "builder"
   | "picker"
+  | "card"
   | "xs"
   | "sm"
   | "md"
@@ -117,6 +122,7 @@ export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
   described: "w-(--popover-width-described) max-w-(--available-width)", // choices with description lines
   builder: "w-(--popover-width-builder) max-w-(--available-width)", // a six-track rule row
   picker: "w-(--popover-width-picker) max-w-(--available-width)", // a panel whose body is a grid
+  card: "w-(--popover-width-card) max-w-(--available-width)", // a hover card describing one thing
   xs: "w-48 max-w-(--available-width)",
   sm: "w-56 max-w-(--available-width)",
   md: "w-64 max-w-(--available-width)",

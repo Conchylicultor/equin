@@ -43,9 +43,7 @@ plugin name). What an unresolvable sha renders as is the host's call.
     - `code-explorer/commit-detail.commitDetailPane`
     - `code-explorer/commit-detail.useCommitInfo`
     - `primitives/css/link-chip.LinkChip`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
-    - `primitives/overlay/tooltip.WithTooltip`
+    - `primitives/overlay/hover-card.WithHoverCard`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.formatRelativeTime`
     - `ui/icons.Icon`

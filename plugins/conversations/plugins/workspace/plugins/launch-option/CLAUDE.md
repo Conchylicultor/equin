@@ -25,8 +25,6 @@ default, stored as no row) or one registered scratch profile. Design:
     - `network/live.mapRow`
     - `network/live.useLive`
     - `network/live.useLiveRow`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Select`
     - `primitives/css/ui-kit.SelectContent`
     - `primitives/css/ui-kit.SelectItem`
@@ -69,10 +67,7 @@ default, stored as no row) or one registered scratch profile. Design:
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --space-2xs`
-    - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
-    - `ui/tokens/type-scale --font-weight-medium`
   - Imported by: `conversations`
 - Shared:
   - Exports (types): `TaskWorkspace`

@@ -463,6 +463,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ButtonGroup`
     - `buttonTextClassFor`
     - `buttonVariants`
+    - `closestOverlayPanel`
     - `cn`
     - `ControlSizeProvider`
     - `Dialog`
@@ -567,6 +568,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `textStepFor`
     - `themeScopeSelectors`
     - `Tooltip`
+    - `TooltipCardContent`
     - `TooltipContent`
     - `TooltipProvider`
     - `TooltipTrigger`
@@ -579,8 +581,8 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useSidewaysScroll`
     - `useSingleLine`
 - Cross-plugin:
-  - Uses tokens: 232 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×69
+  - Uses tokens: 233 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×70
     - `ui/tokens/color-palette` ×57
     - `ui/tokens/type-scale` ×42
     - `ui/tokens/shape` ×13
@@ -592,12 +594,12 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/font-family` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
   - Imported by: 406 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×102
+    - `primitives` ×103
     - `apps` ×82
     - `conversations` ×54
     - `page` ×25
     - `debug` ×22
-    - `ui` ×22
+    - `ui` ×21
     - `tasks` ×15
     - `apps-core` ×14
     - `fields` ×12

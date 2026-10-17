@@ -22,12 +22,10 @@
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `fields/dynamic-enum/config.DynamicEnum`
-    - `primitives/css/grid.Grid`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/overlay/tooltip.WithTooltip`
-    - `primitives/overlay/tooltip.WithTooltipProps`
+    - `primitives/overlay/hover-card.WithHoverCard`
+    - `primitives/overlay/hover-card.WithHoverCardProps`
     - `primitives/slot-render.renderIsolated`
     - `ui/theme-engine.ThemeEngine`
   - Exports (types):
@@ -56,14 +54,11 @@
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-text`
-    - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-body`
-    - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
   - Imported by:

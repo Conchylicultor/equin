@@ -169,7 +169,7 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
     - `primitives/css/badge.Badge`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
-    - `primitives/overlay/tooltip.WithTooltip`
+    - `primitives/overlay/hover-card.WithHoverCard`
     - `ui/icons.Icon`
   - Exports (values):
     - `PrototypeThumbnail`

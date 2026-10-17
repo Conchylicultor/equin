@@ -7,12 +7,13 @@
 - Description: Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
 - Web:
   - Contributes: `Conversation.PromptBar` "Deps" → `DependenciesButton`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×3
     - `infra/endpoints` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/text` ×2
     - `primitives/live-state` ×2
+    - `primitives/overlay/hover-card` ×2
     - `primitives/search` ×2
     - `conversations/conversation-ui/item.ConversationItem`
     - `conversations/conversation-view.Conversation`
@@ -25,7 +26,6 @@
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `shell/notifications.toast`
     - `ui/icons.Icon`
 - Cross-plugin:

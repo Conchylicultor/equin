@@ -66,8 +66,8 @@ follow.
     - `ui/tokens/shape --spacing`
   - Tokens used by: 225 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×55
-    - `conversations` ×40
-    - `primitives` ×37
+    - `conversations` ×39
+    - `primitives` ×38
     - `debug` ×16
     - `plugin-meta` ×15
     - `page` ×12

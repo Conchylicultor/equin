@@ -93,6 +93,7 @@ export {
 } from "./components/portal-forward";
 export {
   OverlayPanel,
+  closestOverlayPanel,
   type OverlayPanelProps,
 } from "./components/overlay-panel";
 export {
@@ -161,6 +162,7 @@ export {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
+  TooltipCardContent,
   TooltipProvider,
 } from "./components/ui/tooltip";
 

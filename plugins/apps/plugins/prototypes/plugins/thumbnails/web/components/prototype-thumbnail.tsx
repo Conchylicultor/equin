@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { WithHoverCard } from "@plugins/primitives/plugins/overlay/plugins/hover-card/web";
 import { prototypeThumbnailUrl, type ThumbnailState } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -58,7 +58,7 @@ export function PrototypeThumbnail({
       // Two non-obvious choices, both load-bearing:
       //
       // `behind`, not `above`: an `above` layer is click-through by design,
-      // which would swallow the hover the marker's tooltip needs.
+      // which would swallow the hover the marker's hover card needs.
       //
       // `fill`: without it the children wrapper is in-flow, and a wrapper whose
       // only child is absolutely positioned collapses to zero height — so the
@@ -66,11 +66,13 @@ export function PrototypeThumbnail({
       // card, present in the DOM and invisible on screen.
       <Overlay behind={fallback} fill className="h-full w-full">
         <Pin to="bottom-right" offset="xs">
-          <WithTooltip content={state.message} className="max-w-md">
+          <WithHoverCard
+            card={{ title: "Preview failed", description: state.message }}
+          >
             <Badge variant="warning" icon={<Icon icon={warningIcon} />}>
               Preview failed
             </Badge>
-          </WithTooltip>
+          </WithHoverCard>
         </Pin>
       </Overlay>
     );
@@ -82,11 +84,13 @@ export function PrototypeThumbnail({
     return (
       <Overlay behind={fallback} fill className="h-full w-full">
         <Pin to="bottom-right" offset="xs">
-          <WithTooltip content={state.message} className="max-w-md">
+          <WithHoverCard
+            card={{ title: "Installing browser", description: state.message }}
+          >
             <Badge variant="muted" icon={<Icon icon={downloadingIcon} />}>
               Installing browser
             </Badge>
-          </WithTooltip>
+          </WithHoverCard>
         </Pin>
       </Overlay>
     );

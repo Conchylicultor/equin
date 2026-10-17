@@ -24,6 +24,7 @@ const VARIANT_CLASS: Record<BadgeVariant, string> = {
   destructive: "bg-destructive/15 text-destructive",
   success: "bg-success/15 text-success",
   info: "bg-info/15 text-info",
+  absent: "text-faint-foreground line-through ring-1 ring-border ring-inset",
 };
 
 /**

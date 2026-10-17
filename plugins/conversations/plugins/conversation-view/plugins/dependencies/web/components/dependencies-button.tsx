@@ -23,9 +23,10 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  WithHoverCard,
+  type HoverCardContent,
+} from "@plugins/primitives/plugins/overlay/plugins/hover-card/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { DepPopoverContent } from "./dep-popover-content";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -231,68 +232,53 @@ function DependenciesButtonInner({
   const hasBlocking = blockedTaskIds.size > 0;
   const hasAny = hasBlockedBy || hasBlocking;
 
-  const peekContent = (
-    <Stack gap="xs">
-      {hasBlockedBy && (
-        <div>
-          <div className="text-3xs tracking-wider text-muted-foreground">
-            Blocked by
-          </div>
-          {blockerConvs.map((c) => (
-            <Text as="div" variant="caption" key={c.taskId}>
-              {c.title}
-            </Text>
-          ))}
-          {orphanDepIds.map((id) => {
-            const t = allTasks.find((at) => at.id === id);
-            return (
-              <Text
-                as="div"
-                variant="caption"
-                key={id}
-                className="text-muted-foreground"
-              >
-                {t?.title ?? id}
-              </Text>
-            );
-          })}
-        </div>
-      )}
-      {hasBlocking && (
-        <div>
-          <div className="text-3xs tracking-wider text-muted-foreground">
-            Blocking
-          </div>
-          {blockedConvs.map((c) => (
-            <Text as="div" variant="caption" key={c.taskId}>
-              {c.title}
-            </Text>
-          ))}
-          {orphanBlockedIds.map((id) => {
-            const t = allTasks.find((at) => at.id === id);
-            return (
-              <Text
-                as="div"
-                variant="caption"
-                key={id}
-                className="text-muted-foreground"
-              >
-                {t?.title ?? id}
-              </Text>
-            );
-          })}
-        </div>
-      )}
-      {!hasAny && (
-        <Text as="div" variant="caption" className="text-muted-foreground">
-          Click to add dependencies
-        </Text>
-      )}
-    </Stack>
-  );
+  const titleOf = (id: string) =>
+    allTasks.find((at) => at.id === id)?.title ?? id;
+  const peek: HoverCardContent = {
+    title: "Dependencies",
+    description: hasAny ? undefined : "Click to add dependencies",
+    lists: [
+      ...(hasBlockedBy
+        ? [
+            {
+              label: "Blocked by",
+              items: [
+                ...blockerConvs.map((c) => ({
+                  key: c.taskId,
+                  text: c.title ?? titleOf(c.taskId),
+                })),
+                ...orphanDepIds.map((id) => ({
+                  key: id,
+                  text: titleOf(id),
+                  muted: true,
+                })),
+              ],
+            },
+          ]
+        : []),
+      ...(hasBlocking
+        ? [
+            {
+              label: "Blocking",
+              items: [
+                ...blockedConvs.map((c) => ({
+                  key: c.taskId,
+                  text: c.title ?? titleOf(c.taskId),
+                })),
+                ...orphanBlockedIds.map((id) => ({
+                  key: id,
+                  text: titleOf(id),
+                  muted: true,
+                })),
+              ],
+            },
+          ]
+        : []),
+    ],
+  };
 
   return (
-    <WithTooltip content={peekContent} side="top" className="max-w-md">
+    <WithHoverCard card={peek}>
       <ButtonGroup>
         <InlinePopover
           resetOnClose
@@ -374,6 +360,6 @@ function DependenciesButtonInner({
           />
         </InlinePopover>
       </ButtonGroup>
-    </WithTooltip>
+    </WithHoverCard>
   );
 }

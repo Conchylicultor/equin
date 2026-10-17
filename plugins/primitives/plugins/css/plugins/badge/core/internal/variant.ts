@@ -7,4 +7,13 @@
  * everyone's.
  */
 export type BadgeVariant =
-  "muted" | "primary" | "warning" | "destructive" | "success" | "info";
+  | "muted"
+  | "primary"
+  | "warning"
+  | "destructive"
+  | "success"
+  | "info"
+  // A facet the subject LACKS, listed beside the ones it has: no fill, a
+  // hairline, faint and struck through — so "has" and "has not" read apart
+  // in one row of chips (a workspace's capabilities).
+  | "absent";

@@ -1,11 +1,7 @@
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import {
-  WithTooltip,
-  type WithTooltipProps,
-} from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+  WithHoverCard,
+  type WithHoverCardProps,
+} from "@plugins/primitives/plugins/overlay/plugins/hover-card/web";
 import type { ReactElement } from "react";
 import type { SegmentedProgressBarProps } from "../../core";
 
@@ -23,84 +19,43 @@ export function progressStepLabel({
   return `${steps[current]?.label ?? activeStep} · step ${current + 1} of ${steps.length}`;
 }
 
-// Past steps a quiet accent, the current one a strong accent, the rest a faint fill.
-const SEGMENT = {
-  done: "bg-primary/45",
-  now: "bg-primary",
-  todo: "bg-muted-foreground/25",
-} as const;
-
 /**
- * The tooltip every variant wraps its bar in: where the bar stands and what it
- * tracks, then the whole path as a stepper — one equal segment per step with
- * its name under it, the current one lit — and what the current step means.
- * So a user who has never seen the bar learns the full path from one hover.
- *
- * It owns the tooltip, not just its body: the stepper needs more room than a
- * tooltip's default width, and a variant cannot forget to give it.
+ * The hover card every variant wraps its bar in: where the bar stands and what
+ * it tracks, then the whole path as a stepper — one equal segment per step
+ * with its name under it, the current one lit — and what the current step
+ * means. So a user who has never seen the bar learns the full path from one
+ * hover.
  */
 export function ProgressStepsTooltip({
   side,
   pinOnClick,
   children,
-  ...props
+  steps,
+  activeStep,
+  summary,
 }: Props & {
-  side?: WithTooltipProps["side"];
-  /** A click on the bar pins the tooltip open — for a bar with no click action of its own. */
-  pinOnClick?: WithTooltipProps["pinOnClick"];
-  /** The bar — the tooltip's trigger. */
+  side?: WithHoverCardProps["side"];
+  /** A click on the bar pins the card open — for a bar with no click action of its own. */
+  pinOnClick?: WithHoverCardProps["pinOnClick"];
+  /** The bar — the card's trigger. */
   children: ReactElement;
 }) {
-  return (
-    <WithTooltip
-      content={<StepsBody {...props} />}
-      side={side}
-      pinOnClick={pinOnClick}
-      className="max-w-md"
-    >
-      {children}
-    </WithTooltip>
-  );
-}
-
-function StepsBody({ steps, activeStep, summary }: Props) {
   const current = steps.findIndex((s) => s.id === activeStep);
   return (
-    <Stack gap="sm" className="min-w-56 py-2xs">
-      <Stack gap="none">
-        <Text variant="caption" className="font-medium">
-          {progressStepLabel({ steps, activeStep })}
-        </Text>
-        <Text variant="caption" tone="muted">
-          {summary}
-        </Text>
-      </Stack>
-      {/* Equal columns: sized to fit, each is as wide as the longest name. */}
-      <Grid as="ol" cols={steps.length} gap="sm">
-        {steps.map((step, i) => {
-          const state = i < current ? "done" : i === current ? "now" : "todo";
-          return (
-            <Stack as="li" key={step.id} gap="2xs">
-              <span className={cn("h-1 rounded-sm", SEGMENT[state])} />
-              <Text
-                variant="caption"
-                tone={state === "now" ? "default" : "muted"}
-                className={cn(
-                  "whitespace-nowrap",
-                  state === "now" && "font-medium",
-                )}
-              >
-                {step.label}
-              </Text>
-            </Stack>
-          );
-        })}
-      </Grid>
-      {steps[current] && (
-        <Text variant="caption" tone="muted">
-          {steps[current].description}
-        </Text>
-      )}
-    </Stack>
+    <WithHoverCard
+      card={{
+        title: progressStepLabel({ steps, activeStep }),
+        description: summary,
+        steps: {
+          items: steps,
+          current,
+          caption: steps[current]?.description,
+        },
+      }}
+      side={side}
+      pinOnClick={pinOnClick}
+    >
+      {children}
+    </WithHoverCard>
   );
 }

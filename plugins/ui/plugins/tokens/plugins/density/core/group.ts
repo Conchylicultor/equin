@@ -115,6 +115,10 @@ export const densityGroup = defineTokenGroup("density", {
     label: "Builder popover width",
   },
   popoverWidthPicker: { default: "20rem", label: "Picker popover width" },
+  // A hover card (`overlay/hover-card`): one fixed width for every card, so
+  // a card never resizes as the pointer moves from one subject to the next.
+  // Default = the workspace-menu mock's 250px card.
+  popoverWidthCard: { default: "15.75rem", label: "Hover card width" },
   // A list of choices that each carry a visible description line (the
   // page-kind menu), whose width decides how many lines each description
   // wraps to. Default = the Menu prototype's 280px described menu.

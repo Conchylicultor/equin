@@ -5,7 +5,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { WorkspaceSpec } from "@plugins/conversations/plugins/workspace/core";
 import type { LaunchControlProps } from "@plugins/tasks/plugins/launch-options/web";
 import { choiceFor, useWorkspaceCatalog } from "../internal/catalog";
-import { WorkspaceInfo } from "./workspace-info";
+import { workspaceCard } from "./workspace-card";
 
 export const worktreeIcon = symbol("call-split");
 const scratchIcon = symbol("folder");
@@ -52,7 +52,7 @@ export function WorkspacePillMenu({
           }
           selected={choice === current}
           note={choice.unavailable ? "needs input" : undefined}
-          info={<WorkspaceInfo choice={choice} />}
+          info={workspaceCard(choice)}
           // The worktree is the default: picking it clears the choice.
           onSelect={() =>
             onChange(choice.spec.kind === "worktree" ? null : choice.spec)

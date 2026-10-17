@@ -87,10 +87,10 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `Stack`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 394 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 393 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×100
-    - `conversations` ×64
-    - `primitives` ×50
+    - `conversations` ×63
+    - `primitives` ×51
     - `debug` ×34
     - `ui` ×28
     - `page` ×24
@@ -102,10 +102,10 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `build` ×5
     - `auth` ×4
     - `review` ×4
-    - `active-data` ×3
     - `infra` ×3
     - `reorder` ×3
     - `shell` ×3
+    - `active-data` ×2
     - `backup` ×2
     - `code-explorer` ×2
     - `config_v2` ×2

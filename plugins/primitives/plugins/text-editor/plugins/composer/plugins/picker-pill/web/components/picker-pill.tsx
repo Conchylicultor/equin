@@ -14,6 +14,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import {
+  WithHoverCard,
+  type HoverCardContent,
+} from "@plugins/primitives/plugins/overlay/plugins/hover-card/web";
 import { Children, cloneElement, Fragment, isValidElement } from "react";
 
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
@@ -82,11 +86,11 @@ export interface PickerPillItemProps {
   /** Dim trailing hint ("default", a shortcut, …), shown when not selected. */
   note?: string;
   /**
-   * What this row is, in more words than its label — shown in a card beside
-   * the menu while the row is hovered, so a plain menu can still explain its
-   * choices.
+   * What this row is, in more words than its label — shown in a hover card
+   * beside the menu, level with the row, while it is hovered, so a plain menu
+   * can still explain its choices. Data, laid out by the card.
    */
-  info?: React.ReactNode;
+  info?: HoverCardContent;
   onSelect: () => void;
   disabled?: boolean;
   children: React.ReactNode;
@@ -236,9 +240,9 @@ function PickerPillItem({
   // events, and its card — often the one place saying WHY it is disabled —
   // must still show. The hover falls through the disabled row to the wrapper.
   return (
-    <WithTooltip content={info} side="right" className="max-w-72">
+    <WithHoverCard card={info} beside="panel">
       <span className="block">{row}</span>
-    </WithTooltip>
+    </WithHoverCard>
   );
 }
 

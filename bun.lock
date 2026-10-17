@@ -5153,6 +5153,10 @@
         "@floating-ui/react-dom": "^2.1.8",
       },
     },
+    "plugins/primitives/plugins/overlay/plugins/hover-card": {
+      "name": "@singularity/plugin-primitives-overlay-hover-card",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/overlay/plugins/hover-popover": {
       "name": "@singularity/plugin-primitives-overlay-hover-popover",
       "version": "0.0.1",
@@ -9134,6 +9138,8 @@
     "@singularity/plugin-primitives-overlay-floating-action": ["@singularity/plugin-primitives-overlay-floating-action@workspace:plugins/primitives/plugins/overlay/plugins/floating-action"],
 
     "@singularity/plugin-primitives-overlay-floating-surface": ["@singularity/plugin-primitives-overlay-floating-surface@workspace:plugins/primitives/plugins/overlay/plugins/floating-surface"],
+
+    "@singularity/plugin-primitives-overlay-hover-card": ["@singularity/plugin-primitives-overlay-hover-card@workspace:plugins/primitives/plugins/overlay/plugins/hover-card"],
 
     "@singularity/plugin-primitives-overlay-hover-popover": ["@singularity/plugin-primitives-overlay-hover-popover@workspace:plugins/primitives/plugins/overlay/plugins/hover-popover"],
 

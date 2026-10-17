@@ -6,6 +6,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
 import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/overlay-boundary/web";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
+import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel";
 
 function TooltipProvider({
   delay = 0,
@@ -71,4 +72,59 @@ function TooltipContent({
   );
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };
+/**
+ * A tooltip drawn as a CARD: the same hover / focus state machine as
+ * `TooltipContent`, but the popup IS the shared `OverlayPanel` — the menu's
+ * paint, radius, shadow and animation — at the fixed `card` width, with no
+ * arrow. For content that describes one thing in several parts, which the
+ * one-line label chrome cannot hold. Not styled per call site: no
+ * `className`, and the body is laid out by `overlay/hover-card`.
+ *
+ * `anchor` replaces the trigger as what the card is placed against (a virtual
+ * rect: beside a menu, level with one of its rows).
+ */
+function TooltipCardContent({
+  side = "right",
+  sideOffset = 6,
+  align = "start",
+  anchor,
+  children,
+  ...props
+}: Omit<TooltipPrimitive.Popup.Props, "render" | "className"> &
+  Pick<
+    TooltipPrimitive.Positioner.Props,
+    "align" | "side" | "sideOffset" | "anchor"
+  >) {
+  const forwarded = usePortalForwardedAttrs();
+  const container = usePortalContainer();
+  return (
+    <TooltipPrimitive.Portal container={container}>
+      <TooltipPrimitive.Positioner
+        {...forwarded}
+        anchor={anchor}
+        align={align}
+        side={side}
+        sideOffset={sideOffset}
+        className="isolate z-popover"
+      >
+        <TooltipPrimitive.Popup
+          data-slot="tooltip-card"
+          {...props}
+          render={
+            <OverlayPanel width="card" padding="sm" scroll={false}>
+              {children}
+            </OverlayPanel>
+          }
+        />
+      </TooltipPrimitive.Positioner>
+    </TooltipPrimitive.Portal>
+  );
+}
+
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipCardContent,
+  TooltipProvider,
+};

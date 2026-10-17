@@ -21,6 +21,15 @@ import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import { IconScopeProvider } from "@plugins/ui/plugins/icons/web";
 import { usePortalThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-theme-scope";
 
+/**
+ * The floating panel an element sits in, or null when it is in none — for
+ * something hung off a row INSIDE a panel that places itself against the
+ * panel's edge rather than the row's (a hover card beside its menu).
+ */
+export function closestOverlayPanel(el: Element): HTMLElement | null {
+  return el.closest<HTMLElement>("[data-overlay-panel]");
+}
+
 /** Pins the sticky header at the panel's true top edge, through its block
  *  padding (see the header below). */
 const HEADER_PIN_STYLE = { top: "calc(-1 * var(--rail-block-start, 0px))" };
@@ -158,6 +167,9 @@ export function OverlayPanel({
       onScroll={handleScroll}
       // Presence-only: the CSS gates each gradient on its attribute existing, so
       // an absent attribute is "no content that way", never "unknown".
+      // Names the box as a floating panel, so something hung off a row INSIDE
+      // it can find the panel's edge (a hover card placed beside its menu).
+      data-overlay-panel=""
       data-fade-top={top ? "" : undefined}
       data-fade-bottom={bottom ? "" : undefined}
       className={cn(
