@@ -70,6 +70,7 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
     - `PlaywrightBrowserName`
     - `PlaywrightBrowserSource`
   - Exports (values):
+    - `connectChromium`
     - `launchChromium`
     - `playwrightBrowser`
 

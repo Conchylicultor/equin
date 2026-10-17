@@ -237,3 +237,14 @@ export async function launchChromium(
       : read.executables.headed,
   });
 }
+
+/**
+ * Connect to a Chromium another process launched and bound (`browser.bind()`,
+ * a pipe path) — the agent browser's shared one. Nothing is installed or
+ * launched here: the binder's install runs it. `close()` on the result drops
+ * this connection only; the browser and the pages it holds stay up.
+ */
+export async function connectChromium(endpoint: string): Promise<Browser> {
+  const { chromium } = await import("playwright");
+  return chromium.connect(endpoint);
+}

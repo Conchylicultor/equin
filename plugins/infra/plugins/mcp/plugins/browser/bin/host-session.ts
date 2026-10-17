@@ -93,6 +93,10 @@ const sessions = new Map<string, Session>();
 const errors: AgentBrowserHostError[] = [];
 let hostIdleExitAt: Date | null = null;
 let hostIdle: ReturnType<typeof setTimeout> | null = null;
+/** Each launched browser's `bind()` pipe, opened on the first attach ticket. */
+const bound = new WeakMap<Browser, Promise<string>>();
+/** The tab a page is, so the context's `page` event and `openTab` adopt it once. */
+const tabOfPage = new WeakMap<Page, Tab>();
 
 /** Wired by the entry: publish the status file, exit when idle. */
 let onChange: () => void = () => {};
@@ -188,6 +192,29 @@ async function launch(): Promise<Browser> {
   return launched;
 }
 
+/**
+ * The shared browser's pipe endpoint, for an e2e script to `chromium.connect`
+ * to. `bind()` serves connections in Playwright's shared-browser mode: each one
+ * sees every context and page, and leaves them open when it disconnects — so a
+ * script drives a tab of this conversation's own session and the tab outlives
+ * the script. Bound lazily (most browsers never see a script) and once per
+ * launch; the pipe dies with the browser.
+ */
+export async function bindEndpoint(): Promise<string> {
+  const b = await getBrowser();
+  let endpoint = bound.get(b);
+  if (!endpoint) {
+    endpoint = b.bind("singularity-agent-browser").then((r) => r.endpoint);
+    bound.set(b, endpoint);
+  }
+  try {
+    return await endpoint;
+  } catch (err) {
+    bound.delete(b);
+    throw err;
+  }
+}
+
 function armHostIdle(): void {
   if (sessions.size > 0) {
     if (hostIdle) clearTimeout(hostIdle);
@@ -204,6 +231,8 @@ function armHostIdle(): void {
 }
 
 function touch(session: Session): void {
+  // A closed session's late page events must not re-arm its deadline.
+  if (sessions.get(session.conversationId) !== session) return;
   if (session.idle) clearTimeout(session.idle);
   session.idleDeadline = new Date(Date.now() + SESSION_IDLE_MS);
   session.idle = setTimeout(() => {
@@ -270,6 +299,9 @@ export async function getSession(
     idle: null,
   };
   sessions.set(conversationId, session);
+  // Every page of the context is a tab — the ones a script attached through
+  // `bindEndpoint` opens (and popups) too, not only `openTab`'s.
+  context.on("page", (page) => adoptPage(session, page));
   touch(session);
   armHostIdle();
   onChange();
@@ -282,7 +314,17 @@ export async function openTab(session: Session): Promise<Tab> {
     const oldest = session.tabs.keys().next().value;
     if (oldest !== undefined) await closeTab(session, oldest);
   }
-  const page = await session.context.newPage();
+  return adoptPage(session, await session.context.newPage());
+}
+
+/**
+ * Make a page of the session's context one of its tabs (once), recording its
+ * console and network from then on. Its traffic keeps the session alive: a
+ * script driving a tab makes no MCP call, and must not be idle-closed mid-run.
+ */
+function adoptPage(session: Session, page: Page): Tab {
+  const known = tabOfPage.get(page);
+  if (known) return known;
   const tab: Tab = {
     id: `t${session.nextTab++}`,
     page,
@@ -313,6 +355,7 @@ export async function openTab(session: Session): Promise<Tab> {
     });
     background("dismiss-dialog", () => d.dismiss());
   });
+  page.on("request", () => touch(session));
   page.on("requestfinished", (req) => {
     background("record-request", async () => {
       const res = await req.response();
@@ -355,6 +398,7 @@ export async function openTab(session: Session): Promise<Tab> {
     }
     onChange();
   });
+  tabOfPage.set(page, tab);
   session.tabs.set(tab.id, tab);
   session.current = tab.id;
   onChange();

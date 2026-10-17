@@ -212,6 +212,19 @@ chromium` child — its progress on this terminal, ~280 MB, once per machine per
 revision. A launch failure is re-thrown with the playwright that ran (and
 where it resolved from), the install dir and the executables it recorded.
 
+## `--attach`: run inside the agent's browser session
+
+`--attach <ticket>` (the ticket from the `browser_attach` MCP tool) makes
+`withBrowser` connect to the conversation's shared agent browser
+(`infra/mcp/browser`, via its `bind()` pipe and `connectChromium`) and drive the
+tab the ticket names instead of launching a browser. On exit, pass or fail, it
+disconnects and the tab STAYS in the session: the agent picks up at the failing
+step with `browser_*`. It refuses `--headed`, a ticket for another deploy, and a
+Playwright version mismatch with the backend. It skips the install/launch and
+the agent-write repair at both ends (the session owns those writes; its close
+reverts them), and allows ONE `session()` — a second context would outlive the
+script, owned by nobody.
+
 ## `diffImages` — two captures in, a number and a picture out
 
 `diffImages(page, aPng, bPng, { threshold, grid, labels })` compares two PNG

@@ -17,6 +17,7 @@ import {
   type Session,
   type Tab,
 } from "./host-session";
+import { issueAttachTicket } from "./host-attach";
 
 /**
  * Every tool of `shared/tools.ts`, implemented on the host's live pages. A
@@ -316,6 +317,16 @@ const impls: Impls = {
     return text({
       ...(await state(tab, tab.console.length)),
       viewport: tab.page.viewportSize(),
+    });
+  },
+
+  async browser_attach(_args, ctx) {
+    const s = await session(ctx);
+    const { ticket, tab } = await issueAttachTicket(s);
+    return text({
+      tab: tab.id,
+      target: s.target.origin,
+      flag: `--attach ${ticket}`,
     });
   },
 

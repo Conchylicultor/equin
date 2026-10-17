@@ -12,6 +12,7 @@ import { basename, dirname } from "node:path";
 import type { Browser, BrowserContext, Page } from "playwright";
 import { ensureDepViaCli, type Ready } from "@plugins/infra/plugins/deps/deps";
 import {
+  connectChromium,
   launchChromium,
   type PlaywrightBrowserSource,
 } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
@@ -22,13 +23,17 @@ import {
   ORIGIN_HEADER,
   ORIGIN_SOURCE_HEADER,
 } from "@plugins/infra/plugins/request-origin/core";
-import { flag } from "./args";
+import {
+  decodeAttachTicket,
+  type AttachTicket,
+} from "@plugins/infra/plugins/mcp/plugins/browser/core";
+import { arg, flag, usage } from "./args";
 import { capture, type Captured } from "./capture";
 import { detectOsColorScheme, type ColorScheme } from "./color-scheme";
 import { onBeforeFinish } from "./report";
 import { repairAgentWrites, settleAgentWrites } from "./agent-writes";
 import { assertDeployIdentity } from "./deploy-identity";
-import { isTargetOrigin, unconsumedPage } from "./target";
+import { isTargetOrigin, targetNamespace, unconsumedPage } from "./target";
 import { trackContextNetwork, waitForNetworkIdle } from "./network-idle";
 
 export const DEFAULT_VIEWPORT = { width: 1400, height: 900 } as const;
@@ -229,6 +234,9 @@ export async function withBrowser<T>(
   // before the first request, not before the first assertion.
   await assertDeployIdentity();
 
+  const attach = arg("attach");
+  if (attach !== undefined) return withAttachedBrowser(attach, fn);
+
   // START REPAIR, before the browser exists. A previous run killed by Ctrl-C, a
   // SIGKILL or a Playwright timeout never reached its own revert, and its ledger
   // is still on disk — so this is the half no teardown can provide, and the
@@ -320,6 +328,134 @@ export async function withBrowser<T>(
     release();
     await teardown();
   }
+}
+
+/**
+ * `--attach <ticket>`: run inside a conversation's agent-browser session
+ * (`infra/mcp/browser`) instead of a browser of our own, and leave the tab
+ * there — so when the script fails at step N, the agent continues from that
+ * exact page with the browser_* tools rather than replaying the whole flow.
+ *
+ * The ticket (from the `browser_attach` MCP tool) names the session browser's
+ * `bind()` pipe and the tab it opened for us. Connections to that pipe share
+ * every context and leave them open on disconnect, so this drives a page the
+ * backend owns, under the session's own headers and cookies, and `close()`
+ * only drops our connection.
+ *
+ * What it skips, and why:
+ *  - no install / launch: the browser is the session's;
+ *  - no agent-write repair or settle, at either end: the writes belong to the
+ *    session, whose close reverts the same ledger — and reverting at start
+ *    would wipe the interactive state the agent is deliberately continuing
+ *    from. The baseline is the session's, not a clean one;
+ *  - one session only: a second context would outlive the script in the
+ *    shared browser, owned by nobody.
+ */
+async function withAttachedBrowser<T>(
+  raw: string,
+  fn: (h: Harness) => Promise<T>,
+): Promise<T> {
+  if (raw === "") usage("--attach needs the ticket browser_attach returned.");
+  if (flag("headed")) {
+    usage(
+      "--attach drives the agent's shared headless browser; drop --headed.",
+    );
+  }
+  const ticket = decodeAttachTicket(raw);
+  if (!isTargetOrigin(ticket.origin)) {
+    throw new Error(
+      `--attach: the ticket's session drives ${ticket.origin}, but this run targets ${targetNamespace()}.\n` +
+        `  Ask browser_attach from the conversation whose checkout this is, or drop --attach.`,
+    );
+  }
+  assertSamePlaywright(ticket);
+
+  let browser: Browser;
+  try {
+    browser = await connectChromium(ticket.endpoint);
+  } catch (err) {
+    throw new Error(
+      `--attach: could not reach the agent browser at ${ticket.endpoint} ` +
+        `(${err instanceof Error ? err.message : String(err)}).\n` +
+        `  It restarted or went idle since the ticket was issued — ask browser_attach for a new one.`,
+      { cause: err },
+    );
+  }
+  const page = browser
+    .contexts()
+    .flatMap((c) => c.pages())
+    .find((p) => p.url() === ticket.marker);
+  if (!page) {
+    await browser.close();
+    throw new Error(
+      `--attach: tab ${ticket.tab} is no longer waiting at its ticket ` +
+        `(closed, navigated, or the ticket was already used) — ask browser_attach for a new one.`,
+    );
+  }
+
+  let torndown = false;
+  const teardown = async (): Promise<void> => {
+    if (torndown) return;
+    torndown = true;
+    const at = page.isClosed() ? "closed by the script" : page.url();
+    // Drops this connection only: the tab and its session stay up.
+    await browser.close();
+    console.log(
+      `[e2e] kept tab ${ticket.tab} in the conversation's browser session (${at}) — ` +
+        `continue with browser_read_page({ tab: "${ticket.tab}" })`,
+    );
+    assertPageWasConsumed();
+  };
+  const release = onBeforeFinish(teardown);
+
+  let handedOut = false;
+  try {
+    return await fn({
+      browser,
+      async session(opts: SessionOptions = {}): Promise<Session> {
+        if (handedOut) {
+          throw new Error(
+            "--attach drives ONE session (the ticket's tab), and this script opens another. Run it without --attach.",
+          );
+        }
+        handedOut = true;
+        await page.setViewportSize(opts.viewport ?? { ...DEFAULT_VIEWPORT });
+        await page.emulateMedia({
+          colorScheme: opts.colorScheme ?? detectOsColorScheme(),
+        });
+        const context = page.context();
+        trackContextNetwork(context);
+        const label = opts.label ?? "";
+        return {
+          context,
+          page,
+          label,
+          captured:
+            opts.capture === false
+              ? { pageErrors: [], consoleErrors: [], failedRequests: [] }
+              : capture(page, opts.label),
+        };
+      },
+    });
+  } finally {
+    release();
+    await teardown();
+  }
+}
+
+/**
+ * `connect` speaks the binder's protocol version: refuse a mismatch with both
+ * versions named (main's backend can lag a worktree's Playwright upgrade)
+ * rather than let it surface as a protocol error.
+ */
+function assertSamePlaywright(ticket: AttachTicket): void {
+  const ours = packageVersion("playwright", import.meta.dir).version;
+  const minor = (v: string) => v.split(".").slice(0, 2).join(".");
+  if (minor(ours) === minor(ticket.playwright)) return;
+  throw new Error(
+    `--attach: this checkout runs playwright ${ours}, the agent browser ${ticket.playwright} — ` +
+      `they cannot connect. Run without --attach until both sides are on one version.`,
+  );
 }
 
 export interface BootOptions {

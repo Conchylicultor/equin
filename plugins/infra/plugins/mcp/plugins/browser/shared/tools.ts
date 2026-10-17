@@ -187,6 +187,10 @@ export const browserToolSpecs = {
       colorScheme: z.enum(["light", "dark"]).optional(),
     },
   ),
+  browser_attach: spec(
+    "Run an e2e script INSIDE this session: opens a fresh tab and returns a ticket. Pass it as `./singularity run <script>.ts --attach <ticket>` — the script drives that tab instead of launching its own browser, and leaves it here when it ends, passing or failing. Then inspect or continue from the exact step it stopped at with the other browser_* tools on that tab. One ticket per run; single-session scripts only.",
+    {},
+  ),
   browser_close: spec(
     "Close this conversation's whole session (every tab) and revert the durable writes it made. Sessions also close after 30 idle minutes and when the conversation ends.",
     {},
