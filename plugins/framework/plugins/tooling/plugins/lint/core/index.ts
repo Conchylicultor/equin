@@ -3,10 +3,12 @@ export { findPluginDirs } from "./plugin-dirs";
 export {
   LINT_CONFIG_SOURCE,
   buildLintConfig,
+  isTypeAwareRule,
   lintContributionPaths,
   lintExemptions,
   lintRuleIds,
   loadLintContributions,
+  typeAwareLintGroups,
 } from "./build-lint-config";
 export { LINT_DATA_FILES, lintDataKey } from "./declared-utilities";
 export {
@@ -17,6 +19,8 @@ export type {
   BuildLintConfigOptions,
   LintContribution,
   LintExemptionMode,
+  LintRuleDocs,
+  LintRuleKind,
   LintRuleSelection,
   LoadedLintContribution,
   ParserTypeSource,

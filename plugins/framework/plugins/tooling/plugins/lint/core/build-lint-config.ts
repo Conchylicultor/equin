@@ -69,6 +69,43 @@ function loadReactHooks(): Promise<typeof ReactHooksPlugin> {
   ));
 }
 
+let builtinRulesPromise: Promise<Record<string, unknown>> | undefined;
+function loadBuiltinRules(): Promise<Record<string, unknown>> {
+  return (builtinRulesPromise ??= import("eslint/use-at-your-own-risk").then(
+    (m) => Object.fromEntries(m.builtinRules),
+  ));
+}
+
+/** The rule modules a base rule id (`baseRuleEntries`) is looked up in. */
+interface BaseRulePlugins {
+  tsPlugin: typeof TsEslintPlugin;
+  reactHooks: typeof ReactHooksPlugin;
+  /** eslint core's rules, by id. */
+  builtinRules: Record<string, unknown>;
+}
+
+/**
+ * The rule module a base rule id names: `@typescript-eslint/<r>`,
+ * `react-hooks/<r>`, or an eslint core `<r>`. Throws on an id none of them
+ * defines — classifying a rule nobody defines would silently give it a kind.
+ */
+function baseRuleModule(id: string, plugins: BaseRulePlugins): unknown {
+  const slash = id.lastIndexOf("/");
+  const ns = id.slice(0, Math.max(slash, 0));
+  const rules: Record<string, unknown> | undefined = {
+    "": plugins.builtinRules,
+    "@typescript-eslint": plugins.tsPlugin.rules,
+    "react-hooks": plugins.reactHooks.rules,
+  }[ns];
+  const rule = rules?.[id.slice(slash + 1)];
+  if (rule === undefined) {
+    throw new Error(
+      `[eslint] base rule "${id}" is not defined by eslint core, @typescript-eslint or react-hooks — cannot classify its kind`,
+    );
+  }
+  return rule;
+}
+
 /**
  * What a plugin's `lint/index.ts` default-exports. Write the barrel as
  * `export default { … } satisfies LintContribution`, so a misspelled or
@@ -287,9 +324,47 @@ export function lintExemptions(
   return lint;
 }
 
-/** How the parser resolves TypeScript type information for type-aware rules. */
+/**
+ * The rule-docs fields this repo reads, for a rule's `meta.docs` — pass it to
+ * `ESLintUtils.RuleCreator<LintRuleDocs>(…)`. `requiresTypeChecking` is the
+ * typescript-eslint convention (its own rules set it): a rule that reads types
+ * declares `true`, and the lint rule `rule-kind-safety/type-aware-rule-declared`
+ * holds every rule calling `getParserServices` to it.
+ */
+export interface LintRuleDocs {
+  requiresTypeChecking?: boolean;
+}
+
+/** A rule's kind: whether its answer depends on type information. */
+export type LintRuleKind = "syntactic" | "type-aware";
+
+/**
+ * The ONE rule-kind classifier: a rule is type-aware iff it declares
+ * `meta.docs.requiresTypeChecking: true`. Everything else is syntactic — its
+ * result is a function of the file's own text, which is what lets the
+ * type-check lint cache key it on that text alone. An undeclared type-aware
+ * rule cannot cache a wrong answer: the syntactic pass runs with
+ * `{ none: true }`, where its `getParserServices` throws.
+ */
+export function isTypeAwareRule(rule: unknown): boolean {
+  if (typeof rule !== "object" || rule === null) return false;
+  const docs = (
+    rule as { meta?: { docs?: { requiresTypeChecking?: unknown } } }
+  ).meta?.docs;
+  return docs?.requiresTypeChecking === true;
+}
+
+function isRuleOfKind(rule: unknown, kind: LintRuleKind | "all"): boolean {
+  return kind === "all" || isTypeAwareRule(rule) === (kind === "type-aware");
+}
+
+/**
+ * How the parser resolves TypeScript type information for type-aware rules.
+ * `{ none: true }` resolves none: only syntactic rules may run under it, and a
+ * type-aware one fails loudly (see `isTypeAwareRule`).
+ */
 export type ParserTypeSource =
-  { projectService: true } | { programs: Program[] };
+  { projectService: true } | { programs: Program[] } | { none: true };
 
 /**
  * How `exempt/` manifests apply:
@@ -311,6 +386,12 @@ export type LintExemptionMode = "config-off" | "report";
 export interface LintRuleSelection {
   base: boolean;
   contributions: ReadonlySet<string>;
+  /**
+   * Which rules of the selected groups to enable, by `isTypeAwareRule`: the
+   * type-check worker runs the syntactic ones without a program (`{ none:
+   * true }`) and the type-aware ones with it.
+   */
+  kind: LintRuleKind | "all";
 }
 
 export interface BuildLintConfigOptions {
@@ -375,6 +456,99 @@ function compilerDiagnosticRulesAsWarn(
   );
 }
 
+/**
+ * The builder's own rules (typescript-eslint, react-hooks, eslint core) and
+ * their severities — the ONE table both `buildLintConfig` and
+ * `typeAwareLintGroups` read, so the config and the type-aware classification
+ * of the base group cannot disagree.
+ */
+function baseRuleEntries(
+  reactHooks: Awaited<ReturnType<typeof loadReactHooks>>,
+): Record<string, Linter.RuleEntry> {
+  return {
+    "@typescript-eslint/no-floating-promises": "off",
+    "@typescript-eslint/no-misused-promises": [
+      "error",
+      {
+        checksVoidReturn: { attributes: false },
+      },
+    ],
+    "@typescript-eslint/switch-exhaustiveness-check": "error",
+    "@typescript-eslint/no-unnecessary-condition": [
+      "warn",
+      {
+        allowConstantLoopConditions: true,
+      },
+    ],
+    "@typescript-eslint/await-thenable": "error",
+    // React Compiler / Rules-of-React diagnostics, warn-first (see
+    // compilerDiagnosticRulesAsWarn above). Spread FIRST so the two
+    // explicit "error" pins below win the merge.
+    ...compilerDiagnosticRulesAsWarn(reactHooks),
+    "react-hooks/rules-of-hooks": "error",
+    // exhaustive-deps treats the `settings["react-hooks"].stableHooks` list
+    // (buildLintConfig's base block) as known-stable returns (like a bare useRef), via our patch to
+    // isStableKnownHookValue (patches/eslint-plugin-react-hooks@*.patch) —
+    // so useLatestRef/useEventCallback refs need not be listed in dep arrays.
+    "react-hooks/exhaustive-deps": "error",
+    // Coverage-blocking React Compiler rules — RATCHETED warn→error once the
+    // codebase was driven to zero (2026-06-23). These are the diagnostics
+    // that make the compiler SILENTLY BAIL on (skip memoizing) a component;
+    // enforcing them at error keeps compiler coverage complete — a new bail
+    // fails `./singularity check` instead of silently eroding coverage.
+    // Genuine exemptions opt out at the site: a `"use no memo"` directive
+    // and/or an inline `// eslint-disable-next-line react-hooks/<rule> -- …`
+    // (e.g. the @tanstack/react-virtual incompatibility in primitives/
+    // virtual-rows). `react-hooks/refs` was likewise RATCHETED warn→error in
+    // Phase 2 (2026-06-23) once its burndown hit zero: the latest-value-ref
+    // idiom moved into the `useLatestRef`/`useEventCallback` primitive
+    // (primitives/latest-ref), which carries the one sanctioned disable;
+    // @dnd-kit / auto-scroll library refs are destructured at the call site
+    // (member access on a ref-bearing hook return is what trips the rule);
+    // genuine anti-patterns were refactored; and the few intentional
+    // render-time machines (use-tab-presence, use-cursor-pagination, the
+    // build-once markdown/overlay memos) carry an inline `react-hooks/refs`
+    // disable. `react-hooks/set-state-in-effect` was likewise RATCHETED
+    // warn→error on 2026-06-24 once its burndown hit zero: anti-patterns
+    // were refactored (props-to-state → key= remount, default-selection /
+    // derived state → derive in render), fetch/subscription effects migrated
+    // to useEndpoint / useSyncExternalStore or the shared useHighlightedHtml
+    // primitive, and the genuinely-stateful remainder (animation/temporal
+    // machines, NDJSON streams, optimistic-cleanup, primitive internals)
+    // carries an inline `react-hooks/set-state-in-effect` disable. See
+    // research/2026-06-24-global-react-compiler-set-state-burndown.md (and the
+    // refs burndown research/2026-06-23-global-react-compiler-refs-burndown.md).
+    "react-hooks/purity": "error",
+    "react-hooks/immutability": "error",
+    "react-hooks/use-memo": "error",
+    "react-hooks/void-use-memo": "error",
+    "react-hooks/static-components": "error",
+    "react-hooks/preserve-manual-memoization": "error",
+    "react-hooks/incompatible-library": "error",
+    "react-hooks/refs": "error",
+    "react-hooks/set-state-in-effect": "error",
+    // Final 6 diagnostics RATCHETED warn→error on 2026-06-24. Their scan count
+    // was ALREADY 0 (no burndown needed — the coverage / refs / set-state-in-
+    // effect phases left the whole web tree clean), so all six promote together.
+    // `set-state-in-render` (unconditional render-phase setState = re-render
+    // loop) and `unsupported-syntax` (the compiler SILENTLY BAILS on it = lost
+    // coverage) are the bug/coverage-bearing ones; `globals` / `error-boundaries`
+    // / `config` / `gating` are rare-but-correct guards (`gating` is permanently
+    // 0 — we don't use compiler feature-gating). With these, ALL react-hooks
+    // compiler diagnostics are now enforced at error — completing the compliance
+    // program; see research/2026-06-24-global-react-compiler-final-rules-ratchet.md.
+    "react-hooks/set-state-in-render": "error",
+    "react-hooks/unsupported-syntax": "error",
+    "react-hooks/globals": "error",
+    "react-hooks/error-boundaries": "error",
+    "react-hooks/config": "error",
+    "react-hooks/gating": "error",
+    "no-constant-binary-expression": "error",
+    eqeqeq: ["error", "smart"],
+    "no-template-curly-in-string": "error",
+  };
+}
+
 /** Build the full flat config array (base + plugin rules + per-rule exemptions). */
 export async function buildLintConfig(
   opts: BuildLintConfigOptions,
@@ -391,22 +565,51 @@ export async function buildLintConfig(
   // Validated in BOTH modes, so a manifest naming a dead or closed rule fails
   // the IDE config and the check alike.
   const lintExempt = lintExemptions(exemptions, allContributions);
-  const contributions =
-    selection === undefined
-      ? allContributions
-      : allContributions.filter((c) => selection.contributions.has(c.relPath));
-  const baseRulesOn = selection === undefined || selection.base;
+  const allBaseRules = baseRuleEntries(reactHooks);
+  let contributions = allContributions;
+  let baseRules = allBaseRules;
+  if (selection !== undefined) {
+    const { kind } = selection;
+    const plugins: BaseRulePlugins = {
+      tsPlugin,
+      reactHooks,
+      builtinRules: await loadBuiltinRules(),
+    };
+    // A rule left out is not registered, so no scope block below names it.
+    contributions = allContributions
+      .filter((c) => selection.contributions.has(c.relPath))
+      .map((c) => ({
+        ...c,
+        rules: Object.fromEntries(
+          Object.entries(c.rules).filter(([, rule]) =>
+            isRuleOfKind(rule, kind),
+          ),
+        ),
+      }))
+      .filter((c) => Object.keys(c.rules).length > 0);
+    baseRules = !selection.base
+      ? {}
+      : Object.fromEntries(
+          Object.entries(allBaseRules).filter(([id]) =>
+            isRuleOfKind(baseRuleModule(id, plugins), kind),
+          ),
+        );
+  }
 
   const parserOptions: Record<string, unknown> = {
     ecmaVersion: "latest",
     sourceType: "module",
     tsconfigRootDir: root,
-    // Every .ts/.tsx must resolve to type info: projectService discovers the
-    // tsconfig; programs supplies pre-built ones (project must be off so the
-    // programs aren't overridden). A file in neither errors loudly.
+    // projectService discovers each file's tsconfig; programs supplies
+    // pre-built ones (project must be off so the programs aren't overridden) —
+    // a file in neither errors loudly. `none` configures no type source at
+    // all: the file parses standalone, and a rule asking for types
+    // (`ESLintUtils.getParserServices`) throws instead of answering.
     ...("projectService" in typeSource
       ? { projectService: true }
-      : { programs: typeSource.programs, project: null }),
+      : "programs" in typeSource
+        ? { programs: typeSource.programs, project: null }
+        : { project: null }),
   };
 
   const baseConfigs: Linter.Config[] = [
@@ -437,90 +640,7 @@ export async function buildLintConfig(
           stableHooks: ["useLatestRef", "useEventCallback"],
         },
       },
-      rules: !baseRulesOn
-        ? {}
-        : {
-            "@typescript-eslint/no-floating-promises": "off",
-            "@typescript-eslint/no-misused-promises": [
-              "error",
-              {
-                checksVoidReturn: { attributes: false },
-              },
-            ],
-            "@typescript-eslint/switch-exhaustiveness-check": "error",
-            "@typescript-eslint/no-unnecessary-condition": [
-              "warn",
-              {
-                allowConstantLoopConditions: true,
-              },
-            ],
-            "@typescript-eslint/await-thenable": "error",
-            // React Compiler / Rules-of-React diagnostics, warn-first (see
-            // compilerDiagnosticRulesAsWarn above). Spread FIRST so the two
-            // explicit "error" pins below win the merge.
-            ...compilerDiagnosticRulesAsWarn(reactHooks),
-            "react-hooks/rules-of-hooks": "error",
-            // exhaustive-deps treats the `settings["react-hooks"].stableHooks` list
-            // above as known-stable returns (like a bare useRef), via our patch to
-            // isStableKnownHookValue (patches/eslint-plugin-react-hooks@*.patch) —
-            // so useLatestRef/useEventCallback refs need not be listed in dep arrays.
-            "react-hooks/exhaustive-deps": "error",
-            // Coverage-blocking React Compiler rules — RATCHETED warn→error once the
-            // codebase was driven to zero (2026-06-23). These are the diagnostics
-            // that make the compiler SILENTLY BAIL on (skip memoizing) a component;
-            // enforcing them at error keeps compiler coverage complete — a new bail
-            // fails `./singularity check` instead of silently eroding coverage.
-            // Genuine exemptions opt out at the site: a `"use no memo"` directive
-            // and/or an inline `// eslint-disable-next-line react-hooks/<rule> -- …`
-            // (e.g. the @tanstack/react-virtual incompatibility in primitives/
-            // virtual-rows). `react-hooks/refs` was likewise RATCHETED warn→error in
-            // Phase 2 (2026-06-23) once its burndown hit zero: the latest-value-ref
-            // idiom moved into the `useLatestRef`/`useEventCallback` primitive
-            // (primitives/latest-ref), which carries the one sanctioned disable;
-            // @dnd-kit / auto-scroll library refs are destructured at the call site
-            // (member access on a ref-bearing hook return is what trips the rule);
-            // genuine anti-patterns were refactored; and the few intentional
-            // render-time machines (use-tab-presence, use-cursor-pagination, the
-            // build-once markdown/overlay memos) carry an inline `react-hooks/refs`
-            // disable. `react-hooks/set-state-in-effect` was likewise RATCHETED
-            // warn→error on 2026-06-24 once its burndown hit zero: anti-patterns
-            // were refactored (props-to-state → key= remount, default-selection /
-            // derived state → derive in render), fetch/subscription effects migrated
-            // to useEndpoint / useSyncExternalStore or the shared useHighlightedHtml
-            // primitive, and the genuinely-stateful remainder (animation/temporal
-            // machines, NDJSON streams, optimistic-cleanup, primitive internals)
-            // carries an inline `react-hooks/set-state-in-effect` disable. See
-            // research/2026-06-24-global-react-compiler-set-state-burndown.md (and the
-            // refs burndown research/2026-06-23-global-react-compiler-refs-burndown.md).
-            "react-hooks/purity": "error",
-            "react-hooks/immutability": "error",
-            "react-hooks/use-memo": "error",
-            "react-hooks/void-use-memo": "error",
-            "react-hooks/static-components": "error",
-            "react-hooks/preserve-manual-memoization": "error",
-            "react-hooks/incompatible-library": "error",
-            "react-hooks/refs": "error",
-            "react-hooks/set-state-in-effect": "error",
-            // Final 6 diagnostics RATCHETED warn→error on 2026-06-24. Their scan count
-            // was ALREADY 0 (no burndown needed — the coverage / refs / set-state-in-
-            // effect phases left the whole web tree clean), so all six promote together.
-            // `set-state-in-render` (unconditional render-phase setState = re-render
-            // loop) and `unsupported-syntax` (the compiler SILENTLY BAILS on it = lost
-            // coverage) are the bug/coverage-bearing ones; `globals` / `error-boundaries`
-            // / `config` / `gating` are rare-but-correct guards (`gating` is permanently
-            // 0 — we don't use compiler feature-gating). With these, ALL react-hooks
-            // compiler diagnostics are now enforced at error — completing the compliance
-            // program; see research/2026-06-24-global-react-compiler-final-rules-ratchet.md.
-            "react-hooks/set-state-in-render": "error",
-            "react-hooks/unsupported-syntax": "error",
-            "react-hooks/globals": "error",
-            "react-hooks/error-boundaries": "error",
-            "react-hooks/config": "error",
-            "react-hooks/gating": "error",
-            "no-constant-binary-expression": "error",
-            eqeqeq: ["error", "smart"],
-            "no-template-curly-in-string": "error",
-          },
+      rules: baseRules,
     },
     {
       ignores: [
@@ -599,4 +719,42 @@ export async function buildLintConfig(
       : [];
 
   return [...baseConfigs, ...pluginConfigs, ...scopeConfigs, ...exemptConfigs];
+}
+
+function isRuleEntryOff(entry: Linter.RuleEntry): boolean {
+  const severity = Array.isArray(entry) ? entry[0] : entry;
+  return severity === "off" || severity === 0;
+}
+
+/**
+ * Which rule groups hold at least one ENABLED type-aware rule: `base` when a
+ * configured base rule not set "off" is, and the `relPath` of every
+ * contribution with one. Read off the same loaders, base table and classifier
+ * as `buildLintConfig`, so a group named here is exactly a group whose
+ * `kind: "type-aware"` selection registers a rule.
+ */
+export async function typeAwareLintGroups(
+  root: string,
+): Promise<{ base: boolean; contributions: Set<string> }> {
+  const [contributions, tsPlugin, reactHooks, builtinRules] = await Promise.all(
+    [
+      loadLintContributions(root),
+      loadTsPlugin(),
+      loadReactHooks(),
+      loadBuiltinRules(),
+    ],
+  );
+  const plugins: BaseRulePlugins = { tsPlugin, reactHooks, builtinRules };
+  const base = Object.entries(baseRuleEntries(reactHooks)).some(
+    ([id, entry]) =>
+      !isRuleEntryOff(entry) && isTypeAwareRule(baseRuleModule(id, plugins)),
+  );
+  return {
+    base,
+    contributions: new Set(
+      contributions
+        .filter((c) => Object.values(c.rules).some(isTypeAwareRule))
+        .map((c) => c.relPath),
+    ),
+  };
 }

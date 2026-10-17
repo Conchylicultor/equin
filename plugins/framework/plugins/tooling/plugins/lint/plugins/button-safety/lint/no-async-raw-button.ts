@@ -1,7 +1,8 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 import type { Node as TsNode, Type as TsType, TypeChecker } from "typescript";
+import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator(
+const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
@@ -46,6 +47,7 @@ export default createRule({
     docs: {
       description:
         "Disallow async / promise-returning onClick on raw <button> or SidebarMenuAction — they cannot auto-pend; use Button/IconButton which show a spinner and guard against double-clicks while the promise is in flight.",
+      requiresTypeChecking: true,
     },
     schema: [],
     messages: {

@@ -3409,6 +3409,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-route-teardown-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/rule-kind-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-rule-kind-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/runtime-isolation": {
       "name": "@singularity/plugin-framework-tooling-lint-runtime-isolation",
       "version": "0.0.1",
@@ -8367,6 +8371,8 @@
     "@singularity/plugin-framework-tooling-lint-resize-observer-safety": ["@singularity/plugin-framework-tooling-lint-resize-observer-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/resize-observer-safety"],
 
     "@singularity/plugin-framework-tooling-lint-route-teardown-safety": ["@singularity/plugin-framework-tooling-lint-route-teardown-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/route-teardown-safety"],
+
+    "@singularity/plugin-framework-tooling-lint-rule-kind-safety": ["@singularity/plugin-framework-tooling-lint-rule-kind-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/rule-kind-safety"],
 
     "@singularity/plugin-framework-tooling-lint-runtime-isolation": ["@singularity/plugin-framework-tooling-lint-runtime-isolation@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/runtime-isolation"],
 

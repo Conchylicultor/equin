@@ -23,10 +23,12 @@ async function handle(request: PrepareRequest): Promise<PrepareReply> {
       if (session) {
         throw new Error("type-check prepare thread: prepare called twice");
       }
-      // Still SYNCHRONOUS work — `openPreparation` has no awaits. `handle` is
-      // async only because `finalize` now spawns git to label and prune the
-      // warm-base pool.
-      session = openPreparation(request.input);
+      // Almost all SYNCHRONOUS work. `openPreparation` awaits once, to load
+      // the lint contributions and learn which rule groups hold a type-aware
+      // rule (`typeAwareLintGroups`); `finalize` awaits git, to label and
+      // prune the warm-base pool. Neither yields to another request: a second
+      // one in flight is refused by the runner side (`./prepare-thread`).
+      session = await openPreparation(request.input);
       return { type: "plan", plan: session.plan };
     case "finalize":
       if (!session || !("finalize" in session)) {

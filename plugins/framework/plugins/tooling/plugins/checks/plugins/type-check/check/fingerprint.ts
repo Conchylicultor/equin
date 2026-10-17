@@ -1,26 +1,29 @@
-// Dependency-closure fingerprints for the eslint check.
+// The tree listing, the global trigger set, and each lintable file's content
+// hash — the half of a lint result's key that is the file itself.
 //
-// Each file's type-aware lint result depends on the file PLUS everything it
-// transitively imports (type info flows through forward import edges) PLUS the
-// rules that ran on it. The closure fingerprint is the first half, one
-// content-addressed key per file; the rules are keyed per GROUP beside it
-// (`./lint-groups`), so a rule edit no longer changes every file's key. A result
-// stored under both is reusable across runs and worktrees.
+// A file's lint result is stored per (file, content hash) (`./lint-results`):
+// what its rules read is its own text, the rules (keyed per GROUP,
+// `./lint-groups`), and — for the type-aware ones only — the declarations it
+// can see (its type fingerprint, `../shared/type-fingerprint`). It used to be
+// keyed on the source of the file's whole forward import CLOSURE, so a body-only
+// edit in a hub re-linted every transitive importer, though no rule reads
+// another file's text (research/2026-10-17-global-lint-keyed-on-what-it-reads.md).
 
 import { createHash } from "crypto";
 import { join } from "path";
 import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { LINT_DATA_FILES } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import type { ImportGraphs } from "./import-graph";
 import { safeRead } from "./import-graph";
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
 }
 
-export interface FingerprintResult {
-  perFile: Map<string, string>; // relpath -> closureFingerprint
-  /** The run's memoized per-file content hash, for the group fingerprints. */
+export interface ContentHashes {
+  /**
+   * The run's memoized per-file content hash: the lint result store's key, and
+   * the group fingerprints' input.
+   */
   contentHash: (rel: string) => string;
   /** Candidates whose text can carry an eslint directive (`hasLintDirective`). */
   directives: Set<string>;
@@ -35,7 +38,7 @@ export interface FingerprintResult {
 // own walk. That also fixes a live bug: the walk this replaced skipped a literal
 // `dist` segment but not `dist.staging.*` / `dist.live.*` / `dist.old.*` — all
 // gitignored, all capable of holding a `package.json` or a `.d.ts`. One of those
-// perturbed the global fingerprint and invalidated the entire closure cache for
+// perturbed the global fingerprint and invalidated the entire lint cache for
 // a change that never lands on main. Git's own ignore rules cover every
 // spelling, so there is nothing left here to keep in sync.
 
@@ -71,7 +74,7 @@ function isGlobalTrigger(rel: string): boolean {
  * everything that asks.
  *
  * ONE traversal, several predicates. A single check pass asks four different
- * questions of the repo's files: the lint closure fingerprint's trigger set,
+ * questions of the repo's files: the lint key's global trigger set,
  * the outer read-set's copy of the same set, the program key's tsc-relevant
  * subset, and the program key's name census. Enumerated separately those were
  * four full traversals costing seconds — and, worse, four copies of the
@@ -134,74 +137,37 @@ export function hasLintDirective(src: string): boolean {
 }
 
 /**
- * Compute the closure fingerprint for each candidate file:
+ * Hash each candidate file's content, noting which can carry an eslint
+ * directive (such a file is linted and stored as one unit, `LINT_GROUP_ALL`).
  *
- *   closure(f) = { f } ∪ transitive forward-closure of f over graphs.forward
- *   fp(f) = sha256( sorted( `${c}\0${ch(c)}` for c in closure(f) ).join("\n") )
+ *   ch(rel) = sha256(content ?? "")
  *
- * Nothing global: which rules ran is keyed per group beside it
- * (`./lint-groups`). The closure DFS is memoized and cycle-safe (a visited
- * set), and per-file content hashes ch(rel) are memoized — both shared across
- * all candidates, and `ch` is handed back for the group fingerprints. Reading a
- * file to hash it also notes whether it can carry an eslint directive.
+ * Memoized and handed back: the group fingerprints (`./lint-groups`) hash the
+ * engine's and each contribution's files through the same memo, so a file is
+ * read once per run whoever asks.
  */
-export function computeClosureFingerprints(
+export function computeContentHashes(
   listing: TreeListing,
-  graphs: ImportGraphs,
   candidates: string[],
-): FingerprintResult {
+): ContentHashes {
   const { root } = listing;
-
-  // Memoized per-file content hash: ch(rel) = sha256(content ?? "").
-  const contentHash = new Map<string, string>();
+  const memo = new Map<string, string>();
   const directives = new Set<string>();
   const ch = (rel: string): string => {
-    let h = contentHash.get(rel);
+    let h = memo.get(rel);
     if (h === undefined) {
       const src = safeRead(join(root, rel)) ?? "";
       if (hasLintDirective(src)) directives.add(rel);
       h = sha256(src);
-      contentHash.set(rel, h);
+      memo.set(rel, h);
     }
     return h;
   };
-
-  // Memoized transitive forward closure (the unordered SET of reachable files,
-  // including the file itself). Cycle-safe via the visited set.
-  const closureCache = new Map<string, Set<string>>();
-  const closureOf = (start: string): Set<string> => {
-    const cached = closureCache.get(start);
-    if (cached) return cached;
-    const visited = new Set<string>();
-    const stack = [start];
-    while (stack.length) {
-      const cur = stack.pop()!;
-      if (visited.has(cur)) continue;
-      visited.add(cur);
-      const deps = graphs.forward.get(cur);
-      if (!deps) continue;
-      for (const dep of deps) {
-        if (!visited.has(dep)) stack.push(dep);
-      }
-    }
-    closureCache.set(start, visited);
-    return visited;
-  };
-
-  const perFile = new Map<string, string>();
-  for (const f of candidates) {
-    const closure = closureOf(f);
-    const body = [...closure]
-      .sort()
-      .map((c) => `${c}\0${ch(c)}`)
-      .join("\n");
-    perFile.set(f, sha256(body));
-  }
-
+  for (const f of candidates) ch(f);
   return {
-    perFile,
     contentHash: ch,
-    // Only candidates: a non-candidate hashed as someone's import is not linted.
+    // Only candidates: a non-candidate hashed as an engine file is not linted.
+    // A snapshot NOW, while only candidates have been hashed.
     directives: new Set(candidates.filter((f) => directives.has(f))),
   };
 }

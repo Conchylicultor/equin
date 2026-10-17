@@ -58,7 +58,17 @@ interface Pending {
  * runs) keeps its message listener, and with it the process, alive.
  */
 export function openPrepareThread(): PrepareThread {
-  const worker = new Worker(WORKER_URL);
+  // The environment AS IT IS NOW, explicitly: a Bun Worker otherwise sees only
+  // the environment the process STARTED with, never a later `process.env`
+  // edit. The thread is this run's own code moved off the runner's thread, so
+  // it must resolve every data dir (`SINGULARITY_DIR`) exactly as the runner
+  // would — measured: without this, a test's redirect never reached the
+  // thread, which read and copied from the host's real warm-base pool.
+  const env: Record<string, string> = {};
+  for (const [name, value] of Object.entries(process.env)) {
+    if (value !== undefined) env[name] = value;
+  }
+  const worker = new Worker(WORKER_URL, { env });
   let pending: Pending | null = null;
   // Set once the thread is gone for any reason. Every later call rejects with
   // it at once, instead of posting to a thread nobody will answer from.

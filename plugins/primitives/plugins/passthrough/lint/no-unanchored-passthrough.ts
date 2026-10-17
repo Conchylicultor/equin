@@ -3,8 +3,9 @@ import {
   type TSESLint,
   type TSESTree,
 } from "@typescript-eslint/utils";
+import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator(
+const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
@@ -309,6 +310,7 @@ export default createRule({
     docs: {
       description:
         "An open props passthrough is a promise about ONE node: the bag a caller spreads and the `ref` it holds must land on the same element. Rejects a rest binding that escapes into hand-rolled derivation, is spread onto more than one element, or is spread onto an element other than the one carrying `ref`.",
+      requiresTypeChecking: true,
     },
     schema: [],
     messages: {

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-lint-rule-kind-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "rule-kind-safety lint rule: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true)"
+}

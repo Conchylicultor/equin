@@ -64,7 +64,8 @@ const priorDataRoot = process.env.SINGULARITY_DIR;
 beforeAll(async () => {
   // The program name is a fixed literal now (`repo`), not a per-suite one, so
   // the host-global stores this preparation touches — the warm-base pool, the
-  // closure cache, the program-pass set — are the REAL ones unless pointed
+  // lint result store, the program-pass set, the signature tables — are the
+  // REAL ones unless pointed
   // elsewhere. Left alone, the suite would score (and copy) every pooled
   // multi-GB base of every checkout on this machine. `SINGULARITY_DIR` is the
   // sanctioned redirect (every DataDir read resolves it per call), and it is
@@ -127,22 +128,28 @@ test(
     const thread = openPrepareThread();
     try {
       const fromThread = await thread.prepare(await input());
-      const inProcess = openPreparation(await input()).plan;
+      const inProcess = (await openPreparation(await input())).plan;
       expect(decisions(fromThread)).toEqual(decisions(inProcess));
       // Not a vacuous equality: the fixture is a runnable, unkeyed cold tree,
-      // whose every file needs every rule group (the result store is empty).
+      // whose every file needs every syntactic rule group (the result store is
+      // empty) and whose typed parts only the worker can decide (no program
+      // key, so no signature table).
       const everyGroup = [LINT_GROUP_BASE, ...lintContributionPaths()];
+      const job = (rel: string) => ({
+        file: join(root, rel),
+        unit: "split" as const,
+        syntactic: everyGroup,
+        typed: {
+          kind: "deferred" as const,
+          fp: expect.any(String) as string,
+          known: [],
+        },
+      });
       expect(decisions(fromThread)).toEqual({
         kind: "run",
         program: { name: PROGRAM, tsconfigPath: join(root, "tsconfig.json") },
         run: true,
-        lintFiles: [
-          { file: join(root, "src/a.ts"), groups: everyGroup },
-          { file: join(root, "src/b.ts"), groups: everyGroup },
-        ],
-        lintPlan: expect.stringContaining(
-          `type-check: lint 2/2 files (2 whole, 0 partial; ${everyGroup.length} groups`,
-        ) as string,
+        lintFiles: [job("src/a.ts"), job("src/b.ts")],
         skipped: false,
         unkeyed: "no buildinfo yet",
         // The data root is a fresh temp dir, so the pool partition really is
@@ -166,7 +173,7 @@ test(
     const thread = openPrepareThread();
     try {
       const fromThread = await thread.prepare(await input());
-      expect(fromThread).toEqual(openPreparation(await input()).plan);
+      expect(fromThread).toEqual((await openPreparation(await input())).plan);
       expect(fromThread).toEqual({
         kind: "uncovered",
         uncovered: ["stray.ts"],

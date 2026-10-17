@@ -1,7 +1,8 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 import type * as ts from "typescript";
+import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator(
+const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
@@ -54,6 +55,7 @@ export default createRule({
     docs: {
       description:
         "Disallow detaching async work (`void promise`) in a file-watch callback: return it, so the watch coalesces it to one running plus one pending run.",
+      requiresTypeChecking: true,
     },
     schema: [],
     messages: {

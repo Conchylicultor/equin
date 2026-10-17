@@ -1,8 +1,9 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 import type * as ts from "typescript";
 import { HOOK_NAME, holdsHook, keyName, typeMembers } from "./hook-brand";
+import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator(
+const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
@@ -33,6 +34,7 @@ export default createRule({
     docs: {
       description:
         "Require every binding whose type is Hook<…> to be named use* — the React Compiler recognises hooks by name only and memoizes any other call, skipping the hook's own hooks on a cache hit (React #311).",
+      requiresTypeChecking: true,
     },
     schema: [],
     messages: {

@@ -1,5 +1,6 @@
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import type { TSESLint } from "@typescript-eslint/utils";
+import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 const original = tsPlugin.rules!["no-floating-promises"]!;
 
@@ -13,10 +14,16 @@ const GUIDANCE =
 // spread names typescript-eslint internals that a declaration file cannot
 // reference portably (TS2883), and declaration emit is what gives the
 // type-check its per-file signatures.
-const rule: TSESLint.RuleModule<string, unknown[]> = {
+const rule: TSESLint.RuleModule<string, unknown[], LintRuleDocs> = {
   ...original,
   meta: {
     ...original.meta,
+    // Restated, not inherited through the spread: the kind is this module's
+    // own declaration (see LintRuleDocs), whatever upstream's meta carries.
+    docs: {
+      ...original.meta.docs,
+      requiresTypeChecking: true,
+    },
     messages: Object.fromEntries(
       Object.entries(original.meta.messages).map(([id, msg]) => [
         id,

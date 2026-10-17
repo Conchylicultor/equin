@@ -75,19 +75,21 @@ Design and decision: `research/2026-09-18-global-type-check-one-program.md`.
   log lines, the verdict.
 - `check/prepare.ts` — the **preparation thread** (one Bun `Worker` per run;
   entry `prepare-worker.ts`, runner-side host `prepare-thread.ts`). Builds the
-  import graph + closure fingerprints, parses the tsconfig's include-expansion,
+  import graph + content hashes, parses the tsconfig's include-expansion,
   runs the coverage gate (replaces projectService's "every file resolves to a
-  project"), reads the lint result store (which rule groups each file still
-  needs), materializes the warm base, computes the program key → returns a
-  `Plan` and keeps the session. After the worker, `finalize` runs the records
-  (warm-base publish, the fresh lint results, the program PASS or its
-  re-record) and assembles the lint verdict under the current exemptions.
+  project"), materializes the warm base, computes the program key, reads the
+  signature table and the lint result store (which parts of each file are
+  stale, or not yet decidable) → returns a `Plan` and keeps the session. After
+  the worker, `finalize` runs the records (warm-base publish, the fresh lint
+  results, the signature table, the program PASS or its re-record) and
+  assembles the lint verdict under the current exemptions.
 - `shared/worker.ts` — the worker **process**. `createIncrementalProgram` →
-  `getPreEmitDiagnostics` (+ persists the shared `.tsbuildinfo`) → ESLint
-  `Linter.verify` with the program injected, running only the rule groups each
-  file's job names and returning the messages raw. A separate process so the
-  single-threaded program build runs on its own core and its peak RSS is
-  measurable from outside.
+  `getPreEmitDiagnostics` (+ persists the shared `.tsbuildinfo`) → the type
+  fingerprints off that buildinfo (`shared/type-fingerprint.ts`) → ESLint
+  `Linter.verify`: each file's stale syntactic groups with no program, its
+  typed part with the program injected, returning the messages raw. A
+  separate process so the single-threaded program build runs on its own core
+  and its peak RSS is measurable from outside.
 
 **Nothing that reads file bytes or walks the tree goes in `index.ts`** — it goes
 in `prepare.ts`, whose values only the worker imports. That work is 70–130 s of
@@ -158,47 +160,82 @@ noise for one broken JSON file — and would mint a program key for a program we
 could not describe. The `unparsed` arm skips the gate and the key and lets the
 worker run, where tsc reports the broken config as the one diagnostic it is.
 
-## The lint cache is keyed per rule group, and exemptions apply when it is read
+## The lint cache is keyed on what the rules read, and exemptions apply when it is read
 
-A file's type-aware lint result depends on the file plus everything it imports
-(its closure fingerprint, `check/fingerprint.ts`) and on the rules that ran on
-it. The rules used to be ONE global hash over every `lint/`, `exempt/`,
-tsconfig, lockfile, `.d.ts` and app.css file, so a change to any of them
-re-linted all ~11.4k files: 657 CPU-s and 21.4 GB for a comment in one rule
-(this host, 2026-10-15). On main, 61 of 226 commits in a week did that, plus 11
-app.css edits — and not one of the 37 lockfile edits changed an npm resolution.
+A rule reads the file's own text and, if it is **type-aware** (declares
+`meta.docs.requiresTypeChecking`, `isTypeAwareRule` in `lint/core`; a dozen
+rules), the checker's types for it — a function of the *declarations* the file
+can see, never of another file's source. So a file's result is stored per
+**(file, content hash)** (`check/lint-results.ts`, `type-check-lint-results-v2`)
+in parts, each under its own key:
 
-So `check/lint-groups.ts` splits the rules into GROUPS, each with its own
-fingerprint:
+| Part | Key | Re-linted when |
+| --- | --- | --- |
+| each syntactic group (base + one per contribution) | the group's fp | the file's text, or that group's rules/engine |
+| ONE typed part, `LINT_GROUP_TYPED` | `typedResultKey(typed fp, type fp)` | the text, a declaration it can see, or any type-aware rule |
+| a directive file, whole (`LINT_GROUP_ALL`) | `typedResultKey(all fp, type fp)` | any of the above |
 
-- the **engine**, folded into every group: the config builder's import closure
-  (`LINT_CONFIG_SOURCE`, generated registries not followed), `shared/worker.ts`,
-  the root tsconfigs and `package.json`, ambient `.d.ts`, `patches/**`, the
-  lockfile **minus its workspace entries** (`lockfileLintDigest`), and the
-  declared `@utility` set (`lintDataKey`), not app.css's bytes;
-- the **base** group (`LINT_GROUP_BASE`): the builder's own rules
-  (typescript-eslint, react-hooks, eslint core) — the engine alone;
-- one group per **lint contribution** (`lintContributionPaths()`): the import
-  closure of `plugins/<p>/lint/index.ts`, stopping at engine files. A rule's
-  `*.test.ts` is not in it; a helper it imports from outside `lint/` is.
+It used to be keyed on the source of the file's whole import closure, so a
+body-only edit in a hub re-linted every transitive importer: a median of 470
+files per main commit, p90 6,218. Design:
+`research/2026-10-17-global-lint-keyed-on-what-it-reads.md`.
 
-`check/lint-results.ts` stores, per (file, closure fingerprint), the RAW
-messages each group produced, under that group's fingerprint (the newest few per
-group, so two worktrees on two versions of a rule do not thrash). The worker
-re-runs only the stale groups of each file (`buildLintConfig`'s `rules`
-selection), and `check/lint-verdict.ts` assembles every file's messages under
-the CURRENT exemptions — so an exemption edit re-lints nothing, and an unused
-file-level exemption is now reported for every file, not only re-linted ones.
+**The rules half** (`check/lint-groups.ts`) — one fingerprint per GROUP, each
+folding in the **engine**: the config builder's import closure
+(`LINT_CONFIG_SOURCE`, generated registries not followed), `shared/worker.ts`
+and `shared/type-fingerprint.ts`, the root tsconfigs and `package.json`,
+ambient `.d.ts`, `patches/**`, the lockfile **minus its workspace entries**
+(`lockfileLintDigest`), and the declared `@utility` set (`lintDataKey`). The
+**base** group is the builder's own rules (typescript-eslint, react-hooks,
+eslint core); each **contribution** (`lintContributionPaths()`) is the import
+closure of `plugins/<p>/lint/index.ts`, stopping at engine files (a rule's
+`*.test.ts` is not in it; a helper it imports from outside `lint/` is). The
+**typed fp** is the hash of just the groups that hold a type-aware rule
+(`typeAwareLintGroups`, loaded in prepare through the same classifier), so a
+syntactic-only rule edit stales no typed result.
 
-**A file with an eslint directive is one unit** (`LINT_GROUP_ALL`, ~4 % of
-files): whether a disable directive is unused depends on every rule, so its
-result is keyed on all group fingerprints at once and it is re-linted whole.
+**The types half** — the **type fp** (`shared/type-fingerprint.ts`): a Merkle
+hash over the strongly-connected-component condensation of the buildinfo's
+`referencedMap`, each component hashing its members' `signature` (the hash of
+their `.d.ts`; the version where tsc wrote a placeholder) and its successors'
+hashes, with the signatures of every `affectsGlobalScope` file folded into
+every file's. A body edit leaves the signature, and every importer's type fp,
+unchanged; an API change moves its transitive referencers (a superset of what
+tsc re-checks); a global file moves everyone. O(V + E), in the worker.
 
-What a change costs now: a workspace-only lockfile, an exemption, or an app.css
-token edit — nothing re-linted; one contribution's rule — every file, but that
-group's rules only (a directive file whole); a rule's test — nothing; the lint
-core, a tsconfig, a `.d.ts`, a real dependency bump — everything, as before.
-Design and measurements: `research/2026-10-15-global-lint-cache-per-contribution.md`.
+**When the type fp is known.** Fresh signatures exist only after tsc runs, in
+the worker. So `finalize` records each program's **signature table**
+(`check/type-fp-tables.ts`, `type-check-type-fps`: program key → every lintable
+file's type fp, concatenated in lintable-list order, ~180 KB) whenever a worker
+comes back — whatever the verdict, since signatures are facts of the program —
+under the key it recomputes from the buildinfo the worker wrote. A later run
+whose program key has a table decides every typed part in prepare (`run` or
+`fresh`), so an all-fresh tree on a PASS program skips the worker. Without one
+(the program changed, or a cold run) each file's typed part goes to the worker
+**deferred**, carrying its few stored typed keys; the worker computes the key
+and runs the part only if it is not among them.
+
+Running a syntactic group without a program (`typeSource: { none: true }`) is
+the enforcement: a type-aware rule that forgot to declare itself throws in
+`getParserServices` instead of caching an answer that read types (and
+`rule-kind-safety/type-aware-rule-declared` catches a lazily reached one).
+Null-id messages (parse failures) belong to the syntactic base part; the typed
+pass drops them.
+
+`check/lint-verdict.ts` assembles every file's messages — stored or fresh —
+under the CURRENT exemptions, so an exemption edit re-lints nothing, and an
+unused file-level exemption is reported for every file.
+
+**A file with an eslint directive is one unit** (~4 % of files): whether a
+disable directive is unused depends on every rule, so it is re-linted whole
+whenever any rule or its type fp changes.
+
+What a change costs: a body-only edit — the file itself; an exported-type
+change — the file plus the typed part of its transitive referencers; a
+workspace-only lockfile, an exemption, or an app.css token edit — nothing; one
+syntactic rule — that group on every file (directive files whole); one
+type-aware rule — the typed part of every file; the lint core, a tsconfig, a
+`.d.ts`, a real dependency bump — everything.
 
 ## Host-wide worker admission — `server/spawnTypeCheckWorker`
 
@@ -255,14 +292,16 @@ Three orderings are load-bearing:
 - The key is computed **after `materializeWarmBase`**, so a fresh worktree can
   enumerate the program from a sibling's base and skip on its very first run.
 - The skip clause is read **after `lintFiles` is built**: a run with files still
-  to lint is never skipped, so an evicted lint result re-runs the worker. That
+  to lint is never skipped, so an evicted lint result — or a typed part no
+  signature table could decide — re-runs the worker. (`lintFiles` itself is
+  built after the key now: the table is looked up by it.) That
   clause is also what lets the tsc key drop the lint-only globals
   (`eslint.config.ts`, `plugins/**/lint/**`): a lint-rule edit makes its group
   stale for every file, so the lint list is non-empty and nothing skips. An
   exemption edit stales nothing, and needs no worker: `finalize` re-assembles
   the verdict from the store either way.
-- A PASS is recorded from the buildinfo the worker just **wrote**, so what is
-  recorded describes the program that actually passed.
+- A PASS — and a signature table — is recorded from the buildinfo the worker
+  just **wrote**, so what is recorded describes the program that was built.
 
 No buildinfo, an unparseable tsconfig, or a buildinfo shape we do not recognise
 means **no key**, which means a cold run — never a key over an empty program.
@@ -272,7 +311,9 @@ yet`): "running" with no account of why there was nothing to compare against is
 the shape of a report that hides a broken key.
 
 The store is `programPassDir` (host-global, content-addressed, 14-day age
-bound), a sibling of the lint result store over the shared `check/pass-set.ts`.
+bound), a sibling of the lint result store and the signature tables over the
+shared `check/pass-set.ts`. A skipped run re-records both its PASS and its
+table, so each ages as "unused for 14 days".
 
 `--no-cache` (and `SINGULARITY_CHECK_NO_CACHE=1`) disarms the skip, via
 `ctx.cacheEnabled`: someone typing it wants the program actually rebuilt. It
@@ -387,11 +428,18 @@ lines per run, and they are the instrument every claim about this check is made 
   "running" half is what separates a cold tree from a broken key.
 - `type-check: no program key — <why>` — only when the program could not be
   keyed at all.
-- `type-check: lint 412/11455 files (61 whole, 351 partial; 99 groups, engine
-  27 files) — stale: ui/plugins/icons 351, (base) 12` — every run: how many
-  files the worker lints, how many whole (every group stale, or a directive
-  file) vs only some groups, and the groups with the most stale files. The
-  instrument for "did that rule edit cost its group or the repo".
+- `type-check: lint 412/11455 files (61 whole, 351 partial; syntactic 20,
+  typed 400; 11455 sent; 99 groups, engine 28 files; typed keys from worker (no
+  table for this program yet)) — stale: (types) 392, ui/plugins/icons 12` —
+  every run, AFTER the worker (a skipped run prints `lint 0/…`): how many files
+  the worker actually linted, how many whole (every part stale, or a directive
+  file) vs only some parts, how many ran syntactic rules and how many typed
+  ones, how many jobs were sent (with no table every file is, its typed part
+  deferred), whether the typed decisions came from a signature `table` or the
+  `worker` (and why there was no table), and the parts with the most stale
+  files. The instrument for "did that edit cost its group, its importers, or
+  the repo". `type-check: no signature table recorded — <why>` follows when the
+  worker could not read the buildinfo it wrote.
 - `type-check worker repo: cpu 186.6s (sys 12.0s), wall 95.2s, maxRSS 7.2 GB, slot wait 3.1s`
   — only when the worker RAN (a skipped run has no line, by construction). These
   are the numbers `TYPE_CHECK_WORKER_UNITS` is measured from, so a grep over many
@@ -443,7 +491,8 @@ measures the queue, so any per-check cost claim needs `./singularity check --job
   CPU and 3× the RAM of the same edit with real signatures). The price is that
   every exported value must have a nameable type: a `TS2883` / `TS4023`
   declaration diagnostic is a real error here, fixed by an annotation;
-  lint reuses the per-group result store (only stale groups re-lint); and
+  lint reuses the per-part result store (only stale parts re-lint, and the
+  real signatures are what key the typed part); and
   an unchanged PROGRAM runs no worker at all (above). A worker that crashes
   records no results (re-lints next run) and yields no lint verdict.
 - **An editor loads this one ~11k-file project for any file**, where a
@@ -472,9 +521,13 @@ measures the queue, so any per-check cost claim needs `./singularity check --job
     - `RawLintMessage`
     - `TypeCheckWorkerJob`
     - `TypeCheckWorkerResult`
+    - `TypedDecision`
+    - `TypedOutcome`
+    - `TypeFpTable`
   - Exports (values):
     - `LINT_GROUP_ALL`
     - `LINT_GROUP_BASE`
+    - `LINT_GROUP_TYPED`
     - `TYPE_CHECK_WORKER_PEAK_BYTES`
     - `TYPE_CHECK_WORKER_UNITS`
 - Cross-plugin:

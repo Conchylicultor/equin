@@ -1,8 +1,9 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 import type * as ts from "typescript";
 import { HOOK_NAME, isBranded, keyName, typeMembers } from "./hook-brand";
+import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator(
+const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
@@ -30,6 +31,7 @@ export default createRule({
     docs: {
       description:
         "Require a use*-named function-typed field (property or method signature) to be declared Hook<…>, so every binding that later holds it is forced to keep a use* name.",
+      requiresTypeChecking: true,
     },
     schema: [],
     messages: {

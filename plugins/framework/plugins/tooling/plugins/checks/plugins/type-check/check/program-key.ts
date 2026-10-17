@@ -57,9 +57,9 @@ import { findFiles, type TreeListing } from "./fingerprint";
 import { openPassSet, type PassSetBounds } from "./pass-set";
 
 // Entries are per (program name, program key) — one or two per run, against
-// the closure cache's thousands — so the count bound is a formality and the
-// 14-day age bound does the evicting. Same shape as the closure cache so the
-// two stores are read the same way.
+// the lint result store's thousands — so the count bound is a formality and the
+// 14-day age bound does the evicting. Same shape as the lint result store so
+// the stores are read the same way.
 const BOUNDS: PassSetBounds = {
   maxAgeMs: 14 * 24 * 60 * 60 * 1000,
   maxEntries: 20000,
@@ -73,7 +73,7 @@ const BOUNDS: PassSetBounds = {
  * chain), every `package.json` outside `node_modules`, the lockfile, and every
  * ambient `.d.ts`.
  *
- * Deliberately NARROWER than the lint closure fingerprint's trigger set: the
+ * Deliberately NARROWER than the outer read-set's global trigger set: the
  * lint-only globals (`eslint.config.ts`, `plugins/**\/lint/**`,
  * `*.lint.generated.ts`) are excluded, so changing a lint rule no longer flips
  * every program's TSC key.

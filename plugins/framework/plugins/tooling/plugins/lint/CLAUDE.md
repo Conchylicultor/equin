@@ -49,6 +49,26 @@ Which files may violate a rule is declared by the plugin owning them, in its
 own `exempt/index.ts` — see [`tooling/exempt`](../exempt/CLAUDE.md). The
 owner-side `ignores` key no longer exists: a barrel carrying it is a tsc error and fails at load.
 
+## Two kinds of rule: syntactic and type-aware
+
+A rule is **type-aware** iff it declares `meta.docs.requiresTypeChecking:
+true` (the typescript-eslint convention; build custom rules with
+`ESLintUtils.RuleCreator<LintRuleDocs>` so the field type-checks). Every other
+rule is **syntactic**. `isTypeAwareRule` in
+[`core/build-lint-config.ts`](core/build-lint-config.ts) is the one
+classifier; `LintRuleSelection.kind` and `typeAwareLintGroups` both read it.
+
+The declaration is load-bearing: the `type-check` lint cache keys a syntactic
+rule's result on the file's own text alone, and a type-aware one also on the
+types the file can see (research/2026-10-17-global-lint-keyed-on-what-it-reads.md).
+An undeclared rule that reads types would cache an answer that goes stale when
+an imported declaration changes. Two guards stop that:
+
+- the syntactic pass runs with the `{ none: true }` type source — no program,
+  no project — so a `getParserServices` call there throws instead of answering;
+- `rule-kind-safety/type-aware-rule-declared` catches the lazily-reached call
+  statically: a file that reads parser services must declare the flag.
+
 ## Class rules take the shared walk — they do not copy it
 
 A rule that reads Tailwind class tokens uses the ONE walk in
@@ -123,6 +143,8 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `ClassRuleFactory`
     - `LintContribution`
     - `LintExemptionMode`
+    - `LintRuleDocs`
+    - `LintRuleKind`
     - `LintRuleSelection`
     - `LintToolkit`
     - `LoadedLintContribution`
@@ -137,6 +159,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `collectTokens`
     - `findPluginDirs`
     - `isLintScopeExcluded`
+    - `isTypeAwareRule`
     - `LINT_CONFIG_SOURCE`
     - `LINT_DATA_FILES`
     - `LINT_SCOPE_EXCLUDE_GLOBS`
@@ -146,6 +169,7 @@ its disable does not cover. Parameters and imports have no in-file value.
     - `lintExemptions`
     - `lintRuleIds`
     - `loadLintContributions`
+    - `typeAwareLintGroups`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `framework/tooling/codegen`
@@ -180,6 +204,7 @@ its disable does not cover. Parameters and imports have no in-file value.
   - **`repo-walk-safety`** — repo-walk-safety lint rule: no-adhoc-repo-walk
   - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
   - **`route-teardown-safety`** — route-teardown-safety lint rule: no-unroute
+  - **`rule-kind-safety`** — rule-kind-safety lint rule: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true)
   - **`runtime-isolation`** — runtime-isolation lint rule: no-deep-own-folder-import
   - **`scroll-safety`** — scroll-safety lint rules: no-adhoc-scroll-into-view, no-adhoc-scroll-write
   - **`sink-safety`** — sink-safety lint rules: no-adhoc-file-sink, no-adhoc-profiler-seam

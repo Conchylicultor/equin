@@ -6,10 +6,12 @@
  *
  *   1. `tsc` semantic diagnostics (via the incremental builder, persisting the
  *      shared `.tsbuildinfo` so warm runs re-check only the diff);
- *   2. type-aware ESLint, with the SAME program injected via `parserOptions.programs`
- *      so typescript-eslint reuses it instead of constructing a second one —
- *      only the rule groups each file's job names, returning the messages RAW
- *      (exemptions are the check's to apply, when it reads them).
+ *   2. ESLint, only the parts of each file its job names, returning the
+ *      messages RAW (exemptions are the check's to apply, when it reads them):
+ *      the stale SYNTACTIC rule groups with no program at all, and the TYPED
+ *      part (or a directive file whole) with the SAME program injected via
+ *      `parserOptions.programs`, so typescript-eslint reuses it instead of
+ *      constructing a second one.
  *
  * That single construction — not the parallelism — is what removes the
  * duplicated ~99%-TS-program-build cost the two old checks each paid.
@@ -18,7 +20,7 @@
  * never hit the argv limit). stdout is one JSON result object. A nonzero exit
  * means the worker itself crashed (the orchestrator records no PASSes for it).
  */
-import { readFileSync, unlinkSync, writeSync } from "fs";
+import { existsSync, readFileSync, unlinkSync, writeSync } from "fs";
 import { dirname, relative } from "path";
 import ts from "typescript";
 import { Linter } from "eslint";
@@ -32,14 +34,17 @@ import {
 // implements them. Through the barrel, not the file: a deep import into the
 // plugin's own `core/` is what the browser build cannot inline.
 import {
-  LINT_GROUP_ALL,
   LINT_GROUP_BASE,
-  type LintFileJob,
   type LintFileResult,
   type RawLintMessage,
+  type TypedDecision,
+  type TypedOutcome,
+  type TypeFpTable,
   type TypeCheckWorkerJob as Job,
   type TypeCheckWorkerResult as Result,
 } from "../core";
+import { signatureEmitOptions } from "./emit-options";
+import { computeTypeFingerprints, typedResultKey } from "./type-fingerprint";
 
 function rel(root: string, abs: string): string {
   return relative(root, abs).split("\\").join("/");
@@ -54,6 +59,45 @@ function formatTscDiagnostic(root: string, d: ts.Diagnostic): string {
   return `error TS${d.code}: ${msg}`;
 }
 
+/**
+ * The program's type fingerprints, from the buildinfo the emit just wrote —
+ * or, when tsc wrote none because nothing changed, from the one on disk, which
+ * then describes this very program.
+ *
+ * Keyed by each root's spelling ON DISK (`rootNames`, the tsconfig's directory
+ * expansion), not the buildinfo's. On a case-insensitive filesystem tsc names a
+ * file by the first spelling it resolved, so the buildinfo can say
+ * `web/app.tsx` for `web/App.tsx` — and every reader looks a file up by its
+ * git spelling. Every lintable file is a root (the coverage gate), so re-keying
+ * the roots is exact.
+ */
+function readTypeFps(
+  job: Job,
+  written: string | undefined,
+  rootNames: readonly string[],
+): TypeFpTable {
+  let text = written;
+  if (text === undefined) {
+    if (!existsSync(job.buildInfoPath)) {
+      return { kind: "unavailable", why: "tsc wrote no buildinfo" };
+    }
+    text = readFileSync(job.buildInfoPath, "utf8");
+  }
+  const r = computeTypeFingerprints(text, dirname(job.buildInfoPath), job.root);
+  if (r.kind !== "fps") return { kind: "unavailable", why: r.why };
+  // tsc's own identity for a path: lower-cased where the filesystem ignores case.
+  const canonical = (p: string): string =>
+    ts.sys.useCaseSensitiveFileNames ? p : p.toLowerCase();
+  const onDisk = new Map<string, string>();
+  for (const name of rootNames) {
+    const p = rel(job.root, name);
+    onDisk.set(canonical(p), p);
+  }
+  const fps: Record<string, string> = {};
+  for (const [p, fp] of r.fps) fps[onDisk.get(canonical(p)) ?? p] = fp;
+  return { kind: "table", fps };
+}
+
 async function run(job: Job): Promise<Result> {
   // 1. Parse the tsconfig (glob resolution only — no type-check yet).
   const cfg = ts.readConfigFile(job.tsconfigPath, ts.sys.readFile);
@@ -62,6 +106,7 @@ async function run(job: Job): Promise<Result> {
       name: job.name,
       tscErrors: formatTscDiagnostic(job.root, cfg.error),
       lint: [],
+      typeFps: { kind: "unavailable", why: "the tsconfig did not parse" },
     };
   }
   const parsed = ts.parseJsonConfigFileContent(
@@ -74,33 +119,12 @@ async function run(job: Job): Promise<Result> {
 
   // 2. Build ONE incremental program; gather diagnostics through the builder so
   //    its state (and the persisted .tsbuildinfo) reflects what was checked.
-  //
-  //    Declarations are EMITTED, to a writer that keeps nothing but the
-  //    buildinfo. Not for the .d.ts files — nothing reads them — but for what
-  //    computing them puts INTO the buildinfo: a real per-file signature, the
-  //    hash of each file's public shape. Under `noEmit` tsc stores a placeholder
-  //    (signature = version) for every file, so it cannot tell a body edit from
-  //    an API change and re-checks a hub's entire importer closure either way:
-  //    measured on web-core, a one-line body edit in a file with a thousand
-  //    importers cost 168 CPU-s and 7.8 GB, the same as cold. With real
-  //    signatures the same edit costs the identical-tree floor, 38 CPU-s and
-  //    2.5 GB; an edit that changes an API still re-checks its importers, as it
-  //    must. `rootDir` is the repo root so every file has a well-defined output
-  //    path (without it tsc reports TS6059 for anything outside the tsconfig's
-  //    own directory); `outDir` is named but never written. See
-  //    research/2026-09-09-global-type-check-zone-cut.md, Finding 5.
+  //    The options emit declarations, so every file carries a real signature,
+  //    and order types stably, so that signature is a function of the code
+  //    (`./emit-options.ts`).
   const builder = ts.createIncrementalProgram({
     rootNames: parsed.fileNames,
-    options: {
-      ...parsed.options,
-      noEmit: false,
-      declaration: true,
-      emitDeclarationOnly: true,
-      rootDir: job.root,
-      outDir: `${job.buildInfoPath}.decl-out`,
-      incremental: true,
-      tsBuildInfoFile: job.buildInfoPath,
-    },
+    options: signatureEmitOptions(parsed.options, job.root, job.buildInfoPath),
   });
   const diags: ts.Diagnostic[] = [
     ...builder.getConfigFileParsingDiagnostics(),
@@ -115,12 +139,15 @@ async function run(job: Job): Promise<Result> {
     ...builder.getDeclarationDiagnostics(),
   ];
   // Emit through a writer that persists ONLY the .tsbuildinfo. The .d.ts text
-  // is computed (that is what fills in the signatures) and dropped.
+  // is computed (that is what fills in the signatures) and dropped. The
+  // buildinfo text is also KEPT: it is what the type fingerprints are read off.
+  let buildInfoText: string | undefined;
   const emitResult = builder.emit(
     undefined,
     (fileName, text, writeByteOrderMark) => {
       if (fileName.endsWith(".tsbuildinfo")) {
         ts.sys.writeFile(fileName, text, writeByteOrderMark);
+        buildInfoText = text;
       }
     },
     undefined,
@@ -132,17 +159,32 @@ async function run(job: Job): Promise<Result> {
     .map((d) => formatTscDiagnostic(job.root, d))
     .join("\n");
 
-  // 3. Type-aware lint, reusing the program just built (no second construction).
+  // 3. The type fingerprints of the program just built
+  //    (`./type-fingerprint.ts`), read off the buildinfo the emit wrote. tsc
+  //    writes one only when its state changed, and an unchanged program left
+  //    the one on disk describing exactly this program — so that is the
+  //    fallback, not a guess. A shape we cannot read is `unavailable`: fatal
+  //    below only if a job needs it, so the build's fast path (no lint files)
+  //    never fails over a table nobody asked for.
+  const typeFps = readTypeFps(job, buildInfoText, parsed.fileNames);
+
+  // 4. Lint, in up to three passes per file, each with its own config:
   //
-  //    Each file names the rule GROUPS it needs (`../check/lint-groups`): the
-  //    ones whose stored result is stale, or `LINT_GROUP_ALL` for a file that
-  //    carries an eslint directive. One config per distinct selection, built
-  //    once. Messages come back RAW — before exemptions, which the check applies
-  //    when it reads them — and split by group, so each lands under its own key.
+  //    - the stale SYNTACTIC groups, with NO program (`typeSource: { none }`).
+  //      Only rules that read nothing but the text are registered (`kind:
+  //      "syntactic"`), and a type-aware rule misdeclared as syntactic throws
+  //      in `getParserServices` instead of storing an answer that read types;
+  //    - the TYPED part — every type-aware rule, whatever group it is in —
+  //      with the program, when its key is not already stored;
+  //    - a directive file WHOLE, every rule with the program.
+  //
+  //    Messages come back RAW — before exemptions, which the check applies when
+  //    it reads them — and split by part, so each lands under its own key.
   const lint: LintFileResult[] = [];
   if (job.lintFiles.length > 0) {
     const program = builder.getProgram();
     const contributions = await loadLintContributions(job.root);
+    const allContributions = new Set(contributions.map((c) => c.relPath));
     // A rule id's namespace is its contribution's `name`; anything else (the
     // config builder's own typescript-eslint / react-hooks / core rules) and
     // a null id (the linter itself: a parse failure) belong to the base group.
@@ -155,37 +197,56 @@ async function run(job: Job): Promise<Result> {
       const ns = slash < 0 ? "" : ruleId.slice(0, slash);
       return groupOfNamespace.get(ns) ?? LINT_GROUP_BASE;
     };
-    const configs = new Map<string, Linter.Config[]>();
-    const configFor = async (
-      groups: LintFileJob["groups"],
+    const syntacticConfigs = new Map<string, Linter.Config[]>();
+    const syntacticConfig = async (
+      groups: string[],
     ): Promise<Linter.Config[]> => {
-      const key = groups === LINT_GROUP_ALL ? groups : groups.join("\n");
-      let config = configs.get(key);
+      const key = groups.join("\n");
+      let config = syntacticConfigs.get(key);
       if (config === undefined) {
         config = await buildLintConfig({
           root: job.root,
-          typeSource: { programs: [program] },
+          typeSource: { none: true },
           exemptions: "report",
-          ...(groups === LINT_GROUP_ALL
-            ? {}
-            : {
-                rules: {
-                  base: groups.includes(LINT_GROUP_BASE),
-                  contributions: new Set(groups),
-                },
-              }),
+          rules: {
+            base: groups.includes(LINT_GROUP_BASE),
+            contributions: new Set(groups),
+            kind: "syntactic",
+          },
         });
-        configs.set(key, config);
+        syntacticConfigs.set(key, config);
       }
       return config;
     };
+    let typedConfig: Linter.Config[] | undefined;
+    let wholeConfig: Linter.Config[] | undefined;
+    const typedOnly = async (): Promise<Linter.Config[]> =>
+      (typedConfig ??= await buildLintConfig({
+        root: job.root,
+        typeSource: { programs: [program] },
+        exemptions: "report",
+        rules: {
+          base: true,
+          contributions: allContributions,
+          kind: "type-aware",
+        },
+      }));
+    const whole = async (): Promise<Linter.Config[]> =>
+      (wholeConfig ??= await buildLintConfig({
+        root: job.root,
+        typeSource: { programs: [program] },
+        exemptions: "report",
+      }));
+
     const linter = new Linter({ configType: "flat" });
-    for (const { file, groups } of job.lintFiles) {
-      const code = ts.sys.readFile(file);
-      if (code === undefined) continue;
-      // `--quiet` parity: error-level (2) and fatal parse errors only.
-      const messages: RawLintMessage[] = linter
-        .verify(code, await configFor(groups), { filename: file })
+    const verify = (
+      file: string,
+      code: string,
+      config: Linter.Config[],
+    ): RawLintMessage[] =>
+      linter
+        .verify(code, config, { filename: file })
+        // `--quiet` parity: error-level (2) and fatal parse errors only.
         .filter((m) => m.severity === 2 || m.fatal)
         .map((m) => ({
           ruleId: m.ruleId,
@@ -194,21 +255,84 @@ async function run(job: Job): Promise<Result> {
           column: m.column,
           message: m.message,
         }));
-      const byGroup: Record<string, RawLintMessage[]> = {};
-      if (groups === LINT_GROUP_ALL) {
-        byGroup[LINT_GROUP_ALL] = messages;
-      } else {
-        for (const g of groups) byGroup[g] = [];
+    // Where the typed part's result goes, and whether it must run: decided
+    // by prepare (`run`), or here, now that the type fingerprints exist.
+    const typedKey = (
+      file: string,
+      typed: Exclude<TypedDecision, { kind: "fresh" }>,
+    ): { run: boolean; key: string } => {
+      if (typed.kind === "run") return { run: true, key: typed.key };
+      if (typeFps.kind !== "table") {
+        throw new Error(
+          `type-check worker: ${rel(job.root, file)} needs its type fingerprint, and the program's could not be read: ${typeFps.why}`,
+        );
+      }
+      const typeFp = typeFps.fps[rel(job.root, file)];
+      if (typeFp === undefined) {
+        throw new Error(
+          `type-check worker: ${rel(job.root, file)} is not in the program it was sent to be linted under`,
+        );
+      }
+      const key = typedResultKey(typed.fp, typeFp);
+      return { run: !typed.known.includes(key), key };
+    };
+
+    for (const fileJob of job.lintFiles) {
+      const { file } = fileJob;
+      const code = ts.sys.readFile(file);
+      if (code === undefined) {
+        throw new Error(`type-check worker: cannot read ${file}`);
+      }
+      if (fileJob.unit === "whole") {
+        const { run, key } = typedKey(file, fileJob.typed);
+        lint.push({
+          file,
+          unit: "whole",
+          typed: run
+            ? { kind: "ran", key, messages: verify(file, code, await whole()) }
+            : { kind: "cached", key },
+        });
+        continue;
+      }
+      const syntactic: Record<string, RawLintMessage[]> = {};
+      if (fileJob.syntactic.length > 0) {
+        for (const g of fileJob.syntactic) syntactic[g] = [];
         // A message outside the selection can only be a null-id one (a parse
         // failure) on a run without the base group, whose stored result
         // already holds it.
-        for (const m of messages) byGroup[groupOf(m.ruleId)]?.push(m);
+        for (const m of verify(
+          file,
+          code,
+          await syntacticConfig(fileJob.syntactic),
+        )) {
+          syntactic[groupOf(m.ruleId)]?.push(m);
+        }
       }
-      lint.push({ file, groups: byGroup });
+      let typed: TypedOutcome = { kind: "fresh" };
+      if (fileJob.typed.kind !== "fresh") {
+        const { run, key } = typedKey(file, fileJob.typed);
+        typed = run
+          ? {
+              kind: "ran",
+              key,
+              // Null-id messages (a parse failure) belong to the syntactic
+              // base part: the same text produced them there, run or stored.
+              messages: verify(file, code, await typedOnly()).filter(
+                (m) => m.ruleId !== null,
+              ),
+            }
+          : { kind: "cached", key };
+      }
+      lint.push({ file, unit: "split", syntactic, typed });
     }
   }
 
-  return { name: job.name, tscErrors, lint };
+  return {
+    name: job.name,
+    tscErrors,
+    lint,
+    typeFps,
+  };
 }
 
 // A ~16 GB process whose only reader is the check that spawned it: when that

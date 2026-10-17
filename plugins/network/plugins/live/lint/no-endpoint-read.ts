@@ -6,8 +6,9 @@ import {
   type TSESTree,
 } from "@typescript-eslint/utils";
 import type { Type as TsType, TypeChecker } from "typescript";
+import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator(
+const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
@@ -291,6 +292,7 @@ export default createRule({
     docs: {
       description:
         "Disallow request/response server reads in the browser — declare a liveValue (params / query / paged) or a liveCollection and read it with useLive.",
+      requiresTypeChecking: true,
     },
     schema: [],
     messages: {

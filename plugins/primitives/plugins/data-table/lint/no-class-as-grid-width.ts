@@ -1,8 +1,9 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 import type * as ts from "typescript";
 import { isGridTrackSize } from "./grid-track";
+import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator(
+const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
@@ -28,6 +29,7 @@ export default createRule({
     docs: {
       description:
         "Disallow Tailwind class strings (or other non-track values) as ColumnDef.width. The data-table primitive feeds width straight into grid-template-columns, so it must be a CSS grid track size (e.g. minmax(0,1fr), 12rem, auto).",
+      requiresTypeChecking: true,
     },
     schema: [],
     messages: {

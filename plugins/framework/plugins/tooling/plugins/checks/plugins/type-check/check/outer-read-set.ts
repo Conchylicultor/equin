@@ -4,13 +4,13 @@
 // The OUTER whole-tree cache used to force type-check.run() to rebuild the import
 // graph and spawn the full tsc worker fleet on ANY tree change — even a docs-only
 // one — because its verdict was keyed on the entire working-tree hash. (Its INNER
-// per-file closure cache only skips the *lint* stage, never the tsc fan-out.)
+// per-file lint result store only skips the *lint* stage, never the tsc fan-out.)
 //
 // This module records, into the ambient recording `FileSystemView`, EVERY input
 // type-check's verdict depends on, so validate-by-replay makes a change touching
 // none of them an outer HIT (zero workers) while any verdict-relevant change is a
 // MISS. It is purely ADDITIVE to run(): on a MISS the body runs exactly as before
-// (the inner closure cache still applies); on a HIT the runner short-circuits and
+// (the inner lint result store still applies); on a HIT the runner short-circuits and
 // run() is never called.
 
 import type { FileSystemView } from "@plugins/framework/plugins/tooling/plugins/checks/core";
