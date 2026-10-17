@@ -278,7 +278,7 @@ the outcome too, with no separate code path.
   - Uses tokens:
     - `ui/tokens/density --control-height-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 81 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 82 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×25
     - `conversations` ×13
     - `primitives` ×13
@@ -290,6 +290,7 @@ the outcome too, with no separate code path.
     - `debug` ×2
     - `page` ×2
     - `improve`
+    - `integrations/google-maps`
     - `map`
     - `network/live`
     - `reorder`

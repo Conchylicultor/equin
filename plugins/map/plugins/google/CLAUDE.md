@@ -27,8 +27,11 @@ The only map-vendor code in the repo. Everything else draws maps through
     glide), is styled by the Map ID's cloud style (`styles` is not passed,
     since Google ignores it), and has tilt and heading interaction off.
   - A Map ID is fixed at creation, so `GoogleMapCanvas` is keyed by it.
-  - `ReportRendering` reports `getRenderingType()` to the integration's check,
-    and shows `MapIdRasterNotice` when a Map ID still drew raster.
+  - `RasterNotice` shows `MapIdRasterNotice` when a Map ID still drew raster
+    (local to the map). The setup pane's check is separate: `MapIdPreview`
+    (`components/map-id-preview.tsx`) is this plugin's contribution to
+    `integrations/google-maps`'s `LiveMapSetup.MapIdPreview` slot, a bare map
+    that reports `getRenderingType()`.
   - No Advanced Markers either way: they are a DOM element per pin, the cost
     below.
 - **Pins: one canvas** (`components/pin-canvas.tsx`). A single `OverlayView`
@@ -87,24 +90,17 @@ The only map-vendor code in the repo. Everything else draws maps through
 
 ## Plugin reference
 
-- Description: Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Lazily loaded off the boot wave.
+- Description: Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Draws the Live map setup's Map ID preview map. Lazily loaded off the boot wave.
 - Web:
-  - Contributes: `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
-  - Uses:
-    - `integrations/google-maps.MapIdRasterNotice`
-    - `integrations/google-maps.MapsMapAccessAction`
-    - `integrations/google-maps.reportMapRendering`
-    - `integrations/google-maps.useMapsAccess`
-    - `integrations/google-maps.useMapsBrowserConfig`
-    - `map.GeoMap`
-    - `map.MapRendererProps`
-    - `map.useMapTextStyle`
-    - `map/pin-layer.createCanvas2dPainter`
-    - `map/pin-layer.PinLayer`
-    - `map/pin-layer.SceneItem`
+  - Contributes:
+    - `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
+    - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `integrations/google-maps` ×6
+    - `map/pin-layer` ×3
+    - `map` ×3
+    - `primitives/css/spacing` ×2
     - `primitives/css/center.Center`
-    - `primitives/css/spacing.Inset`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`

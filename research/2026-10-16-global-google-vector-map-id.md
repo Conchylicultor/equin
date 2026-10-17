@@ -155,6 +155,27 @@ Once the map is idle, the renderer reads `map.getRenderingType()`.
 The store is in-memory (page lifetime). It is a check, not state that needs
 persisting.
 
+### v2: in-pane preview (supersedes the §3 order and the §5 store)
+
+User feedback: "Check it" needed a map opened elsewhere, the step order forced
+going back, and the instructions were easy to miss. Now:
+
+- The page-global `reportMapRendering` / `useMapIdCheck` store is deleted. The
+  pane draws its own **preview map** (central Paris, zoom 16) with the valid
+  draft Map ID or the saved one, reads `getRenderingType()` and shows
+  Checking / Vector / Raster. A changed id re-checks automatically; **Check
+  again** remounts the map (Google takes minutes to serve changes).
+- The preview is a slot, `LiveMapSetup.MapIdPreview`, because Google map
+  creation belongs to `map/google`, which imports `integrations/google-maps`.
+- Steps: 1 create the Map ID (JavaScript, Vector, tilt/rotation off), 2 paste
+  it (preview = the vector check), 3 hide Google's places (create the style,
+  import the JSON, associate it with the Map ID; confirmed by eye on the same
+  preview, there being no signal for hidden POIs).
+- Instructions are `StepActions` / `StepAction` / `StepKey` in
+  `primitives/setup-steps`: a numbered, full-contrast click-path with the exact
+  Console labels in bold.
+- The on-map `MapIdRasterNotice` stays, local to the renderer.
+
 ## Critical files
 
 - `plugins/integrations/plugins/google-maps/core/browser-config.ts`: `mapId`,

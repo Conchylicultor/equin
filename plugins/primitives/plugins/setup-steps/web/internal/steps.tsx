@@ -184,3 +184,67 @@ export function StepDone({ children }: { children: ReactNode }) {
     </Text>
   );
 }
+
+interface StepListItemInjected {
+  number?: number;
+}
+
+/**
+ * The click-path inside a step: a short numbered list of actions to perform
+ * ("Click Create map ID", "Set Map type to JavaScript"). Body-size and
+ * full-contrast — unlike {@link StepNote}, whose muted caption is for
+ * asides — so the instructions that must be followed cannot be skimmed past.
+ * Direct children must be {@link StepAction} elements; numbers are injected.
+ */
+export function StepActions({ children }: { children: ReactNode }) {
+  const items = Children.toArray(children).filter(isValidElement);
+  return (
+    <Stack as="ol" gap="xs">
+      {items.map((el, i) =>
+        cloneElement(el as ReactElement<StepListItemInjected>, {
+          key: el.key ?? i,
+          number: i + 1,
+        }),
+      )}
+    </Stack>
+  );
+}
+
+/**
+ * One action of a {@link StepActions} list. Wrap the exact UI label in
+ * {@link StepKey}. `detail` is a block the action needs right under it (the
+ * {@link StepCommand} to copy, a field) — so the list stays one numbered
+ * click-path instead of being split, and renumbered, around it.
+ */
+export function StepAction({
+  children,
+  detail,
+  number = 1,
+}: { children: ReactNode; detail?: ReactNode } & StepListItemInjected) {
+  return (
+    <Stack as="li" direction="row" align="baseline" gap="sm">
+      <Text as="span" variant="caption" tone="muted">
+        {number}.
+      </Text>
+      <Fill>
+        <Stack gap="xs">
+          <Text as="span">{children}</Text>
+          {detail}
+        </Stack>
+      </Fill>
+    </Stack>
+  );
+}
+
+/**
+ * The exact label or value to pick in the other app's UI ("JavaScript",
+ * "Vector"): emphasised inline, so the critical choices stand out of a
+ * sentence.
+ */
+export function StepKey({ children }: { children: ReactNode }) {
+  return (
+    <Text as="strong" className="font-semibold">
+      {children}
+    </Text>
+  );
+}

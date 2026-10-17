@@ -31,7 +31,6 @@ import type { MapRendererProps } from "@plugins/map/web";
 import {
   MapIdRasterNotice,
   MapsMapAccessAction,
-  reportMapRendering,
   useMapsBrowserConfig,
 } from "@plugins/integrations/plugins/google-maps/web";
 import { BASEMAP_STYLE } from "@plugins/integrations/plugins/google-maps/core";
@@ -191,7 +190,7 @@ function GoogleMapCanvas({
             />
           )}
           <FitControl overlays={overlays} fitPadding={fitPadding} />
-          {mapId === null ? null : <ReportRendering mapId={mapId} />}
+          {mapId === null ? null : <RasterNotice />}
           <FocusCamera
             overlays={overlays}
             focusId={focusId}
@@ -279,12 +278,12 @@ function ReportCameraRest({
 }
 
 /**
- * With a Map ID: reports how Google actually drew the map (the Live map
- * setup's check), and says so on the map when it is NOT the vector map — a
- * Map ID of the wrong type, another project's, or a deleted one silently gives
- * the raster map otherwise.
+ * With a Map ID: says so on the map when Google did NOT draw the vector map —
+ * a Map ID of the wrong type, another project's, or a deleted one silently
+ * gives the raster map otherwise. Local to the map: the setup pane checks with
+ * its own preview map, not through a report from here.
  */
-function ReportRendering({ mapId }: { mapId: string }) {
+function RasterNotice() {
   const map = useMap();
   const [raster, setRaster] = useState(false);
 
@@ -293,14 +292,12 @@ function ReportRendering({ mapId }: { mapId: string }) {
     const read = () => {
       const type = map.getRenderingType();
       if (type === "UNINITIALIZED") return;
-      const rendering = type === "VECTOR" ? "vector" : "raster";
-      reportMapRendering(mapId, rendering);
-      setRaster(rendering === "raster");
+      setRaster(type !== "VECTOR");
     };
     read();
     const listener = map.addListener("renderingtype_changed", read);
     return () => listener.remove();
-  }, [map, mapId]);
+  }, [map]);
 
   if (!raster) return null;
   return (

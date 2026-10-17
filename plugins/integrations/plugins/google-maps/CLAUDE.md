@@ -40,22 +40,30 @@ and rate-limitable on the server.
 The user creates the style and the Map ID in the Cloud Console, guided by the
 **Smooth zoom** part of the Live map pane:
 
-1. Import `BASEMAP_STYLE_JSON`, the same rule the raster map passes inline, so
-   the two cannot drift.
-2. Create a JavaScript Vector Map ID, with tilt and rotation off because the
+1. Create a JavaScript Vector Map ID, with tilt and rotation off because the
    pin canvas projects flat.
-3. Paste the Map ID.
+2. Paste the Map ID (the preview checks it).
+3. Import `BASEMAP_STYLE_JSON` (the same rule the raster map passes inline, so
+   the two cannot drift) as a map style, and associate it with the Map ID.
 
 The app never holds a Cloud permission. The Map Management API takes only the
 broad `cloud-platform` scope, which the user declined
 (`research/2026-10-16-global-google-vector-map-id.md`). Only the id string is
 stored.
 
-Nothing verifies the Map ID on write. The renderer reports how Google actually
-drew the map (`reportMapRendering`, an in-page store). The pane's **Check it**
-step reads that report (`useMapIdCheck`), and a Map ID that Google drew as
-raster shows `MapIdRasterNotice` on the map itself. It is never a silent
-fallback.
+Nothing verifies the Map ID on write. The pane checks it live instead: step 2
+draws a **preview map** with the Map ID being set up (the valid draft, else the
+saved one) and the stored key, centred on central Paris so Google's shops and
+museums are visible if the style is not attached yet. It reads
+`getRenderingType()` and shows Checking / Vector map / Raster, and **Check
+again** remounts it (Google can take minutes to serve a changed Map ID or
+style). The map is drawn by `map/google`, contributed into the
+`LiveMapSetup.MapIdPreview` slot (props `{ browserKey, mapId, onResult }`):
+`map/google` imports this plugin, so this plugin cannot import it back, and
+with no contribution installed the pane says so loudly. No automatic signal
+exists for hidden places; step 3 asks the user to look at the same preview. A
+Map ID that Google draws as raster also shows `MapIdRasterNotice` on the real
+map, local to the renderer. There is no page-global report store.
 
 ### Where the browser config lives, and why
 
@@ -112,8 +120,8 @@ Google adapter, the live map renderer) go through it and **never** import
     `"no-browser-key"` only for `"map"`. Pending is `loading`, never a blocker.
   - `useMapsBrowserConfig(): MapsBrowserConfigState` — `loading` / `unset` /
     `set { browserKey, mapId }`, for the renderer.
-  - `reportMapRendering(mapId, "vector" | "raster")` — the renderer's report
-    of how Google drew a map with that id. `MapIdRasterNotice` — the map's
+  - `LiveMapSetup.MapIdPreview` — the slot a map renderer fills with the
+    Map ID preview map. `MapIdRasterNotice` — the map's
     "this Map ID isn't a vector map" affordance (opens the Live map pane).
   - `MapsAccessAction` — opens the Places setup wizard, or `null` when Places
     is ready. `MapsMapAccessAction` — opens the Live map pane, or `null` when
@@ -142,13 +150,17 @@ over:
 
 ## Plugin reference
 
-- Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane (browser key, plus the optional vector-map Map ID, checked against how Google actually drew the map). Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
+- Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the pane's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
 - Web:
-  - Slots: `google-maps-live-map-setup.actions`
-  - Slot contributors: `google-maps-live-map-setup.actions` ← `primitives.pane`
+  - Slots:
+    - `google-maps-live-map-setup.actions`
+    - `LiveMapSetup.MapIdPreview`
+  - Slot contributors:
+    - `google-maps-live-map-setup.actions` ← `primitives.pane`
+    - `LiveMapSetup.MapIdPreview` ← `map.google`
   - Contributes: `Pane.Register` "google-maps-live-map-setup"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/setup-steps` ×7
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/setup-steps` ×10
     - `primitives/live-state` ×3
     - `primitives/pane` ×3
     - `auth` ×2
@@ -157,21 +169,25 @@ over:
     - `apps-core/tabs.appLinkProps`
     - `auth/google-maps/setup-wizard.googleMapsSetupPane`
     - `network/live.useLive`
+    - `primitives/css/clip.Clip`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/loading.Loading`
+    - `primitives/slot-render.defineDispatchSlot`
   - Exports (types):
+    - `MapIdPreviewProps`
+    - `MapIdPreviewResult`
     - `MapRendering`
     - `MapsAccess`
     - `MapsAccessBlocker`
     - `MapsAccessCapability`
     - `MapsBrowserConfigState`
   - Exports (values):
+    - `LiveMapSetup`
     - `MapIdRasterNotice`
     - `MAPS_BLOCKER_BODY`
     - `MapsAccessAction`
     - `MapsMapAccessAction`
-    - `reportMapRendering`
     - `useMapsAccess`
     - `useMapsBrowserConfig`
 - Server:
@@ -217,6 +233,7 @@ over:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-lg`
+    - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/places/place-details`
