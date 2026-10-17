@@ -142,11 +142,12 @@ export const HOLDS_FILE = "plugins/toolchain/core/internal/tools.ts";
  * Releases not to move to, as the shared bounded `Hold` of infra/deps/updates
  * (`names` are tool names). Added by the agent running a toolchain upgrade when
  * a new release regresses something that is not ours to fix, with the reason,
- * the upstream issue and an `until` at most 90 days out. While active,
- * `toolchain upgrade` skips a held release, detection lists it as HELD and
- * `toolchain:resolved` fails if the lock records it; the day after `until` it is
- * inert. Delete it once it no longer matters; renew it (a new `until` and
- * reason) only when it still does.
+ * the upstream issue and a `reviewBy` at most 90 days out. Until a diff deletes
+ * it, `toolchain upgrade` skips a held release, detection lists it as HELD and
+ * `toolchain:resolved` fails if the lock records it; past `reviewBy` the upgrade
+ * refuses to run until it is reviewed. Delete it once it no longer matters;
+ * renew it (a new `reviewBy` and a reason saying what was checked) only when it
+ * still does.
  */
 export const HOLDS: readonly Hold[] = [];
 

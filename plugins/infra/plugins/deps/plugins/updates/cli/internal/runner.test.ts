@@ -180,7 +180,7 @@ describe("runUpgrade verdicts", () => {
     let planned = false;
     const updater: Updater = {
       ...fakeUpdater(PKG_MOVE, [
-        { names: ["pkg"], version: "2", reason: "r", until: "2999-01-01" },
+        { names: ["pkg"], version: "2", reason: "r", reviewBy: "2999-01-01" },
       ]),
       plan: async () => {
         planned = true;
@@ -191,10 +191,40 @@ describe("runUpgrade verdicts", () => {
     const receipt = await run(updater, gates);
     expect(receipt.verdict).toBe("aborted");
     expect(receipt.error).toContain(
-      "fake.ts: the hold on pkg lasts until 2999-01-01",
+      "fake.ts: the hold on pkg is next reviewed 2999-01-01",
     );
     expect(planned).toBe(false);
     expect(gates.calls).toEqual([]);
+  });
+
+  test("a hold past its review date stops the run before anything is prepared or planned", async () => {
+    let touched = false;
+    const lapsed: Hold = {
+      names: ["pkg"],
+      version: "2",
+      reason: "broken upstream",
+      reviewBy: "2020-01-01",
+    };
+    const updater: Updater = {
+      ...fakeUpdater(PKG_MOVE, [lapsed]),
+      prepare: async () => {
+        touched = true;
+        return {};
+      },
+      plan: async () => {
+        touched = true;
+        return PKG_MOVE;
+      },
+    };
+    const gates = fakeGates({ before: clean, after: clean });
+    const receipt = await run(updater, gates);
+    expect(receipt.verdict).toBe("holds-to-review");
+    expect(receipt.holdsToReview).toEqual([
+      { updater: "fake", file: "fake.ts", hold: lapsed },
+    ]);
+    expect(touched).toBe(false);
+    expect(gates.calls).toEqual([]);
+    expect(readFileSync(join(root, "fake.lock"), "utf8")).toBe("pkg = 1\n");
   });
 
   test("an apply that crashes is a regression with a verdict, not an abort", async () => {

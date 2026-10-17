@@ -59,20 +59,20 @@ describe("policyProblems", () => {
   };
 
   test("a hold may last 90 days, not more", () => {
-    const hold = (until: string) => ({
+    const hold = (reviewBy: string) => ({
       ...base,
       policies: [
         {
           manifest: "package.json",
           policy: {
-            holds: [{ names: ["a"], below: "2.0.0", reason: "r", until }],
+            holds: [{ names: ["a"], below: "2.0.0", reason: "r", reviewBy }],
           },
         },
       ],
     });
     expect(policyProblems(hold("2027-01-14"))).toEqual([]);
     expect(policyProblems(hold("2027-01-15"))).toEqual([
-      expect.stringContaining("at most 90 days"),
+      expect.stringContaining("at most 90 days unreviewed"),
     ]);
   });
 

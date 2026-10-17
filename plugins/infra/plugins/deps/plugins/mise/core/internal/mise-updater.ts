@@ -136,12 +136,14 @@ export const miseUpdater: Updater = {
         .filter(([tool]) => TOOLS.some((t) => t.name === tool))
         .filter(([, o]) => isExactRelease(o.latest))
         .map(([tool, o]) => {
-          const hold = heldBy(HOLDS, tool, o.latest, today, compareVersions);
+          const hold = heldBy(HOLDS, tool, o.latest, compareVersions);
           return {
             name: tool,
             current: o.current,
             latest: o.latest,
-            ...(hold === undefined ? {} : { waiting: heldWaiting(hold) }),
+            ...(hold === undefined
+              ? {}
+              : { waiting: heldWaiting(hold, today) }),
           };
         }),
     );
@@ -155,7 +157,6 @@ export const miseUpdater: Updater = {
       );
     }
     const { locked, fresh } = assertSound(root);
-    const today = utcDay(new Date());
     const moves: Move[] = [];
     for (const spec of TOOLS) {
       if (only !== undefined && !only.includes(spec.name)) continue;
@@ -165,7 +166,7 @@ export const miseUpdater: Updater = {
       const available = (await mise(root, ["ls-remote", spec.name], 5 * MINUTE))
         .split("\n")
         .map((l) => l.trim());
-      const to = upgradeTarget(spec.name, available, HOLDS, today);
+      const to = upgradeTarget(spec.name, available, HOLDS);
       if (to === null)
         throw new Error(
           `mise lists no usable release of ${spec.name} (every exact release is held, or ls-remote returned none).`,

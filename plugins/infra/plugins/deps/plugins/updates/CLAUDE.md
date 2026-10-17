@@ -60,17 +60,16 @@ delete it once none can be open.
     - `Updater`
     - `UpdaterSmoke`
   - Exports (values):
-    - `assertHoldsBounded`
     - `DEPS_UPGRADE_PROMPT`
+    - `hasUpgradeWork`
     - `heldBy`
     - `heldWaiting`
     - `HOLD_MAX_DAYS`
-    - `holdActive`
     - `holdProblems`
     - `HoldSchema`
     - `isActionable`
-    - `latestUntil`
     - `outdatedSections`
+    - `reviewableHolds`
     - `upgradeTaskTitle`
     - `utcDay`
 - Cli:

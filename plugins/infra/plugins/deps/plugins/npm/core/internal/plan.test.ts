@@ -68,7 +68,7 @@ describe("planNpm", () => {
       names: ["react"],
       below: "20.0.0",
       reason: "waits on x",
-      until: "2026-12-01",
+      reviewBy: "2026-12-01",
     };
     const plan = planNpm(
       input({
@@ -89,11 +89,16 @@ describe("planNpm", () => {
       name: "react",
       current: "19.1.0",
       latest: "20.0.0",
-      waiting: { kind: "held", reason: "waits on x", until: "2026-12-01" },
+      waiting: {
+        kind: "held",
+        reason: "waits on x",
+        reviewBy: "2026-12-01",
+        lapsed: false,
+      },
     });
   });
 
-  test("an expired hold is inert", () => {
+  test("a lapsed hold still holds, its row flagged overdue", () => {
     const plan = planNpm(
       input({
         installed: [{ name: "react", current: "19.1.0" }],
@@ -105,15 +110,25 @@ describe("planNpm", () => {
             names: ["react"],
             below: "20.0.0",
             reason: "r",
-            until: "2026-10-15",
+            reviewBy: "2026-10-15",
           },
         ],
       }),
     );
-    expect(plan.moves).toEqual([
-      { name: "react", from: "19.1.0", to: "20.0.0" },
+    expect(plan.moves).toEqual([]);
+    expect(plan.outdated).toEqual([
+      {
+        name: "react",
+        current: "19.1.0",
+        latest: "20.0.0",
+        waiting: {
+          kind: "held",
+          reason: "r",
+          reviewBy: "2026-10-15",
+          lapsed: true,
+        },
+      },
     ]);
-    expect(plan.outdated.every((o) => o.waiting === undefined)).toBe(true);
   });
 
   const pg: Group[] = [

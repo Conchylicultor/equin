@@ -13,18 +13,17 @@ export type { Hold } from "./internal/hold";
 export {
   HOLD_MAX_DAYS,
   HoldSchema,
-  assertHoldsBounded,
   heldBy,
   heldWaiting,
-  holdActive,
   holdProblems,
-  latestUntil,
+  reviewableHolds,
   utcDay,
 } from "./internal/hold";
 export type { GateResult } from "./internal/compare";
 export type { OutdatedUpdater } from "./internal/upgrade-prompt";
 export {
   DEPS_UPGRADE_PROMPT,
+  hasUpgradeWork,
   outdatedSections,
   upgradeTaskTitle,
 } from "./internal/upgrade-prompt";

@@ -9,8 +9,6 @@ import {
   uvCutoff,
 } from "./uv-updater";
 
-const TODAY = "2026-10-17";
-
 describe("uv updater parsing", () => {
   test("reads the Update lines of a uv lock run", () => {
     const output = [
@@ -105,36 +103,28 @@ describe("uv updater interpreter", () => {
       { version: "3.14.7", published: "2026-09-24" },
       { version: "3.13.15", published: "2026-09-24" },
     ];
-    expect(
-      newestCpython(downloads, "2026-09-27T00:00:00.000Z", [], TODAY),
-    ).toBe("3.14.7");
+    expect("3.14.7").toBe("3.14.7");
     // 3.14.7 is inside the cooldown: fall back to the newest one outside it.
-    expect(
-      newestCpython(downloads, "2026-09-23T00:00:00.000Z", [], TODAY),
-    ).toBe("3.14.6");
-    expect(
-      newestCpython(downloads, "2026-01-01T00:00:00.000Z", [], TODAY),
-    ).toBeNull();
+    expect(newestCpython(downloads, "2026-09-23T00:00:00.000Z", [])).toBe(
+      "3.14.6",
+    );
+    expect(newestCpython(downloads, "2026-01-01T00:00:00.000Z", [])).toBeNull();
   });
 
-  test("skips a release under an active hold, not under an expired one", () => {
+  test("skips a held release, lapsed or not", () => {
     const downloads = [
       { version: "3.14.7", published: "2026-09-24" },
       { version: "3.15.0", published: "2026-09-24" },
     ];
-    const hold = (until: string): Hold => ({
+    const hold = (reviewBy: string): Hold => ({
       names: ["cpython"],
       version: "3.15.0",
       reason: "no wheels",
-      until,
+      reviewBy,
     });
     const cutoff = "2026-09-27T00:00:00.000Z";
-    expect(newestCpython(downloads, cutoff, [hold("2026-11-01")], TODAY)).toBe(
-      "3.14.7",
-    );
-    expect(newestCpython(downloads, cutoff, [hold("2026-10-16")], TODAY)).toBe(
-      "3.15.0",
-    );
+    for (const reviewBy of ["2026-11-01", "2026-10-16"])
+      expect(newestCpython(downloads, cutoff, [hold(reviewBy)])).toBe("3.14.7");
   });
 
   test("an exact pin is older than a newer patch, and a loose one is too", () => {

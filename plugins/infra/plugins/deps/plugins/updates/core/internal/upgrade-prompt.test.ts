@@ -14,6 +14,7 @@ const batch: OutdatedUpdater[] = [
   {
     updaterId: "mise",
     outdated: [{ name: "bun", current: "1.3.12", latest: "1.3.13" }],
+    lapsed: [],
     holdsFile: "mise.holds.jsonc",
   },
 ];
@@ -49,13 +50,19 @@ describe("held and blocked rows", () => {
     {
       updaterId: "npm",
       holdsFile: "package.json",
+      lapsed: [],
       outdated: [
         { name: "vite", current: "6.4.2", latest: "7.1.0" },
         {
           name: "react",
           current: "19.1.0",
           latest: "20.0.0",
-          waiting: { kind: "held", reason: "waits on x", until: "2026-12-01" },
+          waiting: {
+            kind: "held",
+            reason: "waits on x",
+            reviewBy: "2026-12-01",
+            lapsed: false,
+          },
         },
         {
           name: "@embedded-postgres/darwin-arm64",
@@ -70,7 +77,7 @@ describe("held and blocked rows", () => {
   test("the task text names why each waits", () => {
     const text = outdatedSections(mixed);
     expect(text).toContain("- vite 6.4.2 → 7.1.0\n");
-    expect(text).toContain("HELD until 2026-12-01: waits on x");
+    expect(text).toContain("HELD (review by 2026-12-01): waits on x");
     expect(text).toContain("BLOCKED, do this first: publish pg-client 18.4");
   });
 
@@ -79,5 +86,52 @@ describe("held and blocked rows", () => {
     expect(title).toContain("vite");
     expect(title).toContain("@embedded-postgres/darwin-arm64");
     expect(title).not.toContain("react");
+  });
+});
+
+describe("holds to review", () => {
+  const overdue: OutdatedUpdater[] = [
+    {
+      updaterId: "uv",
+      holdsFile: "uv-holds.ts",
+      outdated: [
+        {
+          name: "audio-analysis:cpython",
+          current: "3.14.7",
+          latest: "3.15.0",
+          waiting: {
+            kind: "held",
+            reason: "no cp315 wheels",
+            reviewBy: "2026-11-15",
+            lapsed: true,
+          },
+        },
+      ],
+      lapsed: [
+        {
+          names: ["cpython"],
+          version: "3.15.0",
+          reason: "no cp315 wheels",
+          issue: "https://example.com/i/1",
+          reviewBy: "2026-11-15",
+        },
+      ],
+    },
+  ];
+
+  test("each lapsed hold is its own checklist item, with its reason and issue", () => {
+    const text = outdatedSections(overdue);
+    expect(text).toContain(
+      "HELD, REVIEW OVERDUE since 2026-11-15: no cp315 wheels",
+    );
+    expect(text).toContain(
+      "Holds to review:\n- [ ] cpython 3.15.0 (review by 2026-11-15): no cp315 wheels — https://example.com/i/1",
+    );
+  });
+
+  test("a lapsed hold alone is work: it titles the task", () => {
+    expect(upgradeTaskTitle(overdue)).toBe(
+      "Upgrade uv: review hold on cpython",
+    );
   });
 });

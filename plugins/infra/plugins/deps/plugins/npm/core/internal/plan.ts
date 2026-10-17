@@ -37,7 +37,7 @@ export interface PlanInput {
   patched: ReadonlyMap<string, { version: string; patch: string }>;
   /** A release published after this instant is not adopted yet (the cooldown). */
   cutoff: string;
-  /** `YYYY-MM-DD`: a hold whose `until` is before it is inert. */
+  /** `YYYY-MM-DD`: past a hold's `reviewBy` its HELD row says the review is overdue. */
   today: string;
 }
 
@@ -168,9 +168,7 @@ export function planNpm(input: PlanInput): Plan {
       all.set(m, c);
       allowed.set(
         m,
-        c.filter(
-          (v) => v === current.get(m) || !heldBy(holds, m, v, today, order),
-        ),
+        c.filter((v) => v === current.get(m) || !heldBy(holds, m, v, order)),
       );
     }
     const chosen = assign(members, allowed, groups);
@@ -222,12 +220,12 @@ export function planNpm(input: PlanInput): Plan {
           },
         });
       } else if (order(newest, newestAllowed) > 0) {
-        const hold = heldBy(holds, m, newest, today, order)!;
+        const hold = heldBy(holds, m, newest, order)!;
         outdated.push({
           name: m,
           current: from,
           latest: newest,
-          waiting: heldWaiting(hold),
+          waiting: heldWaiting(hold, today),
         });
       }
     }

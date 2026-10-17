@@ -18,8 +18,9 @@ import {
  * this checkout: refuses the main checkout, writes the receipt in the
  * worktree data dir (`deps-upgrade-<id>.json` for one updater,
  * `deps-upgrade.json` for a batch of several), runs the real gates. Returns the
- * receipt when something landed or nothing had to; throws on `regressed` and
- * `aborted` (files already put back), so every caller exits non-zero on them.
+ * receipt when something landed or nothing had to; throws on `regressed`,
+ * `aborted` (files already put back) and `holds-to-review` (nothing touched),
+ * so every caller exits non-zero on them.
  */
 export async function upgradeThisWorktree(
   selection: readonly UpgradeSelection[],
@@ -48,6 +49,11 @@ export async function upgradeThisWorktree(
   if (receipt.verdict === "regressed")
     throw new Error(
       `${what}: regressed — nothing landed, the locks were put back (the receipt names each culprit).`,
+    );
+  if (receipt.verdict === "holds-to-review")
+    throw new Error(
+      `${what}: ${receipt.holdsToReview.length} hold(s) past their review date — nothing was planned. ` +
+        "Lift each (delete it) or renew it (a new `reviewBy` and a reason saying what was checked), then run again.",
     );
   if (receipt.verdict === "aborted")
     throw new Error(

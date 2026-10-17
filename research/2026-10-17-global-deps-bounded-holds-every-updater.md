@@ -1,6 +1,6 @@
 # Bounded holds for every updater: one hold model for npm, mise and uv
 
-Status: **plan**. Follows up on [2026-10-16-global-deps-versions-always-move.md](./2026-10-16-global-deps-versions-always-move.md) §B.
+Status: **shipped; expiry semantics superseded by [v2](./2026-10-17-global-deps-bounded-holds-every-updater-v2.md)** — a hold is never released by its date; `until` became `reviewBy`, and a lapsed hold must be reviewed before the upgrade runs. Follows up on [2026-10-16-global-deps-versions-always-move.md](./2026-10-16-global-deps-versions-always-move.md) §B.
 
 ## Context
 

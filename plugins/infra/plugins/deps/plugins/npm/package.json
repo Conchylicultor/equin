@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-infra-deps-npm",
   "version": "0.0.1",
   "private": true,
-  "description": "The npm updater and the dependency policy: specs are ranges, bun.lock fixes versions, the updater moves them (lockstep groups together, expiring holds), and the deps-npm checks hold the invariants."
+  "description": "The npm updater and the dependency policy: specs are ranges, bun.lock fixes versions, the updater moves them (lockstep groups together, reviewed holds), and the deps-npm checks hold the invariants."
 }

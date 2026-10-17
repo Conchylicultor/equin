@@ -25,15 +25,17 @@ export interface UpdaterSmoke {
 /**
  * Why a newer release is reported but not moved to by this upgrade.
  *
- * `held`: a hold the updater honours until `until` (a date at most 90 days out
- * when it was set) — reported so a hold is never silent, and inert once it
- * expires. `blocked`: a move the updater cannot make on its own (a lockstep
- * group whose members have not all published the release, a patched package
- * whose patch must be ported) — `prerequisite` is the work that unblocks it,
- * which the upgrade task asks for.
+ * `held`: a hold covers it — honoured until a diff deletes it, whatever its
+ * date. `reviewBy` is when it must be looked at again; `lapsed` once that has
+ * passed (the hold itself is then work for the upgrade task, listed under
+ * "Holds to review", and the runner refuses to finish past it). `blocked`: a
+ * move the updater cannot make on its own (a lockstep group whose members have
+ * not all published the release, a patched package whose patch must be
+ * ported) — `prerequisite` is the work that unblocks it, which the upgrade
+ * task asks for.
  */
 export type OutdatedWaiting =
-  | { kind: "held"; reason: string; until: string }
+  | { kind: "held"; reason: string; reviewBy: string; lapsed: boolean }
   | { kind: "blocked"; prerequisite: string };
 
 /** Something newer than what the lock records, as the scheduled detection sees it. */
@@ -118,8 +120,9 @@ export interface Updater {
     /** Repo-relative file the agent adds a hold to, or where to find them. */
     readonly file: string;
     /**
-     * Every hold declared, expired ones included. The runner and the detect job
-     * refuse a hold set past its bound ({@link holdProblems}) before planning.
+     * Every hold declared, lapsed ones included. The runner and the detect job
+     * read it before planning (`reviewableHolds`): a hold set past its bound
+     * throws, and a lapsed one is work the upgrade must do first.
      */
     read(root: string): Promise<readonly Hold[]>;
   };

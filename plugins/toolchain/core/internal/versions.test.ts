@@ -82,11 +82,11 @@ describe("parseMiseToolRequests", () => {
 
 const TODAY = "2026-10-17";
 const NO_HOLDS = { holds: [], today: TODAY };
-const bunHold = (until: string): Hold => ({
+const bunHold = (reviewBy: string): Hold => ({
   names: ["bun"],
   version: "1.4.2",
   reason: "broken",
-  until,
+  reviewBy,
 });
 
 describe("lockProblems", () => {
@@ -147,19 +147,14 @@ describe("lockProblems", () => {
     );
   });
 
-  test("a locked release under an active hold is a problem; an expired hold is inert", () => {
-    expect(
-      lockProblems(all("latest"), locked, {
-        holds: [bunHold("2026-11-01")],
-        today: TODAY,
-      }).join("\n"),
-    ).toContain("bun 1.4.2, which is held until 2026-11-01: broken");
-    expect(
-      lockProblems(all("latest"), locked, {
-        holds: [bunHold("2026-10-16")],
-        today: TODAY,
-      }),
-    ).toEqual([]);
+  test("a locked release under a hold is a problem, lapsed or not", () => {
+    for (const reviewBy of ["2026-11-01", "2026-10-16"])
+      expect(
+        lockProblems(all("latest"), locked, {
+          holds: [bunHold(reviewBy)],
+          today: TODAY,
+        }).join("\n"),
+      ).toContain(`bun 1.4.2, which is held (review by ${reviewBy}): broken`);
   });
   test("a hold set past 90 days is a problem", () => {
     expect(
@@ -167,7 +162,7 @@ describe("lockProblems", () => {
         holds: [bunHold("2027-06-01")],
         today: TODAY,
       }).join("\n"),
-    ).toContain("a hold is set for at most 90 days");
+    ).toContain("a hold goes at most 90 days unreviewed");
   });
 });
 
@@ -187,24 +182,17 @@ describe("addLockedTool", () => {
 describe("upgradeTarget", () => {
   test("takes the newest exact release, ignoring channels and prereleases", () => {
     expect(
-      upgradeTarget(
-        "bun",
-        ["1.4.1", "1.4.2", "1.5.0-canary.1", "canary"],
-        [],
-        TODAY,
-      ),
+      upgradeTarget("bun", ["1.4.1", "1.4.2", "1.5.0-canary.1", "canary"], []),
     ).toBe("1.4.2");
   });
-  test("skips a release under an active hold, not under an expired one", () => {
+  test("skips a held release, lapsed or not", () => {
     const available = ["1.4.1", "1.4.2"];
-    expect(
-      upgradeTarget("bun", available, [bunHold("2026-11-01")], TODAY),
-    ).toBe("1.4.1");
-    expect(
-      upgradeTarget("bun", available, [bunHold("2026-10-16")], TODAY),
-    ).toBe("1.4.2");
+    for (const reviewBy of ["2026-11-01", "2026-10-16"])
+      expect(upgradeTarget("bun", available, [bunHold(reviewBy)])).toBe(
+        "1.4.1",
+      );
   });
   test("nothing to take is null", () => {
-    expect(upgradeTarget("bun", ["canary"], [], TODAY)).toBeNull();
+    expect(upgradeTarget("bun", ["canary"], [])).toBeNull();
   });
 });

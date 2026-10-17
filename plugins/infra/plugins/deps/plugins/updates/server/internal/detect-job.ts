@@ -7,8 +7,8 @@ import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { tasksCategory } from "@plugins/tasks/plugins/task-category/server";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
 import {
-  assertHoldsBounded,
-  isActionable,
+  hasUpgradeWork,
+  reviewableHolds,
   outdatedSections,
   upgradeTaskTitle,
   type OutdatedUpdater,
@@ -88,16 +88,16 @@ export const depsUpgradesAutomation = defineAutomation({
     for (const updater of declaredUpdaters()) {
       if (!included.has(updater.id)) continue;
       try {
-        await assertHoldsBounded(updater, REPO_ROOT, new Date());
-        const outdated = await updater.detect(REPO_ROOT);
-        // Held rows ride along with work but never file a task on their own:
-        // a hold is bounded by its `until`, after which its row is actionable.
-        if (outdated.some(isActionable))
-          batch.push({
-            updaterId: updater.id,
-            outdated,
-            holdsFile: updater.holds.file,
-          });
+        const lapsed = await reviewableHolds(updater, REPO_ROOT, new Date());
+        const share: OutdatedUpdater = {
+          updaterId: updater.id,
+          outdated: await updater.detect(REPO_ROOT),
+          lapsed,
+          holdsFile: updater.holds.file,
+        };
+        // Held rows ride along with work but never file a task on their own;
+        // a hold past its `reviewBy` does, until someone lifts or renews it.
+        if (hasUpgradeWork(share)) batch.push(share);
       } catch (err) {
         partialFailure(err);
       }

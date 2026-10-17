@@ -20,7 +20,11 @@ import {
 } from "./bisect";
 import type { Gates } from "./gates";
 import type { Move, Updater, UpdaterSmoke } from "../../core/internal/updater";
-import { assertHoldsBounded } from "../../core/internal/hold";
+import {
+  describeHold,
+  reviewableHolds,
+  type Hold,
+} from "../../core/internal/hold";
 
 /**
  * `running` until the end, and only then: every run ends on one of the others.
@@ -28,10 +32,25 @@ import { assertHoldsBounded } from "../../core/internal/hold";
  * nothing regressed. `partial`: some moves landed (proven together); the rest
  * regressed (`culprits`) or were never decided (`untested`). `regressed`:
  * nothing landed — the files were put back. `aborted`: the run itself failed
- * before a verdict (`error`) — the files were put back.
+ * before a verdict (`error`) — the files were put back. `holds-to-review`: a
+ * hold is past its `reviewBy` (`holdsToReview`) — nothing was planned or
+ * touched; lift or renew each, then run again.
  */
 export type UpgradeVerdict =
-  "running" | "current" | "upgraded" | "partial" | "regressed" | "aborted";
+  | "running"
+  | "current"
+  | "upgraded"
+  | "partial"
+  | "regressed"
+  | "aborted"
+  | "holds-to-review";
+
+/** A hold past its `reviewBy`, with the updater and file it belongs to. */
+export interface HoldToReview {
+  updater: string;
+  file: string;
+  hold: Hold;
+}
 
 /** One updater a run moves, restricted to `only` (names it knows) when given. */
 export interface UpgradeSelection {
@@ -70,6 +89,8 @@ export interface UpgradeReceipt {
   verdict: UpgradeVerdict;
   /** Why the run aborted (`aborted` only). */
   error: string | null;
+  /** Holds past their `reviewBy` (`holds-to-review` only): the work before any upgrade. */
+  holdsToReview: HoldToReview[];
   /** What each updater's `prepare` recorded (mise: its own version before and after), by updater id. */
   notes: Record<string, Record<string, string>>;
   /** Every move planned. */
@@ -214,6 +235,7 @@ export async function runUpgrade(args: {
     finishedAt: null,
     verdict: "running",
     error: null,
+    holdsToReview: [],
     notes: {},
     moves: [],
     baseline: null,
@@ -271,10 +293,29 @@ async function upgrade(args: {
   const { selection, root, receiptPath, gates, log, receipt } = args;
   const save = () => writeReceipt(receiptPath, receipt);
 
+  // Every hold is reviewed before anything moves: a lapsed one stops the run
+  // here, before any updater prepares (mise updates itself) or plans.
+  const now = new Date();
+  for (const { updater } of selection)
+    for (const hold of await reviewableHolds(updater, root, now))
+      receipt.holdsToReview.push({
+        updater: updater.id,
+        file: updater.holds.file,
+        hold,
+      });
+  if (receipt.holdsToReview.length > 0) {
+    receipt.verdict = "holds-to-review";
+    log(
+      "\nHOLDS TO REVIEW — nothing planned. Lift or renew each, then run again:",
+    );
+    for (const h of receipt.holdsToReview)
+      log(`  ${h.updater} (${h.file}): ${describeHold(h.hold)}`);
+    return;
+  }
+
   // Every updater's moves, planned before any gate runs.
   const planned: Updater[] = [];
   for (const { updater, only } of selection) {
-    await assertHoldsBounded(updater, root, new Date());
     if (updater.prepare !== undefined) {
       receipt.notes[updater.id] = { ...(await updater.prepare(root, log)) };
       save();

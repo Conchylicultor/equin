@@ -25436,7 +25436,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `miseUpdater`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-        - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring expiring holds — contributed to the infra/deps updater registry.
+        - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring reviewed holds — contributed to the infra/deps updater registry.
           - Server:
             - Contributes: `updater` "npm"
             - Uses: `infra/deps/updates.UpdaterDeclare`
@@ -25558,17 +25558,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Updater`
               - `UpdaterSmoke`
             - Exports (values):
-              - `assertHoldsBounded`
               - `DEPS_UPGRADE_PROMPT`
+              - `hasUpgradeWork`
               - `heldBy`
               - `heldWaiting`
               - `HOLD_MAX_DAYS`
-              - `holdActive`
               - `holdProblems`
               - `HoldSchema`
               - `isActionable`
-              - `latestUntil`
               - `outdatedSections`
+              - `reviewableHolds`
               - `upgradeTaskTitle`
               - `utcDay`
           - Cli:

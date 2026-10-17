@@ -162,19 +162,18 @@ export function parseCpythonDownloads(json: string): CpythonDownload[] {
 
 /**
  * The newest CPython published on or before `cutoff` (an ISO instant from
- * {@link uvCutoff}) that no hold in `holds` honoured on `today` covers, or
- * `null` when none is. Pass no holds for the newest release outright.
+ * {@link uvCutoff}) that no hold in `holds` covers (lapsed or not), or `null`
+ * when none is. Pass no holds for the newest release outright.
  */
 export function newestCpython(
   downloads: readonly CpythonDownload[],
   cutoff: string,
   holds: readonly Hold[],
-  today: string,
 ): string | null {
   let best: string | null = null;
   for (const d of downloads) {
     if (`${d.published}T00:00:00.000Z` > cutoff) continue;
-    if (heldBy(holds, CPYTHON, d.version, today, compareReleases)) continue;
+    if (heldBy(holds, CPYTHON, d.version, compareReleases)) continue;
     if (best === null || isNewerRelease(d.version, best)) best = d.version;
   }
   return best;
@@ -291,8 +290,8 @@ export const uvUpdater: Updater = {
     const cutoff = uvCutoff(now);
     const today = utcDay(now);
     const downloads = await cpythonDownloads(root);
-    const cpython = newestCpython(downloads, cutoff, UV_HOLDS, today);
-    const newest = newestCpython(downloads, cutoff, [], today);
+    const cpython = newestCpython(downloads, cutoff, UV_HOLDS);
+    const newest = newestCpython(downloads, cutoff, []);
     const out: Outdated[] = [];
     for (const project of await uvProjects(root)) {
       const pinned = readFileSync(
@@ -307,12 +306,12 @@ export const uvUpdater: Updater = {
         });
       } else if (newest !== null && isNewerRelease(newest, pinned)) {
         // Nothing to move to but a held release: listed, so a hold is never silent.
-        const hold = heldBy(UV_HOLDS, CPYTHON, newest, today, compareReleases)!;
+        const hold = heldBy(UV_HOLDS, CPYTHON, newest, compareReleases)!;
         out.push({
           name: moveName(project, CPYTHON),
           current: pinned,
           latest: newest,
-          waiting: heldWaiting(hold),
+          waiting: heldWaiting(hold, today),
         });
       }
       const output = await uvLock(root, project, [
@@ -323,12 +322,12 @@ export const uvUpdater: Updater = {
       ]);
       for (const u of parseLockUpdates(output)) {
         if (!isNewerRelease(u.to, u.from)) continue;
-        const hold = heldBy(UV_HOLDS, u.pkg, u.to, today, compareReleases);
+        const hold = heldBy(UV_HOLDS, u.pkg, u.to, compareReleases);
         out.push({
           name: moveName(project, u.pkg),
           current: u.from,
           latest: u.to,
-          ...(hold === undefined ? {} : { waiting: heldWaiting(hold) }),
+          ...(hold === undefined ? {} : { waiting: heldWaiting(hold, today) }),
         });
       }
     }

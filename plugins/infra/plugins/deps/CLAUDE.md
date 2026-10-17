@@ -185,7 +185,7 @@ module eval).
 - `updates` — the `Updater` contract (`core/`) and the generic runner (its
   `cli/` barrel, shared CLI machinery: baseline gates → move → candidate gates
   → retry-to-confirm → narrow → prove → verdict `current | upgraded | partial |
-  regressed | aborted`), lifted from `plugins/toolchain`. A crash in `apply` is
+  regressed | aborted | holds-to-review`), lifted from `plugins/toolchain`. A crash in `apply` is
   a regression, not an abort; anything else that throws is `aborted`, and the
   receipt always ends on a verdict. A regressed batch is bisected by unit (a
   `Move.unit` — a lockstep group — never splits), each probe re-running only the
@@ -199,13 +199,16 @@ module eval).
   (receipt `deps-upgrade.json`); naming one moves only it
   (`deps-upgrade-<updater>.json`, `--only` allowed). **Holds** are one model
   for every updater (`Hold` in `core/`: `names`, `version` | `below`, `reason`,
-  `issue?`, required `until` at most 90 days out, inert the day after): each
-  updater exposes its own through `holds.read`, the runner and the detect job
-  refuse one set past the bound before asking the updater anything, each
+  `issue?`, required `reviewBy` at most 90 days out): a hold is honoured until
+  a diff deletes it — never released by its date. Each updater exposes its own
+  through `holds.read`; the runner and the detect job refuse one set past the
+  bound, and a hold past `reviewBy` (lapsed) is work: the detect job files the
+  task for it ("Holds to review") and `deps upgrade` ends `holds-to-review`,
+  touching nothing, until each is lifted or renewed. Each
   updater's check holds the bound statically (`deps-npm:policy`,
   `toolchain:resolved`, `deps-uv:holds`), and a held release is always
   detected as a HELD row (`heldWaiting`), never dropped. Design:
-  `research/2026-10-17-global-deps-bounded-holds-every-updater.md`. The `UpdaterDeclare` registry and the **Dependency upgrades
+  `research/2026-10-17-global-deps-bounded-holds-every-updater-v2.md`. The `UpdaterDeclare` registry and the **Dependency upgrades
   automation** (`deps-upgrades`, a `tasks/automations` `defineAutomation`; its
   job `automation.deps-upgrades` runs on the schedule its automation config
   sets, weekly by default): ONE auto-started task covering every outdated
@@ -408,7 +411,7 @@ torch.
   - **`build`** — The build installer kind of infra/deps: build({ inputs, tool, output, run }) (its deps barrel) declares something built from this checkout's own source — identity = sha256 of every file the git…
   - **`download`** — The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus…
   - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the Dependency upgrades automation includes it in the batched upgrade task and `./singularity deps upgrade mise`…
-  - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring expiring holds…
+  - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring reviewed holds…
   - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that…
   - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and…
   - **`sweep`** — The daily deps.sweep job: removes installed optional-dependency identities that no checkout of this repo declares and that sat unused for 14 days (sweepUnusedDeps over the git worktree list).

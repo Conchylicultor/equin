@@ -3,8 +3,9 @@
 The `uv` updater of `infra/deps`: plans and applies moves of every `python/`
 project's `uv.lock` and its exact `.python-version` (CPython) pin, under a
 3-day release cooldown, with `UV_HOLDS` (`core/`) for releases known to be
-broken — the shared bounded `Hold` of `infra/deps/updates` (an `until` at most
-90 days out, held by `deps-uv:holds`; inert the day after). A held release is
+broken — the shared bounded `Hold` of `infra/deps/updates` (a `reviewBy` at most
+90 days out, held by `deps-uv:holds`; honoured until deleted, and past
+`reviewBy` the upgrade refuses to run until it is reviewed). A held release is
 still detected, as a HELD row.
 
 It is a sub-plugin rather than part of `deps/python` so the installer kind

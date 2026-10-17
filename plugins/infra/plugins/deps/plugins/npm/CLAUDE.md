@@ -48,7 +48,7 @@ Declared in the `package.json` that owns the dependency, next to it:
     "below": "20.0.0",                 // or "version": "19.2.1" (one broken release)
     "reason": "…",
     "issue": "https://…",              // optional
-    "until": "2027-01-10"              // ≤ 90 days from the day it is set
+    "reviewBy": "2027-01-10"           // ≤ 90 days from the day it is set or renewed
   }]
 }
 ```
@@ -60,16 +60,18 @@ Declared in the `package.json` that owns the dependency, next to it:
   `deps-npm:groups-coherent` asserts the lock holds one copy per member and the
   members agree. Today: `typescript-eslint` (root), `embedded-postgres`,
   `pg-client` + `postgres-release` (`database/client-tools`), `pgbouncer`.
-- **Hold** — releases not to land yet, for at most 90 days
-  (`deps-npm:policy` rejects an `until` further than 90 days from today). On
-  its `until` day it goes **inert**: the updater proposes the move and the gates
-  decide. Keeping it longer is a renewal — a new `until` and reason in a
-  reviewed diff. While active, the held release is still listed (**HELD**) in
-  every upgrade task the automation files; held rows alone never file one.
+- **Hold** — releases not to land, until a diff deletes the hold. Its
+  `reviewBy` is at most 90 days out (`deps-npm:policy` rejects one further).
+  Past it the hold is **lapsed**: still honoured, but the automation files an
+  upgrade task listing it under "Holds to review", and `deps upgrade` refuses to
+  run (verdict `holds-to-review`) until it is lifted (deleted) or renewed (a new
+  `reviewBy` and a reason saying what was checked) — the shared model of
+  `infra/deps/updates`. The held release is always listed (**HELD**) in every
+  upgrade task; held rows alone never file one.
 - **Patched packages** (`patchedDependencies`) are BLOCKED on porting the
   patch: it names the exact version it applies to.
 
-Why every newer release ends up moved, held (≤ 90 days, then moved) or
+Why every newer release ends up moved, held (reviewed at least every 90 days — lifted or renewed) or
 blocked (asked for every cycle): there is no other arm in `planNpm`, and no
 spec can opt out (`deps-npm:ranges`).
 
@@ -82,7 +84,7 @@ functions in `core/internal/coherence.ts` over `readWorkspace(root)`.
 
 ## Plugin reference
 
-- Description: The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring expiring holds — contributed to the infra/deps updater registry.
+- Description: The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring reviewed holds — contributed to the infra/deps updater registry.
 - Server:
   - Contributes: `updater` "npm"
   - Uses: `infra/deps/updates.UpdaterDeclare`
