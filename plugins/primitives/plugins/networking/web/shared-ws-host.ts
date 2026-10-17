@@ -25,6 +25,8 @@ export interface SharedWsHost {
 interface PortEntry {
   port: MessagePortLike;
   will: string | null;
+  /** `Date.now()` at attach — how long a released port had lived. */
+  attachedAt: number;
 }
 
 /**
@@ -71,9 +73,21 @@ export function createSharedWsHost(deps: SharedWsHostDeps): SharedWsHost {
     const entry = ports.get(portId);
     if (!entry) return; // already released (detach, then the lock frees)
     ports.delete(portId);
+    const attachedMs = Date.now() - entry.attachedAt;
+    // "gone" is the worker's inference (it was granted the tab's liveness
+    // lock), not the tab's word. Tell the port itself before closing it: a tab
+    // that is in fact alive learns it was dropped, reports why, and re-attaches
+    // — instead of sending into a port nobody reads, forever.
+    if (reason === "gone") post(entry.port, { kind: "released", attachedMs });
     entry.port.close();
     if (entry.will !== null) owner?.sendIfOpen(entry.will);
-    diag({ type: "port-released", url: url!, ports: ports.size, reason });
+    diag({
+      type: "port-released",
+      url: url!,
+      ports: ports.size,
+      reason,
+      attachedMs,
+    });
     if (ports.size === 0) {
       owner?.close();
       owner = null;
@@ -101,7 +115,7 @@ export function createSharedWsHost(deps: SharedWsHostDeps): SharedWsHost {
       return null;
     }
     url = msg.url;
-    ports.set(msg.portId, { port, will: null });
+    ports.set(msg.portId, { port, will: null, attachedAt: Date.now() });
     // Granted only once the tab's own hold ends: the tab is gone.
     void deps.locks.request(
       portLivenessLockName(msg.portId),

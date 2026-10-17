@@ -83,6 +83,13 @@ function defaultLocks(): LockManagerLike {
   return locks;
 }
 
+/**
+ * A live tab the worker evicted re-attaches — at most `MAX_EVICTIONS` times per
+ * `EVICTION_WINDOW_MS`; one more and the socket closes with a thrown error.
+ */
+const MAX_EVICTIONS = 3;
+const EVICTION_WINDOW_MS = 60_000;
+
 /** One attachment of this tab to the worker: a port plus its liveness lock. */
 interface PortSession {
   worker: SharedWorkerLike;
@@ -94,6 +101,14 @@ interface PortSession {
   queue: TabToWorker[];
   /** Ends the liveness hold; null until the lock is granted. */
   releaseLock: (() => void) | null;
+  /**
+   * How this port's liveness lock request stands, from the tab's own side:
+   * `"held"` while granted and not yet ended (or still pending), `"ended"` once
+   * the hold ended, `"aborted:<name>"` if the browser rejected the request.
+   * Read when the worker evicts the port, to name what made it think the tab
+   * was gone.
+   */
+  lock: "held" | "ended" | `aborted:${string}`;
 }
 
 // Drop-in replacement for the string-message subset of the native WebSocket
@@ -134,6 +149,8 @@ export class SharedWebSocket {
    * any connection (never opened, a drop since, or a re-attach).
    */
   private boundConn: string | null = null;
+  /** `Date.now()` of each recent eviction (see the `released` message). */
+  private evictions: number[] = [];
 
   constructor(
     url: string | URL,
@@ -232,6 +249,7 @@ export class SharedWebSocket {
       attached: false,
       queue: [],
       releaseLock: null,
+      lock: "held",
     };
     this.session = session;
     worker.onerror = () => this.onWorkerError(session);
@@ -241,7 +259,7 @@ export class SharedWebSocket {
     // Hold the liveness lock for the port's whole life, and attach only once it
     // is held: the worker queues for the same lock, so a grant before ours
     // would read as "this tab is already gone".
-    void this.locks.request(
+    const lockSettled = this.locks.request(
       portLivenessLockName(portId),
       { mode: "exclusive" },
       () =>
@@ -265,6 +283,17 @@ export class SharedWebSocket {
           session.attached = true;
           for (const msg of session.queue.splice(0)) post(msg);
         }),
+    );
+    // The request settles when the hold ends — our own detach, or the browser
+    // ending it under us. Recorded, not acted on: an eviction reads it.
+    void lockSettled.then(
+      () => {
+        session.lock = "ended";
+      },
+      (err: unknown) => {
+        if (!(err instanceof DOMException)) throw err;
+        session.lock = `aborted:${err.name}`;
+      },
     );
   }
 
@@ -344,6 +373,38 @@ export class SharedWebSocket {
         return;
       case "diag":
         publishNetDiag(msg.event);
+        return;
+      case "released":
+        // The worker dropped this port as "gone" while this tab is alive (it
+        // never detached — a detached session's messages are ignored above).
+        // Report what the tab's own lock says, THEN re-attach: the report is
+        // the record of the cause; the re-attach only stops the page from
+        // waiting forever on a port nobody reads.
+        publishNetDiag({
+          type: "port-evicted",
+          url: this.absUrl,
+          attachedMs: msg.attachedMs,
+          tabLock: session.lock,
+        });
+        this.detach();
+        {
+          const now = Date.now();
+          this.evictions = this.evictions.filter(
+            (t) => now - t < EVICTION_WINDOW_MS,
+          );
+          this.evictions.push(now);
+          // Evicted again and again: the cause is not transient, and
+          // re-attaching would only spin. Stop and fail loudly.
+          if (this.evictions.length > MAX_EVICTIONS) {
+            this.setStatus("closed");
+            throw new Error(
+              `SharedWebSocket ${this.url}: the shared-ws worker evicted this live tab ${this.evictions.length} times in ${EVICTION_WINDOW_MS / 1000}s (tab lock: ${session.lock}) — giving up`,
+            );
+          }
+        }
+        this.boundConn = null;
+        this.readyState = SharedWebSocket.CONNECTING;
+        this.attach();
         return;
       case "fatal":
         this.detach();

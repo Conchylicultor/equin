@@ -7,7 +7,7 @@
 import type { NetDiagEvent } from "./net-diag-bus";
 import type { WsStatus } from "./ws-status-bus";
 
-export const SHARED_WS_PROTO = 1;
+export const SHARED_WS_PROTO = 2;
 
 /** Tab → worker. */
 export type TabToWorker =
@@ -50,7 +50,14 @@ export type WorkerToTab =
   /** A diagnostic event for the tab's net-diag bus (the worker has no bus). */
   | { kind: "diag"; event: NetDiagEvent }
   /** The worker rejected this port (protocol or URL mismatch). */
-  | { kind: "fatal"; message: string };
+  | { kind: "fatal"; message: string }
+  /**
+   * The worker released this port as "gone" (it was granted the port's
+   * liveness lock) — sent to the released port itself, just before the worker
+   * closes it, so a tab that is in fact alive learns it was dropped instead of
+   * sending into a port nobody reads.
+   */
+  | { kind: "released"; attachedMs: number };
 
 /**
  * The SharedWorker name for one server URL and dialect. SharedWorker identity

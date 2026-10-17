@@ -28,6 +28,8 @@ import {
   type WsTestHook,
 } from "../../core";
 import { SharedWebSocket } from "../shared-websocket";
+import { CONNECT_DEADLINE_MS } from "../socket-owner";
+import { subscribeNetDiag, type NetDiagEvent } from "../net-diag-bus";
 import { createSharedWsHost } from "../shared-ws-host";
 import { SHARED_WS_PROTO, type WorkerToTab } from "../shared-ws-protocol";
 import {
@@ -464,5 +466,102 @@ describe("SharedWebSocket", () => {
       await flush();
       expect(hub.server.all()).toHaveLength(1);
     });
+  });
+});
+
+/**
+ * Transport faults the networking layer recovers from — each one PUBLISHED on
+ * the net-diag bus before it heals, so the recovery never hides the cause
+ * (infra/health's watchdog turns these into reports).
+ */
+describe("SharedWebSocket — reported recoveries", () => {
+  const built: SharedWebSocket[] = [];
+  let diag: NetDiagEvent[] = [];
+  let unsub: () => void = () => {};
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    diag = [];
+    unsub = subscribeNetDiag((ev) => diag.push(ev));
+  });
+
+  afterEach(() => {
+    unsub();
+    for (const s of built.splice(0)) s.close();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  test("a handshake that never answers is reported as ws-connect-stalled, then abandoned and redialed", async () => {
+    const hub = createTransportHub();
+    const sws = new SharedWebSocket(URL_PATH, hub.tab().hooks);
+    built.push(sws);
+    await flush();
+    expect(hub.server.all()).toHaveLength(1);
+    expect(sws.status).toBe("connecting");
+
+    await vi.advanceTimersByTimeAsync(CONNECT_DEADLINE_MS - 1);
+    expect(diag.some((e) => e.type === "ws-connect-stalled")).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(diag.find((e) => e.type === "ws-connect-stalled")).toMatchObject({
+      type: "ws-connect-stalled",
+      elapsedMs: CONNECT_DEADLINE_MS,
+      attempt: 0,
+    });
+    expect(hub.server.all()[0]!.readyState).toBe(CLOSED);
+    expect(sws.status).toBe("reconnecting");
+
+    await vi.advanceTimersByTimeAsync(500); // first backoff step
+    expect(hub.server.all()).toHaveLength(2);
+    hub.server.all()[1]!.open();
+    await flush();
+    expect(sws.status).toBe("open");
+  });
+
+  test("an open connection is never abandoned by the connect deadline", async () => {
+    const hub = createTransportHub();
+    built.push(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    await flush();
+    hub.server.all()[0]!.open();
+    await vi.advanceTimersByTimeAsync(CONNECT_DEADLINE_MS * 3);
+    expect(diag.some((e) => e.type === "ws-connect-stalled")).toBe(false);
+    expect(hub.server.openSockets()).toHaveLength(1);
+  });
+
+  test("a live tab whose liveness lock the worker was granted is told, reports port-evicted, and re-attaches", async () => {
+    const hub = createTransportHub();
+    const tab = hub.tab();
+    const sws = new SharedWebSocket(URL_PATH, tab.hooks);
+    built.push(sws);
+    // A second tab keeps the shared connection alive across the eviction.
+    built.push(new SharedWebSocket(URL_PATH, hub.tab().hooks));
+    let opens = 0;
+    sws.onopen = () => {
+      opens++;
+    };
+    await flush();
+    const ws = hub.server.all()[0]!;
+    ws.open();
+    await flush();
+    expect(opens).toBe(1);
+
+    // The tab's hold ends WITHOUT the tab detaching (its port stays alive):
+    // the worker is granted the lock and reads the tab as gone.
+    hub.locks.releaseTab(tab.lockNames[0]!);
+    await flush();
+
+    expect(diag.find((e) => e.type === "port-evicted")).toMatchObject({
+      type: "port-evicted",
+      tabLock: "ended",
+    });
+    // Re-attached on a fresh port: the same server connection, onopen
+    // re-dispatched so consumers replay, and frames reach the server again.
+    expect(tab.ports).toHaveLength(2);
+    expect(hub.server.all()).toHaveLength(1);
+    expect(opens).toBe(2);
+    sws.send("after-eviction");
+    await flush();
+    expect(ws.sent).toContain("after-eviction");
   });
 });

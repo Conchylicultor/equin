@@ -28,15 +28,17 @@ export default {
       id: "stale-frontend",
       matches: (i) => i.staleOrigin === true,
     }),
-    // A missed-updates live-state wedge the watchdog attributed to a server
-    // restart that happened while the tab was backgrounded (the socket missed the
-    // restart's version bumps). This is benign deploy-skew, not a stuck pipeline
-    // — and the build-id check above can't catch it, because such a tab is still
-    // on the build the server is currently serving. Record + file the task, mute
-    // the notification.
+    // A live-state wedge the watchdog attributed to a server restart (its
+    // discriminator ends `:restart`): missed updates while the tab was
+    // backgrounded across one, or a handshake held while the server booted.
+    // Benign deploy-skew, not a stuck pipeline — and the build-id check above
+    // can't catch it, because such a tab is still on the build the server is
+    // currently serving. Record + file the task, mute the notification.
     ReportNoiseRule({
       id: "live-state-wedge-restart",
-      matches: ({ errorType }) => errorType === "LiveStateWedge:missed-updates:restart",
+      matches: ({ errorType }) =>
+        errorType?.startsWith("LiveStateWedge:") === true &&
+        errorType.endsWith(":restart"),
     }),
   ],
 } satisfies ServerPluginDefinition;

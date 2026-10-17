@@ -11,6 +11,18 @@ export type NetDiagEvent =
   | { type: "ws-open"; url: string }
   | { type: "ws-close"; url: string }
   | { type: "ws-reconnect-scheduled"; url: string; attempt: number }
+  /**
+   * A connection attempt neither opened nor closed within the connect deadline
+   * (`CONNECT_DEADLINE_MS`): the handshake hung. The owner abandons it and
+   * reconnects — this event is the record that it happened, so the stall is
+   * reported, never just healed. `attempt`: 0 for a first connect.
+   */
+  | {
+      type: "ws-connect-stalled";
+      url: string;
+      elapsedMs: number;
+      attempt: number;
+    }
   // --- tab ports joining / leaving the SharedWorker (shared-ws-host.ts) ---
   | { type: "port-attached"; url: string; ports: number }
   | {
@@ -18,6 +30,24 @@ export type NetDiagEvent =
       url: string;
       ports: number;
       reason: "detach" | "gone";
+      /** How long the released port had been attached. */
+      attachedMs: number;
+    }
+  /**
+   * Published by the TAB (shared-websocket.ts) whose own port the worker
+   * released as "gone" while the tab was alive — the worker was granted the
+   * tab's liveness lock. `tabLock` is what the tab's own lock request says at
+   * that moment, which names the trigger: `"held"` ⇒ the worker was granted a
+   * lock the tab still holds (a Web Locks fault); `"ended"` ⇒ the tab's hold
+   * ended without the tab releasing it; `"aborted:<DOMException name>"` ⇒ the
+   * browser rejected the tab's request (e.g. stolen). The tab re-attaches
+   * after publishing.
+   */
+  | {
+      type: "port-evicted";
+      url: string;
+      attachedMs: number;
+      tabLock: "held" | "ended" | `aborted:${string}`;
     };
 
 type Listener = (ev: NetDiagEvent) => void;

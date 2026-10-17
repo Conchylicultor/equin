@@ -30,7 +30,10 @@ Watches this page's connection to its backends and says so.
     - `infra/endpoints.fetchEndpoint`
     - `primitives/live-state.getNotificationsClient`
     - `primitives/live-state.liveStateSocketKind`
+    - `primitives/live-state.unansweredSubReportSink`
     - `primitives/live-state.useNotificationsChannelStatuses`
+    - `primitives/networking.NetDiagEvent`
+    - `primitives/networking.subscribeNetDiag`
     - `primitives/networking.subscribeWsStatus`
     - `shell/health-report.HealthReport`
     - `shell/toast.showToast`

@@ -40,6 +40,7 @@ import {
   type SubErrorReason,
 } from "@plugins/packages/plugins/resource-protocol/core";
 import { markResourceContractMismatch } from "./resource-contract-store";
+import { unansweredSubReportSink } from "./unanswered-sub-reporter";
 import { toResourceError } from "./resource-error";
 import {
   resourceErrorReportSink,
@@ -331,6 +332,13 @@ interface ActiveSub {
   key: string;
   params: ResourceParams;
   /**
+   * `Date.now()` when this sub's last `sub` / replay entry went out on an OPEN
+   * socket and no answer (`sub-ack` / `up-to-date` / `sub-error`) has landed
+   * since; undefined otherwise. Read by the unanswered-sub deadline (see
+   * `armUnansweredCheck`).
+   */
+  awaitingSince?: number;
+  /**
    * Highest server version (state-change count) this sub has applied. `-1` =
    * nothing applied yet — the baseline a fresh or replayed sub starts from, so
    * the first sub-ack always passes the `<=` staleness guard. The server bumps
@@ -478,7 +486,18 @@ interface SocketChannel {
    * frame the live socket really missed.
    */
   opens: number;
+  /** The one armed unanswered-sub deadline for this channel (see `armUnansweredCheck`). */
+  unansweredTimer?: ReturnType<typeof setTimeout>;
 }
+
+/**
+ * How long a sub sent on an open socket may go unanswered. The server
+ * registers a sub synchronously on receipt and always answers it, so past this
+ * the frame or its answer was lost between this tab and the server while the
+ * transport still reads "open" — reported (`unansweredSubReportSink`), never
+ * silently retried.
+ */
+export const UNANSWERED_SUB_MS = 15_000;
 
 /** One live-state pipeline's causal-floor registries. */
 export interface LiveRegistries {
@@ -959,6 +978,8 @@ export class NotificationsClient {
     for (const channel of Object.values(this.channels) as SocketChannel[]) {
       for (const timer of channel.pendingTeardown.values()) clearTimeout(timer);
       channel.pendingTeardown.clear();
+      clearTimeout(channel.unansweredTimer);
+      channel.unansweredTimer = undefined;
       channel.ws.close();
     }
   }
@@ -1855,6 +1876,7 @@ export class NotificationsClient {
       // can't be read as the resync's (liveFrameSeq is a monotonic counter and
       // is never reset).
       sub.lastAckVersion = -1;
+      this.markAwaiting(channel, sub);
       if (!backed) unbacked++;
       entries.push({
         id: this.nextMsgId++,
@@ -1884,7 +1906,79 @@ export class NotificationsClient {
       trace(
         `replaySubs socket=${socket} unbacked=${unbacked}/${entries.length}`,
       );
+    this.armUnansweredCheck(channel);
     this.emitDebug();
+  }
+
+  /**
+   * Start this sub's answer deadline — only on an OPEN socket: a frame sent
+   * while connecting waits in the transport and is resent by the replay on
+   * open, which restarts the clock; a socket that never opens is the
+   * socket-down watchdog's to report, not this one's.
+   */
+  private markAwaiting(channel: SocketChannel, sub: ActiveSub): void {
+    if (channel.ws.connection === null) {
+      sub.awaitingSince = undefined;
+      return;
+    }
+    sub.awaitingSince = Date.now();
+  }
+
+  /**
+   * One armed timeout per channel, due when its oldest awaiting sub crosses
+   * `UNANSWERED_SUB_MS` — armed only while some sub awaits, so an idle channel
+   * holds no timer (no polling). On firing, every sub past the deadline is
+   * reported ONCE, as one batch, and stops awaiting; the timer re-arms for the
+   * rest.
+   */
+  private armUnansweredCheck(channel: SocketChannel): void {
+    if (channel.unansweredTimer !== undefined) return;
+    let oldest: number | undefined;
+    for (const sub of channel.subs.values()) {
+      if (sub.awaitingSince === undefined) continue;
+      if (oldest === undefined || sub.awaitingSince < oldest)
+        oldest = sub.awaitingSince;
+    }
+    if (oldest === undefined) return;
+    channel.unansweredTimer = setTimeout(
+      () => {
+        channel.unansweredTimer = undefined;
+        this.reportUnanswered(channel);
+        this.armUnansweredCheck(channel);
+      },
+      Math.max(0, oldest + UNANSWERED_SUB_MS - Date.now()),
+    );
+  }
+
+  private reportUnanswered(channel: SocketChannel): void {
+    const now = Date.now();
+    const open = channel.ws.connection !== null;
+    const late: ActiveSub[] = [];
+    for (const sub of channel.subs.values()) {
+      if (sub.awaitingSince === undefined) continue;
+      // The socket dropped since: the replay on its next open re-sends and
+      // restarts the clock, so these are not unanswered on this connection.
+      if (!open) sub.awaitingSince = undefined;
+      else if (now - sub.awaitingSince >= UNANSWERED_SUB_MS) late.push(sub);
+    }
+    if (late.length === 0) return;
+    late.sort((a, b) => a.awaitingSince! - b.awaitingSince!);
+    const oldest = late[0]!;
+    const socket = channel === this.channels.central ? "central" : "worktree";
+    const oldestWaitMs = now - oldest.awaitingSince!;
+    for (const sub of late) sub.awaitingSince = undefined;
+    trace(
+      `unanswered socket=${socket} count=${late.length} oldestKey=${oldest.key} oldestParams=${paramsKey(oldest.params)} waitMs=${oldestWaitMs} tabs=${channel.ws.attachedTabs ?? "?"} conn=${channel.ws.connection ?? "-"}`,
+    );
+    unansweredSubReportSink.emit({
+      socket,
+      count: late.length,
+      oldestKey: oldest.key,
+      oldestParams: paramsKey(oldest.params),
+      oldestWaitMs,
+      attachedTabs: channel.ws.attachedTabs,
+      connection: channel.ws.connection,
+    });
   }
 
   private sendSub(
@@ -1911,6 +2005,10 @@ export class NotificationsClient {
       sub !== undefined && this.hasAppliedValue(key, params)
         ? sub.etag
         : undefined;
+    if (sub !== undefined) {
+      this.markAwaiting(channel, sub);
+      this.armUnansweredCheck(channel);
+    }
     trace(
       `sendSub key=${key} params=${paramsKey(params)} socket=${socket}${etag !== undefined ? " etag=1" : ""}${derive !== undefined ? ` derive=${derive.from.length}` : ""}`,
     );
@@ -2027,6 +2125,7 @@ export class NotificationsClient {
       // date), then heal through the one error channel: the HTTP read now gets
       // the typed 409/404 body, so `q.error` names the reason.
       noteContractRefusal(msg.key, msg.reason, msg.verdict);
+      entry.awaitingSince = undefined;
       entry.derivation = undefined;
       this.fetchAfterSubError(channel, msg.key, msg.params);
       return;
@@ -2158,6 +2257,7 @@ export class NotificationsClient {
     // (re)subscribe; every other kind is a live, server-initiated frame.
     if (msg.kind === "sub-ack" || msg.kind === "up-to-date") {
       entry.lastAckVersion = msg.version;
+      entry.awaitingSince = undefined;
       // Stamp which server boot `entry.version` now belongs to. Only ack frames
       // carry `epoch` (sub-ack, and up-to-date — incl. the up-to-date-batch that
       // recurses through it with the batch epoch attached); update/delta/

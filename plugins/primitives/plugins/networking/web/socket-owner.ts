@@ -6,6 +6,17 @@ import type { WsStatus } from "./ws-status-bus";
 
 const WS_OPEN = 1;
 
+/**
+ * How long one connection attempt may stay CONNECTING. A handshake that
+ * neither opens nor closes fires no event at all, so without a deadline the
+ * socket sits in "connecting" forever and every tab on it waits with it. Past
+ * the deadline the attempt is abandoned and reconnected — after publishing
+ * `ws-connect-stalled`, so the hang is reported, not just healed. Generous on
+ * purpose: a cold backend boot behind the gateway can legitimately hold a
+ * handshake for seconds; this catches the attempt that is never answered.
+ */
+export const CONNECT_DEADLINE_MS = 15_000;
+
 export interface SocketOwnerEvents {
   /** Every status transition; `conn` names the server connection while "open". */
   onStatus(status: WsStatus, conn: string | null): void;
@@ -31,6 +42,10 @@ export class SocketOwner {
   private ws: WebSocketLike | null = null;
   private queue: string[] = [];
   private reconnect = new ReconnectSchedule();
+  /** The current attempt's connect deadline; null once it opened or closed. */
+  private connectDeadline: ReturnType<typeof setTimeout> | null = null;
+  /** Attempts since the last open (0 = first connect), for diagnostics. */
+  private attempt = 0;
   private closed = false;
   /** Test fault: new connection attempts park instead of dialing. */
   private held = false;
@@ -99,6 +114,7 @@ export class SocketOwner {
     if (this.closed) return;
     this.closed = true;
     this.reconnect.cancel();
+    this.clearConnectDeadline();
     this.queue = [];
     const ws = this.ws;
     this.ws = null;
@@ -117,6 +133,7 @@ export class SocketOwner {
 
   /** The connection is gone (closed by the server, the network, or a `drop`). */
   private lost(): void {
+    this.clearConnectDeadline();
     this.ws = null;
     if (this.closed) return;
     this.events.onDiag({ type: "ws-close", url: this.url });
@@ -141,8 +158,26 @@ export class SocketOwner {
       return;
     }
     this.ws = ws;
+    const startedAt = Date.now();
+    const attempt = this.attempt++;
+    this.clearConnectDeadline();
+    this.connectDeadline = setTimeout(() => {
+      this.connectDeadline = null;
+      if (this.ws !== ws || ws.readyState === WS_OPEN) return;
+      this.events.onDiag({
+        type: "ws-connect-stalled",
+        url: this.url,
+        elapsedMs: Date.now() - startedAt,
+        attempt,
+      });
+      this.detach(ws);
+      ws.close();
+      this.lost();
+    }, CONNECT_DEADLINE_MS);
 
     ws.onopen = () => {
+      this.clearConnectDeadline();
+      this.attempt = 0;
       this.reconnect.reset();
       for (const data of this.queue.splice(0)) this.write(ws, data);
       this.events.onDiag({ type: "ws-open", url: this.url });
@@ -156,6 +191,12 @@ export class SocketOwner {
     };
     ws.onclose = () => this.lost();
   };
+
+  private clearConnectDeadline(): void {
+    if (this.connectDeadline === null) return;
+    clearTimeout(this.connectDeadline);
+    this.connectDeadline = null;
+  }
 
   private scheduleReconnect(): void {
     const attempt = this.reconnect.schedule(this.connect);

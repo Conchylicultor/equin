@@ -26111,7 +26111,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.fetchEndpoint`
           - `primitives/live-state.getNotificationsClient`
           - `primitives/live-state.liveStateSocketKind`
+          - `primitives/live-state.unansweredSubReportSink`
           - `primitives/live-state.useNotificationsChannelStatuses`
+          - `primitives/networking.NetDiagEvent`
+          - `primitives/networking.subscribeNetDiag`
           - `primitives/networking.subscribeWsStatus`
           - `shell/health-report.HealthReport`
           - `shell/toast.showToast`
@@ -37630,6 +37633,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceViewProps`
           - `SlowResourceInfo`
           - `TransportInfo`
+          - `UnansweredSubReport`
           - `WindowParams`
           - `WindowResourceDescriptor`
           - `WindowSelector`
@@ -37657,6 +37661,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceView`
           - `slowResourceReportSink`
           - `subscribePendingMounts`
+          - `unansweredSubReportSink`
           - `useCombinedResources`
           - `useEndpointResource`
           - `useFailingResources`
