@@ -11606,6 +11606,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
       - `infra/host-fs.decodeTextBytes`
+      - `infra/host-fs.inertHeaders`
+      - `infra/host-fs.readHostPathText`
+      - `infra/host-fs.serveHostPath`
       - `infra/host/host-read-pool.withHeavyReadSlot`
       - `infra/paths.GIT`
       - `infra/paths.REPO_ROOT`
@@ -26487,7 +26490,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `inertHeaders`
           - `listHostPath`
           - `openHostFile`
+          - `readHostPathText`
           - `resolveHostPath`
+          - `serveHostPath`
         - Routes:
           - `GET /api/host-fs/list`
           - `GET /api/host-fs/stat`

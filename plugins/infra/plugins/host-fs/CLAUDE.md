@@ -134,7 +134,9 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `inertHeaders`
     - `listHostPath`
     - `openHostFile`
+    - `readHostPathText`
     - `resolveHostPath`
+    - `serveHostPath`
   - Routes:
     - `GET /api/host-fs/list`
     - `GET /api/host-fs/stat`

@@ -2,13 +2,17 @@
 
 A file viewer that knows nothing about where its file comes from. The target is a
 `FileRef` (core): `{ source: "host", path }` for any file on the machine, or
-`{ source: "git", worktree, ref?, path }` for a file in a checkout. Renderers
+`{ source: "workspace", workspace, ref?, path }` for a file relative to a
+workspace's root (an attempt id of any workspace kind, `main`, `self`). Without
+`ref` it is read as it is on disk now — code-api resolves the root and hands the
+file to host-fs's readers, so a scratch workspace reads like a worktree; with
+`ref` it is a git read, which only a checkout answers. Renderers
 receive the `FileRef` and read it through `useFileText(file)` /
 `useFileBytes(file)` (the raw bytes, for a renderer that decodes its format
 itself) / `fileUrl(file)`, which dispatch to infra/host-fs or code-api — a
-renderer never branches on the source to read. A checkout's raw route serves
+renderer never branches on the source to read. A workspace's raw route serves
 image formats only today, so `useFileBytes` answers `unsupported` for any other
-checkout file.
+workspace file.
 
 - `FileViewer.Renderer` is the tiered registry: each renderer's `supports({ file,
   gitStatus? })` answers `native` / `contextual` / `fallback` / `last-resort` / `false`, and every

@@ -20,7 +20,8 @@ import { handleStat } from "./internal/stat";
 import { handleText } from "./internal/text";
 import { handleVolume } from "./internal/volume";
 
-export { inertHeaders } from "./internal/raw";
+export { inertHeaders, serveHostPath } from "./internal/raw";
+export { readHostPathText } from "./internal/text";
 export { listHostPath } from "./internal/list";
 export { resolveHostPath } from "./internal/path";
 export { openHostFile, type HostFileOpen } from "./internal/open-file";

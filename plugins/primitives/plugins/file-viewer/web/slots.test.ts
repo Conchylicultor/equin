@@ -40,7 +40,7 @@ describe("resolveRenderers", () => {
     expect(
       ids(
         {
-          file: { source: "git", worktree: "w", path: "a.ts" },
+          file: { source: "workspace", workspace: "w", path: "a.ts" },
           git: { checkout: "w", path: "a.ts", status: "modified" },
         },
         registry,

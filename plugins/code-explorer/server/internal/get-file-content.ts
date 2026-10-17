@@ -2,8 +2,10 @@ import { resolve } from "node:path";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { HOST_FS_TEXT_MAX_BYTES } from "@plugins/infra/plugins/host-fs/core";
-import { decodeTextBytes } from "@plugins/infra/plugins/host-fs/server";
+import {
+  decodeTextBytes,
+  readHostPathText,
+} from "@plugins/infra/plugins/host-fs/server";
 import { resolveInsideRoot } from "./contained-path";
 
 // Every git read in this file serves an open HTTP request from the code
@@ -19,7 +21,9 @@ export type FileReadResult =
   | { kind: "invalid-path" }
   | { kind: "not-found" }
   | { kind: "too-large"; size: number }
-  | { kind: "binary" };
+  | { kind: "binary" }
+  | { kind: "denied" }
+  | { kind: "unreadable-archive"; reason: string };
 
 export async function getFileContentAtRef(
   worktreePath: string,
@@ -44,14 +48,26 @@ export async function getFileContent(
   worktreePath: string,
   relPath: string,
 ): Promise<FileReadResult> {
-  // The file as it is on disk right now — inside the checkout only. A file
-  // elsewhere on the host is host-fs's to read (file-viewer's `host` FileRef).
+  // The file as it is on disk right now — inside the workspace only, read by
+  // host-fs's one text gate. A file elsewhere on the host is host-fs's to
+  // address too (file-viewer's `host` FileRef).
   const absTarget = resolveInsideRoot(worktreePath, relPath);
   if (absTarget === null) return { kind: "invalid-path" };
 
-  const file = Bun.file(absTarget);
-  if (!(await file.exists())) return { kind: "not-found" };
-  if (file.size > HOST_FS_TEXT_MAX_BYTES)
-    return { kind: "too-large", size: file.size };
-  return decodeTextBytes(new Uint8Array(await file.arrayBuffer()));
+  const result = await readHostPathText(absTarget);
+  switch (result.kind) {
+    case "ok":
+      return { kind: "ok", content: result.content };
+    case "too-large":
+      return { kind: "too-large", size: result.size };
+    case "binary":
+      return { kind: "binary" };
+    case "missing":
+    case "not-a-file":
+      return { kind: "not-found" };
+    case "denied":
+      return { kind: "denied" };
+    case "unreadable-archive":
+      return { kind: "unreadable-archive", reason: result.reason };
+  }
 }

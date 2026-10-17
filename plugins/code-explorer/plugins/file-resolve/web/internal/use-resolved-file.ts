@@ -36,7 +36,7 @@ export function useResolvedFile(
       status: "exact",
       file:
         data.source === "git"
-          ? { source: "git", worktree, path: data.path }
+          ? { source: "workspace", workspace: worktree, path: data.path }
           : { source: "host", path: data.path },
     };
   }
@@ -44,7 +44,11 @@ export function useResolvedFile(
     return data.matches.length === 1
       ? {
           status: "resolved",
-          file: { source: "git", worktree, path: data.matches[0]! },
+          file: {
+            source: "workspace",
+            workspace: worktree,
+            path: data.matches[0]!,
+          },
         }
       : { status: "ambiguous", matches: data.matches };
   }

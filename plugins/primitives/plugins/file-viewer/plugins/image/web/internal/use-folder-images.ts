@@ -77,18 +77,18 @@ export function useFolderImages(file: FileRef): {
     {},
     { query: { path: dir }, enabled: file.source === "host" },
   );
-  const git = useEndpoint(
+  const inWorkspace = useEndpoint(
     listCodeDir,
-    { worktree: file.source === "git" ? file.worktree : "" },
+    { worktree: file.source === "workspace" ? file.workspace : "" },
     {
       query:
-        file.source === "git" && file.ref !== undefined
+        file.source === "workspace" && file.ref !== undefined
           ? { dir, ref: file.ref }
           : { dir },
-      enabled: file.source === "git",
+      enabled: file.source === "workspace",
     },
   );
-  const query = file.source === "host" ? host : git;
+  const query = file.source === "host" ? host : inWorkspace;
 
   const names = useMemo((): readonly string[] | null => {
     const result = query.data;

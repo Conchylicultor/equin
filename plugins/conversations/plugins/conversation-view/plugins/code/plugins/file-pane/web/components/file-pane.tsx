@@ -19,7 +19,7 @@ export function FilePaneView({
 }) {
   return (
     <FileView
-      file={{ source: "git", worktree, path }}
+      file={{ source: "workspace", workspace: worktree, path }}
       git={{ checkout: worktree, path, status }}
       line={line}
     />

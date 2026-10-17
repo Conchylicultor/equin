@@ -2,7 +2,15 @@ import { resolve } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { ALLOWED_REFS, resolveRef } from "./resolve-ref";
-import { resolveWorktreePath } from "./resolve-worktree-path";
+import { HttpError } from "@plugins/infra/plugins/endpoints/server";
+import {
+  inertHeaders,
+  serveHostPath,
+} from "@plugins/infra/plugins/host-fs/server";
+import {
+  resolveWorkspacePath,
+  resolveWorktreePath,
+} from "./resolve-worktree-path";
 import { resolveInsideRoot } from "./contained-path";
 
 // Every git read in this file serves an open HTTP request from the code
@@ -12,6 +20,7 @@ import { resolveInsideRoot } from "./contained-path";
 // reaches it, and it fails as a named error instead of holding the request open
 // forever.
 const GIT_TIMEOUT_MS = 30_000;
+// A ref read buffers `git show`'s output; the on-disk read streams, uncapped.
 const MAX_BYTES = 20 * 1024 * 1024;
 
 const EXT_TO_MIME: Record<string, string> = {
@@ -40,6 +49,19 @@ export async function handleImageContent(
   req: Request,
   params: Record<string, string>,
 ): Promise<Response> {
+  try {
+    return await serveImage(req, params);
+  } catch (err) {
+    if (err instanceof HttpError)
+      return new Response(err.message, { status: err.status });
+    throw err;
+  }
+}
+
+async function serveImage(
+  req: Request,
+  params: Record<string, string>,
+): Promise<Response> {
   const worktree = params.worktree;
   if (!worktree) return new Response("Missing worktree", { status: 400 });
 
@@ -50,50 +72,46 @@ export async function handleImageContent(
 
   const ref = url.searchParams.get("ref");
 
-  const wtPath = await resolveWorktreePath(worktree);
-  if (!wtPath) return new Response("Not found", { status: 404 });
-
   const mime = mimeForPath(path);
   if (!mime) return new Response("Unsupported media type", { status: 415 });
 
-  // Inside the checkout only, with or without a ref: an image elsewhere on the
-  // host is host-fs's to serve (file-viewer's `host` FileRef).
-  const absTarget = resolveInsideRoot(wtPath, path);
-  if (absTarget === null) return new Response("Invalid path", { status: 400 });
-  const absRoot = resolve(wtPath);
-  let bytes: Uint8Array<ArrayBuffer>;
-
-  if (ref) {
-    if (!ALLOWED_REFS.has(ref))
-      return new Response("Invalid ref", { status: 400 });
-    const resolvedRef = await resolveRef(wtPath, ref);
-    const result = await spawnCaptured(
-      [
-        GIT,
-        "--no-optional-locks",
-        "-C",
-        absRoot,
-        "show",
-        `${resolvedRef}:${path}`,
-      ],
-      { timeoutMs: GIT_TIMEOUT_MS },
-    );
-    if (result.exitCode !== 0)
-      return new Response("File not found", { status: 404 });
-    bytes = new Uint8Array(result.stdoutBytes);
-  } else {
-    const file = Bun.file(absTarget);
-    if (!(await file.exists()))
-      return new Response("File not found", { status: 404 });
-    if (file.size > MAX_BYTES)
-      return new Response("File too large", { status: 413 });
-    bytes = new Uint8Array(await file.arrayBuffer());
+  // The file as it is on disk now: any workspace kind, served by host-fs's
+  // byte server (inert headers, `Range`) once the path is known to sit inside
+  // the workspace. An image elsewhere on the host is host-fs's to address too
+  // (file-viewer's `host` FileRef).
+  if (!ref) {
+    const root = await resolveWorkspacePath(worktree);
+    if (!root) return new Response("Not found", { status: 404 });
+    const absTarget = resolveInsideRoot(root, path);
+    if (absTarget === null)
+      return new Response("Invalid path", { status: 400 });
+    return await serveHostPath(absTarget, req.headers.get("range"));
   }
 
+  // As of a revision: a git read, so the workspace must be a checkout.
+  const wtPath = await resolveWorktreePath(worktree);
+  if (!wtPath) return new Response("Not found", { status: 404 });
+  if (resolveInsideRoot(wtPath, path) === null)
+    return new Response("Invalid path", { status: 400 });
+  if (!ALLOWED_REFS.has(ref))
+    return new Response("Invalid ref", { status: 400 });
+  const resolvedRef = await resolveRef(wtPath, ref);
+  const result = await spawnCaptured(
+    [
+      GIT,
+      "--no-optional-locks",
+      "-C",
+      resolve(wtPath),
+      "show",
+      `${resolvedRef}:${path}`,
+    ],
+    { timeoutMs: GIT_TIMEOUT_MS },
+  );
+  if (result.exitCode !== 0)
+    return new Response("File not found", { status: 404 });
+  const bytes = new Uint8Array(result.stdoutBytes);
   if (bytes.length > MAX_BYTES)
     return new Response("File too large", { status: 413 });
 
-  return new Response(bytes, {
-    headers: { "Content-Type": mime, "Cache-Control": "no-cache" },
-  });
+  return new Response(bytes, { headers: inertHeaders(path, mime) });
 }

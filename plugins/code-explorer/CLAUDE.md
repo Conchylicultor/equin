@@ -22,6 +22,9 @@ commit-diff pane in `commit-detail`, fuzzy path resolution in `file-resolve`.
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/host-fs.decodeTextBytes`
+    - `infra/host-fs.inertHeaders`
+    - `infra/host-fs.readHostPathText`
+    - `infra/host-fs.serveHostPath`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.GIT`
     - `infra/paths.REPO_ROOT`

@@ -67,24 +67,24 @@ function hostState(result: HostFsTextResult): FileTextState {
 }
 
 /**
- * A file's text, whichever source holds it: a checkout file through code-api's
+ * A file's text, whichever source holds it: a workspace file through code-api's
  * `file` route (as of the ref's revision when it names one), a host file
  * through host-fs's `text` route. Both reads are declared every render (hooks
  * cannot be conditional) and the one for the other source stays disabled.
  */
 export function useFileText(file: FileRef): FileTextState {
-  const git = file.source === "git" ? file : null;
+  const ws = file.source === "workspace" ? file : null;
   const host = file.source === "host" ? file : null;
 
-  const gitRead = useEndpoint(
+  const wsRead = useEndpoint(
     getFileContent,
-    { worktree: git?.worktree ?? "" },
+    { worktree: ws?.workspace ?? "" },
     {
       query: {
-        path: git?.path ?? "",
-        ...(git?.ref !== undefined ? { ref: git.ref } : {}),
+        path: ws?.path ?? "",
+        ...(ws?.ref !== undefined ? { ref: ws.ref } : {}),
       },
-      enabled: git !== null,
+      enabled: ws !== null,
     },
   );
   const hostRead = useEndpoint(
@@ -93,10 +93,10 @@ export function useFileText(file: FileRef): FileTextState {
     { query: { path: host?.path ?? "" }, enabled: host !== null },
   );
 
-  if (git !== null) {
-    if (gitRead.error) return failureState(gitRead.error);
-    if (!gitRead.data) return { kind: "loading" };
-    return { kind: "ok", content: gitRead.data.content };
+  if (ws !== null) {
+    if (wsRead.error) return failureState(wsRead.error);
+    if (!wsRead.data) return { kind: "loading" };
+    return { kind: "ok", content: wsRead.data.content };
   }
   if (hostRead.error) return failureState(hostRead.error);
   if (!hostRead.data) return { kind: "loading" };

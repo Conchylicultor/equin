@@ -2,16 +2,18 @@
  * What a file viewer shows: one file, named by WHERE its bytes live.
  *
  * - `host` — an absolute path on the user's machine, read through infra/host-fs.
- * - `git` — a path inside a checkout (`worktree` is the namespace the
- *   `/api/code/:worktree/*` routes take), read AS OF `ref` when given, or as it
- *   is on disk right now when not.
+ * - `workspace` — a path relative to a workspace's root (`workspace` is the id
+ *   the `/api/code/:worktree/*` routes take: an attempt id of any workspace
+ *   kind, `"main"`, `"self"`, or a checkout's absolute root). Read as it is on
+ *   disk right now, or AS OF `ref` when given — a git read, so only a checkout
+ *   answers one.
  *
  * Renderers receive a `FileRef` and hand it straight to `useFileText` /
  * `fileUrl`; they never branch on `source` to read it.
  */
 export type FileRef =
   | { source: "host"; path: string }
-  | { source: "git"; worktree: string; ref?: string; path: string };
+  | { source: "workspace"; workspace: string; ref?: string; path: string };
 
 /**
  * How a file stands against its checkout's base — the context that lights up a
@@ -60,5 +62,5 @@ export function fileExtension(path: string): string {
 export function fileRefKey(file: FileRef): string {
   return file.source === "host"
     ? `host:${file.path}`
-    : `git:${file.worktree}:${file.ref ?? ""}:${file.path}`;
+    : `workspace:${file.workspace}:${file.ref ?? ""}:${file.path}`;
 }

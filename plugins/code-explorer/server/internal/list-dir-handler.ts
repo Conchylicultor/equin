@@ -10,7 +10,10 @@ import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { resolveInsideRoot } from "./contained-path";
 import { ALLOWED_REFS, resolveRef } from "./resolve-ref";
-import { resolveWorktreePath } from "./resolve-worktree-path";
+import {
+  resolveWorkspacePath,
+  resolveWorktreePath,
+} from "./resolve-worktree-path";
 
 // A local metadata read serving an open HTTP request; only a wedged child
 // reaches this, and it then fails as a named error (see get-file-content.ts).
@@ -24,7 +27,11 @@ export const handleListDir = implement(
     const { worktree } = params;
     if (!worktree) throw new HttpError(400, "Missing worktree");
 
-    const wtPath = await resolveWorktreePath(worktree);
+    // A listing as of a ref reads git's tree, so needs a checkout; one on
+    // disk lists any workspace kind.
+    const wtPath = await (query.ref !== undefined
+      ? resolveWorktreePath(worktree)
+      : resolveWorkspacePath(worktree));
     if (!wtPath) throw new HttpError(404, "Not found");
 
     // Inside the checkout only: `""` is its root, anything else must resolve

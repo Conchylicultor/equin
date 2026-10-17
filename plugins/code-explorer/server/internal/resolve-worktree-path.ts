@@ -1,6 +1,7 @@
 import { isAbsolute } from "node:path";
+import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { getAttemptRow } from "@plugins/tasks/plugins/tasks-core/server";
-import { assertCapability } from "@plugins/conversations/plugins/workspace/core";
+import { hasCapability } from "@plugins/conversations/plugins/workspace/core";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { resolveCheckoutRoot } from "./checkout-root";
@@ -10,26 +11,52 @@ export const MAIN_WORKTREE = "main";
 // which resolves to the main checkout even when serving from a worktree.
 export const SELF_WORKTREE = "self";
 
-// Resolve a worktree identifier (from the URL) to an absolute filesystem path.
+/** A workspace's root on disk, and whether it is a git checkout. */
+type WorkspaceRoot = { path: string; git: boolean };
+
+// Resolve a workspace identifier (from the URL) to its root on disk.
 // `"main"`/`"self"` are reserved sentinels; an absolute path (URL-encoded in
 // `:worktree`) is accepted only when it is exactly a git checkout's toplevel —
 // so any checkout on the host (`~/code/foo`) is addressable, and every read
 // under it stays a relative path inside that root. Any other value is looked
-// up as an attempt id.
-export async function resolveWorktreePath(id: string): Promise<string | null> {
+// up as an attempt id, whatever its workspace kind.
+async function resolveWorkspaceRoot(id: string): Promise<WorkspaceRoot | null> {
   if (id === MAIN_WORKTREE) {
-    return await ensureMainWorktreeRoot();
+    return { path: await ensureMainWorktreeRoot(), git: true };
   }
   if (id === SELF_WORKTREE) {
-    return REPO_ROOT;
+    return { path: REPO_ROOT, git: true };
   }
   if (isAbsolute(id)) {
-    return await resolveCheckoutRoot(id);
+    const root = await resolveCheckoutRoot(id);
+    return root === null ? null : { path: root, git: true };
   }
   const attempt = await getAttemptRow(id);
   if (!attempt) return null;
-  // Every /api/code/* read is a git one (tree, diff, commits); a scratch
-  // workspace has no checkout to read, so asking is a caller bug.
-  assertCapability(attempt.workspace.kind, "git", "code-explorer");
-  return attempt.worktreePath;
+  return {
+    path: attempt.worktreePath,
+    git: hasCapability(attempt.workspace.kind, "git"),
+  };
+}
+
+/**
+ * The root of the workspace `id` names, for a read of its files as they are on
+ * disk now — any workspace kind, a scratch dir included.
+ */
+export async function resolveWorkspacePath(id: string): Promise<string | null> {
+  return (await resolveWorkspaceRoot(id))?.path ?? null;
+}
+
+/**
+ * The root of the checkout `id` names, for a git read (a ref, a diff, a
+ * commit range). A workspace that is not a checkout is a 400: asking it for
+ * git is the caller's mistake, never an empty answer.
+ */
+export async function resolveWorktreePath(id: string): Promise<string | null> {
+  const root = await resolveWorkspaceRoot(id);
+  if (root === null) return null;
+  if (!root.git) {
+    throw new HttpError(400, `Workspace ${id} is not a git checkout`);
+  }
+  return root.path;
 }

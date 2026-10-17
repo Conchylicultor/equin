@@ -2,10 +2,10 @@ import { describe, expect, it } from "bun:test";
 import { fileRefForPath } from "./file-ref-for-path";
 
 describe("fileRefForPath", () => {
-  it("reads a relative path from the checkout", () => {
+  it("reads a relative path from the workspace", () => {
     expect(fileRefForPath("att-1", "src/a.png")).toEqual({
-      source: "git",
-      worktree: "att-1",
+      source: "workspace",
+      workspace: "att-1",
       path: "src/a.png",
     });
   });
@@ -13,7 +13,7 @@ describe("fileRefForPath", () => {
   it("relativizes an absolute path inside the known root", () => {
     expect(
       fileRefForPath("att-1", "/wt/one/src/a.png", { root: "/wt/one/" }),
-    ).toEqual({ source: "git", worktree: "att-1", path: "src/a.png" });
+    ).toEqual({ source: "workspace", workspace: "att-1", path: "src/a.png" });
   });
 
   it("sends an absolute path outside the root to the host", () => {
@@ -28,7 +28,7 @@ describe("fileRefForPath", () => {
     ).toEqual({ source: "host", path: "/wt/one-two/a.png" });
   });
 
-  it("does not let `..` escape the root into a git read", () => {
+  it("does not let `..` escape the root into a workspace read", () => {
     expect(
       fileRefForPath("att-1", "/wt/one/../etc/a.png", { root: "/wt/one" }),
     ).toEqual({ source: "host", path: "/wt/etc/a.png" });

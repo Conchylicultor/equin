@@ -81,19 +81,19 @@ function FilePeekPaneBody() {
   // `status` is a derived renderer hint, so an unknown file set (loading, a
   // failed read, or an unresolved worktree) safely defaults to "clean" — no
   // display surface here; the file content itself is a separate read. Only a
-  // checkout file has one: a host file sits outside the worktree.
+  // workspace file has one: a host file sits outside the worktree.
   const status = foldResource(filesResult, {
     loading: () => "clean" as const,
     error: () => "clean" as const,
     ready: (files) =>
-      files.resolved && file.source === "git"
+      files.resolved && file.source === "workspace"
         ? (files.value.find((f) => f.path === file.path)?.status ?? "clean")
         : "clean",
   });
   const renderers = useFileRenderers({
     file,
-    ...(file.source === "git"
-      ? { git: { checkout: file.worktree, path: file.path, status } }
+    ...(file.source === "workspace"
+      ? { git: { checkout: file.workspace, path: file.path, status } }
       : {}),
   });
 

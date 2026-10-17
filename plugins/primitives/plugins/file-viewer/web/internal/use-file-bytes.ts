@@ -10,7 +10,7 @@ import { fileRefKey, type FileRef } from "../../core";
 /**
  * Why a file has no bytes to hand over — a determinate answer about the file,
  * not a failed read. `unsupported` is the source declining the format (a
- * checkout file is served for image formats only today).
+ * workspace file is served for image formats only today).
  */
 export type FileBytesUnavailable =
   "too-large" | "missing" | "denied" | "unsupported";
@@ -37,10 +37,10 @@ function readBlob(file: FileRef, signal: AbortSignal): Promise<Blob> {
         {},
         { query: { path: file.path }, signal },
       );
-    case "git":
+    case "workspace":
       return fetchEndpoint(
         getImageContent,
-        { worktree: file.worktree },
+        { worktree: file.workspace },
         {
           query: {
             path: file.path,

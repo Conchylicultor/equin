@@ -81,16 +81,28 @@ export async function handleRaw(req: Request): Promise<Response> {
   try {
     const raw = new URL(req.url, "http://localhost").searchParams.get("path");
     if (raw === null) return new Response("Missing path", { status: 400 });
-    const path = resolveHostPath(raw);
-    const located = await locateHostPath(path);
-    return located.kind === "archive"
-      ? await serveArchiveMember(path, located, req.headers.get("range"))
-      : await serveHostFile(path, req.headers.get("range"));
+    return await serveHostPath(resolveHostPath(raw), req.headers.get("range"));
   } catch (err) {
     if (err instanceof HttpError)
       return new Response(err.message, { status: err.status });
     throw err;
   }
+}
+
+/**
+ * Stream the bytes at an absolute host path — a file on disk or a member of an
+ * archive — with the inert headers and `Range` handling the `raw` route
+ * answers with. The one byte server: a route addressing files another way
+ * (code-api's workspace-relative paths) resolves to a host path and lands here.
+ */
+export async function serveHostPath(
+  path: string,
+  rangeHeader: string | null,
+): Promise<Response> {
+  const located = await locateHostPath(path);
+  return located.kind === "archive"
+    ? await serveArchiveMember(path, located, rangeHeader)
+    : await serveHostFile(path, rangeHeader);
 }
 
 export async function serveHostFile(
