@@ -811,7 +811,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`start-page`** — Browser start page: the empty-state landing shown in the viewport when no URL is loaded — a centered hero (wordmark + search), curated quick links, and the live bookmarks and recents sections.
           - Web:
             - Contributes: `Browser.StartPage` "Start page" → `StartPage`
-            - Uses: 22 symbols — full list in [`plugins/apps/plugins/browser/plugins/start-page/REFERENCE.md`](../plugins/apps/plugins/browser/plugins/start-page/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/browser/plugins/start-page/REFERENCE.md`](../plugins/apps/plugins/browser/plugins/start-page/REFERENCE.md)
               - `apps/browser/shell` ×3
               - `primitives/css/ui-kit` ×3
               - `primitives/css/spacing` ×2
@@ -824,6 +824,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/card.Card`
               - `primitives/css/grid.Grid`
               - `primitives/css/row.Row`
+              - `primitives/link-gesture/new-tab.NewTabGlyph`
               - `primitives/relative-time.RelativeTime`
               - `primitives/search.SearchInput`
               - `ui/icons.Icon`
@@ -866,6 +867,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture/new-tab.NewTabButton`
               - `ui/icons.Icon`
           - Cross-plugin:
             - Uses tokens:
@@ -2273,6 +2275,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
           - Cross-plugin:
@@ -2365,7 +2368,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/detail-sections.defineDetailSections`
-              - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
             - Exports (types):
@@ -2586,6 +2589,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.fieldOverrides`
               - `primitives/data-view.liveDataSource`
+              - `primitives/link-gesture/new-tab.newTabAnchorProps`
+              - `primitives/link-gesture/new-tab.NewTabGlyph`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -2943,7 +2948,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EventSourceActions` "open" → `SourceOpenAction`
               - `EventSourceActions` "enabled" → `SourceToggleAction`
               - `EventSourceActions` "delete" → `SourceDeleteAction`
-            - Uses: 39 symbols — full list in [`plugins/apps/plugins/events/plugins/sources/REFERENCE.md`](../plugins/apps/plugins/events/plugins/sources/REFERENCE.md)
+            - Uses: 40 symbols — full list in [`plugins/apps/plugins/events/plugins/sources/REFERENCE.md`](../plugins/apps/plugins/events/plugins/sources/REFERENCE.md)
               - `apps/events/events-core` ×7
               - `primitives/css/ui-kit` ×5
               - `primitives/data-view` ×5
@@ -2962,6 +2967,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/live-state.matchResource`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `ui/icons.Icon`
@@ -4085,6 +4091,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/live-state.mapResource`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/live-state.ResourceResult`
@@ -4954,7 +4961,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "places-map"
               - `GeoMap.Pin` → `SavedPlacePin`
-            - Uses: 79 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 80 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×9
               - `map` ×6
               - `primitives/data-view` ×6
@@ -4993,6 +5000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
+              - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/persistent-draft.useDraft`
@@ -5500,12 +5508,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `prototypeDetailPane.Actions` "open-canvas" → `OpenCanvasAction`
               - `PrototypeFrameActions` "present" → `PresentMenu`
               - `PrototypeFrameActions` "open-responsive" → `OpenResponsiveAction`
-            - Uses: 60 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
+            - Uses: 61 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
               - `apps/prototypes/canvas` ×25
               - `primitives/css/ui-kit` ×8
               - `apps-core/tabs` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/latest-ref` ×2
+              - `primitives/link-gesture/new-tab` ×2
               - `primitives/pane` ×2
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
@@ -5517,7 +5526,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/viewport-overlay.ViewportOverlay`
               - `primitives/dom/element-size.useElementSize`
               - `primitives/embed.embedUrl`
-              - `primitives/icon-button.IconButton`
               - `primitives/live-state.matchResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/popup-open.PopupOpenScope`
@@ -7919,7 +7927,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/spinner.Spinner`
                       - `primitives/css/surface.Surface`
                       - `primitives/css/text.Text`
-                      - `primitives/icon-button.IconButton`
+                      - `primitives/link-gesture/new-tab.NewTabButton`
                       - `primitives/loading.Loading`
                       - `ui/icons.Icon`
                   - Server:
@@ -8634,6 +8642,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.Button`
+                      - `primitives/link-gesture.openInBrowserTab`
+                      - `primitives/link-gesture/new-tab.NewTabGlyph`
                       - `primitives/live-state.ResourceErrorInline`
                       - `primitives/loading.Loading`
                       - `ui/icons.Icon`
@@ -12560,9 +12570,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversations-view/data-view/history`
     - **`commit-conversation`** — The commit row action that opens the conversation which wrote a commit (its Singularity-Conversation trailer) in a new browser tab.
       - Web:
-        - Uses:
-          - `primitives/icon-button.IconButton`
-          - `primitives/link-gesture.openInBrowserTab`
+        - Uses: `primitives/link-gesture/new-tab.NewTabButton`
         - Exports (values): `OpenCommitConversation`
       - Cross-plugin:
         - Imported by:
@@ -13111,6 +13119,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/artifacts.ConversationArtifacts`
                   - `network/live.useLive`
                   - `primitives/css/spacing.Stack`
+                  - `primitives/link-gesture/new-tab.NewTabButton`
                   - `primitives/live-state.matchResource`
                   - `primitives/loading.Loading`
                   - `primitives/pane.useOpenPane`
@@ -15682,6 +15691,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/action-bar.Conversation`
               - `network/live.useLive`
               - `primitives/link-gesture.linkGestureProps`
+              - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -28203,7 +28213,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
           - `primitives/latest-ref.useLatestRef`
-          - `ui/icons.Icon`
+          - `primitives/link-gesture/new-tab.NewTabGlyph`
         - Exports (types):
           - `MediaClock`
           - `YouTubeAudio`
@@ -30689,7 +30699,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.BlockRendererProps`
           - `page/editor.Editor`
           - `page/editor.useBlockActivate`
-          - `primitives/css/inline.Inline`
           - `primitives/css/overlay.Overlay`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -30698,6 +30707,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.Input`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/link-gesture/new-tab.NewTabLink`
           - `primitives/undo-redo.localUndoProps`
           - `ui/icons.Icon`
         - Exports (values):
@@ -34531,8 +34541,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×16
               - `reports` ×13
               - `conversations` ×9
-              - `primitives` ×8
-              - `page` ×7
+              - `primitives` ×9
+              - `page` ×6
               - `build` ×3
               - `plugin-meta` ×3
               - `tasks` ×3
@@ -35510,8 +35520,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 410 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×104
+            - Imported by: 411 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×105
               - `apps` ×84
               - `conversations` ×56
               - `page` ×25
@@ -37380,10 +37390,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 114 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×41
-          - `primitives` ×20
-          - `conversations` ×16
+        - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×38
+          - `primitives` ×21
+          - `conversations` ×15
           - `page` ×7
           - `tasks` ×7
           - `debug` ×5
@@ -37619,12 +37629,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
-          - `conversations` ×12
-          - `primitives` ×12
+        - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+          - `primitives` ×13
+          - `conversations` ×11
           - `apps-core` ×3
+          - `apps` ×3
           - `page` ×3
-          - `apps` ×2
           - `auth` ×2
           - `debug` ×2
           - `tasks` ×2
@@ -37650,6 +37660,46 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `afterOpen`
           - `beforeOpen`
           - `runActivation`
+      - Plugins:
+        - **`new-tab`** — The new-browser-tab control in every form — NewTabButton (icon or text), NewTabMenuItem, NewTabLink, newTabAnchorProps for a component rendered as a link, NewTabGlyph for a container that is one — owning the open-in-new glyph and the open-in-a-browser-tab behaviour together, so the arrow can never be paired with anything else. Enforced by new-tab/no-adhoc-new-tab.
+          - Web:
+            - Uses:
+              - `primitives/css/inline.Inline`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.DropdownMenuItem`
+              - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture.openInBrowserTab`
+              - `ui/icons.Icon`
+            - Exports (types):
+              - `NewTabButtonProps`
+              - `NewTabHref`
+            - Exports (values):
+              - `newTabAnchorProps`
+              - `NewTabButton`
+              - `NewTabGlyph`
+              - `NewTabLink`
+              - `NewTabMenuItem`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/browser/start-page`
+              - `apps/browser/webview`
+              - `apps/deploy/local-serve`
+              - `apps/deploy/servers`
+              - `apps/events/event-list`
+              - `apps/events/sources`
+              - `apps/mail/sync-status`
+              - `apps/places/places-map`
+              - `apps/prototypes/present`
+              - `apps/sonata/sources/ultimate-guitar/alignment`
+              - `apps/studio/compositions/release/release-artifact`
+              - `conversations/commit-conversation`
+              - `conversations/conversation-view/artifacts/prototype`
+              - `conversations/conversation-view/open-app`
+              - `integrations/youtube`
+              - `page/embed`
+              - `primitives/overlay/image-viewer`
+              - `primitives/setup-steps`
+              - `tasks/task-events`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
       - Web:
         - Uses: 26 symbols — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
@@ -38646,7 +38696,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `createHoverIntent`
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
-            - Uses: 43 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
+            - Uses: 44 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
               - `primitives/css/clip` ×2
               - `primitives/css/coords` ×2
@@ -38673,6 +38723,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/scroll-reveal.useRevealOnActive`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
+              - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/loading.Loading`
               - `primitives/networking.probeUrlStatus`
               - `primitives/overlay/tooltip.Kbd`
@@ -39761,8 +39812,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.insetClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `primitives/link-gesture/new-tab.NewTabButton`
           - `ui/icons.Icon`
         - Exports (types):
           - `StepProps`
@@ -44199,13 +44250,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
           - `primitives/link-gesture.activationProps`
+          - `primitives/link-gesture/new-tab.NewTabGlyph`
           - `primitives/live-state.foldResource`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `tasks/attempt-status.AttemptStatusBadge`
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/tasks-core.useTaskAttempts`
-          - `ui/icons.Icon`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
@@ -45029,16 +45080,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 309 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 308 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×65
           - `conversations` ×60
+          - `primitives` ×41
           - `page` ×40
-          - `primitives` ×40
           - `fields` ×33
           - `debug` ×14
           - `ui` ×8
-          - `tasks` ×7
           - `apps-core` ×6
+          - `tasks` ×6
           - `active-data` ×4
           - `plugin-meta` ×4
           - `reorder` ×4
@@ -45052,7 +45103,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fullscreen`
           - `improve`
           - `infra/events-test`
-          - `integrations/youtube`
           - `layouts/miller`
           - `map`
           - `reports/launch-fix`

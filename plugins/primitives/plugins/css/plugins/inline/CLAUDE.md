@@ -57,8 +57,8 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `debug` ×16
     - `reports` ×13
     - `conversations` ×9
-    - `primitives` ×8
-    - `page` ×7
+    - `primitives` ×9
+    - `page` ×6
     - `build` ×3
     - `plugin-meta` ×3
     - `tasks` ×3

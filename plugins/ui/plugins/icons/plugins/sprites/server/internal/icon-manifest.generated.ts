@@ -295,6 +295,7 @@ export const ICON_MANIFEST: {
     "sync",
     "sync-problem",
     "tab",
+    "tab-new-right",
     "table",
     "table-chart",
     "table-rows",

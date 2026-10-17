@@ -17,6 +17,8 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/link-gesture.openInBrowserTab`
+    - `primitives/link-gesture/new-tab.NewTabGlyph`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`

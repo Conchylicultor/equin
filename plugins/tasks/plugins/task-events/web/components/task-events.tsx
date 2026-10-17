@@ -21,7 +21,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import { NewTabGlyph } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 
 function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
@@ -73,8 +73,7 @@ function PushRow({
           {formatDate(push.createdAt)}
         </Text>
         {url ? (
-          <Icon
-            icon={navIcons.newTab}
+          <NewTabGlyph
             className={cn("text-muted-foreground size-4", rigidClass())}
           />
         ) : null}

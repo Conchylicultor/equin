@@ -12,7 +12,8 @@ import {
   isServableCompositionId,
   isServed,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 
 const boltIcon = symbol("bolt");
 
@@ -85,14 +86,10 @@ function ServeRowAction({
     // resolves it from its own checkout whether anything is served there or not.
     const { url } = status;
     return (
-      <IconButton
-        icon={navIcons.newTab}
+      <NewTabButton
+        href={url}
         label="Open the local serve"
         tooltip={`Open ${url}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          window.open(url, "_blank", "noopener");
-        }}
       />
     );
   }

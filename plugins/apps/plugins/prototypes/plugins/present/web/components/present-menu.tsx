@@ -26,6 +26,7 @@ import { BrowserTabOpener, frameTarget } from "./frame-link";
 import { PresentOverlay, type PresentPlacement } from "./present-overlay";
 import { type IconRef, navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { NewTabMenuItem } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 
 const fullscreenIcon = symbol("fullscreen");
 const tabIcon = symbol("tab");
@@ -183,7 +184,7 @@ function PresentRow({
   );
 }
 
-/** The trailing new-tab icon: disabled when there is nothing to open. */
+/** The trailing new-app-tab icon: disabled when there is nothing to open. */
 function NewTabItem({
   label,
   open,
@@ -201,7 +202,7 @@ function NewTabItem({
       onClick={open}
       className="w-auto"
     >
-      <Icon icon={navIcons.newTab} className="size-4" />
+      <Icon icon={navIcons.newAppTab} className="size-4" />
     </DropdownMenuItem>
   );
 }
@@ -220,7 +221,14 @@ function NewBrowserTabItem({
 }) {
   return (
     <BrowserTabOpener frame={frame} meta={meta}>
-      {(open) => <NewTabItem label="Open in a new browser tab" open={open} />}
+      {(href) => (
+        <NewTabMenuItem
+          href={href}
+          label="Open in a new browser tab"
+          unavailableReason="not available for this frame"
+          className="w-auto"
+        />
+      )}
     </BrowserTabOpener>
   );
 }

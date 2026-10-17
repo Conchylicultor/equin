@@ -58,13 +58,18 @@ export function downloadImage(src: string, name: string): void {
  *  for the new tab to load it, after which the tab holds its own copy. */
 const OPENED_BLOB_TTL_MS = 60_000;
 
-/** Open the image by itself in a new tab. */
-export function openOriginal(src: string, via: Exclude<OpenVia, "none">): void {
-  if (via === "url") {
-    window.open(src, "_blank", "noopener");
-    return;
-  }
-  const url = URL.createObjectURL(dataUriToBlob(src));
-  window.open(url, "_blank", "noopener");
-  window.setTimeout(() => URL.revokeObjectURL(url), OPENED_BLOB_TTL_MS);
+/** Where "Open original" goes: the image by itself. A thunk, evaluated inside
+ *  the click, because a `data:` image is first made into a `blob:` URL (a
+ *  browser will not navigate a tab to a `data:` URI) that must exist only once
+ *  the user asks. */
+export function originalHref(
+  src: string,
+  via: Exclude<OpenVia, "none">,
+): () => string {
+  if (via === "url") return () => src;
+  return () => {
+    const url = URL.createObjectURL(dataUriToBlob(src));
+    window.setTimeout(() => URL.revokeObjectURL(url), OPENED_BLOB_TTL_MS);
+    return url;
+  };
 }

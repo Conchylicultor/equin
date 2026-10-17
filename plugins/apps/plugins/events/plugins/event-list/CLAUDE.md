@@ -155,6 +155,8 @@ ascending), `All`, and `By category` (grouped). The surface is the collection's
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.fieldOverrides`
     - `primitives/data-view.liveDataSource`
+    - `primitives/link-gesture/new-tab.newTabAnchorProps`
+    - `primitives/link-gesture/new-tab.NewTabGlyph`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

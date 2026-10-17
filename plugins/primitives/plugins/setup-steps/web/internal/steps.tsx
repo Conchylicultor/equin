@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import {
@@ -14,8 +14,9 @@ import {
   insetClass,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 
 const checkIcon = symbol("check");
 
@@ -134,15 +135,9 @@ export function StepLink({
   label?: string;
 }) {
   return (
-    <Button
-      variant="outline"
-      onClick={() => window.open(href, "_blank")}
-      className="w-fit"
-    >
+    <NewTabButton href={href} variant="outline" className="w-fit">
       {label}
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline icon offset from button label */}
-      <Icon icon={navIcons.newTab} className="ml-1 size-3.5" />
-    </Button>
+    </NewTabButton>
   );
 }
 

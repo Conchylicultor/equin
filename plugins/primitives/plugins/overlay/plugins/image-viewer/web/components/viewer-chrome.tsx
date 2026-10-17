@@ -43,8 +43,10 @@ import {
 import type { ViewController } from "../internal/view-controller";
 import { ViewStore, type ViewState } from "../internal/view-store";
 import type { ViewerImage } from "../internal/types";
+import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
+import { originalHref } from "../internal/file-actions";
 import { KeyCaps, keyTooltip } from "./key-caps";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const addIcon = symbol("add");
@@ -96,7 +98,6 @@ export function TopBar({
   count,
   capabilities,
   compact,
-  onOpen,
   onCopy,
   onDownload,
   onSlideshow,
@@ -107,7 +108,6 @@ export function TopBar({
   count: number;
   capabilities: ImageCapabilities;
   compact: boolean;
-  onOpen(): void;
   onCopy(): Promise<void>;
   onDownload(): void;
   onSlideshow(): void;
@@ -155,10 +155,9 @@ export function TopBar({
               </>
             )}
             {capabilities.open !== "none" && (
-              <IconButton
-                icon={navIcons.newTab}
+              <NewTabButton
+                href={originalHref(image.src, capabilities.open)}
                 label="Open original in a new tab"
-                onClick={onOpen}
               />
             )}
             {capabilities.copy && (

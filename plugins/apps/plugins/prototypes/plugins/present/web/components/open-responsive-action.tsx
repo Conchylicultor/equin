@@ -1,9 +1,8 @@
 import type { ReactElement } from "react";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { FrameActionRow } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { BrowserTabOpener } from "./frame-link";
-import { navIcons } from "@plugins/ui/plugins/icons/core";
 
 /**
  * "Open responsive in a new tab" — a frame action of its own, beside Present:
@@ -21,13 +20,8 @@ export function OpenResponsiveAction({
       meta={row.meta}
       size={{ kind: "responsive" }}
     >
-      {(open) => (
-        <IconButton
-          icon={navIcons.newTab}
-          label="Open responsive in a new tab"
-          disabled={open === undefined}
-          onClick={open}
-        />
+      {(href) => (
+        <NewTabButton href={href} label="Open responsive in a new tab" />
       )}
     </BrowserTabOpener>
   );

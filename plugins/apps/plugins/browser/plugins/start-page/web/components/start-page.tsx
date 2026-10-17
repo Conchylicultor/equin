@@ -7,8 +7,7 @@ import { Hero } from "./hero";
 import { QuickLinks } from "./quick-links";
 import { BookmarksSection } from "./bookmarks-section";
 import { RecentsSection } from "./recents-section";
-import { navIcons } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import { NewTabGlyph } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 
 /**
  * The browser start page: the empty-state landing shown in the viewport when no
@@ -26,7 +25,7 @@ export function StartPage() {
         <BookmarksSection />
         <RecentsSection />
         <Stack direction="row" gap="2xs" align="center" justify="center">
-          <Icon icon={navIcons.newTab} style={{ width: 14, height: 14 }} />
+          <NewTabGlyph className="size-3.5" />
           <Text variant="caption" tone="muted">
             Some sites block embedding — use the open-in-new-tab button to open
             them in a new tab.

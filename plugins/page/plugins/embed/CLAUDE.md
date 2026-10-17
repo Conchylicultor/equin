@@ -11,7 +11,6 @@
     - `page/editor.BlockRendererProps`
     - `page/editor.Editor`
     - `page/editor.useBlockActivate`
-    - `primitives/css/inline.Inline`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -20,6 +19,7 @@
     - `primitives/css/ui-kit.Input`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/link-gesture/new-tab.NewTabLink`
     - `primitives/undo-redo.localUndoProps`
     - `ui/icons.Icon`
   - Exports (values):

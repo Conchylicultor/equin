@@ -12,8 +12,7 @@ import {
   hoverRevealGroup,
   hoverRevealTargetWithGroupFocus,
 } from "@plugins/primitives/plugins/hover-reveal/web";
-import { navIcons } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import { NewTabGlyph } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import { youtubeThumbnailUrl, youtubeWatchUrl } from "../../core";
 import {
   YouTubePlayerControllerImpl,
@@ -200,7 +199,7 @@ function OpenOnYouTube({
       <Layer className={cn(hoverRevealTargetWithGroupFocus, "bg-black/45")}>
         <Center className="size-full">
           <Line className="gap-2xs rounded-full bg-black/70 px-sm py-2xs text-white">
-            <Icon icon={navIcons.newTab} />
+            <NewTabGlyph />
             <Text variant="caption" className="font-medium text-white">
               Open on YouTube
             </Text>

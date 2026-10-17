@@ -7,6 +7,11 @@ import { prototypesList } from "@plugins/apps/plugins/prototypes/plugins/files/c
 import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import { ArtifactRow } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
+import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
+import {
+  prototypeDetailRoute,
+  prototypesApp,
+} from "@plugins/apps/plugins/prototypes/plugins/shell/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const dashboardCustomizeIcon = symbol("dashboard-customize");
@@ -58,6 +63,18 @@ export function PrototypeSection({ items }: { items: ArtifactItem[] }) {
               icon={PROTOTYPE_ICON}
               title={meta?.title ?? item.key}
               inertReason={meta === undefined ? NO_SUCH_PROTOTYPE : undefined}
+              actions={
+                meta === undefined ? undefined : (
+                  // The prototype alone, in its own app — not the conversation
+                  // with the mock beside it, which is what the row's ⌘-click
+                  // URL carries.
+                  <NewTabButton
+                    href={prototypeDetailRoute.link(prototypesApp, {
+                      name: item.key,
+                    })}
+                  />
+                )
+              }
               activation={
                 meta === undefined
                   ? undefined

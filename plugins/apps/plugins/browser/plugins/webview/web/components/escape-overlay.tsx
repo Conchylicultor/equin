@@ -8,8 +8,9 @@ import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 
 const closeIcon = symbol("close");
 const publicOffIcon = symbol("public-off");
@@ -68,19 +69,9 @@ export function EscapeOverlay({
               system browser to keep going.
             </Text>
             <Stack direction="row" gap="sm" align="center">
-              <Button
-                onClick={() =>
-                  url !== "" &&
-                  window.open(url, "_blank", "noopener,noreferrer")
-                }
-              >
-                <Icon
-                  icon={navIcons.newTab}
-                  className="icon-auto"
-                  aria-hidden
-                />
+              <NewTabButton href={url} disabled={url === ""}>
                 Open in system browser
-              </Button>
+              </NewTabButton>
               <Button variant="outline" onClick={onReload}>
                 <Icon icon={refreshIcon} className="icon-auto" aria-hidden />
                 Reload

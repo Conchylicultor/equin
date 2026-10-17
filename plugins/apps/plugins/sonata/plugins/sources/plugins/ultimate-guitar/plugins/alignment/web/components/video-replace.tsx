@@ -16,12 +16,11 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
-import { navIcons } from "@plugins/ui/plugins/icons/core";
+import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   resolveUgAlignment,
@@ -31,8 +30,6 @@ import {
 import { candidateTitle } from "../internal/recording-state";
 import { useInlineAction } from "../internal/use-inline-action";
 import { ChipBadge, outcomeChip } from "./outcome-chip";
-
-const openIcon = navIcons.newTab;
 
 const watchUrl = (videoId: string) =>
   `https://www.youtube.com/watch?v=${videoId}`;
@@ -101,17 +98,10 @@ function CandidateRow({
           </span>
         </Line>
       </button>
-      <IconButton
-        icon={openIcon}
+      <NewTabButton
+        href={watchUrl(candidate.videoId)}
         label="Open on YouTube"
         className={hoverRevealTarget}
-        render={
-          <a
-            href={watchUrl(candidate.videoId)}
-            target="_blank"
-            rel="noopener noreferrer"
-          />
-        }
       />
     </Line>
   );

@@ -95,12 +95,20 @@ export function activationProps(
 }
 
 /**
- * Open an app path (`/agents/c/42`) of THIS origin in a new browser tab — the
- * one place that is spelled. `noopener`, so the new tab cannot reach back into
- * this one through `window.opener`.
+ * Open a URL in a new browser tab — the one place that is spelled. Takes an
+ * app path of THIS origin (`/agents/c/42`) or an absolute URL (another
+ * worktree's origin, an external site). Always `noopener`, so the new tab
+ * cannot reach back into this one through `window.opener`; `noreferrer` too
+ * when it leaves this origin, so an external site is not told where it was
+ * opened from.
  */
-export function openInBrowserTab(path: string): void {
-  window.open(new URL(path, window.location.origin), "_blank", "noopener");
+export function openInBrowserTab(url: string): void {
+  const target = new URL(url, window.location.origin);
+  const features =
+    target.origin === window.location.origin
+      ? "noopener"
+      : "noopener,noreferrer";
+  window.open(target, "_blank", features);
 }
 
 /**

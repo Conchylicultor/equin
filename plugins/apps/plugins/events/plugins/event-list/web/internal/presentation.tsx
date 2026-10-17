@@ -1,4 +1,4 @@
-import type { MouseEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { FieldPresentation } from "@plugins/network/plugins/live/web";
@@ -6,8 +6,10 @@ import {
   eventsEntityRef,
   externalUrl,
 } from "@plugins/apps/plugins/events/plugins/events-core/core";
-import { navIcons } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import {
+  NewTabGlyph,
+  newTabAnchorProps,
+} from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import { formatEventWhen, urlHost } from "./format";
 
 // How the events entity's fields present in every list of events: registered
@@ -21,9 +23,9 @@ import { formatEventWhen, urlHost } from "./format";
  *
  * The href passes `externalUrl` (absolute `http(s)` only) — a scraped, model-written
  * value is never handed to the DOM as a destination unguarded. The click stops
- * propagating because the row around it is itself activatable (it opens the same
- * page, or the source's when the event has none): without this, clicking the chip
- * would open two tabs.
+ * propagating (newTabAnchorProps) because the row around it is itself activatable
+ * (it opens the same page, or the source's when the event has none): without
+ * this, clicking the chip would open two tabs.
  */
 function UrlCell({ url }: { url: string | null }): ReactNode {
   const href = externalUrl(url);
@@ -32,11 +34,8 @@ function UrlCell({ url }: { url: string | null }): ReactNode {
   return (
     <Badge
       as="a"
-      href={href}
-      target="_blank"
-      rel="noreferrer noopener"
-      onClick={(e: MouseEvent) => e.stopPropagation()}
-      icon={<Icon icon={navIcons.newTab} />}
+      {...newTabAnchorProps(href)}
+      icon={<NewTabGlyph />}
       colorClass="bg-muted text-primary-text hover:bg-muted/80 hover:underline"
       tooltip={href}
     >

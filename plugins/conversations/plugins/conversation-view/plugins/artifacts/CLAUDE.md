@@ -103,6 +103,11 @@ is. Move one and the others have to follow.
 The relation mark goes in the row BODY, never in `Row`'s `actions` slot: it is
 state to read, not a control to press, and `actions` is hover-revealed.
 
+Controls do go there: `ArtifactRow`'s `actions` prop is `Row`'s hover-revealed
+cluster. A prototype row uses it for **Open in a new tab** — the prototype alone,
+at its own Prototypes-app URL, in a new browser tab (`openInBrowserTab`), where
+⌘-click on the row opens the conversation-with-mock route instead.
+
 `ArtifactRow` takes an `activation` (`openPane.to(…)` — a link, so ⌘/middle-click
 opens a browser tab) and dismisses the popover itself when its row is activated,
 so a kind cannot ship a row that navigates and leaves the panel over what it

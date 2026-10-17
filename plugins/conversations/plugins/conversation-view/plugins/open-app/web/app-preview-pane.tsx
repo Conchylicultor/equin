@@ -11,7 +11,8 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { withEmbedFlag } from "@plugins/primitives/plugins/embed/core";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import { createContext, useCallback, useContext, useState } from "react";
 
 const chromeIcon = symbol("web-asset");
@@ -103,10 +104,9 @@ export function ReloadAction() {
 export function OpenInNewTabAction() {
   const { attemptId, path } = appPreviewPane.useParams();
   return (
-    <PaneIconAction
-      label="Open in new tab"
-      icon={navIcons.newTab}
-      onClick={() => window.open(appPreviewUrl(attemptId, path), "_blank")}
+    <NewTabButton
+      href={appPreviewUrl(attemptId, path)}
+      label="Open in a new tab"
     />
   );
 }

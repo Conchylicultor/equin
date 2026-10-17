@@ -14,8 +14,9 @@ import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useMailSyncState } from "../internal/use-mail-sync";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 
 const errorIcon = symbol("error");
 const warningIcon = symbol("warning");
@@ -129,15 +130,9 @@ function RemediationActions({
         <GmailAccessAction reconnect />
       ) : null}
       {remediation.action === "enable-api" && learnMoreUrl ? (
-        <Button
-          variant="outline"
-          onClick={() => {
-            window.open(learnMoreUrl, "_blank", "noopener,noreferrer");
-          }}
-        >
+        <NewTabButton href={learnMoreUrl} variant="outline">
           Enable Gmail API
-          <Icon icon={navIcons.newTab} className="size-4" />
-        </Button>
+        </NewTabButton>
       ) : null}
       <RetryButton />
     </>

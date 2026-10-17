@@ -22,13 +22,13 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
+    - `primitives/link-gesture/new-tab.NewTabGlyph`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `tasks/attempt-status.AttemptStatusBadge`
     - `tasks/task-detail.TaskDetailSlots`
     - `tasks/tasks-core.useTaskAttempts`
-    - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

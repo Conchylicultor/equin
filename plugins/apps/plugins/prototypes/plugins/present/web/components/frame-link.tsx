@@ -24,8 +24,8 @@ export function frameTarget(frame: PrototypeFrame, meta: PrototypeMeta) {
 }
 
 /**
- * How a frame opens in a new browser tab, handed to `children` — `undefined`
- * when it cannot. A prototype frame opens its present page chromeless, at
+ * Where a frame opens in a new browser tab, handed to `children` as an href —
+ * `undefined` when it cannot. A prototype frame opens its present page chromeless, at
  * `size` (the size it declares when omitted); a source frame opens its own
  * `href`, which is already the page at the tab's size, whatever `size` says.
  */
@@ -38,20 +38,16 @@ export function BrowserTabOpener({
   frame: CanvasFrame;
   meta: PrototypeMeta;
   size?: PrototypeViewport;
-  children: (open: (() => void) | undefined) => ReactNode;
+  children: (href: string | undefined) => ReactNode;
 }) {
-  const openHref = (href: string) => () =>
-    window.open(href, "_blank", "noopener,noreferrer");
   if (frame.kind === "prototype") {
     return children(
-      openHref(
-        embedUrl(
-          presentPath({
-            ...frameTarget(frame, meta),
-            ...(size === undefined ? {} : { size }),
-          }),
-          "chromeless",
-        ),
+      embedUrl(
+        presentPath({
+          ...frameTarget(frame, meta),
+          ...(size === undefined ? {} : { size }),
+        }),
+        "chromeless",
       ),
     );
   }
@@ -60,7 +56,7 @@ export function BrowserTabOpener({
       {(resolution: FrameResolution) =>
         children(
           resolution.status === "found" && resolution.href !== undefined
-            ? openHref(resolution.href)
+            ? resolution.href
             : undefined,
         )
       }

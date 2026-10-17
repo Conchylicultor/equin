@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-link-gesture-new-tab",
+  "description": "The new-browser-tab control in every form, owning the open-in-new glyph and the behaviour together.",
+  "private": true,
+  "version": "0.0.1"
+}

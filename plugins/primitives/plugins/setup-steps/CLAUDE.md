@@ -13,8 +13,8 @@
     - `primitives/css/spacing.insetClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/link-gesture/new-tab.NewTabButton`
     - `ui/icons.Icon`
   - Exports (types):
     - `StepProps`

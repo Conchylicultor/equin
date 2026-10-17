@@ -9,7 +9,6 @@ import {
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
@@ -18,8 +17,9 @@ import {
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
 import { embedBlock, toEmbedUrl } from "../../core";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { NewTabLink } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 
 const smartDisplayIcon = symbol("smart-display");
 
@@ -103,17 +103,12 @@ function FilledEmbedBlock({
     <div className="px-md py-xs">
       <Stack gap="xs" className={hoverRevealGroup}>
         <Stack direction="row" gap="sm" align="center" justify="end">
-          <a
+          <NewTabLink
             href={url}
-            target="_blank"
-            rel="noreferrer"
             className="text-caption text-muted-foreground hover:text-foreground hover:underline"
           >
-            <Inline gap="2xs">
-              Open original
-              <Icon icon={navIcons.newTab} className="size-3" />
-            </Inline>
-          </a>
+            Open original
+          </NewTabLink>
           {/*
            * Escape hatch: many sites send X-Frame-Options / CSP frame-ancestors
            * and refuse to render in an iframe. That refusal happens inside the

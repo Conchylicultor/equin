@@ -14,8 +14,10 @@ import {
   releaseRuns,
   releasePreviews,
 } from "@plugins/release/core";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { NewTabGlyph } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
+import { openInBrowserTab } from "@plugins/primitives/plugins/link-gesture/web";
 
 const playArrowIcon = symbol("play-arrow");
 const stopIcon = symbol("stop");
@@ -104,10 +106,10 @@ export function ReleaseArtifact({ runId }: { runId: string }): ReactElement {
         {isPreviewRunning && preview && (
           <LinkChip
             mono
-            leading={<Icon icon={navIcons.newTab} />}
+            leading={<NewTabGlyph />}
             tooltip="Open preview in a new tab"
             activation={() => {
-              window.open(preview.url, "_blank", "noopener,noreferrer");
+              openInBrowserTab(preview.url);
             }}
           >
             {preview.url}

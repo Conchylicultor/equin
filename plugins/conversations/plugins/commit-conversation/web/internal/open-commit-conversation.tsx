@@ -1,5 +1,4 @@
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { openInBrowserTab } from "@plugins/primitives/plugins/link-gesture/web";
+import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import {
   commitTrailer,
   type CommitRow,
@@ -7,7 +6,6 @@ import {
 import { CONVERSATION_TRAILER_KEY } from "@plugins/tasks/plugins/tasks-core/core";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { navIcons } from "@plugins/ui/plugins/icons/core";
 
 /**
  * A commit row action: open the conversation that wrote this commit — named by
@@ -20,12 +18,10 @@ import { navIcons } from "@plugins/ui/plugins/icons/core";
 export function OpenCommitConversation({ commit }: { commit: CommitRow }) {
   const convId = commitTrailer(commit, CONVERSATION_TRAILER_KEY);
   if (convId === null) return null;
-  const url = conversationRoute.link(agentManagerApp, { convId });
   return (
-    <IconButton
-      icon={navIcons.newTab}
+    <NewTabButton
+      href={conversationRoute.link(agentManagerApp, { convId })}
       label="Open the conversation in a new tab"
-      onClick={() => openInBrowserTab(url)}
     />
   );
 }

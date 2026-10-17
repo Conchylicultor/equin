@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -34,6 +35,12 @@ export interface ArtifactRowProps {
    * Replaces the default tooltip's second line and greys the row out.
    */
   inertReason?: string;
+  /**
+   * Controls revealed when the row is hovered or focused — `Row`'s trailing
+   * `actions` cluster, e.g. "open in a new tab". Never state to read: that
+   * belongs in the row body, where it stays visible.
+   */
+  actions?: ReactNode;
 }
 
 /**
@@ -64,6 +71,7 @@ export function ArtifactRow({
   icon,
   activation,
   inertReason,
+  actions,
 }: ArtifactRowProps) {
   const close = useCloseArtifacts();
   const referenced = item.relation === "referenced";
@@ -88,6 +96,7 @@ export function ArtifactRow({
       disabled={inertReason !== undefined || activation === undefined}
       {...activationProps(activation && afterOpen(activation, close))}
       title={`${item.key}\n${detail}`}
+      actions={actions}
     >
       <Fill>
         <Text variant="caption" tone={referenced ? "muted" : "default"}>

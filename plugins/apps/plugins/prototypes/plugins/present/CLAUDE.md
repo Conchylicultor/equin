@@ -27,8 +27,9 @@ the menu (`OpenResponsiveAction`): one click opens the new-browser-tab page at
 the Responsive size (`present/<id>/<version>/responsive`) whatever size the
 canvas is at — at Fit that is the page laid out at the tab's own width, filling
 it. A source frame opens its own `href`, which already is that, and the button
-is disabled when it has none. Both it and the menu's new-browser-tab icon go
-through `BrowserTabOpener` (`components/frame-link.tsx`).
+is disabled when it has none. Both it and the menu's new-browser-tab icon take
+their href from `BrowserTabOpener` (`components/frame-link.tsx`) and open it as a
+`NewTabButton` / `NewTabMenuItem`.
 
 **`F` presents the selected frame** in full screen. Only the selected frame's
 menu registers the key (a surface-scoped shortcut, silent in text fields), and
@@ -138,12 +139,13 @@ embedded document): a reload reopens the canvas the link carries.
     - `prototypeDetailPane.Actions` "open-canvas" → `OpenCanvasAction`
     - `PrototypeFrameActions` "present" → `PresentMenu`
     - `PrototypeFrameActions` "open-responsive" → `OpenResponsiveAction`
-  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/prototypes/canvas` ×25
     - `primitives/css/ui-kit` ×8
     - `apps-core/tabs` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/latest-ref` ×2
+    - `primitives/link-gesture/new-tab` ×2
     - `primitives/pane` ×2
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
@@ -155,7 +157,6 @@ embedded document): a reload reopens the canvas the link carries.
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/embed.embedUrl`
-    - `primitives/icon-button.IconButton`
     - `primitives/live-state.matchResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/popup-open.PopupOpenScope`

@@ -98,7 +98,7 @@ function OpenWithDefaultApp({ path }: { path: string }) {
   if (inArchive) return null;
   return (
     <Button variant="outline" onClick={() => openHostFile(path)}>
-      <Icon icon={navIcons.newTab} />
+      <Icon icon={navIcons.hostApp} />
       Open with default app
     </Button>
   );

@@ -76,6 +76,7 @@ round-trip.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Cross-plugin:

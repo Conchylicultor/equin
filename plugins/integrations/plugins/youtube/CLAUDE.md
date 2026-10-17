@@ -175,7 +175,7 @@ calls the controller makes; `@types/youtube` is not a dependency.
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
     - `primitives/latest-ref.useLatestRef`
-    - `ui/icons.Icon`
+    - `primitives/link-gesture/new-tab.NewTabGlyph`
   - Exports (types):
     - `MediaClock`
     - `YouTubeAudio`

@@ -242,7 +242,7 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
     - `primitives/css/spinner.Spinner`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
-    - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
 - Server:

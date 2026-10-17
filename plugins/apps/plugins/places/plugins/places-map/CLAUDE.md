@@ -175,7 +175,7 @@ pin*, starts pick mode for a place Google does not know.
   - Contributes:
     - `Pane.Register` "places-map"
     - `GeoMap.Pin` → `SavedPlacePin`
-  - Uses: 79 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×9
     - `map` ×6
     - `primitives/data-view` ×6
@@ -214,6 +214,7 @@ pin*, starts pick mode for a place Google does not know.
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
+    - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/persistent-draft.useDraft`

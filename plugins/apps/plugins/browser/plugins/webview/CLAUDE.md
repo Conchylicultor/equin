@@ -25,6 +25,7 @@
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture/new-tab.NewTabButton`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:

@@ -76,7 +76,7 @@ plus `sshKey`.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/detail-sections.defineDetailSections`
-    - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
   - Exports (types):

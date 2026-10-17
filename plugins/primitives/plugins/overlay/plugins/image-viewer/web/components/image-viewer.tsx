@@ -35,11 +35,7 @@ import {
   type ViewerAction,
   type ViewerMode,
 } from "../../core";
-import {
-  copyImage,
-  downloadImage,
-  openOriginal,
-} from "../internal/file-actions";
+import { copyImage, downloadImage } from "../internal/file-actions";
 import { createDecodedCache, isLoadFailure } from "../internal/decoded-cache";
 import {
   knownSize,
@@ -593,10 +589,6 @@ function ViewerFrame({
     downloadImage(shown.image.src, shown.image.name);
     feedback(`Downloading ${shown.image.name}`);
   });
-  const open = useEventCallback(() => {
-    if (capabilities.open !== "none")
-      openOriginal(shown.image.src, capabilities.open);
-  });
 
   // --- grid ----------------------------------------------------------------
   const gridRef = useRef<HTMLElement | null>(null);
@@ -901,7 +893,6 @@ function ViewerFrame({
             count={images.length}
             capabilities={capabilities}
             compact={compact}
-            onOpen={open}
             onCopy={copy}
             onDownload={download}
             onSlideshow={toggleSlideshow}

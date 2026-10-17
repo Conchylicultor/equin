@@ -307,6 +307,7 @@ export const LUCIDE_MAP = {
   sync: "refresh-cw",
   "sync-problem": "refresh-cw-off",
   tab: "panel-top",
+  "tab-new-right": "app-window",
   table: "table",
   "table-chart": "sheet",
   "table-rows": "rows-3",

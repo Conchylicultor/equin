@@ -25,6 +25,7 @@
     - `conversations/conversation-view/action-bar.Conversation`
     - `network/live.useLive`
     - `primitives/link-gesture.linkGestureProps`
+    - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

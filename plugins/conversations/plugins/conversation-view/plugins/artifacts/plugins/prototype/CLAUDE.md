@@ -56,6 +56,7 @@ Two states are not a title and do not pretend to be one:
     - `conversations/conversation-view/artifacts.ConversationArtifacts`
     - `network/live.useLive`
     - `primitives/css/spacing.Stack`
+    - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/live-state.matchResource`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`

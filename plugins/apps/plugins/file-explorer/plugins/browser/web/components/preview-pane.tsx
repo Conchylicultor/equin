@@ -107,7 +107,7 @@ export function PreviewPane({
           {renderers.resolved.length > 1 && <FileTabs {...renderers} />}
           {!inArchive && (
             <IconButton
-              icon={navIcons.newTab}
+              icon={navIcons.hostApp}
               label="Open with default app"
               variant="ghost"
               onClick={() => openHostFile(path)}

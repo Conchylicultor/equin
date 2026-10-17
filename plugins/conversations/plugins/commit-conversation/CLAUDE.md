@@ -6,9 +6,7 @@
 
 - Description: The commit row action that opens the conversation which wrote a commit (its Singularity-Conversation trailer) in a new browser tab.
 - Web:
-  - Uses:
-    - `primitives/icon-button.IconButton`
-    - `primitives/link-gesture.openInBrowserTab`
+  - Uses: `primitives/link-gesture/new-tab.NewTabButton`
   - Exports (values): `OpenCommitConversation`
 - Cross-plugin:
   - Imported by:

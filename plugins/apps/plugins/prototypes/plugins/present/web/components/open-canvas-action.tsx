@@ -1,11 +1,10 @@
 import type { ReactElement } from "react";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import { embedUrl } from "@plugins/primitives/plugins/embed/web";
 import {
   encodeCanvas,
   usePrototypeDetail,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
-import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { presentCanvasPath } from "../panes";
 
 /**
@@ -16,16 +15,12 @@ import { presentCanvasPath } from "../panes";
 export function OpenCanvasAction(): ReactElement {
   const { name, canvas } = usePrototypeDetail();
   return (
-    <IconButton
-      icon={navIcons.newTab}
+    <NewTabButton
+      href={embedUrl(
+        presentCanvasPath(name, encodeCanvas(canvas)),
+        "chromeless",
+      )}
       label="Open the canvas in a new tab"
-      onClick={() =>
-        window.open(
-          embedUrl(presentCanvasPath(name, encodeCanvas(canvas)), "chromeless"),
-          "_blank",
-          "noopener,noreferrer",
-        )
-      }
     />
   );
 }

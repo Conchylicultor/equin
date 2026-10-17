@@ -27,7 +27,8 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { NewTabMenuItem } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const icons = {
@@ -241,10 +242,10 @@ export default function MenuSheetExhibit() {
                 <Icon icon={icons.edit} /> Rename
                 <DropdownMenuShortcut>R</DropdownMenuShortcut>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Icon icon={navIcons.newTab} /> Open in new tab
+              <NewTabMenuItem href="/">
+                Open in new tab
                 <DropdownMenuShortcut>⌘↵</DropdownMenuShortcut>
-              </DropdownMenuItem>
+              </NewTabMenuItem>
               <DropdownMenuItem>
                 <Icon icon={icons.link} /> Copy link
                 <DropdownMenuShortcut>⌘L</DropdownMenuShortcut>

@@ -21,8 +21,9 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
-import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import {
   MAPS_BLOCKER_BODY,
   MapsAccessAction,
@@ -337,16 +338,13 @@ export function PlaceCard({
       footer={
         <Line className="gap-xs border-t p-md">
           <Fill>
-            <Button
+            <NewTabButton
+              href={mapsHref(place)}
               className="w-full text-white hover:opacity-90"
               style={{ background: washInk(visual.mainColor) }}
-              render={
-                <a href={mapsHref(place)} target="_blank" rel="noreferrer" />
-              }
             >
-              <Icon icon={navIcons.newTab} />
               Open in Google Maps
-            </Button>
+            </NewTabButton>
           </Fill>
           <IconButton
             icon={directionsIcon}

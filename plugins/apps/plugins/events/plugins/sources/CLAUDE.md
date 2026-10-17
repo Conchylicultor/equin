@@ -170,7 +170,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSourceActions` "open" → `SourceOpenAction`
     - `EventSourceActions` "enabled" → `SourceToggleAction`
     - `EventSourceActions` "delete" → `SourceDeleteAction`
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/events/events-core` ×7
     - `primitives/css/ui-kit` ×5
     - `primitives/data-view` ×5
@@ -189,6 +189,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/live-state.matchResource`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `ui/icons.Icon`
