@@ -83,3 +83,23 @@ export function PageNavigationProvider({
 export function usePageNavigation(): PageNavigation | undefined {
   return useContext(PageNavigationContext);
 }
+
+/**
+ * Opens a page the user just made, in place, once it exists: `made` is the
+ * server op minting it, and the page opens when that settles — opened before,
+ * the host would route to a page the server does not hold yet. A page made from
+ * the editor (`/page`, `/agent-page`, …) is one you are about to write in, so
+ * this is what every such insert does. A host that declared no navigation leaves
+ * the new row where it is.
+ */
+export function useOpenMadePage(): (
+  made: Promise<unknown>,
+  pageId: string,
+) => void {
+  const nav = usePageNavigation();
+  return (made, pageId) => {
+    void made.then(() => {
+      nav?.open(pageId).open();
+    });
+  };
+}

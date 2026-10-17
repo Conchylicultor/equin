@@ -97,6 +97,8 @@ ones.
     - `page/annotations/agent-notes/authorship.useAgentNotesCreator`
     - `page/editor.Editor`
     - `page/page-reference.PageReference`
+    - `page/page-reference.PageReferenceDecorationContribution`
+    - `page/page-reference.useOpenMadePage`
     - `primitives/css/row.Row`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`

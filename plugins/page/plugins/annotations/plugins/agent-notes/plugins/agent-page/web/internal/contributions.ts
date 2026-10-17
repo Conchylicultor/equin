@@ -3,7 +3,10 @@ import type {
   InsertAction,
   InsertActionRun,
 } from "@plugins/page/plugins/editor/web";
-import type { PageReferenceDecorationContribution } from "@plugins/page/plugins/page-reference/web";
+import {
+  useOpenMadePage,
+  type PageReferenceDecorationContribution,
+} from "@plugins/page/plugins/page-reference/web";
 import { agentNotesBlock } from "@plugins/page/plugins/annotations/plugins/agent-notes/core";
 import { AgentPageCreatorChip } from "../components/agent-page-creator-chip";
 import { turnIntoAgentPage } from "./turn-into-agent-page";
@@ -32,9 +35,13 @@ export const agentPageDecoration: PageReferenceDecorationContribution = {
   component: AgentPageCreatorChip,
 };
 
-const runAgentPageInsert: InsertActionRun = ({ blockId, text }) => {
-  void turnIntoAgentPage(blockId, agentPageTitle(text));
-};
+/** Turn the line into the page, then open it (`useOpenMadePage`). */
+function useAgentPageInsertRun(): InsertActionRun {
+  const openMadePage = useOpenMadePage();
+  return ({ blockId, text }) => {
+    openMadePage(turnIntoAgentPage(blockId, agentPageTitle(text)), blockId);
+  };
+}
 
 /**
  * `/agent-page`: an agent-authored page made in place of the caret's line, the
@@ -47,5 +54,5 @@ export const agentPageInsertAction: InsertAction = {
   icon: autoAwesomeIcon,
   aliases: ["agent", "agent-page", "agent page", "ai page"],
   after: agentNotesBlock.type,
-  useRun: () => runAgentPageInsert,
+  useRun: useAgentPageInsertRun,
 };

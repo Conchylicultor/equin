@@ -12,7 +12,7 @@
   - Uses:
     - `infra/endpoints.fetchEndpoint`
     - `page/editor.Editor`
-    - `page/page-reference.usePageNavigation`
+    - `page/page-reference.useOpenMadePage`
     - `primitives/css/row.Row`
     - `ui/icons.Icon`
 - Cross-plugin:

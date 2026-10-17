@@ -29552,6 +29552,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `page/annotations/agent-notes/authorship.useAgentNotesCreator`
                   - `page/editor.Editor`
                   - `page/page-reference.PageReference`
+                  - `page/page-reference.PageReferenceDecorationContribution`
+                  - `page/page-reference.useOpenMadePage`
                   - `primitives/css/row.Row`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
@@ -29690,6 +29692,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.useLiveRow`
                   - `page/editor.Editor`
                   - `page/page-reference.PageReference`
+                  - `page/page-reference.PageReferenceDecorationContribution`
+                  - `page/page-reference.useOpenMadePage`
                   - `primitives/css/badge.Badge`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
@@ -31503,6 +31507,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageNavigationProvider`
           - `PageReference`
           - `PageReferenceTrailing`
+          - `useOpenMadePage`
           - `usePageNavigation`
           - `usePageReferenceActions`
           - `usePageReferenceDecoration`
@@ -32112,7 +32117,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/endpoints.fetchEndpoint`
           - `page/editor.Editor`
-          - `page/page-reference.usePageNavigation`
+          - `page/page-reference.useOpenMadePage`
           - `primitives/css/row.Row`
           - `ui/icons.Icon`
       - Cross-plugin:

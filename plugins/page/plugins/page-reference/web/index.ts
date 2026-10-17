@@ -3,6 +3,7 @@ import { PageReference } from "./internal/slots";
 
 export {
   PageNavigationProvider,
+  useOpenMadePage,
   usePageNavigation,
   type PageNavigation,
 } from "./internal/navigation";

@@ -58,6 +58,8 @@ It contributes to two generic seams and names nothing else:
     - `network/live.useLiveRow`
     - `page/editor.Editor`
     - `page/page-reference.PageReference`
+    - `page/page-reference.PageReferenceDecorationContribution`
+    - `page/page-reference.useOpenMadePage`
     - `primitives/css/badge.Badge`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`

@@ -3,7 +3,10 @@ import type {
   InsertAction,
   InsertActionRun,
 } from "@plugins/page/plugins/editor/web";
-import type { PageReferenceDecorationContribution } from "@plugins/page/plugins/page-reference/web";
+import {
+  useOpenMadePage,
+  type PageReferenceDecorationContribution,
+} from "@plugins/page/plugins/page-reference/web";
 import { instructionsBlock } from "@plugins/page/plugins/annotations/plugins/instructions/core";
 import { InstructionsPageChip } from "../components/instructions-page-chip";
 import { turnIntoInstructionsPage } from "./turn-into-instructions-page";
@@ -30,9 +33,13 @@ export const instructionsPageDecoration: PageReferenceDecorationContribution = {
   component: InstructionsPageChip,
 };
 
-const runInstructionsPageInsert: InsertActionRun = ({ blockId, text }) => {
-  void turnIntoInstructionsPage(blockId, text);
-};
+/** Turn the line into the page, then open it (`useOpenMadePage`). */
+function useInstructionsPageInsertRun(): InsertActionRun {
+  const openMadePage = useOpenMadePage();
+  return ({ blockId, text }) => {
+    openMadePage(turnIntoInstructionsPage(blockId, text), blockId);
+  };
+}
 
 /**
  * `/instructions page`: an instructions page made in place of the caret's line,
@@ -44,5 +51,5 @@ export const instructionsPageInsertAction: InsertAction = {
   icon: menuBookIcon,
   aliases: ["instructions page", "rules page", "instructions-page"],
   after: instructionsBlock.type,
-  useRun: () => runInstructionsPageInsert,
+  useRun: useInstructionsPageInsertRun,
 };

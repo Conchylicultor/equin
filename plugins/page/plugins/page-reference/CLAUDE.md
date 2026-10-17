@@ -119,6 +119,7 @@ carrying the same actions — a separate feature.
     - `PageNavigationProvider`
     - `PageReference`
     - `PageReferenceTrailing`
+    - `useOpenMadePage`
     - `usePageNavigation`
     - `usePageReferenceActions`
     - `usePageReferenceDecoration`
