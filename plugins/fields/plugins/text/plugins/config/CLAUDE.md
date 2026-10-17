@@ -43,7 +43,7 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `textField`
     - `textSample`
 - Cross-plugin:
-  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×17
     - `conversations` ×5
     - `infra` ×5
@@ -55,6 +55,7 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `fields` ×2
     - `plugin-meta` ×2
     - `release` ×2
+    - `activity`
     - `backup/runs-arm`
     - `history/engine`
     - `primitives/usage-rank`

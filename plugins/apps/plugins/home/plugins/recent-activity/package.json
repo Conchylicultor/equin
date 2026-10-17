@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-home-recent-activity",
+  "description": "Home's Recent activity section.",
+  "private": true,
+  "version": "0.0.1"
+}

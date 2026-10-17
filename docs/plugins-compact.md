@@ -6,6 +6,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`active-data`** [14 sub-plugins] — Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute block (tag) and code (claimed code-span) renderers, and declare inline chips…
 
+- **`activity`** — The Recent activity surface: <ActivityDataView> over the `activity` union window (base fields presented once here; each kind's fields derived from its arm and its entity's exposures, with no list…
+
 - **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
   - Plugins:
     - **`agent-manager`** [4 sub-plugins] — Agent manager app shell and layout.
@@ -18,9 +20,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`deploy`** [test helpers] [exempt] [17 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`events`** [exempt] [22 sub-plugins] — Events — track events from pluggable sources in one database.
     - **`file-explorer`** [exempt] [5 sub-plugins] — File explorer app.
-    - **`home`** [3 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
+    - **`home`** [4 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`mail`** [exempt] [12 sub-plugins] — Mail — a Gmail-class client.
-    - **`pages`** [exempt] [16 sub-plugins] — Notion-like pages app.
+    - **`pages`** [exempt] [17 sub-plugins] — Notion-like pages app.
     - **`places`** [6 sub-plugins] — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
     - **`prototypes`** [11 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
     - **`settings`** [4 sub-plugins] — Settings app.
@@ -71,7 +73,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`config_v2`** [test helpers] [5 sub-plugins] — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 
-- **`conversations`** [load-bearing] [test helpers] [exempt] [165 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
+- **`conversations`** [load-bearing] [test helpers] [exempt] [166 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 
 - **`database`** [load-bearing] — Core database infrastructure. Connection pooling and DB readiness.
   - Plugins:
@@ -276,6 +278,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`tasks`** — Nested tasks with attempts linking to conversations.
   - Plugins:
+    - **`activity-arm`** — The task arm's presence in every list of activity: its rows open the task's detail pane in the agent manager. Its band's fields are its entity's exposures, presented by their own plugins. The task…
     - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge tint, dot tint and sentence-case label, so a chip and a badge for the same attempt cannot disagree.
     - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
     - **`attempt-work`** — The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger, as…

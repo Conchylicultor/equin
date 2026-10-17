@@ -132,6 +132,7 @@
     - `tasks/task-header`
     - `tasks/task-list`
 - Sub-plugins:
+  - **`activity-arm`** — The task arm's presence in every list of activity: its rows open the task's detail pane in the agent manager. Its band's fields are its entity's exposures, presented by their own plugins. The task…
   - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge tint, dot tint and sentence-case label, so a chip and a badge for the same attempt cannot disagree.
   - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - **`attempt-work`** — The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger, as…

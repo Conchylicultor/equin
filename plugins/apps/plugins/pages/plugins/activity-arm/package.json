@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-pages-activity-arm",
+  "description": "Pages, as one arm of the activity space.",
+  "private": true,
+  "version": "0.0.1"
+}

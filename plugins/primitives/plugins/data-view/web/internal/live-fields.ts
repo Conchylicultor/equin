@@ -66,7 +66,7 @@ export interface LiveFieldPlan<TRow> {
 export interface LiveGroupColumn {
   name: string;
   domain: LiveGroupableDomain;
-  /** The exposed column set it belongs to — the grouping hands it to the codec; absent for an own column. */
+  /** The column set it belongs to (an exposure's, a union arm's) — the grouping hands it to the codec; absent for an own column. */
   handle?: LiveColumnsDeclaration;
 }
 
@@ -142,8 +142,10 @@ function columnFor<TRow>(
         break;
       case "exposed":
         // An exposure is read by every collection whose `exposes` reaches
-        // its entity — never named by one.
+        // its entity — never named by one — and by a union whose entity arm
+        // reaches it (the server decodes against the arms it folds).
         if (
+          c.arms == null &&
           !Object.values(c.exposes ?? {}).some((r) => r.name === owner.entity)
         ) {
           throw new Error(
@@ -212,10 +214,13 @@ export function resolveLiveFields<TRow>(
     if (column === null) continue;
     columnOf.set(field.id, column.name);
     if (column.handle) handles.set(column.handle.name, column.handle);
-    // What the server can `GROUP BY`: an own filterable column, or an
-    // exposed one (its domain is the exposed set's).
+    // What the server can `GROUP BY`: an own filterable column, or one of an
+    // exposed set or a union arm's (its domain is the set's).
     const exposed =
-      column.handle?.owner.kind === "exposed" ? column.handle : undefined;
+      column.handle?.owner.kind === "exposed" ||
+      column.handle?.owner.kind === "arm"
+        ? column.handle
+        : undefined;
     const groupDomain =
       exposed !== undefined
         ? column.domain

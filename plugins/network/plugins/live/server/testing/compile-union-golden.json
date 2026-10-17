@@ -4520,7 +4520,8 @@
   },
   "groups": {
     "options": {
-      "mode": "push"
+      "mode": "push",
+      "validateParams": "$function"
     },
     "routes": [
       {

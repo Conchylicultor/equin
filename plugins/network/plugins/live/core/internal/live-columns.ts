@@ -11,6 +11,7 @@ import {
   type FieldsRecord,
   type InferFieldValue,
 } from "@plugins/fields/core";
+import type { EntityRef } from "@plugins/infra/plugins/entities/core";
 import { fieldDomain, type FieldsFilterable } from "./field-domain";
 import {
   isShape,
@@ -375,7 +376,9 @@ export interface LiveArm<
   F extends FieldsRecord,
   S extends string,
   C extends FieldsRecord = Record<never, never>,
-  Pk extends string = never,
+  // Erased (`LiveArm<Row, FieldsRecord, string>` — a presentation owner, a
+  // link's arm): ANY arm, whatever it picks. `liveArm` returns its own `P`.
+  Pk extends string = string,
 > extends LiveArmColumnsHandle<
   Row,
   { [K in keyof (F & C)]: InferFieldValue<(F & C)[K]> },
@@ -398,6 +401,13 @@ export interface LiveArm<
    * binding names only its own fields.
    */
   readonly picked: readonly Pk[];
+  /**
+   * The entity its rows are (`from`, when an `EntityRef`) — whose EXPOSED
+   * extension fields every list of the union shows in this arm's band, as a
+   * direct collection `from` the entity folds them. `null` for an arm over a
+   * raw ledger or an extension shape (a shape reaches no exposure).
+   */
+  readonly reaches: EntityRef | null;
 }
 
 /**
@@ -411,7 +421,10 @@ export interface LiveArm<
  * An arm whose rows ARE an entity's (or an extension shape's) names it in
  * `from` and lists some of its fields by name in `pick` — declared once, on
  * the entity, with their labels and options — before its own `fields`; its
- * server binding then binds the picked ones by name.
+ * server binding then binds the picked ones by name. An arm `from` an ENTITY
+ * also folds the entity's exposed extension fields (`reaches`): served on its
+ * rows under each exposure's slice, listed in its band — as a direct
+ * `liveCollection({ from })` reaches `exposes.base`.
  */
 export function liveArm<
   Row,
@@ -541,6 +554,7 @@ export function liveArm<
     order: spec.order,
     listed,
     picked: Object.freeze([...(spec.pick ?? [])]),
+    reaches: from === undefined || isShape(from) ? null : (from as EntityRef),
   }) as unknown as LiveArm<
     WithContributedColumns<Row>,
     Pick<FromFields<E>, P & keyof FromFields<E>> & F,

@@ -1151,7 +1151,8 @@ source field the discriminator.
 - **The overload (T12).** A union is a window like any other (read as
   key-range pages, listed as a live DataView); `exposes` and `columnScope` are
   `never` — a union's
-  column vocabulary is its arms' static declarations. Declared by fields, its
+  column vocabulary is its arms' declarations (and the exposures its entity
+  arms reach, below). Declared by fields, its
   base fields are its own (`fields` / `carry.fields` — no `from` / `pick` /
   `related`: a union's rows are no entity's), presented once by
   `FieldPresentation.Register({ owner: union })`, so a list of it derives
@@ -1170,12 +1171,40 @@ source field the discriminator.
   parses its own slice once per row object, and THROWS on its own arm's row
   with no slice (A16 — a server that did not fold the arm is a bug, never "no
   values"). A collection without `arms` is a tsc error, and throws.
+- **Entity arms fold their entity's exposures** (fields declared once, phase
+  4 — `research/2026-10-17-global-fields-declared-once-phase4-entity-meta-dataview.md`).
+  An arm declared `from` an ENTITY (`liveArm({ from: entityRef })` — its
+  `reaches`; a raw-ledger or extension-shape arm reaches none) folds every
+  served exposure (`LiveColumns.Expose`) of that entity, as a direct
+  `liveCollection({ from })` folds `exposes.base`: at the deferred bind
+  `compileUnion` runs `exposureFolds({ base: reaches }, …)` per arm, appends
+  each fold's `ext.join(slice)` to THAT arm's joins (an `alias` route,
+  `<arm>.<slice>`), and binds its fields (`exposedBinding`: COALESCE to the
+  declared default, presence as `presenceExpr`) under their wire names
+  `<slice>.<field>`. Every other arm reads them as a typed NULL, so a filter
+  on one prunes the arms that cannot hold it. Rows carry them under
+  `$columns[<slice>]` beside `$columns[<arm>]` (on the folding arm's rows
+  only). Refused at bind: two arms reaching ONE entity (one slice would bind
+  two arms — a filter on "arm A's" track would filter arm B too), a slice
+  named like an arm, an exposed field id equal to one of the arm's own
+  fields. The codec of a union lets an exposed set through (its arms are
+  declared after it, in other plugins), and the server's decode — over the
+  sets it folds — is the authority. Data-view lists them in the arm's band,
+  ids `<arm>.<id>` (a task's and a page's `origin` do not collide). Test:
+  `server/internal/serve-union-entity-arms.test.ts`. The reference is
+  `activity` (tasks, conversations, pages).
+- **Groups by a column set.** A union's `:groups` decodes with its arms'
+  and exposures' sets (its `validateParams` replaces the descriptor's, as the
+  window's), so a list groups by an arm field (`build.status`) or an exposed
+  one (a task's track) on the server; another arm's rows fall in the NULL
+  group.
 - **Owners (T11).** Every column set's declaration carries an `owner` —
   `scoped` (`scopedLiveColumns`), `arm` (`liveArm`) or `exposed`
   (`exposedColumns`) — and a column ref's owner adds `own`. The codec,
   data-view's field resolution and the server switch on it exhaustively, so a
   codec takes an arm set only on its own union, an exposed set only on a
-  collection reaching its entity, a scoped set only in its scope.
+  collection reaching its entity (or a union, decided by its server), a
+  scoped set only in its scope.
 - **Serve — `const served = serveUnionCollection(c, { derive? })`**
   (P6 of `research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md`), and
   **`served.arm(arm, { from, id, joins?, base(j), extra(j), where?(j) })`** —
@@ -1731,8 +1760,8 @@ never add one.
   - Slots:
     - `FieldPresentation.Register`
     - `ClientFields.Resolve`
-  - Slot contributors: 31 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `FieldPresentation.Register` ×28
+  - Slot contributors: 35 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `FieldPresentation.Register` ×32
     - `ClientFields.Resolve` ×3
   - Uses:
     - `primitives/live-state.PagedResourceResult`
@@ -1995,10 +2024,10 @@ never add one.
     - `serveValueOn`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 237 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×68
-    - `conversations` ×40
-    - `tasks` ×27
+  - Imported by: 241 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×69
+    - `conversations` ×41
+    - `tasks` ×28
     - `debug` ×24
     - `active-data` ×12
     - `infra` ×11
@@ -2015,6 +2044,7 @@ never add one.
     - `history` ×2
     - `release` ×2
     - `search` ×2
+    - `activity`
     - `backup/runs-arm`
     - `database/query-deadline`
     - `fields/secret/config`

@@ -368,11 +368,65 @@ export function deriveFields(
   }
 
   // Every arm's fields, when the collection is a union — in the arms' own
-  // declared order (`liveArm({ order })`), never the plugins' load order.
+  // declared order (`liveArm({ order })`), never the plugins' load order. An
+  // arm `from` an entity (`reaches`) lists that entity's exposed fields after
+  // its own, in its band, ids `<arm>.<id>` like its own (two entities may
+  // expose one id — a task's origin and a page's).
   for (const arm of arms) {
     const ownerKey = presentationOwnerKey(arm);
     if (!once(ownerKey)) continue;
-    const presentation = presentations.get(ownerKey);
+    addArmFields(arm);
+    if (arm.reaches === null) continue;
+    for (const owner of registered) {
+      if ("rowKeys" in owner || owner.kind !== "exposure") continue;
+      if (owner.parent.name !== arm.reaches.name) continue;
+      addArmExposure(arm, owner);
+    }
+  }
+
+  function addArmExposure(
+    arm: LiveArm<unknown, FieldsRecord, string>,
+    owner: Parameters<typeof exposedColumns>[0],
+  ): void {
+    const columns = exposedColumns(owner);
+    const presentation = presentations.get(presentationOwnerKey(owner));
+    const kind = arm.owner.arm;
+    for (const [key, exposed] of Object.entries(owner.fields)) {
+      const spec = presentation?.fields.get(key);
+      const wire = columns.wireName(key);
+      const bound =
+        Object.hasOwn(columns.wireFilterable, wire) ||
+        columns.wireSortable.includes(wire);
+      add(
+        derivedField(
+          {
+            id: `${kind}.${exposed.id}`,
+            key,
+            label: exposed.label,
+            typeId: exposed.typeId,
+            options: exposed.options,
+            primary: false,
+            domain: columns.wireFilterable[wire]?.domain ?? null,
+            sortable: columns.wireSortable.includes(wire),
+          },
+          // Another arm's row carries no slice of this exposure.
+          (row) =>
+            (row as Record<string, unknown>)[discriminator!] === kind
+              ? columns.read(row as Parameters<typeof columns.read>[0])[key]
+              : undefined,
+          spec,
+          {
+            section: arm.label,
+            ...(live && bound ? { column: columns.column(key) } : {}),
+          },
+        ),
+        spec,
+      );
+    }
+  }
+
+  function addArmFields(arm: LiveArm<unknown, FieldsRecord, string>): void {
+    const presentation = presentations.get(presentationOwnerKey(arm));
     for (const field of Object.values(arm.listed)) {
       const spec = presentation?.fields.get(field.key);
       add(

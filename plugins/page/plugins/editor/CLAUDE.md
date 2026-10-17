@@ -4856,9 +4856,9 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 75 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `page` ×57
-    - `apps` ×8
+    - `apps` ×9
     - `reports` ×4
     - `active-data` ×3
     - `primitives` ×2

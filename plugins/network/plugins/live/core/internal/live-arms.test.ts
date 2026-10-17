@@ -236,7 +236,7 @@ describe("liveArm — the column set", () => {
 });
 
 describe("the codec switches on the owner (T11)", () => {
-  test("a union decodes its arms' columns; an exposed / scoped set is refused there; an arm set elsewhere is refused", () => {
+  test("a union decodes its arms' columns (and passes an exposed set to the server); a scoped set is refused there; an arm set elsewhere is refused", () => {
     const c = runs();
     const build = liveArm(c, "build", {
       label: "Build",
@@ -274,7 +274,10 @@ describe("the codec switches on the owner (T11)", () => {
       } as never),
     ).toThrow(/arm columns "build" belong to "test.live.arms-/);
 
-    // An exposure is read by a collection reaching its entity — never a union.
+    // An exposure is read by a collection reaching its entity — and by a
+    // union, whose entity arms reach theirs: arms are declared after the
+    // union, so its codec lets an exposed set through and the server (which
+    // folds each arm's exposures) decodes strictly.
     const runsEntity = entityRef("test_arm_runs", RUN);
     const extra = exposedColumns(
       defineExtensionShape({
@@ -288,7 +291,7 @@ describe("the codec switches on the owner (T11)", () => {
         orderBy: [[extra.wireName("size"), "asc"]],
         columns: [extra],
       } as never),
-    ).toThrow(/which the collection's `exposes` does not reach/);
+    ).not.toThrow();
     const host = liveCollection(`test.live.arms-ex-${seq++}`, {
       from: runsEntity,
       pick: ["runKey", "kind", "label", "startedAt"],

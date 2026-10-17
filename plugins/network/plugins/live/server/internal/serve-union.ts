@@ -50,7 +50,14 @@ import {
   type LiveWindowParams,
   type WithContributedColumns,
 } from "@plugins/network/plugins/live/core";
+import type { EntityRef } from "@plugins/infra/plugins/entities/core";
 import type { ServedCollection } from "./serve-collection";
+import { LiveColumns, type ExposingExtension } from "./serve-columns";
+import {
+  exposedBinding,
+  exposureFolds,
+  type ExposureFold,
+} from "./exposure-folds";
 import {
   bindArm,
   type ArmSpec,
@@ -75,7 +82,15 @@ import {
 //   groups only, over an arm CONSTANT (a typed NULL, or the discriminator), is
 //   answered once by the op's own `testClause`; a `false` prunes the arm (no
 //   SQL, no routes). A negative op or `isEmpty` keeps it (NULL satisfies it);
-// - **the decode** — strict, over the static set of the arms' column sets.
+// - **the decode** — strict, over the static set of the arms' column sets
+//   and the exposures they fold.
+//
+// An arm declared `from` an ENTITY (`liveArm({ from })`, its `reaches`) folds
+// that entity's exposed extension fields, as a direct collection `from` it
+// does (`./exposure-folds`): each served exposure is LEFT-joined onto the
+// arm's base under its slice, its fields bound under their wire names
+// (`<slice>.<field>`) and carried on the arm's rows under `$columns[<slice>]`
+// — a typed NULL on every other arm's rows, so a filter on one prunes them.
 //
 // The compile is DEFERRED (`defineDeferredResource`): arms register in the
 // register phase (`served.arm(…)` is a `Registration`), so it runs at
@@ -124,6 +139,11 @@ export interface UnionArmBinding {
 export interface CompileUnionOptions {
   /** The arms — called once, at the deferred bind (after the register phase). */
   arms: () => readonly UnionArmBinding[];
+  /**
+   * The served exposures (`LiveColumns.Expose`) an entity arm folds — read at
+   * the deferred bind by `serveUnionCollection`; a test hands its own.
+   */
+  exposed?: readonly ExposingExtension[];
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
 }
@@ -260,7 +280,8 @@ export function compileUnion<
 
   const bindings = opts.arms();
   const handles: LiveColumnsDeclaration[] = [];
-  const wireOwner = new Map<string, { arm: string; field: string }>();
+  /** Wire name → the column set (an arm, or an exposure's slice) and its field. */
+  const wireOwner = new Map<string, { set: string; field: string }>();
   for (const b of bindings) {
     const owner = b.columns.owner;
     switch (owner.kind) {
@@ -285,17 +306,70 @@ export function compileUnion<
     }
     handles.push(b.columns);
     for (const field of b.columns.fields) {
-      wireOwner.set(b.columns.wireName(field), { arm: b.columns.name, field });
+      wireOwner.set(b.columns.wireName(field), { set: b.columns.name, field });
     }
   }
+
+  // ── The exposures each entity arm folds ───────────────────────────────────
+  // One arm per entity: two arms folding one slice would read one wire column,
+  // so a filter on "arm A's" exposed field would filter arm B's rows too.
+  const reachedBy = new Map<string, string>();
+  const armFolds: ExposureFold[][] = bindings.map((b) => {
+    const kind = b.columns.name;
+    const reaches =
+      (b.columns as { readonly reaches?: EntityRef | null }).reaches ?? null;
+    if (reaches === null) return [];
+    const other = reachedBy.get(reaches.name);
+    if (other !== undefined) {
+      fail(
+        `arms "${other}" and "${kind}" both reach entity "${reaches.name}" — one arm per entity, so an exposed field filters one arm's rows.`,
+      );
+    }
+    reachedBy.set(reaches.name, kind);
+    return exposureFolds(
+      { base: reaches },
+      isEntitySource(b.from) ? b.from.table : (b.from as PgTable),
+      b.joins ?? [],
+      opts.exposed ?? [],
+      // An exposed field is listed beside the arm's own, in its band: its id
+      // must not be one of the arm's fields; its slice not a set's name.
+      {
+        fields: b.columns.fields,
+        sets: bindings.map((o) => o.columns.name),
+      },
+      fail,
+    );
+  });
+  /** Each arm's column sets — its own, then each exposure it folds. */
+  const armSets = new Map<string, readonly string[]>();
+  bindings.forEach((b, i) => {
+    const folds = armFolds[i]!;
+    for (const { handle } of folds) {
+      if (handles.some((h) => h.name === handle.name)) {
+        fail(
+          `two column sets are named "${handle.name}" — an exposure's slice names its \`$columns\` slot.`,
+        );
+      }
+      handles.push(handle);
+      for (const field of handle.fields) {
+        wireOwner.set(handle.wireName(field), { set: handle.name, field });
+      }
+    }
+    armSets.set(b.columns.name, [
+      b.columns.name,
+      ...folds.map((f) => f.handle.name),
+    ]);
+  });
 
   // ── Bind each arm ─────────────────────────────────────────────────────────
   const reads: Map<string, ReadColumn>[] = [];
   const plans: ReturnType<typeof compileJoins>[] = [];
   const armWires: Map<string, WireCodec<unknown, unknown>>[] = [];
   const armWheres: (SQL | undefined)[] = [];
-  for (const b of bindings) {
+  const armJoins: (readonly JoinSpec[])[] = [];
+  for (const [i, b] of bindings.entries()) {
     const kind = b.columns.name;
+    const folds = armFolds[i]!;
     if (!KIND_RE.test(kind))
       fail(`arm kind "${kind}" is not a plain identifier.`);
     const label = `serveUnionCollection("${key}") arm "${kind}"`;
@@ -305,7 +379,8 @@ export function compileUnion<
     const sourceColumns: Record<string, PgColumn> = isEntitySource(b.from)
       ? b.from.wireColumns
       : (getTableColumns(table) as Record<string, PgColumn>);
-    const joins = b.joins ?? [];
+    const joins = [...(b.joins ?? []), ...folds.map((f) => f.join)];
+    armJoins.push(joins);
     let renderRef: ((ref: ColumnRef) => ReadColumn) | undefined;
     const refs = joinRefs(sourceColumns, joins, (ref) =>
       (
@@ -392,6 +467,18 @@ export function compileUnion<
       nullCheck(wire, col, schemaOf(b.columns.rowShape, field, "arm field"));
       read.set(wire, col);
     }
+    for (const fold of folds) {
+      const { handle, join } = fold;
+      for (const field of handle.fields) {
+        const wire = handle.wireName(field);
+        const col = bind(
+          wire,
+          exposedBinding(fold, field, refs[join.alias], fail),
+        );
+        nullCheck(wire, col, schemaOf(handle.rowShape, field, "exposed field"));
+        read.set(wire, col);
+      }
+    }
     reads.push(read);
     plans.push(plan);
     armWires.push(wires);
@@ -458,7 +545,7 @@ export function compileUnion<
         kind,
         from: b.from,
         id: b.id,
-        ...(b.joins ? { joins: b.joins } : {}),
+        ...(armJoins[i]!.length > 0 ? { joins: armJoins[i]! } : {}),
         reads: Object.fromEntries(reads[i]!),
         ...(armWheres[i] ? { where: armWheres[i] } : {}),
         whereReads: Object.keys(filterDecl)
@@ -500,6 +587,13 @@ export function compileUnion<
     return d;
   };
   const groupCodec = collection.groups.groups;
+  /** A grouped column's field schema: a base field's, or its column set's. */
+  const groupSchema = (name: string): ZodParser<unknown> => {
+    const owner = wireOwner.get(name);
+    if (owner === undefined) return schemaOf(rowShape, name, "row field");
+    const handle = handles.find((h) => h.name === owner.set)!;
+    return schemaOf(handle.rowShape, owner.field, "column-set field");
+  };
 
   // ── Rows on the wire ──────────────────────────────────────────────────────
   const encodeRow = (row: Record<string, unknown>): Record<string, unknown> => {
@@ -510,12 +604,14 @@ export function compileUnion<
       const v = out[name];
       if (v !== null && v !== undefined) out[name] = wire.encode(v);
     }
-    const own: Record<string, unknown> = {};
-    for (const [wire, { arm: of, field }] of wireOwner) {
-      if (of === kind) own[field] = out[wire];
+    const cols: Record<string, Record<string, unknown>> = {};
+    for (const set of armSets.get(kind)!) cols[set] = {};
+    for (const [wire, { set, field }] of wireOwner) {
+      const slice = cols[set];
+      if (slice !== undefined) slice[field] = out[wire];
       delete out[wire];
     }
-    out[LIVE_COLUMNS_KEY] = { [kind]: own };
+    out[LIVE_COLUMNS_KEY] = cols;
     return out;
   };
   const readField = (row: Record<string, unknown>, name: string): unknown => {
@@ -525,10 +621,10 @@ export function compileUnion<
       string,
       Record<string, unknown>
     >;
-    return cols[owner.arm]?.[owner.field] ?? null;
+    return cols[owner.set]?.[owner.field] ?? null;
   };
 
-  return compileUnionCollection<
+  const compiled = compileUnionCollection<
     WithContributedColumns<Row>,
     LiveWindowParams,
     PointParams,
@@ -562,8 +658,8 @@ export function compileUnion<
     point: { idsOf: (params) => collection.rows.point.decode(params) },
     groups: {
       query: (params) => {
-        const q = groupCodec.decode(params);
-        const schema = schemaOf(rowShape, q.groupBy, "row field");
+        const q = groupCodec.decode(params, handles);
+        const schema = groupSchema(q.groupBy);
         return {
           groupBy: q.groupBy,
           arms: prune(q.where),
@@ -583,6 +679,18 @@ export function compileUnion<
     encodeRow,
     ...(opts.db ? { db: opts.db } : {}),
   });
+  // The params gate: the descriptor's own decode knows no column set, and
+  // would refuse a grouping by an arm's or an exposure's field (as the
+  // window's `validateParams` above).
+  return {
+    ...compiled,
+    groups: {
+      ...compiled.groups,
+      validateParams: (params) => {
+        groupCodec.decode(params as LiveGroupParams, handles);
+      },
+    },
+  };
 }
 
 /**
@@ -636,6 +744,7 @@ export function serveUnionCollection<
   const once = () =>
     (compiled ??= compileUnion(collection, {
       arms: () => [...arms.values()].map((a) => a.binding),
+      exposed: LiveColumns.Expose.getContributions(),
     }));
   const window = defineDeferredResource(collection.window, () => once().window);
   const rows = defineDeferredResource(collection.rows, () => once().rows);

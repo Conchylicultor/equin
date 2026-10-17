@@ -126,6 +126,10 @@
       "name": "@singularity/plugin-active-data-task-link",
       "version": "0.0.1",
     },
+    "plugins/activity": {
+      "name": "@singularity/plugin-activity",
+      "version": "0.0.1",
+    },
     "plugins/apps": {
       "name": "@singularity/plugin-apps",
       "version": "0.0.1",
@@ -539,6 +543,10 @@
       "name": "@singularity/plugin-apps-home-app-cards",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/home/plugins/recent-activity": {
+      "name": "@singularity/plugin-apps-home-recent-activity",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/home/plugins/shell": {
       "name": "@singularity/plugin-apps-home-shell",
       "version": "0.0.1",
@@ -604,6 +612,10 @@
     },
     "plugins/apps/plugins/pages": {
       "name": "@singularity/plugin-apps-pages",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/pages/plugins/activity-arm": {
+      "name": "@singularity/plugin-apps-pages-activity-arm",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/pages/plugins/agent-origin": {
@@ -1483,6 +1495,10 @@
     },
     "plugins/conversations": {
       "name": "@singularity/plugin-conversations",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/activity-arm": {
+      "name": "@singularity/plugin-conversations-activity-arm",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/agents": {
@@ -5709,6 +5725,10 @@
       "name": "@singularity/plugin-tasks",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/activity-arm": {
+      "name": "@singularity/plugin-tasks-activity-arm",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/attempt-status": {
       "name": "@singularity/plugin-tasks-attempt-status",
       "version": "0.0.1",
@@ -6745,6 +6765,8 @@
 
     "@singularity/plugin-active-data-task-link": ["@singularity/plugin-active-data-task-link@workspace:plugins/active-data/plugins/task-link"],
 
+    "@singularity/plugin-activity": ["@singularity/plugin-activity@workspace:plugins/activity"],
+
     "@singularity/plugin-apps": ["@singularity/plugin-apps@workspace:plugins/apps"],
 
     "@singularity/plugin-apps-agent-manager": ["@singularity/plugin-apps-agent-manager@workspace:plugins/apps/plugins/agent-manager"],
@@ -6947,6 +6969,8 @@
 
     "@singularity/plugin-apps-home-app-cards": ["@singularity/plugin-apps-home-app-cards@workspace:plugins/apps/plugins/home/plugins/app-cards"],
 
+    "@singularity/plugin-apps-home-recent-activity": ["@singularity/plugin-apps-home-recent-activity@workspace:plugins/apps/plugins/home/plugins/recent-activity"],
+
     "@singularity/plugin-apps-home-shell": ["@singularity/plugin-apps-home-shell@workspace:plugins/apps/plugins/home/plugins/shell"],
 
     "@singularity/plugin-apps-home-usage-fields": ["@singularity/plugin-apps-home-usage-fields@workspace:plugins/apps/plugins/home/plugins/usage-fields"],
@@ -6978,6 +7002,8 @@
     "@singularity/plugin-apps-mail-threads": ["@singularity/plugin-apps-mail-threads@workspace:plugins/apps/plugins/mail/plugins/threads"],
 
     "@singularity/plugin-apps-pages": ["@singularity/plugin-apps-pages@workspace:plugins/apps/plugins/pages"],
+
+    "@singularity/plugin-apps-pages-activity-arm": ["@singularity/plugin-apps-pages-activity-arm@workspace:plugins/apps/plugins/pages/plugins/activity-arm"],
 
     "@singularity/plugin-apps-pages-agent-origin": ["@singularity/plugin-apps-pages-agent-origin@workspace:plugins/apps/plugins/pages/plugins/agent-origin"],
 
@@ -7402,6 +7428,8 @@
     "@singularity/plugin-config_v2-settings-conflict-agent": ["@singularity/plugin-config_v2-settings-conflict-agent@workspace:plugins/config_v2/plugins/settings/plugins/conflict-agent"],
 
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
+
+    "@singularity/plugin-conversations-activity-arm": ["@singularity/plugin-conversations-activity-arm@workspace:plugins/conversations/plugins/activity-arm"],
 
     "@singularity/plugin-conversations-agents": ["@singularity/plugin-conversations-agents@workspace:plugins/conversations/plugins/agents"],
 
@@ -9390,6 +9418,8 @@
     "@singularity/plugin-stats-tasks": ["@singularity/plugin-stats-tasks@workspace:plugins/stats/plugins/tasks"],
 
     "@singularity/plugin-tasks": ["@singularity/plugin-tasks@workspace:plugins/tasks"],
+
+    "@singularity/plugin-tasks-activity-arm": ["@singularity/plugin-tasks-activity-arm@workspace:plugins/tasks/plugins/activity-arm"],
 
     "@singularity/plugin-tasks-attempt-status": ["@singularity/plugin-tasks-attempt-status@workspace:plugins/tasks/plugins/attempt-status"],
 

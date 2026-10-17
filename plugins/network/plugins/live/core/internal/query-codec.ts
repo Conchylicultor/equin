@@ -215,7 +215,10 @@ export function createLiveQueryCodec<C extends string, S extends string>(
           }
           break;
         case "exposed":
-          if (!spec.exposes.includes(owner.entity)) {
+          // A union's arms are declared after it, in other plugins, so which
+          // entities they reach is not known here: the server — which folds
+          // each arm's exposures — decodes against the sets it serves, strictly.
+          if (!spec.arms && !spec.exposes.includes(owner.entity)) {
             fail(
               `a query names exposed columns "${handle.name}" of entity "${owner.entity}", which the collection's \`exposes\` does not reach`,
             );

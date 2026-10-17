@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-tasks-activity-arm",
+  "description": "Tasks, as one arm of the activity space.",
+  "private": true,
+  "version": "0.0.1"
+}

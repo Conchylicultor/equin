@@ -38,6 +38,7 @@ import {
 } from "@plugins/primitives/plugins/cursor-pagination/web";
 import { fieldsReadByView, resolveBodyState } from "../internal/body-state";
 import { BodyFallback } from "./body-fallback";
+import { useHeldHeight } from "../internal/use-held-height";
 import {
   useFilterController,
   type FilterController,
@@ -1017,6 +1018,9 @@ function DataViewBodyInner<TRow>(
     advances,
     rowPitch,
   } = useVisibleRowKeys(rowsHost, viewportReads);
+  // The room the rows last took: a query starting over holds it while it
+  // loads, so the page never shrinks under a reader scrolled down.
+  const heldHeight = useHeldHeight(rowsHost, bodyState.kind === "view");
   useEffect(() => {
     if (visibleKeys === "measuring") return;
     for (const t of viewportTargets) {
@@ -1252,13 +1256,21 @@ function DataViewBodyInner<TRow>(
               >
                 <PlaceholderHeightContext.Provider value={placeholderHeight}>
                   {bodyState.kind !== "view" ? (
-                    <BodyFallback
-                      state={bodyState}
-                      errorState={errorState}
-                      loadingState={loadingState}
-                      loadingVariant={activeInstance.viewType.loadingVariant}
-                      loadingCount={activeInstance.viewType.loadingCount}
-                    />
+                    <div
+                      style={
+                        bodyState.kind === "loading" && heldHeight !== null
+                          ? { minHeight: heldHeight }
+                          : undefined
+                      }
+                    >
+                      <BodyFallback
+                        state={bodyState}
+                        errorState={errorState}
+                        loadingState={loadingState}
+                        loadingVariant={activeInstance.viewType.loadingVariant}
+                        loadingCount={activeInstance.viewType.loadingCount}
+                      />
+                    </div>
                   ) : (
                     // Holds a dropped row at its new slot until the producer's
                     // own order carries the move — no snap-back while the write

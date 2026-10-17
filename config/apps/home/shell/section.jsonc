@@ -1,4 +1,4 @@
-// @hash fca88b7a1afe
+// @hash f1b2db4ff3d9
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -9,6 +9,8 @@
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
-    "apps.home.app-cards:apps"
+    "apps.home.app-cards:apps",
+    // Below the launcher: what was last worked on, of every kind.
+    "apps.home.recent-activity:recent-activity"
   ]
 }

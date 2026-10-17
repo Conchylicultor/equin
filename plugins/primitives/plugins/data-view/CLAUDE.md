@@ -232,7 +232,10 @@ shows ONE source at a time. What every list of it gets, with no list code:
   arm's `label` in its own band, in the arms' declared `order`; on another
   source's row they read nothing, and a filter on one prunes the other
   sources. An arm declared `from` an entity picks its fields by name, with the
-  entity's labels and options.
+  entity's labels and options — and lists every field an extension EXPOSES on
+  that entity in the same band (ids `<arm>.<id>`, presented by the exposure's
+  own registration), bound to its column, so a task's Track filters, sorts and
+  groups the activity list on the server with no code naming it.
 - **The source field** — the discriminator: an enum whose options are the
   registered arms (value: the kind, label: the arm's), derived by
   `deriveFields` from the arms' `FieldPresentation.Register` registrations —
@@ -243,7 +246,9 @@ shows ONE source at a time. What every list of it gets, with no list code:
   owner: arm, useActivation })`: each row is dispatched to its own source's
   destination (*Row activation is PER ROW*, below).
 
-`runs` is the reference (`plugins/runs`).
+`runs` is the reference over raw ledgers (`plugins/runs`); `activity`
+(`plugins/activity`: tasks, conversations, pages) the reference over
+entities, its arms' bands made of their entities' exposures.
 
 ## Multi-source surfaces (`DataViewSwitcher`)
 
@@ -2224,7 +2229,10 @@ export const threadsSource = liveDataSource(mailThreads, { searchable: ["subject
   never the next page); any other page's error as one notice above the rows
   ("Rows after ‹row› could not refresh — Retry"), keyed by the failing read. A
   search-only change keeps the previous rows until the new head settles; any
-  other query change starts over. A read that cannot page past its last page
+  other query change starts over — and its loading state holds at least the
+  room the previous rows took (`useHeldHeight`), so a view switch or filter
+  change never shrinks the page under a reader scrolled down (the scroller
+  would clamp them up). A read that cannot page past its last page
   says so in the footer (`InfiniteScrollFooter`'s `truncated`), in the user's
   words per `PagesTruncation` kind (`TRUNCATION_HINT`: an over-long sort key);
   the plan's own wording goes to the `live-pages` log. A page scrolled far away
@@ -2459,13 +2467,13 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.ValueCodec`
     - `DataViewSlots.Grouping`
     - `DataViewSlots.ColumnConfig`
-  - Slot contributors: 50 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 53 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `DataViewSlots.Cell` ×10
+    - `DataViewSlots.CollectionRowActivation` ×7
     - `DataViewSlots.Filter` ×7
     - `DataViewSlots.CellEditor` ×6
     - `DataViewSlots.CollectionItemAction` ×6
     - `DataViewSlots.View` ×5
-    - `DataViewSlots.CollectionRowActivation` ×4
     - `DataViewSlots.Grouping` ×3
     - `DataViewSlots.ValueCodec` ×3
     - `DataViewSlots.Setting` ×2
@@ -2473,12 +2481,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 71 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×63
+  - Contributes: 72 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×64
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 101 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 102 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
     - `primitives/css/ui-kit` ×11
     - `primitives/data-view/view-core` ×8
@@ -2493,6 +2501,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/css/sticky/stack` ×2
     - `primitives/css/sticky` ×2
     - `primitives/cursor-pagination` ×2
+    - `primitives/dom/element-size` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/latest-ref` ×2
     - `primitives/loading` ×2
@@ -2514,7 +2523,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/auto-scroll.KeepAnchorAcross`
-    - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/in-view.createInViewWatcher`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
@@ -2668,8 +2676,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 65 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×63
+  - Contributes: 66 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×64
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -2819,7 +2827,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
-  - Imported by: 92 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 93 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×30
     - `apps` ×22
     - `debug` ×12
@@ -2827,6 +2835,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `conversations` ×7
     - `tasks` ×4
     - `infra` ×2
+    - `activity`
     - `apps-core/app-launcher`
     - `config_v2/settings`
     - `history/dialog`
