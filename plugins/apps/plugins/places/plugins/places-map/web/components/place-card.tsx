@@ -290,7 +290,7 @@ export function PlaceCard({
                 <InfoRow
                   icon={addressIcon}
                   action={
-                    <CopyButton text={place.address} title="Copy address" />
+                    <CopyButton text={place.address} tooltip="Copy address" />
                   }
                 >
                   <Text variant="body">{place.address}</Text>

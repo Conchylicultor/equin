@@ -70,7 +70,7 @@ export function TranscriptStatsStrip() {
             screen. Without something saying so, a reader who scrolls up just
             sees the counters move for no reason. */}
         {!read.atEnd && (
-          <StatBadge title="Showing the transcript up to the last row on screen. Scroll to the end for the totals.">
+          <StatBadge tooltip="Showing the transcript up to the last row on screen. Scroll to the end for the totals.">
             <Icon icon={historyIcon} className="size-3" />
           </StatBadge>
         )}

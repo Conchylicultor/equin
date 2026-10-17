@@ -382,7 +382,7 @@ function ChoiceMember({
               key={option.value}
               variant="ghost"
               active={selected.has(option.value)}
-              title={option.hint}
+              tooltip={option.hint}
               onClick={() => shape.onSelect(option.value)}
             >
               {option.label}

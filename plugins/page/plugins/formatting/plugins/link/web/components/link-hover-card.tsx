@@ -92,7 +92,7 @@ export function LinkHoverCard({
                 <Text variant="label">{url}</Text>
               </a>
             </Fill>
-            <CopyButton text={url} title="Copy link" />
+            <CopyButton text={url} tooltip="Copy link" />
             <Button variant="ghost" onClick={onEdit}>
               Edit
             </Button>

@@ -28,7 +28,7 @@ export function genericIdChip(
     return (
       <LinkChip
         activation={target(id)}
-        title={`${referent.title} · ${id}`}
+        tooltip={`${referent.title} · ${id}`}
         leading={icon ? <Icon icon={icon} /> : undefined}
       >
         {referent.title}

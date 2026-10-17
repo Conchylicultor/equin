@@ -71,7 +71,7 @@ export function SourcesList(): ReactNode {
         cell: (s) => (
           <Badge
             variant="muted"
-            title={
+            tooltip={
               typeLabel.has(s.type)
                 ? undefined
                 : "This source's type plugin is not installed, so it cannot be refreshed or configured."

@@ -22,10 +22,10 @@ import {
   ControlSizeProvider,
   Separator,
   cn,
+  WithTooltip,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { ColorPicker } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
 import {
   Popover,

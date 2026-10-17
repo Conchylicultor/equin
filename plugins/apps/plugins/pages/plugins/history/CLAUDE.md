@@ -24,7 +24,6 @@
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/relative-time.RelativeTime`
 - Server:
   - Contributes:

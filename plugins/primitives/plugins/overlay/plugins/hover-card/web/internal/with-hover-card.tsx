@@ -3,8 +3,8 @@ import {
   Tooltip,
   TooltipCardContent,
   TooltipTrigger,
+  usePinOnClick,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { usePinOnClick } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { useRef, type ReactElement, type ReactNode } from "react";
 
 import { HoverCardBody } from "./hover-card-body";

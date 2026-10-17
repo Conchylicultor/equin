@@ -954,7 +954,7 @@ See "Open questions" in the design doc.
     - `welcomePane.Actions` "title" → `PaneTitleItem`
     - `workflow-node.actions` "title" → `PaneTitleItem`
     - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `primitives/live-state` ×3
     - `primitives/slot-render` ×3
@@ -974,7 +974,6 @@ See "Open questions" in the design doc.
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/scope/install-sink.defineInstallSink`
     - `primitives/scope/surface-id.SurfaceIdContext`
     - `primitives/select-scope.ContentScope`

@@ -54,7 +54,7 @@ export function TagChip({
     <Badge
       variant={excluded ? "destructive" : "muted"}
       shape="pill"
-      title={
+      tooltip={
         auto && tinted ? `${title} — set from the Google place type` : title
       }
       icon={<TagMark tag={tag} tags={tags} />}
@@ -75,7 +75,7 @@ export function TagChip({
       ) : auto ? (
         <Badge
           variant="warning"
-          title="Set automatically from the Google place type"
+          tooltip="Set automatically from the Google place type"
         >
           AUTO
         </Badge>

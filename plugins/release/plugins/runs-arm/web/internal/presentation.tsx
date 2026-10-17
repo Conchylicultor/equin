@@ -34,7 +34,7 @@ export const releaseRunPresentation = FieldPresentation.Register({
           <Badge
             variant={dirty === true ? "warning" : "muted"}
             mono
-            title={dirty === true ? `${sha} (tree was dirty)` : sha}
+            tooltip={dirty === true ? `${sha} (tree was dirty)` : sha}
           >
             {sha.slice(0, 8)}
             {dirty === true ? "+" : ""}

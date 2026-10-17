@@ -191,15 +191,15 @@ await withBrowser(async (h) => {
     `decorators=${pastedDecorators} shape=[${await shapeOf(block)}]`,
   );
 
-  const chip = block.locator(`button[title*="${ATTEMPT}"]`).first();
-  const chipCount = await block.locator(`button[title*="${ATTEMPT}"]`).count();
+  const chip = block.locator(`button[data-tooltip*="${ATTEMPT}"]`).first();
+  const chipCount = await block.locator(`button[data-tooltip*="${ATTEMPT}"]`).count();
   r.ok(
     "1. paste: the decorator rendered the attempt chip",
     chipCount === 1,
     `chip buttons=${chipCount}`,
   );
   if (chipCount === 1) {
-    r.note(`chip title="${await chip.getAttribute("title")}"`);
+    r.note(`chip tooltip="${await chip.getAttribute("data-tooltip")}"`);
   }
 
   const pastedText = await textOf(block);
@@ -437,10 +437,10 @@ await withBrowser(async (h) => {
 
   // ---- 5. clicking the chip opens the attempt pane ---------------------------
   const reloadedChip = reloadedBlock
-    .locator(`button[title*="${ATTEMPT}"]`)
+    .locator(`button[data-tooltip*="${ATTEMPT}"]`)
     .first();
   if (
-    (await reloadedBlock.locator(`button[title*="${ATTEMPT}"]`).count()) === 0
+    (await reloadedBlock.locator(`button[data-tooltip*="${ATTEMPT}"]`).count()) === 0
   ) {
     r.fail("5. click: no chip to click after the reload");
   } else {

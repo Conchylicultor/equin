@@ -22,7 +22,6 @@ chord overlay and the progression strip so they label chords identically.
     - `primitives/css/ui-kit.Button`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/overlay/tooltip.WithTooltip`
   - Exports (types): `ChordBoxFace`
   - Exports (values):
     - `chordBoxFace`

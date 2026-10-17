@@ -50,7 +50,7 @@ export function TagIconButton({
           variant="ghost"
           aspect="icon"
           aria-label={`Icon of ${tag.name}`}
-          title="Tag icon"
+          tooltip="Tag icon"
         >
           {tag.icon === null ? (
             <Icon icon={addIcon} className="text-muted-foreground" />

@@ -66,7 +66,7 @@ export function CommitsSection() {
         <ToggleChip
           active={filterRebases}
           onClick={toggle}
-          title={
+          tooltip={
             filterRebases
               ? "Deduplication on: multi-commit pushes counted once — click to disable"
               : "Deduplication off: every commit counted — click to filter rebases"

@@ -259,7 +259,7 @@ function CompositionsDataView({
             <ToggleChip
               active={served}
               disabled={!servable}
-              title={
+              tooltip={
                 !servable
                   ? "The main app is built by ./singularity build — it is never served as a composition."
                   : served
@@ -295,7 +295,7 @@ function CompositionsDataView({
           return host ? (
             <LinkChip
               mono
-              title={`Open http://${host}`}
+              tooltip={`Open http://${host}`}
               activation={() => {
                 window.open(`http://${host}`, "_blank", "noopener");
               }}

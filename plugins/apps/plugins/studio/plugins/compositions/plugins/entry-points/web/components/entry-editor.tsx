@@ -103,7 +103,7 @@ export function EntryEditor({
             <Button
               variant="outline"
               disabled={!editable}
-              title={
+              tooltip={
                 editable
                   ? undefined
                   : "This composition's entry points are committed source — edit core/config.ts and rebuild."
@@ -156,7 +156,7 @@ export function EntryEditor({
             <Badge
               key={pattern}
               variant="primary"
-              title={String(pattern)}
+              tooltip={String(pattern)}
               icon={
                 editable ? (
                   <ControlSizeProvider size="sm">

@@ -4,6 +4,7 @@ import {
   textStepFor,
   useControlSize,
   type DensityControlled,
+  type Tooltipped,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
@@ -23,7 +24,8 @@ import type React from "react";
  * `Inline` to give the tooltip something clonable, and `ui-context` hand-rolled
  * the whole chip, which is where the look below comes from.
  */
-export interface LinkChipProps extends DensityControlled, Passthrough {
+export interface LinkChipProps
+  extends DensityControlled, Tooltipped, Passthrough {
   /**
    * What clicking the chip does. A `LinkTarget` gets the browser's link
    * gestures (⌘/Ctrl- and middle-click open its `href` in a new browser tab);
@@ -50,7 +52,6 @@ export interface LinkChipProps extends DensityControlled, Passthrough {
   leading?: React.ReactNode;
   /** Monospace label (for ids). Applies font-mono to the children wrapper. */
   mono?: boolean;
-  title?: string;
   className?: string;
   /** Label (+ optional trailing count). */
   children: React.ReactNode;
@@ -79,7 +80,6 @@ export function LinkChip({
   activation,
   leading,
   mono,
-  title,
   className,
   children,
   ...rest
@@ -110,7 +110,6 @@ export function LinkChip({
       as="button"
       type="button"
       {...activationProps(activation, { isolate: true })}
-      title={title}
       icon={leading}
       mono={mono}
       colorClass="bg-muted"

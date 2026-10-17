@@ -329,7 +329,7 @@ function BackendRow({
       <Stack as={Rigid} direction="row" align="center" gap="sm">
         <Badge
           variant={depth > 0 ? "warning" : "muted"}
-          title="Host-wide heavy-read gate queue depth"
+          tooltip="Host-wide heavy-read gate queue depth"
         >
           {`heavy-read ${depth}`}
         </Badge>

@@ -20,7 +20,7 @@ function ToolChip({ tool, missing }: { tool: ToolName; missing?: boolean }) {
     <Badge
       mono
       variant={missing ? "warning" : "primary"}
-      title={missing ? `${tool.id} — not found` : tool.id}
+      tooltip={missing ? `${tool.id} — not found` : tool.id}
     >
       <ToolNameLabel tool={tool} />
     </Badge>

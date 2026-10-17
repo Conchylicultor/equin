@@ -56,7 +56,7 @@ export function DownloadCode({
         </Fill>
         <CopyButton
           text={text}
-          title="Copy"
+          tooltip="Copy"
           className="border-border border"
           onClick={() => track(`download_copy_${kind}`)}
         />

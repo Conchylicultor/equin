@@ -189,7 +189,7 @@ await withBrowser(async (h) => {
   // --- Pen edit mode: the bucket must not hide its members behind a menu ------
   // A closed dropdown would suppress drag and hide what is being authored, so
   // the container renders its inline form in edit mode instead.
-  await page.locator('button[title="Pages"]').click();
+  await page.locator('button[data-tooltip="Pages"]').click();
 
   // The pen lives in the collapsed floating action bar; hover expands it.
   const glyph = page.locator('[data-ui-owner^="GlobalActionBar"], svg').first();

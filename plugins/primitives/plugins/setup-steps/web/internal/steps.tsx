@@ -168,7 +168,7 @@ export function StepCommand({ text, title }: { text: string; title: string }) {
           {text}
         </Text>
       </Fill>
-      <CopyButton text={text} title={title} />
+      <CopyButton text={text} tooltip={title} />
     </Stack>
   );
 }

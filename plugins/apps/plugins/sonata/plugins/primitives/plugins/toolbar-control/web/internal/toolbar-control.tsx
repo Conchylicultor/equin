@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  WithTooltip,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   Stack,
   Inset,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { hoverExpandHost } from "./hover-expand";
 
 export interface ToolbarControlProps {

@@ -10,7 +10,10 @@ import {
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  WithTooltip,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import {
   DataView,
@@ -30,7 +33,6 @@ import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/
 import { useConversationTitleBySlug } from "@plugins/conversations/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { opDetailPane } from "@plugins/debug/plugins/profiling/plugins/ops/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { WAIT_KINDS } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import type { OpRow } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
 import { OP_KINDS, type OpKind } from "@plugins/infra/plugins/worktree/core";

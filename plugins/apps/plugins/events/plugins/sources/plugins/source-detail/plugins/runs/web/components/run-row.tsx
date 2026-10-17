@@ -41,7 +41,7 @@ export function RunRow({ run }: { run: EventSourceRun }): ReactElement {
           <Badge
             variant="warning"
             icon={<Icon icon={warningIcon} />}
-            title="The extraction reported schedules it could not express"
+            tooltip="The extraction reported schedules it could not express"
           >
             {caveats}
           </Badge>

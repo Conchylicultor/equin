@@ -14,7 +14,7 @@ import {
 import { setTracksActive } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useSaveChordMode } from "../actions";
 
 const LABEL = "Accompaniment — play the detected chords";

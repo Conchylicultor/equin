@@ -7,7 +7,7 @@ export function PluginChip({ pluginId }: { pluginId: string }) {
   return (
     <LinkChip
       mono
-      title={pluginId}
+      tooltip={pluginId}
       activation={openPane.to(pluginViewPane, { pluginId }, { mode: "push" })}
     >
       {pluginId}

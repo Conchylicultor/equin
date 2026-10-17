@@ -457,6 +457,9 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `SidebarToggleGlyph`
     - `SidebarToggleIcons`
     - `SurfaceLevel`
+    - `Tooltipped`
+    - `TooltipSide`
+    - `WithTooltipProps`
   - Exports (values):
     - `appThemeScope`
     - `Button`
@@ -574,12 +577,14 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `TooltipTrigger`
     - `useControlSize`
     - `useMenuSurface`
+    - `usePinOnClick`
     - `usePortalForwardedAttrs`
     - `usePortalThemeScope`
     - `useRegionForwardedAttrs`
     - `useSidebar`
     - `useSidewaysScroll`
     - `useSingleLine`
+    - `WithTooltip`
 - Cross-plugin:
   - Uses tokens: 233 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/density` ×70
@@ -593,10 +598,10 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/chart` ×5
     - `ui/tokens/font-family` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
-  - Imported by: 405 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×103
-    - `apps` ×82
-    - `conversations` ×54
+  - Imported by: 410 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×104
+    - `apps` ×84
+    - `conversations` ×56
     - `page` ×25
     - `debug` ×22
     - `ui` ×21

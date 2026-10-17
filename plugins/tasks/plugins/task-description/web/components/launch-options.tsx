@@ -5,10 +5,8 @@ import {
   ResourceErrorInline,
 } from "@plugins/primitives/plugins/live-state/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  TooltipDoc,
-  WithTooltip,
-} from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import {
   TaskLaunch,
   type LaunchOptionEntry,

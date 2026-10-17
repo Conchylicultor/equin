@@ -51,7 +51,6 @@ The composer names no contributor: a host decides what goes on the bar.
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/overlay/tooltip.TooltipDoc`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/text-editor.TextEditor`
     - `primitives/text-editor.TextEditorProps`
     - `primitives/text-editor/composer/picker-pill.pillHighlightClass`

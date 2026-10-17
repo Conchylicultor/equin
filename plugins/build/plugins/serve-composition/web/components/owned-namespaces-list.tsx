@@ -25,7 +25,7 @@ export function OwnedNamespacesList({
     <Stack gap="xs">
       {namespaces.map((ns) => (
         <Stack key={ns.namespace} direction="row" align="center" gap="xs">
-          <Badge mono variant="muted" title={ns.url}>
+          <Badge mono variant="muted" tooltip={ns.url}>
             {ns.host}
           </Badge>
           <Text variant="caption" tone="muted">

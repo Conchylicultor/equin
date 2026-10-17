@@ -2,7 +2,9 @@ import {
   cn,
   useControlSize,
   textStepFor,
+  WithTooltip,
   type DensityControlled,
+  type Tooltipped,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { BadgeVariant } from "../../core";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
@@ -34,7 +36,7 @@ const VARIANT_CLASS: Record<BadgeVariant, string> = {
  * caller is concerned, and the inner spans are implementation details of how
  * the label centres and ellipsizes. See {@link Passthrough}.
  */
-export interface BadgeProps extends DensityControlled, Passthrough {
+export interface BadgeProps extends DensityControlled, Tooltipped, Passthrough {
   /** Semantic color variant. Default "muted". Ignored when `colorClass` is set. */
   variant?: BadgeVariant;
   /** Corner treatment. Default "rect" (rounded rectangle); "pill" → fully rounded. */
@@ -48,7 +50,6 @@ export interface BadgeProps extends DensityControlled, Passthrough {
   /** Element to render. Default "span"; pass "button" for interactive badges. */
   as?: React.ElementType;
   className?: string;
-  title?: string;
   children: React.ReactNode;
 }
 
@@ -60,6 +61,8 @@ export function Badge({
   mono,
   as: As = "span",
   className,
+  tooltip,
+  tooltipSide,
   children,
   ...rest
 }: BadgeProps) {
@@ -79,6 +82,7 @@ export function Badge({
     ? "p-chip-compact text-tag-compact font-tag"
     : "p-chip text-tag font-tag";
   return (
+    <WithTooltip content={tooltip} side={tooltipSide}>
     <As
       className={cn(
         // The chip shell, shared by every chip role (LinkChip/ToggleChip compose this).
@@ -153,5 +157,6 @@ export function Badge({
         </span>
       </span>
     </As>
+    </WithTooltip>
   );
 }

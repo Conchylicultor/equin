@@ -234,7 +234,7 @@ function HomeMissingSurface({ id }: { id: string }) {
             This deployment's home app did not register.
           </Text>
         </Stack>
-        <Badge mono title={id}>
+        <Badge mono tooltip={id}>
           {id}
         </Badge>
       </Stack>
@@ -274,7 +274,7 @@ function NoSuchRouteSurface({
             mistyped.
           </Text>
         </Stack>
-        <Badge mono title={pathname}>
+        <Badge mono tooltip={pathname}>
           {pathname}
         </Badge>
         {homePath ? (

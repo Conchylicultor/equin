@@ -38,10 +38,10 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(waitMs);
   await snap(page, OUT, "1-conversation");
 
-  // The chip is the only element carrying the raw id in its `title` (the
+  // The chip is the only element carrying the raw id in its `data-tooltip` (the
   // unresolved fallback is bare text with no attributes), so a hit here IS the
   // chip — and finding one already proves it resolved.
-  const chips = page.locator(`button[title*="${PROTO_ID}"]`);
+  const chips = page.locator(`button[data-tooltip*="${PROTO_ID}"]`);
   // Polled, not `waitFor`: an absent chip is the outcome the next line ASSERTS
   // on, so it must not arrive as a thrown timeout.
   for (let i = 0; i < 20 && (await chips.count()) === 0; i++) {
@@ -53,7 +53,7 @@ await withBrowser(async (h) => {
 
   const chip = chips.first();
   const label = (await chip.innerText()).trim();
-  r.note(`label="${label}" title="${await chip.getAttribute("title")}"`);
+  r.note(`label="${label}" tooltip="${await chip.getAttribute("data-tooltip")}"`);
   // The whole point of resolving: the chip says what the mock IS, not what the
   // model typed. An opaque id showing through means it did not resolve.
   r.ok(

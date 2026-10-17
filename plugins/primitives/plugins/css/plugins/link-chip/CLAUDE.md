@@ -11,6 +11,7 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.DensityControlled`
     - `primitives/css/ui-kit.textStepFor`
+    - `primitives/css/ui-kit.Tooltipped`
     - `primitives/css/ui-kit.useControlSize`
     - `primitives/link-gesture.activationProps`
   - Exports (types): `LinkChipProps`

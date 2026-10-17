@@ -52,7 +52,7 @@ const WHOLE_LIBRARY = 500;
 /** Unplayed rows the default viewport renders for certain — the exact-count bound. */
 const ON_SCREEN = 10;
 const BOOT_TIMEOUT_MS = 120_000;
-const TABS_READY = 'button[title="All"]';
+const TABS_READY = 'button[data-tooltip="All"]';
 
 interface SongRow {
   id: string;

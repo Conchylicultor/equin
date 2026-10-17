@@ -37,8 +37,8 @@ by the same rule, owned here so it is never re-spelled:
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.WithTooltip`
     - `primitives/css/yield.yieldClass`
-    - `primitives/overlay/tooltip.WithTooltip`
   - Exports (types): `ToolbarControlProps`
   - Exports (values):
     - `hoverExpandHost`

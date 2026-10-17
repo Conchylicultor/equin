@@ -18,7 +18,7 @@ export function NewChildTaskAction() {
           variant="ghost"
           aspect="icon"
           aria-label="New child task"
-          title="New child task"
+          tooltip="New child task"
         >
           <Icon icon={addIcon} />
         </Button>

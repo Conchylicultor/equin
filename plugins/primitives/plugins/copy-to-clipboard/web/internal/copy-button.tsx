@@ -9,7 +9,8 @@ const contentCopyIcon = symbol("content-copy");
 
 export interface CopyButtonProps {
   text: string;
-  title?: string;
+  /** The button's tooltip, and its accessible name. */
+  tooltip?: string;
   className?: string;
   /** Button shape. "icon" = a square icon box at the ambient control density (the default); "inline" = collapses to surrounding text height. */
   aspect?: "icon" | "inline";
@@ -20,7 +21,7 @@ export interface CopyButtonProps {
 
 export function CopyButton({
   text,
-  title,
+  tooltip,
   className,
   aspect = "icon",
   iconClassName,
@@ -32,8 +33,8 @@ export function CopyButton({
       variant="ghost"
       aspect={aspect}
       className={className}
-      title={title}
-      aria-label={title}
+      tooltip={tooltip}
+      aria-label={tooltip}
       onClick={(e) => {
         onClick?.(e);
         copy();

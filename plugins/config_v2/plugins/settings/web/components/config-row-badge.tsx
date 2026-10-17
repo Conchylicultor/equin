@@ -5,7 +5,7 @@ import type {
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { conflictSentence } from "../internal/conflict-locations";
 import { useScopeDisplay } from "../internal/scope-label";
 import { symbol } from "@plugins/ui/plugins/icons/core";

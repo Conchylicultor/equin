@@ -119,7 +119,7 @@ last desktop creates a new one; moving before the first clamps).
     - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
     - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
   - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×9
+    - `primitives/css/ui-kit` ×10
     - `apps-core/surface` ×4
     - `apps-core/tabs` ×3
     - `config_v2` ×3
@@ -143,7 +143,6 @@ last desktop creates a new one; moving before the first clamps).
     - `primitives/dom/element-size.useElementSize`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/scope/install-sink.defineInstallSink`
     - `ui/icons.Icon`
 - Server:

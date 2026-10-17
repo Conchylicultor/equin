@@ -166,7 +166,7 @@ export function ClusterView(): ReactElement {
           <Badge
             variant="muted"
             className="truncate font-mono"
-            title={r.worktree}
+            tooltip={r.worktree}
           >
             {r.worktree}
           </Badge>

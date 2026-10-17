@@ -184,7 +184,7 @@ export function LiveLogChannel({
     <ControlSizeProvider size="xs">
       <CopyButton
         text={copyText}
-        title="Copy logs"
+        tooltip="Copy logs"
         // `invisible` is a RESERVATION, not a hide-with-a-dead-target:
         // `visibility: hidden` takes the button out of hit-testing, out of the
         // tab order and out of the a11y tree, while it keeps its box. The box is

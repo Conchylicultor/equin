@@ -22,7 +22,7 @@ export function MailLabelChip({ label }: { label: MailLabelRef }): ReactElement 
     return (
       <Badge
         shape="pill"
-        title={label.name}
+        tooltip={label.name}
         style={{ backgroundColor: label.color, color: label.textColor ?? undefined }}
       >
         {label.name}
@@ -30,7 +30,7 @@ export function MailLabelChip({ label }: { label: MailLabelRef }): ReactElement 
     );
   }
   return (
-    <Badge variant="muted" shape="pill" title={label.name}>
+    <Badge variant="muted" shape="pill" tooltip={label.name}>
       {label.name}
     </Badge>
   );

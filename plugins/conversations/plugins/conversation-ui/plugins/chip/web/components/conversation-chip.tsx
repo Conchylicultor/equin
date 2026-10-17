@@ -37,7 +37,7 @@ export function ConversationChip({ conv }: ConversationChipProps) {
     <ToggleChip
       variant="ghost"
       active={opener.isOpen(conv.id)}
-      title={conversationTitle(conv)}
+      tooltip={conversationTitle(conv)}
       {...activationProps(opener.toggle(conv.id))}
     >
       <ConversationItem conv={conv} layout="inline" />

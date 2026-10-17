@@ -35,7 +35,7 @@ export function SummarizeButton() {
 
         disabled
         className="gap-xs text-caption"
-        title="Summary"
+        tooltip="Summary"
         aria-label="Summary"
         aria-pressed={isOpen}
       >
@@ -54,7 +54,7 @@ export function SummarizeButton() {
 
         onClick={toggle}
         className="gap-xs text-caption"
-        title="Summary"
+        tooltip="Summary"
         aria-label="Summary"
         aria-pressed={isOpen}
       >
@@ -69,7 +69,7 @@ export function SummarizeButton() {
       variant={isOpen ? "secondary" : "ghost"}
       onClick={toggle}
       className="gap-xs"
-      title={`Summary: ${PHASE_LABEL[latest.phase]}`}
+      tooltip={`Summary: ${PHASE_LABEL[latest.phase]}`}
       aria-label={`Summary: ${PHASE_LABEL[latest.phase]}`}
       aria-pressed={isOpen}
     >

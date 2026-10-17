@@ -213,7 +213,7 @@ export function LaunchControl({
           aspect="icon"
           disabled={busy}
           aria-label={`Launch ${choiceLabel(defaultModel)}`}
-          title={launchTitle}
+          tooltip={launchTitle}
           onClick={() => launch(defaultModel)}
         >
           <Icon icon={playArrowIcon} className={choiceIconSize(defaultModel)} />
@@ -265,7 +265,7 @@ export function LaunchControl({
         variant={btnVariant}
         disabled={busy}
         aria-label={`Launch ${choiceLabel(defaultModel)}`}
-        title={launchTitle}
+        tooltip={launchTitle}
         onClick={() => launch(defaultModel)}
         className={cn(
           "px-sm",

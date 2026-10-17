@@ -3,8 +3,10 @@ import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import {
+  ControlSizeProvider,
+  WithTooltip,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   hoverRevealClass,
   useHoverReveal,

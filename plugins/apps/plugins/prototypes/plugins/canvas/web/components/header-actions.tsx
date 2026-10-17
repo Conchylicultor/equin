@@ -42,7 +42,7 @@ export function AddFrameActions(): ReactElement {
     <Stack direction="row" gap="xs" align="center">
       <Button
         variant="outline"
-        title={
+        tooltip={
           last === undefined
             ? "Add the prototype"
             : "Add a copy of the last frame — then change its variant or version"
@@ -61,7 +61,7 @@ export function AddFrameActions(): ReactElement {
             key={source.id}
             variant="outline"
             disabled={onCanvas}
-            title={
+            tooltip={
               onCanvas
                 ? `${source.addLabel} is already on the canvas`
                 : undefined

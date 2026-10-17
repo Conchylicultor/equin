@@ -219,7 +219,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
             </ControlSizeProvider>
             <CopyButton
               text={code}
-              title="Copy code"
+              tooltip="Copy code"
               className="bg-background/80 backdrop-blur"
             />
           </Stack>

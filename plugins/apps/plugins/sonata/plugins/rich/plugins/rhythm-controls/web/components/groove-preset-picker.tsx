@@ -242,7 +242,7 @@ function PresetPicker({
       {edited && (
         <Button
           variant="ghost"
-          title={`Save the changes into “${selected.name}”`}
+          tooltip={`Save the changes into “${selected.name}”`}
           onClick={() => update(selected.id, fields)}
         >
           Save

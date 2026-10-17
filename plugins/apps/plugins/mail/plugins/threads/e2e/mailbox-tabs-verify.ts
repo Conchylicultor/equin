@@ -58,7 +58,7 @@ const MAILBOXES = [
 const OUT = arg("out") ?? "/tmp/mailbox-tabs";
 
 /** The tab strip is the surface's proof-of-render — never settle on a timer. */
-const TABS_READY = 'button[title="Trash"]';
+const TABS_READY = 'button[data-tooltip="Trash"]';
 
 /**
  * Generous boot budget: this drives a real deploy on a shared dev box where
@@ -147,12 +147,12 @@ const scopeLabel = (labelId: string): string =>
   `Filter: Labels contains ${labelId}`;
 
 /**
- * One mailbox tab. `button[title=…]` rather than `getByRole` because the
+ * One mailbox tab. `button[data-tooltip=…]` rather than `getByRole` because the
  * switcher's chips are drag-reorderable: dnd-kit wraps each in its own
  * `role="button"` sortable shell, so a role query resolves two elements per tab.
  */
 function tab(page: Page, name: string) {
-  return page.locator(`button[title="${name}"]`);
+  return page.locator(`button[data-tooltip="${name}"]`);
 }
 
 async function pillLabel(page: Page): Promise<string> {

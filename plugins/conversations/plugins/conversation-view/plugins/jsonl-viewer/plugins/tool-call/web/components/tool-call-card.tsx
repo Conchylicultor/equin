@@ -86,7 +86,7 @@ export function ToolCallFrame({
                 ? "bg-destructive/15 text-destructive"
                 : "bg-primary/10 text-primary-text"
             }
-            title={tool.server ? tool.id : undefined}
+            tooltip={tool.server ? tool.id : undefined}
             // The badge's shape is the tool-badge tokens (density
             // `padToolBadge*`, shape `radiusToolBadge` / `borderToolBadge`);
             // its words are the `tag` role at its strong weight, pinned so the

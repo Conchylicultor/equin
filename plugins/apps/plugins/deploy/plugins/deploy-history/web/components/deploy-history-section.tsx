@@ -211,7 +211,7 @@ function HistoryRow({ run }: { run: DeployRunRecord }): ReactNode {
           {outcomeBadge(run)}
           <Badge variant="muted">{run.verb}</Badge>
           {run.commitSha && (
-            <Badge variant="muted" mono title={run.commitSha}>
+            <Badge variant="muted" mono tooltip={run.commitSha}>
               {shortSha(run.commitSha)}
             </Badge>
           )}
@@ -219,7 +219,7 @@ function HistoryRow({ run }: { run: DeployRunRecord }): ReactNode {
             <Badge
               variant="muted"
               mono
-              title={`Release run ${run.releaseRunId}`}
+              tooltip={`Release run ${run.releaseRunId}`}
             >
               {run.releaseRunId}
             </Badge>

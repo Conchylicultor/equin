@@ -80,7 +80,7 @@ function AlsoAfterChip({ taskId, dep }: { taskId: string; dep: TaskListItem }) {
       variant="muted"
       shape="pill"
       icon={<Icon icon={closeIcon} />}
-      title={`also after: ${title} — click to remove`}
+      tooltip={`also after: ${title} — click to remove`}
       onClick={remove}
       className="hover:text-destructive"
     >

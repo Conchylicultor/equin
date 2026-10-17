@@ -208,7 +208,7 @@ export function PhoneRow({ phone }: { phone: string }): ReactNode {
   return (
     <InfoRow
       icon={phoneIcon}
-      action={<CopyButton text={phone} title="Copy number" />}
+      action={<CopyButton text={phone} tooltip="Copy number" />}
     >
       <Button
         variant="link"

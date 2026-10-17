@@ -137,7 +137,7 @@ function GoChecklist({ content, body }: { content: string; body: GoBody }) {
           <ControlSizeProvider size="xs">
             <Button
               variant="ghost"
-              title="Back to the agent's picks"
+              tooltip="Back to the agent's picks"
               onClick={() => pick(initial)}
               className="select-none text-muted-foreground"
             >

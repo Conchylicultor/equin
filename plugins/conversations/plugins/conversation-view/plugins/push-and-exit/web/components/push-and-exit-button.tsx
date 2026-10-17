@@ -322,7 +322,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   return (
     <Button
       variant="default"
-      title={label}
+      tooltip={label}
       aria-label={label}
       loading={busy}
       disabled={disabled}

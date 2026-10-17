@@ -6,7 +6,6 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { selfClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import {
   bringWindowToFront,
   restoreWindow,
@@ -133,25 +132,24 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
           };
 
           return (
-            <WithTooltip key={win.id} content={label}>
-              <ToggleChip
-                active={active}
-                variant="ghost"
-                // Reuse the tab's icon+badge composition so the dock chip's
-                // per-app attention dot (e.g. the active member's Mail
-                // sync-error) is pixel-identical to the tab-strip / docked bar.
-                icon={
-                  entry?.icon ? (
-                    <TabIcon icon={entry.icon.symbol} badge={entry.badge} />
-                  ) : undefined
-                }
-                onClick={onClick}
-                title={label}
-                className={cn("max-w-40", minimized && "opacity-60")}
-              >
-                {label}
-              </ToggleChip>
-            </WithTooltip>
+            <ToggleChip
+              key={win.id}
+              active={active}
+              variant="ghost"
+              // Reuse the tab's icon+badge composition so the dock chip's
+              // per-app attention dot (e.g. the active member's Mail
+              // sync-error) is pixel-identical to the tab-strip / docked bar.
+              icon={
+                entry?.icon ? (
+                  <TabIcon icon={entry.icon.symbol} badge={entry.badge} />
+                ) : undefined
+              }
+              onClick={onClick}
+              tooltip={label}
+              className={cn("max-w-40", minimized && "opacity-60")}
+            >
+              {label}
+            </ToggleChip>
           );
         })}
       </Cluster>

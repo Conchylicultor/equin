@@ -64,7 +64,7 @@ export function FxToggle() {
             // `ControlPanelPopover` has no tooltip prop (the trigger owns its
             // own), and a ToggleChip carries none — so the hover hint is the
             // native one.
-            title="Visual effects"
+            tooltip="Visual effects"
             className={cn(
               // Match the HUD pill look (key-chip): translucent + blurred.
               !open && "bg-background/90 shadow-sm backdrop-blur-sm",

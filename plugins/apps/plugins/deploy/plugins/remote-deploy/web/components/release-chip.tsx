@@ -83,7 +83,7 @@ function ResolvedChip({ info }: { info: Resolved }): ReactNode {
 
   if (state === "building") {
     return (
-      <Badge variant="info" icon={<BouncingDots />} title={tooltipFor(info)}>
+      <Badge variant="info" icon={<BouncingDots />} tooltip={tooltipFor(info)}>
         {releaseStateLabel(state)}
       </Badge>
     );
@@ -93,7 +93,7 @@ function ResolvedChip({ info }: { info: Resolved }): ReactNode {
     <Badge
       variant="muted"
       icon={<StatusDot colorClass={DOT_COLOR[state]} />}
-      title={tooltipFor(info)}
+      tooltip={tooltipFor(info)}
     >
       {releaseStateLabel(state)}
     </Badge>

@@ -65,7 +65,7 @@ export function NotificationBody({ n }: { n: Notification }): ReactElement {
         {n.muted && (
           <Badge
             variant="muted"
-            title="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
+            tooltip="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
           >
             muted
           </Badge>

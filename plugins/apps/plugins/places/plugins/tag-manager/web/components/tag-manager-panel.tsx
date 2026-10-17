@@ -259,7 +259,7 @@ function TagRowActions({
         <ToggleChip
           variant="tinted"
           active={ramp}
-          title="Colour the children without their own colour as shades of this one, light to deep in their order"
+          tooltip="Colour the children without their own colour as shades of this one, light to deep in their order"
           onClick={() =>
             void updateTag.mutateAsync({
               params: { id: tag.id },

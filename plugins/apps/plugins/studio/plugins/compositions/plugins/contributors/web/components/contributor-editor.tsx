@@ -102,7 +102,7 @@ export function ContributorEditor({
                   <ToggleChip
                     variant="ghost"
                     active={isOn}
-                    title={String(id)}
+                    tooltip={String(id)}
                     onClick={() => toggle(id)}
                   >
                     <span className="truncate font-mono">{shortName(id)}</span>

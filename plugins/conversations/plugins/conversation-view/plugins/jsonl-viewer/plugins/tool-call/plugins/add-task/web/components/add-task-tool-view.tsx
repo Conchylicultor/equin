@@ -70,7 +70,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const summary = (
     <Stack as="span" direction="row" align="center" gap="sm">
       <Text as="span">{input.title}</Text>
-      <Badge variant="muted" className={rigidClass()} title={track.hint}>
+      <Badge variant="muted" className={rigidClass()} tooltip={track.hint}>
         {track.label}
       </Badge>
       {autostart ? (
@@ -106,7 +106,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
               { mode: "push" },
             )}
             leading={task ? <StatusIcon status={task.status} /> : undefined}
-            title={task ? `${task.title} · ${taskId}` : taskId}
+            tooltip={task ? `${task.title} · ${taskId}` : taskId}
           >
             {task?.title ?? <span className="font-mono">{taskId}</span>}
           </LinkChip>

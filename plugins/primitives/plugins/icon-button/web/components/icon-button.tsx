@@ -6,10 +6,7 @@ import {
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentProps, ReactNode } from "react";
-import {
-  WithTooltip,
-  Kbd,
-} from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import {
   useActionForm,
@@ -37,11 +34,12 @@ export interface IconButtonProps
   glyph?: "control" | "small";
   /** The action's name: the aria-label + tooltip at full size, the visible row text in row form. */
   label: string;
-  /** Full-form only — INERT in row form (the label is already visible text there). */
+  /**
+   * Overrides the label as the tooltip. Full-form only — INERT in row form
+   * (the label is already visible text there), as is `tooltipSide`.
+   */
   tooltip?: ReactNode;
   shortcut?: string;
-  /** Full-form only — INERT in row form (a panel row has no ghost box to place). */
-  side?: "top" | "right" | "bottom" | "left";
 }
 
 /**
@@ -61,7 +59,7 @@ const ICON_BUTTON_LADDER = { shrinksTo: ["row"] } as const;
  * the one widget for which "a labelled row" is a lossless smaller form of
  * itself — and therefore the one that declares the `"row"` rung. When a bar runs
  * out of room and relocates it behind a `⋯`, the same action renders as that
- * row. The full-form-only dials — `variant`, `className`, `tooltip`, `side` —
+ * row. The full-form-only dials — `variant`, `className`, `tooltip`, `tooltipSide` —
  * are INERT in that form.
  */
 export function IconButton({
@@ -73,7 +71,6 @@ export function IconButton({
   tooltip,
   shortcut,
   variant = "ghost",
-  side,
   ...props
 }: IconButtonProps) {
   // Unconditional (hook order): declare the ladder and read the region's
@@ -109,9 +106,14 @@ export function IconButton({
   );
 
   return (
-    <WithTooltip content={content} side={side}>
-      {/* eslint-disable-next-line icon-button/prefer-icon-button -- this IS IconButton: the one place a Button wraps a lone <Icon> */}
-      <Button variant={variant} aspect="icon" aria-label={label} {...props}>
+    // eslint-disable-next-line icon-button/prefer-icon-button -- this IS IconButton: the one place a Button wraps a lone <Icon>
+    <Button
+      variant={variant}
+      aspect="icon"
+      aria-label={label}
+      tooltip={content}
+      {...props}
+    >
         <Icon
           icon={icon}
           active={active}
@@ -121,7 +123,6 @@ export function IconButton({
             glyph === "small" && "size-3.5",
           )}
         />
-      </Button>
-    </WithTooltip>
+    </Button>
   );
 }

@@ -3,7 +3,7 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SyncStatusSinkContext } from "../internal/sink-context";
 import {
   aggregate,

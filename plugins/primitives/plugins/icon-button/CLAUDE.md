@@ -56,7 +56,6 @@ icon+count button it stands in for — carries a per-site
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.DensityControlled`
     - `primitives/overlay/tooltip.Kbd`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/shortcuts.formatShortcutLabel`
     - `ui/icons.Icon`
   - Exports (types): `IconButtonProps`

@@ -115,7 +115,7 @@ export function ServeTargetPanel({
         <ToggleChip
           active={served}
           disabled={!canServe}
-          title={
+          tooltip={
             !canServe
               ? "The main app is built by ./singularity build — it is not served as a composition."
               : served
@@ -139,14 +139,14 @@ export function ServeTargetPanel({
           <>
             <LinkChip
               mono
-              title={`Open ${live.url}`}
+              tooltip={`Open ${live.url}`}
               activation={() => {
                 window.open(live.url, "_blank", "noopener");
               }}
             >
               {host}
             </LinkChip>
-            <Badge variant="muted" mono title={live.commit ?? undefined}>
+            <Badge variant="muted" mono tooltip={live.commit ?? undefined}>
               {live.commit ? live.commit.slice(0, 7) : "no commit recorded"}
             </Badge>
             <Badge variant="muted">
@@ -162,7 +162,7 @@ export function ServeTargetPanel({
         {served && canServe && (
           <Button
             variant="outline"
-            title={
+            tooltip={
               host !== null
                 ? `Build this composition now and republish ${host}`
                 : "Build this composition now from this checkout"
@@ -181,7 +181,7 @@ export function ServeTargetPanel({
             variant="destructive"
             aspect="text"
             loading={reset.isPending}
-            title={`Wipe ${host}'s database and config back to first-launch (main is untouched)`}
+            tooltip={`Wipe ${host}'s database and config back to first-launch (main is untouched)`}
             onClick={() => {
               // Fire-and-forget: confirmDialog owns the dialog lifetime and the
               // keep-open-on-failure retry. `loading={reset.isPending}` reflects

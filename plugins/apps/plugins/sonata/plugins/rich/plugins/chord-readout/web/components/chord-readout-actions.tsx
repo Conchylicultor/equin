@@ -27,7 +27,7 @@ export function ChordReadoutActions() {
       variant="ghost"
       disabled={!invertible}
       onClick={() => setShowInversions((v) => !v)}
-      title="Show one keyboard per inversion of the chord"
+      tooltip="Show one keyboard per inversion of the chord"
     >
       Inversions
     </ToggleChip>

@@ -41,7 +41,7 @@ export function PluginLinkChip({
               { mode: "push" },
             )
       }
-      title={value.description ?? resolvedId}
+      tooltip={value.description ?? resolvedId}
       leading={<Icon icon={widgetsIcon} className="text-muted-foreground" />}
       mono
     >

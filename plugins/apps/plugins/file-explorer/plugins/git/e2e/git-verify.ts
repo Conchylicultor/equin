@@ -74,7 +74,7 @@ async function hidden(l: Locator, timeout = 10_000): Promise<boolean> {
   }
 }
 
-const badge = (r: Locator, title: string) => r.locator(`[title="${title}"]`);
+const badge = (r: Locator, title: string) => r.locator(`[data-tooltip="${title}"]`);
 
 const r = report("file explorer git");
 

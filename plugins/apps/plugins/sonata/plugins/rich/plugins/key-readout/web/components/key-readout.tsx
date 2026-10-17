@@ -281,7 +281,7 @@ export function KeyReadout() {
         <ToggleChip
           active={showChords}
           onClick={() => setShowChords((v) => !v)}
-          title="Show the chord built on each degree of the scale"
+          tooltip="Show the chord built on each degree of the scale"
         >
           Chords
         </ToggleChip>

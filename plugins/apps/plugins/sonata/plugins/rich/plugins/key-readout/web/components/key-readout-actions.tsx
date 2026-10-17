@@ -59,7 +59,7 @@ export function KeyReadoutActions() {
       active={autoDetect}
       variant="ghost"
       onClick={toggleAutoDetect}
-      title={
+      tooltip={
         autoDetect
           ? "Using a key auto-detected from the notes. Turn off to use the song's own (MIDI) key."
           : "Using the song's own (MIDI) key. Turn on to auto-detect the key from the notes instead."

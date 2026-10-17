@@ -21,7 +21,7 @@ required `draftKey`.
     - `primitives/css/ui-kit.Popover`
     - `primitives/css/ui-kit.PopoverContent`
     - `primitives/css/ui-kit.PopoverTrigger`
-    - `primitives/overlay/tooltip.WithTooltip`
+    - `primitives/css/ui-kit.WithTooltip`
   - Exports (types): `InlinePopoverProps`
   - Exports (values): `InlinePopover`
 - Cross-plugin:

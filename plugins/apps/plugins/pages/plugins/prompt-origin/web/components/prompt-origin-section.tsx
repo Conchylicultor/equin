@@ -61,7 +61,7 @@ export function PromptOriginSection({ taskId }: { taskId: string }) {
     <Cluster>
       <LinkChip
         leading={<Icon icon={descriptionIcon} />}
-        title={page.title}
+        tooltip={page.title}
         activation={openPane.to(
           pageDetailPane,
           { pageId: page.pageId },

@@ -59,7 +59,7 @@ export function TasksButton() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      title={title}
+      tooltip={title}
       aria-label={title}
       aria-pressed={isOpen}
       onClick={() => {

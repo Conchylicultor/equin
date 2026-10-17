@@ -17,12 +17,12 @@ export function QueryDeadlineSummary({ report }: { report: Report }) {
 
   return (
     <Inline gap="xs">
-      <Badge mono title={`Connection pool: ${d.pool}`}>
+      <Badge mono tooltip={`Connection pool: ${d.pool}`}>
         {d.pool}
       </Badge>
       <Badge
         variant={d.phase === "connect" ? "warning" : "muted"}
-        title={
+        tooltip={
           d.phase === "connect"
             ? "Opening the connection got no reply"
             : "A query on an open connection got no reply"
@@ -31,7 +31,7 @@ export function QueryDeadlineSummary({ report }: { report: Report }) {
         {d.phase === "connect" ? "connect" : "query"}
       </Badge>
       {d.phase === "query" && (
-        <Badge variant="destructive" mono title={d.sql}>
+        <Badge variant="destructive" mono tooltip={d.sql}>
           {d.sql}
         </Badge>
       )}

@@ -146,7 +146,7 @@ export function ChipSelectFilterInput(
                   active={selected.includes(option.value)}
                   variant="ghost"
                   icon={listed ? undefined : <Icon icon={helpIcon} />}
-                  title={
+                  tooltip={
                     listed
                       ? undefined
                       : `${option.value} — not one of this field's listed options`

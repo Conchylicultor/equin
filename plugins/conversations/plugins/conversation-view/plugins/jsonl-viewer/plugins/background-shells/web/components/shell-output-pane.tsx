@@ -165,7 +165,7 @@ function ShellHeader({ shell }: { shell: BackgroundShell }) {
             {shell.outputFile}
           </Text>
         </Fill>
-        <CopyButton text={shell.outputFile} title="Copy output file path" />
+        <CopyButton text={shell.outputFile} tooltip="Copy output file path" />
       </Line>
     </Stack>
   );

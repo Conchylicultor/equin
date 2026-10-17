@@ -67,7 +67,6 @@ appears (YAGNI).
     - `primitives/css/ui-kit.DialogTitle`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/overlay/tooltip.Kbd`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/shortcuts.formatShortcutLabel`
   - Exports (types): `ConfirmDialogOptions`
   - Exports (values): `confirmDialog`

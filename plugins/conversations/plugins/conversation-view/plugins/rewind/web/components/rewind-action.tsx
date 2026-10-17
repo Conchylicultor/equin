@@ -35,7 +35,7 @@ export function RewindAction({ event }: { event: JsonlEvent }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <RowActionButton title="Go back to this message">
+          <RowActionButton tooltip="Go back to this message">
             <Icon icon={historyIcon} className="size-3" />
           </RowActionButton>
         }

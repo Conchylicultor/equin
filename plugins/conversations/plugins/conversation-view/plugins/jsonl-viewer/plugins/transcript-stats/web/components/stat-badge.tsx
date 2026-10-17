@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
+import type { Tooltipped } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /** How loud a stat is. `attention` / `alert` change the ink, never the plate. */
 export type StatTone = "muted" | "attention" | "alert";
@@ -18,10 +19,9 @@ const INK: Record<StatTone, string> = {
   alert: "text-destructive",
 };
 
-export interface StatBadgeProps extends Passthrough {
+/** `tooltip`: hover detail — the exact figures behind the rounded ones. */
+export interface StatBadgeProps extends Tooltipped, Passthrough {
   tone?: StatTone;
-  /** Hover detail: the exact figures behind the rounded ones. */
-  title?: string;
   /**
    * `"button"` for a stat that opens something (a popover trigger spreads its
    * handlers and ref onto the badge, which is why the rest passes through).
@@ -32,7 +32,6 @@ export interface StatBadgeProps extends Passthrough {
 
 export function StatBadge({
   tone = "muted",
-  title,
   as = "span",
   children,
   ...rest
@@ -45,7 +44,6 @@ export function StatBadge({
         "pointer-events-auto",
         as === "button" && "cursor-pointer hover:text-foreground",
       )}
-      title={title}
       {...(as === "button" ? { type: "button" } : {})}
       {...rest}
     >

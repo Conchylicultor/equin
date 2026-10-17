@@ -24,7 +24,6 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
 import {
   MAX_SCALE,
@@ -435,27 +434,25 @@ function ZoomControls({ ctl }: { ctl: ViewController }) {
         onClick={() => ctl.step(1)}
       />
       <Separator orientation="vertical" className="h-4" />
-      <WithTooltip content={keyTooltip("Fit to screen", "fit")}>
-        <Button
-          variant="ghost"
-          aria-pressed={atFit}
-          className="aria-pressed:bg-hover-fill"
-          onClick={() => ctl.toFit(true)}
-        >
-          <Icon icon={fitScreenIcon} />
-          Fit
-        </Button>
-      </WithTooltip>
-      <WithTooltip content={keyTooltip("Actual size", "actual-size")}>
-        <Button
-          variant="ghost"
-          aria-pressed={atActual}
-          className="tabular-nums aria-pressed:bg-hover-fill"
-          onClick={() => ctl.actualSize()}
-        >
-          1:1
-        </Button>
-      </WithTooltip>
+      <Button
+        tooltip={keyTooltip("Fit to screen", "fit")}
+        variant="ghost"
+        aria-pressed={atFit}
+        className="aria-pressed:bg-hover-fill"
+        onClick={() => ctl.toFit(true)}
+      >
+        <Icon icon={fitScreenIcon} />
+        Fit
+      </Button>
+      <Button
+        tooltip={keyTooltip("Actual size", "actual-size")}
+        variant="ghost"
+        aria-pressed={atActual}
+        className="tabular-nums aria-pressed:bg-hover-fill"
+        onClick={() => ctl.actualSize()}
+      >
+        1:1
+      </Button>
     </>
   );
 }

@@ -50,7 +50,7 @@ function TargetPicker({
             disabled={!t.implemented}
             icon={icon ? <Icon icon={icon} /> : undefined}
             onClick={() => onPick(t.id)}
-            title={t.implemented ? t.label : `${t.label} (coming soon)`}
+            tooltip={t.implemented ? t.label : `${t.label} (coming soon)`}
           >
             {t.implemented ? t.label : `${t.label} (soon)`}
           </ToggleChip>

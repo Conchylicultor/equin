@@ -14,7 +14,7 @@ export function UsageStat() {
 
   return (
     <StatBadge
-      title={`Latest context: ${totals.latestContext.toLocaleString()} tokens\nTotal output: ${totals.output.toLocaleString()} tokens`}
+      tooltip={`Latest context: ${totals.latestContext.toLocaleString()} tokens\nTotal output: ${totals.output.toLocaleString()} tokens`}
     >
       {formatTokenCount(totals.latestContext)} ctx ·{" "}
       {formatTokenCount(totals.output)} out

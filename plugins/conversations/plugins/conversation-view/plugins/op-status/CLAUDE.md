@@ -119,6 +119,7 @@ spawn / control-file / banner helpers both scripts share are `e2e/synthetic.ts`.
     - `conversations/conversation-view` ×2
     - `conversations` ×2
     - `primitives/css/fill` ×2
+    - `primitives/css/ui-kit` ×2
     - `primitives/relative-time` ×2
     - `conversations/conversation-ui/item.Item`
     - `debug/profiling/ops.opDetailPane`
@@ -132,10 +133,8 @@ spawn / control-file / banner helpers both scripts share are `e2e/synthetic.ts`.
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
 - Cross-plugin:

@@ -41,7 +41,7 @@ hangs off.
     - `primitives/css/ui-kit.Tooltip`
     - `primitives/css/ui-kit.TooltipCardContent`
     - `primitives/css/ui-kit.TooltipTrigger`
-    - `primitives/overlay/tooltip.usePinOnClick`
+    - `primitives/css/ui-kit.usePinOnClick`
   - Exports (types):
     - `HoverCardChip`
     - `HoverCardContent`

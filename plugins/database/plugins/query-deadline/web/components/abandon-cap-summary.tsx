@@ -18,7 +18,7 @@ export function AbandonCapSummary({ report }: { report: Report }) {
         {d.abandoned} abandoned database connections — over the cap of {d.cap}
       </span>
       <span className="text-muted-foreground">· latest</span>
-      <Badge mono title={`Connection pool: ${d.pool}`}>
+      <Badge mono tooltip={`Connection pool: ${d.pool}`}>
         {d.pool}
       </Badge>
     </Inline>

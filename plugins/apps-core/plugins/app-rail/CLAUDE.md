@@ -17,8 +17,8 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.WithTooltip`
     - `primitives/link-gesture.activationProps`
-    - `primitives/overlay/tooltip.WithTooltip`
   - Exports (values): `AppRail`
 - Cross-plugin:
   - Uses tokens:

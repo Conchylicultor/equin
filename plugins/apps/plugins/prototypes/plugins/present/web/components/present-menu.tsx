@@ -81,7 +81,7 @@ export function PresentMenu({ row }: ItemActionProps<FrameActionRow>) {
               variant="ghost"
               aspect="icon"
               aria-label="Present"
-              title="Present"
+              tooltip="Present"
             />
           }
         >

@@ -317,7 +317,7 @@ function OpDetailView({
               <Badge
                 key={`${w.kind}:${i}`}
                 colorClass={`${waitFillClass(w.kind)}/15`}
-                title={`${waitLabel(w)} · +${formatDuration(waitPlacement(w).startMs)} into the op`}
+                tooltip={`${waitLabel(w)} · +${formatDuration(waitPlacement(w).startMs)} into the op`}
               >
                 {formatStatusLabel(w.kind)} {formatDuration(w.durationMs)}
                 {w.cycle > 0 && ` · #${w.cycle}`}

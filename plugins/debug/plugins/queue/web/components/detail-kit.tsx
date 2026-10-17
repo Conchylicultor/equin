@@ -97,7 +97,7 @@ export function IdValue({ value }: { value: string }) {
       <Text variant="code" title={value}>
         {value}
       </Text>
-      <CopyButton text={value} title="Copy" aspect="inline" />
+      <CopyButton text={value} tooltip="Copy" aspect="inline" />
     </>
   );
 }
@@ -134,7 +134,7 @@ export function SectionHeader({
       )}
       <Fill />
       {copy !== undefined && (
-        <CopyButton text={copy} title={`Copy ${label.toLowerCase()}`} />
+        <CopyButton text={copy} tooltip={`Copy ${label.toLowerCase()}`} />
       )}
     </Line>
   );

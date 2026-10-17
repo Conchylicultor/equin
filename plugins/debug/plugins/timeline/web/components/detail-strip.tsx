@@ -61,7 +61,7 @@ export function DetailStrip({
           >
             {event.source}
           </Badge>
-          <Badge variant="muted" mono title={event.worktree}>
+          <Badge variant="muted" mono tooltip={event.worktree}>
             {event.worktree}
           </Badge>
           <Fill>

@@ -5,10 +5,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  Kbd,
-  WithTooltip,
-} from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -109,11 +106,14 @@ export function ConfirmDialogBody({
             destructive button, which adds noise to the one control that should
             read as a single unambiguous word. `formatShortcutLabel` spells the
             modifier the way THIS machine does (⌘ on a Mac, Ctrl elsewhere). */}
-        <WithTooltip content={<Kbd>{formatShortcutLabel("mod+enter")}</Kbd>}>
-          <Button variant="destructive" onClick={runConfirm} loading={pending}>
-            {confirmLabel}
-          </Button>
-        </WithTooltip>
+        <Button
+          tooltip={<Kbd>{formatShortcutLabel("mod+enter")}</Kbd>}
+          variant="destructive"
+          onClick={runConfirm}
+          loading={pending}
+        >
+          {confirmLabel}
+        </Button>
       </Stack>
     </Stack>
   );

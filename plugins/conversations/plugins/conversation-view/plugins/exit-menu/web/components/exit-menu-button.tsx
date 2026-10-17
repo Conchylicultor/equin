@@ -27,7 +27,7 @@ export function ExitMenuButton(_: PromptEditorActionProps) {
             variant="ghost"
             aspect="icon"
             aria-label="Close options"
-            title="Close options"
+            tooltip="Close options"
           />
         }
       >

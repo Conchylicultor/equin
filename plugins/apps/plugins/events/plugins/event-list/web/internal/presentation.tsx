@@ -38,7 +38,7 @@ function UrlCell({ url }: { url: string | null }): ReactNode {
       onClick={(e: MouseEvent) => e.stopPropagation()}
       icon={<Icon icon={navIcons.newTab} />}
       colorClass="bg-muted text-primary-text hover:bg-muted/80 hover:underline"
-      title={href}
+      tooltip={href}
     >
       {host}
     </Badge>

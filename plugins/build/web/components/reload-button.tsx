@@ -1,5 +1,4 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useReloadAdvice, type ReloadAdvice } from "../hooks/use-reload-advice";
@@ -31,33 +30,32 @@ export function ReloadButton({ advice }: { advice: ReloadAdvice }) {
   if (advice.kind === "none") return null;
   const message = reloadMessageFor(advice);
   return (
-    <WithTooltip content={message}>
-      <Button
-        aria-label={message}
-        className={cn(
-          // A pill whose refresh glyph sits at its start: only the label end
-          // takes the pill's extra room (10px | 12px), the glyph sits 6px from
-          // the label, and no border — the fill reaches the pill's full height.
-          "rounded-full pill-end border-0 gap-control-sm font-semibold",
-          // The fill is the solid tone; the label is that tone's light
-          // foreground with 18% of the tone mixed back in, so it reads as
-          // tinted light rather than stark white. Hover lifts the fill 12%
-          // toward the foreground and the label to the foreground itself.
-          // Mixed in oklab, not oklch: an achromatic foreground (white) has no
-          // hue of its own, and an oklch mix would swing the tint's hue toward
-          // the foreground's nominal 0°. The RAW `--*-solid` vars, not the
-          // `--color-*` aliases: those resolve at :root, outside the chrome's
-          // theme scope.
-          reloadIsFailing(advice)
-            ? "bg-destructive-solid text-[color:color-mix(in_oklab,var(--destructive-solid)_18%,var(--destructive-solid-foreground))] hover:bg-[color:color-mix(in_oklab,var(--destructive-solid)_88%,var(--destructive-solid-foreground))] hover:text-destructive-solid-foreground"
-            : "bg-info-solid text-[color:color-mix(in_oklab,var(--info-solid)_18%,var(--info-solid-foreground))] hover:bg-[color:color-mix(in_oklab,var(--info-solid)_88%,var(--info-solid-foreground))] hover:text-info-solid-foreground",
-        )}
-        onClick={() => window.location.reload()}
-      >
-        <Icon icon={refreshIcon} className="size-3.5" />
-        Reload
-      </Button>
-    </WithTooltip>
+    <Button
+      tooltip={message}
+      aria-label={message}
+      className={cn(
+        // A pill whose refresh glyph sits at its start: only the label end
+        // takes the pill's extra room (10px | 12px), the glyph sits 6px from
+        // the label, and no border — the fill reaches the pill's full height.
+        "rounded-full pill-end border-0 gap-control-sm font-semibold",
+        // The fill is the solid tone; the label is that tone's light
+        // foreground with 18% of the tone mixed back in, so it reads as
+        // tinted light rather than stark white. Hover lifts the fill 12%
+        // toward the foreground and the label to the foreground itself.
+        // Mixed in oklab, not oklch: an achromatic foreground (white) has no
+        // hue of its own, and an oklch mix would swing the tint's hue toward
+        // the foreground's nominal 0°. The RAW `--*-solid` vars, not the
+        // `--color-*` aliases: those resolve at :root, outside the chrome's
+        // theme scope.
+        reloadIsFailing(advice)
+          ? "bg-destructive-solid text-[color:color-mix(in_oklab,var(--destructive-solid)_18%,var(--destructive-solid-foreground))] hover:bg-[color:color-mix(in_oklab,var(--destructive-solid)_88%,var(--destructive-solid-foreground))] hover:text-destructive-solid-foreground"
+          : "bg-info-solid text-[color:color-mix(in_oklab,var(--info-solid)_18%,var(--info-solid-foreground))] hover:bg-[color:color-mix(in_oklab,var(--info-solid)_88%,var(--info-solid-foreground))] hover:text-info-solid-foreground",
+      )}
+      onClick={() => window.location.reload()}
+    >
+      <Icon icon={refreshIcon} className="size-3.5" />
+      Reload
+    </Button>
   );
 }
 

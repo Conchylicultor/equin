@@ -88,7 +88,7 @@ export function ViewOptionsToggle() {
             // `ControlPanelPopover` has no tooltip prop (the trigger owns its
             // own), and a ToggleChip carries none — so the hover hint is the
             // native one.
-            title="Display options"
+            tooltip="Display options"
             className={cn(
               // Match the HUD pill look (key-chip): translucent + blurred.
               !open && "bg-background/90 shadow-sm backdrop-blur-sm",

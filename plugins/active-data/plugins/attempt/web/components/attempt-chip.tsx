@@ -72,7 +72,7 @@ export function AttemptChip({
   const rawChip = (
     <LinkChip
       activation={target(undefined)}
-      title={attemptId}
+      tooltip={attemptId}
       leading={<StatusDot colorClass={UNKNOWN_DOT} />}
       mono
     >
@@ -96,7 +96,7 @@ export function AttemptChip({
       return (
         <LinkChip
           activation={target(conv?.id)}
-          title={[name, attemptStatusLabel(attempt.status), attemptId]
+          tooltip={[name, attemptStatusLabel(attempt.status), attemptId]
             .filter(Boolean)
             .join(" · ")}
           leading={

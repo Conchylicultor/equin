@@ -108,7 +108,7 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
           <Badge
             variant="destructive"
             role="alert"
-            title={`Skipped: ${skipped.join(", ")}`}
+            tooltip={`Skipped: ${skipped.join(", ")}`}
           >
             Skipped: {skipped.join(", ")}
           </Badge>

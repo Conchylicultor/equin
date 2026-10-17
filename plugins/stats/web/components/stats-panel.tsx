@@ -27,7 +27,7 @@ function StatsContent() {
           <ToggleChip
             active={showEmptyDays}
             onClick={() => setShowEmptyDays(!showEmptyDays)}
-            title={
+            tooltip={
               showEmptyDays
                 ? "Showing all days — click to skip empty days"
                 : "Skipping empty days — click to show all days"

@@ -2,6 +2,7 @@ import {
   cn,
   type ControlSize,
   type DensityControlled,
+  type Tooltipped,
   useControlSize,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -66,7 +67,8 @@ const VARIANT_CLASS: Record<
  * chip shell, never the truncating label span inside it. See
  * {@link Passthrough}.
  */
-export interface ToggleChipProps extends DensityControlled, Passthrough {
+export interface ToggleChipProps
+  extends DensityControlled, Tooltipped, Passthrough {
   /** Whether the chip reads as selected/on. Drives the active vs inactive color pair. */
   active: boolean;
   /**
@@ -83,7 +85,6 @@ export interface ToggleChipProps extends DensityControlled, Passthrough {
   as?: React.ElementType;
   disabled?: boolean;
   className?: string;
-  title?: string;
   children: React.ReactNode;
 }
 
@@ -137,7 +138,7 @@ export interface SegmentedOption<T extends string> {
   id: T;
   label: React.ReactNode;
   icon?: React.ReactNode;
-  title?: string;
+  tooltip?: React.ReactNode;
 }
 
 export interface SegmentedControlProps<
@@ -176,7 +177,7 @@ export function SegmentedControl<T extends string>({
           active={opt.id === value}
           variant={variant}
           icon={opt.icon}
-          title={opt.title}
+          tooltip={opt.tooltip}
           onClick={() => onChange(opt.id)}
         >
           {opt.label}

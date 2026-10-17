@@ -3,6 +3,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  WithTooltip,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type {
   PopoverWidth,
@@ -10,8 +11,6 @@ import type {
   PopoverMaxHeight,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentProps } from "react";
-
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 
 type ContentPositionerProps = Pick<
   ComponentProps<typeof PopoverContent>,

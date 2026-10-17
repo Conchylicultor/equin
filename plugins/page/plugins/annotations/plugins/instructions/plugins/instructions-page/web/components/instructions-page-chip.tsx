@@ -54,7 +54,7 @@ export function InstructionsPageChip({ pageId }: PageReferenceChipProps) {
     <Badge
       variant="primary"
       icon={<Icon icon={publicIcon} />}
-      title="Handed to every agent conversation at its start"
+      tooltip="Handed to every agent conversation at its start"
     >
       Global
     </Badge>

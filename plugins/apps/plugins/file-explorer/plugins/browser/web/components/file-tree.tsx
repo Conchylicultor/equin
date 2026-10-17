@@ -267,7 +267,7 @@ function FolderSize({
     return (
       <Button
         variant="ghost"
-        title={`${peek.message} — click to retry`}
+        tooltip={`${peek.message} — click to retry`}
         onClick={(e) => {
           e.stopPropagation();
           peek.retry();

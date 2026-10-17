@@ -13,14 +13,18 @@ export function rowActionClass(extra?: string): string {
   );
 }
 
-interface RowActionButtonProps extends ComponentPropsWithoutRef<"button"> {
-  title: string;
+interface RowActionButtonProps extends Omit<
+  ComponentPropsWithoutRef<"button">,
+  "title"
+> {
+  /** The action's name: its tooltip and accessible name. */
+  tooltip: string;
   active?: boolean;
   children: ReactNode;
 }
 
 export function RowActionButton({
-  title,
+  tooltip,
   active,
   className,
   children,
@@ -38,8 +42,8 @@ export function RowActionButton({
         active && "bg-accent text-accent-foreground",
         className,
       )}
-      title={title}
-      aria-label={title}
+      tooltip={tooltip}
+      aria-label={tooltip}
       aria-pressed={active}
       onClick={(e) => {
         e.stopPropagation();

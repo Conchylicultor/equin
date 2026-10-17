@@ -72,7 +72,7 @@ export function DeleteServerDialog({
               {removeCommand}
             </Text>
           </Fill>
-          <CopyButton text={removeCommand} title="Copy removal command" />
+          <CopyButton text={removeCommand} tooltip="Copy removal command" />
         </Stack>
       )}
       <Stack direction="row" align="center" gap="sm">

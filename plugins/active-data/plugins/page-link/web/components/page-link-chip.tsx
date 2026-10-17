@@ -53,7 +53,7 @@ export function PageLinkChip({
   return (
     <LinkChip
       activation={link(target)}
-      title={
+      tooltip={
         target.kind === "page"
           ? `${title} · ${blockId}`
           : `${title} · block ${blockId}`

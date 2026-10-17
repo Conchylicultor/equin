@@ -6,6 +6,7 @@ import type {
 } from "@plugins/network/plugins/live/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { absolutePath } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import {
   useExplorerDir,
@@ -76,13 +77,15 @@ export function GitBadgeCell({ badge }: { badge: GitBadge }): ReactNode {
   const { label, variant } = GIT_BADGE_OPTIONS[badge];
   if (badge === CONTAINS_CHANGES) {
     return (
-      <span title={label}>
-        <StatusDot colorClass="bg-warning" />
-      </span>
+      <WithTooltip content={label}>
+        <span>
+          <StatusDot colorClass="bg-warning" />
+        </span>
+      </WithTooltip>
     );
   }
   return (
-    <Badge variant={variant} mono title={label}>
+    <Badge variant={variant} mono tooltip={label}>
       {LETTERS[badge]}
     </Badge>
   );

@@ -44,7 +44,7 @@ export function PageWriteReport({
         <Badge variant="muted">{survived} unchanged</Badge>
       )}
       {noteIds.length > 0 && (
-        <Badge variant="muted" title={noteIds.join("\n")}>
+        <Badge variant="muted" tooltip={noteIds.join("\n")}>
           {noteIds.length} note {noteIds.length === 1 ? "card" : "cards"}
         </Badge>
       )}

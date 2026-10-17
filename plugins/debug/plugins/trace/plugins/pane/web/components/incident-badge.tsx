@@ -19,7 +19,7 @@ export function IncidentBadge({
     <Badge
       mono
       icon={<StatusDot colorClass={incidentColorClass(info.colorIndex)} />}
-      title={`${info.size} traces co-occur in this ~${Math.round(
+      tooltip={`${info.size} traces co-occur in this ~${Math.round(
         windowSpanMs / 1000,
       )}s window — groups may be incomplete (siblings can be rate-limited).`}
     >

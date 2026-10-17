@@ -11,7 +11,7 @@ export function MarkdownToggleAction({ event }: { event: JsonlEvent }) {
   if (event.kind !== "assistant-text") return null;
   return (
     <RowActionButton
-      title={markdownMode ? "Show raw text" : "Render markdown"}
+      tooltip={markdownMode ? "Show raw text" : "Render markdown"}
       active={markdownMode}
       onClick={() => setMarkdownMode(!markdownMode)}
     >

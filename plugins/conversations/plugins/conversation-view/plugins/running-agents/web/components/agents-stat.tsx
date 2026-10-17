@@ -82,7 +82,7 @@ function AgentsStatFor({ conversationId }: { conversationId: string }) {
 
   if (subagents.kind === "failed") {
     return (
-      <StatBadge tone="alert" title={subagents.error.message}>
+      <StatBadge tone="alert" tooltip={subagents.error.message}>
         agents unavailable
       </StatBadge>
     );
@@ -109,11 +109,11 @@ function AgentsStatFor({ conversationId }: { conversationId: string }) {
     </>
   );
 
-  if (!toggles) return <StatBadge title={title}>{label}</StatBadge>;
+  if (!toggles) return <StatBadge tooltip={title}>{label}</StatBadge>;
   return (
     <StatBadge
       as="button"
-      title={title}
+      tooltip={title}
       aria-pressed={view.showAll}
       onClick={toggleShowAll}
     >

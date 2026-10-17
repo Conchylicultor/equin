@@ -80,7 +80,7 @@ function AttemptCommitsChip({ attemptId }: { attemptId: string }) {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      title={title}
+      tooltip={title}
       aria-label={title}
       aria-pressed={isOpen}
       onClick={toggle}
@@ -126,7 +126,7 @@ function UnmeasuredChip({
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      title={reason}
+      tooltip={reason}
       aria-label={reason}
       aria-pressed={isOpen}
       onClick={onToggle}

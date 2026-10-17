@@ -6,7 +6,7 @@ import { deployRunArm } from "../../core";
 /** An id column reads as a monospace chip. */
 function idCell(value: string | null): ReactNode {
   return value === null ? null : (
-    <Badge variant="muted" mono title={value}>
+    <Badge variant="muted" mono tooltip={value}>
       {value}
     </Badge>
   );
@@ -42,7 +42,7 @@ export const deployRunPresentation = FieldPresentation.Register({
       // is untouched, so a search for a full sha still matches.
       cell: (sha) =>
         sha === null ? null : (
-          <Badge variant="muted" mono title={sha}>
+          <Badge variant="muted" mono tooltip={sha}>
             {sha.slice(0, 8)}
           </Badge>
         ),

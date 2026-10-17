@@ -50,7 +50,7 @@ export function SkillSection({ items }: { items: ArtifactItem[] }) {
             <Badge
               key={item.key}
               mono
-              title={
+              tooltip={
                 path === null
                   ? PACKAGED_SKILL_REASON
                   : "Waiting for the conversation's worktree"
@@ -66,7 +66,7 @@ export function SkillSection({ items }: { items: ArtifactItem[] }) {
           <LinkChip
             key={item.key}
             mono
-            title={`Open ${path}`}
+            tooltip={`Open ${path}`}
             activation={afterOpen(
               openPane.to(
                 filePeekPane,

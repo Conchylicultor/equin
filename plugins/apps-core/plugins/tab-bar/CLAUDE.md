@@ -9,7 +9,7 @@
   - Contributes: `Apps.TabBar` "Tab bar" → `AppTabBar`
   - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×3
-    - `primitives/css/ui-kit` ×2
+    - `primitives/css/ui-kit` ×3
     - `primitives/sortable-list` ×2
     - `ui/tab-bar` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
@@ -23,7 +23,6 @@
     - `primitives/css/theme-boundary.Theme`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
-    - `primitives/overlay/tooltip.WithTooltip`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

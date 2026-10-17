@@ -38,30 +38,30 @@ describe("EnumCell reads its display metadata off the option", () => {
   it("tints the chip with the option's variant", () => {
     const { getByText } = renderCell("failed");
     // The chip shell, not the inner truncating label span.
-    const chip = getByText("Failed").parentElement;
+    const chip = getByText("Failed").parentElement?.parentElement;
     expect(chip?.className).toContain("text-destructive");
   });
 
   it("spends the option's hint as the chip's tooltip", () => {
     const { getByText } = renderCell("empty");
-    const chip = getByText("Empty").parentElement;
-    expect(chip?.getAttribute("title")).toBe(
+    const chip = getByText("Empty").parentElement?.parentElement;
+    expect(chip?.getAttribute("data-tooltip")).toBe(
       "The run succeeded and found nothing.",
     );
   });
 
   it("falls back to muted with no tooltip when the option declares neither", () => {
     const { getByText } = renderCell("idle");
-    const chip = getByText("Idle").parentElement;
+    const chip = getByText("Idle").parentElement?.parentElement;
     expect(chip?.className).toContain("text-muted-foreground");
-    expect(chip?.getAttribute("title")).toBeNull();
+    expect(chip?.getAttribute("data-tooltip")).toBeNull();
   });
 
   it("falls back to the raw value when no option matches", () => {
     // The live-registry case: a value whose option is gone (an uninstalled
     // source type). The label is the id, and the chip stays muted.
     const { getByText } = renderCell("shotgun");
-    const chip = getByText("shotgun").parentElement;
+    const chip = getByText("shotgun").parentElement?.parentElement;
     expect(chip?.className).toContain("text-muted-foreground");
   });
 

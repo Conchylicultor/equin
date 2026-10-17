@@ -15,7 +15,7 @@ export function ReviewButton() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      title="Review"
+      tooltip="Review"
       aria-label="Review"
       aria-pressed={isOpen}
       onClick={toggle}

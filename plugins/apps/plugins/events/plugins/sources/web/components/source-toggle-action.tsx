@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useUpdateEventSource } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import type { EventSource } from "@plugins/apps/plugins/events/plugins/events-core/core";
 

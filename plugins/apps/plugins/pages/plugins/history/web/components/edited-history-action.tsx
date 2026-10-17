@@ -7,7 +7,6 @@ import {
   Button,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { VersionHistoryDialog } from "@plugins/history/plugins/dialog/web";
 import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/web";
 import { pagesTree } from "@plugins/page/plugins/editor/core";
@@ -60,16 +59,15 @@ export function EditedHistoryAction() {
               is a statement about the page, set apart from the controls after
               it. Ghost + faint at rest, so it still reads as a label first. */}
           <ControlSizeProvider size="xs">
-            <WithTooltip content="Version history">
-              <Button
-                variant="ghost"
-                className="text-caption font-normal text-faint-foreground"
-                style={{ marginRight: "var(--space-sm)" }}
-                onClick={() => setOpen(true)}
-              >
-                Edited <RelativeTime date={result.row.editedAt} />
-              </Button>
-            </WithTooltip>
+            <Button
+              tooltip="Version history"
+              variant="ghost"
+              className="text-caption font-normal text-faint-foreground"
+              style={{ marginRight: "var(--space-sm)" }}
+              onClick={() => setOpen(true)}
+            >
+              Edited <RelativeTime date={result.row.editedAt} />
+            </Button>
           </ControlSizeProvider>
           {open && (
             <VersionHistoryDialog

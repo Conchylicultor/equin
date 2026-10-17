@@ -254,7 +254,7 @@ export function DuressBadgeRow({
             as="button"
             type="button"
             variant="warning"
-            title={duressBandTitle(band)}
+            tooltip={duressBandTitle(band)}
             onClick={() => onSelect(band.id)}
           >
             {band.label}

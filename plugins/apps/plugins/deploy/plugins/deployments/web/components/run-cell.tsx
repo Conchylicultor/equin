@@ -27,7 +27,7 @@ export function RunCell({ run }: { run: DeployRun | undefined }): ReactElement |
   return (
     <Badge
       variant={ok ? "success" : "destructive"}
-      title={run.message ?? undefined}
+      tooltip={run.message ?? undefined}
     >
       {run.verb} {ok ? "ok" : "failed"}
     </Badge>

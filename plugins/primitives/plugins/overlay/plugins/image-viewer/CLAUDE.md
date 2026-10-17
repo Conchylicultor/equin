@@ -130,13 +130,12 @@ handler, the `?` sheet and the button tooltips all read.
 - Description: One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
 - Web:
   - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×5
+    - `primitives/css/ui-kit` ×6
     - `primitives/css/clip` ×2
     - `primitives/css/coords` ×2
     - `primitives/css/rigid` ×2
     - `primitives/css/spacing` ×2
     - `primitives/hover-reveal` ×2
-    - `primitives/overlay/tooltip` ×2
     - `primitives/persistent-draft` ×2
     - `primitives/announce.announce`
     - `primitives/css/badge.Badge`
@@ -159,6 +158,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `primitives/latest-ref.useEventCallback`
     - `primitives/loading.Loading`
     - `primitives/networking.probeUrlStatus`
+    - `primitives/overlay/tooltip.Kbd`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/shortcuts.formatShortcutLabel`
     - `ui/icons.Icon`

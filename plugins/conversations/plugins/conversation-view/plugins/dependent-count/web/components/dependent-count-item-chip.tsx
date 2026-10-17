@@ -36,7 +36,7 @@ export function DependentCountItemChip({
   return (
     <Badge
       className="group/blocked"
-      title={`${count} task${count === 1 ? "" : "s"} blocked on this task`}
+      tooltip={`${count} task${count === 1 ? "" : "s"} blocked on this task`}
     >
       {count}
       <span className="hidden group-hover/blocked:inline"> blocked</span>

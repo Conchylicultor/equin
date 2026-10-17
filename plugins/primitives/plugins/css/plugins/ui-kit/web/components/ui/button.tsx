@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
 import {
+  WithTooltip,
+  type Tooltipped,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/tooltip";
+import {
   useControlSize,
   textSizeFor,
   iconSizeFor,
@@ -134,10 +138,16 @@ const buttonVariants = cva(
  * self-indicating with zero per-call-site wiring. The public `onClick` type is
  * left as base-ui's standard handler so consumers and value-returning handlers
  * keep type-checking; the promise is detected at runtime.
+ *
+ * `tooltip` (see {@link Tooltipped}) is the button's hover name — the themed
+ * tooltip, never the native `title`, which the props reject. An icon-shaped
+ * button with a plain-string tooltip and no `aria-label` takes the tooltip as
+ * its accessible name, as the native `title` used to give it.
  */
-type ButtonOwnProps = ButtonPrimitive.Props &
+type ButtonOwnProps = Omit<ButtonPrimitive.Props, "title"> &
   Omit<VariantProps<typeof buttonVariants>, "size"> &
-  DensityControlled & {
+  DensityControlled &
+  Tooltipped & {
     aspect?: "text" | "icon" | "inline";
     loading?: boolean;
   };
@@ -150,6 +160,8 @@ function Button({
   loading = false,
   disabled = false,
   onClick,
+  tooltip,
+  tooltipSide,
   children,
   ...props
 }: ButtonOwnProps) {
@@ -196,36 +208,43 @@ function Button({
   // text buttons keep their label with the spinner as a leading indicator.
   const iconOnly = resolvedSize.startsWith("icon");
 
+  const ariaLabel =
+    props["aria-label"] ??
+    (aspect === "icon" && typeof tooltip === "string" ? tooltip : undefined);
+
   return (
-    <ButtonPrimitive
-      data-slot="button"
-      className={cn(
-        buttonVariants({ variant, size: resolvedSize, shape }),
-        textClass,
-        className,
-      )}
-      disabled={disabled || isLoading}
-      data-loading={isLoading || undefined}
-      onClick={onClick ? handleClick : undefined}
-      {...props}
-      // After the spread: a popover/menu trigger rendering this Button passes
-      // its own `data-slot`, so only a marker nothing else sets survives. It is
-      // how ButtonGroup tells a segment from the hidden spans a library adds.
-      data-button-group-segment=""
-    >
-      {isLoading ? (
-        iconOnly ? (
-          <Icon icon={refreshIcon} className="animate-spin" />
-        ) : (
-          <>
+    <WithTooltip content={tooltip} side={tooltipSide}>
+      <ButtonPrimitive
+        data-slot="button"
+        className={cn(
+          buttonVariants({ variant, size: resolvedSize, shape }),
+          textClass,
+          className,
+        )}
+        disabled={disabled || isLoading}
+        data-loading={isLoading || undefined}
+        onClick={onClick ? handleClick : undefined}
+        {...props}
+        aria-label={ariaLabel}
+        // After the spread: a popover/menu trigger rendering this Button passes
+        // its own `data-slot`, so only a marker nothing else sets survives. It is
+        // how ButtonGroup tells a segment from the hidden spans a library adds.
+        data-button-group-segment=""
+      >
+        {isLoading ? (
+          iconOnly ? (
             <Icon icon={refreshIcon} className="animate-spin" />
-            {children}
-          </>
-        )
-      ) : (
-        children
-      )}
-    </ButtonPrimitive>
+          ) : (
+            <>
+              <Icon icon={refreshIcon} className="animate-spin" />
+              {children}
+            </>
+          )
+        ) : (
+          children
+        )}
+      </ButtonPrimitive>
+    </WithTooltip>
   );
 }
 

@@ -132,7 +132,7 @@ export function CarrierBadge({
       <Badge
         variant="warning"
         icon={<Icon icon={differenceIcon} />}
-        title={`${label} is at this commit (${distance}), but running a different bundle than the one now served — the same tree can compose different bytes. Reload to pick up the served one.`}
+        tooltip={`${label} is at this commit (${distance}), but running a different bundle than the one now served — the same tree can compose different bytes. Reload to pick up the served one.`}
       >
         {label}
       </Badge>
@@ -141,7 +141,7 @@ export function CarrierBadge({
   return (
     <Badge
       variant={atTarget ? "success" : "muted"}
-      title={`${label} — ${distance} · ${at}`}
+      tooltip={`${label} — ${distance} · ${at}`}
     >
       {label}
     </Badge>

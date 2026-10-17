@@ -41,7 +41,7 @@ function seenPage(result: LiveRowResult<PageRow>): PageRow | undefined {
 /** The row's target as the only thing known about it: its id. */
 function BlockIdBadge({ id }: { id: string }) {
   return (
-    <Badge variant="muted" mono title={id}>
+    <Badge variant="muted" mono tooltip={id}>
       {shortenBlockId(id)}
     </Badge>
   );
@@ -89,7 +89,7 @@ export function PageRefChip({
   return (
     <LinkChip
       leading={<Icon icon={descriptionIcon} />}
-      title={title}
+      tooltip={title}
       activation={openPane.to(
         pageDetailPane,
         { pageId: page.id },

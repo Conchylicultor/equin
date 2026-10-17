@@ -49,7 +49,7 @@ export function TaskTrackControl({ taskId }: { taskId: string }) {
       as="button"
       type="button"
       variant={meta.variant}
-      title={`${meta.hint} Click to move it to ${TRACK_META[next].label}.`}
+      tooltip={`${meta.hint} Click to move it to ${TRACK_META[next].label}.`}
       aria-label={`Track: ${meta.label}. Move to ${TRACK_META[next].label}`}
       onClick={onClick}
     >

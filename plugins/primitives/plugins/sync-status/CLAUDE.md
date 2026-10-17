@@ -155,9 +155,9 @@ non-surface mounts instead of crashing.
   - Uses:
     - `primitives/css/pin.Pin`
     - `primitives/css/spinner.Spinner`
+    - `primitives/css/ui-kit.WithTooltip`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/relative-time.RelativeTime`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `ui/icons.Icon`

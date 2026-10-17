@@ -69,7 +69,7 @@ function FileLink({
   return (
     <LinkChip
       activation={target}
-      title={file.filename}
+      tooltip={file.filename}
       leading={<FileTypeIcon name={file.filename} />}
     >
       {file.filename}

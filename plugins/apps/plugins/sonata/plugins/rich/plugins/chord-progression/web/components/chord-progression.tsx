@@ -264,7 +264,7 @@ function ChordChip({
       variant={isActive ? "default" : "secondary"}
       aria-pressed={isActive}
       onClick={() => onSeek(chord.start)}
-      title={`${chord.data.symbol} · beats ${chord.start.toFixed(2)}–${chord.end.toFixed(2)}`}
+      tooltip={`${chord.data.symbol} · beats ${chord.start.toFixed(2)}–${chord.end.toFixed(2)}`}
       className={cn("font-semibold", isContinuation && "opacity-40")}
       style={{
         // Grow by beat-weight, floor at the label, ceiling at the beats' share of

@@ -21,7 +21,7 @@ export function ConvChip({
   return (
     <LinkChip
       activation={opener.toggle(sideConvId)}
-      title={title ? `${title} · ${sideConvId}` : sideConvId}
+      tooltip={title ? `${title} · ${sideConvId}` : sideConvId}
       leading={conv ? undefined : <StatusDot {...CONV_STATUS_DOT.gone} />}
       mono={!conv}
     >

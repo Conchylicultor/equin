@@ -78,7 +78,7 @@ export function AttachmentChip({ attachment }: AttachmentChipProps) {
       type="button"
       shape="pill"
       variant="muted"
-      title={attachment.filename}
+      tooltip={attachment.filename}
       onClick={() => {
         void open();
       }}

@@ -26,9 +26,9 @@ export function EnumCell(props: TableCellProps): ReactNode {
   if (option?.quiet === true) return null;
   // An option that declares no `variant` is "muted" — the right default for a
   // value with no semantics (every user-authored custom column). `hint` is the
-  // option's own explanation of what the value means, spent as the chip's title.
+  // option's own explanation of what the value means, spent as the chip's tooltip.
   return (
-    <Badge variant={option?.variant ?? "muted"} title={option?.hint}>
+    <Badge variant={option?.variant ?? "muted"} tooltip={option?.hint}>
       {option?.label ?? key}
     </Badge>
   );

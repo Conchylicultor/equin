@@ -12,7 +12,7 @@
     - `Sonata.Hud` "swing-chip" → `SwingChip`
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/document` ×8
-    - `primitives/css/ui-kit` ×2
+    - `primitives/css/ui-kit` ×3
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `infra/endpoints.fetchEndpoint`
@@ -25,7 +25,6 @@
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/overlay/tooltip.WithTooltip`
 - Server:
   - Contributes: `resource.declare` "sonata-swing:rows"
   - Uses:

@@ -34,7 +34,7 @@ import { openThreadFixture } from "./fixture";
 
 const OUT = arg("out") ?? "/tmp/threads-live";
 const BOOT_TIMEOUT_MS = 120_000;
-const TABS_READY = 'button[title="Trash"]';
+const TABS_READY = 'button[data-tooltip="Trash"]';
 
 /** The seeded threads' ids, top to bottom, as the list renders them now. */
 async function renderedOrder(
@@ -87,7 +87,7 @@ try {
       settleMs: 500,
     });
     // Clicking the ACTIVE tab opens its rename menu; Escape closes it either way.
-    await page.locator('button[title="Inbox"]').first().click();
+    await page.locator('button[data-tooltip="Inbox"]').first().click();
     await page.keyboard.press("Escape");
 
     // ---- 2. the seeded threads render, newest first -----------------------

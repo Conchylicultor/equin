@@ -29,7 +29,7 @@ export function FilepathBreadcrumb({
       text={path}
       aspect="inline"
       className="text-muted-foreground hover:text-foreground"
-      title="Copy path"
+      tooltip="Copy path"
     />
   ) : undefined;
 

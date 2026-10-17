@@ -87,7 +87,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
                 active={isActive}
                 variant="ghost"
                 icon={<Icon icon={icon} />}
-                title={r.instance.name}
+                tooltip={r.instance.name}
                 // Which view type the chip opens — what a script driving the
                 // surface picks a view by (`data-view/e2e/live-pages-scroll.ts
                 // --view`), whatever the instance is named.

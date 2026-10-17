@@ -44,7 +44,7 @@ export function SkillToolView({ event }: ToolRendererProps) {
       activation={skillFile}
       mono
       leading={<Icon icon={descriptionIcon} />}
-      title={`Open ${skillFilePath}`}
+      tooltip={`Open ${skillFilePath}`}
     >
       {skillName}
     </LinkChip>

@@ -164,7 +164,12 @@ export {
   TooltipContent,
   TooltipCardContent,
   TooltipProvider,
+  WithTooltip,
+  type WithTooltipProps,
+  type Tooltipped,
+  type TooltipSide,
 } from "./components/ui/tooltip";
+export { usePinOnClick } from "./components/ui/use-pin-on-click";
 
 export default {
   description:

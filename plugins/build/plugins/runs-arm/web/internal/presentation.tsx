@@ -26,7 +26,7 @@ export const buildRunPresentation = FieldPresentation.Register({
     commitHash: {
       cell: (hash) =>
         hash === null ? null : (
-          <Badge variant="muted" mono title={hash}>
+          <Badge variant="muted" mono tooltip={hash}>
             {hash.slice(0, 8)}
           </Badge>
         ),

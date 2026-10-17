@@ -85,9 +85,9 @@ remove the overwrite trade-off.
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLiveRow`
     - `primitives/css/switch.Switch`
+    - `primitives/css/ui-kit.WithTooltip`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/overlay/tooltip.WithTooltip`
   - Exports (values):
     - `ChordModeSwitch`
     - `useChordModeAvailable`

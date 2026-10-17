@@ -2,10 +2,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  TooltipDoc,
-  WithTooltip,
-} from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { pillHighlightClass } from "@plugins/primitives/plugins/text-editor/plugins/composer/plugins/picker-pill/web";
 
 export interface ComposerAttachButtonProps {
@@ -43,20 +40,19 @@ export function ComposerAttachButton({
   disabled,
 }: ComposerAttachButtonProps) {
   return (
-    <WithTooltip content={<TooltipDoc title={label}>{description}</TooltipDoc>}>
-      <Button
-        shape="pill"
-        aspect={active ? "text" : "icon"}
-        variant={active ? "frame" : "ghost"}
-        aria-label={label}
-        aria-pressed={active}
-        disabled={disabled}
-        onClick={() => onToggle(!active)}
-        className={cn(active && pillHighlightClass)}
-      >
-        <Icon icon={icon} aria-hidden className="size-3.5" />
-        {active && <Text variant="control">{label}</Text>}
-      </Button>
-    </WithTooltip>
+    <Button
+      tooltip={<TooltipDoc title={label}>{description}</TooltipDoc>}
+      shape="pill"
+      aspect={active ? "text" : "icon"}
+      variant={active ? "frame" : "ghost"}
+      aria-label={label}
+      aria-pressed={active}
+      disabled={disabled}
+      onClick={() => onToggle(!active)}
+      className={cn(active && pillHighlightClass)}
+    >
+      <Icon icon={icon} aria-hidden className="size-3.5" />
+      {active && <Text variant="control">{label}</Text>}
+    </Button>
   );
 }

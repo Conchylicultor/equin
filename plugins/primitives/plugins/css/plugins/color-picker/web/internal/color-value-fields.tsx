@@ -85,7 +85,7 @@ export function ColorValueFields({
         ))}
         <CopyButton
           text={formatColor(color, format)}
-          title={`Copy ${format.toUpperCase()}`}
+          tooltip={`Copy ${format.toUpperCase()}`}
         />
       </Stack>
     </Stack>

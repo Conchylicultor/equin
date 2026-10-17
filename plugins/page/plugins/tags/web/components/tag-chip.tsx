@@ -47,7 +47,7 @@ export function TagChip({
       colorClass=""
       style={softChipStyle(tag.color)}
       className={className}
-      title={tag.name}
+      tooltip={tag.name}
     >
       {tag.name}
     </Badge>

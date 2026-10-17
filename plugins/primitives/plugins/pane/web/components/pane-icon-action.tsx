@@ -2,7 +2,6 @@ import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { forwardRef, type ComponentProps, type ReactNode } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 
 interface PaneIconActionProps extends Omit<
   ComponentProps<typeof IconButton>,
@@ -22,17 +21,16 @@ export const PaneIconAction = forwardRef<
   // buttons beside them.
   if (children && !Icon) {
     return (
-      <WithTooltip content={label}>
-        <Button
-          ref={ref}
-          variant="ghost"
-          aspect="icon"
-          aria-label={label}
-          {...rest}
-        >
-          {children}
-        </Button>
-      </WithTooltip>
+      <Button
+        tooltip={label}
+        ref={ref}
+        variant="ghost"
+        aspect="icon"
+        aria-label={label}
+        {...rest}
+      >
+        {children}
+      </Button>
     );
   }
   // `rest` carries the whole handler set, not just `onClick` — the promote

@@ -2,7 +2,6 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { useLive } from "@plugins/network/plugins/live/web";
 import { allowFiles } from "../../shared";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -31,9 +30,9 @@ export function AllowMonitorChip() {
   if (files.length === 0) return null;
 
   return (
-    <WithTooltip
-      side="bottom"
-      content={
+    <Badge
+      tooltipSide="bottom"
+      tooltip={
         <>
           {/* eslint-disable-next-line spacing/no-adhoc-spacing -- heading offset inside a tooltip fragment with no flex parent to own the gap */}
           <p className="mb-1 font-semibold">Guard bypasses active:</p>
@@ -44,16 +43,13 @@ export function AllowMonitorChip() {
           ))}
         </>
       }
-    >
-      <Badge
-        as="button"
+      as="button"
         colorClass="bg-destructive/90 text-white hover:bg-destructive"
         icon={<Icon icon={warningIcon} />}
         className="animate-pulse cursor-default"
         aria-label="Security bypass active"
       >
         BYPASS ACTIVE
-      </Badge>
-    </WithTooltip>
+    </Badge>
   );
 }

@@ -19,6 +19,7 @@ anonymous index signature. See
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.DensityControlled`
+    - `primitives/css/ui-kit.Tooltipped`
     - `primitives/css/ui-kit.useControlSize`
   - Exports (types):
     - `SegmentedControlProps`

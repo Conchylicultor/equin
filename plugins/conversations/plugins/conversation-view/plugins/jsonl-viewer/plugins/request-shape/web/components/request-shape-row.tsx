@@ -60,7 +60,7 @@ function ToolChips({
     <Cluster gap="2xs">
       {tools.map((tool) =>
         added.has(tool) ? (
-          <Badge key={tool} mono variant="success" title="Added">
+          <Badge key={tool} mono variant="success" tooltip="Added">
             {tool}
           </Badge>
         ) : (
@@ -73,7 +73,7 @@ function ToolChips({
         <Badge
           key={tool}
           mono
-          title="Removed"
+          tooltip="Removed"
           className="line-through opacity-60"
         >
           {tool}

@@ -11,7 +11,7 @@ export function RawTextToggleAction({ event }: { event: JsonlEvent }) {
   if (event.kind !== "user-text") return null;
   return (
     <RowActionButton
-      title={markdownMode ? "Show raw text" : "Show rich text"}
+      tooltip={markdownMode ? "Show raw text" : "Show rich text"}
       active={markdownMode}
       onClick={() => setMarkdownMode(!markdownMode)}
     >

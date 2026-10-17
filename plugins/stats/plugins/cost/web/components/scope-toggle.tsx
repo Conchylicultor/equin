@@ -7,7 +7,7 @@ export function ScopeToggle() {
     <ToggleChip
       active={singularityOnly}
       onClick={toggle}
-      title={
+      tooltip={
         singularityOnly
           ? "Singularity sessions only — click to include all Claude Code sessions on this machine"
           : "Including all Claude Code sessions — click to filter to Singularity only"

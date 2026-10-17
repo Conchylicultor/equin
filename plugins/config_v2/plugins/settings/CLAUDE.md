@@ -95,7 +95,7 @@ renderer, which only the running app has.
     - `primitives/data-view` ×4
     - `primitives/live-state` ×4
     - `primitives/pane` ×4
-    - `primitives/css/ui-kit` ×2
+    - `primitives/css/ui-kit` ×3
     - `apps-core/app-icon.AppIconView`
     - `apps-core.Apps`
     - `config_v2.useConfigRegistrations`
@@ -120,7 +120,6 @@ renderer, which only the running app has.
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/syntax-highlight.HighlightedCode`
     - `shell/toast.showToast`

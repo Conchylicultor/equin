@@ -32,7 +32,7 @@ export const runsPresentation = FieldPresentation.Register({
     namespace: {
       cell: (namespace) =>
         namespace === null ? null : (
-          <Badge variant="muted" mono title={namespace}>
+          <Badge variant="muted" mono tooltip={namespace}>
             {namespace}
           </Badge>
         ),

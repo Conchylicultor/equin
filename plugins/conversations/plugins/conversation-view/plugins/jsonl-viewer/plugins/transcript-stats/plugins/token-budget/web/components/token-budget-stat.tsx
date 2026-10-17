@@ -25,5 +25,5 @@ export function TokenBudgetStat() {
     `Across ${requests} request${requests === 1 ? "" : "s"} — the allowance re-anchors in full on each new one, so what is "left" is never a conversation total.`,
   ].join("\n");
 
-  return <StatBadge title={title}>{formatTokenCount(spent)} used</StatBadge>;
+  return <StatBadge tooltip={title}>{formatTokenCount(spent)} used</StatBadge>;
 }

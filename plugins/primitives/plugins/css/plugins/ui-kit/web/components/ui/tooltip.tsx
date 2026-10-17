@@ -1,12 +1,14 @@
 "use client";
 
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
+import type { ReactElement, ReactNode } from "react";
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
 import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/overlay-boundary/web";
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel";
+import { usePinOnClick } from "./use-pin-on-click";
 
 function TooltipProvider({
   delay = 0,
@@ -118,6 +120,115 @@ function TooltipCardContent({
         />
       </TooltipPrimitive.Positioner>
     </TooltipPrimitive.Portal>
+  );
+}
+
+export type TooltipSide = "top" | "right" | "bottom" | "left";
+
+/**
+ * The ONE way a control names itself on hover. Every interactive primitive
+ * (`Button`, `IconButton`, `Badge` and the chips built on it, `CopyButton`, …)
+ * takes these props and draws the themed tooltip from them — so a control can
+ * never fall back to the browser's native `title` bubble, which looks nothing
+ * like the rest of the app and appears after its own fixed delay.
+ *
+ * `title` is `never` rather than omitted: a primitive with an open passthrough
+ * (`Badge`'s index signature) would otherwise still accept it.
+ */
+export interface Tooltipped {
+  /**
+   * Shown on hover and focus. A plain string, or rich content (`<TooltipDoc>`,
+   * a `<Kbd>` shortcut). Empty (`undefined`, `null`, `false`, `""`) draws none.
+   */
+  tooltip?: ReactNode;
+  /** Which side of the control the tooltip opens on. Default "top". */
+  tooltipSide?: TooltipSide;
+  /** Never the native bubble — pass `tooltip`. */
+  title?: never;
+}
+
+/** Whether a `tooltip` value draws anything. */
+function hasTooltip(content: ReactNode): boolean {
+  return (
+    content !== undefined &&
+    content !== null &&
+    content !== false &&
+    content !== ""
+  );
+}
+
+export interface WithTooltipProps {
+  /**
+   * A short label (or a `TooltipDoc`). Something described in parts — a
+   * title with an id, chips, a footer — is a hover card
+   * (`overlay/hover-card`), which owns that layout and its width.
+   */
+  content: ReactNode;
+  side?: TooltipSide;
+  /**
+   * A click on the trigger pins the tooltip open (and a second click unpins
+   * it), on top of the usual hover. For a trigger whose tooltip IS its content
+   * — a status mark with nothing else to do on click — so the click that
+   * people try first shows it, and it stays up while they read. A click
+   * elsewhere or Esc closes it.
+   */
+  pinOnClick?: boolean;
+  children: ReactElement;
+}
+
+/**
+ * A plain-string tooltip is also stamped on the trigger as `data-tooltip` —
+ * the stable selector a test or e2e script uses where it once read `[title]`.
+ */
+function tooltipAttr(content: ReactNode) {
+  return typeof content === "string" ? content : undefined;
+}
+
+/**
+ * Puts a themed tooltip on any element. The primitives that take a
+ * {@link Tooltipped} `tooltip` prop draw theirs through this; reach for it
+ * directly only for an element that is not one of them. Empty `content`
+ * renders `children` alone.
+ */
+export function WithTooltip({
+  content,
+  side,
+  pinOnClick = false,
+  children,
+}: WithTooltipProps) {
+  if (!hasTooltip(content)) return children;
+  const body = (
+<TooltipContent side={side}>{content}</TooltipContent>
+  );
+  if (pinOnClick)
+    return (
+      <PinnableTooltip body={body} attr={tooltipAttr(content)}>
+        {children}
+      </PinnableTooltip>
+    );
+  return (
+    <Tooltip>
+      <TooltipTrigger render={children} data-tooltip={tooltipAttr(content)} />
+      {body}
+    </Tooltip>
+  );
+}
+
+function PinnableTooltip({
+  body,
+  attr,
+  children,
+}: {
+  body: ReactElement;
+  attr: string | undefined;
+  children: ReactElement;
+}) {
+  const pin = usePinOnClick();
+  return (
+    <Tooltip {...pin.root}>
+      <TooltipTrigger render={children} data-tooltip={attr} {...pin.trigger} />
+      {body}
+    </Tooltip>
   );
 }
 

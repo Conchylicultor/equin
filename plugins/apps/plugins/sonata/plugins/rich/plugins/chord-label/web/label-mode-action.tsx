@@ -2,7 +2,6 @@ import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import type { ChordDisplayMode } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { chordLabelConfig } from "../shared/config";
 
@@ -50,18 +49,15 @@ export function ChordLabelModeAction() {
   const next = LABEL_MODES[current.next];
 
   return (
-    <WithTooltip
-      content={`Chord labels: ${current.name} — click for ${next.name.toLowerCase()}`}
+    <Button
+      tooltip={`Chord labels: ${current.name} — click for ${next.name.toLowerCase()}`}
+      variant="ghost"
+      aspect="text"
+      aria-label={`Chord labels: ${current.name}`}
+      className="font-semibold tabular-nums"
+      onClick={() => setConfig("mode", current.next)}
     >
-      <Button
-        variant="ghost"
-        aspect="text"
-        aria-label={`Chord labels: ${current.name}`}
-        className="font-semibold tabular-nums"
-        onClick={() => setConfig("mode", current.next)}
-      >
-        {current.face}
-      </Button>
-    </WithTooltip>
+      {current.face}
+    </Button>
   );
 }

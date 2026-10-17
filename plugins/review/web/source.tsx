@@ -69,7 +69,7 @@ export function SourceTabs({
         <ToggleChip
           active={source.kind === "working"}
           onClick={() => onChange({ kind: "working" })}
-          title="Uncommitted changes vs. main"
+          tooltip="Uncommitted changes vs. main"
         >
           Working tree
         </ToggleChip>
@@ -81,7 +81,7 @@ export function SourceTabs({
               key={g.pushId}
               active={source.kind === "push" && source.pushId === g.pushId}
               onClick={() => onChange({ kind: "push", pushId: g.pushId })}
-              title={`${g.message} · ${formatDate(g.createdAt)}`}
+              tooltip={`${g.message} · ${formatDate(g.createdAt)}`}
             >
               <span className="max-w-[24ch] truncate">{g.message}</span>
               {g.count > 1 && (

@@ -15,7 +15,7 @@ export function CopyTextAction({
 }) {
   const { copy, copied } = useCopyToClipboard(text);
   return (
-    <RowActionButton title={title} onClick={copy}>
+    <RowActionButton tooltip={title} onClick={copy}>
       {copied ? (
         <Icon icon={checkIcon} className="size-3" />
       ) : (

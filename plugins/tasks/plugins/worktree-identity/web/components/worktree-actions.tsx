@@ -20,7 +20,7 @@ export function WorktreeActions() {
   return (
     <>
       {place.kind === "local" ? null : (
-        <CopyButton text={place.namespace} title="Copy namespace" />
+        <CopyButton text={place.namespace} tooltip="Copy namespace" />
       )}
       {task.kind === "linked" ? (
         <IconButton

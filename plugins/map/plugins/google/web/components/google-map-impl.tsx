@@ -412,7 +412,7 @@ function FitControl({
           <IconButton
             icon={fitIcon}
             label="Fit to the map's places"
-            side="left"
+            tooltipSide="left"
             disabled={map === null || overlays.length === 0}
             onClick={fit}
           />

@@ -55,7 +55,7 @@ export function ArtifactsButton() {
       // eslint-disable-next-line icon-button/prefer-icon-button -- placeholder for the icon+count button below; a square IconButton would resize the toolbar when the count settles
       <Button
         variant="ghost"
-        title={LABEL}
+        tooltip={LABEL}
         aria-label={LABEL}
         disabled
         className="gap-xs"
@@ -128,7 +128,7 @@ function ArtifactsReady({
       // eslint-disable-next-line icon-button/prefer-icon-button -- same control as the enabled form below, which carries a count beside its glyph
       <Button
         variant="ghost"
-        title={`${LABEL} — nothing yet`}
+        tooltip={`${LABEL} — nothing yet`}
         aria-label={LABEL}
         disabled
         className="gap-xs"
@@ -152,7 +152,7 @@ function ArtifactsReady({
           // The number is what the conversation MADE, so the tooltip says so
           // and splits it by kind — the panel underneath lists more than that,
           // and a reader comparing the two deserves the words.
-          title={
+          tooltip={
             madeKinds.length > 0
               ? `${LABEL} — made or changed: ${madeKinds
                   .map(({ kind, n }) => `${kind.label} ${n}`)

@@ -104,7 +104,7 @@ export function DraftActions({ id }: { id: string }): ReactElement {
         <Button
           variant="default"
           disabled={!canSave}
-          title={
+          tooltip={
             committedSource
               ? "This composition is committed source — edit core/config.ts and rebuild."
               : undefined

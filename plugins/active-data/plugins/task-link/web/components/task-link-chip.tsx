@@ -31,7 +31,7 @@ export function TaskLinkChip({
     loading: () => (
       <LinkChip
         activation={target}
-        title={taskId}
+        tooltip={taskId}
         leading={<StatusDot colorClass="bg-muted-foreground/40" />}
       >
         <span className="font-mono">{taskId}</span>
@@ -47,7 +47,7 @@ export function TaskLinkChip({
       return (
         <LinkChip
           activation={target}
-          title={task ? `${task.title} · ${taskId}` : taskId}
+          tooltip={task ? `${task.title} · ${taskId}` : taskId}
           leading={<StatusDot colorClass={statusClass} />}
         >
           {task?.title ?? <span className="font-mono">{taskId}</span>}

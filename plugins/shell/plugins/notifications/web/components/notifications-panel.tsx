@@ -179,7 +179,7 @@ function FilterChips({
             onClick={() => {
               onPick({ kind: "type", type: g.value });
             }}
-            title={`${g.count} ${g.value} notification${g.count === 1 ? "" : "s"}`}
+            tooltip={`${g.count} ${g.value} notification${g.count === 1 ? "" : "s"}`}
             data-type={g.value}
             // eslint-disable-next-line layout/no-adhoc-layout -- rigid chip in the horizontally-scrolling filter row
             className="shrink-0"

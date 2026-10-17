@@ -10,8 +10,8 @@
   - Uses:
     - `conversations/conversation-view.Conversation`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/ui-kit.WithTooltip`
     - `primitives/launch.LaunchControl`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:

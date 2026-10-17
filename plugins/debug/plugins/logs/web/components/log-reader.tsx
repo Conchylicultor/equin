@@ -237,7 +237,10 @@ function ReaderHeader({
               >
                 {entry.path}
               </Text>
-              <CopyButton text={`tail -f ${entry.path}`} title="Copy tail -f" />
+              <CopyButton
+                text={`tail -f ${entry.path}`}
+                tooltip="Copy tail -f"
+              />
             </Stack>
             <GenerationStrip entry={entry} />
           </>

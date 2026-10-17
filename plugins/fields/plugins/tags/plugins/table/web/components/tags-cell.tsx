@@ -20,7 +20,7 @@ export function TagsCell(props: TableCellProps): ReactNode {
             <Badge
               key={t}
               variant={option?.variant ?? "muted"}
-              title={option?.hint}
+              tooltip={option?.hint}
             >
               {option?.label ?? t}
             </Badge>

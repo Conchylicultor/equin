@@ -172,7 +172,7 @@ function RemoteDeploy({
         <Button
           className="w-fit"
           disabled={blocked !== null}
-          title={blocked ?? undefined}
+          tooltip={blocked ?? undefined}
           loading={deploy.isPending}
           onClick={() =>
             deploy.mutate({
@@ -213,7 +213,7 @@ function RemoteDeploy({
               <LinkChip
                 key={url}
                 mono
-                title={`Open ${url}`}
+                tooltip={`Open ${url}`}
                 activation={() => {
                   window.open(url, "_blank", "noopener");
                 }}
@@ -366,7 +366,7 @@ function Provenance({ info }: { info: ReleaseInfo }): ReactNode {
         <Badge variant="muted" mono>
           {manifest.platform}
         </Badge>
-        <Badge variant="muted" mono title={sha ?? undefined}>
+        <Badge variant="muted" mono tooltip={sha ?? undefined}>
           {sha ? shortSha(sha) : "no commit recorded"}
         </Badge>
         <Badge variant="muted">

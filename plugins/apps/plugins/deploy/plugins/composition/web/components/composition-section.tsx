@@ -97,7 +97,7 @@ function CompositionCard({
           <LinkChip
             mono
             leading={<Icon icon={layersIcon} />}
-            title={`Open “${item.name}” in Studio`}
+            tooltip={`Open “${item.name}” in Studio`}
             activation={appLink(
               compositionDetailRoute.link(studioApp, { id: item.id }),
             )}

@@ -51,7 +51,7 @@ export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
         variant="destructive"
         // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- same one-off offset and rigidity as the queued chip below
         className="ml-1 shrink-0"
-        title={`${label} is ${resolution.reason === "retired" ? "retired" : "not a model this machine knows"} — this task will not auto-start. Pick another model on the task, or click to cancel.`}
+        tooltip={`${label} is ${resolution.reason === "retired" ? "retired" : "not a model this machine knows"} — this task will not auto-start. Pick another model on the task, or click to cancel.`}
         aria-label={`Cancel auto-start (${label}, ${resolution.reason})`}
         onClick={(e: React.MouseEvent) => {
           e.stopPropagation();
@@ -68,7 +68,7 @@ export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
       variant="warning"
       // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- ml-1 one-off inline offset of the chip from its preceding label (no parent gap to lift into); shrink-0 keeps this rigid action chip whole inside the data-view item-actions flex cluster (owned by Row, not this file)
       className="ml-1 shrink-0 hover:bg-warning/20"
-      title="Auto-start when parent is done — click to cancel"
+      tooltip="Auto-start when parent is done — click to cancel"
       aria-label={`Cancel auto-start (${label})`}
       onClick={(e: React.MouseEvent) => {
         e.stopPropagation();

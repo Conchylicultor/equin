@@ -164,7 +164,7 @@ export function SizeChip({
             <Button
               variant={zoom === "fit" ? "secondary" : "outline"}
               aria-pressed={zoom === "fit"}
-              title="The whole frame visible at once"
+              tooltip="The whole frame visible at once"
               onClick={() => dispatch({ type: "setZoom", zoom: "fit" })}
             >
               Fit
@@ -187,7 +187,7 @@ export function SizeChip({
               variant={zoom === 1 ? "secondary" : "outline"}
               aria-pressed={zoom === 1}
               aria-label="Actual size"
-              title="Actual size"
+              tooltip="Actual size"
               className="w-14 tabular-nums"
               onClick={() => dispatch({ type: "setZoom", zoom: 1 })}
             >

@@ -47,7 +47,7 @@ export function RangeBar({
         active={compare}
         variant="tinted"
         onClick={() => onCompare(!compare)}
-        title="Draw the previous period as a dashed line"
+        tooltip="Draw the previous period as a dashed line"
       >
         Compare to previous
       </ToggleChip>

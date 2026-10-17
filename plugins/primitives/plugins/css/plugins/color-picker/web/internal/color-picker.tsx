@@ -1,6 +1,7 @@
 import {
   cn,
   ControlSizeProvider,
+  WithTooltip,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -13,7 +14,6 @@ import {
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {

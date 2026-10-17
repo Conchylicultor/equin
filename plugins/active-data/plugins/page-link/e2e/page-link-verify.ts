@@ -43,10 +43,10 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(waitMs);
   await snap(page, OUT, "1-conversation");
 
-  // The chip is the only element carrying the id in its `title` (the raw text
+  // The chip is the only element carrying the id in its `data-tooltip` (the raw text
   // fallback carries none), so a hit here IS the chip.
   async function chipFor(id: string) {
-    const chips = page.locator(`button[title*="${id}"]`);
+    const chips = page.locator(`button[data-tooltip*="${id}"]`);
     // Polled, not `waitFor`: an absent chip is the outcome the next line
     // ASSERTS on, so it must not arrive as a thrown timeout. The content-block
     // lookup is a fetch, so the chip can appear a beat after first paint.
@@ -58,13 +58,13 @@ await withBrowser(async (h) => {
 
   async function verify(kind: string, id: string, expectedPath: string) {
     const chip = await chipFor(id);
-    const count = await page.locator(`button[title*="${id}"]`).count();
+    const count = await page.locator(`button[data-tooltip*="${id}"]`).count();
     r.ok(`${kind}: chip rendered for ${id}`, count > 0);
     if (count === 0) return;
 
     const label = (await chip.innerText()).trim();
     r.note(
-      `${kind}: label="${label}" title="${await chip.getAttribute("title")}"`,
+      `${kind}: label="${label}" tooltip="${await chip.getAttribute("data-tooltip")}"`,
     );
     r.ok(
       `${kind}: chip is labelled, not the raw id`,

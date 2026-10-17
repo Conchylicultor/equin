@@ -1,6 +1,6 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";

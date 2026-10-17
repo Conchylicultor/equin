@@ -49,7 +49,7 @@ export function outcomeChip(candidate: AlignmentCandidate): Chip {
 
 export function ChipBadge({ chip }: { chip: Chip }) {
   return (
-    <Badge variant={chip.variant} shape="pill" title={chip.title}>
+    <Badge variant={chip.variant} shape="pill" tooltip={chip.title}>
       {chip.label}
     </Badge>
   );

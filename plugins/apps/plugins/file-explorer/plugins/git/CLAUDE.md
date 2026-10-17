@@ -48,6 +48,7 @@ missing column). Plan: `research/2026-10-02-apps-file-explorer-git-and-code-expl
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/ui-kit.WithTooltip`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceError`
     - `primitives/live-state.ResourceResult`

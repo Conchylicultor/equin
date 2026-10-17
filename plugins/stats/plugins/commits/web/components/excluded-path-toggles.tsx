@@ -39,7 +39,7 @@ export function ExcludedPathToggles({ dense = false }: ExcludedPathTogglesProps)
               );
               setConfig("excludedPaths", updated);
             }}
-            title={
+            tooltip={
               item.enabled
                 ? `Excluding ${item.path} — click to include`
                 : `Including ${item.path} — click to exclude`

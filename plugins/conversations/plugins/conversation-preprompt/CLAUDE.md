@@ -54,9 +54,9 @@ never the reverse) and the feature fully opt-in and removable.
     - `primitives/css/inline.Inline`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.WithTooltip`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/overlay/tooltip.WithTooltip`
   - Exports (values): `useConversationPreprompt`
 - Server:
   - Contributes:

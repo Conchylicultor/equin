@@ -112,7 +112,7 @@ function LogLines({ lines }: { lines: ReleaseLogLine[] }): ReactElement {
         <ControlSizeProvider size="xs">
           <CopyButton
             text={lines.map((l) => l.text).join("\n")}
-            title="Copy logs"
+            tooltip="Copy logs"
           />
         </ControlSizeProvider>
       </Line>

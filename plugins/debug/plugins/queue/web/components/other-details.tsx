@@ -104,7 +104,7 @@ export function EmissionDetail({
             {emission.matchedTriggerIds.map((id) => {
               const trigger = byId.get(id);
               return (
-                <Badge key={id} mono title={id}>
+                <Badge key={id} mono tooltip={id}>
                   {trigger === undefined ? id : `${id} → ${trigger.jobName}`}
                 </Badge>
               );

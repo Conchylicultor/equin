@@ -61,7 +61,7 @@ export function BranchButtons({
         <Button
           variant="ghost"
           className="text-subtle-foreground"
-          title="Branch conversation"
+          tooltip="Branch conversation"
           aria-label="Branch conversation"
         >
           <Icon icon={callSplitIcon} />

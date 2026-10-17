@@ -293,7 +293,7 @@ function MenuRowTrailParts({ shortcut, action }: MenuRowTrailProps) {
               aspect="icon"
               tabIndex={-1}
               aria-label={action.label}
-              title={action.label}
+              tooltip={action.label}
               data-slot="dropdown-menu-item-action"
               // `transition-colors`, not the Button's `transition-all`: that
               // also animates `visibility`, which kept the action showing on

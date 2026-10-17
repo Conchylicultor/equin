@@ -302,7 +302,9 @@ function PlayInGrid({
                   ? `${name} (original key)`
                   : `${name} (${formatOffset(offset)} st)`
               }
-              title={isOriginal ? "Original key" : `${formatOffset(offset)} st`}
+              tooltip={
+                isOriginal ? "Original key" : `${formatOffset(offset)} st`
+              }
               active={offset === semitones}
               variant="ghost"
               disabled={disabled}

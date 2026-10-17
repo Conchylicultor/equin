@@ -172,9 +172,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSourceActions` "delete" → `SourceDeleteAction`
   - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/events/events-core` ×7
+    - `primitives/css/ui-kit` ×5
     - `primitives/data-view` ×5
     - `primitives/pane` ×5
-    - `primitives/css/ui-kit` ×4
     - `apps/events/shell.Events`
     - `config_v2/fields.FieldRenderer`
     - `infra/endpoints.getEndpointErrorMessage`
@@ -191,7 +191,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.matchResource`
     - `primitives/overlay/imperative-dialog.openDialog`
-    - `primitives/overlay/tooltip.WithTooltip`
     - `ui/icons.Icon`
   - Exports (types):
     - `ConfigValues`

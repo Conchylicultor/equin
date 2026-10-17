@@ -10,12 +10,11 @@
   - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/text-editor/paste-images` ×5
     - `primitives/live-state` ×4
+    - `primitives/css/ui-kit` ×3
     - `tasks/task-detail` ×3
     - `network/live` ×2
     - `primitives/css/text` ×2
-    - `primitives/css/ui-kit` ×2
     - `primitives/hover-reveal` ×2
-    - `primitives/overlay/tooltip` ×2
     - `tasks/launch-options` ×2
     - `tasks` ×2
     - `infra/endpoints.fetchEndpoint`
@@ -26,6 +25,7 @@
     - `primitives/inline-text.InlineText`
     - `primitives/launch.LaunchControl`
     - `primitives/loading.Loading`
+    - `primitives/overlay/tooltip.TooltipDoc`
     - `primitives/text-editor.TextEditor`
 - Cross-plugin:
   - Uses tokens:

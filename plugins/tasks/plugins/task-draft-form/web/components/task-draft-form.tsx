@@ -12,7 +12,6 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   Kbd,
   TooltipDoc,
-  WithTooltip,
 } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { TaskDraftCard } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
@@ -297,24 +296,21 @@ export function TaskDraftForm({
       </SortableList>
 
       <Line className="gap-sm">
-        <WithTooltip
-          content={
+        <Button
+          tooltip={
             <TooltipDoc title="Follow-up task">
               Draft another task below this one, created together with it. It
               runs after the task above it; unlink them to run in parallel.
             </TooltipDoc>
           }
-        >
-          <Button
-            variant="ghost"
+          variant="ghost"
             onClick={appendChainCard}
             loading={submitting}
             className="text-muted-foreground"
           >
             <Icon icon={addIcon} className="size-3.5" />
             Follow-up task
-          </Button>
-        </WithTooltip>
+        </Button>
         {/* Empty grow cell: it absorbs the slack so Cancel/Create sit flush-right. */}
         <Fill />
         <Button variant="ghost" onClick={onCancel} loading={submitting}>

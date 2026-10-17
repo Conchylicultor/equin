@@ -106,7 +106,7 @@ export function HoldBadge({ hold }: { hold: HoldClass }) {
 
 export function JobBadge({ name }: { name: string }) {
   return (
-    <Badge variant="muted" mono title={name}>
+    <Badge variant="muted" mono tooltip={name}>
       {name}
     </Badge>
   );

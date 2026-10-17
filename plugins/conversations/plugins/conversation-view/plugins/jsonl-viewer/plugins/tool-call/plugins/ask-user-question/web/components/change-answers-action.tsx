@@ -87,7 +87,7 @@ function ChangeAnswersMenuFor({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <RowActionButton title="Change answers">
+          <RowActionButton tooltip="Change answers">
             <Icon icon={historyIcon} className="size-3" />
           </RowActionButton>
         }

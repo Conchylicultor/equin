@@ -34,7 +34,7 @@ export function AttemptSwitchButton() {
         // eslint-disable-next-line icon-button/prefer-icon-button -- placeholder for the icon+count button below; a square IconButton would resize the toolbar when the count settles
         <Button
           variant={isOpen ? "secondary" : "ghost"}
-          title={isOpen ? "Close attempt view" : "Open attempt view"}
+          tooltip={isOpen ? "Close attempt view" : "Open attempt view"}
           aria-label={isOpen ? "Close attempt view" : "Open attempt view"}
           aria-pressed={isOpen}
           onClick={toggle}
@@ -51,7 +51,7 @@ export function AttemptSwitchButton() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      title={isOpen ? "Close attempt view" : "Open attempt view"}
+      tooltip={isOpen ? "Close attempt view" : "Open attempt view"}
       aria-label={isOpen ? "Close attempt view" : "Open attempt view"}
       aria-pressed={isOpen}
       onClick={toggle}

@@ -156,7 +156,7 @@ export function TaskCard({
           variant="ghost"
           onClick={onCreate}
           disabled={disabled}
-          title="Create task"
+          tooltip="Create task"
         >
           {creating ? "Creating…" : "Create"}
         </Button>
@@ -258,7 +258,7 @@ function TaskChip({ taskId }: { taskId: string }) {
     <LinkChip
       activation={openPane.to(taskDetailPane, { taskId }, { mode: "push" })}
       leading={<span className="text-muted-foreground">✓</span>}
-      title={title}
+      tooltip={title}
     >
       {title}
     </LinkChip>
