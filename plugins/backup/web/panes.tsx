@@ -48,7 +48,7 @@ function useResolveBackupRun({ runId }: { runId: string }): ResolveResult {
 
 function BackupBody(): ReactElement {
   // Which row is OPEN is this pane's own knowledge and nothing else can supply
-  // it. Where a row GOES is not: that belongs to the arm's `Runs.Kind.open`,
+  // it. Where a row GOES is not: that belongs to the arm's `runLinks`,
   // which pushes the detail pane from whichever surface the row was clicked in.
   const selectedRunId = backupRunPane.useRouteEntry()?.params.runId;
 

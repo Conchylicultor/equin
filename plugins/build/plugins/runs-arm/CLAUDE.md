@@ -102,10 +102,10 @@ quiet absence of a predicate.
 
 ## Plugin reference
 
-- Description: The build arm's presence on the merged run surface: the Build kind (whose rows open the existing build run-detail pane), the six-way build status dot as the list row's leading indicator, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the six-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
+- Description: The build arm's presence on the merged run surface: its rows' link into the existing build run-detail pane, the six-way build status dot as the list row's leading indicator, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the six-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
 - Web:
   - Contributes:
-    - `Runs.Kind` "build"
+    - `DataViewSlots.CollectionRowActivation` "runs:open"
     - `Runs.Leading` → `BuildRunLeading`
     - `FieldPresentation.Register` "arm:runs:build"
     - `DataViewSlots.CollectionItemAction` "runs:investigate:build" → `CollectionInvestigate`
@@ -116,13 +116,14 @@ quiet absence of a predicate.
     - `network/live.FieldPresentation`
     - `primitives/css/badge.Badge`
     - `runs.investigateRuns`
+    - `runs.runLinks`
     - `runs.Runs`
 - Server:
   - Uses:
     - `build/run-ledger._buildRuns`
     - `database/sql-projection.parsed`
-    - `runs.defineRunKind`
-  - Register: `defineRunKind('build')`
+    - `runs.runsServed`
+  - Register: `serveArm('runs:build')`
 - Core:
   - Uses:
     - `build/build-status.BUILD_STATUS_OPTIONS_META`

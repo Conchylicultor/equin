@@ -2,7 +2,7 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { eq, sql } from "drizzle-orm";
 import { expr } from "@plugins/infra/plugins/query-resource/core";
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
-import { defineRunKind } from "@plugins/runs/server";
+import { runsServed } from "@plugins/runs/server";
 import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";
 import { _releaseRuns } from "@plugins/release/server";
 import { releaseRunArm } from "../../core";
@@ -19,8 +19,7 @@ import { releaseOutcomeExpr } from "./outcome-sql";
  *   started it — it is `release.kind`, where it is exactly itself.
  * - `message` is `error`, the run's own words about the failure, verbatim.
  */
-export const releaseRunKind = defineRunKind({
-  columns: releaseRunArm,
+export const releaseRunKind = runsServed.arm(releaseRunArm, {
   from: _releaseRuns,
   id: _releaseRuns.id,
   base: (j) => ({

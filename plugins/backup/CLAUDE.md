@@ -215,7 +215,7 @@ row with a rising count and a new source starting to fail mints its own.
 - Shared:
   - Exports (values): `runBackup`
 - Sub-plugins:
-  - **`runs-arm`** — The backup arm's presence on the merged run surface: the kind's label, its rows' activation into the backup run-detail pane, its four scalar columns (native status, archive size, source and target…
+  - **`runs-arm`** — The backup arm's presence on the merged run surface: its rows' link into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real…
   - **`sources`** — Umbrella for pluggable backup sources, each a self-gating sub-plugin contributing a BackupSource.
     - Plugins:
       - **`attachments`** — Config UI for the attachments backup source. Backs up file attachments into the backup archive.

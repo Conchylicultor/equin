@@ -1,5 +1,5 @@
 /**
- * `defineRunKind`'s bindings are typed by value (T9): a column ref binds a
+ * An arm's bindings (`runsServed.arm`) are typed by value (T9): a column ref binds a
  * field only when the column reads as that field's type — its data type and
  * its nullability — so a wrong-typed column is a tsc error at the arm, not a
  * row the browser's parse refuses. The `@ts-expect-error` lines ARE the test:
@@ -15,7 +15,7 @@ import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { expr } from "@plugins/infra/plugins/query-resource/core";
 import { liveArm } from "@plugins/network/plugins/live/core";
 import { runs } from "../../core";
-import { defineRunKind } from "./registry";
+import { runsServed } from "./served";
 
 const ledger = pgTable("rt_type_runs", {
   id: text("id").primaryKey(),
@@ -41,10 +41,9 @@ const outcome = expr(sql`'succeeded'`, {
   notNull: true,
 });
 
-describe("defineRunKind — bindings typed by value", () => {
+describe("runsServed.arm — bindings typed by value", () => {
   test("a column of the field's type binds; one of another type does not compile", () => {
-    const ok = defineRunKind({
-      columns,
+    const ok = runsServed.arm(columns, {
       from: ledger,
       id: ledger.id,
       base: (j) => ({
@@ -60,8 +59,7 @@ describe("defineRunKind — bindings typed by value", () => {
     });
     expect(ok.kind).toBe("typecheck");
 
-    defineRunKind({
-      columns,
+    runsServed.arm(columns, {
       from: ledger,
       id: ledger.id,
       base: (j) => ({
@@ -87,8 +85,7 @@ describe("defineRunKind — bindings typed by value", () => {
   });
 
   test("a nullable column cannot bind a NOT NULL field", () => {
-    defineRunKind({
-      columns,
+    runsServed.arm(columns, {
       from: ledger,
       id: ledger.id,
       base: (j) => ({
@@ -101,6 +98,44 @@ describe("defineRunKind — bindings typed by value", () => {
         finishedAt: j.base.finishedAt,
         namespace: null,
         message: null,
+      }),
+      extra: (j) => ({ code: j.base.code, note: j.base.note }),
+    });
+  });
+
+  test("the union's derived fields are never an arm's, and what they read is a column", () => {
+    runsServed.arm(columns, {
+      from: ledger,
+      id: ledger.id,
+      base: (j) => ({
+        label: j.base.title,
+        outcome,
+        trigger: null,
+        // @ts-expect-error `duration` is derived from `startedAt` / `finishedAt`, so it must be a column
+        startedAt: expr(sql`now()`, {
+          decoder: () => new Date(),
+          sqlType: "timestamptz",
+          notNull: true,
+        }),
+        finishedAt: j.base.finishedAt,
+        namespace: null,
+        message: null,
+      }),
+      extra: (j) => ({ code: j.base.code, note: j.base.note }),
+    });
+    runsServed.arm(columns, {
+      from: ledger,
+      id: ledger.id,
+      base: (j) => ({
+        label: j.base.title,
+        outcome,
+        trigger: null,
+        startedAt: j.base.startedAt,
+        finishedAt: j.base.finishedAt,
+        namespace: null,
+        message: null,
+        // @ts-expect-error the union derives `duration` (and `id`): an arm binding one is refused
+        duration: null,
       }),
       extra: (j) => ({ code: j.base.code, note: j.base.note }),
     });

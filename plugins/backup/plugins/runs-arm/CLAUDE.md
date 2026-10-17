@@ -146,10 +146,10 @@ compiler — a real follow-up, and a bigger change than it looks.
 
 ## Plugin reference
 
-- Description: The backup arm's presence on the merged run surface: the kind's label, its rows' activation into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the three detail sections — the archive's size on one line, the manifest's source reports, and the per-target outcome with its Grant access remediation. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup covers the machine, not a checkout — the table's own namespace column is the in-flight index's scope discriminator, not a fact about the run) and for message (a backup's failure words are per-target).
+- Description: The backup arm's presence on the merged run surface: its rows' link into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the three detail sections — the archive's size on one line, the manifest's source reports, and the per-target outcome with its Grant access remediation. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup covers the machine, not a checkout — the table's own namespace column is the in-flight index's scope discriminator, not a fact about the run) and for message (a backup's failure words are per-target).
 - Web:
   - Contributes:
-    - `Runs.Kind` "backup"
+    - `DataViewSlots.CollectionRowActivation` "runs:open"
     - `FieldPresentation.Register` "arm:runs:backup"
     - `DataViewSlots.CollectionItemAction` "runs:investigate:backup" → `CollectionInvestigate`
     - `BackupRunDetail.Section` "Archive"
@@ -167,15 +167,15 @@ compiler — a real follow-up, and a bigger change than it looks.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `runs.investigateRuns`
-    - `runs.Runs`
+    - `runs.runLinks`
     - `ui/icons.Icon`
 - Server:
   - Uses:
     - `backup._backupRuns`
     - `database/sql-projection.nullable`
     - `database/sql-projection.parsed`
-    - `runs.defineRunKind`
-  - Register: `defineRunKind('backup')`
+    - `runs.runsServed`
+  - Register: `serveArm('runs:backup')`
 - Core:
   - Uses:
     - `backup.BACKUP_RUN_KIND`

@@ -6,7 +6,7 @@ import {
   parsed,
 } from "@plugins/database/plugins/sql-projection/server";
 import { _backupRuns } from "@plugins/backup/server";
-import { defineRunKind } from "@plugins/runs/server";
+import { runsServed } from "@plugins/runs/server";
 import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";
 import {
   BACKUP_RUN_STATUSES,
@@ -76,8 +76,7 @@ function sourceCountExpr(manifest: unknown): SQL {
  * `finished_at`, `status`, `archive_size_bytes`, `manifest`, `target_results`
  * — so a `pid` write routes nowhere.
  */
-export const backupRunKind = defineRunKind({
-  columns: backupRunArm,
+export const backupRunKind = runsServed.arm(backupRunArm, {
   from: _backupRuns,
   id: _backupRuns.id,
   base: (j) => ({

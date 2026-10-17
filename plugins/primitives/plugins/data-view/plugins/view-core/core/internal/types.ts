@@ -77,7 +77,7 @@ export interface ViewConfigRow {
  * One data source a view surface can bind its instances to. The engine treats
  * `id` as an **opaque lookup key** matched against `ViewConfigRow.source`
  * (`undefined` = the implicit sole source — the single-source case) — it never
- * knows what a source renders; the consumer (e.g. data-view's `MergedDataView`)
+ * knows what a source renders; the consumer (e.g. data-view's `DataViewSwitcher`)
  * owns that. Each entry carries the per-source capability surface that used to
  * be the flat `(contributions, viewOptions)` pair.
  */

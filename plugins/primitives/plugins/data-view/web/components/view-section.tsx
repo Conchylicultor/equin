@@ -296,7 +296,7 @@ function SectionRootPanel(props: {
  * "Add section": one row per view type the surface can add — the same
  * `availableSources` the switcher's `+` menu lists. Rows, not
  * `AddViewMenuItems`: those are dropdown-menu items, and this is a panel page.
- * A sections surface is single-source (`MergedDataView` cannot take the
+ * A sections surface is single-source (`DataViewSwitcher` cannot take the
  * chrome), so the sources flatten without group labels.
  */
 function AddSectionPanel(props: {

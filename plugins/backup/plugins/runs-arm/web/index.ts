@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Runs, investigateRuns } from "@plugins/runs/web";
+import { investigateRuns, runLinks } from "@plugins/runs/web";
 import { BACKUP_CATEGORY_ID } from "@plugins/backup/core";
 import { BackupRunDetail, backupRunPane } from "@plugins/backup/web";
 import { backupRunArm } from "../core";
@@ -20,13 +20,11 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
-    "The backup arm's presence on the merged run surface: the kind's label, its rows' activation into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the three detail sections — the archive's size on one line, the manifest's source reports, and the per-target outcome with its Grant access remediation.",
+    "The backup arm's presence on the merged run surface: its rows' link into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the three detail sections — the archive's size on one line, the manifest's source reports, and the per-target outcome with its Grant access remediation.",
   contributions: [
-    Runs.Kind({
-      arm: backupRunArm,
-      link: (run, { openPane }) =>
-        openPane.to(backupRunPane, { runId: run.id }, { mode: "push" }),
-    }),
+    runLinks(backupRunArm, (run, { openPane }) =>
+      openPane.to(backupRunPane, { runId: run.id }, { mode: "push" }),
+    ),
     // Its fields' cells; the fields — under their "Backup" band — are the
     // arm's (`backupRunArm`, core).
     backupRunPresentation,

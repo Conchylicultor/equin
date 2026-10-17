@@ -14,8 +14,8 @@ import { IdKinds } from "@plugins/ids/web";
 import { presetIdKind, filterNodeIdKind } from "../core";
 
 export { DataView } from "./components/data-view";
-export { MergedDataView } from "./components/merged-data-view";
-export type { MergedDataViewProps } from "./components/merged-data-view";
+export { DataViewSwitcher } from "./components/data-view-switcher";
+export type { DataViewSwitcherProps } from "./components/data-view-switcher";
 export { defineDataViewSources } from "./internal/define-data-view-sources";
 export type {
   DataViewSources,
@@ -61,6 +61,7 @@ export type {
   GlobalRowOrderContribution,
   CollectionItemActionContribution,
   CollectionItemActionOwner,
+  CollectionRowActivationContribution,
 } from "./slots";
 export { getDataViewDescriptor } from "./internal/descriptors";
 export { useDataViewControls } from "./components/controls/controls-context";

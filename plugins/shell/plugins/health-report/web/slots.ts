@@ -7,7 +7,7 @@ import type { HealthReportRow } from "../core";
  * A PLAIN `defineSlot`, not a render slot, on purpose: the report owns the row
  * order (info rows first, then status rows worst-first, ties by `order`), so
  * reorder middleware would only fight it, and a render slot would owe a reorder
- * config for an order no user curates. Precedent: `Runs.Kind`.
+ * config for an order no user curates. Precedent: `DataViewSlots.Control`.
  *
  * ```ts
  * HealthReport.Row({

@@ -2123,10 +2123,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)
           - Plugins:
-            - **`runs-arm`** — The deploy arm's presence on the merged run surface: the Deploy kind (whose rows open the deployment detail pane on the server the run went to), and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
+            - **`runs-arm`** — The deploy arm's presence on the merged run surface: its rows' link into the deployment detail pane on the server the run went to, and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
               - Web:
                 - Contributes:
-                  - `Runs.Kind` "deploy"
+                  - `DataViewSlots.CollectionRowActivation` "runs:open"
                   - `FieldPresentation.Register` "arm:runs:deploy"
                   - `DataViewSlots.CollectionItemAction` "runs:investigate:deploy" → `CollectionInvestigate`
                 - Uses:
@@ -2134,14 +2134,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.FieldPresentation`
                   - `primitives/css/badge.Badge`
                   - `runs.investigateRuns`
-                  - `runs.Runs`
+                  - `runs.runLinks`
               - Server:
                 - Uses:
                   - `apps/deploy/deployments._deployRuns`
                   - `apps/deploy/servers._deployServers`
                   - `database/sql-projection.parsed`
-                  - `runs.defineRunKind`
-                - Register: `defineRunKind('deploy')`
+                  - `runs.runsServed`
+                - Register: `serveArm('runs:deploy')`
               - Core:
                 - Uses:
                   - `apps/deploy/deployments.DeployPhaseSchema`
@@ -10711,10 +10711,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Shared:
     - Exports (values): `runBackup`
   - Plugins:
-    - **`runs-arm`** — The backup arm's presence on the merged run surface: the kind's label, its rows' activation into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the three detail sections — the archive's size on one line, the manifest's source reports, and the per-target outcome with its Grant access remediation. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup covers the machine, not a checkout — the table's own namespace column is the in-flight index's scope discriminator, not a fact about the run) and for message (a backup's failure words are per-target).
+    - **`runs-arm`** — The backup arm's presence on the merged run surface: its rows' link into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the three detail sections — the archive's size on one line, the manifest's source reports, and the per-target outcome with its Grant access remediation. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup covers the machine, not a checkout — the table's own namespace column is the in-flight index's scope discriminator, not a fact about the run) and for message (a backup's failure words are per-target).
       - Web:
         - Contributes:
-          - `Runs.Kind` "backup"
+          - `DataViewSlots.CollectionRowActivation` "runs:open"
           - `FieldPresentation.Register` "arm:runs:backup"
           - `DataViewSlots.CollectionItemAction` "runs:investigate:backup" → `CollectionInvestigate`
           - `BackupRunDetail.Section` "Archive"
@@ -10732,15 +10732,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `runs.investigateRuns`
-          - `runs.Runs`
+          - `runs.runLinks`
           - `ui/icons.Icon`
       - Server:
         - Uses:
           - `backup._backupRuns`
           - `database/sql-projection.nullable`
           - `database/sql-projection.parsed`
-          - `runs.defineRunKind`
-        - Register: `defineRunKind('backup')`
+          - `runs.runsServed`
+        - Register: `serveArm('runs:backup')`
       - Core:
         - Uses:
           - `backup.BACKUP_RUN_KIND`
@@ -11420,10 +11420,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build`
           - `build/build-commits`
           - `build/runs-arm`
-    - **`runs-arm`** — The build arm's presence on the merged run surface: the Build kind (whose rows open the existing build run-detail pane), the six-way build status dot as the list row's leading indicator, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the six-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
+    - **`runs-arm`** — The build arm's presence on the merged run surface: its rows' link into the existing build run-detail pane, the six-way build status dot as the list row's leading indicator, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the six-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
       - Web:
         - Contributes:
-          - `Runs.Kind` "build"
+          - `DataViewSlots.CollectionRowActivation` "runs:open"
           - `Runs.Leading` → `BuildRunLeading`
           - `FieldPresentation.Register` "arm:runs:build"
           - `DataViewSlots.CollectionItemAction` "runs:investigate:build" → `CollectionInvestigate`
@@ -11434,13 +11434,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.FieldPresentation`
           - `primitives/css/badge.Badge`
           - `runs.investigateRuns`
+          - `runs.runLinks`
           - `runs.Runs`
       - Server:
         - Uses:
           - `build/run-ledger._buildRuns`
           - `database/sql-projection.parsed`
-          - `runs.defineRunKind`
-        - Register: `defineRunKind('build')`
+          - `runs.runsServed`
+        - Register: `serveArm('runs:build')`
       - Core:
         - Uses:
           - `build/build-status.BUILD_STATUS_OPTIONS_META`
@@ -16265,9 +16266,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
               - `primitives/css/ui-kit.Separator`
+              - `primitives/data-view.DataViewSwitcher`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineDataViewSources`
-              - `primitives/data-view.MergedDataView`
               - `tasks/task-title.useTaskShortTitle`
             - Exports (types): `ConversationSidebarProps`
             - Exports (values):
@@ -28708,6 +28709,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServeAllCollectionOptions`
           - `ServeCollectionOptions`
           - `ServedAllCollection`
+          - `ServedArm`
           - `ServedCollection`
           - `ServedExternalQueryValue`
           - `ServedExternalValue`
@@ -28715,6 +28717,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServedPagedValue`
           - `ServedScopedColumns`
           - `ServedSilentPagedValue`
+          - `ServedUnion`
           - `ServedValue`
           - `ServePagedValueOptions`
           - `ServeUnionOptions`
@@ -28722,6 +28725,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UnionArmBinding`
           - `UnionArmColumns`
           - `UnionArmRefs`
+          - `UnionDerived`
           - `UnionFieldBinding`
         - Exports (values):
           - `compileCollection`
@@ -35644,18 +35648,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Setting`
           - `DataViewSlots.Control`
           - `DataViewSlots.CollectionItemAction`
+          - `DataViewSlots.CollectionRowActivation`
           - `DataViewSlots.Cell`
           - `DataViewSlots.CellEditor`
           - `DataViewSlots.Filter`
           - `DataViewSlots.ValueCodec`
           - `DataViewSlots.Grouping`
           - `DataViewSlots.ColumnConfig`
-        - Slot contributors: 46 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Slot contributors: 50 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `DataViewSlots.Cell` ×10
           - `DataViewSlots.Filter` ×7
           - `DataViewSlots.CellEditor` ×6
           - `DataViewSlots.CollectionItemAction` ×6
           - `DataViewSlots.View` ×5
+          - `DataViewSlots.CollectionRowActivation` ×4
           - `DataViewSlots.Grouping` ×3
           - `DataViewSlots.ValueCodec` ×3
           - `DataViewSlots.Setting` ×2
@@ -35717,6 +35723,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CellEditorProps`
           - `CollectionItemActionContribution`
           - `CollectionItemActionOwner`
+          - `CollectionRowActivationContribution`
           - `ColumnConfigDerive`
           - `ColumnConfigProps`
           - `CreateOption`
@@ -35740,6 +35747,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSourceContribution`
           - `DataViewSourceProps`
           - `DataViewSources`
+          - `DataViewSwitcherProps`
           - `DataViewViewportSink`
           - `FieldCellProps`
           - `FieldDef`
@@ -35785,7 +35793,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LivePagesPaging`
           - `LoweredFilter`
           - `ManualOrderConfig`
-          - `MergedDataViewProps`
           - `PartitionOptions`
           - `ProjectedRow`
           - `RowTone`
@@ -35804,6 +35811,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataView`
           - `DataViewGroupHeader`
           - `DataViewSlots`
+          - `DataViewSwitcher`
           - `defineDataView`
           - `defineDataViewSources`
           - `defineItemActions`
@@ -35822,7 +35830,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `leadingSlot`
           - `liveDataSource`
           - `makeSortComparator`
-          - `MergedDataView`
           - `MissingDataCellError`
           - `partitionIntoSections`
           - `pickLeadingField`
@@ -40885,10 +40892,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/deployments`
           - `release`
-    - **`runs-arm`** — The release arm's presence on the merged run surface: the Release kind (whose rows open the Studio release run-detail pane), plus the composition / target / platform / provenance columns only a release row has. The release arm of the merged run space: binds `release_runs` into the runs union, mapping its own three-way status onto the shared outcome axis through a typed-total record, and contributing the composition / target / platform / provenance columns only a release row has — `release.kind` namespaced so the ledger's own kind column cannot shadow the run-kind discriminator.
+    - **`runs-arm`** — The release arm's presence on the merged run surface: its rows' link into the Studio release run-detail pane, plus the composition / target / platform / provenance columns only a release row has. The release arm of the merged run space: binds `release_runs` into the runs union, mapping its own three-way status onto the shared outcome axis through a typed-total record, and contributing the composition / target / platform / provenance columns only a release row has — `release.kind` namespaced so the ledger's own kind column cannot shadow the run-kind discriminator.
       - Web:
         - Contributes:
-          - `Runs.Kind` "release"
+          - `DataViewSlots.CollectionRowActivation` "runs:open"
           - `FieldPresentation.Register` "arm:runs:release"
           - `DataViewSlots.CollectionItemAction` "runs:investigate:release" → `CollectionInvestigate`
         - Uses:
@@ -40896,13 +40903,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.FieldPresentation`
           - `primitives/css/badge.Badge`
           - `runs.investigateRuns`
-          - `runs.Runs`
+          - `runs.runLinks`
       - Server:
         - Uses:
           - `database/sql-projection.parsed`
           - `release._releaseRuns`
-          - `runs.defineRunKind`
-        - Register: `defineRunKind('release')`
+          - `runs.runsServed`
+        - Register: `serveArm('runs:release')`
       - Core:
         - Uses:
           - `fields.FieldOptionMeta`
@@ -41937,29 +41944,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
 
-- **`runs`** — The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields derived from the collection and presented once, plus every arm's own fields, derived from its liveArm, each bound to its column), and the two seams an arm reaches it through (Runs.Kind for the arm itself — its kind and label — plus row activation, and Runs.Leading for the list row's status glyph); an arm presents its fields' cells with FieldPresentation.Register({ owner: arm }). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair) and <RunDuration> (finished duration, or a running run's ticking elapsed time). The run-kind registry and the merged run space as ONE routed union window: defineRunKind binds a domain's own ledger into the `runs` collection as an arm (base fields typed against the row, its own fields against its liveArm; id and duration derived), and serveUnionCollection serves the window, its `:rows` point read (useRun) and `:groups` from every registered arm — a write to one ledger refills only the rows it changed. Names no run kind.
+- **`runs`** — The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields derived from the collection and presented once, plus every arm's own fields, derived from its liveArm, each bound to its column), and the seams an arm reaches it through: runLinks (where its rows go — data-view's CollectionRowActivation over the arm), investigateRuns, and Runs.Leading for the list row's status glyph; the kind filter's options are the registered arms, derived by every list; an arm presents its fields' cells with FieldPresentation.Register({ owner: arm }). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair) and <RunDuration> (finished duration, or a running run's ticking elapsed time). The merged run space as ONE routed union window (a Meta-DataView): runsServed serves the `runs` collection's window, its `:rows` point read (useRun) and `:groups` from every arm bound through runsServed.arm — a domain's own ledger typed against the base row and its liveArm, the ledger id and the duration derived by the union — so a write to one ledger refills only the rows it changed. Names no run kind.
   - Web:
-    - Slots:
-      - `Runs.Kind`
-      - `Runs.Leading`
-    - Slot contributors:
-      - `Runs.Kind` ← `apps.deploy.deployments.runs-arm`
-      - `Runs.Kind` ← `backup.runs-arm`
-      - `Runs.Kind` ← `build.runs-arm`
-      - `Runs.Kind` ← `release.runs-arm`
-      - `Runs.Leading` ← `build.runs-arm`
+    - Slots: `Runs.Leading`
+    - Slot contributors: `Runs.Leading` ← `build.runs-arm`
     - Contributes: `FieldPresentation.Register` "collection:runs"
     - Uses:
       - `network/live.FieldPresentation`
-      - `network/live.LiveFieldOption`
       - `network/live.LiveRowResult`
       - `network/live.useLiveRow`
       - `primitives/css/badge.Badge`
       - `primitives/data-view.DataView`
       - `primitives/data-view.DataViewDensity`
+      - `primitives/data-view.DataViewSlots`
       - `primitives/data-view.defineDataView`
       - `primitives/data-view.liveDataSource`
       - `primitives/launch/investigate.Investigate`
+      - `primitives/pane.OpenPaneFn`
       - `primitives/pane.useOpenPane`
       - `primitives/relative-time.RelativeTime`
       - `primitives/relative-time.useNow`
@@ -41968,13 +41969,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `runs/run-outcome.RunOutcomeDot`
     - Exports (types):
       - `RunInvestigation`
-      - `RunKindContribution`
       - `RunRowProps`
       - `RunsDataViewProps`
     - Exports (values):
       - `formatDuration`
       - `investigateRuns`
       - `RunDuration`
+      - `runLinks`
       - `Runs`
       - `RUNS_VIEW`
       - `RunsDataView`
@@ -41985,15 +41986,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "runs:groups"
       - `resource.declare` "runs:rows"
     - Uses: `network/live.serveUnionCollection`
-    - Exports (types):
-      - `RunArmBase`
-      - `RunArmRefs`
-      - `RunFieldBinding`
-      - `RunKind`
-      - `RunKindSpec`
-    - Exports (values):
-      - `defineRunKind`
-      - `getRunKinds`
+    - Exports (values): `runsServed`
     - Resources:
       - `runs` (keyed, window)
       - `runs:groups` (push)

@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { MergedDataView } from "@plugins/primitives/plugins/data-view/web";
+import { DataViewSwitcher } from "@plugins/primitives/plugins/data-view/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   Inset,
@@ -42,7 +42,7 @@ export function ConversationsSidebarDataView(
         <Separator className="bg-sidebar-border" />
       </Inset>
       <Scroll axis="y" fill>
-        <MergedDataView
+        <DataViewSwitcher
           storageKey={SIDEBAR_VIEW}
           sources={SidebarSources}
           hostProps={props}

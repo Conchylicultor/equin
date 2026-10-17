@@ -22,11 +22,11 @@ const ROW = {
 const ROW_TEXT = `carry: { fields: { id: textField(), kind: textField(), n: floatField() } }, id: "id"`;
 // The union's row: the arms overload lists its base fields (`n`) and carries the rest.
 const UNION_ROW = {
-  fields: { n: floatField({ label: "N" }) },
-  carry: { fields: { id: textField(), kind: textField() } },
+  fields: { n: floatField({ label: "N" }), kind: textField({ label: "Kind" }) },
+  carry: { fields: { id: textField() } },
   id: "id",
 } as const;
-const UNION_ROW_TEXT = `fields: { n: floatField({ label: "N" }) }, carry: { fields: { id: textField(), kind: textField() } }, id: "id"`;
+const UNION_ROW_TEXT = `fields: { n: floatField({ label: "N" }), kind: textField({ label: "Kind" }) }, carry: { fields: { id: textField() } }, id: "id"`;
 const WHERE = { file: "x.ts", line: 1 };
 
 /** The keys a collection minted, with whether each is keyed, read off the runtime registry. */

@@ -201,6 +201,23 @@ function derivedField(
 }
 
 /**
+ * A union's source field — its discriminator — as an enum whose options are
+ * its arms (value: the arm's kind, label: the arm's), in their declared
+ * order: a fact about what is installed, never about the loaded page.
+ */
+function sourceField(
+  field: LiveField,
+  arms: readonly LiveArm<unknown, FieldsRecord, string>[],
+): LiveField {
+  return {
+    ...field,
+    options: Object.fromEntries(
+      arms.map((arm) => [arm.owner.arm, { label: arm.label }]),
+    ),
+  };
+}
+
+/**
  * The fields `collection` derives, in declaration order — its own (picked
  * and own), then every reached exposure's, then every arm's — and the live
  * option reads of those presented with `useOptions`. Under a live source
@@ -241,6 +258,22 @@ export function deriveFields(
       optionReaders.push({ id: field.id, useOptions });
   };
 
+  const registered = registrations.map((r) => r.owner);
+  // A union's arms (a Meta-DataView's sources), in their declared order
+  // (`liveArm({ order })`) — never the plugins' load order. Registered on the
+  // web by each arm (`FieldPresentation.Register({ owner: arm })`, enforced by
+  // `live:arms-registered`), so always known: they are both the source
+  // field's options and the bands of the arms' own fields.
+  const arms = registered
+    .filter(
+      (owner): owner is LiveArm<unknown, FieldsRecord, string> =>
+        !("rowKeys" in owner) &&
+        owner.kind === "live-columns" &&
+        owner.owner.collection === collection.key,
+    )
+    .sort((a, b) => a.order - b.order);
+  const discriminator = collection.arms?.discriminator;
+
   // Its own fields, presented by its entity's registration (the picked ones)
   // and by its own (`FieldPresentation.Register({ owner: collection })`, any
   // listed one — one property of one field set by both throws).
@@ -271,9 +304,15 @@ export function deriveFields(
         entity?.fields.get(field.key),
         own?.fields.get(field.key),
       );
+      const source = field.key === discriminator;
+      if (source && spec?.useOptions !== undefined) {
+        throw new Error(
+          `data-view: the presentation of "${collection.key}" reads options for "${field.key}", its source field — a union's source options are its registered arms (\`liveArm({ label, order })\`), never read.`,
+        );
+      }
       add(
         derivedField(
-          field,
+          source ? sourceField(field, arms) : field,
           (row) => (row as Record<string, unknown>)[field.key],
           spec,
           {},
@@ -283,7 +322,6 @@ export function deriveFields(
     }
   }
 
-  const registered = registrations.map((r) => r.owner);
   const seen = new Set<string>();
   const once = (key: string): boolean => {
     if (seen.has(key)) return false;
@@ -331,14 +369,6 @@ export function deriveFields(
 
   // Every arm's fields, when the collection is a union — in the arms' own
   // declared order (`liveArm({ order })`), never the plugins' load order.
-  const arms = registered
-    .filter(
-      (owner): owner is LiveArm<unknown, FieldsRecord, string> =>
-        !("rowKeys" in owner) &&
-        owner.kind === "live-columns" &&
-        owner.owner.collection === collection.key,
-    )
-    .sort((a, b) => a.order - b.order);
   for (const arm of arms) {
     const ownerKey = presentationOwnerKey(arm);
     if (!once(ownerKey)) continue;

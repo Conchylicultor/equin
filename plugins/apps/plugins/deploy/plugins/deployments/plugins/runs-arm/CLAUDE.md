@@ -76,10 +76,10 @@ windows recompute FULL). A subquery over an undeclared table cannot be written
 
 ## Plugin reference
 
-- Description: The deploy arm's presence on the merged run surface: the Deploy kind (whose rows open the deployment detail pane on the server the run went to), and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
+- Description: The deploy arm's presence on the merged run surface: its rows' link into the deployment detail pane on the server the run went to, and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
 - Web:
   - Contributes:
-    - `Runs.Kind` "deploy"
+    - `DataViewSlots.CollectionRowActivation` "runs:open"
     - `FieldPresentation.Register` "arm:runs:deploy"
     - `DataViewSlots.CollectionItemAction` "runs:investigate:deploy" → `CollectionInvestigate`
   - Uses:
@@ -87,14 +87,14 @@ windows recompute FULL). A subquery over an undeclared table cannot be written
     - `network/live.FieldPresentation`
     - `primitives/css/badge.Badge`
     - `runs.investigateRuns`
-    - `runs.Runs`
+    - `runs.runLinks`
 - Server:
   - Uses:
     - `apps/deploy/deployments._deployRuns`
     - `apps/deploy/servers._deployServers`
     - `database/sql-projection.parsed`
-    - `runs.defineRunKind`
-  - Register: `defineRunKind('deploy')`
+    - `runs.runsServed`
+  - Register: `serveArm('runs:deploy')`
 - Core:
   - Uses:
     - `apps/deploy/deployments.DeployPhaseSchema`

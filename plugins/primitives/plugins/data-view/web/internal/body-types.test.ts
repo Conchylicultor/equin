@@ -1,6 +1,6 @@
 /**
  * The DataView data origin is a UNION, so a stand-in cannot be spelled — on
- * `DataViewProps`, and through the `MergedDataView` path's
+ * `DataViewProps`, and through the `DataViewSwitcher` path's
  * `DataViewSourceBundle` (a plain `Omit` would have merged the arms back into
  * one object type). Checked by tsc (`./singularity check type-check`): each
  * `Rejects<…>` must compute `true`, so a spelling that became legal is a type
@@ -88,7 +88,7 @@ const searchAccessorOnLive: Rejects<
   Props
 > = true;
 
-// The same, through the MergedDataView bundle (distributive, not a merged Omit).
+// The same, through the DataViewSwitcher bundle (distributive, not a merged Omit).
 const bundleSourceRows: Rejects<
   Omit<Base, "storageKey"> & { source: Source; rows: Thread[] },
   Bundle

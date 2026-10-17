@@ -6,7 +6,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
-  MergedDataView,
+  DataViewSwitcher,
   defineDataView,
 } from "@plugins/primitives/plugins/data-view/web";
 import { taskRows, type TaskRow } from "@plugins/tasks/plugins/tasks-core/core";
@@ -88,7 +88,7 @@ function DepsTreeSectionLoaded({
   // ONE merged DataView surface: the Dependencies / Created organisations are
   // contributed sources, unified under a single switcher + config file.
   return (
-    <MergedDataView
+    <DataViewSwitcher
       storageKey={DEPS_TREE_VIEW}
       sources={DepsSources}
       hostProps={{ taskId, allTasks, memberIds, linkTo }}

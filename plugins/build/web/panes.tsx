@@ -23,7 +23,7 @@ export const buildDetailPane = Pane.define({
 
 function BuildPaneBody(): ReactElement {
   // No `onRunClick`: a row's destination belongs to the arm that owns the row —
-  // the build arm's `Runs.Kind.open` pushes `buildDetailPane` from whichever
+  // the build arm's `runLinks` pushes `buildDetailPane` from whichever
   // surface the row was clicked in, and a backup row goes somewhere else
   // entirely. `selectedRunId` stays, because which row is OPEN is this pane's
   // own knowledge and nothing else can supply it.

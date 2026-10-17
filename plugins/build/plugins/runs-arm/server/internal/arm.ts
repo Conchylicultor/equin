@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { expr } from "@plugins/infra/plugins/query-resource/core";
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
-import { defineRunKind } from "@plugins/runs/server";
+import { runsServed } from "@plugins/runs/server";
 import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
 import { buildRunArm, BuildStatusSchema } from "../../core";
@@ -23,8 +23,7 @@ import { buildOutcomeExpr, buildStatusExpr } from "./status-sql";
  * - `status` and `outcome` are two projections of ONE expression, so a row can
  *   never be `canceled` on one column and `failed` on the other.
  */
-export const buildRunKind = defineRunKind({
-  columns: buildRunArm,
+export const buildRunKind = runsServed.arm(buildRunArm, {
   from: _buildRuns,
   id: _buildRuns.id,
   base: (j) => {

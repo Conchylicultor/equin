@@ -24,7 +24,7 @@ export interface ConversationSidebarProps {
 /**
  * The source slot for the merged conversation-sidebar DataView. Sub-plugins
  * under `data-view/plugins/*` contribute one source each (Queue, History); the
- * `MergedDataView` host resolves ONE unified view model over them — one config
+ * `DataViewSwitcher` host resolves ONE unified view model over them — one config
  * file, one `EditableViewSwitcher`, a source-grouped `+` add-view menu.
  */
 export const SidebarSources = defineDataViewSources<ConversationSidebarProps>();

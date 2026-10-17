@@ -112,7 +112,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
  * body — it is invoked as a plain function (not a component), so it must stay
  * hook-free; the body's hooks live in `DataViewBody`'s own components.
  *
- * Shared by the single-source `DataView` above and `MergedDataView` (exported
+ * Shared by the single-source `DataView` above and `DataViewSwitcher` (exported
  * plugin-internally, never from the barrel) so the placeholder / measurement /
  * switcher logic cannot drift between the two hosts.
  */
@@ -145,7 +145,7 @@ export function DataViewShellFrame(props: {
   /**
    * Renders EVERY instance, stacked — what a `{ kind: "sections" }` toolbar
    * shows instead of `children`'s one active instance. Only the single-source
-   * `DataView` passes it: `MergedDataView` cannot take a sections toolbar (its
+   * `DataView` passes it: `DataViewSwitcher` cannot take a sections toolbar (its
    * props exclude it), so its absence there is unreachable, and a sections
    * toolbar without it throws rather than silently rendering one section.
    */
@@ -278,7 +278,7 @@ export function DataViewShellFrame(props: {
     if (!renderSections) {
       throw new Error(
         `DataView(${storageKey}): a sections toolbar needs a host that ` +
-          "renders every instance — MergedDataView cannot.",
+          "renders every instance — DataViewSwitcher cannot.",
       );
     }
     if (instances.length === 0) {

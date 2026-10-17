@@ -19,6 +19,8 @@ import type {
   LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
 import type { ControlPanelSize } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import type { DataViewControlsContextValue } from "./components/controls/controls-context";
 import { defineFieldExtensions } from "./internal/field-extensions";
 import { Cell } from "./cell-slot";
@@ -247,6 +249,27 @@ export interface CollectionItemActionContribution {
   component: ComponentType<ItemActionProps<unknown>>;
 }
 
+/**
+ * Where a row goes when it is clicked, declared ONCE beside its owner — a
+ * collection (every row of every list of it), or one arm of a union (that
+ * arm's rows, in every list of the union: a Meta-DataView dispatches each row
+ * to its own source) — and applied by EVERY DataView listing it. The list
+ * names no destination and the destination names no list: the row-activation
+ * twin of {@link CollectionItemActionContribution}.
+ *
+ * `useActivation` is a hook (its owner reads its own context — `useOpenPane`)
+ * returning the per-row resolver: a {@link Activation} — a link
+ * (`openPane.to(…)`, so ⌘/middle-click opens a browser tab) — or `undefined`
+ * for a row that goes nowhere. A list's own `rowActivation` / `onRowActivate`
+ * still runs, AFTER the owner's navigation (the build popover closing itself).
+ */
+export interface CollectionRowActivationContribution {
+  /** Stable id (doc identity). */
+  id: string;
+  owner: CollectionItemActionOwner;
+  useActivation: Hook<() => (row: unknown) => Activation | undefined>;
+}
+
 /** The collection key a collection item action's owner lists under. */
 export function collectionItemActionKey(
   owner: CollectionItemActionOwner,
@@ -303,6 +326,12 @@ export const DataViewSlots = {
    *  DataView listing it — see `CollectionItemActionContribution`. Plain data
    *  slot: the host keeps the contributions its collection owns. */
   CollectionItemAction: defineSlot<CollectionItemActionContribution>({
+    docLabel: (p) => `${collectionItemActionKey(p.owner)}:${p.id}`,
+  }),
+  /** Where a row of a collection (or of a union's arm) goes when clicked,
+   *  declared once, applied by every DataView listing it — see
+   *  `CollectionRowActivationContribution`. Plain data slot. */
+  CollectionRowActivation: defineSlot<CollectionRowActivationContribution>({
     docLabel: (p) => `${collectionItemActionKey(p.owner)}:${p.id}`,
   }),
   /** Per-type table cell. Contribute `{ match, component }`, plus the optional

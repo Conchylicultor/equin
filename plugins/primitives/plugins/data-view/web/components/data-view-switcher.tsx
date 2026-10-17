@@ -30,10 +30,10 @@ import { DataViewBody } from "./data-view-body";
  *  excludes `title` / `actions`, and the `sections` chrome is a type error
  *  here: a merged surface mounts one source's data at a time, so it cannot
  *  stack every instance. */
-export type MergedDataViewProps<THostProps> =
-  MergedDataViewBaseProps<THostProps> & DataViewActiveChrome;
+export type DataViewSwitcherProps<THostProps> =
+  DataViewSwitcherBaseProps<THostProps> & DataViewActiveChrome;
 
-interface MergedDataViewBaseProps<THostProps> {
+interface DataViewSwitcherBaseProps<THostProps> {
   storageKey: DataViewId;
   /** The per-consumer source slot minted by `defineDataViewSources`. */
   sources: DataViewSources<THostProps>;
@@ -63,8 +63,8 @@ interface MergedDataViewBaseProps<THostProps> {
  * `DataViewBody`. Switching sources remounts the body (`key={source.id}`), so
  * per-source subscriptions restart cleanly.
  */
-export function MergedDataView<THostProps>(
-  props: MergedDataViewProps<THostProps>,
+export function DataViewSwitcher<THostProps>(
+  props: DataViewSwitcherProps<THostProps>,
 ): ReactNode {
   const {
     storageKey,
@@ -128,7 +128,7 @@ export function MergedDataView<THostProps>(
         );
         if (!activeSource) {
           throw new Error(
-            `MergedDataView(${storageKey}): active instance ` +
+            `DataViewSwitcher(${storageKey}): active instance ` +
               `"${activeInstance.instance.id}" resolved with unknown source ` +
               `"${activeInstance.instance.source ?? ""}"`,
           );
@@ -142,7 +142,7 @@ export function MergedDataView<THostProps>(
             // documented cast boundary as field extensions (the contributor keeps
             // full `TRow` typing; the shared body machinery is row-type-erased).
             render: (bundle) => (
-              <MergedSourceBody
+              <SwitcherSourceBody
                 storageKey={storageKey}
                 viewModel={readyModel}
                 activeInstance={activeInstance}
@@ -164,7 +164,7 @@ export function MergedDataView<THostProps>(
  * state, subscriptions restart); plain instance switches within one source keep
  * the body mounted, exactly like the single-source path.
  */
-function MergedSourceBody(props: {
+function SwitcherSourceBody(props: {
   storageKey: DataViewId;
   viewModel: ReadyViewModel;
   activeInstance: ResolvedViewInstance<DataViewContribution>;

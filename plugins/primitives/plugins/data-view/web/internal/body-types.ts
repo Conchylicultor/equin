@@ -30,7 +30,7 @@ export interface DataViewShellChrome {
   /**
    * The surface's declared density (`DataViewProps.density`). It travels on the
    * chrome rather than reaching the body twice because both hosts —
-   * `DataView` and `MergedDataView` — build their chrome through the one
+   * `DataView` and `DataViewSwitcher` — build their chrome through the one
    * `DataViewShellFrame`, so there is a single place the value can be set and a
    * single place the body reads it from. Absent ⇒ `"comfortable"`.
    */
@@ -77,7 +77,7 @@ export type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
  *
  * DISTRIBUTIVE over the data-origin union: a plain `Omit` would merge its arms
  * into one object type, and `{ source, rows }` would type-check again on the
- * `MergedDataView` path.
+ * `DataViewSwitcher` path.
  */
 export type DataViewSourceBundle<TRow> = DistributiveOmit<
   DataViewProps<TRow>,

@@ -11,19 +11,14 @@
  *   column's domain — so the surface cannot throw on its own schema;
  * - `<RunsDataView>`'s own wiring, mounted over a stubbed DataView (how rows
  *   draw is the primitive's tested behaviour): the host's empty line reaches
- *   it, a selected `{ kind, id }` highlights its row key, and activation is per
- *   kind — a kind with no `link` does not activate, unless the host asked, and
- *   a kind's link keeps its href so the row stays a link.
+ *   it, a selected `{ kind, id }` highlights its row key, and the host's
+ *   `onRowActivate` goes through untouched — where a row GOES is its arm's
+ *   (`runLinks`, data-view's per-arm `CollectionRowActivation`, tested there);
+ * - the `kind` source field's options are the registered arms, in their order.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  act,
-  cleanup,
-  render,
-  renderHook,
-  screen,
-} from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import {
   liveDataSource,
   type FilterOperatorSet,
@@ -36,21 +31,11 @@ import { liveArm } from "@plugins/network/plugins/live/core";
 import { runRowKey, runs, type RunRow } from "../../core";
 import { RunDuration } from "../components/run-duration";
 import { RunsDataView } from "../components/runs-data-view";
-import { useRunKindOptions } from "../internal/presentation";
-import type { RunKindContribution } from "../internal/slots";
-import {
-  activationHref,
-  runActivation,
-  type Activation,
-} from "@plugins/primitives/plugins/link-gesture/core";
 
 /** What the stubbed seams hold for the `<RunsDataView>` suite. */
 const stub = vi.hoisted(() => ({
   /** The props the stubbed DataView last rendered with. */
   props: undefined as Record<string, unknown> | undefined,
-  /** The registered kinds `Runs.Kind` answers. */
-  kinds: [] as unknown[],
-  openPane: () => {},
 }));
 
 vi.mock(
@@ -63,22 +48,6 @@ vi.mock(
     },
   }),
 );
-
-vi.mock("@plugins/primitives/plugins/pane/web", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useOpenPane: () => stub.openPane,
-}));
-
-vi.mock("../internal/slots", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../internal/slots")>();
-  return {
-    ...actual,
-    Runs: {
-      ...actual.Runs,
-      Kind: { ...actual.Runs.Kind, useContributions: () => stub.kinds },
-    },
-  };
-});
 
 afterEach(() => {
   cleanup();
@@ -192,41 +161,22 @@ describe("the base field schema over the runs source", () => {
     });
   });
 
-  it("the kind chip offers the registered kinds, not the loaded page's", () => {
-    stub.kinds = [{ arm: buildArm }] satisfies RunKindContribution[];
-    const { result } = renderHook(() => useRunKindOptions());
-    expect(result.current).toEqual([{ value: "build", label: "Build" }]);
+  it("the kind source field offers the registered arms, in their order — not the loaded page's kinds", () => {
+    // Registered release first (plugin load order); the options follow `order`.
+    const { fields } = deriveFields(runs, true, [
+      { owner: releaseArm, reads: [], fields: {} },
+      { owner: buildArm, reads: [], fields: {} },
+    ]);
+    expect(fields.find((f) => f.id === "kind")?.options).toEqual([
+      { value: "build", label: "Build" },
+      { value: "release", label: "Release" },
+    ]);
   });
 });
 
-/** A merged row of `kind` — only the fields the wiring reads. */
-const row = (kind: string, id: string): RunRow =>
-  ({ kind, id, runKey: runRowKey({ kind, id }) }) as unknown as RunRow;
-
-/** The stubbed DataView's `rowActivation`, as the primitive calls it. */
-function activationOf(run: RunRow): Activation | undefined {
-  const resolve = stub.props!.rowActivation as (
-    r: RunRow,
-  ) => Activation | undefined;
-  return resolve(run);
-}
-
 describe("<RunsDataView>", () => {
-  const openBuild = vi.fn<() => void>();
-  const linkBuild = vi.fn<NonNullable<RunKindContribution["link"]>>();
-
   beforeEach(() => {
     stub.props = undefined;
-    openBuild.mockReset();
-    linkBuild.mockReset();
-    linkBuild.mockImplementation(() => ({
-      open: openBuild,
-      href: () => "/build/run/1",
-    }));
-    stub.kinds = [
-      { arm: buildArm, link: linkBuild },
-      { arm: releaseArm },
-    ] satisfies RunKindContribution[];
   });
 
   it("hands the DataView the host's empty line and the live runs source", () => {
@@ -248,33 +198,10 @@ describe("<RunsDataView>", () => {
     expect(stub.props!.selectedRowId).toBe("build:b:1");
   });
 
-  it("a row activates through its own kind's `link`; a kind with none does not activate", () => {
-    render(<RunsDataView emptyState="none" />);
-    const build = row("build", "1");
-    const activation = activationOf(build)!;
-    runActivation(activation);
-    expect(openBuild).toHaveBeenCalledTimes(1);
-    expect(linkBuild.mock.calls[0]![0]).toBe(build);
-    expect(linkBuild.mock.calls[0]![1].openPane).toBe(stub.openPane);
-    // Still a link: a middle- / ⌘-click opens the arm's URL.
-    expect(activationHref(activation)?.()).toBe("/build/run/1");
-    expect(activationOf(row("release", "1"))).toBeUndefined();
-    // A kind nobody registered is no different.
-    expect(activationOf(row("mystery", "1"))).toBeUndefined();
-  });
-
-  it("the host's onRowActivate runs in addition to the arm's opener, and makes every row activate", () => {
-    const calls: string[] = [];
-    openBuild.mockImplementation(() => calls.push("arm"));
-    render(
-      <RunsDataView
-        emptyState="none"
-        onRowActivate={(r) => calls.push(`host:${r.kind}`)}
-      />,
-    );
-    runActivation(activationOf(row("build", "1"))!);
-    expect(calls).toEqual(["arm", "host:build"]);
-    runActivation(activationOf(row("release", "2"))!);
-    expect(calls).toEqual(["arm", "host:build", "host:release"]);
+  it("hands the host's onRowActivate straight through — where a row goes is its arm's", () => {
+    const onRowActivate = vi.fn();
+    render(<RunsDataView emptyState="none" onRowActivate={onRowActivate} />);
+    expect(stub.props!.onRowActivate).toBe(onRowActivate);
+    expect(stub.props!.rowActivation).toBeUndefined();
   });
 });

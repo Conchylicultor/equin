@@ -61,7 +61,7 @@ export interface DataViewSources<THostProps> extends RenderSlot<
  * `defineFieldExtensions`: disjoint host-prop types per consumer → a factory,
  * not a global slot.
  *
- * Pass the result to `<MergedDataView sources={MySources} />`; the host builds
+ * Pass the result to `<DataViewSwitcher sources={MySources} />`; the host builds
  * one `ViewSourceEntry` per contribution from the static metadata, resolves the
  * unified view model over ONE config file, and mounts only the active
  * instance's source component.

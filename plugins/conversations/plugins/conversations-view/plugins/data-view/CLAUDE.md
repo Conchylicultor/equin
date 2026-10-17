@@ -26,9 +26,9 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/ui-kit.Separator`
+    - `primitives/data-view.DataViewSwitcher`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineDataViewSources`
-    - `primitives/data-view.MergedDataView`
     - `tasks/task-title.useTaskShortTitle`
   - Exports (types): `ConversationSidebarProps`
   - Exports (values):

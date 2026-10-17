@@ -42,6 +42,7 @@ import {
   LIVE_COLUMNS_KEY,
   LIVE_ROW_KEY,
   LIVE_ROW_KEY_MAX_BYTES,
+  type LiveArmColumnsHandle,
   type LiveArmsCollection,
   type LiveColumnsDeclaration,
   type LiveGroup,
@@ -50,6 +51,13 @@ import {
   type WithContributedColumns,
 } from "@plugins/network/plugins/live/core";
 import type { ServedCollection } from "./serve-collection";
+import {
+  bindArm,
+  type ArmSpec,
+  type DeriveReads,
+  type ServedArm,
+  type UnionDerived,
+} from "./serve-arm";
 
 // `serveUnionCollection` — the server half of a UNION collection
 // (`liveCollection(key, { arms })`, P6 of
@@ -70,7 +78,7 @@ import type { ServedCollection } from "./serve-collection";
 // - **the decode** — strict, over the static set of the arms' column sets.
 //
 // The compile is DEFERRED (`defineDeferredResource`): arms register in the
-// register phase (a run kind is a `Registration`), so it runs at
+// register phase (`served.arm(…)` is a `Registration`), so it runs at
 // `bindDeferredResources` — before anything serves, and before the change
 // feed's ready barrier rebuilds the triggers from the routes.
 
@@ -88,9 +96,9 @@ export type UnionArmColumns = Readonly<
 export type UnionFieldBinding = ColumnRef | ExprField;
 
 /**
- * One arm, as the union serves it. Its kind is its column set's arm. Typed
- * loosely here — a domain's own facade (`runs`' `defineRunKind`) types `j`
- * and each binding's value against its row (T9).
+ * One arm, as the union compiles it. Its kind is its column set's arm. Typed
+ * loosely here — `served.arm(columns, spec)` (`./serve-arm`) types `j` and
+ * each binding's value against the union's row and the arm's fields (T9).
  */
 export interface UnionArmBinding {
   /** The arm (`liveArm`) — its `owner.arm` is the arm's kind. */
@@ -112,11 +120,54 @@ export interface UnionArmBinding {
   where?: (j: UnionArmColumns) => SQL;
 }
 
-export interface ServeUnionOptions {
+/** What `compileUnion` compiles a union from: its arms' bindings (a test hands its own). */
+export interface CompileUnionOptions {
   /** The arms — called once, at the deferred bind (after the register phase). */
   arms: () => readonly UnionArmBinding[];
   /** Test seam. Defaults to the real per-worktree drizzle `db`. */
   db?: QueryDb;
+}
+
+/**
+ * What `serveUnionCollection` takes beside the collection: the base fields it
+ * DERIVES for every arm (see {@link UnionDerived}) — so no arm supplies one,
+ * and no two arms can disagree about it.
+ */
+export interface ServeUnionOptions<Row, Dv> {
+  derive?: Dv & {
+    readonly [K in keyof Dv]: K extends keyof Row
+      ? UnionDerived<keyof Row & string>
+      : never;
+  };
+}
+
+/**
+ * A union collection, served: its resources, and `arm(columns, spec)` — the
+ * one way an arm binds its own table into it (typed against the union's base
+ * row and the arm's `liveArm`), returning the {@link Registration} its plugin
+ * puts in `register: [...]`. The arms are read at the deferred bind, after the
+ * register phase: a union never names one, and an arm never edits it.
+ */
+export interface ServedUnion<
+  Row,
+  Omitted extends string,
+  Reads extends string,
+> extends ServedCollection<WithContributedColumns<Row>> {
+  arm<
+    CRow,
+    F,
+    S extends string,
+    T extends PgTable,
+    // No `joins` → no join relations, not the constraint's open set (whose
+    // string index would swallow `base`, so no column could bind).
+    const J extends readonly JoinSpec[] = readonly [],
+    Pk extends string = never,
+  >(
+    columns: LiveArmColumnsHandle<WithContributedColumns<Row>, CRow, F, S> & {
+      readonly picked?: readonly Pk[];
+    },
+    spec: ArmSpec<Row, Omitted, Reads, CRow, T, J, Pk>,
+  ): ServedArm;
 }
 
 function isEntitySource(from: RoutedSource): from is EntitySource {
@@ -163,7 +214,7 @@ export function compileUnion<
   D extends keyof Row & string,
 >(
   collection: LiveArmsCollection<Row, F, S, D>,
-  opts: ServeUnionOptions,
+  opts: CompileUnionOptions,
 ): CompiledUnion<
   WithContributedColumns<Row>,
   LiveWindowParams,
@@ -535,16 +586,20 @@ export function compileUnion<
 }
 
 /**
- * Serve a UNION collection from its arms. `arms` is read once, at the
- * deferred bind — after the register phase, where a domain's arms register.
- * Returns the three resources, their keys and their `Resource.Declare`
- * contributions:
+ * Serve a UNION collection — a Meta-DataView's rows: every arm bound through
+ * the returned `arm(columns, spec)`, read once at the deferred bind (after
+ * the register phase, where the arms' registrations run). `derive` names the
+ * base fields the union computes for every arm itself (a run's duration, from
+ * its start and finish). Returns the three resources, their keys, their
+ * `Resource.Declare` contributions and `arm`:
  *
  * ```ts
  * export const runsServed = serveUnionCollection(runs, {
- *   arms: () => getRunKinds().map(toBinding),
+ *   derive: { duration: { reads: ["startedAt", "finishedAt"], bind: (r) => durationOf(r) } },
  * });
  * // contributions: [...runsServed.declare]
+ * // an arm's server: export const buildRunServed = runsServed.arm(buildRunArm, { from, id, base, extra });
+ * //                  register: [buildRunServed]
  * ```
  */
 export function serveUnionCollection<
@@ -552,10 +607,24 @@ export function serveUnionCollection<
   F,
   S extends string,
   D extends keyof Row & string,
+  I extends keyof Row & string,
+  const Dv extends object = Record<never, never>,
 >(
-  collection: LiveArmsCollection<Row, F, S, D>,
-  opts: ServeUnionOptions,
-): ServedCollection<WithContributedColumns<Row>> {
+  collection: LiveArmsCollection<Row, F, S, D> & { id: I },
+  opts: ServeUnionOptions<Row, Dv> = {},
+): ServedUnion<Row, I | D | (keyof Dv & string), DeriveReads<Dv>> {
+  const arms = new Map<string, ServedArm>();
+  const derive = (opts.derive ?? {}) as Readonly<
+    Record<string, UnionDerived<string> | undefined>
+  >;
+  const register = (arm: ServedArm): void => {
+    if (arms.has(arm.kind)) {
+      throw new Error(
+        `serveUnionCollection("${collection.key}"): two arms are of kind "${arm.kind}" — a kind names one arm.`,
+      );
+    }
+    arms.set(arm.kind, arm);
+  };
   let compiled:
     | CompiledUnion<
         WithContributedColumns<Row>,
@@ -564,7 +633,10 @@ export function serveUnionCollection<
         LiveGroupParams
       >
     | undefined;
-  const once = () => (compiled ??= compileUnion(collection, opts));
+  const once = () =>
+    (compiled ??= compileUnion(collection, {
+      arms: () => [...arms.values()].map((a) => a.binding),
+    }));
   const window = defineDeferredResource(collection.window, () => once().window);
   const rows = defineDeferredResource(collection.rows, () => once().rows);
   // A group's value is checked against the row schema in the loader
@@ -589,5 +661,13 @@ export function serveUnionCollection<
       ResourceContribution.Declare(rows),
       ResourceContribution.Declare(groups),
     ],
+    arm: (columns, spec) =>
+      bindArm(
+        collection.key,
+        columns as unknown as Parameters<typeof bindArm>[1],
+        spec as unknown as Parameters<typeof bindArm>[2],
+        derive,
+        register,
+      ),
   };
 }

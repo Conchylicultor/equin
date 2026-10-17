@@ -1,14 +1,10 @@
-import { useMemo, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import {
-  FieldPresentation,
-  type LiveFieldOption,
-} from "@plugins/network/plugins/live/web";
+import { FieldPresentation } from "@plugins/network/plugins/live/web";
 import { RunOutcomeChip } from "@plugins/runs/plugins/run-outcome/web";
 import { runs } from "../../core";
 import { RunDuration } from "../components/run-duration";
-import { Runs } from "./slots";
 
 // How the `runs` base fields present in every list of runs — registered once
 // against the collection (its rows are no entity's), so no host builds them.
@@ -21,33 +17,13 @@ function muted(text: string | null): ReactNode {
   );
 }
 
-/**
- * The kind chip's options: the REGISTERED arms (`Runs.Kind`) — a build kind is
- * a fact about what is installed, not about the loaded page, which a
- * server-paginated window could only offer a slice of. Always known (a
- * contribution registry), so the plain options — in the arms' declared order
- * (`liveArm({ order })`), the order of their field bands.
- */
-export function useRunKindOptions(): readonly LiveFieldOption[] {
-  const kinds = Runs.Kind.useContributions();
-  return useMemo(
-    () =>
-      [...kinds]
-        .sort((a, b) => a.arm.order - b.arm.order)
-        .map(({ arm }) => ({ value: arm.owner.arm, label: arm.label })),
-    [kinds],
-  );
-}
-
 export const runsPresentation = FieldPresentation.Register({
   owner: runs,
   fields: {
     label: { width: "minmax(0,1fr)" },
-    kind: {
-      useOptions: useRunKindOptions,
-      cell: (kind) => <Badge variant="muted">{kind}</Badge>,
-      width: "8rem",
-    },
+    // The source field: its options (and so its chip) are the registered
+    // arms, derived by every list of the union (data-view).
+    kind: { width: "8rem" },
     outcome: {
       cell: (outcome) => <RunOutcomeChip outcome={outcome} />,
       width: "10rem",

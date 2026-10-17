@@ -599,7 +599,10 @@ export function liveCollection<
   const CF extends FieldsRecord = Record<never, never>,
   const S extends keyof FieldsRow<undefined, never, never, OF, CF> & string =
     never,
-  const D extends keyof FieldsRow<undefined, never, never, OF, CF> & string =
+  // The source field is a LISTED base field: every list of the union shows,
+  // filters and groups by it (its options are the arms, derived by the list).
+  const D extends keyof OF & string = never,
+  const I extends keyof FieldsRow<undefined, never, never, OF, CF> & string =
     never,
 >(
   key: string,
@@ -611,7 +614,8 @@ export function liveCollection<
     fields: OF & RequireLabel<OF>;
     /** Base fields on the row no list shows (the union key, an arm-local id). */
     carry?: { fields?: CF };
-    id: NoInfer<keyof FieldsRow<undefined, never, never, OF, CF> & string>;
+    /** The union row key (minted by the compiler, never bound by an arm). */
+    id: I;
     default: LiveFieldsDefault<S>;
     row?: never;
     filterable?: never;
@@ -625,7 +629,7 @@ export function liveCollection<
   FieldsSpecFilterable<undefined, never, OF>,
   S,
   D
-> & { fields: LiveFields<keyof OF & string>; from: null };
+> & { fields: LiveFields<keyof OF & string>; from: null; id: I };
 export function liveCollection<
   const E extends LiveFrom | undefined = undefined,
   const P extends LabelledKeys<FromFields<E>> = never,
@@ -693,6 +697,24 @@ export function liveCollection<Row, F, S extends string>(
       if (stray.length > 0) {
         throw new Error(
           `liveCollection("${key}"): ${stray.join(", ")} beside \`arms\` — a union collection's rows are no entity's: it declares its base fields itself (\`fields\` / \`carry.fields\`), each arm its own (\`liveArm\`).`,
+        );
+      }
+    }
+    if (fieldsSpec.arms !== undefined) {
+      // The source field (a Meta-DataView's): a listed base field, so every
+      // list of the union shows, filters and groups by it — its options are
+      // the union's arms (`liveArm({ label, order })`), derived by the list,
+      // never declared beside them.
+      const discriminator = (fieldsSpec.arms as LiveArms).discriminator;
+      const field = (fieldsSpec.fields ?? {})[discriminator];
+      if (field === undefined) {
+        throw new Error(
+          `liveCollection("${key}"): the discriminator "${discriminator}" is not a field listed in \`fields\` — declare it there, with a label: it is the union's source field.`,
+        );
+      }
+      if (field.meta.optionMeta !== undefined) {
+        throw new Error(
+          `liveCollection("${key}"): the discriminator "${discriminator}" declares options — a union's source options are its arms (\`liveArm({ label, order })\`), derived by every list.`,
         );
       }
     }

@@ -109,9 +109,13 @@ import { HostedOptions } from "./toolbar/hosted-options";
 import { hostedCreators } from "./creators-control";
 import { ViewSection } from "./view-section";
 import {
+  afterOpen,
   beforeOpen,
+  runActivation,
   type Activation,
 } from "@plugins/primitives/plugins/link-gesture/core";
+import { CollectRowActivation } from "../internal/collection-row-activation";
+import type { CollectionActivation } from "../internal/fold-activations";
 import {
   DataViewControlsProvider,
   type DataViewControlsContextValue,
@@ -125,15 +129,22 @@ import {
  */
 export function DataViewBody<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
   return (
-    <CollectBodyFields source={props}>
-      {(fields, rowKeyOf) => (
-        <DataViewBodyInner
-          {...props}
-          fields={fields as FieldDef<TRow>[]}
-          rowKeyOf={rowKeyOf}
-        />
+    <CollectRowActivation
+      collection={props.source?.collection ?? props.collection}
+    >
+      {(collectionActivation) => (
+        <CollectBodyFields source={props}>
+          {(fields, rowKeyOf) => (
+            <DataViewBodyInner
+              {...props}
+              fields={fields as FieldDef<TRow>[]}
+              rowKeyOf={rowKeyOf}
+              collectionActivation={collectionActivation}
+            />
+          )}
+        </CollectBodyFields>
       )}
-    </CollectBodyFields>
+    </CollectRowActivation>
   );
 }
 
@@ -164,23 +175,30 @@ export function DataViewSectionsBody<TRow>(
     null,
   );
   return (
-    <CollectBodyFields source={props}>
-      {(fields, rowKeyOf) =>
-        instances.map((instance) => (
-          <DataViewBodyInner
-            key={instance.instance.id}
-            {...props}
-            activeInstance={instance}
-            fields={fields as FieldDef<TRow>[]}
-            rowKeyOf={rowKeyOf}
-            sectionActivation={{
-              last: activatedIn,
-              record: setActivatedIn,
-            }}
-          />
-        ))
-      }
-    </CollectBodyFields>
+    <CollectRowActivation
+      collection={props.source?.collection ?? props.collection}
+    >
+      {(collectionActivation) => (
+        <CollectBodyFields source={props}>
+          {(fields, rowKeyOf) =>
+            instances.map((instance) => (
+              <DataViewBodyInner
+                key={instance.instance.id}
+                {...props}
+                activeInstance={instance}
+                fields={fields as FieldDef<TRow>[]}
+                rowKeyOf={rowKeyOf}
+                collectionActivation={collectionActivation}
+                sectionActivation={{
+                  last: activatedIn,
+                  record: setActivatedIn,
+                }}
+              />
+            ))
+          }
+        </CollectBodyFields>
+      )}
+    </CollectRowActivation>
   );
 }
 
@@ -336,6 +354,8 @@ function DataViewBodyInner<TRow>(
     fields: FieldDef<TRow>[];
     /** The row key the origin implies (`rowKey`, or a live collection's id). */
     rowKeyOf: (row: TRow, index: number) => string;
+    /** Where its collection (or a union arm) sends a row — `CollectRowActivation`. */
+    collectionActivation: CollectionActivation | undefined;
     /** Present only on a `sections` surface: the surface-wide record of which
      *  section the last row activation came from. */
     sectionActivation?: {
@@ -347,6 +367,7 @@ function DataViewBodyInner<TRow>(
   const {
     rows,
     rowKeyOf: rowKey,
+    collectionActivation,
     searchAccessor,
     rowTone,
     onRowActivate,
@@ -446,9 +467,23 @@ function DataViewBodyInner<TRow>(
           "(per row), never both — they are two answers to one question.",
       );
     }
-    const base: ((row: TRow) => Activation | undefined) | undefined =
+    const own: ((row: TRow) => Activation | undefined) | undefined =
       rowActivation ??
       (onRowActivate ? (row) => () => onRowActivate(row) : undefined);
+    // The owner's destination (a collection's, or the row's arm's) is the
+    // navigation; the list's own activation runs after it — a host's business
+    // with its own chrome, never instead of where the row goes.
+    const base: ((row: TRow) => Activation | undefined) | undefined =
+      collectionActivation === undefined
+        ? own
+        : (row) => {
+            const link = collectionActivation(row);
+            const mine = own?.(row);
+            if (link === undefined) return mine;
+            return mine === undefined
+              ? link
+              : afterOpen(link, () => runActivation(mine));
+          };
     const record = sectionActivation?.record;
     if (!base || !record) return base;
     // `undefined` passes straight through: a non-activating row stays one.
@@ -463,6 +498,7 @@ function DataViewBodyInner<TRow>(
   }, [
     rowActivation,
     onRowActivate,
+    collectionActivation,
     sectionActivation?.record,
     activeViewId,
     rowKey,

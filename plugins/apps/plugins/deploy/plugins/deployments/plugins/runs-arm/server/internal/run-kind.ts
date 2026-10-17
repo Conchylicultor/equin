@@ -6,7 +6,7 @@ import {
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import { _deployServers } from "@plugins/apps/plugins/deploy/plugins/servers/server";
 import { _deployRuns } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
-import { defineRunKind } from "@plugins/runs/server";
+import { runsServed } from "@plugins/runs/server";
 import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";
 import { DEPLOY_STATUS_OUTCOME, deployRunArm } from "../../core";
 
@@ -49,8 +49,7 @@ const serverJoin: LookupJoin<"server", typeof _deployServers> = {
  *   is the closest thing to "how did this start".
  * - `message` is the CLI's own words, verbatim.
  */
-export const deployRunKind = defineRunKind({
-  columns: deployRunArm,
+export const deployRunKind = runsServed.arm(deployRunArm, {
   from: _deployRuns,
   id: _deployRuns.id,
   joins: [serverJoin],

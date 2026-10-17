@@ -190,12 +190,12 @@ describe("deriveFields", () => {
     expect(optionReaders).toEqual([{ id: "title", useOptions }]);
   });
 
-  /** A union of `key` / `kind` / `label` rows — the label listed, the key and kind carried. */
+  /** A union of `key` / `kind` / `label` rows — the kind (its source field) listed, the key and label carried. */
   const unionRuns = (key: string) =>
     liveCollection(key, {
-      fields: {},
+      fields: { kind: textField({ label: "Kind" }) },
       carry: {
-        fields: { key: textField(), kind: textField(), label: textField() },
+        fields: { key: textField(), label: textField() },
       },
       id: "key",
       arms: { discriminator: "kind" },
@@ -215,8 +215,8 @@ describe("deriveFields", () => {
     const { fields } = deriveFields(runs, true, [
       registration({ owner: build }),
     ]);
-    expect(fields).toHaveLength(1);
-    const [exitCode] = fields;
+    expect(fields.map((f) => f.id)).toEqual(["kind", "build.exitCode"]);
+    const exitCode = fields[1];
     expect(exitCode).toMatchObject({
       id: "build.exitCode",
       label: "Exit code",
@@ -258,10 +258,49 @@ describe("deriveFields", () => {
       registration({ owner: backup }),
     ]);
     expect(fields.map((f) => [f.id, f.section])).toEqual([
+      ["kind", undefined],
       ["build.code", "BUILD"],
       ["backup.code", "BACKUP"],
       ["release.code", "RELEASE"],
     ]);
+  });
+
+  test("the source field (the discriminator) is an enum of the registered arms, in their declared order", () => {
+    const runs = unionRuns("test.derived-fields.runs-source");
+    const arm = (name: string, label: string, order: number) =>
+      liveArm(runs, name, {
+        label,
+        order,
+        fields: { code: nullable(intField({ label: "Code" })) },
+      });
+    const release = arm("release", "Release", 30);
+    const build = arm("build", "Build", 10);
+    const { fields } = deriveFields(runs, true, [
+      registration({ owner: release }),
+      registration({ owner: build }),
+    ]);
+    const kind = fields.find((f) => f.id === "kind")!;
+    expect(kind.type).toBe("enum");
+    expect(kind.options).toEqual([
+      { value: "build", label: "Build" },
+      { value: "release", label: "Release" },
+    ]);
+    expect(kind.value!({ key: "build:1", kind: "build", label: "x" })).toBe(
+      "build",
+    );
+  });
+
+  test("a presentation reading the source field's options throws: they are the arms", () => {
+    const runs = unionRuns("test.derived-fields.runs-source-read");
+    const useOptions = () => ({
+      status: "loading" as const,
+      refetch: () => Promise.resolve(),
+    });
+    expect(() =>
+      deriveFields(runs, false, [
+        registration({ owner: runs, fields: { kind: { useOptions } } }),
+      ]),
+    ).toThrow(/its source field/);
   });
 });
 

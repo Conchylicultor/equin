@@ -7,6 +7,7 @@ import type {
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/core";
 import type {
+  LiveArms,
   LiveColumnRef,
   LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
@@ -1234,7 +1235,7 @@ export type FilterNode = FilterRule | FilterGroup;
  * `title` / `actions` do not type-check alongside it: the frame renders its
  * own, and a second source would be silently dropped.
  *
- * `MergedDataView` takes only these: it mounts ONE source's data at a time,
+ * `DataViewSwitcher` takes only these: it mounts ONE source's data at a time,
  * so it cannot stack every instance as {@link SectionsToolbar} does.
  */
 export type DataViewActiveChrome =
@@ -1360,11 +1361,18 @@ interface DataViewInMemoryRows<TRow> extends DataViewHeldRowProps<TRow> {
   source?: never;
 }
 
-/** What a DataView needs of the collection its rows come from: its fields, entity and reach. */
+/**
+ * What a DataView needs of the collection its rows come from: its fields,
+ * entity and reach — and, for a union (a Meta-DataView), its `arms`, whose
+ * discriminator is the derived source field.
+ */
 export type DataViewRowsCollection = Pick<
   LiveRowsCollection<unknown>,
   "key" | "exposes" | "fields" | "from"
-> & { readonly rowKeys: readonly string[] };
+> & {
+  readonly rowKeys: readonly string[];
+  readonly arms?: LiveArms | null;
+};
 
 /**
  * What a list may change of one derived field (`DataViewBaseProps.overrides`)

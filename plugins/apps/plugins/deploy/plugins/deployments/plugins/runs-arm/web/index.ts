@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Runs, investigateRuns } from "@plugins/runs/web";
+import { investigateRuns, runLinks } from "@plugins/runs/web";
 import { DEPLOY_CATEGORY_ID } from "@plugins/apps/plugins/deploy/core";
 import { DEPLOY_LOG_CHANNEL } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import { deployRunArm } from "../core";
@@ -8,12 +8,9 @@ import { deployRunPresentation } from "./internal/presentation";
 
 export default {
   description:
-    "The deploy arm's presence on the merged run surface: the Deploy kind (whose rows open the deployment detail pane on the server the run went to), and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm.",
+    "The deploy arm's presence on the merged run surface: its rows' link into the deployment detail pane on the server the run went to, and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm.",
   contributions: [
-    Runs.Kind({
-      arm: deployRunArm,
-      link: (run, { openPane }) => deployRunLink(run, openPane),
-    }),
+    runLinks(deployRunArm, (run, { openPane }) => deployRunLink(run, openPane)),
     // Its fields' cells; the fields — under their "Deploy" band — are the
     // arm's (`deployRunArm`, core).
     deployRunPresentation,

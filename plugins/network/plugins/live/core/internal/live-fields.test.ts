@@ -269,8 +269,11 @@ describe("liveCollection — the fields spelling", () => {
 
 describe("liveArm — a union arm declared by fields", () => {
   const runs = liveCollection("test.live-fields.runs", {
-    fields: { label: textField({ label: "Label" }) },
-    carry: { fields: { key: textField(), kind: textField() } },
+    fields: {
+      label: textField({ label: "Label" }),
+      kind: textField({ label: "Kind" }),
+    },
+    carry: { fields: { key: textField() } },
     id: "key",
     arms: { discriminator: "kind" },
     sortable: ["label"],

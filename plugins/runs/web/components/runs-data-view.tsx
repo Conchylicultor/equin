@@ -1,14 +1,9 @@
-import { useCallback, useMemo, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   DataView,
   liveDataSource,
   type DataViewDensity,
 } from "@plugins/primitives/plugins/data-view/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import {
-  afterOpen,
-  type Activation,
-} from "@plugins/primitives/plugins/link-gesture/core";
 import { runRowKey, runs, type RunRow } from "../../core";
 import { Runs } from "../internal/slots";
 import { RUNS_VIEW } from "../internal/view-id";
@@ -46,8 +41,8 @@ export interface RunsDataViewProps {
    */
   selectedRun?: { kind: string; id: string };
   /**
-   * Fires when a row is clicked, IN ADDITION to the arm's own
-   * `Runs.Kind.link` — never instead of it.
+   * Fires when a row is clicked, IN ADDITION to the arm's own link
+   * (`runLinks`) — never instead of it.
    *
    * The arm still owns where the click goes; this is for the host's own business
    * with its own chrome (the build popover closing itself, so it does not hang
@@ -90,19 +85,6 @@ export function RunsDataView({
   onRowActivate,
   pinnedView,
 }: RunsDataViewProps): ReactNode {
-  const openPane = useOpenPane();
-  const kinds = Runs.Kind.useContributions();
-
-  const openers = useMemo(
-    () =>
-      new Map(
-        kinds.flatMap((k) =>
-          k.link ? [[k.arm.owner.arm, k.link] as const] : [],
-        ),
-      ),
-    [kinds],
-  );
-
   // No `renderRow`: the row body is the list's own, built from the field schema,
   // so it obeys the view's visible fields. An arm decorates the line with a
   // leading glyph and declares fields (derived from its `liveArm`) — it does
@@ -117,31 +99,9 @@ export function RunsDataView({
     [],
   );
 
-  // Per row, not per surface: this list holds rows of several kinds and only
-  // some of them go anywhere. A build row activates and stays a button; a backup
-  // row whose arm contributes no `open` resolves to null and renders as a plain
-  // container — which is what lets its body hold a real control instead of
-  // nesting a <button> inside the row's own.
-  //
-  // Two independent reasons a click matters (the arm's navigation and the host's
-  // own side effect), so a row activates if EITHER is present and runs both when
-  // both are. An arm's navigation is a link, so its row stays one (middle- /
-  // ⌘-click open the run in a browser tab) with the host's effect folded into
-  // the plain click.
-  const resolveActivation = useCallback(
-    (run: RunRow): Activation | undefined => {
-      const linkOf = openers.get(run.kind);
-      // No opener: the host's effect alone, which is not navigation — a plain
-      // action, with no gesture to honour.
-      if (!linkOf) {
-        return onRowActivate ? () => onRowActivate(run) : undefined;
-      }
-      const link = linkOf(run, { openPane });
-      return onRowActivate ? afterOpen(link, () => onRowActivate(run)) : link;
-    },
-    [openers, onRowActivate, openPane],
-  );
-
+  // Where a row goes is its arm's (`runLinks`, applied by every list of runs);
+  // a row whose arm registers none stays a plain container. The host's
+  // own `onRowActivate` runs after the arm's navigation, on every row.
   return (
     <DataView<RunRow>
       storageKey={RUNS_VIEW}
@@ -153,7 +113,7 @@ export function RunsDataView({
       viewOptions={viewOptions}
       emptyState={emptyState}
       selectedRowId={selectedRun ? runRowKey(selectedRun) : undefined}
-      rowActivation={resolveActivation}
+      onRowActivate={onRowActivate}
     />
   );
 }

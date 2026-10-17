@@ -214,9 +214,45 @@ settings popover's type picker and the add menu list the same usable types
 (registered contributions ∩ the `views` whitelist), so the skip is reachable only
 by an authoring mistake, never by a click.
 
-## Multi-source surfaces (`MergedDataView`)
+## Meta-DataView: one list over sources of different entities
 
-One surface, N **sources**, one unified switcher: `<MergedDataView storageKey
+A list whose rows are of several KINDS — builds, releases, deploys and
+backups in one list of runs — is a plain `<DataView>` over a **union
+collection** (`network/live`, *Union collections*): `liveCollection(key, {
+fields, arms: { discriminator } })` in core, one `liveArm(union, kind, {
+label, order, from?, pick?, fields })` per source, served as ONE SQL window
+by `serveUnionCollection` with each source bound by `served.arm(arm, …)`. It
+is not a component of its own, and not `DataViewSwitcher` (below), which
+shows ONE source at a time. What every list of it gets, with no list code:
+
+- **Shared fields** — the union's own `fields`: one id across every source,
+  so a filter, a sort, a group-by or a saved view means the same thing on
+  every row (and runs in SQL over every source at once).
+- **Per-source fields** — each arm's (`<arm>.<field>`), listed under the
+  arm's `label` in its own band, in the arms' declared `order`; on another
+  source's row they read nothing, and a filter on one prunes the other
+  sources. An arm declared `from` an entity picks its fields by name, with the
+  entity's labels and options.
+- **The source field** — the discriminator: an enum whose options are the
+  registered arms (value: the kind, label: the arm's), derived by
+  `deriveFields` from the arms' `FieldPresentation.Register` registrations —
+  so it filters, groups and labels its chip with no list code, and offers
+  every installed source, never only the loaded page's. A union declaring
+  options for it, or a presentation reading them, throws.
+- **Per-source row activation** — `DataViewSlots.CollectionRowActivation({
+  owner: arm, useActivation })`: each row is dispatched to its own source's
+  destination (*Row activation is PER ROW*, below).
+
+`runs` is the reference (`plugins/runs`).
+
+## Multi-source surfaces (`DataViewSwitcher`)
+
+**A switcher, not a union**: one source's rows at a time — for the same rows
+organised several ways (the task deps tree's Dependencies / Created) or
+several lists of one entity (the conversation sidebar's Queue / History). A
+list mixing rows of several kinds is a Meta-DataView (above).
+
+One surface, N **sources**, one unified switcher: `<DataViewSwitcher storageKey
 sources hostProps title? actions? defaultView?>` renders a single DataView
 surface (**one `storageKey` → one config file → one `EditableViewSwitcher`**)
 whose view-instances each bind to a source via the config row's optional
@@ -635,7 +671,7 @@ rail" below) — no view passes a `headerClassName`.
 ### `groupHeaders` — standard or quiet headers, per surface
 
 `DataViewProps.groupHeaders?: "standard" | "quiet"` is a surface declaration like
-`density`: `DataView` / `MergedDataView` hand it to `DataViewShellFrame`, it
+`density`: `DataView` / `DataViewSwitcher` hand it to `DataViewShellFrame`, it
 rides `DataViewShellChrome`, and the body threads it into
 `DataViewRenderProps.groupHeaders`, which every `GroupedSections` view passes as
 `headerStyle`.
@@ -1197,7 +1233,7 @@ no switcher. The Pages sidebar is the reference.
   click. A selection arriving from outside (a link, a deep link) still reveals
   everywhere; the tree's own clicks and arrow keys still reveal in the tree.
 - `title` / `actions` / `pinnedView` are type errors beside it (no band; a
-  pinned surface has one instance). `MergedDataView` takes
+  pinned surface has one instance). `DataViewSwitcher` takes
   `DataViewActiveChrome`, the union without this arm, so it cannot be spelled
   there: a merged surface mounts one source at a time. Section reorder is
   config order; drag-reordering sections is a follow-up.
@@ -1495,6 +1531,20 @@ The **nested table's primary label** is the one exception and keeps *select-then
 the navigation target itself, so it has no room beside it for a second affordance
 (`EditableTreeLabel`).
 
+### Where a row goes, declared by its owner (`CollectionRowActivation`)
+
+A collection — or one arm of a union — declares ONCE where its rows go:
+`DataViewSlots.CollectionRowActivation({ id, owner, useActivation })`, a hook
+returning `(row) => Activation | undefined` (a link: `openPane.to(…)`). Every
+DataView listing the owner folds them (`CollectRowActivation`, one hook level
+per contribution — `web/internal/collection-row-activation.tsx`, the pure
+fold `fold-activations.ts`): an arm's answers only its own rows (by the
+union's discriminator); two answering one row throw. The owner's link is the
+navigation, and the list's own `rowActivation` / `onRowActivate` runs AFTER
+it (`afterOpen`) — a host's business with its own chrome (the build popover
+closing itself), never instead of where the row goes. A row no owner sends
+anywhere activates only through the list's own.
+
 ## Row tone: a row can read as inactive
 
 `DataViewProps.rowTone` is `(row) => "default" | "muted"`. `"muted"` dims the
@@ -1515,7 +1565,7 @@ DataViewProps.rowTone
       → DataViewRenderProps.rowTone   the view child tones its own title
 ```
 
-Concretely: `body-types.ts`, `data-view.tsx` and `merged-data-view.tsx` need no
+Concretely: `body-types.ts`, `data-view.tsx` and `data-view-switcher.tsx` need no
 change at all, because the bundle is derived from `DataViewProps` and the hosts
 spread it. The only code is the type declarations, one destructure-and-forward in
 `DataViewBodyInner` beside `searchAccessor`, and the barrel exports.
@@ -1547,7 +1597,7 @@ class is a statement about pixels.
 hosts get it from one place:
 
 ```
-DataViewProps.density  (and MergedDataViewProps.density)
+DataViewProps.density  (and DataViewSwitcherProps.density)
   → DataViewShellFrame prop
     → DataViewShellChrome.density        (web/internal/body-types.ts)
       → DataViewBody
@@ -2031,7 +2081,7 @@ stand-in (`rows={[]}` beside a server origin) cannot be spelled:
   `hierarchy` (a hierarchy over a paged set orphans children), `manualOrder` (a rank
   would reorder server-sorted pages) and `searchAccessor` (search is the
   source's `searchable`); the contributed `RowOrder` stays off too.
-  `DataViewSourceBundle` is a DISTRIBUTIVE `Omit`, so the `MergedDataView` path
+  `DataViewSourceBundle` is a DISTRIBUTIVE `Omit`, so the `DataViewSwitcher` path
   keeps the union (pinned by `web/internal/body-types.test.ts`).
 
 ```ts
@@ -2401,18 +2451,20 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Setting`
     - `DataViewSlots.Control`
     - `DataViewSlots.CollectionItemAction`
+    - `DataViewSlots.CollectionRowActivation`
     - `DataViewSlots.Cell`
     - `DataViewSlots.CellEditor`
     - `DataViewSlots.Filter`
     - `DataViewSlots.ValueCodec`
     - `DataViewSlots.Grouping`
     - `DataViewSlots.ColumnConfig`
-  - Slot contributors: 46 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 50 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `DataViewSlots.Cell` ×10
     - `DataViewSlots.Filter` ×7
     - `DataViewSlots.CellEditor` ×6
     - `DataViewSlots.CollectionItemAction` ×6
     - `DataViewSlots.View` ×5
+    - `DataViewSlots.CollectionRowActivation` ×4
     - `DataViewSlots.Grouping` ×3
     - `DataViewSlots.ValueCodec` ×3
     - `DataViewSlots.Setting` ×2
@@ -2474,6 +2526,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `CellEditorProps`
     - `CollectionItemActionContribution`
     - `CollectionItemActionOwner`
+    - `CollectionRowActivationContribution`
     - `ColumnConfigDerive`
     - `ColumnConfigProps`
     - `CreateOption`
@@ -2497,6 +2550,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSourceContribution`
     - `DataViewSourceProps`
     - `DataViewSources`
+    - `DataViewSwitcherProps`
     - `DataViewViewportSink`
     - `FieldCellProps`
     - `FieldDef`
@@ -2542,7 +2596,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `LivePagesPaging`
     - `LoweredFilter`
     - `ManualOrderConfig`
-    - `MergedDataViewProps`
     - `PartitionOptions`
     - `ProjectedRow`
     - `RowTone`
@@ -2561,6 +2614,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataView`
     - `DataViewGroupHeader`
     - `DataViewSlots`
+    - `DataViewSwitcher`
     - `defineDataView`
     - `defineDataViewSources`
     - `defineItemActions`
@@ -2579,7 +2633,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `leadingSlot`
     - `liveDataSource`
     - `makeSortComparator`
-    - `MergedDataView`
     - `MissingDataCellError`
     - `partitionIntoSections`
     - `pickLeadingField`

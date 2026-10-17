@@ -21,6 +21,10 @@ the `runs` collection is a **union** over them (`liveCollection("runs", { arms:
 
 ## The union window
 
+`runs` is the reference **Meta-DataView** (data-view's CLAUDE.md): a list over
+sources of different entities, its shared fields the union's, its per-source
+fields the arms', its source field `kind`.
+
 `runs` (core) is a routed, scrollable union window: one arm per registered run
 kind, each served from its own table, listed in one order (`startedAt desc`,
 then the row key). It mints `runs` (the window), `runs:rows` (a point read by
@@ -42,7 +46,7 @@ declares facets over it, D23).
 
 An **arm** is one run kind's contribution (its table, its bindings, its own
 columns, its renderers). Never call it a *source* — in data-view a source is a
-`MergedDataView` presentation, one active at a time, which is a different thing.
+`DataViewSwitcher` presentation, one active at a time, which is a different thing.
 
 A **base field** is one every arm projects (`runs`' own fields); an **arm field**
 is one only that kind has, declared by the arm's own `liveArm(runs, kind, {
@@ -55,7 +59,8 @@ never shadows the discriminator.
 The base fields are the collection's own (`liveCollection("runs", { fields,
 carry, arms })`, core), presented once against it
 (`FieldPresentation.Register({ owner: runs })`, `web/internal/presentation.tsx`:
-cells, widths, the kind options read off `Runs.Kind`). Every arm's fields are
+cells and widths; the `kind` source field's options are the registered arms,
+derived by every list). Every arm's fields are
 DERIVED by the DataView from its `liveArm`, listed after them under the arm's
 label — `RunsDataView` passes no fields.
 
@@ -71,15 +76,16 @@ There used to be a `Runs.Row`. Do not reintroduce one: the list installs a
 the field-driven body for **every** kind — so one arm's bespoke row switched off
 the visible-fields panel for all four.
 
-A domain's detail belongs in the pane `Kind.link` pushes. A domain's data
+A domain's detail belongs in the pane its `runLinks` pushes. A domain's data
 belongs in its arm's fields, where it is filterable and sortable rather than
 merely visible.
 
 ## Where an arm cannot go wrong (T9)
 
-`defineRunKind({ columns, from, id, joins?, base(j), extra(j), where?(j) })`:
+`runsServed.arm(arm, { from, id, joins?, base(j), extra(j), where?(j) })` —
+network/live's generic arm binding (`serveUnionCollection`'s `served.arm`):
 
-- `columns` is the arm's own `liveArm`; the kind is ITS arm, so the
+- `arm` is the arm's own `liveArm`; the kind is ITS arm, so the
   discriminator, the row key's prefix and the field ids cannot drift.
 - `base(j)` binds every base field but `id` and `duration` — each a column ref
   `j` offers whose column reads as the field's type (data type and nullability:
@@ -88,7 +94,9 @@ merely visible.
   field may be `null` ("no such notion": backup and deploy have no namespace).
 - `extra(j)` binds exactly the arm column set's fields, each typed the same way (tsc).
 - `id` is the ledger's single-column primary key (the row key encodes it), and
-  `duration` is derived — `finishedAt − startedAt`, NULL while running — so two
+  the base `id` and `duration` are the union's `derive`d fields
+  (`server/internal/served.ts`) — `duration` is `finishedAt − startedAt`, NULL
+  while running, so `startedAt` / `finishedAt` bind to columns (tsc) and two
   arms cannot disagree about what a duration is. A running run's elapsed time is
   `<RunDuration>`'s browser ticker, never a value the server re-pushes.
 - Labels and outcomes are `ExprField`s whose provenance is read off their SQL: a
@@ -105,19 +113,20 @@ names no kind. `core`: `liveArm(runs, kind, { label, fields, carry?, sortable
 })` — `label` is the kind's human name and the band ("Build", "Deploy", …)
 its fields are listed under in the filter picker, the Properties list and the
 group-by band, beside the "Common" band of base fields (data-view's CLAUDE.md,
-"Field sections"). `server`: `defineRunKind({ columns: arm, … })` in
-`register: [...]`. `web`: `Runs.Kind({ arm, link? })` (its kind and label are
-the arm's), `FieldPresentation.Register({ owner: arm, fields })` for its cells,
-widths and default visibility (required, even empty — the
-`live:arms-registered` check), and `Runs.Leading` as wanted.
+"Field sections"). `server`: `runsServed.arm(arm, { … })` in
+`register: [...]`. `web`: `FieldPresentation.Register({ owner: arm, fields })`
+for its cells, widths and default visibility (required, even empty — the
+`live:arms-registered` check), `runLinks(arm, (run, { openPane }) =>
+openPane.to(…))` where its rows go (data-view's per-arm
+`CollectionRowActivation`), `investigateRuns`, and `Runs.Leading` as wanted.
 
-`Runs.Kind.link` is a plain callback and cannot call hooks, so it can only use
-identifiers the row already carries. When a pane wants one the row does not
-have, **fix the pane** — do not grow this API a component seam.
+A `runLinks` link can only use identifiers the row already carries. When a
+pane wants one the row does not have, **fix the pane** — do not grow this API
+a component seam.
 
-The kind's human label is declared **only** on the arm (`liveArm`'s `label`),
-and the web reads it off the arms registered on `Runs.Kind` — the filter chip
-must offer every registered kind, not the ones on the loaded page.
+The kind's human label is declared **only** on the arm (`liveArm`'s `label`):
+every list derives the `kind` filter's options from the registered arms, so
+it offers every registered kind, not the ones on the loaded page.
 
 ## Reading one run: `useRun({ kind, id })`
 
@@ -131,29 +140,23 @@ row, or on a failed re-read the row as last seen).
 
 ## Plugin reference
 
-- Description: The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields derived from the collection and presented once, plus every arm's own fields, derived from its liveArm, each bound to its column), and the two seams an arm reaches it through (Runs.Kind for the arm itself — its kind and label — plus row activation, and Runs.Leading for the list row's status glyph); an arm presents its fields' cells with FieldPresentation.Register({ owner: arm }). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair) and <RunDuration> (finished duration, or a running run's ticking elapsed time). The run-kind registry and the merged run space as ONE routed union window: defineRunKind binds a domain's own ledger into the `runs` collection as an arm (base fields typed against the row, its own fields against its liveArm; id and duration derived), and serveUnionCollection serves the window, its `:rows` point read (useRun) and `:groups` from every registered arm — a write to one ledger refills only the rows it changed. Names no run kind.
+- Description: The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields derived from the collection and presented once, plus every arm's own fields, derived from its liveArm, each bound to its column), and the seams an arm reaches it through: runLinks (where its rows go — data-view's CollectionRowActivation over the arm), investigateRuns, and Runs.Leading for the list row's status glyph; the kind filter's options are the registered arms, derived by every list; an arm presents its fields' cells with FieldPresentation.Register({ owner: arm }). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair) and <RunDuration> (finished duration, or a running run's ticking elapsed time). The merged run space as ONE routed union window (a Meta-DataView): runsServed serves the `runs` collection's window, its `:rows` point read (useRun) and `:groups` from every arm bound through runsServed.arm — a domain's own ledger typed against the base row and its liveArm, the ledger id and the duration derived by the union — so a write to one ledger refills only the rows it changed. Names no run kind.
 - Web:
-  - Slots:
-    - `Runs.Kind`
-    - `Runs.Leading`
-  - Slot contributors:
-    - `Runs.Kind` ← `apps.deploy.deployments.runs-arm`
-    - `Runs.Kind` ← `backup.runs-arm`
-    - `Runs.Kind` ← `build.runs-arm`
-    - `Runs.Kind` ← `release.runs-arm`
-    - `Runs.Leading` ← `build.runs-arm`
+  - Slots: `Runs.Leading`
+  - Slot contributors: `Runs.Leading` ← `build.runs-arm`
   - Contributes: `FieldPresentation.Register` "collection:runs"
   - Uses:
     - `network/live.FieldPresentation`
-    - `network/live.LiveFieldOption`
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/data-view.DataView`
     - `primitives/data-view.DataViewDensity`
+    - `primitives/data-view.DataViewSlots`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.liveDataSource`
     - `primitives/launch/investigate.Investigate`
+    - `primitives/pane.OpenPaneFn`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
     - `primitives/relative-time.useNow`
@@ -162,13 +165,13 @@ row, or on a failed re-read the row as last seen).
     - `runs/run-outcome.RunOutcomeDot`
   - Exports (types):
     - `RunInvestigation`
-    - `RunKindContribution`
     - `RunRowProps`
     - `RunsDataViewProps`
   - Exports (values):
     - `formatDuration`
     - `investigateRuns`
     - `RunDuration`
+    - `runLinks`
     - `Runs`
     - `RUNS_VIEW`
     - `RunsDataView`
@@ -179,15 +182,7 @@ row, or on a failed re-read the row as last seen).
     - `resource.declare` "runs:groups"
     - `resource.declare` "runs:rows"
   - Uses: `network/live.serveUnionCollection`
-  - Exports (types):
-    - `RunArmBase`
-    - `RunArmRefs`
-    - `RunFieldBinding`
-    - `RunKind`
-    - `RunKindSpec`
-  - Exports (values):
-    - `defineRunKind`
-    - `getRunKinds`
+  - Exports (values): `runsServed`
   - Resources:
     - `runs` (keyed, window)
     - `runs:groups` (push)

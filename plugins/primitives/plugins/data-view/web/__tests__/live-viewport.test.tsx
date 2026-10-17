@@ -1,5 +1,5 @@
 /**
- * The viewport a live source pages by, end to end: a `MergedDataView` over a
+ * The viewport a live source pages by, end to end: a `DataViewSwitcher` over a
  * live collection (`createLiveStateHarness` (a real client and its QueryClient), the view model
  * stubbed, one minimal list view stamping `data-row-key`), with an
  * IntersectionObserver that answers each row it is handed — as a browser does
@@ -38,7 +38,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { DataViewId, DataViewRenderProps, ViewState } from "../../core";
 import { liveDataSource } from "../internal/live-data-source";
 import { defineDataViewSources } from "../internal/define-data-view-sources";
-import { MergedDataView } from "../components/merged-data-view";
+import { DataViewSwitcher } from "../components/data-view-switcher";
 import { DataViewSlots } from "../slots";
 import { fakeViewGetter } from "@plugins/primitives/plugins/data-view/plugins/view-core/web/testing";
 
@@ -159,7 +159,7 @@ function mount(c: C, state: ViewState) {
   const tree = () => (
     <live.Wrapper>
       <PluginProvider plugins={[plugin]}>
-        <MergedDataView
+        <DataViewSwitcher
           storageKey={STORAGE_KEY}
           sources={Sources}
           hostProps={{}}

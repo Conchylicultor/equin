@@ -145,7 +145,7 @@ describe("live:arms-registered", () => {
   const ARM =
     'import { runs } from "@plugins/runs/core";\nexport const buildArm = liveArm(runs, "build", {\n  label: "Build",\n  order: 10,\n  fields,\n});\n';
   const SERVER =
-    'import { buildArm as arm } from "../../core";\nexport const kind = defineRunKind({ columns: arm });\n';
+    'import { buildArm as arm } from "../../core";\nexport const kind = runsServed.arm(arm, {});\n';
   const WEB =
     'import { buildArm } from "../core";\nconst c = FieldPresentation.Register({ owner: buildArm });\n';
 

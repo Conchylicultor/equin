@@ -927,12 +927,15 @@ conversationHistory.fields.status;   // { id, key, label, typeId, options, prima
   against the window one (they are `never` there). The window one is last
   because the resource vocabulary infers a collection factory from the last
   overload's return type (a top-level conditional return would hide it).
-- **Union arms — `liveArm(union, arm, { label, order, fields, carry?, sortable? })`.**
+- **Union arms — `liveArm(union, arm, { label, order, from?, pick?, fields?, carry?, sortable? })`.**
   An arm's own fields, declared the same way (each labelled, domains derived,
   `sortable` explicit; `carry` puts fields on the slice that no list shows —
-  a jsonb blob a detail pane decodes — never listed, filtered or sorted): an
-  arm column set (served by the union's binding, `runs`' `defineRunKind({
-  columns })`) plus `label` (the band its fields are listed under), `order`
+  a jsonb blob a detail pane decodes — never listed, filtered or sorted; an
+  arm whose rows are an entity's names it in `from` and lists some of its
+  fields by name in `pick`, with the entity's labels — `picked` records them,
+  and the server binds them by name): an
+  arm column set (served by the union's binding, `served.arm(arm, { … })` of
+  `serveUnionCollection` — `runsServed.arm`) plus `label` (the band its fields are listed under), `order`
   (its band's place among the union's arms, ascending — each arm states its
   own, so the order is the surface's choice, never plugin load order; the
   runs arms' rationale is in `runs` core) and `listed` (its descriptors, ids
@@ -1131,9 +1134,19 @@ DataView surface (research/2026-09-29-global-scoped-change-routing.md P3).
 
 A collection declared with `arms: { discriminator }` lists rows of several
 KINDS — each served from its own table — in one window (the runs of every run
-kind): `liveCollection(key, { row, id, arms: { discriminator: "kind" },
-filterable, sortable, default, maxLimit })`. Its id is the union row key
-`kind:raw` (query-resource's `armKeyCodec`).
+kind): `liveCollection(key, { fields, carry, id, arms: { discriminator: "kind" },
+sortable, default, maxLimit })`. Its id is the union row key
+`kind:raw` (query-resource's `armKeyCodec`). It is what a **Meta-DataView** is
+(fields declared once, phase 3 —
+`research/2026-10-16-global-fields-declared-once-phase3-meta-dataview.md`;
+data-view's CLAUDE.md, *Meta-DataView*): one list over sources of different
+entities, its shared fields the union's, its per-source fields the arms', its
+source field the discriminator.
+
+- **The source field.** The discriminator is a LISTED base field (in
+  `fields`, labelled — tsc: `D extends keyof fields`, and a runtime throw),
+  declaring no options: its options are the union's arms (`liveArm`'s
+  `label` and `order`), derived by every list (data-view's `deriveFields`).
 
 - **The overload (T12).** A union is a window like any other (read as
   key-range pages, listed as a live DataView); `exposes` and `columnScope` are
@@ -1142,8 +1155,9 @@ filterable, sortable, default, maxLimit })`. Its id is the union row key
   base fields are its own (`fields` / `carry.fields` — no `from` / `pick` /
   `related`: a union's rows are no entity's), presented once by
   `FieldPresentation.Register({ owner: union })`, so a list of it derives
-  every field (`runs`). The discriminator is a row
-  field (tsc) other than the id. An untyped caller's stray field throws. The
+  every field (`runs`). The discriminator is a listed
+  field (tsc) other than the id; the id's literal type is kept
+  (`collection.id: I`), so an arm's binding can leave it out. An untyped caller's stray field throws. The
   collection is `LiveArmsCollection` (`arms` set); every single-table
   collection is `arms: null`, which is what `serveCollection` takes (a union
   is a tsc error there, and throws against a cast).
@@ -1162,17 +1176,31 @@ filterable, sortable, default, maxLimit })`. Its id is the union row key
   data-view's field resolution and the server switch on it exhaustively, so a
   codec takes an arm set only on its own union, an exposed set only on a
   collection reaching its entity, a scoped set only in its scope.
-- **Serve — `serveUnionCollection(c, { arms: () => UnionArmBinding[] })`**
-  (P6 of `research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md`). Each
-  binding is one arm: its column set (`columns`, a `liveArm` — its arm IS the
-  kind), its table and single-column primary key (`from`, `id`),
-  its `joins`, `base(j)` (every base field but the id and the discriminator →
-  a column ref, an `ExprField`, or `null` for "no such notion"), `extra(j)`
-  (exactly its column set's fields) and an always-on `where(j)`. A domain
-  types this through its own facade (`runs`' `defineRunKind`, T9).
-  - **Deferred.** `arms` is read once at `bindDeferredResources` (arms register
-    in the register phase), and the three resources compile there — before
-    anything serves and before the change feed rebuilds triggers from routes.
+- **Serve — `const served = serveUnionCollection(c, { derive? })`**
+  (P6 of `research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md`), and
+  **`served.arm(arm, { from, id, joins?, base(j), extra(j), where?(j) })`** —
+  the one way an arm binds (`./server/internal/serve-arm.ts`), returning the
+  `Registration` its own plugin puts in `register: [...]`; the union names no
+  arm and an arm never edits the union. `arm` is its `liveArm` (its arm IS the
+  kind); `from` / `id` its table and single-column primary key; `base(j)`
+  binds every base field but the id, the discriminator and the derived ones —
+  a column ref `j` offers whose column reads as the field's type (data type
+  and nullability), or an `ExprField` of the field's value type, or `null`
+  ("no such notion") for a nullable field (all tsc, T9); `extra(j)` binds the
+  arm's own fields the same way — a field it `pick`s from its entity binds by
+  name unless bound here; `where(j)` is its always-on scope.
+  - **`derive`** — base fields the union computes for EVERY arm, so no arm
+    supplies one and no two arms can disagree: `{ reads, bind(reads, { id }) }`
+    — `reads` names the base fields it is computed from, each of which every
+    arm must then bind to a COLUMN (tsc, and a throw); `bind` builds the field
+    from those columns and the arm's own id (`runs`: the ledger `id`, and
+    `duration` from `startedAt` / `finishedAt`). An arm binding a derived
+    field is a tsc error and throws.
+  - **Deferred.** The arms are read once at `bindDeferredResources` (they
+    register in the register phase), and the three resources compile there —
+    before anything serves and before the change feed rebuilds triggers from
+    routes. `compileUnion(c, { arms: () => bindings, db? })` (`server/testing`)
+    is the same compile over explicit bindings (`served.arm(…).binding`).
   - **The compile** is query-resource's `compileUnionCollection` (its CLAUDE.md,
     *Union collections*): per-arm positional SQL, static nullability over every
     arm, the row key `kind:raw` as the total order's tiebreaker, each arm routed
@@ -1776,6 +1804,7 @@ never add one.
     - `ServeAllCollectionOptions`
     - `ServeCollectionOptions`
     - `ServedAllCollection`
+    - `ServedArm`
     - `ServedCollection`
     - `ServedExternalQueryValue`
     - `ServedExternalValue`
@@ -1783,6 +1812,7 @@ never add one.
     - `ServedPagedValue`
     - `ServedScopedColumns`
     - `ServedSilentPagedValue`
+    - `ServedUnion`
     - `ServedValue`
     - `ServePagedValueOptions`
     - `ServeUnionOptions`
@@ -1790,6 +1820,7 @@ never add one.
     - `UnionArmBinding`
     - `UnionArmColumns`
     - `UnionArmRefs`
+    - `UnionDerived`
     - `UnionFieldBinding`
   - Exports (values):
     - `compileCollection`

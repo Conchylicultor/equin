@@ -8,12 +8,14 @@ export { serveValue } from "./internal/serve-value";
 export { sliceRange } from "../core/internal/key-order";
 export { serveUnionCollection } from "./internal/serve-union";
 export type {
+  ServedUnion,
   ServeUnionOptions,
   UnionArmBinding,
   UnionArmColumns,
   UnionArmRefs,
   UnionFieldBinding,
 } from "./internal/serve-union";
+export type { ServedArm, UnionDerived } from "./internal/serve-arm";
 export { LiveColumns, serveScopedColumns } from "./internal/serve-columns";
 export type {
   ScopedMemberRead,

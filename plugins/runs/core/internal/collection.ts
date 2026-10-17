@@ -42,7 +42,7 @@ const runFields = {
   namespace: nullable(textField({ label: "Namespace" })),
   /**
    * Wall-clock milliseconds, `finishedAt − startedAt` — DERIVED by
-   * `defineRunKind`, never supplied by an arm, and NULL while the run is in
+   * the union (`runsServed`'s `derive`), never supplied by an arm, and NULL while the run is in
    * flight (a running run's elapsed time is the browser's ticker,
    * `<RunDuration>`, not a value the server would have to re-push every
    * second).
@@ -59,7 +59,7 @@ const runFields = {
  * **runs** — every long-running operation on this machine, from every ledger,
  * as ONE routed union window (P6 of
  * research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md). Each run kind
- * is an arm (`defineRunKind`, server), served from its own table; a write to
+ * is an arm (`runsServed.arm`, server), served from its own table; a write to
  * one ledger refills only the rows it changed, in the windows reading that arm.
  *
  * Its base fields are its own (`fields`), presented once in `runs/web`

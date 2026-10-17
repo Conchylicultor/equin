@@ -1,5 +1,5 @@
 /**
- * A LIVE source through the merged (`MergedDataView`) path — the conversation
+ * A LIVE source through the merged (`DataViewSwitcher`) path — the conversation
  * sidebar's History is the first merged surface whose source is a
  * `liveDataSource`. Mounted over `createLiveStateHarness` (a real client and its QueryClient),
  * with the view model stubbed (the config read is not under test) and one
@@ -42,7 +42,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { DataViewId, DataViewRenderProps, ViewState } from "../../core";
 import { liveDataSource } from "../internal/live-data-source";
 import { defineDataViewSources } from "../internal/define-data-view-sources";
-import { MergedDataView } from "../components/merged-data-view";
+import { DataViewSwitcher } from "../components/data-view-switcher";
 import { DataViewSlots } from "../slots";
 import { fakeViewGetter } from "@plugins/primitives/plugins/data-view/plugins/view-core/web/testing";
 
@@ -185,7 +185,7 @@ function mount(c: C, state: ViewState, activeId: string | null = null) {
   const rendered = render(
     <live.Wrapper>
       <PluginProvider plugins={[plugin]}>
-        <MergedDataView
+        <DataViewSwitcher
           storageKey={STORAGE_KEY}
           sources={Sources}
           hostProps={{ activeId }}
@@ -237,7 +237,7 @@ afterEach(() => {
   resetDeferredLoadStateForTests();
 });
 
-describe("MergedDataView — a live source", () => {
+describe("DataViewSwitcher — a live source", () => {
   it("lowers the active instance's state onto the source's window tuple", () => {
     const c = convs(STORAGE_KEY);
     const { client } = mount(c, {

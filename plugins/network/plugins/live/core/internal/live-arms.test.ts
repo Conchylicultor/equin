@@ -305,3 +305,64 @@ describe("the codec switches on the owner (T11)", () => {
     ).toThrow(/not declared with `arms`/);
   });
 });
+
+describe("liveArm — declared from an entity", () => {
+  const NOTE = {
+    id: textField(),
+    title: textField({ label: "Title" }),
+    secret: textField(),
+  };
+  const notes = entityRef("arm_notes", NOTE);
+
+  test("picked fields are listed first, with the entity's labels; picked ones are recorded", () => {
+    const arm = liveArm(runs(), "note", {
+      label: "Notes",
+      order: 10,
+      from: notes,
+      pick: ["title"],
+      fields: { size: nullable(intField({ label: "Size" })) },
+    });
+    expect(Object.values(arm.listed).map((f) => f.id)).toEqual([
+      "note.title",
+      "note.size",
+    ]);
+    expect(arm.picked).toEqual(["title"]);
+  });
+
+  test("runtime throws mirror the types: an unknown pick, pick without from, an own field named like the entity's", () => {
+    const untyped = liveArm as unknown as (
+      c: unknown,
+      arm: string,
+      spec: Record<string, unknown>,
+    ) => unknown;
+    expect(() =>
+      untyped(runs(), "n", {
+        label: "N",
+        order: 1,
+        from: notes,
+        pick: ["nope"],
+      }),
+    ).toThrow(/not a wire field/);
+    expect(() =>
+      untyped(runs(), "n", { label: "N", order: 1, pick: ["title"] }),
+    ).toThrow(/without `from`/);
+    expect(() =>
+      untyped(runs(), "n", {
+        label: "N",
+        order: 1,
+        from: notes,
+        fields: { title: textField({ label: "T" }) },
+      }),
+    ).toThrow(/named like a field of `from`/);
+    // Types: an unlabelled entity field cannot be picked.
+    const _typesOnly = () =>
+      liveArm(runs(), "n", {
+        label: "N",
+        order: 1,
+        from: notes,
+        // @ts-expect-error `secret` carries no label: no list may show it
+        pick: ["secret"],
+      });
+    void _typesOnly;
+  });
+});

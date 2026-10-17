@@ -3,7 +3,8 @@ import { Runs } from "./internal/slots";
 import { runsPresentation } from "./internal/presentation";
 
 export { Runs } from "./internal/slots";
-export type { RunKindContribution, RunRowProps } from "./internal/slots";
+export type { RunRowProps } from "./internal/slots";
+export { runLinks } from "./internal/links";
 export { RunsDataView } from "./components/runs-data-view";
 export type { RunsDataViewProps } from "./components/runs-data-view";
 export { RunDuration } from "./components/run-duration";
@@ -15,8 +16,8 @@ export type { RunInvestigation } from "./internal/investigate";
 
 export default {
   description:
-    "The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields derived from the collection and presented once, plus every arm's own fields, derived from its liveArm, each bound to its column), and the two seams an arm reaches it through (Runs.Kind for the arm itself — its kind and label — plus row activation, and Runs.Leading for the list row's status glyph); an arm presents its fields' cells with FieldPresentation.Register({ owner: arm }). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair) and <RunDuration> (finished duration, or a running run's ticking elapsed time).",
+    "The merged run surface: <RunsDataView> over the `runs` union window (a live scroll: base fields derived from the collection and presented once, plus every arm's own fields, derived from its liveArm, each bound to its column), and the seams an arm reaches it through: runLinks (where its rows go — data-view's CollectionRowActivation over the arm), investigateRuns, and Runs.Leading for the list row's status glyph; the kind filter's options are the registered arms, derived by every list; an arm presents its fields' cells with FieldPresentation.Register({ owner: arm }). Every row is a single field-driven line; a domain's detail lives in the pane its rows open. Also exports useRun (a live point read of one run by its (kind, id) pair) and <RunDuration> (finished duration, or a running run's ticking elapsed time).",
   slots: Runs,
-  // The base fields' cells, widths and kind options, for every list of runs.
+  // The base fields' cells and widths, for every list of runs.
   contributions: [runsPresentation],
 } satisfies PluginDefinition;

@@ -12,7 +12,15 @@ import {
   type InferFieldValue,
 } from "@plugins/fields/core";
 import { fieldDomain, type FieldsFilterable } from "./field-domain";
-import type { LiveField, LiveFields, RequireLabel } from "./live-fields";
+import {
+  isShape,
+  type FromFields,
+  type LabelledKeys,
+  type LiveField,
+  type LiveFields,
+  type LiveFrom,
+  type RequireLabel,
+} from "./live-fields";
 
 // Column sets: the fields a row carries under `$columns`, beside its own —
 // an entity extension's exposed fields (`exposedColumns`), a union arm's own
@@ -367,6 +375,7 @@ export interface LiveArm<
   F extends FieldsRecord,
   S extends string,
   C extends FieldsRecord = Record<never, never>,
+  Pk extends string = never,
 > extends LiveArmColumnsHandle<
   Row,
   { [K in keyof (F & C)]: InferFieldValue<(F & C)[K]> },
@@ -383,23 +392,36 @@ export interface LiveArm<
   readonly order: number;
   /** The fields every list of the union shows for this arm, by id (`<arm>.<field>`), in declaration order. */
   readonly listed: LiveFields<`${string}.${keyof F & string}`>;
+  /**
+   * The fields it reads from its entity by name (`pick`) — listed like its own,
+   * and bound by name on the server (the arm's table is the entity's), so its
+   * binding names only its own fields.
+   */
+  readonly picked: readonly Pk[];
 }
 
 /**
- * Declare one arm's own fields on an `arms` collection, by field: `label` is
- * the arm's (the band its fields are listed under), each field carries its
- * own (tsc, `RequireLabel`), and `sortable` stays explicit (index-backed).
- * Every field with a filter domain filters in it. `carry` puts fields on the
- * arm's slice that no list shows (a jsonb blob a detail pane decodes): never
- * listed, filterable or sortable.
+ * Declare one arm's own fields on an `arms` collection — a Meta-DataView's
+ * source — by field: `label` is the arm's (the band its fields are listed
+ * under), each field carries its own (tsc, `RequireLabel`), and `sortable`
+ * stays explicit (index-backed). Every field with a filter domain filters in
+ * it. `carry` puts fields on the arm's slice that no list shows (a jsonb blob
+ * a detail pane decodes): never listed, filtered or sorted.
+ *
+ * An arm whose rows ARE an entity's (or an extension shape's) names it in
+ * `from` and lists some of its fields by name in `pick` — declared once, on
+ * the entity, with their labels and options — before its own `fields`; its
+ * server binding then binds the picked ones by name.
  */
 export function liveArm<
   Row,
   F0,
   S0 extends string,
   D extends keyof Row & string,
-  const F extends FieldsRecord,
-  const S extends keyof F & string = never,
+  const E extends LiveFrom | undefined = undefined,
+  const P extends LabelledKeys<FromFields<E>> = never,
+  const F extends FieldsRecord = Record<never, never>,
+  const S extends (keyof F & string) | P = never,
   const C extends FieldsRecord = Record<never, never>,
 >(
   collection: LiveArmsCollection<Row, F0, S0, D>,
@@ -408,24 +430,73 @@ export function liveArm<
     label: string;
     /** Its band's place among the union's arms, ascending ({@link LiveArm.order}). */
     order: number;
-    fields: F & RequireLabel<F>;
+    /** The entity (or extension shape) its rows are — `pick` reads its fields. */
+    from?: E;
+    /** The fields of `from` a list shows, before the arm's own — each labelled (tsc). */
+    pick?: readonly P[];
+    fields?: F & RequireLabel<F>;
     carry?: C;
     sortable?: readonly S[];
   },
-): LiveArm<WithContributedColumns<Row>, F, S, C> {
+): LiveArm<
+  WithContributedColumns<Row>,
+  Pick<FromFields<E>, P & keyof FromFields<E>> & F,
+  S,
+  C,
+  P
+> {
   const fail = (message: string): never => {
     throw new Error(`liveArm("${collection.key}", "${arm}"): ${message}`);
   };
   if (spec.label.trim().length === 0) fail("`label` is empty.");
   if (!Number.isFinite(spec.order)) fail("`order` is not a finite number.");
+  const from = spec.from;
+  if (
+    from !== undefined &&
+    !isShape(from) &&
+    (from as { kind?: unknown }).kind !== "entity"
+  ) {
+    fail(
+      "`from` is neither an EntityRef (`entityRef(name, fields)`) nor an extension shape (`defineExtensionShape`).",
+    );
+  }
+  if (from === undefined && spec.pick !== undefined) {
+    fail("`pick` without `from` — a picked field is one of `from`'s.");
+  }
+  // The listed fields: the picked ones of `from` (by name, in pick order),
+  // then the arm's own — one record, so every derivation below reads it.
+  const listedFields: FieldsRecord = {};
+  for (const name of spec.pick ?? []) {
+    const field =
+      from !== undefined &&
+      Object.hasOwn(from.fields, name) &&
+      (!isShape(from) || Object.hasOwn(from.schema.shape, name))
+        ? (from.fields as FieldsRecord)[name]
+        : undefined;
+    if (field === undefined) {
+      fail(`\`pick\` names "${name}", which is not a wire field of \`from\`.`);
+    }
+    if (Object.hasOwn(listedFields, name)) {
+      fail(`\`pick\` names "${name}" twice.`);
+    }
+    listedFields[name] = field!;
+  }
+  for (const [name, field] of Object.entries(spec.fields ?? {})) {
+    if (from !== undefined && Object.hasOwn(from.fields, name)) {
+      fail(
+        `own field "${name}" is named like a field of \`from\` — pick it, or name it apart.`,
+      );
+    }
+    listedFields[name] = field;
+  }
   const carried = spec.carry ?? ({} as C);
   for (const name of Object.keys(carried)) {
-    if (Object.hasOwn(spec.fields, name)) {
+    if (Object.hasOwn(listedFields, name)) {
       fail(`"${name}" is both a listed and a carried field.`);
     }
   }
   const filterable: Record<string, FilterColumn> = {};
-  for (const [name, field] of Object.entries(spec.fields)) {
+  for (const [name, field] of Object.entries(listedFields)) {
     const label = field.meta.label;
     if (label === undefined || label.trim().length === 0) {
       fail(
@@ -436,19 +507,20 @@ export function liveArm<
     if (domain !== null) filterable[name] = { domain } as FilterColumn;
   }
   const sortable = spec.sortable ?? [];
-  type Slice = { [K in keyof (F & C)]: InferFieldValue<(F & C)[K]> };
+  type Listed = Pick<FromFields<E>, P & keyof FromFields<E>> & F;
+  type Slice = { [K in keyof (Listed & C)]: InferFieldValue<(Listed & C)[K]> };
   const handle = armColumns(collection, arm, {
     row: fieldsToZodObject({
-      ...spec.fields,
+      ...listedFields,
       ...carried,
     }) as unknown as LiveRowSchema<Slice>,
-    filterable: filterable as unknown as FieldsFilterable<F> &
+    filterable: filterable as unknown as FieldsFilterable<Listed> &
       LiveFilterable<Slice>,
     sortable,
   });
   const listed = Object.freeze(
     Object.fromEntries(
-      Object.entries(spec.fields).map(([name, field]) => {
+      Object.entries(listedFields).map(([name, field]) => {
         const id = `${arm}.${name}`;
         const descriptor: LiveField = Object.freeze({
           id,
@@ -468,5 +540,12 @@ export function liveArm<
     label: spec.label,
     order: spec.order,
     listed,
-  }) as LiveArm<WithContributedColumns<Row>, F, S, C>;
+    picked: Object.freeze([...(spec.pick ?? [])]),
+  }) as unknown as LiveArm<
+    WithContributedColumns<Row>,
+    Pick<FromFields<E>, P & keyof FromFields<E>> & F,
+    S,
+    C,
+    P
+  >;
 }

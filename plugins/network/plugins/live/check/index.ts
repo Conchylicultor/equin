@@ -245,7 +245,7 @@ const exposuresRegistered: Check = {
 // ── live:arms-registered ───────────────────────────────────────────────────
 // A union arm declared by fields (`const x = liveArm(…)`, in the arm's core)
 // reaches a list when its plugin's server binds it (the union's arm binding —
-// `runs`' `defineRunKind({ columns: x, … })` — names it in `server/`) and its
+// `served.arm(x, { … })` of `serveUnionCollection` — names it in `server/`) and its
 // web registers it (`FieldPresentation.Register({ owner: x, … })`). Either half
 // missing type-checks: the arm's rows carry no slice (its `read` throws), or
 // its fields are absent from every list of the union.
@@ -302,7 +302,7 @@ const armsRegistered: Check = {
   // INPUT-KEYED: a pure scan of tracked sources.
   inputKeyed: true,
   description:
-    "Every union arm declared by fields (`const x = liveArm(…)`, network/live) is bound by its own plugin's server — named in its `server/` (the union's arm binding, e.g. `defineRunKind({ columns: x })`) — and registered by its own plugin's web — `FieldPresentation.Register({ owner: x })` — outside test code. A half missing leaves the arm's rows without their slice, or its fields absent from every list of the union.",
+    "Every union arm declared by fields (`const x = liveArm(…)`, network/live) is bound by its own plugin's server — named in its `server/` (the union's arm binding, `served.arm(x, { … })` of `serveUnionCollection` — e.g. `runsServed.arm(x, …)`) — and registered by its own plugin's web — `FieldPresentation.Register({ owner: x })` — outside test code. A half missing leaves the arm's rows without their slice, or its fields absent from every list of the union.",
   async run() {
     const root = await getWorktreeRoot();
     const declaring = await listCandidateSources({
@@ -332,7 +332,7 @@ const armsRegistered: Check = {
     return {
       ok: false,
       message: `${missing.length} union arm(s) are not bound and registered by their own plugin:\n    ${missing.join("\n    ")}`,
-      hint: "In the arm's plugin, bind the arm from its server (`defineRunKind({ columns: arm, … })` for a run kind) and contribute `FieldPresentation.Register({ owner: arm })` (network/live/web) from its web barrel.",
+      hint: "In the arm's plugin, bind the arm from its server (`served.arm(arm, { … })` of the union's `serveUnionCollection` — `runsServed.arm(arm, …)` for a run kind) and contribute `FieldPresentation.Register({ owner: arm })` (network/live/web) from its web barrel.",
     };
   },
 };

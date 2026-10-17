@@ -273,7 +273,7 @@ function deriveCollapsedSet(keys: readonly string[]): ReadonlySet<string> {
  *     `data-view.tsx` render logic is unchanged.
  *
  * `entries` is the ordered source-entry list. The single-source `<DataView>`
- * shell builds one implicit entry from its own props; `MergedDataView` builds
+ * shell builds one implicit entry from its own props; `DataViewSwitcher` builds
  * one entry per contributed source (static metadata only — no `viewOptions`).
  * Pass a referentially-stable (memoized) array.
  */
