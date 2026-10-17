@@ -1,8 +1,5 @@
 import { readFileSync } from "node:fs";
-import {
-  attachMarker,
-  encodeAttachTicket,
-} from "../core";
+import { attachMarker, encodeAttachTicket } from "../core";
 import { bindEndpoint, openTab, type Session, type Tab } from "./host-session";
 
 /**

@@ -25469,6 +25469,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlaywrightBrowserName`
               - `PlaywrightBrowserSource`
             - Exports (values):
+              - `connectChromium`
               - `launchChromium`
               - `playwrightBrowser`
         - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and .python-version current.
@@ -27090,6 +27091,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mcpTool('browser_console')`
               - `mcpTool('browser_network')`
               - `mcpTool('browser_viewport')`
+              - `mcpTool('browser_attach')`
               - `mcpTool('browser_close')`
               - `defineJob('mcp-browser.conversation-ended')`
               - `defineDaemon('mcp-browser.host')`
@@ -27103,10 +27105,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentBrowserSession`
               - `AgentBrowserStatus`
               - `AgentBrowserTab`
+              - `AttachTicket`
             - Exports (values):
               - `AgentBrowserHostStatusSchema`
               - `agentBrowserStatus`
               - `AgentBrowserStatusSchema`
+              - `attachMarker`
+              - `decodeAttachTicket`
+              - `encodeAttachTicket`
               - `MAX_HOST_ERRORS`
               - `MAX_SESSIONS`
               - `MAX_TABS`
