@@ -30314,6 +30314,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FramePad`
           - `InsertAction`
           - `InsertActionContext`
+          - `InsertActionRun`
           - `InsertEntry`
           - `InsertSection`
           - `MarkButtonProps`
@@ -31518,6 +31519,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/page-reference/open-aside`
           - `page/sub-page`
           - `page/tags`
+          - `page/turn-into-page`
       - Plugins:
         - **`open-aside`** — Open-in-side-pane action on a page reference: hovering a sub-page row or a link block reveals a button that opens the referenced page in a column beside the current one, leaving it on screen. Contributed into PageReference.Actions, and declared unavailable where the host has no second column to give — so a single-surface embed shows no affordance at all.
           - Web:
@@ -32102,7 +32104,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `toggleDataSchema`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-    - **`turn-into-page`** — Turn a block into a sub-page in place, keeping its id, position, and subtree: from Turn into → Page, or from the caret's line with `/page` (the line's other words become its title). The page row renders inline as the link.
+    - **`turn-into-page`** — Turn a block into a sub-page in place, keeping its id, position, and subtree: from Turn into → Page, or from the caret's line with `/page` (the line's other words become its title, and the new page opens). The page row renders inline as the link.
       - Web:
         - Contributes:
           - `Editor.TurnInto` → `TurnIntoPageItem`
@@ -32110,6 +32112,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/endpoints.fetchEndpoint`
           - `page/editor.Editor`
+          - `page/page-reference.usePageNavigation`
           - `primitives/css/row.Row`
           - `ui/icons.Icon`
       - Cross-plugin:

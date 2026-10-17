@@ -1,5 +1,8 @@
 import type { PageData } from "@plugins/page/plugins/editor/core";
-import type { InsertAction } from "@plugins/page/plugins/editor/web";
+import type {
+  InsertAction,
+  InsertActionRun,
+} from "@plugins/page/plugins/editor/web";
 import type { PageReferenceDecorationContribution } from "@plugins/page/plugins/page-reference/web";
 import { agentNotesBlock } from "@plugins/page/plugins/annotations/plugins/agent-notes/core";
 import { AgentPageCreatorChip } from "../components/agent-page-creator-chip";
@@ -29,6 +32,10 @@ export const agentPageDecoration: PageReferenceDecorationContribution = {
   component: AgentPageCreatorChip,
 };
 
+const runAgentPageInsert: InsertActionRun = ({ blockId, text }) => {
+  void turnIntoAgentPage(blockId, agentPageTitle(text));
+};
+
 /**
  * `/agent-page`: an agent-authored page made in place of the caret's line, the
  * line's other words becoming its title — listed right after the agent-notes
@@ -40,7 +47,5 @@ export const agentPageInsertAction: InsertAction = {
   icon: autoAwesomeIcon,
   aliases: ["agent", "agent-page", "agent page", "ai page"],
   after: agentNotesBlock.type,
-  run: ({ blockId, text }) => {
-    void turnIntoAgentPage(blockId, agentPageTitle(text));
-  },
+  useRun: () => runAgentPageInsert,
 };

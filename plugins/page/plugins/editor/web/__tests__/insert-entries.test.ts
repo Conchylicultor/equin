@@ -29,7 +29,7 @@ function action(
   label: string,
   over: Partial<InsertAction> = {},
 ): InsertAction {
-  return { id, label, icon: testIcon, run: () => {}, ...over };
+  return { id, label, icon: testIcon, useRun: () => () => {}, ...over };
 }
 
 /** Compact view: one string per row, sections separated. */

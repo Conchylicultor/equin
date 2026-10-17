@@ -43,6 +43,7 @@ export type {
   BlockRendererProps,
   InsertAction,
   InsertActionContext,
+  InsertActionRun,
 } from "./types";
 export { BlockEditor } from "./components/block-editor";
 export type { BlockEditorHandle } from "./components/block-editor";

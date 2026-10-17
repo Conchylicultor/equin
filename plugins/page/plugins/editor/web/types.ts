@@ -1,6 +1,7 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { ComponentType } from "react";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { InsetSides } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { SurfaceLevel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Block, RichText, RowData } from "../core";
@@ -136,15 +137,22 @@ export interface InsertAction {
    */
   after?: string;
   /**
-   * Act on the caret's line. The menu has already consumed the query text (the
-   * `/…` span, or the gutter draft's filter) when this runs, exactly as it does
-   * before a block-type conversion. Synchronous by contract: a server call is
-   * fired from here and owns its own failure (`void promise` surfaces a
-   * rejection as an uncaught error), since the menu is gone by the time it
-   * settles.
+   * A hook returning the runner that acts on the caret's line. A hook, not a
+   * plain function, so the runner can read what the editor's HOST provides by
+   * context (how a page opens, say) — the editor itself knows none of it. The
+   * menu calls it once per editor line, whether or not the menu is open.
+   *
+   * The menu has already consumed the query text (the `/…` span, or the gutter
+   * draft's filter) when the runner runs, exactly as it does before a block-type
+   * conversion. Synchronous by contract: a server call is fired from it and owns
+   * its own failure (`void promise` surfaces a rejection as an uncaught error),
+   * since the menu is gone by the time it settles.
    */
-  run(ctx: InsertActionContext): void;
+  useRun: Hook<() => InsertActionRun>;
 }
+
+/** What an `InsertAction`'s `useRun` returns: act on the caret's line. */
+export type InsertActionRun = (ctx: InsertActionContext) => void;
 
 export interface BlockRendererProps {
   block: Block;

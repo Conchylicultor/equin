@@ -135,6 +135,7 @@ carrying the same actions — a separate feature.
     - `page/page-reference/open-aside`
     - `page/sub-page`
     - `page/tags`
+    - `page/turn-into-page`
 - Sub-plugins:
   - **`open-aside`** — Open-in-side-pane action on a page reference: hovering a sub-page row or a link block reveals a button that opens the referenced page in a column beside the current one, leaving it on screen.…
 

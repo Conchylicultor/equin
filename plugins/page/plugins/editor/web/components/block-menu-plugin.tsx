@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { $getSelection, $isRangeSelection, $isTextNode } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
@@ -9,6 +9,8 @@ import {
   useForcedCaretQuery,
 } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
 import { useBlockEditor } from "../block-editor-context";
+import { Editor } from "../slots";
+import type { InsertAction, InsertActionRun } from "../types";
 import {
   $linearCaretOffset,
   serializeBlockRuns,
@@ -92,6 +94,11 @@ export function BlockMenuPlugin({ blockId }: { blockId: string }) {
     [menu.query, flatAll, grouped],
   );
   const flat = useMemo(() => flattenEntries(sections), [sections]);
+  // Every contributed action's runner, bound by `InsertActionBinding` — its
+  // `useRun` is a hook, and the set of actions can grow as plugin tiers load,
+  // so each is called in a component of its own, never in a loop here.
+  const actions = Editor.InsertAction.useContributions();
+  const [runners] = useState(() => new Map<string, InsertActionRun>());
 
   function handleSelect(entry: InsertEntry) {
     // Resolve the consumed span as LINEAR offsets — the stored-runs plain-text
@@ -150,8 +157,14 @@ export function BlockMenuPlugin({ blockId }: { blockId: string }) {
       // action could read would say it yet — and an action that replaces the
       // line must carry the rest of it over, never drop it.
       const text = runsWithoutSpan(serializeBlockRuns(lexicalEditor), from, to);
+      const run = runners.get(entry.action.id);
+      if (!run) {
+        throw new Error(
+          `insert action "${entry.action.id}" committed with no bound runner`,
+        );
+      }
       stripText({ blockId, from, to });
-      entry.action.run({ blockId, editor: makeBlockAPI(blockId), text });
+      run({ blockId, editor: makeBlockAPI(blockId), text });
     }
     if (useForced) clearBlockMenu(blockId);
   }
@@ -169,19 +182,50 @@ export function BlockMenuPlugin({ blockId }: { blockId: string }) {
   // menu's `commit` runs it on pointerdown and inside an `editor.update()`, so a
   // click and Enter are the same operation (see `useCaretMenu`).
   return (
-    <CaretTriggerMenu
-      caret={menu}
-      open={surfaceOpen}
-      width="sm"
-      padding="xs"
-      maxHeight="lg"
-    >
-      <BlockTypeList
-        sections={sections}
-        activeIndex={activeIndex}
-        onCommit={commit}
-        onHoverIndex={setActiveIndex}
-      />
-    </CaretTriggerMenu>
+    <>
+      {actions.map((action) => (
+        <InsertActionBinding
+          key={action.id}
+          action={action}
+          runners={runners}
+        />
+      ))}
+      <CaretTriggerMenu
+        caret={menu}
+        open={surfaceOpen}
+        width="sm"
+        padding="xs"
+        maxHeight="lg"
+      >
+        <BlockTypeList
+          sections={sections}
+          activeIndex={activeIndex}
+          onCommit={commit}
+          onHoverIndex={setActiveIndex}
+        />
+      </CaretTriggerMenu>
+    </>
   );
+}
+
+/**
+ * Calls one insert action's `useRun` — inside the editor, so the runner reads
+ * the host's context — and keeps its latest runner in `runners` under the
+ * action's id, for the menu to run on commit.
+ */
+function InsertActionBinding({
+  action,
+  runners,
+}: {
+  action: InsertAction;
+  runners: Map<string, InsertActionRun>;
+}) {
+  const run = action.useRun();
+  useEffect(() => {
+    runners.set(action.id, run);
+    return () => {
+      runners.delete(action.id);
+    };
+  }, [runners, action.id, run]);
+  return null;
 }

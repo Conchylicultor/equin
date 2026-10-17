@@ -1,5 +1,8 @@
 import type { PageData } from "@plugins/page/plugins/editor/core";
-import type { InsertAction } from "@plugins/page/plugins/editor/web";
+import type {
+  InsertAction,
+  InsertActionRun,
+} from "@plugins/page/plugins/editor/web";
 import type { PageReferenceDecorationContribution } from "@plugins/page/plugins/page-reference/web";
 import { instructionsBlock } from "@plugins/page/plugins/annotations/plugins/instructions/core";
 import { InstructionsPageChip } from "../components/instructions-page-chip";
@@ -27,6 +30,10 @@ export const instructionsPageDecoration: PageReferenceDecorationContribution = {
   component: InstructionsPageChip,
 };
 
+const runInstructionsPageInsert: InsertActionRun = ({ blockId, text }) => {
+  void turnIntoInstructionsPage(blockId, text);
+};
+
 /**
  * `/instructions page`: an instructions page made in place of the caret's line,
  * listed right after the inline instructions card, its sibling in the menu.
@@ -37,7 +44,5 @@ export const instructionsPageInsertAction: InsertAction = {
   icon: menuBookIcon,
   aliases: ["instructions page", "rules page", "instructions-page"],
   after: instructionsBlock.type,
-  run: ({ blockId, text }) => {
-    void turnIntoInstructionsPage(blockId, text);
-  },
+  useRun: () => runInstructionsPageInsert,
 };

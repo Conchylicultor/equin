@@ -4490,6 +4490,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `FramePad`
     - `InsertAction`
     - `InsertActionContext`
+    - `InsertActionRun`
     - `InsertEntry`
     - `InsertSection`
     - `MarkButtonProps`
