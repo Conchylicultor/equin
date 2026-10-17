@@ -1,6 +1,7 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import type { LintRuleDocs } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-const createRule = ESLintUtils.RuleCreator(
+const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
 );
 
@@ -32,6 +33,7 @@ export default createRule({
     docs: {
       description:
         "Disallow LexicalEditor.read(): it flushes pending updates, so from inside an update it commits that update halfway through. Use editor.getEditorState().read(fn, { editor }).",
+      requiresTypeChecking: true,
     },
     schema: [],
     messages: {

@@ -118,6 +118,7 @@ export type ExemptableRuleId =
   | "route-teardown-safety/no-unroute"
   | "row/no-adhoc-row"
   | "row/no-row-focus-class"
+  | "rule-kind-safety/type-aware-rule-declared"
   | "runtime-isolation/no-deep-own-folder-import"
   | "scoped-store/no-module-mutable-store"
   | "scroll-safety/no-adhoc-scroll-into-view"

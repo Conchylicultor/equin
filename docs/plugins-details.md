@@ -23756,9 +23756,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `RawLintMessage`
                   - `TypeCheckWorkerJob`
                   - `TypeCheckWorkerResult`
+                  - `TypedDecision`
+                  - `TypedOutcome`
+                  - `TypeFpTable`
                 - Exports (values):
                   - `LINT_GROUP_ALL`
                   - `LINT_GROUP_BASE`
+                  - `LINT_GROUP_TYPED`
                   - `TYPE_CHECK_WORKER_PEAK_BYTES`
                   - `TYPE_CHECK_WORKER_UNITS`
               - Cross-plugin:
@@ -24133,6 +24137,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ClassRuleFactory`
               - `LintContribution`
               - `LintExemptionMode`
+              - `LintRuleDocs`
+              - `LintRuleKind`
               - `LintRuleSelection`
               - `LintToolkit`
               - `LoadedLintContribution`
@@ -24147,6 +24153,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `collectTokens`
               - `findPluginDirs`
               - `isLintScopeExcluded`
+              - `isTypeAwareRule`
               - `LINT_CONFIG_SOURCE`
               - `LINT_DATA_FILES`
               - `LINT_SCOPE_EXCLUDE_GLOBS`
@@ -24156,6 +24163,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `lintExemptions`
               - `lintRuleIds`
               - `loadLintContributions`
+              - `typeAwareLintGroups`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `framework/tooling/codegen`
@@ -24229,6 +24237,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempted by: `primitives/dom/element-size` (0 debt)
             - **`route-teardown-safety`** — route-teardown-safety lint rule: no-unroute
+            - **`rule-kind-safety`** — rule-kind-safety lint rule: type-aware-rule-declared (a lint rule that reads parser services declares meta.docs.requiresTypeChecking: true)
             - **`runtime-isolation`** — runtime-isolation lint rule: no-deep-own-folder-import
             - **`scroll-safety`** — scroll-safety lint rules: no-adhoc-scroll-into-view, no-adhoc-scroll-write
               - Exemptions:

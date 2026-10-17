@@ -128,7 +128,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`format`** [exempt] — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
         - **`guards`** [exempt] — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
         - **`import-closure`** — Static import-closure measurement (importClosure): the exact repo modules an entrypoint loads, the tree-shaken live subset, the npm specifiers it reaches, and the import chain to any one module…
-        - **`lint`** [test helpers] [exempt] [32 sub-plugins] — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
+        - **`lint`** [test helpers] [exempt] [33 sub-plugins] — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
         - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
         - **`resource-vocabulary`** — The closed set of ways a plugin declares a live-state resource, as data every build-time resource scanner reads. Its key set is DERIVED from the barrels' own module types, so a factory that exists…
