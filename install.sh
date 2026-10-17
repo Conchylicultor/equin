@@ -65,7 +65,10 @@ main() {
   cat <<EOF
 
   Singularity installer. This will:
-    1. install the Xcode command-line tools, if missing (macOS; asks for your password once)
+    1. install the Xcode command-line tools, if missing (macOS), or git, a C
+       compiler and the system libraries headless Chromium needs (Linux, apt)
+       — and enable lingering so the app runs with nobody logged in (Linux);
+       asks for your password once
     2. install mise, and add one line to $RC so new terminals find its tools
     3. $( [ -n "$SELF_DIR" ] && echo "use the checkout at $INSTALL_DIR" || echo "clone $REPO_URL into $INSTALL_DIR" )
     4. install the exact Bun, Go, tmux and Rust releases mise.lock records
@@ -75,7 +78,7 @@ EOF
   if [ "$OS" = "Darwin" ]; then
     echo "  The app then comes back by itself at every login, after a reboot too."
   else
-    echo "  On Linux the app does not survive a reboot: run ./singularity start again after one."
+    echo "  The app then comes back by itself at every boot (a systemd user service)."
   fi
   echo "  Nothing else on your machine is changed. No Homebrew, no system Postgres."
 
@@ -102,9 +105,26 @@ EOF
       xcode-select -p >/dev/null 2>&1 || die "the Xcode command-line tools did not install. Run: xcode-select --install"
     fi
   else
-    for tool in git curl cc; do
-      command -v "$tool" >/dev/null 2>&1 || die "'$tool' is missing. Install it first: sudo apt install git curl build-essential   # or your distro's equivalent"
-    done
+    # The Linux counterpart of the Xcode step: what the app needs from the
+    # system, through the distro's package manager, with one sudo: git, curl
+    # and a C compiler for the toolchain.
+    pkgs=""
+    command -v git >/dev/null 2>&1 || pkgs="$pkgs git"
+    command -v curl >/dev/null 2>&1 || pkgs="$pkgs curl"
+    command -v cc >/dev/null 2>&1 || pkgs="$pkgs build-essential"
+    if [ -n "$pkgs" ]; then
+      command -v apt-get >/dev/null 2>&1 || die "missing:$pkgs. Install them with your distro's package manager (git, curl, a C compiler), then re-run."
+      say "Installing$pkgs (apt; asks for your password)"
+      sudo apt-get update -qq
+      sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $pkgs
+    fi
+    # Lingering: without it systemd stops the user's services — the gateway,
+    # and with it every agent — when the last session closes, and never starts
+    # them at boot. `./singularity start` refuses without it.
+    if [ "$(loginctl show-user "$(id -un)" -p Linger --value 2>/dev/null)" != "yes" ]; then
+      say "Enabling lingering for $(id -un), so the app runs with nobody logged in (asks for your password)"
+      sudo loginctl enable-linger "$(id -un)"
+    fi
   fi
 
   # ── 2. mise ────────────────────────────────────────────────────────────────
@@ -159,6 +179,19 @@ EOF
   # ── 6. Start, 7. build ─────────────────────────────────────────────────────
   say "Starting the gateway and its Postgres"
   ./singularity start
+
+  # Linux: the build's layout checks launch headless Chromium, which links
+  # against system libraries a server image lacks (NSS, ATK, libgbm, ALSA…).
+  # Playwright's own installer knows the list per distro; it runs from the
+  # workspace's pinned playwright, resolved the way the playwright-browser
+  # dependency resolves it (plugins/infra/plugins/deps/plugins/playwright-browser).
+  # Needs node_modules, which `start` just installed.
+  if [ "$OS" != "Darwin" ] && command -v apt-get >/dev/null 2>&1; then
+    BUN="$("$MISE" which bun)"
+    PW_CLI="$("$BUN" -e 'const p = Bun.resolveSync("playwright/package.json", process.argv[1]); const { join, dirname } = require("node:path"); console.log(join(dirname(p), require(p).bin.playwright));' "$INSTALL_DIR/plugins/infra/plugins/deps/plugins/playwright-browser")"
+    say "Installing the system libraries headless Chromium needs (apt; asks for your password)"
+    sudo DEBIAN_FRONTEND=noninteractive "$BUN" "$PW_CLI" install-deps chromium
+  fi
 
   STATUS="$HOME/.singularity/worktrees/singularity/build-status.json"
   before="$(grep -o '"buildId": *"[^"]*"' "$STATUS" 2>/dev/null || true)"

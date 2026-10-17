@@ -4,6 +4,8 @@ import {
   AGENT_SESSION_ENV_ALLOWLIST,
   AGENT_SESSION_PATH_SEED,
   AGENT_SESSION_WRAPPER,
+  agentLoginShell,
+  agentSessionPath,
 } from "./agent-session-env";
 
 // The namespace variable the tmux server used to leak into every pane. Spelled
@@ -15,7 +17,7 @@ const LEAKED_NAMESPACE_VAR = ["SINGULARITY", "WORKTREE"].join("_");
 function assignedNames(wrapper: string): string[] {
   const body = wrapper.slice(
     wrapper.indexOf("env -i ") + "env -i ".length,
-    wrapper.indexOf(" zsh -l -c"),
+    wrapper.indexOf(' "$shell" -l -c'),
   );
   return body.split(" ").map((word) => word.slice(0, word.indexOf("=")));
 }
@@ -23,7 +25,7 @@ function assignedNames(wrapper: string): string[] {
 describe("the agent-session wrapper", () => {
   test("starts the inner shell from an empty environment", () => {
     expect(AGENT_SESSION_WRAPPER).toContain("env -i ");
-    expect(AGENT_SESSION_WRAPPER).toContain(`PATH=${AGENT_SESSION_PATH_SEED}`);
+    expect(AGENT_SESSION_WRAPPER).toContain('PATH="$path"');
   });
 
   test("forwards every allowlisted name by value", () => {
@@ -50,15 +52,49 @@ describe("the agent-session wrapper", () => {
   });
 
   test("interpolates nothing, so a command needs no escaping", () => {
-    expect(AGENT_SESSION_WRAPPER).toContain('zsh -l -c "$cmd" zsh "$@"');
+    expect(AGENT_SESSION_WRAPPER).toContain(
+      '"$shell" -l -c "$cmd" "$shell" "$@"',
+    );
     expect(AGENT_SESSION_WRAPPER).not.toContain("'");
   });
 });
 
+describe("the pane's PATH and shell", () => {
+  test("the toolchain and claude come before the system seed", () => {
+    expect(
+      agentSessionPath({
+        shimsDir: "/h/.local/share/mise/shims",
+        claudeBin: "/h/.local/bin/claude",
+      }),
+    ).toBe(
+      `/h/.local/share/mise/shims:/h/.local/bin:${AGENT_SESSION_PATH_SEED}`,
+    );
+  });
+
+  test("no shims (a host without mise): claude's dir and the seed", () => {
+    expect(
+      agentSessionPath({
+        shimsDir: undefined,
+        claudeBin: "/opt/claude/claude",
+      }),
+    ).toBe(`/opt/claude:${AGENT_SESSION_PATH_SEED}`);
+  });
+
+  test("the account's own POSIX shell; anything else gets /bin/sh", () => {
+    expect(agentLoginShell("/fixture/bin/zsh")).toBe("/fixture/bin/zsh");
+    expect(agentLoginShell("/fixture/bin/bash")).toBe("/fixture/bin/bash");
+    expect(agentLoginShell("/fixture/bin/fish")).toBe("/bin/sh");
+  });
+});
+
 // Drives the real shells with the exact argv shape tmux execs, minus tmux:
-// `zsh -l -c <wrapper> zsh <claudeCmd> [prompt]`, under an environment that
-// carries the leak.
-async function runWrapper(claudeCmd: string, prompt?: string) {
+// `/bin/sh -c <wrapper> sh <loginShell> <path> <claudeCmd> [prompt]`, under an
+// environment that carries the leak. Run once per login shell the host has.
+async function runWrapper(
+  claudeCmd: string,
+  prompt?: string,
+  loginShell = "/bin/sh",
+) {
   // Every value is a fixture. The question this test asks is which KEYS come
   // out the far side, so none of them needs to name anything real — and the
   // inner login shell reads the system profile either way.
@@ -83,11 +119,12 @@ async function runWrapper(claudeCmd: string, prompt?: string) {
   };
   return await spawnCaptured(
     [
-      "/bin/zsh",
-      "-l",
+      "/bin/sh",
       "-c",
       AGENT_SESSION_WRAPPER,
-      "zsh",
+      "sh",
+      loginShell,
+      `/fixture/shims:${AGENT_SESSION_PATH_SEED}`,
       claudeCmd,
       ...(prompt === undefined ? [] : [prompt]),
     ],
@@ -104,10 +141,16 @@ const PROBE_CMD = [
   "env",
 ].join("; ");
 
-describe("the wrapper, executed", () => {
+// Every POSIX login shell this host has: the wrapper must carry the command and
+// prompt identically whichever one the account uses.
+const LOGIN_SHELLS = ["/bin/sh", "/bin/bash", "/bin/zsh"].filter(
+  (sh) => Bun.which(sh) !== null,
+);
+
+describe.each(LOGIN_SHELLS)("the wrapper, executed under %s", (loginShell) => {
   test("delivers the command and the prompt, and drops the leak", async () => {
     const prompt = "fix the 'quoting' bug\nin $HOME/notes & elsewhere";
-    const res = await runWrapper(PROBE_CMD, prompt);
+    const res = await runWrapper(PROBE_CMD, prompt, loginShell);
 
     expect(res.exitCode).toBe(0);
     expect(res.stdout).toContain(`SETTINGS<${SETTINGS}>`);
@@ -117,6 +160,8 @@ describe("the wrapper, executed", () => {
     expect(res.stdout).toContain("TMUX_PANE=%99");
     expect(res.stdout).toContain("SINGULARITY_CONVERSATION_ID=conv-test");
     expect(res.stdout).toContain("SINGULARITY_PARENT_HOST=att-test-w6l1");
+    // ...including the toolchain on PATH, whatever the login profile does...
+    expect(res.stdout).toMatch(/^PATH=.*\/fixture\/shims/m);
     // ...and nothing it was not.
     expect(res.stdout).not.toContain(LEAKED_NAMESPACE_VAR);
     expect(res.stdout).not.toContain("SOCKET_PATH=");
@@ -124,7 +169,11 @@ describe("the wrapper, executed", () => {
   });
 
   test("runs with no prompt at all", async () => {
-    const res = await runWrapper('printf "NARGS<%d>\\n" $#');
+    const res = await runWrapper(
+      'printf "NARGS<%d>\\n" $#',
+      undefined,
+      loginShell,
+    );
     expect(res.exitCode).toBe(0);
     expect(res.stdout).toContain("NARGS<0>");
   });

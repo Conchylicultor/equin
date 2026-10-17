@@ -33,7 +33,8 @@ const state = await depState(audioPython);               // absent | installing 
 onDepInstallSettled(audioPython, () => resync());        // server barrel: that request's install ended
 
 // from a check or an e2e script (host process, no ExecContext of its own):
-const ready = await ensureDepViaCli(audioPython, { stdio: "inherit" }); // `./singularity deps install` child
+const ready = await ensureDepViaCli(audioPython, { stdio: "inherit", grant: null }); // `./singularity deps install` child
+// a check passes the grant its op holds: ensureDepViaCli(dep, { stdio: "capture", grant: ctx.grant })
 ```
 
 - **Declare in `deps/index.ts`.** `deps/` is a barrel folder of its own
@@ -73,7 +74,12 @@ const ready = await ensureDepViaCli(audioPython, { stdio: "inherit" }); // `./si
   its host grant, where an in-process `exec.admit` could wait on itself) and an
   e2e script. One `readyNow`; if not ready, a `./singularity deps install <id>`
   child (its own CLI process and admission, the same host flock), then
-  `readyNow` again for the proof. `"inherit"` streams the child's output,
+  `readyNow` again for the proof. `grant` (required) is the host grant the
+  caller holds, or `null`: the child inherits it and its `exec.admit` spends one
+  of those units instead of queueing host-wide behind its own parent
+  (`admitBackground` honours `inheritedGrant()`). On a host whose whole fleet is
+  one unit (8 GB: `B = 1`) that queue never ended — a build's check timed out
+  installing Chromium that took 20 s alone. `"inherit"` streams the child's output,
   `"capture"` puts its tail in the error. Host code that cannot import the
   `deps/` barrel at all (a `web/`-row test driver) runs
   `./singularity deps install <id> --json` itself: one line

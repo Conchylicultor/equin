@@ -22,7 +22,7 @@ notes inline). Every step is a prerequisite of the next.
 
 ```sh
 # 1. Xcode command-line tools: git, and the C linker Rust builds with.
-#    (Linux: sudo apt install git curl build-essential, or your distro's equivalent.)
+#    (Linux: git, curl and build-essential through apt, one sudo; plus lingering.)
 xcode-select --install
 
 # 2. mise, activated in your shell: it installs the exact Bun, Go, tmux and Rust
@@ -41,6 +41,7 @@ mise trust && mise install   # trust this checkout's mise.toml, then install
 
 # 5. The app.
 ./singularity start               # compiles and starts the gateway, and brings up Postgres
+#    (Linux: then Chromium's system libraries, see below)
 ./singularity build --allow-main  # builds the app and deploys it
 ```
 
@@ -68,8 +69,18 @@ system-level step. On macOS it registers the gateway with launchd
 its own at every login — after a reboot too — and is relaunched if it crashes;
 the gateway then brings Postgres and the app back up. `./singularity stop` stops
 it until the next login, and `./singularity stop --disable` also stops it
-starting at login. On other systems the gateway does not survive a reboot: run
-`./singularity start` again after one.
+starting at login. On Linux it is a systemd user unit
+(`~/.config/systemd/user/dev.singularity.gateway.service`) that starts at boot,
+nobody logged in — it needs lingering (`sudo loginctl enable-linger $USER`,
+which `install.sh` enables). On a server, `SINGULARITY_LISTEN=127.0.0.1:9000
+./singularity start` keeps it on loopback. Elsewhere (no launchd, no systemd)
+the gateway does not survive a reboot: run `./singularity start` again after one.
+
+**Linux: headless Chromium's system libraries.** The build's layout checks
+launch Chromium, which links against libraries a desktop has but a server image
+does not (NSS, ATK, libgbm, ALSA, …). `install.sh` installs them after `start`
+with Playwright's own `install-deps chromium` (apt, one sudo); without them the
+Chromium install fails, naming the missing libraries and the exact command.
 
 ## Postgres
 

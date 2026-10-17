@@ -33,6 +33,12 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
   are and writes `env/executables.json`. A child, because the registry fixes its
   browsers path when it is first loaded. `isIntact` = both recorded files
   exist, so a payload deleted by hand reads `absent` and reinstalls.
+- **Linux: launchable, or not installed.** The browser links against system
+  libraries (NSS, ATK, libgbm, ALSA, …) a server image lacks and Playwright does
+  not download. The install runs `ldd` on the headless shell and fails, naming
+  the missing ones and the root command that installs them (`sudo <bun>
+  <playwright cli> install-deps chromium`), rather than reporting ready and
+  failing at every launch.
 - **`launchChromium` takes a `Ready`**: launched without ensuring is a type
   error. `headless` (default `true`) picks the recorded headless shell;
   `false` the headed binary.

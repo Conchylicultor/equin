@@ -41,9 +41,31 @@ the two launch paths cannot drift. Consequences worth knowing:
 - `launchctl bootstrap gui/<uid>` needs a GUI login session for the user; on a
   Mac nobody is logged into (bare SSH) it fails, loudly, with launchctl's error.
 
+## Linux: a systemd user unit
+
+The same job as a systemd **user** unit, `~/.config/systemd/user/dev.singularity.gateway.service`
+(`infra/launcher`'s `systemd-service.ts`, rendered by the pure `systemd-unit.ts`),
+enabled into `default.target`. Same relaunch policy as the plist. It needs
+**lingering** (`sudo loginctl enable-linger <user>`, once): without it systemd
+stops the user's manager — gateway, backends and agents — when the last session
+closes, so `start` refuses with that fix. With it the gateway starts at boot,
+nobody logged in (nothing is locked until login: the secrets key is a file on
+Linux). `KillMode=process`: a stop signals the gateway alone, because the tmux
+server holding every agent lives in the unit's cgroup.
+
+`start` and `stop` drive both through one `GatewayLoginService` interface
+(`gatewayLoginService()`), so the bullets above hold for systemd too (reload is
+`stop` + `enable --now` after a `daemon-reload`).
+
+## Bind address
+
+Every interface by default. `SINGULARITY_LISTEN=127.0.0.1:9000 ./singularity start`
+binds loopback only — for a server, so the agent manager is unreachable off-box
+by how it was started. Only the host may change; the port stays 9000.
+
 ## Other hosts: a detached spawn
 
-Without launchd the gateway is spawned detached, exactly as before, and does
+Without launchd or systemd the gateway is spawned detached, exactly as before, and does
 not survive a reboot — `start` says so. `--force` first SIGTERMs the running
 daemon and waits until its pid is actually gone.
 
@@ -80,7 +102,7 @@ There is nobody left for it to report to, and the daemon it spawned is unaffecte
 
 ## Plugin reference
 
-- Description: `./singularity start` — build the gateway and register it as a launchd service (macOS) so it comes back after a reboot, then wait for it to actually serve before reporting success.
+- Description: `./singularity start` — build the gateway and register it as a per-user OS service (launchd on macOS, a systemd user unit on Linux) so it comes back after a reboot, then wait for it to actually serve before reporting success.
 - Cli:
   - Uses:
     - `framework/cli/doctor.assertPrerequisites`

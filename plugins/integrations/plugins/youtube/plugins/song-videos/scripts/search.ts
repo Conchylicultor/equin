@@ -25,7 +25,10 @@ if (artist === undefined || title === undefined) {
 // A script holds no ExecContext: yt-dlp is installed through a
 // `./singularity deps install` child instead, and the one source here takes
 // the `Ready` proof directly, never the context.
-const ready = await ensureDepViaCli(ytDlpDep, { stdio: "inherit" });
+const ready = await ensureDepViaCli(ytDlpDep, {
+  stdio: "inherit",
+  grant: null,
+});
 const noExec = {} as ExecContext;
 
 const started = Date.now();

@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-framework-cli-start",
   "private": true,
   "version": "0.0.1",
-  "description": "`./singularity start` — build the gateway and register it as a launchd service (macOS) so it comes back after a reboot, then wait for it to actually serve before reporting success."
+  "description": "`./singularity start` — build the gateway and register it as a per-user OS service (launchd on macOS, a systemd user unit on Linux) so it comes back after a reboot, then wait for it to actually serve before reporting success."
 }

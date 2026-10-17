@@ -8,10 +8,15 @@ half only, by `./singularity start` / `stop`.
 ## One launch spec, two launchers
 
 `gatewayLaunchSpec` is the one derivation of how the gateway runs (argv, cwd,
-declared env, stdio log). `spawnGatewayDaemon` spawns it detached; on macOS
-`./singularity start` instead renders it into a launchd LaunchAgent
-(`server/internal/login-service.ts` + the pure `launchd-plist.ts`), which is what
-makes the dev gateway come back after a reboot. The gateway writes its own
+declared env, stdio log). `spawnGatewayDaemon` spawns it detached; where the host
+has a service manager `./singularity start` instead renders it into a per-user
+service through `gatewayLoginService()` (`server/internal/login-service.ts`), one
+`GatewayLoginService` interface with two implementations — a launchd
+LaunchAgent on macOS (`launchd-service.ts` + the pure `launchd-plist.ts`) and a
+systemd user unit on Linux (`systemd-service.ts` + the pure `systemd-unit.ts`,
+which requires lingering and uses `KillMode=process` so a restart never kills
+the tmux server running the agents). That is what makes the dev gateway come
+back after a reboot. `start` and `stop` name no manager. The gateway writes its own
 pidfile (`-pid-file`) because no launcher sees a launchd relaunch; the detached
 spawn writes it too, so a gateway that dies before getting that far still
 leaves its dead pid for a preview's reaper. Design:
@@ -244,6 +249,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `infra/worktree.writeWorktreeSpec`
   - Exports (types):
     - `GatewayLaunchOptions`
+    - `GatewayLoginService`
     - `GatewayServiceState`
     - `ListenAddress`
   - Exports (values):
@@ -251,16 +257,13 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `awaitGatewayReady`
     - `awaitPgReady`
     - `awaitProcessGone`
-    - `bootoutGatewayService`
     - `bootSelfContainedApp`
-    - `bootstrapGatewayService`
     - `bundledGateway`
     - `ensureDatabaseConfig`
     - `GATEWAY_SERVICE_LABEL`
     - `gatewayLaunchSpec`
+    - `gatewayLoginService`
     - `gatewayPidFile`
-    - `gatewayServicePlistPath`
-    - `gatewayServiceState`
     - `hasPgBouncerPackage`
     - `isGatewayListening`
     - `isRunning`
@@ -270,14 +273,11 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `pgbouncerService`
     - `propagateReleaseConfig`
     - `readPid`
-    - `removeGatewayServicePlist`
     - `resolveListenAddress`
     - `seedReleaseAssetMirror`
     - `spawnGatewayDaemon`
-    - `supportsLoginService`
     - `teardownSelfContainedApp`
     - `terminateProcess`
-    - `writeGatewayServicePlist`
     - `writeReleaseDatabaseConfig`
   - Register: `defineDaemon('launcher.gateway')`
 - Deps:

@@ -1,7 +1,8 @@
 import {
   hostCpuCeiling,
   cpuBudget,
-  HOST_POOLS,
+  hostPoolsFor,
+  type HostFacts,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -21,6 +22,16 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
  */
 const MAX_OVERSUBSCRIPTION = 2;
 
+/**
+ * The host the table is judged on: a fixed reference dev box, never the machine
+ * running the check. The bar is about a DECLARATION (a pool at an implausible
+ * size), so its verdict must be a property of the source. Judged on the running
+ * host, the constant-size pools alone (db-fork, browser-fetch, type-check-worker,
+ * …: Σ 11 today) exceed 2× the cores of any host under 6 cores, so every build
+ * on a 4-core VPS failed whatever the code said.
+ */
+const REFERENCE_HOST: HostFacts = { cpus: 16, ramBytes: 64 * 2 ** 30 };
+
 // The property: the total number of holders host admission can admit at once —
 // every pool's cardinality cap, plus the elastic fleet `B` — must stay within a
 // small multiple of the host's cores.
@@ -38,19 +49,17 @@ const MAX_OVERSUBSCRIPTION = 2;
 // this check reads the numbers WITHOUT importing any server pool code.
 const check: Check = {
   id: "host-budget",
-  description: `Total admitted concurrency (Σ host-pool sizes + the fleet B) must stay within ${MAX_OVERSUBSCRIPTION}× hostCpuCeiling()`,
+  description: `Total admitted concurrency (Σ host-pool sizes + the fleet B) must stay within ${MAX_OVERSUBSCRIPTION}× the cores of a reference ${REFERENCE_HOST.cpus}-core host`,
   async run() {
-    const ceiling = hostCpuCeiling();
+    const ceiling = hostCpuCeiling(REFERENCE_HOST);
     const limit = ceiling * MAX_OVERSUBSCRIPTION;
-    const pooled = Object.values(HOST_POOLS).reduce(
-      (sum, p) => sum + p.size,
-      0,
-    );
-    const { B } = cpuBudget();
+    const pools = hostPoolsFor(REFERENCE_HOST);
+    const pooled = Object.values(pools).reduce((sum, p) => sum + p.size, 0);
+    const { B } = cpuBudget(REFERENCE_HOST);
     const total = pooled + B;
 
     if (total > limit) {
-      const breakdown = Object.entries(HOST_POOLS)
+      const breakdown = Object.entries(pools)
         .map(([id, p]) => `${id}: ${p.size}`)
         .concat(`cpu (fleet B): ${B}`)
         .join("\n    ");
@@ -58,7 +67,7 @@ const check: Check = {
         ok: false,
         message:
           `host pools admit up to ${total} concurrent holders (Σ pool sizes ${pooled} + fleet B ${B}), ` +
-          `over the ${limit} allowed on a ${ceiling}-core host (${MAX_OVERSUBSCRIPTION}× the core count).\n    ${breakdown}`,
+          `over the ${limit} allowed on the reference ${ceiling}-core host (${MAX_OVERSUBSCRIPTION}× the core count).\n    ${breakdown}`,
         hint: "Lower a pool's size in host-admission/core's HOST_POOLS — a pool's size is a cardinality cap on a kind of work, so an implausibly large one is a wiring mistake, not a budget decision.",
       };
     }

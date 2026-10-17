@@ -83,14 +83,30 @@ export type Lane = "interactive" | "background";
  */
 export const PER_UNIT_BYTES = 3.6e9;
 
+/**
+ * The host facts every size here is a pure function of. `thisHost()` reads the
+ * running machine; a check evaluates the same functions on a fixed reference
+ * host instead, so its verdict is a property of the source — not of whichever
+ * box (an 18-core Mac, a 4-core VPS) happens to run it.
+ */
+export interface HostFacts {
+  cpus: number;
+  ramBytes: number;
+}
+
+/** The running machine's facts. */
+export function thisHost(): HostFacts {
+  return { cpus: cpus().length, ramBytes: totalmem() };
+}
+
 /** Host CPU ceiling: one admission unit per logical core. */
-export function hostCpuCeiling(): number {
-  return cpus().length;
+export function hostCpuCeiling(host: HostFacts = thisHost()): number {
+  return host.cpus;
 }
 
 /** Host RAM ceiling for admission: half of physical memory. */
-export function hostRamCeiling(): number {
-  return totalmem() * 0.5;
+export function hostRamCeiling(host: HostFacts = thisHost()): number {
+  return host.ramBytes * 0.5;
 }
 
 /** One host pool's declared admission footprint. */
@@ -117,38 +133,45 @@ export interface HostPoolEntry {
  * names the flock slot-file set, so it must be identical in every backend),
  * matching the formulas the pools themselves size to.
  */
-export const HOST_POOLS = {
-  "heavy-read": { size: Math.max(1, Math.floor(hostCpuCeiling() / 4)) },
-  "worktree-mutate": { size: Math.max(2, Math.floor(hostCpuCeiling() / 6)) },
-  "db-fork": { size: 2 },
-  // A headless-Chromium page render. `size` is a CONSTANT (like `db-fork`, unlike
-  // the `cpus()`-derived pools): a browser launch costs roughly the same on every
-  // box, and the size names the flock slot files, so it must be identical in
-  // every backend.
-  "browser-fetch": { size: 2 },
-  "layout-geometry": { size: 1 },
-  push: { size: 1 },
-  // One repo-program type-check worker (7–14 GB resident). The CPU grant
-  // cannot bound these: its 2-unit weight clamps to each holder's own share, so
-  // up to `B` holders ran one each — 2–4 at once on 2026-10-14, the box in
-  // memory duress, every warm worker burning 718–2211 CPU-s instead of 29–162.
-  // Two is what fits beside everything else on the 64 GB box that measured it;
-  // a CONSTANT (like `db-fork`), because the size names the slot files. The
-  // owner lanes it (background may use 1, the interactive lane — the push
-  // holder, main — keeps the other). See
-  // research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md.
-  "type-check-worker": { size: 2 },
-  // One e2e script run (`./singularity run plugins/…/e2e/x.ts`): one bun
-  // process driving one Chromium against a deployed app, held p50 21 s / p90
-  // 82 s. It used to take a 1-unit `cpu` grant, which put a 20 s screenshot in
-  // the same 6-slot background window as builds holding theirs for 30–60 min:
-  // over 2026-10-09..16, 23 % of 1,492 e2e runs waited ≥ 100 s for that grant
-  // (p95 755 s, worst 2,502 s), and 61 of the 64 agent screenshot calls that hit
-  // the 120 s Bash cap were grant-queue time, not work. Two covers 99 % of the
-  // measured concurrent-e2e time (3+ at once 1.1 %). A CONSTANT: a browser costs
-  // the same on every box, and the size names the slot files.
-  e2e: { size: 2 },
-} as const satisfies Record<string, HostPoolEntry>;
+export function hostPoolsFor(host: HostFacts) {
+  return {
+    "heavy-read": { size: Math.max(1, Math.floor(hostCpuCeiling(host) / 4)) },
+    "worktree-mutate": {
+      size: Math.max(2, Math.floor(hostCpuCeiling(host) / 6)),
+    },
+    "db-fork": { size: 2 },
+    // A headless-Chromium page render. `size` is a CONSTANT (like `db-fork`, unlike
+    // the `cpus()`-derived pools): a browser launch costs roughly the same on every
+    // box, and the size names the flock slot files, so it must be identical in
+    // every backend.
+    "browser-fetch": { size: 2 },
+    "layout-geometry": { size: 1 },
+    push: { size: 1 },
+    // One repo-program type-check worker (7–14 GB resident). The CPU grant
+    // cannot bound these: its 2-unit weight clamps to each holder's own share, so
+    // up to `B` holders ran one each — 2–4 at once on 2026-10-14, the box in
+    // memory duress, every warm worker burning 718–2211 CPU-s instead of 29–162.
+    // Two is what fits beside everything else on the 64 GB box that measured it;
+    // a CONSTANT (like `db-fork`), because the size names the slot files. The
+    // owner lanes it (background may use 1, the interactive lane — the push
+    // holder, main — keeps the other). See
+    // research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md.
+    "type-check-worker": { size: 2 },
+    // One e2e script run (`./singularity run plugins/…/e2e/x.ts`): one bun
+    // process driving one Chromium against a deployed app, held p50 21 s / p90
+    // 82 s. It used to take a 1-unit `cpu` grant, which put a 20 s screenshot in
+    // the same 6-slot background window as builds holding theirs for 30–60 min:
+    // over 2026-10-09..16, 23 % of 1,492 e2e runs waited ≥ 100 s for that grant
+    // (p95 755 s, worst 2,502 s), and 61 of the 64 agent screenshot calls that hit
+    // the 120 s Bash cap were grant-queue time, not work. Two covers 99 % of the
+    // measured concurrent-e2e time (3+ at once 1.1 %). A CONSTANT: a browser costs
+    // the same on every box, and the size names the slot files.
+    e2e: { size: 2 },
+  } as const satisfies Record<string, HostPoolEntry>;
+}
+
+/** The pool table on THIS host — what every pool and its readers size to. */
+export const HOST_POOLS = hostPoolsFor(thisHost());
 
 /**
  * The fleet's ceiling BEFORE the `≥ 1` floor: the smaller of the host's cores and
@@ -160,10 +183,10 @@ export const HOST_POOLS = {
  * than one worker", not "the pools overcommitted the ceiling" — which the `max(1,
  * …)` floor in `cpuBudget()` handles.
  */
-export function rawFleetCeiling(): number {
+export function rawFleetCeiling(host: HostFacts = thisHost()): number {
   return Math.min(
-    hostCpuCeiling(),
-    Math.floor(hostRamCeiling() / PER_UNIT_BYTES),
+    hostCpuCeiling(host),
+    Math.floor(hostRamCeiling(host) / PER_UNIT_BYTES),
   );
 }
 
@@ -193,8 +216,8 @@ export interface CpuBudget {
  * background window floors to 1 and the pool behaves as unlaned. The reserved
  * interactive floor only becomes meaningful again at `B >= 2`.
  */
-export function cpuBudget(): CpuBudget {
-  const B = Math.max(1, rawFleetCeiling());
+export function cpuBudget(host: HostFacts = thisHost()): CpuBudget {
+  const B = Math.max(1, rawFleetCeiling(host));
   const reservedInteractive = Math.max(1, Math.floor(B / 3));
   const backgroundLimit = Math.max(1, B - reservedInteractive);
   return { B, reservedInteractive, backgroundLimit };

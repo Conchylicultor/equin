@@ -242,7 +242,10 @@ export async function withBrowser<T>(
   // it (~280 MB, progress on this terminal) in a `./singularity deps install`
   // child — this script holds no ExecContext of its own — and every run after
   // finds it with one read.
-  const installed = await ensureDepViaCli(chromium, { stdio: "inherit" });
+  const installed = await ensureDepViaCli(chromium, {
+    stdio: "inherit",
+    grant: null,
+  });
 
   let browser: Browser;
   try {

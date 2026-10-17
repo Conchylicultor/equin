@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import type { Browser, LaunchOptions } from "playwright";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import type {
   DepSource,
   InstallContext,
@@ -166,10 +167,38 @@ export function playwrightBrowser(opts: {
       ctx.log(
         `${browser}: headless shell ${read.executables.headlessShell}, headed ${read.executables.headed}`,
       );
+      await assertSystemLibraries(read.executables.headlessShell, pw.cli);
     },
 
     isIntact: (dir) => readBrowserExecutables(dir).ok,
   };
+}
+
+/**
+ * Linux: the browser links against system libraries (NSS, ATK, libgbm, ALSA, …)
+ * that a server image does not ship and Playwright does not download. Without
+ * them every launch fails, minutes later and inside whatever check or script
+ * launched it. So the install is not ready until the dynamic linker resolves
+ * every one, and its failure names the one root command that installs them.
+ * macOS ships everything the browser links against.
+ */
+async function assertSystemLibraries(
+  binary: string,
+  cli: string,
+): Promise<void> {
+  if (process.platform !== "linux") return;
+  const { stdout } = await spawnExpectOk(["ldd", binary], {
+    timeoutMs: MINUTE,
+  });
+  const missing = stdout
+    .split("\n")
+    .filter((l) => l.includes("=> not found"))
+    .map((l) => l.trim().split(" ")[0]);
+  if (missing.length > 0) {
+    throw new Error(
+      `the browser cannot start on this host: system libraries missing (${missing.join(", ")}). Install them once, as root: sudo ${process.execPath} ${cli} install-deps chromium`,
+    );
+  }
 }
 
 /** `chromium.launch` options, minus the two that pick the binary: the install does. */

@@ -23197,7 +23197,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `infra/jobs/supervised-job.cliExecContext`
           - Exemptions:
             - Exempts itself from: `paths:data-root-not-joined` — `cli/run.ts` (sanctioned)
-        - **`start`** — `./singularity start` — build the gateway and register it as a launchd service (macOS) so it comes back after a reboot, then wait for it to actually serve before reporting success.
+        - **`start`** — `./singularity start` — build the gateway and register it as a per-user OS service (launchd on macOS, a systemd user unit on Linux) so it comes back after a reboot, then wait for it to actually serve before reporting success.
           - Cli:
             - Uses:
               - `framework/cli/doctor.assertPrerequisites`
@@ -26380,6 +26380,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CpuBudget`
               - `Grant`
               - `GrantHooks`
+              - `HostFacts`
               - `HostPoolEntry`
               - `Lane`
             - Exports (values):
@@ -26388,6 +26389,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HOST_LANE_ENV`
               - `HOST_POOLS`
               - `hostCpuCeiling`
+              - `hostPoolsFor`
               - `hostRamCeiling`
               - `PER_UNIT_BYTES`
               - `rawFleetCeiling`
@@ -26844,26 +26846,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
           - Server:
             - Contributes: `fork-data-exclusion` "supervised_job_runs"
-            - Uses:
-              - `database.db`
+            - Uses: 21 symbols — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+              - `infra/jobs` ×8
+              - `infra/paths` ×5
+              - `infra/file-watcher` ×2
+              - `infra/host/host-admission` ×2
               - `database/admin.ExcludeFromFork`
+              - `database.db`
               - `infra/events.defineTriggerEvent`
-              - `infra/file-watcher.defineFileWatcher`
-              - `infra/file-watcher.FileWatcher`
-              - `infra/host/host-admission.withHostGrant`
-              - `infra/jobs.abortDurableRun`
-              - `infra/jobs.defineJob`
-              - `infra/jobs.isNonRetryableError`
-              - `infra/jobs.isSuspendSignal`
-              - `infra/jobs.JobCtx`
-              - `infra/jobs.JobFactory`
-              - `infra/jobs.NonRetryableError`
-              - `infra/jobs.ScheduleSpec`
-              - `infra/paths.pruneWorktreeRunArtifacts`
-              - `infra/paths.REPO_ROOT`
-              - `infra/paths.RUN_TERMINAL_SUFFIX`
-              - `infra/paths.RUN_TRANSCRIPT_SUFFIX`
-              - `infra/paths.worktreeArtifacts`
               - `infra/retention.defineRetention`
             - DB schema:
               - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables-run-ended.ts`
@@ -26962,6 +26952,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/worktree.writeWorktreeSpec`
         - Exports (types):
           - `GatewayLaunchOptions`
+          - `GatewayLoginService`
           - `GatewayServiceState`
           - `ListenAddress`
         - Exports (values):
@@ -26969,16 +26960,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `awaitGatewayReady`
           - `awaitPgReady`
           - `awaitProcessGone`
-          - `bootoutGatewayService`
           - `bootSelfContainedApp`
-          - `bootstrapGatewayService`
           - `bundledGateway`
           - `ensureDatabaseConfig`
           - `GATEWAY_SERVICE_LABEL`
           - `gatewayLaunchSpec`
+          - `gatewayLoginService`
           - `gatewayPidFile`
-          - `gatewayServicePlistPath`
-          - `gatewayServiceState`
           - `hasPgBouncerPackage`
           - `isGatewayListening`
           - `isRunning`
@@ -26988,14 +26976,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pgbouncerService`
           - `propagateReleaseConfig`
           - `readPid`
-          - `removeGatewayServicePlist`
           - `resolveListenAddress`
           - `seedReleaseAssetMirror`
           - `spawnGatewayDaemon`
-          - `supportsLoginService`
           - `teardownSelfContainedApp`
           - `terminateProcess`
-          - `writeGatewayServicePlist`
           - `writeReleaseDatabaseConfig`
         - Register: `defineDaemon('launcher.gateway')`
       - Deps:

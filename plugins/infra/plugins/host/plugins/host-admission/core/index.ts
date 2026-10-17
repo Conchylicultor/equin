@@ -1,9 +1,15 @@
-export type { Lane, HostPoolEntry, CpuBudget } from "./internal/budget";
+export type {
+  Lane,
+  HostPoolEntry,
+  CpuBudget,
+  HostFacts,
+} from "./internal/budget";
 export {
   PER_UNIT_BYTES,
   hostCpuCeiling,
   hostRamCeiling,
   HOST_POOLS,
+  hostPoolsFor,
   rawFleetCeiling,
   cpuBudget,
 } from "./internal/budget";

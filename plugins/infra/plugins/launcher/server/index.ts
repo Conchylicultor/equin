@@ -25,17 +25,12 @@ export {
   gatewayPidFile,
 } from "./internal/boot";
 export type { GatewayLaunchOptions } from "./internal/boot";
-export {
-  GATEWAY_SERVICE_LABEL,
-  supportsLoginService,
-  gatewayServicePlistPath,
-  gatewayServiceState,
-  writeGatewayServicePlist,
-  removeGatewayServicePlist,
-  bootstrapGatewayService,
-  bootoutGatewayService,
-} from "./internal/login-service";
-export type { GatewayServiceState } from "./internal/login-service";
+export { gatewayLoginService } from "./internal/login-service";
+export { GATEWAY_SERVICE_LABEL } from "./internal/gateway-service";
+export type {
+  GatewayLoginService,
+  GatewayServiceState,
+} from "./internal/gateway-service";
 export {
   LISTEN_ENV,
   resolveListenAddress,

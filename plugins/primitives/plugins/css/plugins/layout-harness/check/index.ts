@@ -183,13 +183,15 @@ const check: Check = {
     if (existsSync(markerFile(sig))) return { ok: true };
 
     // Chromium is an on-demand dependency. Install it (a no-op once it is)
-    // BEFORE taking the grant and the pool: in a `./singularity deps install`
-    // child, a CLI process admitted to the host on its own, because this
-    // process runs inside an op that already holds its grant — an in-process
-    // install waiting for a background unit could wait on itself. The suite's
-    // measurer then finds it installed (see `web/internal/measure-page.ts`).
+    // BEFORE taking the pool: in a `./singularity deps install` child, which
+    // spends a unit of THIS op's grant (passed down) rather than queueing
+    // host-wide behind it — on a one-unit host that queue waited on its own
+    // parent until the install timed out. The suite's measurer then finds it
+    // installed (see `web/internal/measure-page.ts`).
     try {
-      await ensureDepViaCli(chromium, { stdio: "capture" });
+      await ctx.grant.run(() =>
+        ensureDepViaCli(chromium, { stdio: "capture", grant: ctx.grant }),
+      );
     } catch (err) {
       return {
         ok: false,

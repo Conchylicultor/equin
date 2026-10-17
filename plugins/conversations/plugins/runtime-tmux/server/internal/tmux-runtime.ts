@@ -32,13 +32,19 @@ import {
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
+import { userInfo } from "node:os";
+import { runtimeShimsDir } from "@plugins/infra/plugins/launcher/core";
 import { relayHookEntry } from "@plugins/conversations/plugins/question-relay/server";
 import {
   promptSubmitHookEntry,
   recordPromptHookLaunch,
 } from "@plugins/conversations/plugins/turn-ledger/server";
 import { tmuxSignalsDir } from "../../data-dirs";
-import { AGENT_SESSION_WRAPPER } from "./agent-session-env";
+import {
+  AGENT_SESSION_WRAPPER,
+  agentLoginShell,
+  agentSessionPath,
+} from "./agent-session-env";
 import { resolveSessionState, type SessionState } from "./claude-session";
 import { parseInputDraft } from "./input-draft";
 import { clearDraft } from "./input-guard";
@@ -780,7 +786,7 @@ export const tmuxRuntime: ConversationRuntime = {
     // SERVER, so demoting our short-lived `tmux new-session` client below
     // would be a no-op. backgroundPrefix() is a fixed literal — shell-safe.
     const claudeCmd = backgroundPrefix() + cmdParts.join(" ");
-    // tmux execs this argv directly, so the first zsh is the only process that
+    // tmux execs this argv directly, so the first shell is the only process that
     // can expand `$VAR` against what tmux hands the pane (its injected TMUX /
     // TMUX_PANE plus the two `-e` values). That shell immediately re-execs into
     // an allowlisted environment; see agent-session-env.ts for why the pane's
@@ -802,11 +808,15 @@ export const tmuxRuntime: ConversationRuntime = {
         `SINGULARITY_PARENT_HOST=${parentHost}`,
         "-e",
         "CLAUDE_CODE_DISABLE_AGENT_VIEW=1",
-        "zsh",
-        "-l",
+        "/bin/sh",
         "-c",
         AGENT_SESSION_WRAPPER,
-        "zsh",
+        "sh",
+        agentLoginShell(userInfo().shell ?? "/bin/sh"),
+        agentSessionPath({
+          shimsDir: runtimeShimsDir(process.env),
+          claudeBin,
+        }),
         claudeCmd,
         ...(launchMessage !== undefined && !useTempFile ? [launchMessage] : []),
         // Re-arm the global session hooks in the same invocation: a tmux server

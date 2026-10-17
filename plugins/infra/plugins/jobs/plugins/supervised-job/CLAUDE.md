@@ -662,26 +662,14 @@ construction, and the job and the body it spawns cannot drift apart.
 - Description: Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
 - Server:
   - Contributes: `fork-data-exclusion` "supervised_job_runs"
-  - Uses:
-    - `database.db`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/jobs` ×8
+    - `infra/paths` ×5
+    - `infra/file-watcher` ×2
+    - `infra/host/host-admission` ×2
     - `database/admin.ExcludeFromFork`
+    - `database.db`
     - `infra/events.defineTriggerEvent`
-    - `infra/file-watcher.defineFileWatcher`
-    - `infra/file-watcher.FileWatcher`
-    - `infra/host/host-admission.withHostGrant`
-    - `infra/jobs.abortDurableRun`
-    - `infra/jobs.defineJob`
-    - `infra/jobs.isNonRetryableError`
-    - `infra/jobs.isSuspendSignal`
-    - `infra/jobs.JobCtx`
-    - `infra/jobs.JobFactory`
-    - `infra/jobs.NonRetryableError`
-    - `infra/jobs.ScheduleSpec`
-    - `infra/paths.pruneWorktreeRunArtifacts`
-    - `infra/paths.REPO_ROOT`
-    - `infra/paths.RUN_TERMINAL_SUFFIX`
-    - `infra/paths.RUN_TRANSCRIPT_SUFFIX`
-    - `infra/paths.worktreeArtifacts`
     - `infra/retention.defineRetention`
   - DB schema:
     - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables-run-ended.ts`

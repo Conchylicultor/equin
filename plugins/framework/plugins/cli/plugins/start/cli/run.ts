@@ -25,16 +25,16 @@ import {
   awaitGatewayReady,
   awaitProcessGone,
   terminateProcess,
-  supportsLoginService,
-  gatewayServiceState,
-  writeGatewayServicePlist,
-  bootstrapGatewayService,
-  bootoutGatewayService,
+  gatewayLoginService,
+  resolveListenAddress,
+  LISTEN_ENV,
   GATEWAY_SERVICE_LABEL,
   type GatewayLaunchOptions,
+  type GatewayLoginService,
 } from "@plugins/infra/plugins/launcher/server";
 
-// The dev gateway always listens on the default port.
+// The dev gateway always listens on the default port: every backend reaches
+// central through `localhost:9000`.
 const DEFAULT_PORT = 9000;
 
 type Opts = { force?: boolean; logLevel: string };
@@ -52,21 +52,27 @@ const run: CliAction<[], Opts> = async (opts) => {
   // the same embedded cluster, so the same machine facts have to hold.
   assertSupportedHost();
 
-  if (supportsLoginService()) await startAsLoginService(opts);
+  const service = gatewayLoginService();
+  if (service) await startAsLoginService(service, opts);
   else await startDetached(opts);
 };
 
 /**
- * macOS: the gateway is a launchd LaunchAgent, so it comes back at login after a
- * reboot and is relaunched if it dies. launchd owns the process; this command
- * (re)writes the job, (re)loads it, and waits for it to serve.
+ * The gateway is a per-user OS service (a launchd LaunchAgent on macOS, a
+ * systemd user unit on Linux), so it comes back after a reboot and is
+ * relaunched if it dies. The manager owns the process; this command (re)writes
+ * the job, (re)loads it, and waits for it to serve.
  */
-async function startAsLoginService(opts: Opts): Promise<void> {
-  const service = await gatewayServiceState();
+async function startAsLoginService(
+  loginService: GatewayLoginService,
+  opts: Opts,
+): Promise<void> {
+  const manager = loginService.manager;
+  const service = await loginService.state();
   const managedPid = service.kind === "loaded" ? service.pid : null;
   const pidfilePid = readPid();
-  // A gateway launchd does not own: started by a `start` from before the
-  // gateway was a launchd service.
+  // A gateway the manager does not own: started by a `start` from before the
+  // gateway was a service.
   const legacyPid =
     pidfilePid !== null && pidfilePid !== managedPid && isRunning(pidfilePid)
       ? pidfilePid
@@ -74,7 +80,7 @@ async function startAsLoginService(opts: Opts): Promise<void> {
 
   if (managedPid !== null && !opts.force) {
     printRunning(
-      `Gateway is already running under launchd (PID ${managedPid})`,
+      `Gateway is already running under ${manager} (PID ${managedPid})`,
     );
     return;
   }
@@ -90,45 +96,46 @@ async function startAsLoginService(opts: Opts): Promise<void> {
   }
 
   const spec = gatewayLaunchSpec(await prepareGateway(opts));
-  const plist = writeGatewayServicePlist(spec);
+  const written = loginService.write(spec);
   console.log(
-    `Registered ${GATEWAY_SERVICE_LABEL} with launchd (${plist.path})`,
+    `Registered ${GATEWAY_SERVICE_LABEL} with ${manager} (${written.path})`,
   );
 
   if (legacyPid !== null) {
     if (!opts.force) {
-      // Registering is enough for the next login; swapping the live gateway
-      // restarts every backend, which only an explicit --force asks for.
+      // Registering is enough for the next login/boot; swapping the live
+      // gateway restarts every backend, which only an explicit --force asks for.
       console.log(
-        `The running gateway (PID ${legacyPid}) was started before it was a launchd service. It keeps running now, and launchd starts it from the next login on. Run \`./singularity start --force\` to hand it to launchd now.`,
+        `The running gateway (PID ${legacyPid}) was started before it was a ${manager} service. It keeps running now, and ${manager} starts it from the next ${loginService.startsAt} on. Run \`./singularity start --force\` to hand it to ${manager} now.`,
       );
       return;
     }
     console.log(
-      `Stopping the gateway started outside launchd (PID ${legacyPid})...`,
+      `Stopping the gateway started outside ${manager} (PID ${legacyPid})...`,
     );
     await terminateProcess(legacyPid);
   }
 
   if (service.kind === "loaded") {
-    // Unload rather than `kickstart`: launchd reads a plist only when it is
-    // bootstrapped, so a rewritten job takes effect only through a reload.
-    console.log("Reloading the launchd job...");
-    await bootoutGatewayService();
+    // Unload rather than restart in place: neither manager re-reads a job
+    // definition while it is loaded, so a rewritten job takes effect only
+    // through a reload.
+    console.log(`Reloading the ${manager} job...`);
+    await loginService.unload();
     if (managedPid !== null) await awaitProcessGone(managedPid);
   }
 
-  // launchd appends; truncate so the tail quoted on a failed start is this boot's.
+  // The manager appends; truncate so the tail quoted on a failed start is this boot's.
   writeFileSync(spec.stdioLog, "");
-  const pid = await bootstrapGatewayService();
+  const pid = await loginService.load();
   await awaitGatewayReady({ pid, port: DEFAULT_PORT });
   printRunning(
-    `Gateway started under launchd (PID ${pid}); it starts again at every login`,
+    `Gateway started under ${manager} (PID ${pid}); it starts again at every ${loginService.startsAt}`,
   );
 }
 
 /**
- * Hosts without launchd: the detached spawn. It does not survive a reboot —
+ * Hosts without a service manager: the detached spawn. It does not survive a reboot —
  * run `./singularity start` again after one.
  */
 async function startDetached(opts: Opts): Promise<void> {
@@ -177,7 +184,7 @@ async function prepareGateway(opts: Opts): Promise<GatewayLaunchOptions> {
     root: repoRoot,
     log: console.log,
   });
-  // The launchd job (and a detached gateway) names this binary by path long
+  // The service job (and a detached gateway) names this binary by path long
   // after main's source moves on: keep the deps sweep off it until the next
   // `start` moves the hold to a newer build.
   holdDep(gateway, "machine-gateway");
@@ -187,8 +194,28 @@ async function prepareGateway(opts: Opts): Promise<GatewayLaunchOptions> {
     gateway,
     cwd: repoRoot,
     port: DEFAULT_PORT,
+    bindHost: devBindHost(),
     logLevel: opts.logLevel,
   };
+}
+
+/**
+ * Where the dev gateway binds: every interface by default (unchanged), or the
+ * host `SINGULARITY_LISTEN` names — the one listen override a release honours
+ * too — so a server install can keep the agent manager on loopback by how it
+ * was started, not by a firewall rule someone has to remember. Only the HOST
+ * may change: every backend reaches central at `localhost:9000`.
+ */
+function devBindHost(): string | undefined {
+  const addr = resolveListenAddress(DEFAULT_PORT);
+  if (addr.port !== DEFAULT_PORT) {
+    throw new Error(
+      `${LISTEN_ENV} names port ${addr.port}, but the dev gateway must listen on ${DEFAULT_PORT} (backends reach central at localhost:${DEFAULT_PORT}). Set only the host, e.g. ${LISTEN_ENV}=127.0.0.1:${DEFAULT_PORT}.`,
+    );
+  }
+  if (addr.host !== null)
+    console.log(`Binding the gateway to ${addr.host} (${LISTEN_ENV})`);
+  return addr.host ?? undefined;
 }
 
 function printRunning(headline: string): void {

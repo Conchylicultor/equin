@@ -327,6 +327,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `CpuBudget`
     - `Grant`
     - `GrantHooks`
+    - `HostFacts`
     - `HostPoolEntry`
     - `Lane`
   - Exports (values):
@@ -335,6 +336,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `HOST_LANE_ENV`
     - `HOST_POOLS`
     - `hostCpuCeiling`
+    - `hostPoolsFor`
     - `hostRamCeiling`
     - `PER_UNIT_BYTES`
     - `rawFleetCeiling`
