@@ -185,8 +185,8 @@ export function NestedTableView(
   // Columns follow the view's Properties policy. The leading field (the row's
   // avatar) renders in the tree head's icon slot, so it is no column here.
   const vis = useMemo(
-    () => resolveBodyFields(fields, props.state.visibleFields),
-    [fields, props.state.visibleFields],
+    () => resolveBodyFields(fields, props.state.properties),
+    [fields, props.state.properties],
   );
   const leadingField = useMemo(() => pickLeadingField(vis), [vis]);
   const columnFields = useMemo(

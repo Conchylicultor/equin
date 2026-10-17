@@ -106,7 +106,7 @@ function model(state: ViewState) {
     stateFor: fakeViewGetter(() => state),
     setSort: noop,
     setSortRules: noop,
-    setVisibleFields: noop,
+    setProperties: noop,
     setFilter: noop,
     setGroupBy: noop,
     setFold: noop,

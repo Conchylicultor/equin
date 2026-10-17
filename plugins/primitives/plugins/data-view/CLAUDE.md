@@ -2266,81 +2266,92 @@ view type with no meaningful field-sort axis: the Sort control's `isApplicable`
 then drops it while the Filter control stays. Flag omitted = honors sort.
 
 Body rendering is **show-all by default**, governed per view-instance by
-`visibleFields` (below) and *not* tied to `primary` — so a field is visible in the
+`properties` (below) and *not* tied to `primary` — so a field is visible in the
 body **and** usable in the filter builder unless a surface explicitly hides it. To
-keep a field **filter-only**, author a narrow `visibleFields` on that view that
-omits it (and set
+keep a field **filter-only**, author a `properties` list on that view that does
+not show it (and set
 `filterable: false` to also keep it out of the full-text search accessor) — as the
-settings config nav does (`visibleFields: ["label"]` in
+settings config nav does (`properties: [{ "id": "label" }, …]` in
 `config/config_v2/settings/config_v2.settings.nav.jsonc`, keeping its `modified` /
 `conflict` / `source` fields as pure filter dimensions), and as the studio explorer
-does with `visibleFields: ["name"]`.
+does with `properties: [{ "id": "name" }]`.
 
 ## Per-view visible fields (Properties)
 
 Which fields a view renders in its **body**, and in what order, is a per-view-instance
 dimension — the visible-fields twin of `sort` / `filter`, stored in the **same `view`
-blob** as `visibleFields?: string[] | null`:
+blob** as `properties?: PropertyEntry[] | null`, each entry `{ id, hidden?: true }`:
 
 - **`null` / absent (the default)** → the **schema's own default body set**: every
   field in schema order except those declaring `FieldDef.visible: false` (below).
   Newly added fields (including a freshly added custom column) auto-appear with zero
   user action.
-- **explicit `string[]`** → exactly those field ids, in that order; everything else is
-  hidden. Order is meaningful — it is the body order (table columns, gallery/list
-  property rows, nested-table secondary cells). Like Notion, once a view is customized,
-  later-added fields stay hidden until toggled on.
+- **explicit list** → the field order, each entry shown unless `hidden: true`.
+  Order is meaningful — it is the body order (table columns, gallery/list property
+  rows, nested-table secondary cells). A hidden entry **keeps its place**, so
+  hiding then showing a field returns it where it was. A schema field the list
+  does not name is **hidden, at the end of its band** — like Notion, once a view is
+  customized a later-added field arrives hidden until switched on. Nothing flags
+  it for review: the field catalog is code, not config, so adding a field moves no
+  config hash, and arriving hidden changes nothing the view shows.
+
+The first edit writes **every** field (hidden ones with `hidden: true`), so from
+then on each has a stored position. Saved views from before this shape
+(`visibleFields: string[]`, the visible ids only) are rewritten by the
+`visible-fields-to-properties` config migration (`shared/view-migrations.ts`) —
+`["a", "b"]` → `[{ "id": "a" }, { "id": "b" }]` in the same key slot, lossless
+because an unnamed field reads as hidden either way.
 
 ### `FieldDef.visible` — a field can be a dimension without being printed
 
 `visible?: boolean` (default `true`) is the **schema's** half of the same
 question: `false` means the field feeds sort / filter / group-by / search only
 and is not in the default body set — the user can still switch it on from
-Properties. It is what a surface reaches for instead of authoring a narrow
-`visibleFields` array purely to omit one field.
+Properties. It is what a surface reaches for instead of authoring a
+`properties` list purely to hide one field.
 
 **Two places hardcoded "show everything", and both read it** — this is the part
 that is easy to half-do:
 
-- `web/internal/resolve-body-fields.ts` — the unconfigured branch now filters
+- `web/internal/resolve-body-fields.ts` — the unconfigured branch filters
   `f.visible !== false`. Without this the flag does nothing at all.
-- `web/internal/use-visible-fields-controller.ts` — the unconfigured branch seeds
-  each item's checkbox from `field.visible !== false` rather than a literal
-  `true`. Without *this* the field renders **checked** in the Properties list
-  while the body leaves it out, and the first click on that checkbox visibly does
-  nothing.
+- `web/internal/use-properties-controller.ts` — the unconfigured branch seeds
+  each item's visibility from `field.visible !== false` rather than a literal
+  `true`. Without *this* the field renders **shown** in the Properties list
+  while the body leaves it out, and the first click on it visibly does nothing.
 
 Sort / filter / search are unaffected by construction, not by care: every view
 runs `useDataViewSections` over the full `props.fields` and calls
 `resolveBodyFields` afterwards, on a separate value.
 
 **The one semantic to accept.** In a view whose config already holds an explicit
-`visibleFields` array, a `visible: false` field is indistinguishable from "a field
-the user never switched on" — the array simply does not mention it. That is the
-existing, intended Notion-parity behaviour, and it means `visible` is a
-**default, not an enforcement**. For the same reason "Show all fields" resets to
-`null`, i.e. back to the schema default — a `visible: false` field returns to
-unchecked rather than appearing.
+`properties` list, a `visible: false` field the list does not name reads as hidden
+— indistinguishable from "a field the user never switched on". That is the
+intended Notion-parity behaviour, and it means `visible` is a **default, not an
+enforcement**. For the same reason "Show all fields" resets to `null`, i.e. back
+to the schema default — a `visible: false` field returns to hidden rather than
+appearing.
 
 Custom columns need nothing: they are folded into `props.fields` before any view
 calls `resolveBodyFields`, and an absent `visible` reads as `true`.
 
-`visibleFields` governs **body rendering only**. Filter, sort, and search always
+`properties` governs **body rendering only**. Filter, sort, and search always
 operate on the **full** `FieldDef[]` schema — a hidden field stays filterable and
-sortable. The shared `resolveBodyFields(fields, visibleFields)` helper maps the blob
+sortable. The shared `resolveBodyFields(fields, properties)` helper maps the blob
 to the ordered visible subset each view renders; the primary/title slot in
 gallery/list/nested table is then `pickPrimaryField` over that **visible** subset (so a hidden
 title falls back to the next visible text field).
 
 Users edit this from the **View settings** control (`MdTune`) — the
 **"Properties"** entry in its "Current view" section, a `view`-scope `DataViewSlots.Setting` contribution
-(`PropertiesControl`) sitting alongside "Group by": a sortable, checkbox list to
-reorder / hide fields, plus a "Show all fields" reset (back to `null`). The setting
+(`PropertiesControl`) sitting alongside "Group by": a sortable list of every field,
+each row toggling it (an eye on the right — `visibility` / `visibility-off`; a hidden
+row stays in place, dimmed), plus a "Show all fields" reset (back to `null`). The setting
 gates itself to surfaces with more than one field (via the contribution's
 `isApplicable`, which the menu reads generically — it never names Properties). Writes
-go to the view's config row exactly like sort/filter (`updateView(id, { visibleFields }, { merge: true })`),
+go to the view's config row exactly like sort/filter (`updateView(id, { properties }, { merge: true })`),
 so the choice is durable and git-promotable. Surfaces wanting a deliberately narrow
-body author `visibleFields` directly in their committed `.jsonc` — see the
+body author `properties` directly in their committed `.jsonc` — see the
 config-nav example under "Filtering".
 
 ## The rail (the inverted topology)
@@ -2771,6 +2782,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `LiveSourceScope`
     - `ManualOrderConfig`
     - `PresetId`
+    - `PropertyEntry`
     - `RowTone`
     - `SectionCount`
     - `SectionsToolbar`

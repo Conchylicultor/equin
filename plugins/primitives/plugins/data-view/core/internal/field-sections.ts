@@ -51,7 +51,7 @@ export function splitFieldSections<TRow>(
  *
  * The BAND ORDER comes from `schema`, the full field schema, not from `fields`:
  * the list being ordered is usually a subset in some stored order (a view's
- * `visibleFields`, the Properties list with its hidden fields appended), and
+ * `properties`, the Properties list with its unlisted fields appended), and
  * taking the order from it would float whichever band that list happens to start
  * with above the host's own — so the same schema would band one way in the
  * Properties list and another in the filter picker. Within a band, the order of

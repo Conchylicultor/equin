@@ -10,7 +10,7 @@
         "type": "table",
         "presentation": "outline",
         "groupBy": "category",
-        "visibleFields": ["title", "updatedAt"],
+        "properties": [{ "id": "title" }, { "id": "updatedAt" }],
         "filter": {
           "kind": "group",
           "id": "hide-completed",

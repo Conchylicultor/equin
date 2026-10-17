@@ -5,7 +5,7 @@
   // field — it sorts ahead of any column header the user clicks, and the sort
   // panel unpins it (Finder's "Keep folders on top"). Ties fall back to the
   // rank order the browser mints: by name.
-  // No `visibleFields`: the aligned columns are every visible field — Name /
+  // No `properties`: the aligned columns are every visible field — Name /
   // Modified / Size, then each FileBrowserSlots.Fields contribution (the git
   // badge) — so a contributed column shows without this file naming it.
   "views": [

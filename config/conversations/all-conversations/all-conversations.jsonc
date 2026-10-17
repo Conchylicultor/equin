@@ -13,7 +13,7 @@
       "icon": "auto-awesome",
       "view": {
         "type": "table",
-        "visibleFields": ["title", "status", "createdAt", "endedAt", "model"],
+        "properties": [{ "id": "title" }, { "id": "status" }, { "id": "createdAt" }, { "id": "endedAt" }, { "id": "model" }],
         "filter": {
           "kind": "group",
           "id": "fable",

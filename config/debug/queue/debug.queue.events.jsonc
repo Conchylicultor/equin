@@ -39,7 +39,7 @@
       "icon": "workspaces",
       "view": {
         "type": "table",
-        "visibleFields": ["emittedAt", "matchedCount", "payload"],
+        "properties": [{ "id": "emittedAt" }, { "id": "matchedCount" }, { "id": "payload" }],
         "groupBy": { "fieldId": "eventName", "groupingId": "value" },
         "sort": [{ "fieldId": "emittedAt", "direction": "desc" }]
       }

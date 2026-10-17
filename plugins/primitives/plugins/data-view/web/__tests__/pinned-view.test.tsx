@@ -17,7 +17,7 @@ const NO_COLLAPSED: ReadonlySet<string> = new Set();
 const STATE = {
   sort: [],
   filter: null,
-  visibleFields: null,
+  properties: null,
   groupBy: undefined,
   query: "",
   expanded: {},
@@ -69,7 +69,7 @@ function model(activeId: string): ViewModel {
     stateFor: fakeViewGetter(() => STATE),
     setSort: () => {},
     setSortRules: () => {},
-    setVisibleFields: () => {},
+    setProperties: () => {},
     setFilter: () => {},
     setGroupBy: () => {},
     setFold: () => {},

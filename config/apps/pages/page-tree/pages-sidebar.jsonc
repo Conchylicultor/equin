@@ -7,7 +7,7 @@
   // whose `views` name it (only `pages`: "New page"), and its `⋯` holds that
   // view's search / filter / sort plus "Section settings" and "Add section".
   //
-  // `visibleFields: ["title"]` on every view keeps the exposed `starred`
+  // `properties: [{ "id": "title" }]` on every view keeps the exposed `starred`
   // bool and `origin` enum pure FILTER dimensions: the default (absent) shows
   // every schema field, which would render a chip on every row. Filter/sort/
   // search always see the full schema.
@@ -38,7 +38,7 @@
       "icon": "star",
       "view": {
         "type": "list",
-        "visibleFields": ["title"],
+        "properties": [{ "id": "title" }],
         "hideWhenEmpty": true,
         "filter": {
           "kind": "group",
@@ -63,7 +63,7 @@
       "view": {
         "type": "table",
         "presentation": "outline",
-        "visibleFields": ["title"],
+        "properties": [{ "id": "title" }],
         "filterScope": "roots",
         "filter": {
           "kind": "group",
@@ -94,7 +94,7 @@
       "name": "Recent",
       "view": {
         "type": "list",
-        "visibleFields": ["title"],
+        "properties": [{ "id": "title" }],
         "hideWhenEmpty": true,
         "sort": [{ "fieldId": "editedAt", "direction": "desc" }],
         "filter": {
@@ -127,7 +127,7 @@
       "view": {
         "type": "table",
         "presentation": "outline",
-        "visibleFields": ["title"],
+        "properties": [{ "id": "title" }],
         "filterScope": "roots",
         "hideWhenEmpty": true,
         "description": "Pages created by agent runs — moved to trash after 24h.",

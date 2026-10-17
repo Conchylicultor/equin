@@ -84,6 +84,7 @@ export type {
   SortPreset,
   FilterPreset,
   ViewState,
+  PropertyEntry,
   FoldRule,
   DataViewFoldLines,
   DataViewSection,

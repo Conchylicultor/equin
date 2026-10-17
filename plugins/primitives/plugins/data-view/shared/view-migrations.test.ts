@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { JsonValue } from "@plugins/config_v2/core";
-import { treeViewToTable } from "./view-migrations";
+import { treeViewToTable, visibleFieldsToProperties } from "./view-migrations";
 
 const filter: JsonValue = {
   kind: "group",
@@ -130,5 +130,70 @@ describe("tree-view-to-table", () => {
     expect(treeViewToTable.apply(empty)).toBe(empty);
     expect(treeViewToTable.apply(null)).toBeNull();
     expect(treeViewToTable.apply([1, 2])).toEqual([1, 2]);
+  });
+});
+
+describe("visible-fields-to-properties", () => {
+  test("rewrites the visible ids in place, keeping every other key and its position", () => {
+    const doc: JsonValue = {
+      views: [
+        {
+          id: "all",
+          name: "All",
+          view: {
+            type: "table",
+            sort: [],
+            visibleFields: ["title", "status"],
+            filter,
+          },
+        },
+      ],
+      sortPresets: [],
+    };
+    const out = visibleFieldsToProperties.apply(doc) as {
+      views: { view: Record<string, JsonValue> }[];
+      sortPresets: JsonValue;
+    };
+    expect(out.views[0]!.view).toEqual({
+      type: "table",
+      sort: [],
+      properties: [{ id: "title" }, { id: "status" }],
+      filter,
+    });
+    // The hash is over the serialized JSON: the new key takes the old one's slot.
+    expect(Object.keys(out.views[0]!.view)).toEqual([
+      "type",
+      "sort",
+      "properties",
+      "filter",
+    ]);
+    expect(out.sortPresets).toEqual([]);
+  });
+
+  test("drops a non-array visibleFields (it always read as unconfigured)", () => {
+    const doc: JsonValue = {
+      views: [
+        { id: "a", name: "A", view: { type: "list", visibleFields: null } },
+      ],
+    };
+    const out = visibleFieldsToProperties.apply(doc) as {
+      views: { view: JsonValue }[];
+    };
+    expect(out.views[0]!.view).toEqual({ type: "list" });
+  });
+
+  test("rows without the key are untouched; a migrated document comes back as is", () => {
+    const doc: JsonValue = {
+      views: [
+        { id: "a", name: "A", view: { type: "list" } },
+        { id: "b", name: "B", view: { type: "table", visibleFields: ["x"] } },
+      ],
+    };
+    const once = visibleFieldsToProperties.apply(doc) as {
+      views: JsonValue[];
+    };
+    expect(once.views[0]).toBe((doc as { views: JsonValue[] }).views[0]!);
+    const twice = visibleFieldsToProperties.apply(once);
+    expect(twice).toBe(once);
   });
 });

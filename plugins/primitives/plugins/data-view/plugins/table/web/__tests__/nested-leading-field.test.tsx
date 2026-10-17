@@ -57,7 +57,7 @@ const ROW: Row = { id: "1", name: "alpha", glyph: "★", note: "memo" };
 
 function renderTable(
   fields: FieldDef<Row>[],
-  opts: { visibleFields?: string[]; own?: boolean } = {},
+  opts: { properties?: string[]; own?: boolean } = {},
 ) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
@@ -68,7 +68,7 @@ function renderTable(
       sort: [],
       query: "",
       filter: null,
-      visibleFields: opts.visibleFields,
+      properties: opts.properties?.map((id) => ({ id })),
     },
     setSort: () => {},
     sortHeader: { active: [], sortable: new Set<string>() },
@@ -142,15 +142,15 @@ describe("data-view nested table leading field", () => {
     const html = markup(renderTable([name, note]).container);
     cleanup();
     const hidden = renderTable([{ ...avatar, leading: true }, name, note], {
-      visibleFields: ["name", "note"],
+      properties: ["name", "note"],
     });
     expect(markup(hidden.container)).toBe(html);
   });
 
-  it("disappears when hidden through visibleFields", () => {
+  it("disappears when hidden through properties", () => {
     const { queryByTestId, getByTestId } = renderTable(
       [{ ...avatar, leading: true }, name, note],
-      { visibleFields: ["name", "note"] },
+      { properties: ["name", "note"] },
     );
     expect(queryByTestId("spec-cell")).toBeNull();
     expect(getByTestId("own-leading")).toBeTruthy();

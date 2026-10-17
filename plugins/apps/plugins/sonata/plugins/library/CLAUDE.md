@@ -74,7 +74,7 @@ declared once on the `<DataView>` and honoured by both views:
 | Opening a song | `onRowActivate` |
 | Anything per-song another plugin knows | a field its entity extension exposes on the songs entity (`defineExtensionShape({ exposes })`) |
 
-Which fields the CARD shows is authored config, not code — `visibleFields` on
+Which fields the CARD shows is authored config, not code — `properties` on
 the `cards` row of `config/apps/sonata/library/sonata.library.jsonc`. Leave it
 unauthored and every exposed field stacks another caption row.
 

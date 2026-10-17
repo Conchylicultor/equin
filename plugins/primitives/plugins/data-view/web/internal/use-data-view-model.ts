@@ -21,6 +21,7 @@ import type {
   FilterScope,
   FoldRule,
   GroupByRule,
+  PropertyEntry,
   SortRule,
   ViewState,
 } from "../../core";
@@ -70,8 +71,8 @@ export interface ReadyViewModel {
   setSort: (id: string, fieldId: string) => void;
   /** Replace the whole sort-rule list for THIS view. */
   setSortRules: (id: string, rules: SortRule[]) => void;
-  /** Replace the per-view visible-fields policy for THIS view (null = show-all). */
-  setVisibleFields: (id: string, ids: string[] | null) => void;
+  /** Replace the Properties list for THIS view (null = the schema default). */
+  setProperties: (id: string, entries: PropertyEntry[] | null) => void;
   setFilter: (id: string, filter: FilterGroup | null) => void;
   /** Set (or clear with `null`) THIS view's group-by rule (field + grouping). */
   setGroupBy: (id: string, rule: GroupByRule | null) => void;
@@ -142,13 +143,16 @@ function readFilter(view: VariantValue | undefined): FilterGroup | null {
   return (view?.filter as FilterGroup | null | undefined) ?? null;
 }
 /**
- * Read the per-view visible-fields policy off a row's raw variant value. Only an
- * actual array is a configured policy; everything else (absent / null / legacy
- * non-array) coerces to `null` = unconfigured (show-all).
+ * Read the per-view Properties list off a row's raw variant value. Only an
+ * actual array is a configured list; everything else (absent / null) coerces to
+ * `null` = unconfigured (the schema default). A saved `visibleFields` array is
+ * rewritten to this key by the `visible-fields-to-properties` config migration.
  */
-function readVisibleFields(view: VariantValue | undefined): string[] | null {
-  return Array.isArray(view?.visibleFields)
-    ? (view.visibleFields as string[])
+function readProperties(
+  view: VariantValue | undefined,
+): PropertyEntry[] | null {
+  return Array.isArray(view?.properties)
+    ? (view.properties as PropertyEntry[])
     : null;
 }
 /**
@@ -231,7 +235,7 @@ function deriveViewState(
   return {
     sort: readSortRules(view),
     filter: readFilter(view),
-    visibleFields: readVisibleFields(view),
+    properties: readProperties(view),
     groupBy: readGroupBy(view),
     fold: readFold(view),
     filterScope: readFilterScope(view),
@@ -324,14 +328,14 @@ export function useDataViewModel(
     [core],
   );
 
-  const setVisibleFields = useCallback(
-    (id: string, ids: string[] | null) => {
-      // A reset-to-show-all passes `null` (and an empty array is likewise "no
-      // explicit policy") — omit the key so the row falls back to show-all.
+  const setProperties = useCallback(
+    (id: string, entries: PropertyEntry[] | null) => {
+      // A reset passes `null` (and an empty array is likewise "no explicit
+      // list") — omit the key so the row falls back to the schema default.
       core.updateView(
         id,
         {
-          visibleFields: ids && ids.length ? ids : undefined,
+          properties: entries && entries.length ? entries : undefined,
         } as unknown as VariantValue,
         { merge: true },
       );
@@ -440,7 +444,7 @@ export function useDataViewModel(
       stateFor,
       setSort,
       setSortRules,
-      setVisibleFields,
+      setProperties,
       setFilter,
       setGroupBy,
       setFold,
@@ -457,7 +461,7 @@ export function useDataViewModel(
       stateFor,
       setSort,
       setSortRules,
-      setVisibleFields,
+      setProperties,
       setFilter,
       setGroupBy,
       setFold,

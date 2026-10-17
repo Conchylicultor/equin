@@ -10,7 +10,7 @@
       // column worth its width.
       "view": {
         "type": "table",
-        "visibleFields": ["t", "stream", "text"]
+        "properties": [{ "id": "t" }, { "id": "stream" }, { "id": "text" }]
       }
     },
     {
@@ -19,7 +19,7 @@
       "icon": "error",
       "view": {
         "type": "table",
-        "visibleFields": ["t", "text"],
+        "properties": [{ "id": "t" }, { "id": "text" }],
         "filter": {
           "kind": "group",
           "id": "f-stderr",

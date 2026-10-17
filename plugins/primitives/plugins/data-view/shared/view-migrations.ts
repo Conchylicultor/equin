@@ -54,8 +54,54 @@ export const treeViewToTable = defineConfigMigration({
 });
 
 /**
+ * Every saved `visibleFields` list becomes a `properties` list — the Properties
+ * fix (`research/2026-10-17-primitives-data-view-properties-keep-order.md`):
+ * `visibleFields` held only the VISIBLE ids, so a hidden field had no position
+ * and came back at the end of its band; `properties` holds every field in order,
+ * each shown unless `hidden: true`.
+ *
+ * `visibleFields: ["a", "b"]` is rewritten to
+ * `properties: [{ "id": "a" }, { "id": "b" }]` AT THE SAME KEY POSITION (the
+ * config hash is over the serialized JSON, so a migrated user origin must
+ * serialize exactly as the rewritten committed row does). Lossless with no
+ * field catalog: under `properties` a field the list does not name is hidden,
+ * which is exactly what absence from `visibleFields` meant. A non-array
+ * `visibleFields` (which always read as unconfigured) is dropped. A row without
+ * the key — and a document already migrated — is returned as is (idempotent).
+ */
+export const visibleFieldsToProperties = defineConfigMigration({
+  id: "visible-fields-to-properties",
+  apply: (doc) => {
+    if (!isObject(doc) || !Array.isArray(doc.views)) return doc;
+    let changed = false;
+    const views = doc.views.map((row) => {
+      if (
+        !isObject(row) ||
+        !isObject(row.view) ||
+        !("visibleFields" in row.view)
+      ) {
+        return row;
+      }
+      changed = true;
+      const view: JsonObject = {};
+      for (const [key, value] of Object.entries(row.view)) {
+        if (key !== "visibleFields") view[key] = value;
+        else if (Array.isArray(value)) {
+          view.properties = value.map((id) => ({ id }));
+        }
+      }
+      return { ...row, view };
+    });
+    return changed ? { ...doc, views } : doc;
+  },
+});
+
+/**
  * The rewrites of a DataView's saved `views` rows, threaded into every per-id
  * `viewsDescriptor` (web and server alike). ONE identity-stable module
  * constant, like the sibling `extraFields` (the descriptor cache keys by id).
  */
-export const viewMigrations: readonly ConfigMigration[] = [treeViewToTable];
+export const viewMigrations: readonly ConfigMigration[] = [
+  treeViewToTable,
+  visibleFieldsToProperties,
+];

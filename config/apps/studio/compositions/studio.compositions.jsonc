@@ -8,7 +8,7 @@
       "view": {
         "type": "list",
         "groupBy": "category",
-        "visibleFields": ["name", "serve", "serveUrl", "entryCount", "contributorCount", "extendsCount"]
+        "properties": [{ "id": "name" }, { "id": "serve" }, { "id": "serveUrl" }, { "id": "entryCount" }, { "id": "contributorCount" }, { "id": "extendsCount" }]
       }
     }
   ]

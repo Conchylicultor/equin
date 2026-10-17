@@ -150,7 +150,7 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
   // fields and in what order. `null` → identity (`props.fields`), so a view with
   // no Properties configured renders every column unchanged. Sort/filter/search
   // above still run over the FULL `props.fields`.
-  const vis = resolveBodyFields(props.fields, props.state.visibleFields);
+  const vis = resolveBodyFields(props.fields, props.state.properties);
   // Aggregate representatives carry a `×N` badge in the primary cell. Key the
   // count by row OBJECT identity (the cell renderer gets the row, not its index),
   // which is stable since the representative row object flows through unchanged.

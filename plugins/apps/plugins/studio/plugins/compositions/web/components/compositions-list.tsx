@@ -130,7 +130,7 @@ export function CompositionsList(): ReactElement {
  * the old summary badge) so they come with sort / filter for free. A per-row
  * Delete lives in the hover-trailing item-actions slot; the `category` field is a
  * pure group/filter dimension kept out of the row body via the config's
- * `visibleFields`. GroupBy + visibleFields are authored in
+ * `properties`. GroupBy + properties are authored in
  * `config/apps/studio/compositions/studio.compositions.jsonc`.
  */
 function CompositionsDataView({

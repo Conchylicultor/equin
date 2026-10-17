@@ -1,11 +1,12 @@
 import { useCallback, type ReactNode } from "react";
+import type { PropertyEntry } from "../../../core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import {
   SortableItem,
   SortableList,
 } from "@plugins/primitives/plugins/sortable-list/web";
-import { useVisibleFieldsController } from "../../internal/use-visible-fields-controller";
+import { usePropertiesController } from "../../internal/use-properties-controller";
 import { FieldSections } from "../../internal/field-sections";
 import { dragHandleProps } from "../../internal/drag-handle-props";
 import { useDataViewControls } from "../controls/controls-context";
@@ -13,23 +14,26 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const visibilityIcon = symbol("visibility");
+const hiddenIcon = symbol("visibility-off");
 
 /**
  * Properties setting (a `view`-scope settings contribution): a per-view-instance
  * control governing which fields render in the view body and in what order
- * (Notion "Properties"). A reorderable, toggleable field list driven by the
- * `VisibleFieldsController`, plus a "Show all fields" reset. Reads the field
+ * (Notion "Properties"). One stable, reorderable list of EVERY field, driven by
+ * the `PropertiesController`, plus a "Show all fields" reset. Reads the field
  * schema + active-instance state from `DataViewControlsContext` and writes back
- * through `viewModel.setVisibleFields` — no prop-threading, mirroring
+ * through `viewModel.setProperties` — no prop-threading, mirroring
  * `GroupByControl`. Renders nothing on a single-field surface (nothing to
  * configure); the contribution's `isApplicable` gates the panel on the same
  * condition so the gear never opens onto an empty section.
  *
  * Each row is one `ControlPanel.Row`: the drag handle rides the row's own gutter
- * track and the visibility toggle is the row's `select="check"`, so the handle,
- * the checkbox and the label all sit on the same rails as every other panel row
- * — where before this list hand-built `[handle] [Row with a checkbox icon]` and
- * landed its label at a rail of its own.
+ * track, the row itself is the show / hide toggle, and the trailing cell is the
+ * eye that says which (`visibility` / `visibility-off`). A hidden field stays
+ * where it is, dimmed (`muted`), so showing it again puts it back in the same
+ * place — the list's order is the body's, hidden fields included. The eye is
+ * presentational (the row is the click target), so the hidden state is also
+ * spelled out to screen readers in the label.
  *
  * "Show all fields" is the section's LAST ROW, not the panel's footer: a
  * contribution owns a section, not the panel, and a footer placed from inside one
@@ -44,14 +48,15 @@ export function PropertiesControl(): ReactNode {
   const { fields, activeState, activeViewId, viewModel } =
     useDataViewControls();
 
-  const setVisibleFields = useCallback(
-    (ids: string[] | null) => viewModel.setVisibleFields(activeViewId, ids),
+  const setProperties = useCallback(
+    (entries: PropertyEntry[] | null) =>
+      viewModel.setProperties(activeViewId, entries),
     [viewModel, activeViewId],
   );
-  const controller = useVisibleFieldsController(
+  const controller = usePropertiesController(
     fields,
-    activeState.visibleFields ?? null,
-    setVisibleFields,
+    activeState.properties ?? null,
+    setProperties,
   );
 
   if (fields.length <= 1) return null;
@@ -88,11 +93,18 @@ export function PropertiesControl(): ReactNode {
                     <ControlPanel.Row
                       handle
                       handleProps={dragHandleProps(state)}
-                      select="check"
-                      checked={item.visible}
+                      muted={!item.visible}
                       onSelect={() => controller.toggle(item.field.id)}
+                      trailing={
+                        <Icon
+                          icon={item.visible ? visibilityIcon : hiddenIcon}
+                        />
+                      }
                     >
                       {item.field.label}
+                      {!item.visible && (
+                        <span className="sr-only"> (hidden)</span>
+                      )}
                     </ControlPanel.Row>
                   )}
                 </SortableItem>

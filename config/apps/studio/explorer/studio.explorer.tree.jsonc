@@ -1,7 +1,7 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "id": "tree", "name": "Tree", "icon": "account-tree", "view": { "type": "table", "presentation": "outline", "visibleFields": ["name"], "defaultExpanded": true, "expandAll": true } },
+    { "id": "tree", "name": "Tree", "icon": "account-tree", "view": { "type": "table", "presentation": "outline", "properties": [{ "id": "name" }], "defaultExpanded": true, "expandAll": true } },
     { "id": "table", "name": "Table", "icon": "table-rows", "view": { "type": "table" } },
     {
       "id": "load-bearing",

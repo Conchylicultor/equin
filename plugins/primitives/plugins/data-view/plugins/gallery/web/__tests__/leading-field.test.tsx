@@ -57,7 +57,7 @@ const ROW: Row = { id: "1", name: "alpha", glyph: "★", note: "memo" };
 
 function renderGallery(
   fields: FieldDef<Row>[],
-  opts: { visibleFields?: string[]; own?: boolean } = {},
+  opts: { properties?: string[]; own?: boolean } = {},
 ) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
@@ -68,7 +68,7 @@ function renderGallery(
       sort: [],
       query: "",
       filter: null,
-      visibleFields: opts.visibleFields,
+      properties: opts.properties?.map((id) => ({ id })),
     },
     setSort: () => {},
     sortHeader: { active: [], sortable: new Set<string>() },
@@ -136,15 +136,15 @@ describe("data-view gallery leading field", () => {
     // The same schema with a hidden leading field renders byte-identical markup.
     const hidden = renderGallery([{ ...avatar, leading: true }, name, note], {
       own: false,
-      visibleFields: ["name", "note"],
+      properties: ["name", "note"],
     });
     expect(hidden.container.innerHTML).toBe(html);
   });
 
-  it("disappears when hidden through visibleFields", () => {
+  it("disappears when hidden through properties", () => {
     const { queryByTestId, getByTestId } = renderGallery(
       [{ ...avatar, leading: true }, name, note],
-      { visibleFields: ["name", "note"] },
+      { properties: ["name", "note"] },
     );
     expect(queryByTestId("spec-cell")).toBeNull();
     expect(getByTestId("own-leading")).toBeTruthy();

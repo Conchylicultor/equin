@@ -12,7 +12,7 @@
       "name": "Deployments",
       "view": {
         "type": "list",
-        "visibleFields": ["composition", "release", "run"]
+        "properties": [{ "id": "composition" }, { "id": "release" }, { "id": "run" }]
       }
     }
   ]

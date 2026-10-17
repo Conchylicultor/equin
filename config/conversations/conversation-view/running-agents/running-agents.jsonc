@@ -12,7 +12,7 @@
         "type": "table",
         "presentation": "outline",
         "sort": [],
-        "visibleFields": ["description", "type", "tokens", "started"]
+        "properties": [{ "id": "description" }, { "id": "type" }, { "id": "tokens" }, { "id": "started" }]
       }
     }
   ]

@@ -97,7 +97,7 @@ function renderedIds(filterScope: FilterScope | undefined): string[] {
       sort: [],
       query: "",
       filter: AGENT,
-      visibleFields: ["label"],
+      properties: [{ id: "label" }],
       filterScope,
     },
     setSort: () => {},

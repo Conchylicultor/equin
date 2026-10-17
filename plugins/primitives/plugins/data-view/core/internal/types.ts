@@ -530,9 +530,9 @@ interface FieldDefBase<TRow> {
    * switch it on from the view settings' Properties list.
    *
    * It is a DEFAULT, not an enforcement: a view instance whose config already
-   * holds an explicit `visibleFields` array simply does not mention the field,
-   * which is indistinguishable from "the user never switched it on". See the
-   * plugin CLAUDE.md ("Per-view visible fields").
+   * holds an explicit `properties` array either lists it hidden or does not
+   * list it (which reads as hidden) — indistinguishable from "the user never
+   * switched it on". See the plugin CLAUDE.md ("Per-view visible fields").
    */
   visible?: boolean;
 }
@@ -568,6 +568,15 @@ export interface FilterPreset {
   group: FilterGroup;
 }
 
+/**
+ * One field of a view's Properties list ({@link ViewState.properties}): its id,
+ * and `hidden: true` when it is listed (keeping its place) but not rendered.
+ */
+export interface PropertyEntry {
+  id: string;
+  hidden?: true;
+}
+
 export interface ViewState {
   /** Ordered sort rules (priority = list order). `[]` = unsorted (source order). */
   sort: SortRule[];
@@ -576,14 +585,18 @@ export interface ViewState {
   /** The view's filter tree (root is always a group when present), or null. */
   filter: FilterGroup | null;
   /**
-   * Per-view-instance visible-fields policy for BODY rendering (Notion
-   * "Properties"). `null`/`undefined` = unconfigured → show ALL fields in schema
-   * order (so later-added fields, incl. custom columns, auto-appear). An explicit
-   * ordered array = the VISIBLE field ids in body order; any id absent from the
-   * array is hidden. Display-only — it never touches sort/filter/search, which
+   * Per-view-instance Properties list for BODY rendering (Notion "Properties"):
+   * which fields render, and in what order. `null`/`undefined` = unconfigured →
+   * the schema's default body set in schema order (every field except
+   * `FieldDef.visible: false`, so later-added fields auto-appear). An explicit
+   * array = the field order, each entry shown unless `hidden: true`; a schema
+   * field the array does not list is HIDDEN, drawn at the end of its band (a
+   * field added after the view was customized arrives hidden, as in Notion).
+   * Hidden entries keep their place, so hiding then showing a field returns it
+   * where it was. Display-only — it never touches sort/filter/search, which
    * always operate on the full field schema.
    */
-  visibleFields?: string[] | null;
+  properties?: PropertyEntry[] | null;
   /**
    * Which field rows are partitioned by (Notion's "Group by") AND how that
    * field buckets, or absent = ungrouped. Persisted in the per-instance config

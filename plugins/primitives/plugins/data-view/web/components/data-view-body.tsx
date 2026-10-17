@@ -529,7 +529,7 @@ function DataViewBodyInner<TRow>(
 
   // The fold in effect: suspended while a search is typed (a match must never
   // hide behind "…"). Computed from `activeState` BEFORE the live branch below
-  // zeroes `query`, and carried through that branch like `visibleFields`.
+  // zeroes `query`, and carried through that branch like `properties`.
   // A view that draws no fold lines gets no fold at all — applying one would
   // hold its live paging for rows it never set aside.
   // The active view nests THIS source's rows (the table over a hierarchy).
@@ -813,7 +813,7 @@ function DataViewBodyInner<TRow>(
   // The per-view Properties control (which fields render in the body + their
   // order) now lives in the settings gear as a `view`-scope `DataViewSlots.Setting`
   // contribution (see `PropertiesControl`), reading/writing the same
-  // `activeState.visibleFields` / `viewModel.setVisibleFields` via
+  // `activeState.properties` / `viewModel.setProperties` via
   // `DataViewSettingsContext` — no host wiring needed here.
 
   // Live substitution: when a `source` drives this DataView, the SQL already
@@ -823,7 +823,7 @@ function DataViewBodyInner<TRow>(
     ? origin.rows
     : ((rows ?? NO_ROWS) as readonly unknown[]);
   // Neutralize ONLY the server-owned dimensions (sort/filter/query already ran in
-  // SQL). `visibleFields` is display-only — it never touches the query — so the
+  // SQL). `properties` is display-only — it never touches the query — so the
   // `...activeState` spread deliberately PRESERVES it so the views still honor
   // Properties on the live path.
   const serverOrdered = origin != null;

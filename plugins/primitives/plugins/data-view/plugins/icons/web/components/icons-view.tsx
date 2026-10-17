@@ -210,7 +210,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
   // The roving tab stop: the tile the keyboard user last focused. Absent (or no
   // longer an activating tile) → the selected row's tile, else the first.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
-  const vis = resolveBodyFields(props.fields, props.state.visibleFields);
+  const vis = resolveBodyFields(props.fields, props.state.properties);
   const geometry = GEOMETRY[props.density ?? "comfortable"];
 
   const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);

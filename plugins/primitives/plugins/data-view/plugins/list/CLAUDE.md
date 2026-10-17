@@ -102,7 +102,7 @@ Either way this is the list analog of the gallery's "title + muted properties":
 primary = title, others = subtitle, `align: "end"` floats to the trailing edge.
 
 **Which fields appear (and their order)** follows the view's per-instance
-`visibleFields` (`resolveBodyFields` over the schema; **default `null` = the
+`properties` (`resolveBodyFields` over the schema; **default `null` = the
 schema's own default set** — every field in schema order except those declaring
 `FieldDef.visible: false`) — the same Properties dimension every view honors. The
 title/subtitle/trailing split is unchanged: the primary (picked via

@@ -13,13 +13,13 @@
         // library + Plays / Last played / Tracks / Source from the field
         // extensions), and the card stacks one caption row per visible field.
         // These six are the card; the rest stay filter/sort dimensions.
-        "visibleFields": [
-          "title",
-          "composer",
-          "duration",
-          "playCount",
-          "trackCount",
-          "sourceMissing"
+        "properties": [
+          { "id": "title" },
+          { "id": "composer" },
+          { "id": "duration" },
+          { "id": "playCount" },
+          { "id": "trackCount" },
+          { "id": "sourceMissing" }
         ]
       }
     },

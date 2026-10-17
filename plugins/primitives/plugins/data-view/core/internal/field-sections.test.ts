@@ -75,7 +75,7 @@ describe("orderFieldsBySection", () => {
       field("build.status", "Build"),
       field("deploy.verb", "Deploy"),
     ];
-    // A stored `visibleFields` order that happens to start with an arm's column
+    // A stored `properties` order that happens to start with an arm's column
     // must not float that arm's band above the host's own.
     const stored = [
       field("deploy.verb", "Deploy"),

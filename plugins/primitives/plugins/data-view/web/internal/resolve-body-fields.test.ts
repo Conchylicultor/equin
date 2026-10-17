@@ -1,7 +1,7 @@
 /**
  * `resolveBodyFields` is the ONE seam that decides which fields a view prints.
  * It has two inputs — the schema's own `FieldDef.visible` default and the view
- * instance's `visibleFields` array — and the interesting claim is what it does
+ * instance's `properties` list — and the interesting claim is what it does
  * NOT do: it never touches the schema the sort / filter / search pipeline runs
  * over, because every view calls it after that pipeline, on a separate value.
  */
@@ -38,10 +38,23 @@ describe("resolveBodyFields", () => {
   test("prints a `visible: false` field when a view's array names it", () => {
     // `visible` is a DEFAULT, not an enforcement: once the user switches the
     // field on, the explicit array is the whole answer.
-    expect(ids(resolveBodyFields(FIELDS, ["enabled", "name"]))).toEqual([
-      "enabled",
-      "name",
-    ]);
+    expect(
+      ids(resolveBodyFields(FIELDS, [{ id: "enabled" }, { id: "name" }])),
+    ).toEqual(["enabled", "name"]);
+  });
+
+  test("leaves out hidden entries and fields the array does not list", () => {
+    // `status` is listed hidden (it keeps its place in Properties); `enabled`
+    // is not listed at all — a field added after the view was customized —
+    // and arrives hidden too.
+    expect(
+      ids(
+        resolveBodyFields(FIELDS, [
+          { id: "status", hidden: true },
+          { id: "name" },
+        ]),
+      ),
+    ).toEqual(["name"]);
   });
 
   test("never removes the field from the schema it was handed", () => {
@@ -64,10 +77,10 @@ describe("resolveBodyFields", () => {
     expect(
       ids(
         resolveBodyFields(sectioned, [
-          "build.targets",
-          "name",
-          "build.status",
-          "status",
+          { id: "build.targets" },
+          { id: "name" },
+          { id: "build.status" },
+          { id: "status" },
         ]),
       ),
     ).toEqual(["name", "status", "build.targets", "build.status"]);

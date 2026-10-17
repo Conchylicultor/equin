@@ -9,7 +9,7 @@
       "view": {
         "type": "table",
         "presentation": "outline",
-        "visibleFields": ["label", "modified", "conflict", "source"],
+        "properties": [{ "id": "label" }, { "id": "modified" }, { "id": "conflict" }, { "id": "source" }],
         "filter": {
           "kind": "group",
           "id": "configs",
@@ -58,7 +58,7 @@
       "view": {
         "type": "table",
         "presentation": "outline",
-        "visibleFields": ["label", "modified", "conflict", "source"],
+        "properties": [{ "id": "label" }, { "id": "modified" }, { "id": "conflict" }, { "id": "source" }],
         "filter": {
           "kind": "group",
           "id": "reorder",

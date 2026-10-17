@@ -251,7 +251,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // calls it, so a stable identity keeps it out of the rows' memo key.
   const setExpanded = useEventCallback(props.setExpanded);
 
-  const { visibleFields } = props.state;
+  const { properties } = props.state;
   const { fields, rowActivation, rowTone } = props;
   const { rowChrome, renderRow, leading, labelClassName } = options;
   const config = useMemo<ListRowConfig>(() => {
@@ -259,7 +259,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     // section pipeline above keeps using the full `props.fields` for
     // sort/filter/search. `null` → identity, so the title/subtitle/trailing
     // split is unchanged.
-    const vis = resolveBodyFields(fields, visibleFields);
+    const vis = resolveBodyFields(fields, properties);
     // The leading field (the row's avatar) renders in `Row`'s icon slot, so it
     // is out of the title pick, the subtitle and the trailing cell alike.
     const leadingField = pickLeadingField(vis);
@@ -293,7 +293,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     };
   }, [
     fields,
-    visibleFields,
+    properties,
     isChipField,
     resolveCell,
     resolveEditor,

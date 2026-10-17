@@ -235,7 +235,7 @@ function viewModel(view: PagedViewUnderTest): ViewModel {
     stateFor: fakeViewGetter(() => STATE),
     setSort: noop,
     setSortRules: noop,
-    setVisibleFields: noop,
+    setProperties: noop,
     setFilter: noop,
     setGroupBy: noop,
     setFold: noop,

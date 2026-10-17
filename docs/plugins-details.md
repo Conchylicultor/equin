@@ -36034,6 +36034,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveSourceScope`
           - `ManualOrderConfig`
           - `PresetId`
+          - `PropertyEntry`
           - `RowTone`
           - `SectionCount`
           - `SectionsToolbar`

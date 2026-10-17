@@ -38,7 +38,7 @@
       "icon": "workspaces",
       "view": {
         "type": "table",
-        "visibleFields": ["attempts", "diedAt", "lastError"],
+        "properties": [{ "id": "attempts" }, { "id": "diedAt" }, { "id": "lastError" }],
         "groupBy": { "fieldId": "jobName", "groupingId": "value" },
         "sort": [{ "fieldId": "archivedAt", "direction": "desc" }]
       }

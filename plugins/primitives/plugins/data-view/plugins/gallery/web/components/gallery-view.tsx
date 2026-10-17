@@ -150,7 +150,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   // Body fields follow the view's Properties (visible-fields) policy; sort/filter/
   // search above keep using the full `props.fields`. `null` → identity, so the
   // cover/title/body picks are byte-for-byte the legacy schema-order behavior.
-  const vis = resolveBodyFields(props.fields, props.state.visibleFields);
+  const vis = resolveBodyFields(props.fields, props.state.properties);
   const options = (props.options ?? {}) as GalleryViewOptions<unknown>;
   const minCardWidth = options.minCardWidth ?? 200;
   // Documented cast boundary: itemActions arrives type-erased.

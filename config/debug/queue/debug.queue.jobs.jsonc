@@ -82,7 +82,7 @@
       "icon": "workspaces",
       "view": {
         "type": "table",
-        "visibleFields": ["status", "hold", "attempt", "when", "waitMs", "durationMs", "error"],
+        "properties": [{ "id": "status" }, { "id": "hold" }, { "id": "attempt" }, { "id": "when" }, { "id": "waitMs" }, { "id": "durationMs" }, { "id": "error" }],
         "groupBy": { "fieldId": "jobName", "groupingId": "value" },
         "sort": [{ "fieldId": "order", "direction": "desc" }]
       }

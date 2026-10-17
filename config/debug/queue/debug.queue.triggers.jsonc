@@ -9,7 +9,7 @@
       "icon": "workspaces",
       "view": {
         "type": "table",
-        "visibleFields": ["jobName", "filters", "jobWith", "oneShot", "createdAt"],
+        "properties": [{ "id": "jobName" }, { "id": "filters" }, { "id": "jobWith" }, { "id": "oneShot" }, { "id": "createdAt" }],
         "groupBy": { "fieldId": "eventName", "groupingId": "value" },
         "sort": [{ "fieldId": "jobName", "direction": "asc" }]
       }

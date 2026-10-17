@@ -3,7 +3,7 @@
   // The Places sidebar (places/web/components/places-sidebar.tsx), rendered
   // with the DataView `sections` chrome: each view below is a section under
   // its own header, in this order. Both are lists of the contributed places,
-  // partitioned by their `group` (favorites / locations); `visibleFields`
+  // partitioned by their `group` (favorites / locations); `properties`
   // keeps `group` a filter dimension only, so a row is just its icon and name.
   "views": [
     {
@@ -12,7 +12,7 @@
       "icon": "star",
       "view": {
         "type": "list",
-        "visibleFields": ["label"],
+        "properties": [{ "id": "label" }],
         "filter": {
           "kind": "group",
           "id": "favorites",
@@ -35,7 +35,7 @@
       "icon": "hard-drive",
       "view": {
         "type": "list",
-        "visibleFields": ["label"],
+        "properties": [{ "id": "label" }],
         "filter": {
           "kind": "group",
           "id": "locations",
