@@ -13,21 +13,24 @@ tab's own — the prototype canvas, keyed by its pane instance.
 
 ## Plugin reference
 
-- Description: Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
+- Description: Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten observes every write and clear in the tab.
 - Cross-plugin:
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×9
-    - `primitives` ×7
-    - `conversations` ×5
+    - `primitives` ×8
+    - `conversations` ×6
     - `map`
     - `page/editor`
     - `tasks/task-draft-form`
 - Web:
-  - Exports (types): `DraftOptions`
+  - Exports (types):
+    - `DraftOptions`
+    - `DraftWrite`
   - Exports (values):
     - `clearDraft`
     - `DEFAULT_DRAFT_TTL`
     - `draftKey`
+    - `onDraftWritten`
     - `readDraft`
     - `useDraft`
     - `writeDraft`

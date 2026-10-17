@@ -9,28 +9,17 @@ import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
+import { writeDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { CARD_OF, type PendingTurn } from "../internal/pending";
 import { dismissSentTurn, resendTurn } from "../internal/send";
 import { retryLedgerTurn, withdrawLedgerTurn } from "../internal/delivery";
 
-// Restore the turn's text into the conversation's shared prompt draft.
-// persistent-draft exposes no non-hook setter, so this mirrors use-draft.ts's
-// storage envelope + sync event exactly (key `singularity:draft:<key>:<scope>`,
-// `{v, ts}` envelope, `singularity:draft-updated` custom event) — the editor's
-// own useDraft hook picks the write up through that event.
+// Restore the turn's text into the conversation's shared prompt draft — the
+// key prompt-input's useDraft reads (`CONVERSATION_PROMPT_DRAFT_KEY`, not
+// importable here: prompt-input imports this plugin), which picks the write up
+// through persistent-draft's sync event.
 function copyToDraft(conversationId: string, text: string): void {
-  const sKey = `singularity:draft:conversation:prompt:${conversationId}`;
-  try {
-    localStorage.setItem(sKey, JSON.stringify({ v: text, ts: Date.now() }));
-    // eslint-disable-next-line promise-safety/no-bare-catch -- quota exceeded: the failed card still holds the text; mirrors use-draft.ts
-  } catch {
-    // Quota exceeded — silently ignore
-  }
-  window.dispatchEvent(
-    new CustomEvent("singularity:draft-updated", {
-      detail: { storageKey: sKey },
-    }),
-  );
+  writeDraft("conversation:prompt", text, { scope: conversationId });
 }
 
 /** Run a card action against the server; a refusal is a toast, not a crash. */

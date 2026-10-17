@@ -15724,6 +15724,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.foldResource`
               - `primitives/live-state.mapResource`
               - `primitives/live-state.ResourceResult`
+              - `primitives/persistent-draft.writeDraft`
               - `primitives/sync-status.useReportSync`
               - `shell/toast.showToast`
             - Exports (types):
@@ -24336,8 +24337,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 40 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×38
+        - Slot contributors: 41 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×39
           - `Core.Boot` ×2
       - Core:
         - Uses:
@@ -24654,7 +24655,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineAssetMirror`
           - `runAssetMirrorPrewarm`
           - `seedAssetMirrorCache`
-    - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
+    - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.
       - Server:
         - Contributes:
           - `resource.declare` "attachments.by-owner"
@@ -24684,11 +24685,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/attachments`
           - `GET /api/attachments/:id`
           - `DELETE /api/attachments/:id`
+          - `PUT /api/attachments/holds`
       - Web:
         - Uses: `infra/endpoints.fetchEndpoint`
         - Exports (types): `UploadedAttachment`
         - Exports (values):
           - `getAttachmentFile`
+          - `holdAttachments`
           - `uploadAttachment`
       - Core:
         - Uses:
@@ -39304,21 +39307,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `framework/web-core`
           - Web:
             - Exports (values): `yieldToMain`
-    - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
+    - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten observes every write and clear in the tab.
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
           - `apps` ×9
-          - `primitives` ×7
-          - `conversations` ×5
+          - `primitives` ×8
+          - `conversations` ×6
           - `map`
           - `page/editor`
           - `tasks/task-draft-form`
       - Web:
-        - Exports (types): `DraftOptions`
+        - Exports (types):
+          - `DraftOptions`
+          - `DraftWrite`
         - Exports (values):
           - `clearDraft`
           - `DEFAULT_DRAFT_TTL`
           - `draftKey`
+          - `onDraftWritten`
           - `readDraft`
           - `useDraft`
           - `writeDraft`
@@ -40248,18 +40254,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `InlineTokenReferentSource`
               - `inlineTokenReferentTables`
               - `inlineTokensAsText`
-        - **`paste-images`** — File paste/drop/pick support for the text editor. Uploads files via the attachments primitive and renders them inline: an image as a thumbnail chip that opens the full-window image viewer, any other file as a file chip; AttachFilesButton is the composer bar's "+" picker.
+        - **`paste-images`** — File paste/drop/pick support for the text editor. Uploads files via the attachments primitive and renders them inline: an image as a thumbnail chip that opens the full-window image viewer, any other file as a file chip; AttachFilesButton is the composer bar's "+" picker. Keeps every attachment an unsent draft references alive on the server for as long as the draft lives.
           - Web:
             - Slots: `AttachmentSlots.Opener`
             - Slot contributors: `AttachmentSlots.Opener` ← `apps.file-explorer.attachment-preview`
-            - Contributes: `TextEditorSlots.Plugin` → `ImageUploadPlugin`
+            - Contributes:
+              - `Core.Root` → `DraftAttachmentHolds`
+              - `TextEditorSlots.Plugin` → `ImageUploadPlugin`
             - Uses:
+              - `infra/attachments.holdAttachments`
               - `infra/attachments.uploadAttachment`
               - `primitives/css/link-chip.LinkChip`
               - `primitives/file-type.FileTypeIcon`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.openInBrowserTab`
               - `primitives/overlay/image-viewer.ViewerThumbnail`
+              - `primitives/persistent-draft.onDraftWritten`
+              - `primitives/persistent-draft.readDraft`
+              - `primitives/persistent-draft.writeDraft`
               - `primitives/text-editor.registerNodeExtension`
               - `primitives/text-editor.TextEditorSlots`
               - `primitives/text-editor/token-extension/node.TokenFrame`

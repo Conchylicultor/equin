@@ -22,3 +22,15 @@ export const getAttachmentFile = defineEndpoint({
 export const deleteAttachmentEndpoint = defineEndpoint({
   route: "DELETE /api/attachments/:id",
 });
+
+// Replace the attachments one holder (an unsent draft) keeps alive with `ids`,
+// for `ttlMs` from now (null: until the holder releases them). An empty `ids`
+// releases the holder. Ids that no longer exist are ignored.
+export const holdAttachmentsEndpoint = defineEndpoint({
+  route: "PUT /api/attachments/holds",
+  body: z.object({
+    holder: z.string().min(1),
+    ids: z.array(z.string()),
+    ttlMs: z.number().positive().nullable(),
+  }),
+});

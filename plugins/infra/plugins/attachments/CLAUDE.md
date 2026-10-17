@@ -34,6 +34,12 @@ What matters is that it is **silent when nothing changed**: the diff key is the 
 
 `applyLinkDiff` (the transaction body) is db-parametrized so `define-link.test.ts` counts the statements each reconcile issues against a real Postgres.
 
+## Holds: references the server cannot see
+
+An upload is linked to its owner only when the owner is saved (a turn sent, a task created), and the sweep reclaims unlinked uploads after an hour. An unsent draft lives in browser storage, so it keeps its attachments alive with a **hold** instead: `holdAttachments(holder, ids, ttlMs)` (web, `PUT /api/attachments/holds`) replaces the holder's held set, expiring `ttlMs` from now (`null`: never); an empty set releases it. The sweep skips an attachment with a live hold and deletes expired holds.
+
+Drafts never call it themselves: `primitives/text-editor/paste-images` observes every persistent-draft write (`onDraftWritten`) and re-asserts the attachments that draft references, for the draft's own TTL — so any `useDraft` holding markdown keeps its pasted images exactly as long as the draft lives.
+
 ## Protocol vs DSL
 
 The handle is a **protocol object**, not a query DSL. Methods map 1:1 to operations the subsystem's contract requires (orphan-sweep correctness, FK shape, atomicity). It does not let callers compose `.where(...).join(...).orderBy(...)`. Future operations are added as named methods on the handle, never as escape hatches that re-expose the table.
@@ -44,7 +50,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
 
 ## Plugin reference
 
-- Description: Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
+- Description: Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.
 - Load-bearing: yes
 - Server:
   - Contributes:
@@ -75,11 +81,13 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `POST /api/attachments`
     - `GET /api/attachments/:id`
     - `DELETE /api/attachments/:id`
+    - `PUT /api/attachments/holds`
 - Web:
   - Uses: `infra/endpoints.fetchEndpoint`
   - Exports (types): `UploadedAttachment`
   - Exports (values):
     - `getAttachmentFile`
+    - `holdAttachments`
     - `uploadAttachment`
 - Core:
   - Uses:

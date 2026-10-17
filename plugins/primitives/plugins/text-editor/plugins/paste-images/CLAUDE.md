@@ -20,18 +20,24 @@ a hook conditionally inside one component.
 
 ## Plugin reference
 
-- Description: File paste/drop/pick support for the text editor. Uploads files via the attachments primitive and renders them inline: an image as a thumbnail chip that opens the full-window image viewer, any other file as a file chip; AttachFilesButton is the composer bar's "+" picker.
+- Description: File paste/drop/pick support for the text editor. Uploads files via the attachments primitive and renders them inline: an image as a thumbnail chip that opens the full-window image viewer, any other file as a file chip; AttachFilesButton is the composer bar's "+" picker. Keeps every attachment an unsent draft references alive on the server for as long as the draft lives.
 - Web:
   - Slots: `AttachmentSlots.Opener`
   - Slot contributors: `AttachmentSlots.Opener` ← `apps.file-explorer.attachment-preview`
-  - Contributes: `TextEditorSlots.Plugin` → `ImageUploadPlugin`
+  - Contributes:
+    - `Core.Root` → `DraftAttachmentHolds`
+    - `TextEditorSlots.Plugin` → `ImageUploadPlugin`
   - Uses:
+    - `infra/attachments.holdAttachments`
     - `infra/attachments.uploadAttachment`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/file-type.FileTypeIcon`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.openInBrowserTab`
     - `primitives/overlay/image-viewer.ViewerThumbnail`
+    - `primitives/persistent-draft.onDraftWritten`
+    - `primitives/persistent-draft.readDraft`
+    - `primitives/persistent-draft.writeDraft`
     - `primitives/text-editor.registerNodeExtension`
     - `primitives/text-editor.TextEditorSlots`
     - `primitives/text-editor/token-extension/node.TokenFrame`

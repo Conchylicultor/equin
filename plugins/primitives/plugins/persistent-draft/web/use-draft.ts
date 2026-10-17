@@ -9,8 +9,8 @@ import {
 import {
   clearDraft as clearStoredDraft,
   DEFAULT_DRAFT_TTL,
-  DRAFT_SYNC_EVENT,
   draftKey,
+  onDraftWritten,
   readDraft,
   writeDraft,
 } from "./draft-storage";
@@ -80,21 +80,19 @@ export function useDraft<T>(
 
   // Sync with other useDraft hooks on the same key (same-tab and cross-tab).
   useEffect(() => {
-    const handleCustom = (e: Event) => {
-      const ce = e as CustomEvent<{ storageKey: string }>;
-      if (ce.detail.storageKey === sKey) {
-        setValueState(read(key, scope, resolvedInitial, ttl));
-      }
-    };
     const handleStorage = (e: StorageEvent) => {
       if (e.key === sKey) {
         setValueState(read(key, scope, resolvedInitial, ttl));
       }
     };
-    window.addEventListener(DRAFT_SYNC_EVENT, handleCustom);
+    const unsubscribe = onDraftWritten((write) => {
+      if (write.storageKey === sKey) {
+        setValueState(read(key, scope, resolvedInitial, ttl));
+      }
+    });
     window.addEventListener("storage", handleStorage);
     return () => {
-      window.removeEventListener(DRAFT_SYNC_EVENT, handleCustom);
+      unsubscribe();
       window.removeEventListener("storage", handleStorage);
     };
   }, [sKey, key, scope, resolvedInitial, ttl]);

@@ -88,6 +88,7 @@ render (`reports/turn-unconfirmed`).
     - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
+    - `primitives/persistent-draft.writeDraft`
     - `primitives/sync-status.useReportSync`
     - `shell/toast.showToast`
   - Exports (types):

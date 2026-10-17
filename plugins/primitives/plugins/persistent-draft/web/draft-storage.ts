@@ -15,6 +15,33 @@ export const DEFAULT_DRAFT_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 type Envelope<T> = { v: T; ts: number };
 
+/**
+ * One write or clear of a draft, as `onDraftWritten` hands it out. `value` is
+ * `undefined` for a clear; `ttl` is the draft's own (`Infinity`: never expires).
+ */
+export interface DraftWrite {
+  storageKey: string;
+  value: unknown;
+  ttl: number;
+}
+
+function announce(write: DraftWrite): void {
+  window.dispatchEvent(new CustomEvent(DRAFT_SYNC_EVENT, { detail: write }));
+}
+
+/**
+ * Observe every draft written or cleared in this tab — for state that must
+ * live exactly as long as a draft (the attachments it references). Returns the
+ * unsubscribe.
+ */
+export function onDraftWritten(
+  listener: (write: DraftWrite) => void,
+): () => void {
+  const handle = (e: Event) => listener((e as CustomEvent<DraftWrite>).detail);
+  window.addEventListener(DRAFT_SYNC_EVENT, handle);
+  return () => window.removeEventListener(DRAFT_SYNC_EVENT, handle);
+}
+
 export interface DraftOptions {
   scope?: string;
   ttl?: number;
@@ -78,9 +105,11 @@ export function writeDraft<T>(
   try {
     const envelope: Envelope<T> = { v: value, ts: Date.now() };
     storageOf(options).setItem(sKey, JSON.stringify(envelope));
-    window.dispatchEvent(
-      new CustomEvent(DRAFT_SYNC_EVENT, { detail: { storageKey: sKey } }),
-    );
+    announce({
+      storageKey: sKey,
+      value,
+      ttl: options?.ttl ?? DEFAULT_DRAFT_TTL,
+    });
   } catch (err) {
     // Quota exhaustion and blocked storage are the two expected failures, and a
     // draft that cannot be persisted must never break the surface the user is
@@ -94,9 +123,11 @@ export function clearDraft(key: string, options?: DraftOptions): void {
   const sKey = draftKey(key, options?.scope);
   try {
     storageOf(options).removeItem(sKey);
-    window.dispatchEvent(
-      new CustomEvent(DRAFT_SYNC_EVENT, { detail: { storageKey: sKey } }),
-    );
+    announce({
+      storageKey: sKey,
+      value: undefined,
+      ttl: options?.ttl ?? DEFAULT_DRAFT_TTL,
+    });
   } catch (err) {
     if (err instanceof DOMException) return;
     throw err;
