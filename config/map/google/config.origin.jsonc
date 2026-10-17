@@ -1,0 +1,5 @@
+// @hash 81f4789399de
+{
+  // How far one scroll of the mouse wheel or trackpad zooms the smooth (vector) map: 1 is the default, 0.5 half as far, 2 twice as far. A trackpad pinch always follows the fingers.
+  "scrollZoomSpeed": 1
+}

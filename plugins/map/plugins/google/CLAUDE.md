@@ -26,6 +26,14 @@ The only map-vendor code in the repo. Everything else draws maps through
   - **A Map ID: the vector map.** It zooms fractionally (wheel and pinch
     glide), is styled by the Map ID's cloud style (`styles` is not passed,
     since Google ignores it), and has tilt and heading interaction off.
+  - The vector map's wheel is ours (`internal/wheel-zoom.ts`, Google's
+    `scrollwheel` off): Google has no wheel speed and zooms several levels per
+    scroll burst. A scroll moves a fixed levels-per-pixel times the user's
+    **Scroll zoom speed** (`shared/config.ts`), at most one level per
+    event, and glides there; a pinch
+    (ctrl+wheel) follows the fingers 1:1. The raster map keeps Google's
+    whole-level wheel, and so does a Map ID Google draws raster: `WheelZoom`
+    switches on `getRenderingType()`, not on the Map ID.
   - A Map ID is fixed at creation, so `GoogleMapCanvas` is keyed by it.
   - `RasterNotice` shows `MapIdRasterNotice` when a Map ID still drew raster
     (local to the map). The setup pane's check is separate: `MapIdPreview`
@@ -90,15 +98,17 @@ The only map-vendor code in the repo. Everything else draws maps through
 
 ## Plugin reference
 
-- Description: Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Draws the Live map setup's Map ID preview map. Lazily loaded off the boot wave.
+- Description: Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, zooms the vector map on the wheel at the user's Scroll zoom speed setting, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Draws the Live map setup's Map ID preview map. Lazily loaded off the boot wave. Stores the Google map's settings (Scroll zoom speed) so Settings can edit them.
 - Web:
   - Contributes:
+    - `ConfigV2.WebRegister` "config"
     - `GeoMap.Renderer` "Google Maps" → `LazyBoundary`
     - `LiveMapSetup.MapIdPreview` → `MapIdPreview`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `integrations/google-maps` ×6
     - `map/pin-layer` ×3
     - `map` ×3
+    - `config_v2` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/center.Center`
     - `primitives/css/surface.Surface`
@@ -107,6 +117,9 @@ The only map-vendor code in the repo. Everything else draws maps through
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/loading.Loading`
+- Server:
+  - Contributes: `ConfigV2.Register` "config"
+  - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/density --space-md`

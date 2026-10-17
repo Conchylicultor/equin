@@ -55,7 +55,9 @@ await withBrowser(async (h) => {
   // Hover the pin so the map lifts it, then wheel with the cursor on the
   // lifted pin: the pin keeps presses and clicks, never the wheel.
   await hoverPin(page, labelA);
-  await page.mouse.wheel(0, -600);
+  // One event: the raster map zooms a whole level on it, the vector map ~0.8
+  // (a farther zoom can carry the other pin off screen).
+  await page.mouse.wheel(0, -200);
   await page.waitForTimeout(1500);
   await snap(page, out, "after");
   const after = await spread();

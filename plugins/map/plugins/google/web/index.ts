@@ -1,5 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { GeoMap } from "@plugins/map/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
+import { googleMapConfig } from "../shared/config";
 import {
   LiveMapSetup,
   MapsMapAccessAction,
@@ -11,8 +13,9 @@ import { GOOGLE_TILES } from "./internal/tiles";
 
 export default {
   description:
-    "Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Draws the Live map setup's Map ID preview map. Lazily loaded off the boot wave.",
+    "Google Maps JavaScript API as the map renderer: draws GeoMap overlays (pins as overlays holding each pin's contributed content, Google's own places hidden, paths as polylines, areas as polygons, strokes in resolved theme tones), frames them once and then only from its Fit control, zooms the vector map on the wheel at the user's Scroll zoom speed setting, shows the live-map set-up action until a browser key is set, and replaces Google's silent grey map with an error card when the key is refused. Draws the Live map setup's Map ID preview map. Lazily loaded off the boot wave.",
   contributions: [
+    ConfigV2.WebRegister({ descriptor: googleMapConfig }),
     GeoMap.Renderer({
       id: "google",
       label: "Google Maps",

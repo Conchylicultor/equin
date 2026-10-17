@@ -44,6 +44,9 @@ import { MapErrorCard } from "./map-error-card";
 import { GOOGLE_COLOR_SCHEME, GOOGLE_TILES } from "../internal/tiles";
 import { PinCanvas } from "./pin-canvas";
 import { flyCamera } from "../internal/fly-camera";
+import { attachWheelZoom } from "../internal/wheel-zoom";
+import { useConfig } from "@plugins/config_v2/web";
+import { googleMapConfig } from "../../shared/config";
 
 /**
  * The raster map's inline style: the shared `BASEMAP_STYLE` (Google's own
@@ -191,6 +194,7 @@ function GoogleMapCanvas({
           )}
           <FitControl overlays={overlays} fitPadding={fitPadding} />
           {mapId === null ? null : <RasterNotice />}
+          <WheelZoom />
           <FocusCamera
             overlays={overlays}
             focusId={focusId}
@@ -274,6 +278,40 @@ function ReportCameraRest({
     return () => listener.remove();
   }, [map, report, active]);
 
+  return null;
+}
+
+/**
+ * The vector map's wheel is ours (`attachWheelZoom`): Google's has no speed,
+ * and zooms several levels per scroll burst. Keyed on how Google actually
+ * draws the map, not on the Map ID: a Map ID can still draw raster (no WebGL,
+ * a wrong Map ID), whose whole-level zoom keeps Google's own wheel. The speed
+ * is read live, so a changed setting applies to the next scroll.
+ */
+function WheelZoom() {
+  const map = useMap();
+  const speed = useLatestRef(useConfig(googleMapConfig).scrollZoomSpeed);
+  useEffect(() => {
+    if (map === null) return;
+    let detach: (() => void) | null = null;
+    const sync = () => {
+      const vector = map.getRenderingType() === "VECTOR";
+      if (vector === (detach !== null)) return;
+      map.setOptions({ scrollwheel: !vector });
+      if (vector) {
+        detach = attachWheelZoom(map, () => speed.current);
+      } else {
+        detach?.();
+        detach = null;
+      }
+    };
+    sync();
+    const listener = map.addListener("renderingtype_changed", sync);
+    return () => {
+      listener.remove();
+      detach?.();
+    };
+  }, [map, speed]);
   return null;
 }
 
