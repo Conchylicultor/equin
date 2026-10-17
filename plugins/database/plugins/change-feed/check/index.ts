@@ -2,8 +2,10 @@ import type TS from "typescript";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
+  entityRefIdentifiers,
   findProducedWrites,
   findProducerDecls,
+  resolveEntityRefNames,
   resolveTableNames,
   type Source,
 } from "./producer-writes";
@@ -52,14 +54,28 @@ const check: Check = {
       grepArg: alternation(bindings),
       pathspecs,
     });
-    const tables = resolveTableNames(ts, bindingSources, bindings);
+    // An entity built from a ref is named by the ref, declared in another
+    // file (the plugin's `core/`): find those files by the ref identifiers.
+    const refs = entityRefIdentifiers(ts, bindingSources, bindings);
+    const refNames =
+      refs.size === 0
+        ? new Map<string, Set<string>>()
+        : resolveEntityRefNames(
+            ts,
+            await listCandidateSources({
+              grepArg: alternation(refs),
+              pathspecs,
+            }),
+            refs,
+          );
+    const tables = resolveTableNames(ts, bindingSources, bindings, refNames);
     const unresolved = decls.filter((d) => !tables.has(d.binding));
     if (unresolved.length > 0) {
       // A producer whose table this scan cannot name would make every check of
       // it vacuous: fail rather than pass on a scan that saw nothing.
       return {
         ok: false,
-        message: `Cannot resolve the table of ${unresolved.length} change producer(s) — no \`const <binding> = …pgTable("<name>", …)\` / \`…defineEntity("<name>", …)\` (or \`<entity>.table\` of one) found:\n    ${unresolved.map((d) => `${d.path}:${d.line}  table: ${d.binding}`).join("\n    ")}`,
+        message: `Cannot resolve the table of ${unresolved.length} change producer(s) — no \`const <binding> = …pgTable("<name>", …)\` / \`…defineEntity("<name>", …)\` / \`…defineEntity(<ref>, …)\` over an \`entityRef("<name>", …)\` (or \`<entity>.table\` of one) found:\n    ${unresolved.map((d) => `${d.path}:${d.line}  table: ${d.binding}`).join("\n    ")}`,
         hint: "Pass `defineChangeProducer` the table's own binding (the identifier its `pgTable(…)` / `defineEntity(…)` declaration — or that entity's `.table` — is assigned to), not an alias or an expression.",
       };
     }

@@ -542,6 +542,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `infra/background/timer.defineTimer`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `network/live.serveCollection`
     - `network/live.serveValue`
     - `primitives/log-channels.Log`
@@ -663,6 +665,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.liveValue`
   - Exports (types):

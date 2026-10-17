@@ -1,11 +1,19 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
-import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
+import { sql } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
-import { _buildRuns } from "./tables";
 import { settleDeadInflightRun } from "./stale-holder";
-import { buildRunIdKind } from "../../core/internal/id-kind";
+import { buildRunIdKind } from "../core";
 
+// NEVER IMPORT THE `build_runs` TABLE HERE. Every statement in this file and
+// `stale-holder.ts` is hand-written SQL naming only the columns it touches, for
+// two reasons that are one fact:
+//
+// - The CLI runs NEW code against the schema the PREVIOUS build left behind
+//   (see `insertRow`), so it must never bind to the current table definition.
+// - The table is a `defineEntity` (server/internal/tables.ts), which loads the
+//   field-storage codegen manifest — and the regenerating `./singularity build`
+//   process may not load one (`cli:codegen-manifests-not-frozen`).
+//
 // The detached `./singularity build` CLI records build_runs rows directly, from
 // the CLI process — which declares NO runtime namespace (a terminal build is
 // namespace-less) and so cannot use the namespace-bound `db` from
@@ -62,7 +70,7 @@ export interface BuildRunRecorder {
   close(): Promise<void>;
 }
 
-/** The index the claiming INSERT contends on — see `tables.ts`. */
+/** The index the claiming INSERT contends on — see `server/internal/tables.ts`. */
 const INFLIGHT_UQ = "build_runs_inflight_uniq";
 
 // node-postgres surfaces a unique_violation as SQLSTATE 23505 plus the offending
@@ -215,11 +223,7 @@ export async function insertRunOn(
  * build has not created yet — never had a row to close (`insertRunOn` answered
  * "unavailable"), so the same tolerance applies here.
  *
- * This one stays on drizzle: unlike `.values()`, `.set()` names ONLY the
- * assigned columns, so an UPDATE is already immune to the schema skew described
- * above. Verified with `.toSQL()`:
- *   update "build_runs" set "finished_at" = $1, "exit_code" = $2
- *   where ("build_runs"."id" = $3 and "build_runs"."finished_at" is null)
+ * Hand SQL, like the insert: it names only the two columns it stamps.
  */
 export async function closeRunOn(
   db: NodePgDatabase,
@@ -227,36 +231,11 @@ export async function closeRunOn(
   exitCode: number,
 ): Promise<void> {
   try {
-    await db
-      .update(_buildRuns)
-      .set({ finishedAt: new Date(), exitCode })
-      .where(
-        and(
-          eq(_buildRuns.id, buildRunIdKind.key(id)),
-          isNull(_buildRuns.finishedAt),
-        ),
-      );
+    await db.execute(sql`
+      update "build_runs" set "finished_at" = ${new Date()}, "exit_code" = ${exitCode}
+      where "id" = ${buildRunIdKind.key(id)} and "finished_at" is null
+    `);
   } catch (err) {
     if (!isMissingLedger(err)) throw err;
   }
-}
-
-/**
- * The CLI-side `build_runs` writer for ONE namespace's database — the building
- * checkout's own. It used to be hardcoded to main's, because the only rows it
- * wrote were main's deploy and its compose-serve children; a composition is now
- * built and served from any checkout, and its row belongs with the transcript
- * and profile that checkout's backend serves.
- */
-export function createBuildRunRecorder(namespace: Namespace): BuildRunRecorder {
-  const pool = openShortLivedClient(namespace);
-  const db: NodePgDatabase = drizzle(pool);
-
-  // Nothing but the pool binding lives here: both writes are the exported
-  // db-parametrized bodies above, so what the tests drive is what the CLI runs.
-  return {
-    insertRun: (r) => insertRunOn(db, namespace, r),
-    closeRun: (id, exitCode) => closeRunOn(db, id, exitCode),
-    close: () => pool.end(),
-  };
 }

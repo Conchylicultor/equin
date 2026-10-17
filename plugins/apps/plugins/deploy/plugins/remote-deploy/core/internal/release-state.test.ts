@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ReleaseCandidate, ReleaseRun } from "@plugins/release/core";
+import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
 import { candidatePredatesLatest } from "./release-state";
 
 const T = (min: number) =>
@@ -7,7 +8,7 @@ const T = (min: number) =>
 
 function run(over: Partial<ReleaseRun> = {}): ReleaseRun {
   return {
-    id: "release-new",
+    id: releaseRunIdKind.key("release-new"),
     composition: "c",
     target: "web",
     namespace: "ns",

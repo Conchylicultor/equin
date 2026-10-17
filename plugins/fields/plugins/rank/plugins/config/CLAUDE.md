@@ -29,6 +29,7 @@ sortable fractional-indexing column.
     - `rankValueField`
 - Cross-plugin:
   - Imported by:
+    - `conversations/agents`
     - `conversations/conversations-view/queue`
     - `page/block-entity`
     - `tasks/tasks-core`

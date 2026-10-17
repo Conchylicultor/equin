@@ -3,12 +3,13 @@ import {
   BUILD_EXIT_HARD_KILLED,
   BUILD_EXIT_SUPERSEDED,
 } from "@plugins/build/plugins/build-status/core";
+import { buildRunIdKind } from "@plugins/build/plugins/run-ledger/core";
 import type { BuildRun } from "../../shared";
 import { latestRunState } from "./latest-run-state";
 
 function run(over: Partial<BuildRun>): BuildRun {
   return {
-    id: "b1",
+    id: buildRunIdKind.key("b1"),
     trigger: "auto",
     commitHash: null,
     targets: ["singularity"],

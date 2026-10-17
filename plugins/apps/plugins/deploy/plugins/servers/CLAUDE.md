@@ -101,11 +101,11 @@ plus `sshKey`.
     - `resource.declare` "deploy.servers.all:rows"
   - Uses:
     - `database.db`
-    - `database/derived-updated-at.deriveUpdatedAt`
-    - `ids.idColumn`
     - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/secrets.deleteSecret`
     - `infra/secrets.getSecret`
     - `infra/secrets.hasSecret`
@@ -136,6 +136,7 @@ plus `sshKey`.
     - `fields/int/config.intField`
     - `fields/text/config.textField`
     - `ids.defineIdKind`
+    - `ids.idKindField`
     - `ids.IdOf`
     - `infra/entities.entityRef`
     - `primitives/pane.defineRoute`

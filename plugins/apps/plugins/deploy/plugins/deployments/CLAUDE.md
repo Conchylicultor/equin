@@ -437,10 +437,10 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `resource.declare` "deploy.run-history:groups"
     - `resource.declare` "deploy.run-history:rows"
     - `resource.declare` "deploy.runs"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×3
-    - `ids` ×2
     - `infra/endpoints` ×2
+    - `infra/entities` ×2
     - `infra/jobs/supervised-job` ×2
     - `infra/paths` ×2
     - `network/live` ×2
@@ -449,9 +449,8 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `apps/deploy/health.serverHealth`
     - `apps/deploy/servers._deployServers`
     - `config_v2.getConfig`
-    - `database/derived-updated-at.deriveUpdatedAt`
-    - `database/sql-column.parsedText`
     - `database.db`
+    - `ids.IdKinds`
     - `infra/retention.defineRetention`
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/apps/plugins/deploy/plugins/deployments/server/internal/tables.ts`
@@ -486,6 +485,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `ids.defineIdKind`
+    - `ids.idKindField`
     - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
@@ -512,7 +512,9 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `DEFAULT_LOOPBACK_PORT`
     - `deleteDeployment`
     - `DEPLOY_LOG_CHANNEL`
+    - `deployDeploymentsEntityRef`
     - `deploymentDetailRoute`
+    - `deploymentFields`
     - `deploymentIdKind`
     - `deployments`
     - `DeploymentSchema`

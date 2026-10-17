@@ -7,6 +7,8 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { idKindField } from "@plugins/ids/core";
+import { deployRunIdKind } from "./id-kinds";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
   DEPLOY_PHASES,
@@ -201,10 +203,11 @@ export type DeployRunRecord = z.infer<typeof DeployRunRecordSchema>;
  * A deploy run's fields — the one record of them: the history list's listed
  * and carried fields, and the `deploy_runs` entity the runs union's deploy arm
  * picks from. The supervised-run bookkeeping (`pid`, `leg_run_id`,
- * `launched_from`) is no field: it never reaches the wire.
+ * `launched_from`) is no field here: those are the table's server fields
+ * (`server/internal/tables.ts`), never on the wire.
  */
 export const deployRunFields = {
-  id: textField(),
+  id: idKindField(deployRunIdKind),
   /** The (composition × server) install this run belongs to. */
   deploymentId: textField({ label: "Deployment" }),
   /** The remote box. An opaque id — a dimension to filter by, not a name. */
@@ -258,9 +261,8 @@ export const deployRunFields = {
 /**
  * The `deploy_runs` entity, by reference — what a browser-safe declaration
  * names a deploy run WITH (the runs union's deploy arm `from`, an extension
- * shape's `exposes.parent`). The table stays a raw `pgTable`
- * (`server/internal/tables.ts`: a branded id, a cascading FK, a partial unique
- * index), bound to these fields by name.
+ * shape's `exposes.parent`). The table is built from it
+ * (`server/internal/tables.ts`).
  */
 export const deployRunsEntityRef = entityRef("deploy_runs", deployRunFields);
 

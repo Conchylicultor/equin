@@ -12,6 +12,8 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { idKindField } from "@plugins/ids/core";
+import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { ReleaseLogsResponseSchema } from "./endpoints";
 import { RELEASE_TARGETS } from "./targets";
@@ -50,9 +52,9 @@ const RELEASE_KIND_OPTIONS = {
 export const RELEASE_RUN_STATUSES = ["running", "succeeded", "failed"] as const;
 export const ReleaseRunStatusSchema = z.enum(RELEASE_RUN_STATUSES);
 
-// One release run as seen by the client. Mirrors the `release_runs` table EXCEPT
-// `pid` — that is an internal liveness marker (see tables.ts), never part of the
-// public resource payload.
+// One release run as seen by the client — the `release_runs` table is built
+// from these fields, plus `pid`, its server field (an internal liveness marker,
+// see tables.ts), never part of the public resource payload.
 //
 // The fields a release-history list shows, in its order (`target` the title);
 // `composition` scopes the history to one composition (its pane states it as
@@ -82,7 +84,7 @@ const RELEASE_RUN_LISTED = {
   composition: textField({ label: "Composition" }),
 };
 const RELEASE_RUN_CARRIED = {
-  id: textField(),
+  id: idKindField(releaseRunIdKind),
   namespace: textField(),
   // Stamped from the request's `ReleaseIntent` at claim time. Never null:
   // pre-existing rows read `staged` through the column default, which is what
@@ -117,9 +119,8 @@ export const releaseRunFields = {
 /**
  * The `release_runs` entity, by reference — what a browser-safe declaration
  * names a release run WITH (the runs union's release arm `from`, an extension
- * shape's `exposes.parent`). The table stays a raw `pgTable`
- * (`server/internal/tables.ts`: a branded id, `parsedText` status / kind
- * columns, a partial unique index), bound to these fields by name.
+ * shape's `exposes.parent`). The table is built from it
+ * (`server/internal/tables.ts`).
  */
 export const releaseRunsEntityRef = entityRef("release_runs", releaseRunFields);
 

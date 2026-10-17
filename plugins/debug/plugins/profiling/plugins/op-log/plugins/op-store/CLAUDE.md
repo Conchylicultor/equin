@@ -100,11 +100,11 @@ filesystem event; the 30 s tick is what notices it.
   - Uses:
     - `database.db`
     - `database/derived-updated-at.deriveUpdatedAt`
-    - `database/sql-column.parsedJson`
-    - `database/sql-column.parsedText`
     - `debug/profiling/op-log.appendOpLog`
     - `debug/profiling/op-log.OP_LOG_FILE`
     - `debug/profiling/op-log.readSleepNow`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/retention.defineRetention`
@@ -123,7 +123,7 @@ filesystem event; the 30 s tick is what notices it.
     - `op-store.in-flight.all` (keyed)
     - `op-store.in-flight.all:rows` (keyed, point)
 - Core:
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug/profiling/op-log` ×10
     - `fields/text/config` ×3
     - `fields` ×2
@@ -132,6 +132,7 @@ filesystem event; the 30 s tick is what notices it.
     - `fields/float/config.floatField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
+    - `infra/entities.entityRef`
     - `infra/worktree.OP_KIND_IDS`
     - `network/live.liveCollection`
   - Exports (types):

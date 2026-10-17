@@ -145,11 +145,11 @@ bun test plugins/infra/plugins/trash
     - `resource.declare` "trash-entries:rows"
   - Uses:
     - `database.db`
-    - `database/sql-column.parsedJson`
-    - `ids.idColumn`
     - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/retention.defineRetention`
     - `network/live.serveCollection`
   - DB schema: `plugins/infra/plugins/trash/server/internal/tables.ts`
@@ -180,6 +180,7 @@ bun test plugins/infra/plugins/trash
     - `ids.idKindField`
     - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
   - Exports (types):
     - `TrashEntry`
@@ -190,6 +191,8 @@ bun test plugins/infra/plugins/trash
     - `purgeTrash`
     - `restoreTrash`
     - `trashEntries`
+    - `trashEntriesEntityRef`
+    - `trashEntryFields`
     - `trashEntryIdKind`
     - `TrashEntrySchema`
     - `TrashOutcomeSchema`

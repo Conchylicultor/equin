@@ -2,6 +2,10 @@ export type { Deployment } from "./schemas";
 export { DeploymentSchema } from "./schemas";
 export { deployments } from "./resources";
 export {
+  deploymentFields,
+  deployDeploymentsEntityRef,
+} from "./deployment-entity";
+export {
   listDeployments,
   createDeployment,
   getDeployment,

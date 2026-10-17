@@ -6,12 +6,12 @@ import {
   parsed,
 } from "@plugins/database/plugins/sql-projection/server";
 import { _backupRuns } from "@plugins/backup/server";
+import { BackupSourceReportSchema } from "@plugins/backup/core";
 import { runsServed } from "@plugins/runs/server";
 import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";
 import {
   BACKUP_RUN_STATUSES,
   BACKUP_STATUS_OUTCOME,
-  BackupSourceReportSchema,
   backupRunArm,
   type BackupRunStatus,
 } from "../../core";

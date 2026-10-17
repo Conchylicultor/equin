@@ -6,6 +6,7 @@ import type {
   ColumnBuilderBaseConfig,
   ColumnDataType,
   HasDefault,
+  HasGenerated,
   NotNull,
   SQL,
 } from "drizzle-orm";
@@ -72,6 +73,15 @@ export interface EntityColumnMeta<T> {
   default?: ColumnDefault<T>;
   /** Opt-in foreign-key constraint on this column. */
   references?: EntityReference;
+  /**
+   * A STORED generated column: `GENERATED ALWAYS AS (<sql>)`, a value the
+   * database derives from the row's other columns (`job_runs.id` =
+   * `job_name || ':' || seq`). A lazy thunk, like drizzle's own
+   * `.generatedAlwaysAs(() => sql…)`, so it may name columns by their DB name.
+   * Never written by the app: the key leaves the insert model. Exclusive with
+   * `default`.
+   */
+  generated?: () => SQL;
 }
 
 // ─── Foreign keys ──────────────────────────────────────────────────────────
@@ -139,8 +149,20 @@ type EntityColumnBuilder<V> = $Type<
 type MaybeNotNull<V, B extends PgColumnBuilderBase> = [null] extends [V]
   ? B
   : NotNull<B>;
-export type EntityColumns<F extends FieldsRecord, D extends keyof F = never> = {
-  [K in keyof F]: K extends D
+export type EntityColumns<
+  F extends FieldsRecord,
+  D extends keyof F = never,
+  G extends keyof F = never,
+> = {
+  [K in keyof F]: K extends G
+    ? HasGenerated<
+        MaybeNotNull<
+          InferFieldValue<F[K]>,
+          EntityColumnBuilder<InferFieldValue<F[K]>>
+        >,
+        { type: "always" }
+      >
+    : K extends D
     ? HasDefault<
         MaybeNotNull<
           InferFieldValue<F[K]>,
@@ -162,6 +184,20 @@ export type DefaultedKeys<
 > = M["columns"] extends object
   ? {
       [K in keyof M["columns"]]: M["columns"][K] extends { default: unknown }
+        ? K
+        : never;
+    }[keyof M["columns"]] &
+      keyof F
+  : never;
+
+// The keys of `meta.columns` that are `generated` — STORED generated columns,
+// which drizzle drops from the insert model (`HasGenerated`).
+export type GeneratedKeys<
+  F extends FieldsRecord,
+  M extends EntityMetaBase<F>,
+> = M["columns"] extends object
+  ? {
+      [K in keyof M["columns"]]: M["columns"][K] extends { generated: unknown }
         ? K
         : never;
     }[keyof M["columns"]] &
@@ -231,6 +267,7 @@ export interface Entity<
   F extends FieldsRecord,
   D extends keyof F = never,
   S extends keyof F = never,
+  G extends keyof F = never,
 > {
   readonly name: string;
   // Inferred from the `pgTable(...)` call so `db.select().from(entity.table)`
@@ -242,7 +279,7 @@ export interface Entity<
     name: string;
     schema: undefined;
     dialect: "pg";
-    columns: BuildColumns<string, EntityColumns<F, D>, "pg">;
+    columns: BuildColumns<string, EntityColumns<F, D, G>, "pg">;
   }>;
   // The WIRE schema = `wireSchema(fields, meta.serverOnly)`; keyed by JS prop
   // like `$inferSelect`, minus the server-only keys `S`. With `S = never`
@@ -256,7 +293,7 @@ export interface Entity<
   // (both are the full column/schema set with the same `S` keys removed). With
   // `S = never` this is the full `BuildColumns` map.
   readonly wireColumns: Pick<
-    BuildColumns<string, EntityColumns<F, D>, "pg">,
+    BuildColumns<string, EntityColumns<F, D, G>, "pg">,
     Exclude<keyof F, S>
   >;
   // The compiled derived-`updatedAt` trigger, present iff the record has an

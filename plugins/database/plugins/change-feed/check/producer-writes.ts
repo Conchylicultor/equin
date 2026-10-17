@@ -16,7 +16,9 @@ import type TS from "typescript";
 //     `defineEntity("<name>", …)` its declaration calls (through any wrapper,
 //     e.g. `deriveUpdatedAt(pgTable(…))`), or — for an entity's table bound
 //     apart (`const _t = entity.table`) — the one its entity's declaration in
-//     the same file calls;
+//     the same file calls; an entity built from a ref (`defineEntity(ref, …)`)
+//     is named by that ref's own `entityRef("<name>", …)`, wherever it is
+//     declared;
 //  3. the writes: a drizzle `.insert(<t>)` / `.update(<t>)` / `.delete(<t>)`
 //     whose `<t>` is a produced binding IN THAT FILE'S SCOPE — declared there,
 //     imported (under any alias), re-bound (`const t = _reports`), or reached
@@ -117,11 +119,16 @@ const TABLE_DECLARERS = new Set(["pgTable", "defineEntity"]);
 // The SQL table names `expr` declares: the first string argument of each
 // `pgTable(…)` / `defineEntity(…)` call within it (through any wrapper), or —
 // when it is `<entity>.table` — those of `<entity>`'s own initializer in
-// `decls` (one hop: an entity is declared by its `defineEntity` call).
+// `decls` (one hop: an entity is declared by its `defineEntity` call). A
+// `defineEntity(<ref>, …)` names its table through its ref: the ref's name is
+// read from `refNames` (see `resolveEntityRefNames`), and the identifier is
+// recorded in `refs` when given, so a caller can find the ref's declaration.
 function declaredTableNames(
   ts: typeof TS,
   expr: TS.Expression,
   decls: ReadonlyMap<string, TS.Expression>,
+  refNames: ReadonlyMap<string, ReadonlySet<string>>,
+  refs?: Set<string>,
 ): string[] {
   const names: string[] = [];
   walk(expr, ts, (inner) => {
@@ -134,6 +141,9 @@ function declaredTableNames(
       (ts.isStringLiteral(first) || ts.isNoSubstitutionTemplateLiteral(first))
     ) {
       names.push(first.text);
+    } else if (first && callee === "defineEntity" && ts.isIdentifier(first)) {
+      refs?.add(first.text);
+      names.push(...(refNames.get(first.text) ?? []));
     }
   });
   if (
@@ -144,7 +154,7 @@ function declaredTableNames(
   ) {
     const entity = decls.get(expr.expression.text);
     if (entity && !ts.isPropertyAccessExpression(entity)) {
-      return declaredTableNames(ts, entity, decls);
+      return declaredTableNames(ts, entity, decls, refNames, refs);
     }
   }
   return names;
@@ -172,13 +182,15 @@ function fileDecls(
  * Pass 2: each binding's SQL table name — what a `const <binding> = …`
  * initializer declares (`pgTable("<name>", …)` / `defineEntity("<name>", …)`,
  * through any wrapper, or `<entity>.table` resolved through its entity's
- * declaration in the same file). A binding declared in several files maps to
- * every name found.
+ * declaration in the same file). A `defineEntity(<ref>, …)` is named by
+ * `refNames` (its ref's `entityRef` name, `resolveEntityRefNames`). A binding
+ * declared in several files maps to every name found.
  */
 export function resolveTableNames(
   ts: typeof TS,
   sources: readonly Source[],
   bindings: ReadonlySet<string>,
+  refNames: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
 ): Map<string, Set<string>> {
   const out = new Map<string, Set<string>>();
   for (const source of sources) {
@@ -186,11 +198,69 @@ export function resolveTableNames(
     const decls = fileDecls(ts, sf);
     for (const [binding, initializer] of decls) {
       if (!bindings.has(binding)) continue;
-      for (const name of declaredTableNames(ts, initializer, decls)) {
+      for (const name of declaredTableNames(ts, initializer, decls, refNames)) {
         const names = out.get(binding) ?? new Set<string>();
         names.add(name);
         out.set(binding, names);
       }
+    }
+  }
+  return out;
+}
+
+/**
+ * The entity refs the bindings' entities are built from: every `<ref>` of a
+ * `defineEntity(<ref>, …)` a binding's declaration reaches (directly, or
+ * through `<entity>.table`). Their names are in other files — the ref is
+ * declared in the plugin's `core/` — so the caller finds those files by these
+ * identifiers and reads them with `resolveEntityRefNames`.
+ */
+export function entityRefIdentifiers(
+  ts: typeof TS,
+  sources: readonly Source[],
+  bindings: ReadonlySet<string>,
+): Set<string> {
+  const refs = new Set<string>();
+  for (const source of sources) {
+    const sf = parse(ts, source);
+    const decls = fileDecls(ts, sf);
+    for (const [binding, initializer] of decls) {
+      if (bindings.has(binding)) {
+        declaredTableNames(ts, initializer, decls, new Map(), refs);
+      }
+    }
+  }
+  return refs;
+}
+
+/** Each ref's table name: the first string argument of its `const <ref> = entityRef("<name>", …)`. */
+export function resolveEntityRefNames(
+  ts: typeof TS,
+  sources: readonly Source[],
+  refs: ReadonlySet<string>,
+): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  for (const source of sources) {
+    const sf = parse(ts, source);
+    for (const [ref, initializer] of fileDecls(ts, sf)) {
+      if (!refs.has(ref)) continue;
+      walk(initializer, ts, (inner) => {
+        if (
+          !ts.isCallExpression(inner) ||
+          calleeName(ts, inner) !== "entityRef"
+        )
+          return;
+        const first = inner.arguments[0];
+        if (
+          first &&
+          (ts.isStringLiteral(first) ||
+            ts.isNoSubstitutionTemplateLiteral(first))
+        ) {
+          const names = out.get(ref) ?? new Set<string>();
+          names.add(first.text);
+          out.set(ref, names);
+        }
+      });
     }
   }
   return out;
@@ -343,7 +413,14 @@ export function findProducedWrites(
       ts,
       sf,
       bindings,
-      (init) => declaredTableNames(ts, init, decls).length > 0,
+      // A declaration names a table — by a literal, or through an entity ref.
+      (init) => {
+        const refs = new Set<string>();
+        return (
+          declaredTableNames(ts, init, decls, new Map(), refs).length > 0 ||
+          refs.size > 0
+        );
+      },
     );
     const producersInScope = scopeNames(ts, sf, producers, (init) =>
       callsWithin(ts, init, "defineChangeProducer"),

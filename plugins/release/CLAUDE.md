@@ -436,13 +436,13 @@ remote is built here.
   - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `release/bundles` ×6
     - `infra/jobs/supervised-job` ×3
-    - `ids` ×2
     - `infra/endpoints` ×2
+    - `infra/entities` ×2
     - `infra/launcher` ×2
     - `infra/paths` ×2
     - `network/live` ×2
-    - `database/sql-column.parsedText`
     - `database.db`
+    - `ids.IdKinds`
     - `infra/file-watcher.acquireDirWatch`
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/git/git-watcher.refHeadServed`
@@ -484,11 +484,13 @@ remote is built here.
     - `fields/int/config.intField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
+    - `ids.idKindField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.liveValue`
     - `release/bundles.ReleaseManifestSchema`
+    - `release/bundles.releaseRunIdKind`
   - Exports (types):
     - `PlatformTag`
     - `PlatformTagResult`

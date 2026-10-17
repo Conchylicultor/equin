@@ -24,7 +24,11 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
-import { closeRunOn, insertRunOn, type InsertRunRow } from "./recorder";
+import {
+  closeRunOn,
+  insertRunOn,
+  type InsertRunRow,
+} from "../../shared/recorder";
 import { _buildRuns } from "./tables";
 import { buildRunIdKind } from "../../core/internal/id-kind";
 

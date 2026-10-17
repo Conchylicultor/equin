@@ -121,9 +121,6 @@ are in `infra/entities/server/internal/`
     - `active-data`
     - `apps/chord/curriculum`
     - `apps/chord/song-index`
-    - `apps/deploy/deployments`
-    - `apps/deploy/servers`
-    - `conversations/agents`
     - `conversations/conversation-category`
     - `conversations/conversations-view/grouped`
     - `conversations/turn-ledger`
@@ -135,7 +132,6 @@ are in `infra/entities/server/internal/`
     - `page/editor-collab`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-order`
-    - `reports`
     - `ui/theme-engine/saved-themes`
 - Server:
   - DB schema: `plugins/database/plugins/derived-updated-at/server/internal/from-table.ts`

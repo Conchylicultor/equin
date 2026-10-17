@@ -8,6 +8,7 @@ import {
   parsedTextField,
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { HoldClassSchema } from "./hold";
 
@@ -106,9 +107,19 @@ const DEAD_JOB_LISTED = {
 };
 const DEAD_JOB_CARRIED = {
   id: textField(),
-  input: jsonField({ schema: z.unknown(), default: null }),
+  input: nullable(jsonField({ schema: z.unknown(), default: null })),
   maxAttempts: intField(),
 };
+
+/**
+ * The `dead_jobs` entity — the dead-letter archive, one row per job graphile
+ * gave up on (a copy of its `_private_jobs` row; `id` is graphile's job id).
+ * The table is built from these fields (`server/internal/tables.ts`).
+ */
+export const deadJobsEntityRef = entityRef("dead_jobs", {
+  ...DEAD_JOB_CARRIED,
+  ...DEAD_JOB_LISTED,
+});
 export const DeadJobRowSchema = fieldsToZodObject({
   ...DEAD_JOB_CARRIED,
   ...DEAD_JOB_LISTED,
@@ -193,6 +204,29 @@ const JOB_RUN_FIELDS = {
   waitMs: nullable(floatField()),
 };
 export const JobRunRowSchema = fieldsToZodObject(JOB_RUN_FIELDS);
+
+/**
+ * The `job_runs` entity — the per-job ring of recent runs, column for column
+ * (`server/internal/tables.ts` builds the table from it). `slot` is the ring
+ * slot a run landed in; `id` is generated from `job_name` and `seq`.
+ */
+export const jobRunsEntityRef = entityRef("job_runs", {
+  id: textField(),
+  jobName: textField({ label: "Job" }),
+  slot: intField(),
+  seq: intField({ label: "Run" }),
+  startedAt: dateField({ label: "Started" }),
+  finishedAt: dateField({ label: "Finished" }),
+  outcome: JOB_RUN_FIELDS.outcome,
+  error: nullable(textField({ label: "Error" })),
+  durationMs: intField({ label: "Duration" }),
+  attempt: intField({ label: "Attempt" }),
+  jobId: nullable(textField()),
+  hold: JOB_RUN_FIELDS.hold,
+  maxAttempts: nullable(intField({ label: "Max attempts" })),
+  queuedAt: nullable(dateField({ label: "Queued" })),
+  input: nullable(jsonField({ schema: z.unknown(), default: null })),
+});
 export type JobRunRow = z.infer<typeof JobRunRowSchema>;
 
 /**

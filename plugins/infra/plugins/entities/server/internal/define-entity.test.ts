@@ -10,7 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { getTableConfig, PgCustomColumn } from "drizzle-orm/pg-core";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { is } from "drizzle-orm";
+import { is, sql } from "drizzle-orm";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import {
   parsedJson,
@@ -22,6 +22,7 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { defineFieldType } from "@plugins/fields/core";
 import type { FieldDef } from "@plugins/fields/core";
 import { Fields } from "@plugins/fields/plugins/server-capabilities/server";
+import { entityRef } from "../../core";
 import { defineEntity } from "./define-entity";
 import { defaultNow, defaultRandom } from "./types";
 
@@ -970,4 +971,65 @@ test("a nullable narrowed jsonb field decodes its UNWRAPPED schema and stays nul
   expect(() =>
     ent.table.lastCaller.mapFromDriverValue({ caller: "boot" }),
   ).toThrow(SqlColumnError);
+});
+
+test("a ref's server fields are columns, server-only by construction", () => {
+  const ref = entityRef("ent_ref_server_fields", {
+    id: field(textType, z.string(), ""),
+    name: field(textType, z.string(), ""),
+  });
+  const ent = defineEntity(
+    ref,
+    { pid: field(intType, z.number().int().nullable(), null) },
+    { primaryKey: "id" },
+  );
+  const ddlNames = getTableConfig(ent.table).columns.map((c) => c.name);
+  expect(ddlNames).toEqual(["id", "name", "pid"]);
+  expect(Object.keys(ent.wireColumns)).toEqual(["id", "name"]);
+  expect(Object.keys(ent.schema.shape)).toEqual(["id", "name"]);
+  // The ref itself — what the browser reads — never names the column.
+  expect("pid" in ref.fields).toBe(false);
+});
+
+test("defineEntity refuses a server field the ref already has, and meta.serverOnly on a ref", () => {
+  const ref = entityRef("ent_ref_server_dup", {
+    id: field(textType, z.string(), ""),
+  });
+  expect(() =>
+    defineEntity(
+      ref,
+      { id: field(textType, z.string(), "") },
+      { primaryKey: "id" },
+    ),
+  ).toThrow(/server field "id" is also a field of the ref/);
+  expect(() =>
+    // @ts-expect-error — a ref's fields are wire fields: no meta.serverOnly.
+    defineEntity(ref, { primaryKey: "id", serverOnly: ["id"] }),
+  ).toThrow(/declare a server-only column as a server field/);
+});
+
+test("a generated column is GENERATED ALWAYS AS and leaves the insert model", () => {
+  const ent = defineEntity(
+    "ent_generated",
+    {
+      id: field(textType, z.string(), ""),
+      a: field(textType, z.string(), ""),
+    },
+    {
+      primaryKey: "id",
+      columns: { id: { generated: () => sql`a || ':x'` } },
+    },
+  );
+  const id = getTableConfig(ent.table).columns.find((c) => c.name === "id")!;
+  expect(id.generated?.type).toBe("always");
+  // tsc: an insert names only `a` — `id` is the database's.
+  const insert: typeof ent.table.$inferInsert = { a: "v" };
+  expect(insert.a).toBe("v");
+  expect(() =>
+    defineEntity(
+      "ent_generated_default",
+      { id: field(textType, z.string(), "") },
+      { columns: { id: { generated: () => sql`'x'`, default: "y" } } },
+    ),
+  ).toThrow(/is generated, so it cannot also declare a default/);
 });

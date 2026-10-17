@@ -3,7 +3,6 @@ import { sql } from "drizzle-orm";
 import {
   index,
   integer,
-  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -14,8 +13,15 @@ import {
   parsedJson,
   parsedText,
 } from "@plugins/database/plugins/sql-column/server";
-import { HoldClassSchema } from "../../core/hold";
-import { JobRunOutcomeSchema } from "../../core/resources";
+import {
+  deadJobsEntityRef,
+  JobRunOutcomeSchema,
+  jobRunsEntityRef,
+} from "../../core/resources";
+import {
+  defineEntity,
+  defaultNow,
+} from "@plugins/infra/plugins/entities/server";
 
 // Step log for durable workflows — memoizes side-effects performed via
 // `ctx.step(name, fn)` so replays (retries or resumes after a suspend) skip
@@ -83,33 +89,15 @@ export const _jobWaits = pgTable(
 // every worktree's `_private_jobs`. `reconcileDeadJobs` copies dead rows here
 // (idempotently — PK is the original graphile job id), purges them from the
 // queue, and bounds this table by TTL + cap. Surfaced in Debug → Queue → Dead.
-export const _deadJobs = pgTable(
-  "dead_jobs",
-  {
-    // Original graphile job id — PK makes the archive INSERT idempotent.
-    id: text("id").primaryKey(),
-    jobName: text("job_name").notNull(),
-    // The dead job's original enqueue input — one shape per job type, so this
-    // column declares `unknown` and means it. A decoder would have nothing to
-    // verify, and every reader already treats it as `unknown`.
-    input: jsonb("input"),
-    attempts: integer("attempts").notNull(),
-    maxAttempts: integer("max_attempts").notNull(),
-    lastError: text("last_error"),
-    diedAt: timestamp("died_at", { withTimezone: true }),
-    archivedAt: timestamp("archived_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (t) => [
+const deadJobsEntity = defineEntity(deadJobsEntityRef, {
+  primaryKey: "id",
+  columns: { archivedAt: { default: defaultNow() } },
+  indexes: (t) => [
     index("dead_jobs_archived_at_idx").on(t.archivedAt),
-    // `queryRecentDeadJobs` reads the last day of deaths on every queue change
-    // (the health row's pulse). Each row carries its job's input inline — one
-    // heap page per row on main — so without this a 2000-row archive is a
-    // 2000-page scan to find a handful of recent ones.
     index("dead_jobs_died_at_idx").on(t.diedAt),
   ],
-);
+});
+export const _deadJobs = deadJobsEntity.table;
 
 // How a recorded run ended (`JobRunOutcomeSchema`, core). `suspended` is a
 // durable workflow that returned to wait (`ctx.waitFor` / `ctx.sleep`, or a
@@ -151,40 +139,15 @@ export const _jobRunStats = pgTable("job_run_stats", {
 // Successor of `job_recent_runs` (whose composite (job_name, slot) key no
 // collection can bind): the migration that created this table copied that
 // ring's rows across before dropping it.
-export const _jobRuns = pgTable(
-  "job_runs",
-  {
-    id: text("id")
-      .primaryKey()
-      .generatedAlwaysAs(
-        (): ReturnType<typeof sql> => sql`job_name || ':' || seq::text`,
-      ),
-    jobName: text("job_name").notNull(),
-    slot: integer("slot").notNull(),
-    // The run's number (the stats row's `runs` after it was counted) — the
-    // ring's order, since a slot says nothing about recency once it wraps.
-    seq: integer("seq").notNull(),
-    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
-    finishedAt: timestamp("finished_at", { withTimezone: true }).notNull(),
-    outcome: parsedText("outcome", JobRunOutcomeSchema).notNull(),
-    error: text("error"),
-    durationMs: integer("duration_ms").notNull(),
-    attempt: integer("attempt").notNull(),
-    // NULL on a run copied from `job_recent_runs`, which never recorded them.
-    // `job_id` is graphile's row id (text, like `dead_jobs.id`); `hold` the
-    // class of the task the row was fetched on; `queued_at` the row's `run_at`
-    // — when it became runnable, so `started_at − queued_at` is how long it
-    // waited for a slot; `input` the payload's input, one shape per job type,
-    // so `unknown` and meant.
-    jobId: text("job_id"),
-    hold: parsedText("hold", HoldClassSchema),
-    maxAttempts: integer("max_attempts"),
-    queuedAt: timestamp("queued_at", { withTimezone: true }),
-    input: jsonb("input"),
+const jobRunsEntity = defineEntity(jobRunsEntityRef, {
+  primaryKey: "id",
+  columns: {
+    id: { generated: () => sql`job_name || ':' || seq::text` },
   },
-  (t) => [
+  indexes: (t) => [
     uniqueIndex("job_runs_job_name_slot_idx").on(t.jobName, t.slot),
     // The collection's default order (newest finished first).
     index("job_runs_finished_at_idx").on(t.finishedAt),
   ],
-);
+});
+export const _jobRuns = jobRunsEntity.table;

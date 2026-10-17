@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import ts from "typescript";
 import {
+  entityRefIdentifiers,
   findProducedWrites,
   findProducerDecls,
+  resolveEntityRefNames,
   resolveTableNames,
 } from "./producer-writes";
 
@@ -55,6 +57,44 @@ describe("producer-writes scan", () => {
       },
     ]);
     expect(tablesMap()).toEqual(new Map([["_reports", new Set(["reports"])]]));
+  });
+
+  test("resolves an entity built from a ref through the ref's `entityRef` name", () => {
+    const tables = `
+const reportsEntity = defineEntity(reportsEntityRef, { primaryKey: "id" });
+export const _reports = reportsEntity.table;
+export const _direct = defineEntity(otherRef, serverFields, {}).table;
+`;
+    const refFile = `
+export const reportsEntityRef = entityRef("reports", reportFields);
+export const otherRef = entityRef("other_rows", fields);
+export const unrelatedRef = entityRef("unrelated", fields);
+`;
+    const bindings = new Set(["_reports", "_direct"]);
+    const refs = entityRefIdentifiers(
+      ts,
+      [{ rel: "server/tables.ts", src: tables }],
+      bindings,
+    );
+    expect(refs).toEqual(new Set(["reportsEntityRef", "otherRef"]));
+    const refNames = resolveEntityRefNames(
+      ts,
+      [{ rel: "core/entity.ts", src: refFile }],
+      refs,
+    );
+    expect(
+      resolveTableNames(
+        ts,
+        [{ rel: "server/tables.ts", src: tables }],
+        bindings,
+        refNames,
+      ),
+    ).toEqual(
+      new Map([
+        ["_reports", new Set(["reports"])],
+        ["_direct", new Set(["other_rows"])],
+      ]),
+    );
   });
 
   test("resolves an entity's table: `defineEntity(…)` or `<entity>.table`", () => {

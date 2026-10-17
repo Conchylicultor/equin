@@ -4,12 +4,12 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { enumTextField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveArm } from "@plugins/network/plugins/live/core";
-import { BACKUP_RUN_KIND } from "@plugins/backup/core";
-import { runs } from "@plugins/runs/core";
 import {
+  BACKUP_RUN_KIND,
   BackupSourceReportSchema,
   BackupTargetResultSchema,
-} from "./payload-schemas";
+} from "@plugins/backup/core";
+import { runs } from "@plugins/runs/core";
 import { BACKUP_RUN_STATUSES, type BackupRunStatus } from "./status";
 
 /**

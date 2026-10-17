@@ -13,3 +13,9 @@ export type {
   BackupSourceSkipped,
   BackupTargetResult,
 } from "./source-report";
+export {
+  BackupManifestSchema,
+  BackupSourceReportSchema,
+  BackupTargetResultSchema,
+} from "./run-schemas";
+export { backupRunFields, backupRunsEntityRef } from "./entity";

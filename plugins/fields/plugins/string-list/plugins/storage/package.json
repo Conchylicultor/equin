@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-string-list-storage",
+  "version": "0.0.1",
+  "private": true,
+  "description": "String-list field type: DB storage capability — maps to a Postgres text[] column.",
+  "singularity": {
+    "collapsed": true
+  }
+}

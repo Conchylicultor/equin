@@ -7,3 +7,4 @@ export type { ReportSource } from "./sources";
 export type { ReportFingerprintContext } from "./fingerprint";
 export { reportIdKind } from "./id-kind";
 export type { ReportId } from "./id-kind";
+export { reportFields, reportsEntityRef } from "./entity";

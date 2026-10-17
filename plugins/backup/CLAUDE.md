@@ -153,8 +153,9 @@ row with a rising count and a new source starting to fail mints its own.
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
     - `database.db`
-    - `database/sql-column.parsedJson`
     - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/paths.BACKUPS_DIR`
     - `primitives/log-channels.Log`
@@ -171,7 +172,15 @@ row with a rising count and a new source starting to fail mints its own.
   - Register: `defineSupervisedJob('backup.run.supervised')`
   - Routes: `POST /api/backup/run`
 - Core:
-  - Uses: `primitives/pane.defineRoute`
+  - Uses:
+    - `fields.FieldsRecord`
+    - `fields.nullable`
+    - `fields/date/config.dateField`
+    - `fields/int/config.intField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.textField`
+    - `infra/entities.entityRef`
+    - `primitives/pane.defineRoute`
   - Exports (types):
     - `BackupArchive`
     - `BackupManifest`
@@ -185,9 +194,14 @@ row with a rising count and a new source starting to fail mints its own.
   - Exports (values):
     - `BACKUP_CATEGORY_ID`
     - `BACKUP_RUN_KIND`
+    - `BackupManifestSchema`
     - `backupRoute`
+    - `backupRunFields`
     - `backupRunRoute`
+    - `backupRunsEntityRef`
+    - `BackupSourceReportSchema`
     - `backupSourceWentIn`
+    - `BackupTargetResultSchema`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

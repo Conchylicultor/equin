@@ -20,6 +20,7 @@ import type {
   EntityColumns,
   EntityMeta,
   EntityMetaBase,
+  GeneratedKeys,
   ServerOnlyKeys,
   UpdatedAtMeta,
 } from "./types";
@@ -101,16 +102,41 @@ function applyDefault(b: any, def: ColumnDefault<unknown>, key: string): any {
 // entity's browser-safe ref (`entityRef(name, fields)`, entities/core): its
 // name is the table's, its record the columns, so the fields a browser list
 // reads off the ref and the table the server reads are one declaration.
+//
+// A column only the server may see (a supervisor's `pid`, an SSH key, a dedup
+// key) is NOT on the ref — the ref is what the browser reads, so a field there
+// is one a list could `pick`. It is declared beside the ref instead:
+// `defineEntity(ref, serverFields, meta)`. Those fields are columns of the
+// table and absent from the wire schema / `wireColumns` (`serverOnly`, derived
+// — so `meta.serverOnly` has no spelling on a ref: a ref field is a wire field).
 export function defineEntity<
   F extends FieldsRecord,
-  const M extends EntityMeta<F> = EntityMeta<F>,
+  const M extends EntityMeta<F> & { serverOnly?: never } = EntityMeta<F> & {
+    serverOnly?: never;
+  },
 >(
   ref: EntityRef<string, F>,
   meta: M,
-): Entity<F, DefaultedKeys<F, M>, ServerOnlyKeys<F, M>>;
+): Entity<F, DefaultedKeys<F, M>, never, GeneratedKeys<F, M>>;
 export function defineEntity<F extends FieldsRecord & { updatedAt?: never }>(
   ref: EntityRef<string, F>,
 ): Entity<F>;
+export function defineEntity<
+  F extends FieldsRecord,
+  const SF extends FieldsRecord,
+  const M extends EntityMeta<F & SF> & { serverOnly?: never } = EntityMeta<
+    F & SF
+  > & { serverOnly?: never },
+>(
+  ref: EntityRef<string, F>,
+  serverFields: SF,
+  meta: M,
+): Entity<
+  F & SF,
+  DefaultedKeys<F & SF, M>,
+  keyof SF & string,
+  GeneratedKeys<F & SF, M>
+>;
 export function defineEntity<
   F extends FieldsRecord,
   const M extends EntityMeta<F> = EntityMeta<F>,
@@ -118,7 +144,7 @@ export function defineEntity<
   name: string,
   fields: F,
   meta: M,
-): Entity<F, DefaultedKeys<F, M>, ServerOnlyKeys<F, M>>;
+): Entity<F, DefaultedKeys<F, M>, ServerOnlyKeys<F, M>, GeneratedKeys<F, M>>;
 export function defineEntity<F extends FieldsRecord & { updatedAt?: never }>(
   name: string,
   fields: F,
@@ -136,14 +162,40 @@ export function defineEntity(
     );
   }
   const name = typeof nameOrRef === "string" ? nameOrRef : nameOrRef.name;
+  // The ref spelling's optional middle argument: the server-only fields.
+  const serverFields =
+    typeof nameOrRef !== "string" && maybeMeta !== undefined
+      ? (fieldsOrMeta as FieldsRecord)
+      : undefined;
   const fields = (
-    typeof nameOrRef === "string" ? fieldsOrMeta : nameOrRef.fields
+    typeof nameOrRef === "string"
+      ? fieldsOrMeta
+      : { ...nameOrRef.fields, ...serverFields }
   ) as FieldsRecord;
   const rawMeta =
-    (typeof nameOrRef === "string" ? maybeMeta : fieldsOrMeta) ?? {};
-  const meta = rawMeta as EntityMetaBase<FieldsRecord> & {
+    (typeof nameOrRef === "string" || serverFields !== undefined
+      ? maybeMeta
+      : fieldsOrMeta) ?? {};
+  const declared = rawMeta as EntityMetaBase<FieldsRecord> & {
     updatedAt?: UpdatedAtMeta<FieldsRecord>;
   };
+  if (typeof nameOrRef !== "string" && declared.serverOnly !== undefined) {
+    throw new Error(
+      `defineEntity("${name}"): a ref's fields are its wire fields — declare a ` +
+        `server-only column as a server field (\`defineEntity(ref, serverFields, meta)\`), not in meta.serverOnly.`,
+    );
+  }
+  for (const key of Object.keys(serverFields ?? {})) {
+    if (Object.hasOwn((nameOrRef as EntityRef).fields, key)) {
+      throw new Error(
+        `defineEntity("${name}"): server field "${key}" is also a field of the ref.`,
+      );
+    }
+  }
+  const meta =
+    serverFields === undefined
+      ? declared
+      : { ...declared, serverOnly: Object.keys(serverFields) };
   const builders: Record<string, unknown> = {};
 
   for (const [key, field] of Object.entries(fields)) {
@@ -178,6 +230,15 @@ export function defineEntity(
     if (meta.primaryKey === key) b = b.primaryKey();
 
     const colMeta = meta.columns?.[key];
+    if (colMeta?.generated) {
+      if ("default" in colMeta) {
+        throw new Error(
+          `defineEntity("${name}"): column "${key}" is generated, so it cannot ` +
+            `also declare a default.`,
+        );
+      }
+      b = b.generatedAlwaysAs(colMeta.generated);
+    }
     if (colMeta && "default" in colMeta) {
       b = applyDefault(b, colMeta.default as ColumnDefault<unknown>, key);
     }

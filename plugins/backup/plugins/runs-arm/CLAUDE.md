@@ -120,14 +120,11 @@ look.
 - `backup.targetResults` / `backup.sources` are the arm's CARRIED fields
   (`liveArm`'s `carry`): on the slice, never listed, filtered or sorted — a
   jsonb blob has no comparable projection. Every field must be a column; not
-  every column need be a listed field. Their schemas
-  (`core/internal/payload-schemas.ts`) are the arm slice's own, read through
-  `backupRunArm.read(run)`; the server
-  decodes `sources` with the same schema (idempotent, so the browser re-parses
-  its output). They are second spellings of ones in `backup/shared`
-  (plugin-private), pinned by `ZodParser<BackupTargetResult>` /
-  `ZodParser<BackupSourceReport>` against `backup/core` so a drift stops
-  compiling.
+  every column need be a listed field. Their schemas are the column
+  decoders `backup/core` owns (`run-schemas.ts`, the same ones the
+  `backup_runs` entity is built from), read through `backupRunArm.read(run)`;
+  the server decodes `sources` with the same schema (idempotent, so the
+  browser re-parses its output).
 - **Routes gate on what the SQL reads** (`server/internal/run-kind.test.ts`):
   `id`, `trigger`, `started_at`, `finished_at`, `status`,
   `archive_size_bytes`, `manifest`, `target_results` — never `pid` (the
@@ -179,6 +176,8 @@ compiler — a real follow-up, and a bigger change than it looks.
 - Core:
   - Uses:
     - `backup.BACKUP_RUN_KIND`
+    - `backup.BackupSourceReportSchema`
+    - `backup.BackupTargetResultSchema`
     - `fields.nullable`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
@@ -190,8 +189,6 @@ compiler — a real follow-up, and a bigger change than it looks.
     - `BACKUP_RUN_STATUSES`
     - `BACKUP_STATUS_OUTCOME`
     - `backupRunArm`
-    - `BackupSourceReportSchema`
-    - `BackupTargetResultSchema`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`

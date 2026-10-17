@@ -106,17 +106,17 @@ tokens, so anything that imports the barrels back would cycle.
     - `Fields.Identity` ×26
   - Exports (values): `Fields`
 - Cross-plugin:
-  - Imported by: 89 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 92 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×48
     - `apps` ×11
     - `infra` ×5
     - `debug` ×4
+    - `conversations` ×3
     - `page` ×3
     - `tasks` ×3
+    - `backup` ×2
     - `build` ×2
-    - `conversations` ×2
     - `primitives` ×2
-    - `backup/runs-arm`
     - `config_v2`
     - `history/engine`
     - `ids`
@@ -125,6 +125,7 @@ tokens, so anything that imports the barrels back would cycle.
     - `release`
     - `reports`
     - `runs`
+    - `shell/notifications`
 - Core:
   - Exports (types):
     - `DeclaredDefault`
@@ -178,7 +179,7 @@ tokens, so anything that imports the barrels back would cycle.
   - **`secret`** [1 sub-plugin] — Secret field type: identity only. The config-render/storage/central capabilities and the secretField factory live in the plugins/config sub-plugin. Registers NO coerce and contributes NO data-view…
   - **`server-capabilities`** — Server-owned field-capability library: the Fields.Storage / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldValueTextCast — the latter answering a TEXT-stored value's…
   - **`server-capabilities-loader`** — Eagerly evaluates every fields storage capability barrel via a generated side-effect manifest, so each self-registers into the server-capabilities eager index. Eval-time consumers import this for…
-  - **`string-list`** [1 sub-plugin] — String-list field type: identity only. The config-render capability and the stringListField factory live in the plugins/config sub-plugin.
+  - **`string-list`** [2 sub-plugins] — String-list field type: identity only. The config-render capability and the stringListField factory live in the plugins/config sub-plugin.
   - **`tags`** [test helpers] [5 sub-plugins] — Tags (multi-value) field type: identity only. The data-view filter (multi-select tag chips with array-aware match-any) lives in the plugins/filter sub-plugin.
   - **`text`** [5 sub-plugins] — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`uuid`** [2 sub-plugins] — UUID field type: identity only, extends text — a string value primarily used as a storage/PK type, reusing text's cell and filter via the extends chain.

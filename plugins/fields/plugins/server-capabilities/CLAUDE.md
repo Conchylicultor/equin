@@ -134,6 +134,7 @@ the live registry suffices.)
     - `fields/location/storage`
     - `fields/number/text-cast`
     - `fields/rank/storage`
+    - `fields/string-list/storage`
     - `fields/tags/storage`
     - `fields/text/storage`
     - `fields/uuid/storage`

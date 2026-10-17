@@ -1,36 +1,29 @@
-import { z } from "zod";
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { parsedJson } from "@plugins/database/plugins/sql-column/server";
-import { idColumn } from "@plugins/ids/server";
-import { trashEntryIdKind } from "../../core/id-kind";
+import { index } from "drizzle-orm/pg-core";
+import {
+  defineEntity,
+  defaultNow,
+} from "@plugins/infra/plugins/entities/server";
+import { trashEntriesEntityRef } from "../../core/entity";
 
 // Operation ledger: one row per trashed ROOT entity (a bulk delete of two
 // sub-pages = two independently-restorable entries). Domain-agnostic — the
 // primitive never knows what a `source_id` names or what `root_entity_id`
-// points at; `meta` is an opaque per-source payload. There is deliberately NO
-// foreign key to any consumer table (mirror of `entity_versions`' decoupling):
-// the domain rows carry their own `deleted_at` flags, and the ledger row is the
-// handle to restore or purge them. The (source_id, deleted_at) index serves the
-// per-source trash listing (newest first) and the TTL purge sweep.
-export const _trashEntries = pgTable(
-  "trash_entries",
-  {
-    id: idColumn(trashEntryIdKind), // trashEntryIdKind.mint()
-    sourceId: text("source_id").notNull(), // e.g. "pages"
-    rootEntityId: text("root_entity_id").notNull(), // the trashed root (a page id)
-    label: text("label").notNull(), // display label captured at trash time
-    deletedAt: timestamp("deleted_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    // The opaque per-source payload. It read back as `unknown` while every
-    // server reader cast the whole row `as TrashEntry` to get at it — so the
-    // type it really has is `TrashEntrySchema.meta`'s, and now that is what
-    // decodes it. `z.record` keeps every key a source put there.
-    meta: parsedJson("meta", z.record(z.string(), z.unknown()))
-      .notNull()
-      .default({}),
+// points at; `meta` is an opaque per-source payload, decoded by
+// `TrashEntrySchema.meta`'s schema (`z.record` keeps every key a source put
+// there). There is deliberately NO foreign key to any consumer table (mirror
+// of `entity_versions`' decoupling): the domain rows carry their own
+// `deleted_at` flags, and the ledger row is the handle to restore or purge
+// them. The (source_id, deleted_at) index serves the per-source trash listing
+// (newest first) and the TTL purge sweep.
+const trashEntriesEntity = defineEntity(trashEntriesEntityRef, {
+  primaryKey: "id",
+  columns: {
+    deletedAt: { default: defaultNow() },
+    meta: { default: {} },
   },
-  (t) => [
+  indexes: (t) => [
     index("trash_entries_source_deleted_idx").on(t.sourceId, t.deletedAt),
   ],
-);
+});
+
+export const _trashEntries = trashEntriesEntity.table;

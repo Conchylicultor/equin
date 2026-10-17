@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { fieldsToZodObject, nullable } from "@plugins/fields/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
@@ -180,6 +181,16 @@ export const OP_ROW_CARRIED = {
 export const OpRowSchema = fieldsToZodObject({
   ...OP_ROW_CARRIED,
   ...OP_ROW_LISTED,
+});
+
+/**
+ * The `op_log_ops` entity: the row's fields plus its derived `updatedAt` —
+ * the table is built from them (`server/internal/tables.ts`).
+ */
+export const opLogOpsEntityRef = entityRef("op_log_ops", {
+  ...OP_ROW_CARRIED,
+  ...OP_ROW_LISTED,
+  updatedAt: dateField({ label: "Updated" }),
 });
 export type OpRow = z.infer<typeof OpRowSchema>;
 

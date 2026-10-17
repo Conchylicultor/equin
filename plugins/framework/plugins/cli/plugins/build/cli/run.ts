@@ -98,7 +98,7 @@ import {
   markWorktreeOpStart,
   writeWorktreeSpec,
 } from "@plugins/infra/plugins/worktree/server";
-import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
+import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/cli";
 import { buildRunIdKind } from "@plugins/build/plugins/run-ledger/core";
 import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 

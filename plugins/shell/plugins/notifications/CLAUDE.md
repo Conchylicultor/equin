@@ -121,11 +121,11 @@ DataView (`web/components/notifications-view.tsx`):
     - `database.db`
     - `database/admin.ExcludeFromFork`
     - `database/live-state-snapshot.reconcileReadSetTable`
-    - `database/sql-column.parsedJson`
-    - `ids.idColumn`
     - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/jobs.defineJob`
     - `network/live.serveCollection`
     - `network/live.serveValue`
@@ -150,12 +150,25 @@ DataView (`web/components/notifications-view.tsx`):
     - `POST /api/notifications/:id/dismiss`
 - Core:
   - Uses:
+    - `fields.FieldsRecord`
+    - `fields.nullable`
+    - `fields/bool/config.boolField`
+    - `fields/date/config.dateField`
+    - `fields/int/config.intField`
+    - `fields/json/config.jsonField`
+    - `fields/text/config.enumTextField`
+    - `fields/text/config.textField`
     - `ids.defineIdKind`
+    - `ids.idKindField`
     - `ids.IdOf`
+    - `infra/entities.entityRef`
     - `primitives/pane.defineRoute`
   - Exports (types): `NotificationId`
   - Exports (values):
+    - `NOTIFICATION_VARIANTS`
+    - `notificationFields`
     - `notificationIdKind`
+    - `notificationsEntityRef`
     - `notificationsRoute`
 - Cross-plugin:
   - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)

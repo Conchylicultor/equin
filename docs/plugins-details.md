@@ -2010,10 +2010,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "deploy.run-history:groups"
               - `resource.declare` "deploy.run-history:rows"
               - `resource.declare` "deploy.runs"
-            - Uses: 25 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/deployments/REFERENCE.md)
               - `infra/jobs` ×3
-              - `ids` ×2
               - `infra/endpoints` ×2
+              - `infra/entities` ×2
               - `infra/jobs/supervised-job` ×2
               - `infra/paths` ×2
               - `network/live` ×2
@@ -2022,9 +2022,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/health.serverHealth`
               - `apps/deploy/servers._deployServers`
               - `config_v2.getConfig`
-              - `database/derived-updated-at.deriveUpdatedAt`
-              - `database/sql-column.parsedText`
               - `database.db`
+              - `ids.IdKinds`
               - `infra/retention.defineRetention`
               - `primitives/log-channels.defineLogSink`
             - DB schema: `plugins/apps/plugins/deploy/plugins/deployments/server/internal/tables.ts`
@@ -2059,6 +2058,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/text/config.enumTextField`
               - `fields/text/config.textField`
               - `ids.defineIdKind`
+              - `ids.idKindField`
               - `ids.IdOf`
               - `infra/endpoints.defineEndpoint`
               - `infra/entities.entityRef`
@@ -2085,7 +2085,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DEFAULT_LOOPBACK_PORT`
               - `deleteDeployment`
               - `DEPLOY_LOG_CHANNEL`
+              - `deployDeploymentsEntityRef`
               - `deploymentDetailRoute`
+              - `deploymentFields`
               - `deploymentIdKind`
               - `deployments`
               - `DeploymentSchema`
@@ -2393,11 +2395,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "deploy.servers.all:rows"
             - Uses:
               - `database.db`
-              - `database/derived-updated-at.deriveUpdatedAt`
-              - `ids.idColumn`
               - `ids.IdKinds`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
+              - `infra/entities.defaultNow`
+              - `infra/entities.defineEntity`
               - `infra/secrets.deleteSecret`
               - `infra/secrets.getSecret`
               - `infra/secrets.hasSecret`
@@ -2428,6 +2430,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/int/config.intField`
               - `fields/text/config.textField`
               - `ids.defineIdKind`
+              - `ids.idKindField`
               - `ids.IdOf`
               - `infra/entities.entityRef`
               - `primitives/pane.defineRoute`
@@ -10652,8 +10655,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `config_v2.ConfigV2`
       - `config_v2.getConfig`
       - `database.db`
-      - `database/sql-column.parsedJson`
       - `infra/endpoints.implement`
+      - `infra/entities.defaultNow`
+      - `infra/entities.defineEntity`
       - `infra/jobs/supervised-job.defineSupervisedJob`
       - `infra/paths.BACKUPS_DIR`
       - `primitives/log-channels.Log`
@@ -10670,7 +10674,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Register: `defineSupervisedJob('backup.run.supervised')`
     - Routes: `POST /api/backup/run`
   - Core:
-    - Uses: `primitives/pane.defineRoute`
+    - Uses:
+      - `fields.FieldsRecord`
+      - `fields.nullable`
+      - `fields/date/config.dateField`
+      - `fields/int/config.intField`
+      - `fields/json/config.jsonField`
+      - `fields/text/config.textField`
+      - `infra/entities.entityRef`
+      - `primitives/pane.defineRoute`
     - Exports (types):
       - `BackupArchive`
       - `BackupManifest`
@@ -10684,9 +10696,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `BACKUP_CATEGORY_ID`
       - `BACKUP_RUN_KIND`
+      - `BackupManifestSchema`
       - `backupRoute`
+      - `backupRunFields`
       - `backupRunRoute`
+      - `backupRunsEntityRef`
+      - `BackupSourceReportSchema`
       - `backupSourceWentIn`
+      - `BackupTargetResultSchema`
   - Cross-plugin:
     - Uses tokens:
       - `ui/tokens/color-palette --muted-foreground`
@@ -10747,6 +10764,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `backup.BACKUP_RUN_KIND`
+          - `backup.BackupSourceReportSchema`
+          - `backup.BackupTargetResultSchema`
           - `fields.nullable`
           - `fields/int/config.intField`
           - `fields/json/config.jsonField`
@@ -10758,8 +10777,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BACKUP_RUN_STATUSES`
           - `BACKUP_STATUS_OUTCOME`
           - `backupRunArm`
-          - `BackupSourceReportSchema`
-          - `BackupTargetResultSchema`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -11391,16 +11408,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --spacing`
         - Imported by: `build`
-    - **`run-ledger`** — Lean build-runs ledger leaf: the build_runs table def + the CLI build-run recorder, importable by the `./singularity build` CLI without the heavy build barrel (which pulls config_v2/notifications).
+    - **`run-ledger`** — Build-runs ledger leaf: the build_runs entity, and (cli/) the hand-SQL build-run recorder the `./singularity build` CLI imports without the table or the heavy build barrel.
       - Server:
         - Uses:
-          - `database/admin.openShortLivedClient`
-          - `ids.idColumn`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
         - DB schema: `plugins/build/plugins/run-ledger/server/internal/tables.ts`
-        - Exports (types): `BuildRunRecorder`
         - Exports (values):
           - `_buildRuns`
-          - `createBuildRunRecorder`
           - `settleDeadInflightRun`
       - Core:
         - Uses:
@@ -11412,6 +11427,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/text/config.enumTextField`
           - `fields/text/config.textField`
           - `ids.defineIdKind`
+          - `ids.idKindField`
           - `ids.IdOf`
           - `infra/entities.entityRef`
         - Exports (types): `BuildRunId`
@@ -11422,11 +11438,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `buildRunIdKind`
           - `buildRunsEntityRef`
       - Cross-plugin:
+        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `active-data/build-run`
           - `build`
           - `build/build-commits`
           - `build/runs-arm`
+          - `framework/cli/build`
+      - Cli:
+        - Exports (types): `BuildRunRecorder`
+        - Exports (values): `createBuildRunRecorder`
     - **`runs-arm`** — The build arm's presence on the merged run surface: its rows' link into the existing build run-detail pane, the six-way build status dot as the list row's leading indicator, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the six-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
       - Web:
         - Contributes:
@@ -12387,16 +12408,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core` ×4
           - `primitives/rank` ×3
           - `database/sql-projection` ×2
-          - `ids` ×2
           - `infra/endpoints` ×2
+          - `infra/entities` ×2
           - `tasks/task-category` ×2
           - `conversations/model-provider/catalog.getModelCatalog`
           - `conversations.createConversation`
           - `database/derived-tables.DerivedTable`
-          - `database/derived-updated-at.deriveUpdatedAt`
           - `database/derived-views.View`
           - `database/sql-column.parsedText`
           - `database.db`
+          - `ids.IdKinds`
           - `infra/attachments.Attachments`
           - `infra/claude-cli/availability.assertClaudeCodeReady`
           - `network/live.serveCollection`
@@ -12435,13 +12456,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GET /api/agents/:id/launches`
       - Core:
         - Uses:
+          - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
           - `conversations/model-provider.ModelChoiceSchema`
           - `conversations/model-provider.StoredModelChoiceSchema`
+          - `fields.FieldsRecord`
+          - `fields.nullable`
+          - `fields/date/config.dateField`
+          - `fields/rank/config.rankField`
+          - `fields/text/config.parsedTextField`
+          - `fields/text/config.textField`
           - `ids.defineIdKind`
+          - `ids.idKindField`
           - `ids.IdOf`
           - `infra/endpoints.defineEndpoint`
+          - `infra/entities.entityRef`
           - `primitives/rank.RankSchema`
           - `tasks/tasks-core.ConversationStatusSchema`
+          - `ui/icons/saved-names.parseSavedSymbolName`
           - `ui/icons/saved-names.SavedSymbolNameSchema`
         - Exports (types):
           - `Agent`
@@ -12455,12 +12486,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MoveAgentBody`
           - `UpdateAgentBody`
         - Exports (values):
+          - `agentFields`
           - `agentIdKind`
           - `AgentLaunchConversationRefSchema`
+          - `agentLaunchesEntityRef`
+          - `agentLaunchFields`
           - `agentLaunchIdKind`
           - `AgentLaunchSchema`
           - `AgentLaunchWithStatusSchema`
           - `AgentSchema`
+          - `agentsEntityRef`
           - `createAgent`
           - `CreateAgentBodySchema`
           - `deleteAgent`
@@ -17576,13 +17611,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listDatabases`
           - `openShortLivedClient`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
+        - Imported by: 24 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
           - `debug` ×7
           - `infra` ×6
           - `database` ×5
           - `apps` ×2
-          - `build` ×2
           - `backup/sources/databases`
+          - `build/serve-composition`
           - `reports`
           - `shell/notifications`
       - Test helpers:
@@ -17789,9 +17824,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data`
           - `apps/chord/curriculum`
           - `apps/chord/song-index`
-          - `apps/deploy/deployments`
-          - `apps/deploy/servers`
-          - `conversations/agents`
           - `conversations/conversation-category`
           - `conversations/conversations-view/grouped`
           - `conversations/turn-ledger`
@@ -17803,7 +17835,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor-collab`
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/view-order`
-          - `reports`
           - `ui/theme-engine/saved-themes`
       - Server:
         - DB schema: `plugins/database/plugins/derived-updated-at/server/internal/from-table.ts`
@@ -18117,21 +18148,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
-          - `apps` ×6
+        - Imported by: 24 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+          - `apps` ×5
           - `conversations` ×5
           - `fields` ×4
-          - `infra` ×4
-          - `debug` ×2
-          - `backup`
+          - `infra` ×3
+          - `debug/latency-ledger`
           - `ids`
           - `network/live`
           - `page/editor`
           - `primitives/collab-doc`
-          - `release`
-          - `reports`
           - `search/engine`
-          - `shell/notifications`
           - `ui/theme-engine/saved-themes`
       - Server:
         - DB schema: `plugins/database/plugins/sql-column/server/internal/column-schema.ts`
@@ -19427,11 +19454,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `database.db`
                   - `database/derived-updated-at.deriveUpdatedAt`
-                  - `database/sql-column.parsedJson`
-                  - `database/sql-column.parsedText`
                   - `debug/profiling/op-log.appendOpLog`
                   - `debug/profiling/op-log.OP_LOG_FILE`
                   - `debug/profiling/op-log.readSleepNow`
+                  - `infra/entities.defaultNow`
+                  - `infra/entities.defineEntity`
                   - `infra/file-watcher.defineFileWatcher`
                   - `infra/file-watcher.FileWatcher`
                   - `infra/retention.defineRetention`
@@ -19450,7 +19477,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `op-store.in-flight.all` (keyed)
                   - `op-store.in-flight.all:rows` (keyed, point)
               - Core:
-                - Uses: 22 symbols — full list in [`plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/REFERENCE.md)
+                - Uses: 23 symbols — full list in [`plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/REFERENCE.md)
                   - `debug/profiling/op-log` ×10
                   - `fields/text/config` ×3
                   - `fields` ×2
@@ -19459,6 +19486,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `fields/float/config.floatField`
                   - `fields/int/config.intField`
                   - `fields/json/config.jsonField`
+                  - `infra/entities.entityRef`
                   - `infra/worktree.OP_KIND_IDS`
                   - `network/live.liveCollection`
                 - Exports (types):
@@ -21009,17 +21037,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×26
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 89 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 92 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×48
       - `apps` ×11
       - `infra` ×5
       - `debug` ×4
+      - `conversations` ×3
       - `page` ×3
       - `tasks` ×3
+      - `backup` ×2
       - `build` ×2
-      - `conversations` ×2
       - `primitives` ×2
-      - `backup/runs-arm`
       - `config_v2`
       - `history/engine`
       - `ids`
@@ -21028,6 +21056,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `release`
       - `reports`
       - `runs`
+      - `shell/notifications`
   - Core:
     - Exports (types):
       - `DeclaredDefault`
@@ -21161,7 +21190,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 31 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `debug` ×13
               - `apps` ×6
               - `conversations` ×3
@@ -21172,6 +21201,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/block-entity`
               - `release`
               - `reports`
+              - `shell/notifications`
         - **`data-view-codec`** — Boolean field type: data-view custom-column value codec (native boolean ↔ canonical text).
           - Web:
             - Contributes: `DataViewSlots.ValueCodec` "bool"
@@ -21302,13 +21332,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 35 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 38 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×9
               - `infra` ×5
+              - `conversations` ×4
               - `debug` ×4
               - `page` ×4
-              - `conversations` ×3
               - `tasks` ×3
+              - `backup`
               - `build/run-ledger`
               - `history/engine`
               - `plugin-meta/plugin-health`
@@ -21316,6 +21347,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `release`
               - `reports`
               - `runs`
+              - `shell/notifications`
         - **`data-view-codec`** — Date field type: data-view custom-column value codec (native Date ↔ canonical ISO text).
           - Web:
             - Contributes: `DataViewSlots.ValueCodec` "date"
@@ -21822,17 +21854,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 34 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `debug` ×12
               - `apps` ×7
               - `infra` ×4
+              - `backup` ×2
               - `conversations` ×2
               - `apps-core/surface/floating/wallpaper`
-              - `backup/runs-arm`
               - `build/run-ledger`
               - `fields/object/config`
               - `release`
               - `reports`
+              - `shell/notifications`
               - `tasks/automations`
         - **`storage`** — Integer field type: DB storage capability — maps to a Postgres integer column.
           - Server:
@@ -21885,27 +21918,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by:
+            - Imported by: 23 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+              - `apps` ×4
+              - `debug` ×4
+              - `infra` ×4
+              - `tasks` ×3
+              - `backup` ×2
               - `apps-core/app-launcher`
-              - `apps/events/events-core`
-              - `apps/mail/mail-core`
-              - `apps/places/places-core`
-              - `apps/sonata/sources/ultimate-guitar/alignment`
-              - `backup/runs-arm`
               - `conversations/question-relay`
-              - `debug/boot-profile`
-              - `debug/profiling/op-log/op-store`
-              - `debug/slow-ops`
-              - `debug/trace/engine`
-              - `infra/claude-cli`
-              - `infra/events`
-              - `infra/jobs`
-              - `infra/trash`
+              - `history/engine`
               - `page/block-entity`
               - `reports`
-              - `tasks/automations`
-              - `tasks/outcome-report`
-              - `tasks/tasks-core`
+              - `shell/notifications`
         - **`storage`** — JSON field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so a jsonField<T>'s shape is derived rather than asserted.
           - Server:
             - Contributes: `fields.storage` "json"
@@ -22188,6 +22212,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `rankValueField`
           - Cross-plugin:
             - Imported by:
+              - `conversations/agents`
               - `conversations/conversations-view/queue`
               - `page/block-entity`
               - `tasks/tasks-core`
@@ -22336,6 +22361,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/location/storage`
           - `fields/number/text-cast`
           - `fields/rank/storage`
+          - `fields/string-list/storage`
           - `fields/tags/storage`
           - `fields/text/storage`
           - `fields/uuid/storage`
@@ -22363,6 +22389,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/json/storage`
           - `fields/location/storage`
           - `fields/rank/storage`
+          - `fields/string-list/storage`
           - `fields/tags/storage`
           - `fields/text/storage`
           - `fields/uuid/storage`
@@ -22415,6 +22442,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/composition`
               - `tasks/automations`
               - `tasks/tasks-core`
+        - **`storage`** — String-list field type: DB storage capability — maps to a Postgres text[] column.
+          - Server:
+            - Contributes: `fields.storage` "string-list"
+            - Uses: `fields/server-capabilities.Fields`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
     - **`tags`** — Tags (multi-value) field type: identity only. The data-view filter (multi-select tag chips with array-aware match-any) lives in the plugins/filter sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "tags"
@@ -22554,23 +22587,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 54 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 57 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×16
-              - `conversations` ×5
+              - `conversations` ×6
               - `infra` ×5
               - `page` ×5
               - `tasks` ×5
               - `debug` ×4
               - `apps-core` ×2
+              - `backup` ×2
               - `build` ×2
               - `fields` ×2
               - `plugin-meta` ×2
-              - `backup/runs-arm`
               - `history/engine`
               - `primitives/usage-rank`
               - `release`
               - `reports`
               - `runs`
+              - `shell/notifications`
         - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "text"
@@ -22920,10 +22954,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./singularity build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 43 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 44 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×33
               - `framework/cli/bootstrap` ×4
               - `framework/cli/migrations` ×3
+              - `build/run-ledger.createBuildRunRecorder`
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
               - `framework/tooling/web-artifacts.carryForwardServedEntries`
@@ -24443,10 +24478,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "history.versions:rows"
         - Uses:
           - `database.db`
-          - `ids.idColumn`
           - `ids.IdKinds`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
           - `infra/retention.defineRetention`
           - `network/live.serveCollection`
           - `network/live.serveValue`
@@ -24471,10 +24507,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields.nullable`
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
+          - `fields/json/config.jsonField`
           - `fields/text/config.textField`
           - `ids.defineIdKind`
+          - `ids.idKindField`
           - `ids.IdOf`
           - `infra/endpoints.defineEndpoint`
+          - `infra/entities.entityRef`
           - `network/live.liveCollection`
           - `network/live.liveValue`
         - Exports (types):
@@ -24482,10 +24521,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `VersionId`
           - `VersionWithSnapshot`
         - Exports (values):
+          - `entityVersionsEntityRef`
           - `historyVersion`
           - `historyVersions`
           - `listVersions`
           - `restoreVersion`
+          - `versionFields`
           - `versionIdKind`
           - `VersionSchema`
           - `VersionWithSnapshotSchema`
@@ -25610,15 +25651,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 23 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
           - `apps` ×8
-          - `conversations` ×3
-          - `debug` ×3
-          - `infra` ×3
+          - `infra` ×5
+          - `conversations` ×4
+          - `debug` ×4
           - `page` ×2
+          - `backup`
           - `build/run-ledger`
+          - `history/engine`
           - `plugin-meta/plugin-health`
           - `release`
+          - `reports`
+          - `shell/notifications`
           - `tasks/tasks-core`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
       - Server:
@@ -26513,6 +26558,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/background/timer.defineTimer`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
           - `network/live.serveCollection`
           - `network/live.serveValue`
           - `primitives/log-channels.Log`
@@ -26634,6 +26681,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/text/config.parsedTextField`
           - `fields/text/config.textField`
           - `infra/endpoints.defineEndpoint`
+          - `infra/entities.entityRef`
           - `network/live.liveCollection`
           - `network/live.liveValue`
         - Exports (types):
@@ -27736,11 +27784,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "trash-entries:rows"
         - Uses:
           - `database.db`
-          - `database/sql-column.parsedJson`
-          - `ids.idColumn`
           - `ids.IdKinds`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
           - `infra/retention.defineRetention`
           - `network/live.serveCollection`
         - DB schema: `plugins/infra/plugins/trash/server/internal/tables.ts`
@@ -27771,6 +27819,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.idKindField`
           - `ids.IdOf`
           - `infra/endpoints.defineEndpoint`
+          - `infra/entities.entityRef`
           - `network/live.liveCollection`
         - Exports (types):
           - `TrashEntry`
@@ -27781,6 +27830,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `purgeTrash`
           - `restoreTrash`
           - `trashEntries`
+          - `trashEntriesEntityRef`
+          - `trashEntryFields`
           - `trashEntryIdKind`
           - `TrashEntrySchema`
           - `TrashOutcomeSchema`
@@ -40924,13 +40975,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses: 27 symbols — full list in [`plugins/release/REFERENCE.md`](../plugins/release/REFERENCE.md)
       - `release/bundles` ×6
       - `infra/jobs/supervised-job` ×3
-      - `ids` ×2
       - `infra/endpoints` ×2
+      - `infra/entities` ×2
       - `infra/launcher` ×2
       - `infra/paths` ×2
       - `network/live` ×2
-      - `database/sql-column.parsedText`
       - `database.db`
+      - `ids.IdKinds`
       - `infra/file-watcher.acquireDirWatch`
       - `infra/git/git-read-cache.createSignedMemo`
       - `infra/git/git-watcher.refHeadServed`
@@ -40972,11 +41023,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/int/config.intField`
       - `fields/text/config.enumTextField`
       - `fields/text/config.textField`
+      - `ids.idKindField`
       - `infra/endpoints.defineEndpoint`
       - `infra/entities.entityRef`
       - `network/live.liveCollection`
       - `network/live.liveValue`
       - `release/bundles.ReleaseManifestSchema`
+      - `release/bundles.releaseRunIdKind`
     - Exports (types):
       - `PlatformTag`
       - `PlatformTagResult`
@@ -41354,12 +41407,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `database.db`
       - `database/admin.ExcludeFromFork`
       - `database/change-feed.defineChangeProducer`
-      - `database/derived-updated-at.deriveUpdatedAt`
-      - `database/sql-column.parsedJson`
-      - `ids.idColumn`
       - `ids.IdKinds`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
+      - `infra/entities.defaultNow`
+      - `infra/entities.defineEntity`
       - `infra/host/duress.createShedBuffer`
       - `infra/host/duress.ShedSummary`
       - `infra/retention.defineRetention`
@@ -41406,6 +41458,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Core:
     - Uses:
       - `config_v2.defineConfig`
+      - `fields.FieldsRecord`
       - `fields.nullable`
       - `fields/bool/config.boolField`
       - `fields/date/config.dateField`
@@ -41413,7 +41466,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/json/config.jsonField`
       - `fields/text/config.textField`
       - `ids.defineIdKind`
+      - `ids.idKindField`
       - `ids.IdOf`
+      - `infra/entities.entityRef`
       - `network/live.liveCollection`
       - `primitives/pane.defineRoute`
     - Exports (types):
@@ -41424,9 +41479,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `CLIENT_REPORT_SOURCES`
       - `reportDetailRoute`
+      - `reportFields`
       - `reportIdKind`
       - `REPORTS_SEARCHABLE`
       - `reportsConfig`
+      - `reportsEntityRef`
       - `reportsList`
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
@@ -42661,11 +42718,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
           - `database/admin.ExcludeFromFork`
           - `database/live-state-snapshot.reconcileReadSetTable`
-          - `database/sql-column.parsedJson`
-          - `ids.idColumn`
           - `ids.IdKinds`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
           - `infra/jobs.defineJob`
           - `network/live.serveCollection`
           - `network/live.serveValue`
@@ -42690,12 +42747,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/notifications/:id/dismiss`
       - Core:
         - Uses:
+          - `fields.FieldsRecord`
+          - `fields.nullable`
+          - `fields/bool/config.boolField`
+          - `fields/date/config.dateField`
+          - `fields/int/config.intField`
+          - `fields/json/config.jsonField`
+          - `fields/text/config.enumTextField`
+          - `fields/text/config.textField`
           - `ids.defineIdKind`
+          - `ids.idKindField`
           - `ids.IdOf`
+          - `infra/entities.entityRef`
           - `primitives/pane.defineRoute`
         - Exports (types): `NotificationId`
         - Exports (values):
+          - `NOTIFICATION_VARIANTS`
+          - `notificationFields`
           - `notificationIdKind`
+          - `notificationsEntityRef`
           - `notificationsRoute`
       - Cross-plugin:
         - Uses tokens: 23 vars — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
@@ -46529,7 +46599,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 658 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 659 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×136
               - `primitives` ×124
               - `conversations` ×102
@@ -46544,9 +46614,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core` ×13
               - `packages` ×8
               - `stats` ×6
+              - `build` ×5
               - `review` ×5
               - `active-data` ×4
-              - `build` ×4
               - `database` ×4
               - `integrations` ×4
               - `reorder` ×4

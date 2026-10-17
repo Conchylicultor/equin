@@ -159,16 +159,16 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `tasks/tasks-core` ×4
     - `primitives/rank` ×3
     - `database/sql-projection` ×2
-    - `ids` ×2
     - `infra/endpoints` ×2
+    - `infra/entities` ×2
     - `tasks/task-category` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `conversations.createConversation`
     - `database/derived-tables.DerivedTable`
-    - `database/derived-updated-at.deriveUpdatedAt`
     - `database/derived-views.View`
     - `database/sql-column.parsedText`
     - `database.db`
+    - `ids.IdKinds`
     - `infra/attachments.Attachments`
     - `infra/claude-cli/availability.assertClaudeCodeReady`
     - `network/live.serveCollection`
@@ -207,13 +207,23 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `GET /api/agents/:id/launches`
 - Core:
   - Uses:
+    - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
     - `conversations/model-provider.ModelChoiceSchema`
     - `conversations/model-provider.StoredModelChoiceSchema`
+    - `fields.FieldsRecord`
+    - `fields.nullable`
+    - `fields/date/config.dateField`
+    - `fields/rank/config.rankField`
+    - `fields/text/config.parsedTextField`
+    - `fields/text/config.textField`
     - `ids.defineIdKind`
+    - `ids.idKindField`
     - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
     - `primitives/rank.RankSchema`
     - `tasks/tasks-core.ConversationStatusSchema`
+    - `ui/icons/saved-names.parseSavedSymbolName`
     - `ui/icons/saved-names.SavedSymbolNameSchema`
   - Exports (types):
     - `Agent`
@@ -227,12 +237,16 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `MoveAgentBody`
     - `UpdateAgentBody`
   - Exports (values):
+    - `agentFields`
     - `agentIdKind`
     - `AgentLaunchConversationRefSchema`
+    - `agentLaunchesEntityRef`
+    - `agentLaunchFields`
     - `agentLaunchIdKind`
     - `AgentLaunchSchema`
     - `AgentLaunchWithStatusSchema`
     - `AgentSchema`
+    - `agentsEntityRef`
     - `createAgent`
     - `CreateAgentBodySchema`
     - `deleteAgent`

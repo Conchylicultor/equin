@@ -41,8 +41,12 @@ import {
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/core";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
-import { claimInflightRun, closeRunOn, type InsertRunRow } from "./recorder";
-import { readBuildTerminal } from "./stale-holder";
+import {
+  claimInflightRun,
+  closeRunOn,
+  type InsertRunRow,
+} from "../../shared/recorder";
+import { readBuildTerminal } from "../../shared/stale-holder";
 import { _buildRuns } from "./tables";
 import { buildRunIdKind } from "../../core/internal/id-kind";
 

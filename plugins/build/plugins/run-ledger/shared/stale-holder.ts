@@ -1,5 +1,5 @@
 import { readFileSync, statSync } from "node:fs";
-import { and, eq, isNull } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import {
@@ -8,7 +8,7 @@ import {
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
-import { _buildRuns } from "./tables";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 
 // Settling a DEAD holder of `build_runs_inflight_uniq`, at the moment the lock
 // is actually blocking someone.
@@ -42,6 +42,12 @@ import { _buildRuns } from "./tables";
 //
 // Eval-safe for the CLI like the rest of this leaf: supervised-job/core touches
 // no db and no jobs queue, and paths/core is node:os/node:path resolution only.
+
+/** The in-flight row's two columns the settle reads. */
+const HolderRowSchema = z.object({
+  id: z.string(),
+  pid: z.number().int().nullable(),
+});
 
 /** The one field of `build-logs-<id>.json` the ledger reads — see `BuildLogs`. */
 const BuildLogsTerminalSchema = z.object({ exitCode: z.number().int() });
@@ -116,12 +122,16 @@ export async function settleDeadInflightRun(
   db: NodePgDatabase,
   namespace: Namespace,
 ): Promise<boolean> {
-  const [holder] = await db
-    .select({ id: _buildRuns.id, pid: _buildRuns.pid })
-    .from(_buildRuns)
-    .where(
-      and(eq(_buildRuns.namespace, namespace), isNull(_buildRuns.finishedAt)),
-    );
+  // Hand SQL naming only its columns — see `recorder.ts` for why this module
+  // never imports the table.
+  const [holder] = await executeRows(db, {
+    query: sql`
+      select "id", "pid" from "build_runs"
+      where "namespace" = ${namespace} and "finished_at" is null
+    `,
+    row: HolderRowSchema,
+    label: "build_runs in-flight holder",
+  });
   // The holder closed between our failed insert and this read — the slot is free.
   if (holder === undefined) return true;
 
@@ -136,9 +146,10 @@ export async function settleDeadInflightRun(
     terminal = { exitCode: HARD_KILL_EXIT_CODE, finishedAt: new Date() };
   }
 
-  await db
-    .update(_buildRuns)
-    .set({ finishedAt: terminal.finishedAt, exitCode: terminal.exitCode })
-    .where(and(eq(_buildRuns.id, holder.id), isNull(_buildRuns.finishedAt)));
+  await db.execute(sql`
+    update "build_runs"
+    set "finished_at" = ${terminal.finishedAt}, "exit_code" = ${terminal.exitCode}
+    where "id" = ${holder.id} and "finished_at" is null
+  `);
   return true;
 }

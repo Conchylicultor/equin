@@ -2804,6 +2804,10 @@
       "name": "@singularity/plugin-fields-string-list-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/string-list/plugins/storage": {
+      "name": "@singularity/plugin-fields-string-list-storage",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/tags": {
       "name": "@singularity/plugin-fields-tags",
       "version": "0.0.1",
@@ -8061,6 +8065,8 @@
     "@singularity/plugin-fields-string-list": ["@singularity/plugin-fields-string-list@workspace:plugins/fields/plugins/string-list"],
 
     "@singularity/plugin-fields-string-list-config": ["@singularity/plugin-fields-string-list-config@workspace:plugins/fields/plugins/string-list/plugins/config"],
+
+    "@singularity/plugin-fields-string-list-storage": ["@singularity/plugin-fields-string-list-storage@workspace:plugins/fields/plugins/string-list/plugins/storage"],
 
     "@singularity/plugin-fields-tags": ["@singularity/plugin-fields-tags@workspace:plugins/fields/plugins/tags"],
 

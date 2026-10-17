@@ -1,64 +1,43 @@
-import { z } from "zod";
-import {
-  boolean,
-  index,
-  integer,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { index, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { parsedJson } from "@plugins/database/plugins/sql-column/server";
-import { idColumn } from "@plugins/ids/server";
-import { notificationIdKind } from "../../core";
+import { nullable } from "@plugins/fields/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  defineEntity,
+  defaultNow,
+} from "@plugins/infra/plugins/entities/server";
+import { notificationsEntityRef } from "../../core/entity";
 
-export const _notifications = pgTable(
-  "notifications",
+// Built from `notificationFields` (core/entity.ts). `dedupKey` is the server
+// field: the producer's collapse key, never on the wire.
+const notificationsEntity = defineEntity(
+  notificationsEntityRef,
+  { dedupKey: nullable(textField()) },
   {
-    id: idColumn(notificationIdKind),
-    type: text("type").notNull(),
-    title: text("title").notNull(),
-    description: text("description").notNull(),
-    variant: text("variant").notNull(),
-    dismissed: boolean("dismissed").notNull().default(false),
-    read: boolean("read").notNull().default(false),
-    muted: boolean("muted").notNull().default(false),
-    linkTo: text("link_to"),
-    // A free-form bag every producer stamps its own keys into (the reports
-    // engine writes `reportId`, `source`, `fingerprint`, …; most callers write
-    // nothing). `z.record` is the honest schema for that: it verifies the value
-    // really IS a non-null object — which is all `Record<string, unknown>` ever
-    // claimed — and keeps every key, so no producer's keys are normalized away.
-    // Nullable, so the decoder never sees the `null` a metadata-less row holds.
-    metadata: parsedJson("metadata", z.record(z.string(), z.unknown())),
-    dedupKey: text("dedup_key"),
-    // Occurrences collapsed onto this row via dedupKey (1 on first insert,
-    // bumped on every dedup hit). Lets a deduped/re-surfacing notification read
-    // as "happened N times" instead of spawning N rows. See record-notification.
-    count: integer("count").notNull().default(1),
-    // Wall-clock of the most recent occurrence (every dedup hit refreshes it),
-    // distinct from createdAt which marks when the row last *surfaced*. Drives
-    // the "last seen 2m ago" display and the quiet-notification TTL sweep.
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    primaryKey: "id",
+    columns: {
+      dismissed: { default: false },
+      read: { default: false },
+      muted: { default: false },
+      count: { default: 1 },
+      lastSeenAt: { default: defaultNow() },
+      createdAt: { default: defaultNow() },
+    },
+    indexes: (t) => [
+      index("notifications_dismissed_idx").on(t.dismissed),
+      index("notifications_created_at_idx").on(t.createdAt),
+      index("notifications_last_seen_at_idx").on(t.lastSeenAt),
+      uniqueIndex("notifications_dedup_key_idx").on(t.dedupKey),
+      // The bell's badge (`notifications.unread`) recounts on every write to
+      // this table; this partial index holds exactly the rows it counts
+      // (`countedUnread` minus its variant test, plus the base membership).
+      index("notifications_unread_badge_idx")
+        .on(t.variant)
+        .where(
+          sql`${t.dismissed} = false AND ${t.read} = false AND ${t.muted} = false`,
+        ),
+    ],
   },
-  (t) => [
-    index("notifications_dismissed_idx").on(t.dismissed),
-    index("notifications_created_at_idx").on(t.createdAt),
-    index("notifications_last_seen_at_idx").on(t.lastSeenAt),
-    uniqueIndex("notifications_dedup_key_idx").on(t.dedupKey),
-    // The bell's badge (`notifications.unread`) recounts on every write to this
-    // table; this partial index holds exactly the rows it counts
-    // (`countedUnread` minus its variant test, plus the base membership).
-    index("notifications_unread_badge_idx")
-      .on(t.variant)
-      .where(
-        sql`${t.dismissed} = false AND ${t.read} = false AND ${t.muted} = false`,
-      ),
-  ],
 );
+
+export const _notifications = notificationsEntity.table;

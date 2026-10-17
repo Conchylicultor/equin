@@ -29,3 +29,9 @@ export {
 export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./schemas";
 export { agentIdKind, agentLaunchIdKind } from "./id-kinds";
 export type { AgentId, AgentLaunchId } from "./id-kinds";
+export {
+  agentFields,
+  agentsEntityRef,
+  agentLaunchFields,
+  agentLaunchesEntityRef,
+} from "./entity";

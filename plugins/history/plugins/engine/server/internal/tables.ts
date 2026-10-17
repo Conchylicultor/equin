@@ -1,13 +1,9 @@
+import { index } from "drizzle-orm/pg-core";
 import {
-  boolean,
-  index,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
-import { idColumn } from "@plugins/ids/server";
-import { versionIdKind } from "../../core/id-kind";
+  defineEntity,
+  defaultNow,
+} from "@plugins/infra/plugins/entities/server";
+import { entityVersionsEntityRef } from "../../core/entity";
 
 // One row per stored version. 1:N (a versioning table — NOT a 1:1
 // entity-extension side-table). Domain-agnostic: the engine never knows what a
@@ -16,33 +12,24 @@ import { versionIdKind } from "../../core/id-kind";
 // cleanup is the consumer's job via `deleteVersions`. The
 // (source_id, entity_id, created_at) index serves the per-entity timeline query
 // and is the seam for a future age/count pruning job.
-export const _entityVersions = pgTable(
-  "entity_versions",
-  {
-    id: idColumn(versionIdKind),
-    sourceId: text("source_id").notNull(),
-    entityId: text("entity_id").notNull(),
-    // Opaque per-source: the engine hands it back to that source's own
-    // `restore(entityId, snapshot: unknown)` and never looks inside. `unknown`
-    // is therefore the true type, and the column carries no decoder — narrowing
-    // it would have to happen per source, which is where the shape is known.
-    snapshot: jsonb("snapshot").notNull(),
-    label: text("label"),
-    author: text("author"),
-    // A pinned version is an immutable checkpoint (e.g. the pre-restore undo
-    // point, or a future manual "named version"): time-bucket coalescing never
-    // overwrites it, so it always survives as a distinct point in the timeline.
-    // Auto-snapshots are unpinned and coalesce within the active-editing window.
-    pinned: boolean("pinned").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+//
+// A pinned version is an immutable checkpoint (e.g. the pre-restore undo
+// point, or a future manual "named version"): time-bucket coalescing never
+// overwrites it, so it always survives as a distinct point in the timeline.
+// Auto-snapshots are unpinned and coalesce within the active-editing window.
+const entityVersionsEntity = defineEntity(entityVersionsEntityRef, {
+  primaryKey: "id",
+  columns: {
+    pinned: { default: false },
+    createdAt: { default: defaultNow() },
   },
-  (t) => [
+  indexes: (t) => [
     index("entity_versions_source_entity_created_idx").on(
       t.sourceId,
       t.entityId,
       t.createdAt,
     ),
   ],
-);
+});
+
+export const _entityVersions = entityVersionsEntity.table;

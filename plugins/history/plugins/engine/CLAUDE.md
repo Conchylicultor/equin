@@ -50,10 +50,11 @@ through the change feed — the restore mutation invalidates nothing. The plain
     - `resource.declare` "history.versions:rows"
   - Uses:
     - `database.db`
-    - `ids.idColumn`
     - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/retention.defineRetention`
     - `network/live.serveCollection`
     - `network/live.serveValue`
@@ -78,10 +79,13 @@ through the change feed — the restore mutation invalidates nothing. The plain
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
+    - `fields/json/config.jsonField`
     - `fields/text/config.textField`
     - `ids.defineIdKind`
+    - `ids.idKindField`
     - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.liveValue`
   - Exports (types):
@@ -89,10 +93,12 @@ through the change feed — the restore mutation invalidates nothing. The plain
     - `VersionId`
     - `VersionWithSnapshot`
   - Exports (values):
+    - `entityVersionsEntityRef`
     - `historyVersion`
     - `historyVersions`
     - `listVersions`
     - `restoreVersion`
+    - `versionFields`
     - `versionIdKind`
     - `VersionSchema`
     - `VersionWithSnapshotSchema`

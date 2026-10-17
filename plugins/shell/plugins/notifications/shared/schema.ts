@@ -8,13 +8,9 @@ import {
   enumTextField,
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
+import { NOTIFICATION_VARIANTS } from "../core";
 
-export const NotificationVariantSchema = z.enum([
-  "error",
-  "warning",
-  "info",
-  "success",
-]);
+export const NotificationVariantSchema = z.enum(NOTIFICATION_VARIANTS);
 export type NotificationVariant = z.infer<typeof NotificationVariantSchema>;
 
 // The fields a notification list filters, groups or searches by (see

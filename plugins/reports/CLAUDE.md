@@ -116,12 +116,11 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `database.db`
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.defineChangeProducer`
-    - `database/derived-updated-at.deriveUpdatedAt`
-    - `database/sql-column.parsedJson`
-    - `ids.idColumn`
     - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/host/duress.createShedBuffer`
     - `infra/host/duress.ShedSummary`
     - `infra/retention.defineRetention`
@@ -168,6 +167,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Core:
   - Uses:
     - `config_v2.defineConfig`
+    - `fields.FieldsRecord`
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
@@ -175,7 +175,9 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `fields/json/config.jsonField`
     - `fields/text/config.textField`
     - `ids.defineIdKind`
+    - `ids.idKindField`
     - `ids.IdOf`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `primitives/pane.defineRoute`
   - Exports (types):
@@ -186,9 +188,11 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Exports (values):
     - `CLIENT_REPORT_SOURCES`
     - `reportDetailRoute`
+    - `reportFields`
     - `reportIdKind`
     - `REPORTS_SEARCHABLE`
     - `reportsConfig`
+    - `reportsEntityRef`
     - `reportsList`
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
