@@ -68,14 +68,15 @@ remove the overwrite trade-off.
 
 ## Plugin reference
 
-- Description: Sonata accompaniment part: per-song chord mode. Exports the Accompaniment on/off switch of a song with detected chords (ChordModeSwitch) and its gate (useChordModeAvailable) for the Accompaniment section's header: on, the song document voices the song's detected chords onto the Chords / Bass tracks (through the same groove as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
+- Description: Sonata accompaniment part: per-song chord mode. Exports the Accompaniment on/off switch of a song with notes of its own and chords, detected or authored (ChordModeSwitch) and its gate (useChordModeAvailable) for the Accompaniment section's header: on, the song document voices the song's chords (detected and authored) onto the Chords / Bass tracks (through the same groove as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
 - Web:
   - Contributes: `SonataDocument.SongSetting` "chord-mode-sync" → `ChordModeObserver`
   - Uses:
     - `apps/sonata/document.chordModeSetting`
     - `apps/sonata/document.SonataDocument`
     - `apps/sonata/document.useFailSongSetting`
-    - `apps/sonata/document.useHasDerivedChord`
+    - `apps/sonata/document.useHasChords`
+    - `apps/sonata/document.useHasOwnNotes`
     - `apps/sonata/document.useLibrarySong`
     - `apps/sonata/document.useMountedSongId`
     - `apps/sonata/document.useSongSetting`

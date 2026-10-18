@@ -10,6 +10,7 @@ import {
   CHORD_BASS_TRACK,
   CHORD_TRACK,
   grooveCycles,
+  hasOwnNotes,
   reVoiceChords,
   type ReVoiceGroove,
 } from "./revoice";
@@ -176,5 +177,20 @@ describe("reVoiceChords — restart on chord change", () => {
       { start: 0, end: 2, span: 4 },
       { start: 2, end: 4, span: 4 },
     ]);
+  });
+});
+
+describe("hasOwnNotes", () => {
+  it("is false for a chord-only score, even once its chords are voiced", () => {
+    const chordOnly: Score = {
+      ...emptyScore(),
+      annotations: [chord("authored", 0, 4)],
+    };
+    expect(hasOwnNotes(chordOnly)).toBe(false);
+    expect(hasOwnNotes(reVoiceChords(chordOnly, CFG))).toBe(false);
+  });
+
+  it("is true for a score with notes off the chord tracks", () => {
+    expect(hasOwnNotes(midiScore([chord("authored", 0, 4)]))).toBe(true);
   });
 });

@@ -36,7 +36,7 @@ export {
 } from "./score-settings";
 export {
   useHasChords,
-  useHasDerivedChord,
+  useHasOwnNotes,
   useHasVoicedChords,
 } from "./score-gates";
 

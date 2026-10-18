@@ -17,13 +17,14 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useSaveChordMode } from "../actions";
 
-const LABEL = "Accompaniment — play the detected chords";
+const LABEL = "Accompaniment — play the song's chords";
 
 /**
- * The chord-mode switch: the Accompaniment section's on/off for a song whose
- * chords are detected (a MIDI song), in the section header — flipping the
- * loaded song's chord mode. A song with authored chords (a chord grid, a
- * chord sheet) always plays its accompaniment and has no switch.
+ * The chord-mode switch: the Accompaniment section's on/off for a song that
+ * plays notes of its own (a MIDI song, a score, a transcription) and has
+ * chords — detected or authored — in the section header, flipping the loaded
+ * song's chord mode. A chord-only song (a chord grid, a chord sheet) always
+ * plays its accompaniment and has no switch.
  *
  * One flip does two things, deliberately in an order that never doubles the
  * sound. The setting flips synchronously (the pipeline re-voices at once),
@@ -95,8 +96,8 @@ export function ChordModeSwitch() {
     <WithTooltip
       content={
         mode.value
-          ? "Playing the detected chords on the Chords + Bass tracks. Turn off to play the song's own notes again."
-          : "Play the detected chords (Chords + Bass tracks) and turn the original tracks off. Re-enable any track in the Tracks card."
+          ? "Playing the song's chords on the Chords + Bass tracks. Turn off to play the song's own notes again."
+          : "Play the song's chords (Chords + Bass tracks) and turn the original tracks off. Re-enable any track in the Tracks card."
       }
     >
       <Switch

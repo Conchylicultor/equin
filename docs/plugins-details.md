@@ -5908,7 +5908,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `transposeSetting`
               - `useFailSongSetting`
               - `useHasChords`
-              - `useHasDerivedChord`
+              - `useHasOwnNotes`
               - `useHasVoicedChords`
               - `useLibrarySong`
               - `useLoadCount`
@@ -6924,7 +6924,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `toggleOnset`
         - **`rich`** — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
           - Plugins:
-            - **`accompaniment`** — Sonata Section: Accompaniment — the song's chords played through its groove (RhythmControls in the body). A song with authored chords always plays it; a song with detected chords (MIDI) turns it on and off with the chord-mode switch (ChordModeSwitch) in the header. Available for a library song when chord mode can be offered or the song's chords are voiced.
+            - **`accompaniment`** — Sonata Section: Accompaniment — the song's chords played through its groove (RhythmControls in the body). A chord-only song (chord grid, chord sheet) always plays it; a song with notes of its own (MIDI, MusicXML, a transcription) turns it on and off with the chord-mode switch (ChordModeSwitch) in the header. Available for a library song when chord mode can be offered or the song's chords are voiced.
               - Web:
                 - Contributes: `Sonata.Section` "Accompaniment" → `AccompanimentSection`
                 - Uses:
@@ -6988,14 +6988,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/spacing.Stack`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/shape --spacing`
-            - **`chord-mode`** — Sonata accompaniment part: per-song chord mode. Exports the Accompaniment on/off switch of a song with detected chords (ChordModeSwitch) and its gate (useChordModeAvailable) for the Accompaniment section's header: on, the song document voices the song's detected chords onto the Chords / Bass tracks (through the same groove as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
+            - **`chord-mode`** — Sonata accompaniment part: per-song chord mode. Exports the Accompaniment on/off switch of a song with notes of its own and chords, detected or authored (ChordModeSwitch) and its gate (useChordModeAvailable) for the Accompaniment section's header: on, the song document voices the song's chords (detected and authored) onto the Chords / Bass tracks (through the same groove as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
               - Web:
                 - Contributes: `SonataDocument.SongSetting` "chord-mode-sync" → `ChordModeObserver`
                 - Uses:
                   - `apps/sonata/document.chordModeSetting`
                   - `apps/sonata/document.SonataDocument`
                   - `apps/sonata/document.useFailSongSetting`
-                  - `apps/sonata/document.useHasDerivedChord`
+                  - `apps/sonata/document.useHasChords`
+                  - `apps/sonata/document.useHasOwnNotes`
                   - `apps/sonata/document.useLibrarySong`
                   - `apps/sonata/document.useMountedSongId`
                   - `apps/sonata/document.useSongSetting`
@@ -8390,6 +8391,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `findFiguration`
               - `grooveCycles`
               - `handVoicingEquals`
+              - `hasOwnNotes`
               - `MAX_HAND_OCTAVE`
               - `MIN_HAND_OCTAVE`
               - `reVoiceChords`

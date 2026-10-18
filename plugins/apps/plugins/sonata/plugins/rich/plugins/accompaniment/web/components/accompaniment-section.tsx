@@ -22,9 +22,9 @@ export function useAccompanimentAvailable(): boolean {
 }
 
 /**
- * Header action: the accompaniment's on/off — only for a song with detected
- * chords (a MIDI song), where it is chord mode. A song with authored chords
- * always plays its accompaniment: no switch.
+ * Header action: the accompaniment's on/off — only for a song with notes of
+ * its own and chords (a MIDI song, a score, a transcription), where it is chord
+ * mode. A chord-only song always plays its accompaniment: no switch.
  */
 export function AccompanimentActions() {
   const chordModeAvailable = useChordModeAvailable();
@@ -33,15 +33,15 @@ export function AccompanimentActions() {
 
 /**
  * The Accompaniment body: the groove editor while the song's chords are
- * voiced — always for authored chords, and for detected chords while the
- * header switch (chord mode) is on. Off, a line says what the switch does.
+ * voiced — always for a chord-only song, and for a song with notes of its own
+ * while the header switch (chord mode) is on. Off, a line says what the switch does.
  */
 export function AccompanimentSection() {
   const voiced = useHasVoicedChords();
   if (voiced) return <RhythmControls />;
   return (
     <Text as="p" variant="body" tone="muted">
-      Turn on to play the song's detected chords as an accompaniment.
+      Turn on to play the song's chords as an accompaniment.
     </Text>
   );
 }

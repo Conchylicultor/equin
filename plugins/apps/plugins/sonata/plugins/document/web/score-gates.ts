@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { Annotation } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { hasOwnNotes } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { useSongDocument } from "./document";
 import { useSongSetting } from "./loaded-song";
 import { chordModeSetting } from "./score-settings";
@@ -20,6 +21,17 @@ const NO_ANNOTATIONS: readonly Annotation[] = [];
 function useAnnotations(): readonly Annotation[] {
   const { content } = useSongDocument();
   return content.kind === "ready" ? content.score.annotations : NO_ANNOTATIONS;
+}
+
+/**
+ * The composed score plays notes of its own (see `hasOwnNotes`) — its chords,
+ * authored or detected, are then voiced only under chord mode. False until the
+ * document is `ready`.
+ */
+export function useHasOwnNotes(): boolean {
+  const { content } = useSongDocument();
+  const score = content.kind === "ready" ? content.score : null;
+  return useMemo(() => score !== null && hasOwnNotes(score), [score]);
 }
 
 /** At least one chord annotation, whatever produced it (authored or analyzed). */
@@ -47,28 +59,16 @@ function useHasAuthoredChord(): boolean {
 }
 
 /**
- * At least one analyzer-DERIVED chord annotation — the song has note-only
- * regions a chord analyzer could label (a MIDI song, or the MIDI half of a mixed
- * song). This is what the chord-mode toggle has to work with: those are the
- * chords its second voicing pass turns into notes.
- */
-export function useHasDerivedChord(): boolean {
-  const annotations = useAnnotations();
-  return useMemo(
-    () => annotations.some((a) => a.type === "chord" && a.source === "derived"),
-    [annotations],
-  );
-}
-
-/**
  * The document's re-voicing step is generating chord notes for this song — so the
- * voicing / rhythm controls have something to act on. True for a symbol source
- * (authored chords), and for any chord-bearing song whose per-song chord mode is
- * on (the detected chords are then voiced too). The Voicing and Rhythm cards gate
+ * voicing / rhythm controls have something to act on. True for a chord-only
+ * song (authored chords, no notes of its own), and for any chord-bearing song
+ * whose per-song chord mode is on (its detected and authored chords are then
+ * voiced). The Voicing and Rhythm cards gate
  * on this, so flipping chord mode on a MIDI song brings them in unchanged.
  */
 export function useHasVoicedChords(): boolean {
   const authored = useHasAuthoredChord();
+  const ownNotes = useHasOwnNotes();
   const anyChord = useHasChords();
   const chordMode = useSongSetting(chordModeSetting);
   // Pending (or failed) chord mode means the song's settings are not all
@@ -79,6 +79,6 @@ export function useHasVoicedChords(): boolean {
     case "failed":
       return false;
     case "settled":
-      return authored || (chordMode.value && anyChord);
+      return (authored && !ownNotes) || (chordMode.value && anyChord);
   }
 }

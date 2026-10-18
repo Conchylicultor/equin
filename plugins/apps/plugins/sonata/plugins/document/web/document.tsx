@@ -18,7 +18,10 @@ import {
   inferKeys,
   transposeScore,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
-import { reVoiceChords } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
+import {
+  hasOwnNotes,
+  reVoiceChords,
+} from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { SonataDocument } from "./slots";
 import type { SongIdentity } from "./identity";
 import {
@@ -125,7 +128,8 @@ function ComposedDocument({ children }: { children: ReactNode }) {
   //    same timeline), so it belongs in the view layer and never rewinds the
   //    transport. Always present: every song's chords play through a groove;
   //  - chord mode: when on, `baseScore` runs a SECOND re-voicing pass after
-  //    chord analysis, so the analyzer-derived chords of a MIDI song become
+  //    chord analysis, so the chords of a song with notes of its own (a MIDI
+  //    song's detected ones, a score's authored symbols) become
   //    playable notes on the Chords / Bass tracks — through the same groove a
   //    chord grid uses. A view transform: it lands notes on the
   //    chords' existing beats and never rewinds the transport;
@@ -216,8 +220,14 @@ function ComposedDocument({ children }: { children: ReactNode }) {
     // chord annotations' *existing* beats (the groove strikes a bar-anchored
     // pattern over the same timeline), so the timeline span is unchanged — this
     // belongs in the view layer. No-op when there are no authored chord
-    // annotations (returns the score unchanged).
-    const voiced = reVoiceChords(transposed, groove);
+    // annotations (returns the score unchanged). Only a chord-only song gets
+    // this pass: a song with notes of its own (MIDI, MusicXML, a transcription)
+    // keeps its chord symbols as labels, voiced only under chord mode below —
+    // otherwise the Chords / Bass tracks would double music the score already
+    // plays.
+    const voiced = hasOwnNotes(transposed)
+      ? transposed
+      : reVoiceChords(transposed, groove);
     // Two pure pre-analysis steps establish key context: inferKeys derives the
     // tonal centre(s) from the notes (when no key is authored), then spellScore
     // fills each note's enharmonic `spelling` from the key in force. Order
@@ -243,7 +253,8 @@ function ComposedDocument({ children }: { children: ReactNode }) {
         score: applySwingOverride(analyzed, swing),
       };
     // Chord mode: voice EVERY chord annotation — the analyzer-derived ones the
-    // MIDI notes just yielded included — onto the Chords / Bass tracks, in one
+    // MIDI notes just yielded, and the authored symbols of a song with notes of
+    // its own, included — onto the Chords / Bass tracks, in one
     // pass so voice-leading stays continuous across authored and detected
     // chords. It must run AFTER analysis (detection needs the original notes,
     // which stay in the score; the track-mixer hides/mutes them) and re-spells

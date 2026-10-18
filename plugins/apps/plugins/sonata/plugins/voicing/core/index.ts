@@ -45,6 +45,7 @@ export type {
 export {
   grooveCycles,
   reVoiceChords,
+  hasOwnNotes,
   CHORD_TRACK,
   CHORD_BASS_TRACK,
 } from "./revoice";

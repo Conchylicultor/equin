@@ -83,6 +83,7 @@ without changing those types.
     - `findFiguration`
     - `grooveCycles`
     - `handVoicingEquals`
+    - `hasOwnNotes`
     - `MAX_HAND_OCTAVE`
     - `MIN_HAND_OCTAVE`
     - `reVoiceChords`

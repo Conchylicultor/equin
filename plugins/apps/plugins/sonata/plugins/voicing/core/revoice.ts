@@ -6,9 +6,11 @@
  * annotations under the global voicing config. Run reactively in the shell
  * (before key inference, so chord notes exist for detection), it makes
  * the accompaniment an orthogonal modifier applied uniformly to every symbol source
- * — zero per-source code. The shell runs it a second time, after analysis, with
+ * — zero per-source code. That first pass runs only for a chord-only song (see
+ * {@link hasOwnNotes}). The shell runs it a second time, after analysis, with
  * `include: "all"` when a song's chord mode is on — so a MIDI song's DETECTED
- * chords become playable notes through the very same groove.
+ * chords, and a score's authored chord symbols, become playable notes through
+ * the very same groove.
  *
  * Pure and framework-free: a new `Score` in, a new `Score` out; the input is
  * never mutated.
@@ -49,6 +51,20 @@ export const CHORD_TRACK = "chords";
  * rhythm hand active); with neither, this track carries no notes.
  */
 export const CHORD_BASS_TRACK = "chords-bass";
+
+/**
+ * Whether a score plays notes of its own — any note off the two synthesized
+ * chord tracks (a MIDI file, a MusicXML score, a transcription). Such a song's
+ * authored chord symbols are labels over music it already has, so the document
+ * voices them only under chord mode, like a MIDI song's detected chords; a
+ * chord-only song (a chord grid, a chord sheet) has nothing to play but its
+ * chords, so they are always voiced.
+ */
+export function hasOwnNotes(score: Score): boolean {
+  return score.notes.some(
+    (n) => n.track !== CHORD_TRACK && n.track !== CHORD_BASS_TRACK,
+  );
+}
 
 /** Note-id namespace for re-voiced chord notes (see VoicingOptions.idPrefix). */
 const CHORD_NOTE_PREFIX = "chord";

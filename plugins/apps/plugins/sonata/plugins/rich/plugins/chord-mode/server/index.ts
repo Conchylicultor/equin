@@ -7,7 +7,7 @@ export { songChordMode } from "./internal/tables";
 
 export default {
   description:
-    "Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.",
+    "Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.",
   httpRoutes: {
     [setChordModeEndpoint.route]: handleSetChordMode,
   },
