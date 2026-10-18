@@ -194,6 +194,15 @@ export function parsePropsBlock(body: string): Record<string, string> {
   while (i < len) {
     skipWs();
     const rest = body.slice(i);
+    // A spread (`...operators`) contributes no prop this parse can read; skip
+    // it, so the literal props beside it (`match`, `companion`) still are.
+    if (rest.startsWith("...")) {
+      i += 3;
+      parseValue();
+      skipWs();
+      if (body[i] === ",") i++;
+      continue;
+    }
     const keyMatch = /^([A-Za-z_$][\w$]*)\s*:/.exec(rest);
     if (!keyMatch) break;
     const key = keyMatch[1]!;

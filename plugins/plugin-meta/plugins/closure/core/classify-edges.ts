@@ -7,7 +7,8 @@ import {
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
-import type { EdgeGraph, Edge } from "./types";
+import type { KeySpace } from "@plugins/framework/plugins/slot-declaration/core";
+import type { EdgeGraph, Edge, HardEdgeVia, UsageRule } from "./types";
 
 function pushUnique(
   map: Map<PluginId, PluginId[]>,
@@ -48,6 +49,18 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
   const softReverse = new Map<PluginId, PluginId[]>();
   const subtree = new Map<PluginId, PluginId[]>();
 
+  // Why each hard edge exists, first writer wins: the blocks below run in
+  // precedence order (import, token, companion), so an edge two of them derive
+  // carries the stronger reason. Every hard edge goes through `addHard`, so the
+  // flat list below can never meet one without a reason.
+  const via = new Map<string, HardEdgeVia>();
+  const addHard = (from: PluginId, to: PluginId, why: HardEdgeVia) => {
+    pushUnique(hardForward, from, to);
+    pushUnique(hardReverse, to, from);
+    const k = `${from}\0${to}`;
+    if (!via.has(k)) via.set(k, why);
+  };
+
   // Seed every node as a key so callers never branch on undefined.
   for (const node of tree.byDir.values()) {
     hardForward.set(node.id, []);
@@ -84,8 +97,7 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
       for (const use of crossRefs.apiUses[rt]) {
         if (use.plugin === node.id) continue; // self-edge
         if (!hardForward.has(use.plugin)) continue; // unknown target — inert
-        pushUnique(hardForward, node.id, use.plugin);
-        pushUnique(hardReverse, use.plugin, node.id);
+        addHard(node.id, use.plugin, "import");
       }
     }
   }
@@ -98,31 +110,30 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
   // served bundle unless hand-listed in `served-baseline` (equin.ai shipped
   // blank app tiles and an unpainted headline that way). Deriving it here makes
   // the bundle carry every group its members paint with, by construction.
-  const viaImport = new Set<string>();
-  for (const [from, tos] of hardForward)
-    for (const to of tos) viaImport.add(`${from}\0${to}`);
-  const viaToken = new Set<string>();
   for (const node of tree.byDir.values()) {
     const crossRefs = getFacet(node, crossRefsFacetDef);
     if (!crossRefs) continue;
     for (const use of crossRefs.tokenUses) {
       if (use.plugin === node.id) continue; // self-edge
       if (!hardForward.has(use.plugin)) continue; // unknown target — inert
-      viaToken.add(`${node.id}\0${use.plugin}`);
-      pushUnique(hardForward, node.id, use.plugin);
-      pushUnique(hardReverse, use.plugin, node.id);
+      addHard(node.id, use.plugin, "token");
     }
   }
 
   // ── Soft edges: slot-group ownership × static contributions ───────────
   // groupName → owning PluginId. Skip `_runtimeOnly` slots; first-writer-wins.
+  // `Group.Member` → the slot's keyed companion option, for the usage rules.
   const groupOwner = new Map<string, PluginId>();
+  const keyedSlots = new Map<string, { key: string; space: KeySpace }>();
   for (const node of tree.byDir.values()) {
     const slots = getFacet(node, slotsFacetDef) ?? [];
     for (const slot of slots) {
       if ((slot as { _runtimeOnly?: boolean })._runtimeOnly) continue;
       if (!groupOwner.has(slot.groupName))
         groupOwner.set(slot.groupName, node.id);
+      const ref = `${slot.groupName}.${slot.memberName}`;
+      if (typeof slot.companions === "object" && !keyedSlots.has(ref))
+        keyedSlots.set(ref, slot.companions);
     }
   }
 
@@ -152,6 +163,22 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
   // runs owner → contributor, the reverse of the soft contribution edge (which
   // stays): a bundle holding the owner holds its companions. Every other
   // contribution to the same slot remains an opt-in option.
+  //
+  // A KEYED slot's companion (`companions: { key, space }`) is no edge but a
+  // `UsageRule`: required only while used. The date cell ships with the
+  // data-view primitive AND a plugin referencing field type `date` — a
+  // bundle without dates carries no date cell, and one with dates can no
+  // longer ship without it (the hand-listed `data-views` pack this replaces
+  // missed six of them).
+  const usersOf = new Map<string, PluginId[]>();
+  for (const node of tree.byDir.values())
+    for (const ref of getFacet(node, crossRefsFacetDef)?.keyRefs ?? []) {
+      const k = `${ref.space}\0${ref.key}`;
+      const list = usersOf.get(k);
+      if (list) list.push(node.id);
+      else usersOf.set(k, [node.id]);
+    }
+  const rules: UsageRule[] = [];
   for (const node of tree.byDir.values()) {
     const data = getFacet(node, contributionsFacetDef);
     if (!data) continue;
@@ -160,10 +187,36 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
       const head = contribution.slot.split(".")[0];
       const owner = head ? groupOwner.get(head) : undefined;
       if (!owner || owner === node.id) continue;
-      pushUnique(hardForward, owner, node.id);
-      pushUnique(hardReverse, node.id, owner);
+      const keyed = keyedSlots.get(contribution.slot);
+      if (!keyed) {
+        addHard(owner, node.id, "companion");
+        continue;
+      }
+      // The key is what decides whether this ships, so it must be readable:
+      // a computed one would make the contribution a companion of nothing.
+      const raw = contribution.props[keyed.key]?.trim() ?? "";
+      const literal = /^"([^"\\]+)"$/.exec(raw);
+      if (!literal)
+        throw new Error(
+          `${node.id}: \`${contribution.slot}({ ${keyed.key}: ${raw || "…"}, companion: true })\` — ` +
+            `a companion of a keyed slot must spell its \`${keyed.key}\` as a string literal ` +
+            `at the call: the closure engine ships it only when that ${keyed.space} is used.`,
+        );
+      const key = literal[1]!;
+      rules.push({
+        then: node.id,
+        owner,
+        users: [...new Set(usersOf.get(`${keyed.space}\0${key}`) ?? [])]
+          .filter((u) => u !== node.id)
+          .sort(),
+        space: keyed.space,
+        key,
+      });
     }
   }
+  rules.sort(
+    (a, b) => a.then.localeCompare(b.then) || a.key.localeCompare(b.key),
+  );
 
   // ── Derived flat edge list ────────────────────────────────────────────
   const edges: Edge[] = [];
@@ -173,14 +226,18 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
         from,
         to,
         kind: "hard",
-        via: viaImport.has(`${from}\0${to}`)
-          ? "import"
-          : viaToken.has(`${from}\0${to}`)
-            ? "token"
-            : "companion",
+        via: via.get(`${from}\0${to}`)!,
       });
   for (const [from, tos] of softForward)
     for (const to of tos) edges.push({ from, to, kind: "soft" });
 
-  return { hardForward, hardReverse, softForward, softReverse, subtree, edges };
+  return {
+    hardForward,
+    hardReverse,
+    softForward,
+    softReverse,
+    subtree,
+    edges,
+    rules,
+  };
 }

@@ -8,6 +8,7 @@ export default {
   contributions: [
     DataViewSlots.Grouping({
       match: "date",
+      companion: true,
       label: "Group dates by",
       groupings: dateGroupings,
     }),

@@ -6,8 +6,9 @@ import {
 } from "./components/date-filter";
 import { dateLower } from "./internal/date-lower";
 
-export const dateOperatorSet: FilterOperatorSet = {
-  match: "date",
+// The type key (`match`) is written at the contribution, where the closure
+// engine reads it.
+export const dateOperatorSet: Omit<FilterOperatorSet, "match"> = {
   domain: "instant",
   defaultOperator: "is",
   operators: [

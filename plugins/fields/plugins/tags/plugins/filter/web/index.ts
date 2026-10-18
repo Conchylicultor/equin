@@ -5,5 +5,11 @@ import { tagsOperatorSet } from "./operator-set";
 export default {
   description:
     "Tags (multi-value) field type: data-view filter operator set (contains / contains-any-of …).",
-  contributions: [DataViewSlots.Filter(tagsOperatorSet)],
+  contributions: [
+    DataViewSlots.Filter({
+      match: "tags",
+      companion: true,
+      ...tagsOperatorSet,
+    }),
+  ],
 } satisfies PluginDefinition;

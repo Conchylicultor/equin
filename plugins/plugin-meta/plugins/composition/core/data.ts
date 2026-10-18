@@ -5,7 +5,9 @@ import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type {
   Edge,
   SerializedEdgeGraph,
+  UsageRule,
 } from "@plugins/plugin-meta/plugins/closure/core";
+import { KEY_SPACES } from "@plugins/framework/plugins/slot-declaration/core";
 
 // PluginId is a branded string; over the wire it is just a string. Like the plugin
 // tree's schema in plugin-view, we validate shape (string) not brand.
@@ -19,6 +21,14 @@ const edgeSchema: ZodParser<Edge> = z.object({
   kind: z.union([z.literal("hard"), z.literal("soft")]),
 });
 
+const usageRuleSchema: ZodParser<UsageRule> = z.object({
+  then: pluginIdSchema,
+  owner: pluginIdSchema,
+  users: idList,
+  space: z.enum(KEY_SPACES),
+  key: z.string(),
+});
+
 const serializedEdgeGraphSchema: ZodParser<SerializedEdgeGraph> = z.object({
   hardForward: adjacency,
   hardReverse: adjacency,
@@ -26,6 +36,7 @@ const serializedEdgeGraphSchema: ZodParser<SerializedEdgeGraph> = z.object({
   softReverse: adjacency,
   subtree: adjacency,
   edges: z.array(edgeSchema),
+  rules: z.array(usageRuleSchema),
 });
 
 export interface CompositionData {

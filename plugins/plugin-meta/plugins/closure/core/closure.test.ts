@@ -601,6 +601,7 @@ function syntheticGraph(
       to: asPluginId(to),
       kind: "hard" as const,
     })),
+    rules: [],
   };
 }
 
@@ -1037,6 +1038,69 @@ test("the website bundles its runtime companions, none listed by name", () => {
     "reorder",
     "reorder.slot-middleware",
     "reorder.node-types.spacer",
+  ])
+    expect(comp.bundle.has(asPluginId(id))).toBe(true);
+});
+
+// ── Keyed companions (required if used) ──────────────────────────────────────
+//
+// DataView's per-field-type cells and per-view-type renderers are companions of
+// a KEYED slot: each ships when the data-view primitive ships AND a bundled
+// plugin uses its key. They used to be the hand-listed `data-views` pack.
+const DATA_VIEW = asPluginId("primitives.data-view");
+
+test("a keyed companion is a usage rule, not an edge", () => {
+  const DATE_CELL = asPluginId("fields.date.table");
+  expect(graph.hardForward.get(DATA_VIEW)).not.toContain(DATE_CELL);
+  const rule = graph.rules.find((r) => r.then === DATE_CELL);
+  expect(rule).toMatchObject({
+    owner: DATA_VIEW,
+    space: "field-type",
+    key: "date",
+  });
+  // The type's definer uses it — anything holding a date field imports it.
+  expect(rule!.users).toContain(asPluginId("fields.date"));
+});
+
+test("a view renderer is used by the DataViews whose config authors its type", () => {
+  const rule = graph.rules.find(
+    (r) => r.space === "view-type" && r.key === "icons",
+  );
+  expect(rule?.then).toBe(asPluginId("primitives.data-view.icons"));
+  // `config/apps-core/app-launcher/apps-core.launcher.jsonc` authors an icons row.
+  expect(rule!.users).toContain(asPluginId("apps-core.app-launcher"));
+});
+
+test("every field-type dimension and view renderer is a keyed companion", () => {
+  // The whole former `data-views` pack, plus what it missed.
+  for (const id of [
+    "primitives.data-view.list",
+    "primitives.data-view.table",
+    "primitives.data-view.gallery",
+    "primitives.data-view.map",
+    "primitives.data-view.icons",
+    "fields.text.table",
+    "fields.text.filter",
+    "fields.date.data-view-group",
+    "fields.enum.column-config",
+    "fields.avatar.table",
+    "fields.location.filter",
+  ])
+    expect(graph.rules.some((r) => r.then === asPluginId(id))).toBe(true);
+});
+
+test("sonata bundles the renderers its DataViews use, with no pack", () => {
+  const comp = resolveComposition(graph, {
+    name: "sonata-probe",
+    entryPoints: [asPluginId("apps.sonata.**")],
+    selectedContributors: [],
+  });
+  expect(comp.bundle.has(DATA_VIEW)).toBe(true);
+  for (const id of [
+    "primitives.data-view.table",
+    "fields.text.table",
+    "fields.text.filter",
+    "fields.date.table",
   ])
     expect(comp.bundle.has(asPluginId(id))).toBe(true);
 });

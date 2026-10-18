@@ -9,6 +9,7 @@ export default {
   contributions: [
     DataViewSlots.ColumnConfig({
       match: "enum",
+      companion: true,
       component: EnumOptionsEditor,
       derive: deriveEnumFieldDef,
     }),

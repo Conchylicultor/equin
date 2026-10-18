@@ -47,6 +47,9 @@ export interface CellContributionMeta {
 const Cell = defineDispatchSlot<TableCellProps, string, CellContributionMeta>({
   key: (p) => p.field.type ?? "text",
   docLabel: (c) => (typeof c.match === "string" ? c.match : undefined),
+  // A companion here ships only in bundles that use its field type (see
+  // `KeySpace`): the data-view primitive plus a plugin referencing the type.
+  companions: { key: "match", space: "field-type" },
 });
 
 /**

@@ -21,9 +21,15 @@ import {
   type Slot,
   type SealedComponent,
 } from "@plugins/framework/plugins/web-sdk/core";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import type {
+  CompanionFlag,
+  Contribution,
+} from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
-import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import type {
+  SlotCompanions,
+  SlotHandle,
+} from "@plugins/framework/plugins/slot-declaration/core";
 import {
   useSlotItemAttrs,
   useSlotItemMiddlewares,
@@ -622,12 +628,35 @@ export interface DispatchSlot<
   useMatch: Hook<() => (props: Props) => Extra | undefined>;
 }
 
+/**
+ * `companions` opts the slot into companion contributions, exactly as on
+ * `defineSlot` — typically KEYED (`{ key: "match", space }`), so a contribution
+ * serving one key ships only in bundles that use that key.
+ */
+export function defineDispatchSlot<
+  Props,
+  Key extends string = string,
+  Extra extends object = {},
+>(
+  config: DispatchSlotConfig<Props, Key, Extra> & {
+    companions: SlotCompanions;
+  },
+): DispatchSlot<Props, Key, Extra & CompanionFlag>;
 export function defineDispatchSlot<
   Props,
   Key extends string = string,
   Extra extends object = {},
 >(
   config: DispatchSlotConfig<Props, Key, Extra>,
+): DispatchSlot<Props, Key, Extra>;
+export function defineDispatchSlot<
+  Props,
+  Key extends string = string,
+  Extra extends object = {},
+>(
+  config: DispatchSlotConfig<Props, Key, Extra> & {
+    companions?: SlotCompanions;
+  },
 ): DispatchSlot<Props, Key, Extra> {
   const slot = defineSlot<DispatchContribution<Props, Key> & Extra>({
     docLabel: config.docLabel ? (c) => config.docLabel!(c) : undefined,
@@ -636,7 +665,9 @@ export function defineDispatchSlot<
   const dispatchSlot = slot as unknown as DispatchSlot<Props, Key, Extra>;
   // Exactly one contribution renders and contributions carry no id, so there is
   // nothing to order. `defineOrderedDispatchSlot` overwrites this.
-  dispatchSlot.meta = { kind: "dispatch", reorderable: false };
+  dispatchSlot.meta = config.companions
+    ? { kind: "dispatch", reorderable: false, companions: config.companions }
+    : { kind: "dispatch", reorderable: false };
 
   dispatchSlot.useMatch = function useDispatchMatch() {
     const cleanItems = slot.useContributions();

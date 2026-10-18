@@ -5,5 +5,11 @@ import { boolOperatorSet } from "./operator-set";
 export default {
   description:
     "Boolean field type: data-view filter operator set (is checked/unchecked).",
-  contributions: [DataViewSlots.Filter(boolOperatorSet)],
+  contributions: [
+    DataViewSlots.Filter({
+      match: "bool",
+      companion: true,
+      ...boolOperatorSet,
+    }),
+  ],
 } satisfies PluginDefinition;

@@ -8,6 +8,7 @@ export default {
   contributions: [
     DataViewSlots.Grouping({
       match: "bool",
+      companion: true,
       label: "Group by",
       groupings: boolGroupings,
     }),

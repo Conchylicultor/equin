@@ -1,10 +1,10 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import type { Edge, EdgeGraph } from "./types";
+import type { Edge, EdgeGraph, UsageRule } from "./types";
 
 /**
  * JSON-safe shape of an {@link EdgeGraph}. The five adjacency `Map`s become plain
  * `Record<string, string[]>` (PluginId is a branded string, so the keys/values are
- * already JSON-safe); `edges` is carried verbatim. This is the wire shape shipped
+ * already JSON-safe); `edges` and `rules` are carried verbatim. This is the wire shape shipped
  * by the composition data endpoint and rehydrated client-side via
  * {@link deserializeEdgeGraph}.
  */
@@ -15,6 +15,7 @@ export interface SerializedEdgeGraph {
   softReverse: Record<string, PluginId[]>;
   subtree: Record<string, PluginId[]>;
   edges: Edge[];
+  rules: UsageRule[];
 }
 
 function mapToRecord(map: Map<PluginId, PluginId[]>): Record<string, PluginId[]> {
@@ -38,6 +39,7 @@ export function serializeEdgeGraph(graph: EdgeGraph): SerializedEdgeGraph {
     softReverse: mapToRecord(graph.softReverse),
     subtree: mapToRecord(graph.subtree),
     edges: graph.edges,
+    rules: graph.rules,
   };
 }
 
@@ -51,5 +53,6 @@ export function deserializeEdgeGraph(s: SerializedEdgeGraph): EdgeGraph {
     softReverse: recordToMap(s.softReverse),
     subtree: recordToMap(s.subtree),
     edges: s.edges,
+    rules: s.rules,
   };
 }

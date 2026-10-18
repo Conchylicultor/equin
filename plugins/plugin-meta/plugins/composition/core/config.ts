@@ -225,12 +225,7 @@ export const compositionsConfig = defineConfig({
         // (a scratch-workspace conversation), which a standalone Sonata has no
         // runtime for.
         {
-          ...app(
-            "sonata",
-            "apps.sonata",
-            ["data-views"],
-            ["agent-runtime", "auth"],
-          ),
+          ...app("sonata", "apps.sonata", [], ["agent-runtime", "auth"]),
           entryPoints: [
             "apps.sonata.**",
             "!apps.sonata.sources.midi.file-preview.**",
@@ -379,55 +374,6 @@ export const compositionsConfig = defineConfig({
           "apps-core.surface.docked",
           "apps-core.surface.floating",
           "apps-core.surface.solo",
-        ]),
-        // The DataView RENDERING ecosystem: the four view-type renderers plus the
-        // per-field-type cell (`DataViewSlots.Cell`) and inline-editor
-        // (`DataViewSlots.CellEditor`) contributors. All are `DataViewSlots.*`
-        // contributions to `data-view` — graph dead-ends nothing hard-imports (same
-        // "force it in" rationale as the toast host / app-chrome). Without them a
-        // released DataView has ZERO registered view types, so `buildInstanceFromRow`
-        // fail-soft-skips every config-authored view row and the surface renders
-        // "No views configured" even though the config value ships. Any app hosting
-        // a `<DataView>` `extends` this pack. (Config-authored views live in
-        // config_v2; this pack makes the RENDERERS available — the two are
-        // orthogonal.)
-        //
-        // Plus the Filter-pill (`DataViewSlots.Filter`), typed value-codec
-        // (`DataViewSlots.ValueCodec`), and enum column-config
-        // (`DataViewSlots.ColumnConfig`) contributors. These are now selectable
-        // after the static-parser fix (the closure parser used to drop any
-        // contribution whose argument was a pre-built const rather than an inline
-        // object literal, so `composition-closure` rejected them as "not a genuine
-        // soft option"). Carrying them here keeps a released DataView's filtering
-        // and typed codecs working instead of fail-soft degrading to identity.
-        pack("data-views", [
-          "primitives.data-view.gallery",
-          "primitives.data-view.table",
-          "primitives.data-view.list",
-          "fields.bool.table",
-          "fields.color.table",
-          "fields.date.table",
-          "fields.enum.table",
-          "fields.image.table",
-          "fields.number.table",
-          "fields.tags.table",
-          "fields.text.table",
-          "fields.bool.inline",
-          "fields.date.inline",
-          "fields.enum.inline",
-          "fields.number.inline",
-          "fields.tags.inline",
-          "fields.text.inline",
-          "fields.bool.filter",
-          "fields.date.filter",
-          "fields.enum.filter",
-          "fields.number.filter",
-          "fields.tags.filter",
-          "fields.text.filter",
-          "fields.bool.data-view-codec",
-          "fields.date.data-view-codec",
-          "fields.number.data-view-codec",
-          "fields.enum.column-config",
         ]),
       ],
     }),

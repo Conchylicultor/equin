@@ -1,4 +1,5 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type { SlotCompanions } from "./companion-keys";
 
 // A LEAF on purpose: module eval depends on nothing but a type import, so the
 // build-time collectors (the slots facet, the codegen declaration guard) can
@@ -41,8 +42,14 @@ export interface SlotMeta {
    * sprite sheet `<Icon>` draws from, the middleware every slot renders
    * through). Every other contribution to the slot stays opt-in. Set through
    * `defineSlot({ companions: true })`.
+   *
+   * KEYED (`{ key, space }`): a companion here is required only while it is
+   * USED — it ships when the owner ships and some bundled plugin references the
+   * value of its `key` prop in `space` (see `KeySpace`). For dispatch slots
+   * whose contributions serve one key each: DataView's per-field-type cells and
+   * per-view-type renderers.
    */
-  companions?: true;
+  companions?: SlotCompanions;
 }
 
 /**

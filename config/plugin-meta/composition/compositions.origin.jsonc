@@ -1,4 +1,4 @@
-// @hash 512cfd42e5e8
+// @hash 9da3647e0096
 {
   "manifests": [
     {
@@ -135,8 +135,7 @@
       ],
       "selectedContributors": [],
       "extends": [
-        "served-baseline",
-        "data-views"
+        "served-baseline"
       ],
       "excludes": [
         "agent-runtime",
@@ -447,45 +446,6 @@
         "apps-core.surface.docked",
         "apps-core.surface.floating",
         "apps-core.surface.solo"
-      ],
-      "extends": [],
-      "excludes": [],
-      "serve": "off",
-      "home": ""
-    },
-    {
-      "id": "data-views",
-      "name": "data-views",
-      "category": "pack",
-      "entryPoints": [],
-      "selectedContributors": [
-        "primitives.data-view.gallery",
-        "primitives.data-view.table",
-        "primitives.data-view.list",
-        "fields.bool.table",
-        "fields.color.table",
-        "fields.date.table",
-        "fields.enum.table",
-        "fields.image.table",
-        "fields.number.table",
-        "fields.tags.table",
-        "fields.text.table",
-        "fields.bool.inline",
-        "fields.date.inline",
-        "fields.enum.inline",
-        "fields.number.inline",
-        "fields.tags.inline",
-        "fields.text.inline",
-        "fields.bool.filter",
-        "fields.date.filter",
-        "fields.enum.filter",
-        "fields.number.filter",
-        "fields.tags.filter",
-        "fields.text.filter",
-        "fields.bool.data-view-codec",
-        "fields.date.data-view-codec",
-        "fields.number.data-view-codec",
-        "fields.enum.column-config"
       ],
       "extends": [],
       "excludes": [],

@@ -10,13 +10,18 @@ import {
   seg,
   slotIdFor,
 } from "@plugins/framework/plugins/slot-declaration/core";
-import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import {
+  isKeySpace,
+  type SlotCompanions,
+  type SlotHandle,
+} from "@plugins/framework/plugins/slot-declaration/core";
 import {
   readIfExists,
   stripTypes,
   maskSource,
   parseDefineGroup,
   markerCallSpans,
+  matchBracket,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type SlotDef, slotsFacetDef } from "../core";
@@ -71,6 +76,189 @@ function parseSlotCalls(
   return out;
 }
 
+// Every constructor a slot can be made with — the ones taking `companions`.
+const COMPANION_SLOT_BUILDERS = [
+  "defineSlot",
+  "defineDispatchSlot",
+  "defineOrderedDispatchSlot",
+  "defineRenderSlot",
+  "defineMountSlot",
+  "defineWrapperSlot",
+] as const;
+
+const BUILDER_KIND: Record<
+  (typeof COMPANION_SLOT_BUILDERS)[number],
+  NonNullable<SlotDef["kind"]>
+> = {
+  defineSlot: "slot",
+  defineDispatchSlot: "dispatch",
+  defineOrderedDispatchSlot: "ordered-dispatch",
+  defineRenderSlot: "render",
+  defineMountSlot: "mount",
+  defineWrapperSlot: "wrap",
+};
+
+/** A slot constructor call carrying a `companions:` option. */
+interface CompanionSlotCall {
+  /** The name the slot is exported under (a `const` renamed by `export { X as Y }` resolved). */
+  name: string;
+  kind: NonNullable<SlotDef["kind"]>;
+  companions: SlotCompanions;
+}
+
+/**
+ * Read the `companions` option of a slot constructor's argument, or `undefined`
+ * when it has none. Only literal spellings are accepted — `true`, or
+ * `{ key: "<prop>", space: "<KeySpace>" }` — and anything else THROWS: the
+ * closure engine ships a slot's companions by this value alone, so one it
+ * cannot read would ship them as options, the incident it exists to prevent.
+ */
+function readCompanionsOption(
+  masked: string,
+  original: string,
+  open: number,
+  close: number,
+  file: string,
+): SlotCompanions | undefined {
+  // Only the call's own top-level object literal: `{` right after `(`.
+  let brace = open + 1;
+  while (brace < close && /\s/.test(masked[brace]!)) brace++;
+  if (masked[brace] !== "{") return undefined;
+  const end = matchBracket(masked, brace, "{", "}");
+  if (end < 0) return undefined;
+  // Depth-1 `companions:` only, so a nested option object cannot answer.
+  let depth = 0;
+  for (let i = brace; i < end; i++) {
+    const c = masked[i]!;
+    if (c === "{" || c === "[" || c === "(") depth++;
+    else if (c === "}" || c === "]" || c === ")") depth--;
+    if (depth !== 1) continue;
+    const m = /^companions\s*:\s*/.exec(masked.slice(i, end));
+    if (!m || (i > brace && /[\w$]/.test(masked[i - 1]!))) continue;
+    const at = i + m[0].length;
+    const rest = masked.slice(at, end);
+    if (/^true\b/.test(rest)) return true;
+    if (rest.startsWith("{")) {
+      const objEnd = matchBracket(masked, at, "{", "}");
+      const body = original.slice(at, objEnd + 1);
+      const key = /\bkey\s*:\s*"([^"]+)"/.exec(body)?.[1];
+      const space = /\bspace\s*:\s*"([^"]+)"/.exec(body)?.[1];
+      if (key && space && isKeySpace(space)) return { key, space };
+    }
+    throw new Error(
+      `${file}: a slot's \`companions\` option must be the literal \`true\` or ` +
+        '`{ key: "<prop>", space: "<KeySpace>" }` (a known space) — the closure ' +
+        "engine reads it statically to decide when the slot's companions ship. " +
+        `Got: ${original.slice(at, Math.min(end, at + 80)).trim()}`,
+    );
+  }
+  return undefined;
+}
+
+/** Every companion-taking slot constructor call in one file. */
+function companionSlotCalls(
+  masked: string,
+  original: string,
+  file: string,
+): CompanionSlotCall[] {
+  // `export { ValueCodecSlot as ValueCodec }` — the slot is known by its export.
+  const exportedAs = new Map<string, string>();
+  for (const m of masked.matchAll(/export\s*\{([^}]*)\}/g))
+    for (const part of m[1]!.split(",")) {
+      const alias = /^\s*(\w+)\s+as\s+(\w+)\s*$/.exec(part);
+      if (alias) exportedAs.set(alias[1]!, alias[2]!);
+    }
+  const out: CompanionSlotCall[] = [];
+  for (const builder of COMPANION_SLOT_BUILDERS) {
+    for (const span of markerCallSpans(masked, builder)) {
+      const companions = readCompanionsOption(
+        masked,
+        original,
+        span.open,
+        span.close,
+        file,
+      );
+      if (!companions) continue;
+      const prefix = masked.slice(0, span.identifier);
+      const nameMatch =
+        /(\w+)\s*:\s*$|(?:export\s+)?const\s+(\w+)\s*=\s*$/.exec(prefix);
+      const local = nameMatch && (nameMatch[1] ?? nameMatch[2]);
+      if (!local)
+        throw new Error(
+          `${file}: a slot declared with \`companions\` must be bound to a name ` +
+            "(`Member: " +
+            builder +
+            "(…)` or `const Member = " +
+            builder +
+            "(…)`) so the closure engine can match its contributions to it.",
+        );
+      out.push({
+        name: exportedAs.get(local) ?? local,
+        kind: BUILDER_KIND[builder],
+        companions,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * The group a slot defined OUTSIDE its group object is listed under: the
+ * `export const Group = { …, Member, … }` whose body names it, as a shorthand
+ * (`Cell,`) or a value (`Cell: Cell`). Returns the group and the member key.
+ */
+function enclosingGroupOf(
+  name: string,
+  maskedFiles: readonly string[],
+): { groupName: string; memberName: string } | undefined {
+  for (const masked of maskedFiles) {
+    for (const m of masked.matchAll(/export\s+const\s+([A-Z]\w*)\s*=\s*\{/g)) {
+      const start = masked.indexOf("{", m.index);
+      const end = matchBracket(masked, start, "{", "}");
+      if (end < 0) continue;
+      const body = masked.slice(start + 1, end);
+      const entry = new RegExp(
+        `(?:^|[,{\\s])(?:(\\w+)\\s*:\\s*)?${name}\\s*(?:,|$)`,
+        "m",
+      ).exec(body);
+      if (entry) return { groupName: m[1]!, memberName: entry[1] ?? name };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Stamp `companions` onto the slots `slots` already holds, adding the ones the
+ * group parse cannot reach (a slot `const` defined in its own file and listed
+ * in its group by shorthand — `DataViewSlots.Cell`).
+ */
+function applyCompanions(
+  slots: SlotDef[],
+  calls: readonly CompanionSlotCall[],
+  maskedFiles: readonly string[],
+  pluginId: string,
+): void {
+  for (const call of calls) {
+    const existing = slots.find((s) => s.memberName === call.name);
+    if (existing) {
+      existing.companions = call.companions;
+      continue;
+    }
+    const group = enclosingGroupOf(call.name, maskedFiles) ?? {
+      groupName: call.name,
+      memberName: call.name,
+    };
+    slots.push({
+      memberName: group.memberName,
+      groupName: group.groupName,
+      slotId: slotIdFor(pluginId, seg(group.memberName)),
+      kind: call.kind,
+      contributors: [],
+      companions: call.companions,
+    });
+  }
+}
+
 /**
  * Static parse of every source file under the plugin's OWN `web/` (walkFiles
  * skips sub-plugin `plugins/` trees, `node_modules` and tests), deduped by slot
@@ -87,6 +275,8 @@ function parseSlotsFromSource(dir: string, pluginId: string): SlotDef[] {
   const seen = new Set<string>();
   const files: string[] = [];
   walkFiles(join(dir, "web"), files);
+  const companionCalls: CompanionSlotCall[] = [];
+  const maskedFiles: string[] = [];
 
   for (const file of files) {
     const src = readIfExists(file);
@@ -98,6 +288,8 @@ function parseSlotsFromSource(dir: string, pluginId: string): SlotDef[] {
     // derived from its plugin and member name, not recovered from source text.
     const original = stripTypes(src, file);
     const masked = maskSource(original);
+    maskedFiles.push(masked);
+    companionCalls.push(...companionSlotCalls(masked, original, file));
     // Render and mount slots first: scanned by builder name (distinct from
     // `defineSlot`, so the group parser below won't double-count them).
     const fileSlots: SlotDef[] = [
@@ -155,6 +347,7 @@ function parseSlotsFromSource(dir: string, pluginId: string): SlotDef[] {
       slots.push(slot);
     }
   }
+  applyCompanions(slots, companionCalls, maskedFiles, pluginId);
   return slots;
 }
 
@@ -252,6 +445,7 @@ function collectDeclaredSlots(
         slotId,
         kind: slot.meta.kind,
         contributors: [],
+        ...(slot.meta.companions ? { companions: slot.meta.companions } : {}),
       });
     }
   }

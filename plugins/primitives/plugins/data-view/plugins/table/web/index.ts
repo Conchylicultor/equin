@@ -11,6 +11,7 @@ export default {
   contributions: [
     DataViewSlots.View({
       type: "table",
+      companion: true,
       title: "Table",
       icon: symbol("table-rows"),
       order: 1,

@@ -14,6 +14,9 @@ import { useFieldIdentities } from "./internal/use-field-identities";
  */
 const ValueCodecSlot = defineSlot<{ match: string; codec: ValueCodec }>({
   docLabel: (c) => c.match,
+  // A companion here ships only in bundles that use its field type (see
+  // `KeySpace`): the data-view primitive plus a plugin referencing the type.
+  companions: { key: "match", space: "field-type" },
 });
 
 /** Resolve a field type id → its ValueCodec, honoring `extends`; identity default. */

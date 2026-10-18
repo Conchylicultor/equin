@@ -42,7 +42,15 @@ function makeGraph(hard: [string, string][], soft: [string, string][]): EdgeGrap
   add(hardForward, hardReverse, "hard", hard);
   add(softForward, softReverse, "soft", soft);
 
-  return { hardForward, hardReverse, softForward, softReverse, subtree, edges };
+  return {
+    hardForward,
+    hardReverse,
+    softForward,
+    softReverse,
+    subtree,
+    edges,
+    rules: [],
+  };
 }
 
 describe("focusSubgraph", () => {

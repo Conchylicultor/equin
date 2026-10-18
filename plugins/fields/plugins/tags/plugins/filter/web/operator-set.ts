@@ -2,8 +2,9 @@ import type { FilterOperatorSet } from "@plugins/primitives/plugins/data-view/we
 import { TagSingleInput, TagMultiInput } from "./components/tags-filter";
 import { tagsLower } from "./internal/tags-lower";
 
-export const tagsOperatorSet: FilterOperatorSet = {
-  match: "tags",
+// The type key (`match`) is written at the contribution, where the closure
+// engine reads it.
+export const tagsOperatorSet: Omit<FilterOperatorSet, "match"> = {
   domain: "stringArray",
   defaultOperator: "contains",
   operators: [

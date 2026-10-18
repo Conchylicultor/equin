@@ -3,6 +3,13 @@ import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { ColorCell } from "./components/color-cell";
 
 export default {
-  description: "Color field type: data-view table cell (read-only color swatch).",
-  contributions: [DataViewSlots.Cell({ match: "color", component: ColorCell })],
+  description:
+    "Color field type: data-view table cell (read-only color swatch).",
+  contributions: [
+    DataViewSlots.Cell({
+      match: "color",
+      companion: true,
+      component: ColorCell,
+    }),
+  ],
 } satisfies PluginDefinition;

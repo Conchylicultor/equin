@@ -14,6 +14,7 @@ export default {
   contributions: [
     DataViewSlots.View({
       type: "gallery",
+      companion: true,
       title: "Gallery",
       icon: symbol("grid-view"),
       order: 0,

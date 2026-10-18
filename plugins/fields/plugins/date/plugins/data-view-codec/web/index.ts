@@ -5,5 +5,11 @@ import { dateCodec } from "./internal/codec";
 export default {
   description:
     "Date field type: data-view custom-column value codec (native Date ↔ canonical ISO text).",
-  contributions: [DataViewSlots.ValueCodec({ match: "date", codec: dateCodec })],
+  contributions: [
+    DataViewSlots.ValueCodec({
+      match: "date",
+      companion: true,
+      codec: dateCodec,
+    }),
+  ],
 } satisfies PluginDefinition;

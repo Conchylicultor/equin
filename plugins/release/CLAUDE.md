@@ -393,15 +393,12 @@ release and confirming the Cards/All/Longest/Composed tabs + toolbar render:
    boot. So `config-v2.values` resolves the real defaults at runtime (verified: the
    full value, e.g. the 4 Library views, reaches the browser over the WS sub-ack).
 2. **DataView renderers are in the composition closure.** A `<DataView>`'s
-   view-type + per-field cell/editor renderers are `DataViewSlots.*` contributions
-   nothing hard-imports, so a filtered release closure omits them and the surface
-   fail-soft-skips every config-authored view row → "No views configured" *despite*
-   the config shipping. Any app hosting a DataView now `extends` the **`data-views`**
-   composition pack (`plugin-meta/composition/core/config.ts`). **Residual
-   follow-up:** the `DataViewSlots.{Filter,ValueCodec,ColumnConfig}` contributors
-   are not yet composition-selectable (the closure classifier does not surface them
-   as soft-option edges, so `composition-closure` rejects selecting them), so a
-   released DataView's Filter pill / typed value-codecs degrade to fail-soft.
+   view-type + per-field cell/editor/filter renderers are `DataViewSlots.*`
+   contributions nothing hard-imports. They are KEYED companions
+   (`companions: { key, space }` on the slot, `companion: true` on each
+   contribution): the closure ships each one when the data-view primitive ships
+   and some bundled plugin uses its key — a field type it defines or spells, a
+   view type its DataView config authors or whitelists. No pack to extend.
 
 ## Deploy handoff note
 

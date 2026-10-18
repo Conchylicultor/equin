@@ -4,5 +4,7 @@ import { TextCell } from "./components/text-cell";
 
 export default {
   description: "Text field type: data-view table cell (read-only text cell).",
-  contributions: [DataViewSlots.Cell({ match: "text", component: TextCell })],
+  contributions: [
+    DataViewSlots.Cell({ match: "text", companion: true, component: TextCell }),
+  ],
 } satisfies PluginDefinition;

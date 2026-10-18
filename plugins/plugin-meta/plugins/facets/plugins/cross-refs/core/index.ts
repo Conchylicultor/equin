@@ -5,5 +5,6 @@ export type {
   RawUse,
   DeclaredTokenGroup,
   TokenUse,
+  KeyRef,
 } from "./types";
 export { crossRefsToComparable } from "./to-comparable";

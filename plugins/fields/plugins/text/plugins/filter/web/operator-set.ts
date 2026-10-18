@@ -2,8 +2,9 @@ import type { FilterOperatorSet } from "@plugins/primitives/plugins/data-view/we
 import { TextValueInput } from "./components/text-filter";
 import { textLower } from "./internal/text-lower";
 
-export const textOperatorSet: FilterOperatorSet = {
-  match: "text",
+// The type key (`match`) is written at the contribution, where the closure
+// engine reads it.
+export const textOperatorSet: Omit<FilterOperatorSet, "match"> = {
   domain: "text",
   defaultOperator: "contains",
   operators: [

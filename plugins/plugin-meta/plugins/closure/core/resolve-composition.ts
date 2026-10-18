@@ -16,9 +16,13 @@ import type {
 } from "./types";
 
 /**
- * Transitive hard closure of a seed set over `hardForward`. The visited-set makes
- * it cycle- and self-edge-safe (a DAG is expected per the boundary rules; this is
- * defensive, not relied upon).
+ * Transitive hard closure of a seed set over `hardForward`, plus every usage
+ * rule (`graph.rules`) whose owner and one of whose users are in: the least
+ * fixpoint — walk the edges, fire the rules that now hold, walk on from what
+ * they added, until nothing fires. A rule's conclusion can satisfy another
+ * rule, so one pass is not enough. The visited-set makes it cycle- and
+ * self-edge-safe (a DAG is expected per the boundary rules; this is defensive,
+ * not relied upon).
  */
 export function hardClosure(
   seeds: Iterable<PluginId>,
@@ -26,15 +30,26 @@ export function hardClosure(
 ): Set<PluginId> {
   const out = new Set<PluginId>();
   const stack = [...seeds];
-  while (stack.length) {
-    const x = stack.pop()!;
-    if (out.has(x)) continue;
-    out.add(x);
-    for (const t of graph.hardForward.get(x) ?? []) {
-      if (!out.has(t)) stack.push(t);
+  let pending = graph.rules;
+  for (;;) {
+    while (stack.length) {
+      const x = stack.pop()!;
+      if (out.has(x)) continue;
+      out.add(x);
+      for (const t of graph.hardForward.get(x) ?? []) {
+        if (!out.has(t)) stack.push(t);
+      }
     }
+    const waiting: typeof pending = [];
+    for (const rule of pending) {
+      if (out.has(rule.then)) continue;
+      if (out.has(rule.owner) && rule.users.some((u) => out.has(u)))
+        stack.push(rule.then);
+      else waiting.push(rule);
+    }
+    if (stack.length === 0) return out;
+    pending = waiting;
   }
-  return out;
 }
 
 /**

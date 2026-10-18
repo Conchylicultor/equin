@@ -28,9 +28,13 @@ import — keep it that way.
   - Imported by:
     - `framework/tooling/codegen`
     - `framework/web-sdk`
+    - `plugin-meta/composition`
     - `plugin-meta/plugin-tree`
 - Core:
   - Exports (types):
+    - `KeyedCompanions`
+    - `KeySpace`
+    - `SlotCompanions`
     - `SlotDeclaration`
     - `SlotDeclarationListener`
     - `SlotDeclaringPlugin`
@@ -47,7 +51,9 @@ import — keep it that way.
     - `declarePluginSlots`
     - `findUndeclaredSlots`
     - `getCreatedSlots`
+    - `isKeySpace`
     - `isSlot`
+    - `KEY_SPACES`
     - `recordCreatedSlot`
     - `seg`
     - `slotIdFor`

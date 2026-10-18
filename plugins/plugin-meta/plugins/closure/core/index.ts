@@ -23,4 +23,5 @@ export type {
   InclusionStep,
   InclusionPath,
   UnsatisfiedExclusion,
+  UsageRule,
 } from "./types";

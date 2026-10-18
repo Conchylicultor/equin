@@ -94,6 +94,21 @@ Two edge kinds, both indexed forward + reverse:
   at the type level). `via` is `"companion"` (import > token > companion when
   several hold). The flag is read from the inline literal only; the
   `companions-visible` check fails on one built elsewhere.
+- **usage rules** (`EdgeGraph.rules`, not edges) — a companion of a KEYED slot
+  (`companions: { key, space }`, e.g. DataView's `Cell` keyed by `match` in the
+  `field-type` space, `View` by `type` in `view-type`) is required only while
+  USED: `UsageRule { then, owner, users }` fires once the slot's owner AND any
+  of `users` are bundled. `users` are the plugins whose `cross-refs` `keyRefs`
+  name the key — for a field type, its definer (`defineFieldType("date")`) and
+  every plugin spelling `type: "date"`; for a view type, every plugin whose
+  DataView config authors a row of it or whose call site whitelists it
+  (`views={["map"]}`). `hardClosure` is the least fixpoint of edges plus
+  rules. A rule is also a backward hop for inclusion paths (`InclusionStep.usage`),
+  so negating a used companion lands in `unsatisfiedExclusions` naming the user
+  — drop a premise instead. The key must be a string literal at the call
+  (throws otherwise); `companions-visible` compares runtime keys with the rules,
+  `keys-defined` fails on a key nothing defines or a view type nothing renders.
+  This replaced the hand-listed `data-views` pack.
 - **soft** (prunable) — `A → B` when A *contributes* to a slot **group** B owns.
   Slot ownership comes from the `slots` facet (`groupName`, first-writer-wins,
   `_runtimeOnly` slots skipped); contributions from `contributions.static`
@@ -316,6 +331,7 @@ Run with `./singularity test plugins/plugin-meta/plugins/closure`.
     - `ParsedPattern`
     - `SerializedEdgeGraph`
     - `UnsatisfiedExclusion`
+    - `UsageRule`
   - Exports (values):
     - `classifyEdges`
     - `deserializeEdgeGraph`

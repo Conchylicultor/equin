@@ -19,8 +19,13 @@ import {
   readIfExists,
   findImports,
   runWithFsSnapshot,
+  maskSource,
+  markerCallSpans,
+  matchBracket,
+  parseStaticCallId,
   type FsSnapshot,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { parse as parseJsonc } from "jsonc-parser";
 import {
   tokenGroupsDeclaredIn,
   tokenVarsUsedBy,
@@ -29,6 +34,7 @@ import {
 import {
   type CrossRefsData,
   type DeclaredTokenGroup,
+  type KeyRef,
   type RawUse,
   type TokenUse,
   crossRefsFacetDef,
@@ -139,6 +145,109 @@ function shippedSources(dir: string): SourceText[] {
   return out;
 }
 
+// ── Keys (field types, view types) ─────────────────────────────────────
+
+/**
+ * Every literal first argument of `marker(…)` calls in `src`, skipping the
+ * marker's own declaration (`function defineFieldType(id: string)`). A call
+ * whose id is not a literal is not recorded: the key it defines is unknown
+ * here, and `closure:keys-defined` names any contribution left without one.
+ */
+function literalMarkerIds(src: string, marker: string): string[] {
+  const masked = maskSource(src);
+  const out: string[] = [];
+  for (const span of markerCallSpans(masked, marker)) {
+    if (/function\s+$/.test(masked.slice(0, span.identifier))) continue;
+    const id = parseStaticCallId(src, span);
+    if (id.kind === "value") out.push(id.value);
+  }
+  return out;
+}
+
+// The field types a plugin defines: `defineFieldType("<id>")` in its `core/`.
+function parseFieldTypeDefs(coreDir: string): string[] {
+  const files: string[] = [];
+  walkFiles(coreDir, files);
+  return files.flatMap((f) =>
+    literalMarkerIds(readIfExists(f) ?? "", "defineFieldType"),
+  );
+}
+
+/**
+ * The keys one source file spells: every `type: "<x>"` property (a field
+ * definition naming its type — filtered to DEFINED field types in relate()),
+ * and every string in a `views={[…]}` whitelist (the view types a DataView call
+ * site offers). Located over the masked source, so a spelling inside a comment
+ * or a string never counts; values read back from the original by offset.
+ */
+function spelledKeys(src: string): { fieldTypes: string[]; views: string[] } {
+  const masked = maskSource(src);
+  const fieldTypes: string[] = [];
+  for (const m of masked.matchAll(/(?<![\w$.])type\s*:\s*"/g)) {
+    const start = m.index + m[0].length;
+    const end = src.indexOf('"', start);
+    if (end > start) fieldTypes.push(src.slice(start, end));
+  }
+  const views: string[] = [];
+  for (const m of masked.matchAll(/(?<![\w$.])views\s*=\s*\{\s*\[/g)) {
+    const open = m.index + m[0].length - 1;
+    const close = matchBracket(masked, open, "[", "]");
+    if (close < 0) continue;
+    for (const lit of src.slice(open, close).matchAll(/"([^"\\]+)"/g))
+      views.push(lit[1]!);
+  }
+  return { fieldTypes, views };
+}
+
+// `defineDataView("<id>")` ids in the plugin's `web/` — whose authored config
+// rows name the view types the DataView shows.
+function parseDataViewIds(webDir: string): string[] {
+  const files: string[] = [];
+  walkFiles(webDir, files);
+  return files.flatMap((f) =>
+    literalMarkerIds(readIfExists(f) ?? "", "defineDataView"),
+  );
+}
+
+/**
+ * The view types a DataView's authored config shows: each row's `view.type`
+ * in `config/<plugin path>/<id>.jsonc` — config being the single source of
+ * truth for a surface's views. No file yet ⇒ no rows (`./singularity build`
+ * seeds one).
+ */
+function authoredViewTypes(
+  repoRoot: string,
+  pluginId: PluginId,
+  dataViewId: string,
+): string[] {
+  const file = join(
+    repoRoot,
+    "config",
+    asPath(pluginId),
+    `${dataViewId}.jsonc`,
+  );
+  const text = readIfExists(file);
+  if (text === null) return [];
+  const doc = parseJsonc(text) as { views?: unknown } | undefined;
+  if (!Array.isArray(doc?.views)) return [];
+  const out: string[] = [];
+  for (const row of doc.views as { view?: { type?: unknown } }[]) {
+    const type = row?.view?.type;
+    if (typeof type === "string") out.push(type);
+  }
+  return out;
+}
+
+function sortKeyRefs(refs: Iterable<KeyRef>): KeyRef[] {
+  const byId = new Map<string, KeyRef>();
+  for (const r of refs) byId.set(`${r.space}\0${r.key}`, r);
+  return [...byId.values()].sort((a, b) =>
+    a.space === b.space
+      ? a.key.localeCompare(b.key)
+      : a.space.localeCompare(b.space),
+  );
+}
+
 /**
  * `items` grouped by `labelOf`, each group at its first member's position. Both
  * lists this facet groups are sorted with the label as their prefix, so the
@@ -176,6 +285,27 @@ export default createFacet<CrossRefsData>({
       if (existsSync(rtDir)) raw[rt] = parseRawUses(rtDir);
     }
     const coreDir = join(ctx.dir, "core");
+    const webDir = join(ctx.dir, "web");
+    const keyDefs: KeyRef[] = (
+      existsSync(coreDir) ? parseFieldTypeDefs(coreDir) : []
+    ).map((key) => ({ space: "field-type", key }));
+    // A definer uses its own type (anything holding a date field imports the
+    // token it defines). Spelled field types are raw until relate() keeps the
+    // defined ones; view types are final.
+    const keyRefs: KeyRef[] = [...keyDefs];
+    for (const rt of SHIPPED_RUNTIME_FOLDERS) {
+      const rtDir = join(ctx.dir, rt);
+      if (!existsSync(rtDir)) continue;
+      const files: string[] = [];
+      walkFiles(rtDir, files);
+      for (const f of files) {
+        const spelled = spelledKeys(readIfExists(f) ?? "");
+        for (const key of spelled.fieldTypes)
+          keyRefs.push({ space: "field-type", key });
+        for (const key of spelled.views)
+          keyRefs.push({ space: "view-type", key });
+      }
+    }
     return {
       apiUses: emptyByRuntime(),
       importedBy: [],
@@ -183,6 +313,9 @@ export default createFacet<CrossRefsData>({
       tokenGroups: existsSync(coreDir) ? parseTokenGroups(coreDir) : [],
       tokenUses: [],
       tokenUsedBy: [],
+      keyDefs: sortKeyRefs(keyDefs),
+      keyRefs,
+      rawDataViews: existsSync(webDir) ? parseDataViewIds(webDir) : [],
     };
   },
 
@@ -279,6 +412,27 @@ export default createFacet<CrossRefsData>({
         getFacet(byId.get(use.plugin)!, crossRefsFacetDef)!.tokenUsedBy.push(
           node.id,
         );
+    }
+
+    // Key pass — a spelled `type: "<x>"` is a field-type reference only when
+    // some plugin defines that type (most `type:` properties name something
+    // else), and each DataView's authored rows add the view types it shows.
+    const definedFieldTypes = new Set<string>();
+    for (const node of tree.byDir.values())
+      for (const def of getFacet(node, crossRefsFacetDef)?.keyDefs ?? [])
+        definedFieldTypes.add(def.key);
+    const repoRoot = dirname(tree.pluginsRoot);
+    for (const node of tree.byDir.values()) {
+      const data = getFacet(node, crossRefsFacetDef);
+      if (!data) continue;
+      const refs = data.keyRefs.filter(
+        (r) => r.space !== "field-type" || definedFieldTypes.has(r.key),
+      );
+      for (const id of data.rawDataViews ?? [])
+        for (const key of authoredViewTypes(repoRoot, node.id, id))
+          refs.push({ space: "view-type", key });
+      data.keyRefs = sortKeyRefs(refs);
+      data.rawDataViews = undefined;
     }
 
     // Second pass — invert apiUses into importedBy.
