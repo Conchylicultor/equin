@@ -56,10 +56,9 @@ different need, extend the primitive rather than allowlisting a copy.
 - Cross-plugin:
   - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×18
-    - `apps` ×7
+    - `apps` ×8
     - `shell` ×2
     - `active-data/go`
-    - `apps-core/surface/floating`
     - `reorder`
     - `screenshot`
 - Exemptions:

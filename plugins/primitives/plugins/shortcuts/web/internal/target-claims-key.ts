@@ -60,10 +60,11 @@ export function targetClaimsKey(event: KeyboardEvent): boolean {
 }
 
 /**
- * Does this combo carry a non-shift modifier? Modifier combos (Cmd/Ctrl/Alt)
- * are deliberate commands that should still fire while typing (e.g. Cmd+K,
- * Cmd+Enter). Shift alone is not a modifier here — shift+key is still typing.
+ * Is this combo a deliberate command rather than typing? A non-shift modifier
+ * (Cmd/Ctrl/Alt — e.g. Cmd+K, Cmd+Enter), or a function key (F1–F24), which
+ * never inserts text. Such combos still fire while a field has focus. Shift
+ * alone is not a modifier here — shift+key is still typing.
  */
-export function comboHasModifier(combo: ParsedCombo): boolean {
-  return combo.mod || combo.ctrl || combo.alt;
+export function comboIsCommand(combo: ParsedCombo): boolean {
+  return combo.mod || combo.ctrl || combo.alt || /^f\d{1,2}$/.test(combo.key);
 }

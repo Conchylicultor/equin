@@ -57,11 +57,8 @@ export type {
 // An app's ONE directory, `apps/<app>/`, comes from `defineAppDataDir` at the
 // app's root plugin instead — `defineDataDir` refuses the `apps` kind — and a
 // sub-plugin's space inside it is a `subdir()` area, never a second dir.
-// `META_APP_ROOTS` is the closed table of apps whose root is not
-// `apps/plugins/<id>`.
 export {
   DATA_DIR_KINDS,
-  META_APP_ROOTS,
   dataRoot,
   defineAppDataDir,
   defineDataDir,

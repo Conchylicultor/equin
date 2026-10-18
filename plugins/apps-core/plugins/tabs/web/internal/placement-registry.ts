@@ -23,6 +23,9 @@ export interface PlacementCapabilities {
   newTabFollows: Set<string>;
   /** Modes whose chrome wears the app theme. */
   appThemeScope: Set<string>;
+  /** Modes that draw their own frame: no tab bar, no app rail, and the global
+   * action bar as its floating dot (solo, the desktop). */
+  ownsChrome: Set<string>;
 }
 
 /**
@@ -130,4 +133,17 @@ export function placementHasAppThemeScope(
   id: string,
 ): boolean {
   return caps?.appThemeScope.has(id) ?? false;
+}
+
+/**
+ * Whether surface mode `id` draws its own frame — the layout then mounts no tab
+ * bar and no app rail, and the global action bar floats instead of docking into
+ * the (absent) tab bar. Same value-in shape as the predicates above. `null`
+ * (not registered yet) is `false`.
+ */
+export function placementOwnsChrome(
+  caps: PlacementCapabilities | null,
+  id: string,
+): boolean {
+  return caps?.ownsChrome.has(id) ?? false;
 }

@@ -74,7 +74,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
   - Imported by: 189 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×62
+    - `apps` ×63
     - `ui` ×19
     - `conversations` ×18
     - `debug` ×17
@@ -86,9 +86,9 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `review` ×4
     - `auth` ×3
     - `active-data` ×2
-    - `apps-core` ×2
     - `integrations` ×2
     - `map` ×2
+    - `apps-core/layout`
     - `backup`
     - `code-explorer/commit-detail`
     - `config_v2/settings`

@@ -150,6 +150,12 @@ export interface PlacementDef {
   themeScope?: "app";
   /** `+` reads as "new window" while the surface is in this mode (windows mode). */
   newTabFollows?: boolean;
+  /**
+   * This mode draws its own frame (solo, the desktop): the layout mounts no tab
+   * bar and no app rail while it is active, and the global action bar floats as
+   * its dot instead of docking into the absent tab bar.
+   */
+  ownsChrome?: boolean;
 }
 
 /**

@@ -1,6 +1,17 @@
 import { stripBasePath } from "@plugins/primitives/plugins/pane/web";
 import type { ActiveApp } from "./use-active-app";
 
+/**
+ * Whether an app entry opens as a tab (it has a `component`), as opposed to a
+ * surface-mode app (the desktop), which switches the surface and never owns a
+ * tab or a URL. The one predicate every tab-side reader filters on.
+ */
+export function isTabApp(
+  entry: ActiveApp,
+): entry is ActiveApp & { component: NonNullable<ActiveApp["component"]> } {
+  return entry.component !== undefined;
+}
+
 /** Path-prefix match: an app owns `pathname` if it equals or parents it. */
 function appMatchesPath(appPath: string, pathname: string): boolean {
   return pathname === appPath || pathname.startsWith(appPath + "/");
@@ -17,9 +28,9 @@ export function matchAppForPath(
   pathname: string,
   apps: readonly ActiveApp[],
 ): ActiveApp | undefined {
-  const sorted = [...apps].sort(
-    (a, b) => b.app.basePath.length - a.app.basePath.length,
-  );
+  const sorted = apps
+    .filter(isTabApp)
+    .sort((a, b) => b.app.basePath.length - a.app.basePath.length);
   return sorted.find((entry) => appMatchesPath(entry.app.basePath, pathname));
 }
 

@@ -43,12 +43,28 @@ export interface TabBarContribution {
 }
 
 /**
+ * What picking an app does — exactly one of two, so an entry can never both
+ * open a tab and switch the surface:
+ *
+ *  - `component` — the app's layout: picking it opens (or swaps in) a tab
+ *    showing it, at its base path. Every regular app.
+ *  - `surfaceMode` — a surface-mode app (the desktop): picking it switches the
+ *    surface to that `Surface.Placement` id. It never becomes a tab and owns no
+ *    URL — {@link isTabApp} keeps it out of URL matching and the tab set — but
+ *    it is still an app: listed in the launchers, and given its own `app:<id>`
+ *    theme and config scope like any other.
+ */
+export type AppLaunch =
+  | { component: ComponentType; surfaceMode?: never }
+  | { surfaceMode: string; component?: never };
+
+/**
  * One installed app, as its shell authors it. The app's identity — id, base
  * path, display name, icon key — is authored ONCE via `defineApp` in the
  * shell's `core/`, and handed here whole as {@link AppRef}. The contribution
  * restates none of it, so the two can never disagree.
  */
-export interface AppEntry {
+interface AppEntryBase {
   /** The app itself (`defineApp(…)` from the shell's `core/app.ts`). */
   app: AppRef;
   /** The app's canonical serializable icon descriptor (see {@link AppIcon}). */
@@ -62,13 +78,13 @@ export interface AppEntry {
    * prints {@link AppRef.name}. For an app whose sidebar is named after what it
    * holds rather than what it is ("Etienne's pages"). */
   brandName?: ComponentType;
-  component: ComponentType;
-  onClick?: () => void;
   /** Optional overlay rendered on the app's rail icon (e.g. an attention
    * dot). Painted at the icon's top-right corner; render `null` when there's
    * nothing to surface so the corner stays empty. */
   badge?: ComponentType<{ className?: string }>;
 }
+
+export type AppEntry = AppEntryBase & AppLaunch;
 
 const appSlot = defineRenderSlot<AppEntry>({
   docLabel: (p) => p.app.name,

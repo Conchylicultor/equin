@@ -27,8 +27,8 @@
   - Exports (values): `colorPaletteGroup`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Tokens used by: 475 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×100
+  - Tokens used by: 480 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×107
     - `conversations` ×84
     - `primitives` ×75
     - `debug` ×33
@@ -38,10 +38,10 @@
     - `tasks` ×14
     - `fields` ×12
     - `reports` ×12
-    - `apps-core` ×7
     - `active-data` ×6
     - `build` ×6
     - `stats` ×6
+    - `apps-core` ×5
     - `review` ×5
     - `auth` ×4
     - `infra` ×4

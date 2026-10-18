@@ -94,23 +94,20 @@ tab bar, which an embed does not paint.
     - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
     - `ActionBar.Item` → `ViewOptionsButton`
     - `ConfigV2.WebRegister` "config"
-  - Uses:
-    - `apps-core.Apps`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps-core/tabs` ×3
+    - `config_v2` ×2
+    - `primitives/css/ui-kit` ×2
+    - `primitives/overlay/floating-action` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
-    - `apps-core/tabs.useSurfaceMode`
-    - `config_v2.ConfigV2`
-    - `config_v2.useConfig`
+    - `apps-core.Apps`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Stack`
     - `primitives/css/theme-boundary.Theme`
-    - `primitives/css/ui-kit.ControlSize`
-    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/embed.isChromelessDocument`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/icon-button.IconButton`
-    - `primitives/overlay/floating-action.FloatingAction`
-    - `primitives/overlay/floating-action.FloatingActionFadeIn`
     - `primitives/slot-render.SlotItemLayout`
     - `shell/action-bar.ActionBar`
     - `shell/health-report.HealthReportButton`

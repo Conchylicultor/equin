@@ -23,13 +23,15 @@ import { savePersistedTabs, type PersistedTabs } from "../internal/tabs-store";
 // `unresolved` — exactly the cold-boot "deferred plugin not loaded yet" case the
 // four-branch logic exists for.
 
-// bootTabs only reads each contribution's `.id` and its `AppRef`'s `.basePath`
-// (the app is handed to `Apps.App` whole, so the base path lives on `.app`);
-// cast a plain fixture to the sealed contribution list type.
+// bootTabs only reads each contribution's `.id`, its `AppRef`'s `.basePath`
+// (the app is handed to `Apps.App` whole, so the base path lives on `.app`)
+// and whether it is a tab app (`component`); cast a plain fixture to the
+// sealed contribution list type.
 type AppList = Parameters<typeof bootTabs>[0];
 const fakeApp = (id: string, basePath: string) => ({
   id,
   app: { id, name: id, basePath },
+  component: () => null,
 });
 const APPS = [fakeApp("pages", "/pages")] as unknown as AppList;
 

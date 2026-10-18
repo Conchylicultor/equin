@@ -534,8 +534,8 @@ per-composition scoping:
     - `withOverrideLegend`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 105 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×23
+  - Imported by: 109 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×29
     - `debug` ×14
     - `backup` ×13
     - `conversations` ×13
@@ -544,7 +544,6 @@ per-composition scoping:
     - `tasks` ×4
     - `config_v2` ×3
     - `primitives` ×3
-    - `apps-core` ×2
     - `infra` ×2
     - `stats` ×2
     - `build`

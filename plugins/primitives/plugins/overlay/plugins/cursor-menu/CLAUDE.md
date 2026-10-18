@@ -29,8 +29,10 @@ intact, and `DropdownMenuContent` already self-portals + theme-forwards.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
-    - `apps-core/surface/floating`
-    - `apps-core/surface/floating/wallpaper`
+    - `apps/desktop/launcher`
+    - `apps/desktop/shelf`
+    - `apps/desktop/wallpaper`
+    - `apps/desktop/windows`
 - Exemptions:
   - Exempts itself from: `layout/no-adhoc-layout` — `.` (sanctioned)
 

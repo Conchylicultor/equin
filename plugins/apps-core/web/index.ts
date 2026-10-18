@@ -4,6 +4,7 @@ import { Apps } from "./slots";
 export {
   Apps,
   type AppEntry,
+  type AppLaunch,
   type RailFramingContribution,
   type SurfaceContribution,
   type TabBarContribution,
@@ -15,6 +16,7 @@ export {
   type ActiveApp,
 } from "./internal/use-active-app";
 export {
+  isTabApp,
   matchAppForPath,
   resolveAppForPath,
   type ResolvedApp,

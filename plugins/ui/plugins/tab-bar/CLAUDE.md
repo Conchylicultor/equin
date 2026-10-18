@@ -63,7 +63,6 @@ needing a DOM handle wraps `<Tab>` in its own element.
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
   - Imported by:
-    - `apps-core/surface/floating`
     - `apps-core/tab-bar`
     - `ui/tab-bar/chip`
     - `ui/tab-bar/connected`

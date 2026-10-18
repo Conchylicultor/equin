@@ -120,8 +120,10 @@ would empty a slot somebody had just filled.
 - Description: Installed-sink primitive: defineInstallSink declares the module-level slot a higher layer installs an implementation into and a lower layer calls (the navigator, the history adapter, the overlay fallback). Presence is answerable from render ONLY through the subscribed useInstalled(), so a late install re-renders whoever asked early; the imperative sample is named peek… so install-sink/no-render-phase-peek can keep it out of render.
 - Cross-plugin:
   - Imported by:
-    - `apps-core/surface/floating`
     - `apps-core/tabs`
+    - `apps/desktop/launcher`
+    - `apps/desktop/switcher`
+    - `apps/desktop/windows`
     - `primitives/overlay/overlay-boundary`
     - `primitives/pane`
 - Web:

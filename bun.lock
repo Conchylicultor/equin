@@ -182,26 +182,6 @@
       "name": "@singularity/plugin-apps-core-surface-docked",
       "version": "0.0.1",
     },
-    "plugins/apps-core/plugins/surface/plugins/floating": {
-      "name": "@singularity/plugin-apps-core-surface-floating",
-      "version": "0.0.1",
-    },
-    "plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper": {
-      "name": "@singularity/plugin-apps-core-surface-floating-wallpaper",
-      "version": "0.0.1",
-    },
-    "plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/from-url": {
-      "name": "@singularity/plugin-apps-core-surface-floating-wallpaper-from-url",
-      "version": "0.0.1",
-    },
-    "plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/openverse": {
-      "name": "@singularity/plugin-apps-core-surface-floating-wallpaper-openverse",
-      "version": "0.0.1",
-    },
-    "plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/upload": {
-      "name": "@singularity/plugin-apps-core-surface-floating-wallpaper-upload",
-      "version": "0.0.1",
-    },
     "plugins/apps-core/plugins/surface/plugins/solo": {
       "name": "@singularity/plugin-apps-core-surface-solo",
       "version": "0.0.1",
@@ -410,6 +390,50 @@
     },
     "plugins/apps/plugins/deploy/plugins/ssh-setup/plugins/hetzner": {
       "name": "@singularity/plugin-apps-deploy-ssh-setup-hetzner",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/desktop": {
+      "name": "@singularity/plugin-apps-desktop",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/desktop/plugins/launcher": {
+      "name": "@singularity/plugin-apps-desktop-launcher",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/desktop/plugins/shelf": {
+      "name": "@singularity/plugin-apps-desktop-shelf",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/desktop/plugins/shell": {
+      "name": "@singularity/plugin-apps-desktop-shell",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/desktop/plugins/switcher": {
+      "name": "@singularity/plugin-apps-desktop-switcher",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/desktop/plugins/wallpaper": {
+      "name": "@singularity/plugin-apps-desktop-wallpaper",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/desktop/plugins/wallpaper/plugins/builtin": {
+      "name": "@singularity/plugin-apps-desktop-wallpaper-builtin",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/desktop/plugins/wallpaper/plugins/from-url": {
+      "name": "@singularity/plugin-apps-desktop-wallpaper-from-url",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/desktop/plugins/wallpaper/plugins/openverse": {
+      "name": "@singularity/plugin-apps-desktop-wallpaper-openverse",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/desktop/plugins/wallpaper/plugins/upload": {
+      "name": "@singularity/plugin-apps-desktop-wallpaper-upload",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/desktop/plugins/windows": {
+      "name": "@singularity/plugin-apps-desktop-windows",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/events": {
@@ -6844,16 +6868,6 @@
 
     "@singularity/plugin-apps-core-surface-docked": ["@singularity/plugin-apps-core-surface-docked@workspace:plugins/apps-core/plugins/surface/plugins/docked"],
 
-    "@singularity/plugin-apps-core-surface-floating": ["@singularity/plugin-apps-core-surface-floating@workspace:plugins/apps-core/plugins/surface/plugins/floating"],
-
-    "@singularity/plugin-apps-core-surface-floating-wallpaper": ["@singularity/plugin-apps-core-surface-floating-wallpaper@workspace:plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper"],
-
-    "@singularity/plugin-apps-core-surface-floating-wallpaper-from-url": ["@singularity/plugin-apps-core-surface-floating-wallpaper-from-url@workspace:plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/from-url"],
-
-    "@singularity/plugin-apps-core-surface-floating-wallpaper-openverse": ["@singularity/plugin-apps-core-surface-floating-wallpaper-openverse@workspace:plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/openverse"],
-
-    "@singularity/plugin-apps-core-surface-floating-wallpaper-upload": ["@singularity/plugin-apps-core-surface-floating-wallpaper-upload@workspace:plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/upload"],
-
     "@singularity/plugin-apps-core-surface-solo": ["@singularity/plugin-apps-core-surface-solo@workspace:plugins/apps-core/plugins/surface/plugins/solo"],
 
     "@singularity/plugin-apps-core-tab-bar": ["@singularity/plugin-apps-core-tab-bar@workspace:plugins/apps-core/plugins/tab-bar"],
@@ -6907,6 +6921,28 @@
     "@singularity/plugin-apps-deploy-ssh-setup": ["@singularity/plugin-apps-deploy-ssh-setup@workspace:plugins/apps/plugins/deploy/plugins/ssh-setup"],
 
     "@singularity/plugin-apps-deploy-ssh-setup-hetzner": ["@singularity/plugin-apps-deploy-ssh-setup-hetzner@workspace:plugins/apps/plugins/deploy/plugins/ssh-setup/plugins/hetzner"],
+
+    "@singularity/plugin-apps-desktop": ["@singularity/plugin-apps-desktop@workspace:plugins/apps/plugins/desktop"],
+
+    "@singularity/plugin-apps-desktop-launcher": ["@singularity/plugin-apps-desktop-launcher@workspace:plugins/apps/plugins/desktop/plugins/launcher"],
+
+    "@singularity/plugin-apps-desktop-shelf": ["@singularity/plugin-apps-desktop-shelf@workspace:plugins/apps/plugins/desktop/plugins/shelf"],
+
+    "@singularity/plugin-apps-desktop-shell": ["@singularity/plugin-apps-desktop-shell@workspace:plugins/apps/plugins/desktop/plugins/shell"],
+
+    "@singularity/plugin-apps-desktop-switcher": ["@singularity/plugin-apps-desktop-switcher@workspace:plugins/apps/plugins/desktop/plugins/switcher"],
+
+    "@singularity/plugin-apps-desktop-wallpaper": ["@singularity/plugin-apps-desktop-wallpaper@workspace:plugins/apps/plugins/desktop/plugins/wallpaper"],
+
+    "@singularity/plugin-apps-desktop-wallpaper-builtin": ["@singularity/plugin-apps-desktop-wallpaper-builtin@workspace:plugins/apps/plugins/desktop/plugins/wallpaper/plugins/builtin"],
+
+    "@singularity/plugin-apps-desktop-wallpaper-from-url": ["@singularity/plugin-apps-desktop-wallpaper-from-url@workspace:plugins/apps/plugins/desktop/plugins/wallpaper/plugins/from-url"],
+
+    "@singularity/plugin-apps-desktop-wallpaper-openverse": ["@singularity/plugin-apps-desktop-wallpaper-openverse@workspace:plugins/apps/plugins/desktop/plugins/wallpaper/plugins/openverse"],
+
+    "@singularity/plugin-apps-desktop-wallpaper-upload": ["@singularity/plugin-apps-desktop-wallpaper-upload@workspace:plugins/apps/plugins/desktop/plugins/wallpaper/plugins/upload"],
+
+    "@singularity/plugin-apps-desktop-windows": ["@singularity/plugin-apps-desktop-windows@workspace:plugins/apps/plugins/desktop/plugins/windows"],
 
     "@singularity/plugin-apps-events": ["@singularity/plugin-apps-events@workspace:plugins/apps/plugins/events"],
 

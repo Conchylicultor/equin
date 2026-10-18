@@ -1,4 +1,4 @@
-// @hash 8bebefceab06
+// @hash 1eb3b3de4785
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -16,7 +16,6 @@
     "ui.tab-bar.customizer:tab-bar",
     "ui.tree-disclosure:tree-disclosure",
     "ui.breadcrumb-separator:breadcrumb-separator",
-    "apps-core.surface.floating:floating-titlebar",
     "apps-core.app-rail-framing:app-rail-framing"
   ]
 }

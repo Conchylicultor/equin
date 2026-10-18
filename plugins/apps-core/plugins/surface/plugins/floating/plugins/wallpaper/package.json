@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-core-surface-floating-wallpaper",
-  "description": "Floating desktop wallpaper: provider registry, picker, context menu, store, and global config.",
-  "private": true,
-  "version": "0.0.1"
-}

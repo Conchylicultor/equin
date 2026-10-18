@@ -193,8 +193,8 @@ the decision table.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
-    - `apps-core/surface/floating`
     - `apps-core/tabs`
+    - `apps/desktop/windows`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/scope/plugins/app-instance/web/testing`
     - `resetAppInstanceForTests` — Drop the memoized generation (and its `pageshow` listener) between tests.

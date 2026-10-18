@@ -64,8 +64,8 @@ follow.
   - Uses tokens:
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
-  - Tokens used by: 223 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×55
+  - Tokens used by: 226 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×59
     - `primitives` ×38
     - `conversations` ×37
     - `debug` ×16
@@ -78,11 +78,11 @@ follow.
     - `auth` ×3
     - `build` ×3
     - `stats` ×3
-    - `apps-core` ×2
     - `code-explorer` ×2
     - `config_v2` ×2
     - `infra` ×2
     - `shell` ×2
+    - `apps-core/app-launcher`
     - `backup/runs-arm`
     - `framework/web-core`
     - `integrations/youtube`

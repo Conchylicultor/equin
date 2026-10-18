@@ -39,12 +39,11 @@ remove button — the user is editing that row. The reveal ends when focus leave
     - `useHoverReveal`
 - Cross-plugin:
   - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×9
+    - `apps` ×10
     - `page` ×8
     - `primitives` ×7
     - `ui` ×4
     - `conversations` ×2
-    - `apps-core/surface/floating`
     - `integrations/youtube`
     - `layouts/miller`
     - `tasks/task-description`

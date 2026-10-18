@@ -1,4 +1,4 @@
-// @hash 8bebefceab06
+// @hash 1eb3b3de4785
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,7 +8,6 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps-core.app-rail-framing:app-rail-framing",
-    "apps-core.surface.floating:floating-titlebar",
     "ui.breadcrumb-separator:breadcrumb-separator",
     "ui.segmented-progress-bar:segmented-progress-bar",
     "ui.sidebar-framing:sidebar-framing",

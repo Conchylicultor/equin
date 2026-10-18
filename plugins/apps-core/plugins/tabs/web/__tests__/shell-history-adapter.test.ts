@@ -19,13 +19,22 @@ import type { Tab } from "../internal/tabs-store";
 // tab liveness/focus. This suite pins the decision logic itself.
 
 /**
- * Two fake registered apps; `resolveAppForPath` reads only the contribution's
- * `.id` and its `AppRef`'s `.basePath` (the app is handed to `Apps.App` whole,
- * so the base path lives on `.app`, not on the contribution).
+ * Two fake registered tab apps; `resolveAppForPath` reads only the
+ * contribution's `.id`, its `AppRef`'s `.basePath` (the app is handed to
+ * `Apps.App` whole, so the base path lives on `.app`, not on the contribution)
+ * and its `component` (only a tab app owns a URL).
  */
 const APPS = [
-  { id: "pages", app: { id: "pages", name: "Pages", basePath: "/pages" } },
-  { id: "story", app: { id: "story", name: "Story", basePath: "/story" } },
+  {
+    id: "pages",
+    app: { id: "pages", name: "Pages", basePath: "/pages" },
+    component: () => null,
+  },
+  {
+    id: "story",
+    app: { id: "story", name: "Story", basePath: "/story" },
+    component: () => null,
+  },
 ] as unknown as ActiveApp[];
 
 /** A fake open tab; the adapter reads only `.tabId` / `.appId` (never `.store`). */

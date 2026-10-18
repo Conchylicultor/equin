@@ -1,0 +1,17 @@
+// @hash 775ef7b8811c
+{
+  "state": {
+    // Allowed values: "default", "image", "builtin"
+    "kind": "builtin",
+    "id": "elarun",
+    "version": 0,
+    "mime": "",
+    "attribution": {
+      "creator": "",
+      "license": "",
+      "licenseUrl": "",
+      "sourceUrl": "",
+      "title": ""
+    }
+  }
+}

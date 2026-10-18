@@ -53,26 +53,15 @@ export function ownerForPluginPath(pluginPath: string): string {
 
 /**
  * The app whose subtree `pluginPath` sits in — `apps/plugins/<x>` or anything
- * below it, or a meta-app root (or anything below it) — or `null` when the
- * plugin belongs to no app.
+ * below it — or `null` when the plugin belongs to no app.
  */
-export function appOfPluginPath(
-  pluginPath: string,
-  metaAppRoots: Readonly<Record<string, string>>,
-): string | null {
-  const regular = /^apps\/plugins\/([^/]+)(?:\/|$)/.exec(pluginPath);
-  if (regular) return regular[1]!;
-  for (const [app, root] of Object.entries(metaAppRoots))
-    if (pluginPath === root || pluginPath.startsWith(`${root}/`)) return app;
-  return null;
+export function appOfPluginPath(pluginPath: string): string | null {
+  return /^apps\/plugins\/([^/]+)(?:\/|$)/.exec(pluginPath)?.[1] ?? null;
 }
 
 /** The plugin path that must declare `apps/<app>`. */
-export function appRootPluginPath(
-  app: string,
-  metaAppRoots: Readonly<Record<string, string>>,
-): string {
-  return metaAppRoots[app] ?? `apps/plugins/${app}`;
+export function appRootPluginPath(app: string): string {
+  return `apps/plugins/${app}`;
 }
 
 /** `file-explorer` → `fileExplorerDir`, the conventional name of an app's dir constant. */
@@ -80,11 +69,8 @@ function appDirConst(app: string): string {
   return `${app.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase())}Dir`;
 }
 
-function appDataDirsFile(
-  app: string,
-  metaAppRoots: Readonly<Record<string, string>>,
-): string {
-  return `plugins/${appRootPluginPath(app, metaAppRoots)}/data-dirs/index.ts`;
+function appDataDirsFile(app: string): string {
+  return `plugins/${appRootPluginPath(app)}/data-dirs/index.ts`;
 }
 
 /**
@@ -98,7 +84,6 @@ function appDataDirsFile(
  */
 export function evaluateDataDirDeclarations(
   declarations: readonly DataDirDeclaration[],
-  metaAppRoots: Readonly<Record<string, string>>,
 ): string[] {
   const offenders: string[] = [];
   const sorted = [...declarations].sort(
@@ -110,31 +95,30 @@ export function evaluateDataDirDeclarations(
 
   for (const { pluginPath, spec } of sorted) {
     const key = `${spec.kind}/${spec.name}`;
-    const inApp = appOfPluginPath(pluginPath, metaAppRoots);
+    const inApp = appOfPluginPath(pluginPath);
 
     // ── A. An app's dir is declared by that app's root, and nobody else. ──
     if (spec.kind === "apps") {
-      const expected = appRootPluginPath(spec.name, metaAppRoots);
+      const expected = appRootPluginPath(spec.name);
       if (pluginPath !== expected) {
         if (inApp !== null && inApp !== spec.name) {
           offenders.push(
             `${key} is declared by ${pluginPath}, which is inside app "${inApp}" — an app owns exactly ONE data dir, ` +
               `so everything ${inApp} keeps durably goes inside apps/${inApp}. Delete this declaration and use ` +
-              `${appDirConst(inApp)}.subdir("${spec.name}") from ${appDataDirsFile(inApp, metaAppRoots)} instead.`,
+              `${appDirConst(inApp)}.subdir("${spec.name}") from ${appDataDirsFile(inApp)} instead.`,
           );
         } else if (inApp === spec.name) {
           offenders.push(
             `${key} is declared by ${pluginPath}, a sub-plugin of app "${spec.name}". An app's one data dir is declared ` +
-              `at the app's ROOT: move the defineAppDataDir call to ${appDataDirsFile(spec.name, metaAppRoots)} and ` +
+              `at the app's ROOT: move the defineAppDataDir call to ${appDataDirsFile(spec.name)} and ` +
               `import it from there (a sub-plugin that needs its own space takes ${appDirConst(spec.name)}.subdir("<area>")).`,
           );
         } else {
           offenders.push(
             `${key} is declared by ${pluginPath}, but an apps/<app> dir is declared only by its app's root plugin — ` +
-              `${appDataDirsFile(spec.name, metaAppRoots)}, via defineAppDataDir(<app>, …). If "${spec.name}" is not an ` +
+              `${appDataDirsFile(spec.name)}, via defineAppDataDir(<app>, …). If "${spec.name}" is not an ` +
               `app, this is not app content: declare it with defineDataDir under state/ (the only copy of something) or ` +
-              `cache/ (re-derivable). If it is a meta-app whose root is not apps/plugins/${spec.name}, add it to ` +
-              `META_APP_ROOTS in plugins/infra/plugins/paths/core/internal/data-dir.ts (a reviewed edit).`,
+              `cache/ (re-derivable).`,
           );
         }
       }
@@ -153,7 +137,7 @@ export function evaluateDataDirDeclarations(
       offenders.push(
         `${key} (declared by ${pluginPath}) is durable data of app "${inApp}" (reclaim: never), and durable data of ` +
           `app ${inApp} belongs in apps/${inApp} — delete this declaration and use ` +
-          `${appDirConst(inApp)}.subdir("${spec.name}") from ${appDataDirsFile(inApp, metaAppRoots)}. ` +
+          `${appDirConst(inApp)}.subdir("${spec.name}") from ${appDataDirsFile(inApp)}. ` +
           `(Data the app can re-derive may stay outside: declare it under cache/ with a reclaimable policy.)`,
       );
     }

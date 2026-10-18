@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-core-surface-floating-wallpaper-upload",
-  "description": "Local file upload source for the desktop wallpaper picker.",
-  "private": true,
-  "version": "0.0.1"
-}

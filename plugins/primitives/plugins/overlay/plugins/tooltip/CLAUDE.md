@@ -33,6 +33,7 @@
     - `ui/tokens/type-scale --line-height-2xs`
   - Imported by:
     - `apps/chord/trainer`
+    - `apps/desktop/launcher`
     - `apps/prototypes/present`
     - `page/formatting/bold`
     - `page/formatting/code`

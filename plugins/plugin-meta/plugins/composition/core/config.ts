@@ -372,7 +372,7 @@ export const compositionsConfig = defineConfig({
           "apps-core.app-rail-framing.rail",
           "apps-core.surface",
           "apps-core.surface.docked",
-          "apps-core.surface.floating",
+          "apps.desktop",
           "apps-core.surface.solo",
         ]),
       ],

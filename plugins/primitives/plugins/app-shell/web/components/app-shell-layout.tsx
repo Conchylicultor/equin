@@ -31,7 +31,9 @@ import { AppShell } from "../slots";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { SidebarItem } from "./sidebar-nav-item";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { AppShellBrand, useHasAppShellBrand } from "./app-shell-brand";
+import { useRecordSidebarDrawn } from "../internal/sidebar-presence";
 
 /**
  * Where a nav entry goes, as DATA: a pane and its params, opened as the root
@@ -246,6 +248,11 @@ export function AppShellLayout({
   // form takes the leading edge of the top chrome — the spot the sidebar toggle
   // would otherwise hold. No contribution → nothing, and no empty header.
   const hasBrand = useHasAppShellBrand();
+  // Publish whether this surface draws a sidebar (see `useSidebarDrawnOn`):
+  // chrome outside the surface — a desktop window's titlebar — styles itself
+  // after it.
+  const surfaceId = useSurfaceTabId();
+  useRecordSidebarDrawn(sidebarSlot ? surfaceId : undefined);
 
   const toolbar = hasToolbar && toolbarSlot && (
     <Bar tier="chrome">

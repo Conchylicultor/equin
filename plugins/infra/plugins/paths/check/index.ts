@@ -16,7 +16,6 @@ import { checkoutWorktreeName } from "../core/internal/paths";
 import { dataDirsEntries } from "../core/data-dirs.generated";
 import {
   DATA_DIR_KINDS,
-  META_APP_ROOTS,
   dataRoot,
   getDataDirs,
   isDataDir,
@@ -1043,9 +1042,7 @@ const appDataDirsCheck: Check = {
         declarations.push({ pluginPath: entry.pluginPath, spec: item.spec });
       }
     }
-    offenders.push(
-      ...evaluateDataDirDeclarations(declarations, META_APP_ROOTS),
-    );
+    offenders.push(...evaluateDataDirDeclarations(declarations));
 
     const matches = await grepCode({
       root: await getWorktreeRoot(),
@@ -1064,8 +1061,7 @@ const appDataDirsCheck: Check = {
       hint:
         "Each app owns exactly ONE data dir, `apps/<app>/`: declared once with " +
         "`defineAppDataDir(<app>App, { owner, description })` in the app's root " +
-        "`plugins/apps/plugins/<app>/data-dirs/index.ts` (a meta-app's root is its META_APP_ROOTS entry, " +
-        "e.g. desktop → plugins/apps-core). Everything the app and its sub-plugins keep durably goes " +
+        "`plugins/apps/plugins/<app>/data-dirs/index.ts`. Everything the app and its sub-plugins keep durably goes " +
         'inside it: a sub-plugin imports that declaration and takes an area with `.subdir("<area>")`. ' +
         "Re-derivable output stays outside, under cache/. Every other directory is " +
         "`defineDataDir({ kind, name, owner, description, reclaim })` in the owning plugin's own " +

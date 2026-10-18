@@ -2542,6 +2542,421 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/ssh-setup.SshProvider`
                   - `primitives/css/text.Text`
                   - `primitives/setup-steps.StepNote`
+    - **`desktop`** — Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
+      - Plugins:
+        - **`launcher`** — The desktop's ⌘K launcher: a centred dialog over the windows listing every app as a grid (an empty query) or the matching apps and window commands (a query), with arrow-key selection, Shift+Enter for a new window and a right-click menu to keep an app in the dock. Exposes open / close / toggle for the shelf's launcher button.
+          - Web:
+            - Contributes:
+              - `Desktop.Overlay` "Desktop overlay" → `LauncherOverlay`
+              - `Shortcuts.Shortcut` "desktop.launcher (mod+k)"
+            - Uses: 46 symbols — full list in [`plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/launcher/REFERENCE.md)
+              - `apps/desktop/windows` ×11
+              - `primitives/css/ui-kit` ×3
+              - `primitives/shortcuts` ×3
+              - `apps-core/tabs` ×2
+              - `apps-core` ×2
+              - `apps/desktop/shell` ×2
+              - `config_v2` ×2
+              - `primitives/css/fill` ×2
+              - `reorder` ×2
+              - `primitives/css/clip.Clip`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/grid.Grid`
+              - `primitives/css/layer.Layer`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/surface.Surface`
+              - `primitives/css/text.Text`
+              - `primitives/css/yield.yieldClass`
+              - `primitives/dom/scroll-reveal.useRevealOnActive`
+              - `primitives/live-state.foldResource`
+              - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
+              - `primitives/overlay/tooltip.Kbd`
+              - `primitives/scope/install-sink.defineInstallSink`
+              - `ui/icons.Icon`
+            - Exports (values):
+              - `closeLauncher`
+              - `openLauncher`
+              - `toggleLauncher`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --faint-foreground`
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --muted`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --popover`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/density --space-lg`
+              - `ui/tokens/density --space-md`
+              - `ui/tokens/density --space-sm`
+              - `ui/tokens/density --space-xs`
+              - `ui/tokens/shadow --shadow`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
+              - `ui/tokens/type-scale --font-scale`
+              - `ui/tokens/type-scale --font-size-subheading`
+              - `ui/tokens/type-scale --font-weight-medium`
+              - `ui/tokens/type-scale --font-weight-normal`
+              - `ui/tokens/type-scale --font-weight-semibold`
+              - `ui/tokens/type-scale --line-height-subheading`
+            - Imported by: `apps/desktop/shelf`
+        - **`shelf`** — The desktop's bottom shelf: a centred dock with the launcher button, the pinned apps and the running ones (grouped per app, with window pips, hover thumbnails and a right-click app menu), and the tray — the pager's mini-desktops with their desktop previews, the overview button and the clock. Reserves the desktop's bottom work area and is where windows minimise to.
+          - Web:
+            - Contributes: `Desktop.Overlay` "Desktop overlay" → `Shelf`
+            - Uses: 51 symbols — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
+              - `apps/desktop/windows` ×24
+              - `primitives/css/ui-kit` ×4
+              - `apps-core` ×3
+              - `config_v2` ×2
+              - `primitives/dom/element-size` ×2
+              - `primitives/hover-reveal` ×2
+              - `primitives/overlay/cursor-menu` ×2
+              - `apps-core/tabs.useTabs`
+              - `apps/desktop/launcher.toggleLauncher`
+              - `apps/desktop/shell.DesktopAppTile`
+              - `primitives/css/center.Center`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/layer.Layer`
+              - `primitives/css/line.Line`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/text.Text`
+              - `primitives/latest-ref.useLatestRef`
+              - `ui/icons.Icon`
+          - Cross-plugin:
+            - Uses tokens: 27 vars — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
+              - `ui/tokens/color-palette` ×12
+              - `ui/tokens/type-scale` ×10
+              - `ui/tokens/density` ×2
+              - `ui/tokens/shape` ×2
+              - `ui/tokens/shadow --shadow`
+        - **`shell`** — App shell for the Desktop: its identity, its entry in the app launchers (which switches the surface to the desktop mode instead of opening a tab) its own theme, which the desktop app selects, and the desktop's global shelf config (the apps kept in the dock). Desktop shell, server side: registers the desktop's global shelf config (the apps kept in the dock).
+          - Web:
+            - Contributes:
+              - `Apps.App` "Desktop"
+              - `ThemeEngine.Theme` "Desktop"
+              - `ConfigV2.WebRegister` "shelf"
+            - Uses:
+              - `apps-core.Apps`
+              - `apps-core/app-icon.AppIconView`
+              - `apps-core/tabs.getSurfaceMode`
+              - `apps-core/tabs.useSurfaceMode`
+              - `config_v2.ConfigV2`
+              - `primitives/css/center.Center`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/theme-boundary.Theme`
+              - `primitives/css/ui-kit.appThemeScope`
+              - `primitives/css/ui-kit.cn`
+              - `ui/theme-engine.ThemeEngine`
+            - Exports (values):
+              - `DesktopAppTile`
+              - `desktopThemeScope`
+              - `isDesktopActive`
+              - `useDesktopActive`
+          - Server:
+            - Contributes: `ConfigV2.Register` "shelf"
+            - Uses: `config_v2.ConfigV2`
+          - Core:
+            - Uses:
+              - `config_v2.defineConfig`
+              - `fields/string-list/config.stringListField`
+              - `primitives/pane.defineApp`
+            - Exports (values):
+              - `DESKTOP_PLACEMENT_ID`
+              - `desktopApp`
+              - `shelfConfig`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --popover`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/shadow --shadow`
+              - `ui/tokens/shadow --shadow-popover`
+              - `ui/tokens/shadow --shadow-xl`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
+            - Imported by:
+              - `apps/desktop/launcher`
+              - `apps/desktop/shelf`
+              - `apps/desktop/switcher`
+              - `apps/desktop/windows`
+        - **`switcher`** — The desktop's window switcher: ⌘` opens a panel of snapshots of the active desktop's windows, front-most first; each further press steps the selection, releasing the modifier brings the selected window forward (restoring it if minimised), Esc cancels and a click picks.
+          - Web:
+            - Contributes:
+              - `Desktop.Overlay` "Desktop overlay" → `SwitcherOverlay`
+              - `Shortcuts.Shortcut` "desktop.switcher-next (mod+`)"
+              - `Shortcuts.Shortcut` "desktop.switcher-prev (mod+shift+`)"
+              - `Shortcuts.Shortcut` "desktop.switcher-prev-tilde (mod+shift+~)"
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/desktop/plugins/switcher/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/switcher/REFERENCE.md)
+              - `apps/desktop/windows` ×8
+              - `apps/desktop/shell` ×2
+              - `apps-core/tabs.useTabs`
+              - `apps-core.Apps`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/layer.Layer`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/surface.Surface`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/latest-ref.useLatestRef`
+              - `primitives/scope/install-sink.defineInstallSink`
+              - `primitives/shortcuts.defineShortcut`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --popover`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/density --space-lg`
+              - `ui/tokens/density --space-md`
+              - `ui/tokens/density --space-sm`
+              - `ui/tokens/density --space-xs`
+              - `ui/tokens/shadow --shadow`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
+              - `ui/tokens/type-scale --font-weight-semibold`
+        - **`wallpaper`** — Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper: provider registry, search/import/upload endpoints, the machine-global wallpaper store, and the global wallpaper config registration.
+          - Web:
+            - Slots: `Wallpaper.Provider`
+            - Slot contributors:
+              - `Wallpaper.Provider` ← `apps.desktop.wallpaper.builtin`
+              - `Wallpaper.Provider` ← `apps.desktop.wallpaper.from-url`
+              - `Wallpaper.Provider` ← `apps.desktop.wallpaper.openverse`
+              - `Wallpaper.Provider` ← `apps.desktop.wallpaper.upload`
+            - Contributes: `ConfigV2.WebRegister` "wallpaper"
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/desktop/plugins/wallpaper/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/wallpaper/REFERENCE.md)
+              - `config_v2` ×3
+              - `infra/endpoints` ×3
+              - `primitives/css/ui-kit` ×3
+              - `primitives/overlay/cursor-menu` ×2
+              - `primitives/css/grid.Grid`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/loading.Loading`
+              - `primitives/overlay/imperative-dialog.openDialog`
+              - `primitives/search.SearchInput`
+              - `ui/icons.Icon`
+            - Exports (types): `WallpaperCandidate`
+            - Exports (values):
+              - `builtinWallpaperUrl`
+              - `DesktopContextMenu`
+              - `openWallpaperPicker`
+              - `Wallpaper`
+              - `WallpaperAttribution`
+              - `WallpaperSearchPanel`
+          - Server:
+            - Contributes: `ConfigV2.Register` "wallpaper"
+            - Uses:
+              - `config_v2.ConfigV2`
+              - `infra/endpoints.HttpError`
+              - `infra/endpoints.implement`
+              - `infra/safe-fetch.parsePublicUrl`
+              - `infra/safe-fetch.safeFetch`
+              - `infra/safe-fetch.SsrfError`
+            - Exports (types): `WallpaperSearchProvider`
+            - Exports (values):
+              - `defineWallpaperProvider`
+              - `getWallpaperProvider`
+            - Routes:
+              - `GET /api/wallpaper/search`
+              - `POST /api/wallpaper/import-url`
+              - `POST /api/wallpaper/upload`
+              - `GET /api/wallpaper/image`
+          - Core:
+            - Uses:
+              - `config_v2.defineConfig`
+              - `fields/enum/config.enumField`
+              - `fields/int/config.intField`
+              - `fields/object/config.objectField`
+              - `fields/text/config.textField`
+              - `infra/endpoints.blob`
+              - `infra/endpoints.defineEndpoint`
+              - `infra/endpoints.multipart`
+            - Exports (types):
+              - `BuiltinWallpaper`
+              - `SavedWallpaper`
+              - `WallpaperAttribution`
+              - `WallpaperCandidate`
+              - `WallpaperResult`
+            - Exports (values):
+              - `BUILTIN_WALLPAPERS`
+              - `DEFAULT_WALLPAPER_ID`
+              - `getBuiltinWallpaper`
+              - `GRADIENT_WALLPAPER_ID`
+              - `importWallpaperUrl`
+              - `isDefaultWallpaper`
+              - `SavedWallpaperSchema`
+              - `searchWallpaper`
+              - `uploadWallpaper`
+              - `WallpaperAttributionSchema`
+              - `wallpaperConfig`
+              - `wallpaperImage`
+              - `WallpaperResultSchema`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --muted`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
+            - Imported by:
+              - `apps/desktop/wallpaper/builtin`
+              - `apps/desktop/wallpaper/from-url`
+              - `apps/desktop/wallpaper/openverse`
+              - `apps/desktop/wallpaper/upload`
+              - `apps/desktop/windows`
+            - Endpoint callers: `windows`
+          - Exemptions:
+            - Exempts itself from: `live/no-endpoint-read` — `web/components/wallpaper-search-panel.tsx` (debt)
+          - Plugins:
+            - **`builtin`** — Built-in wallpaper source: contributes the Built-in tab to the desktop wallpaper picker, a grid of the bundled wallpapers (and the theme-following gradient); picking one writes its id to the wallpaper config with no server upload.
+              - Web:
+                - Contributes: `Wallpaper.Provider` "Built-in"
+                - Uses:
+                  - `apps/desktop/wallpaper.builtinWallpaperUrl`
+                  - `apps/desktop/wallpaper.Wallpaper`
+                  - `apps/desktop/wallpaper.WallpaperCandidate`
+                  - `config_v2.useConfig`
+                  - `primitives/css/center.Center`
+                  - `primitives/css/grid.Grid`
+                  - `primitives/css/text.Text`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --border`
+                  - `ui/tokens/color-palette --muted`
+                  - `ui/tokens/color-palette --primary`
+                  - `ui/tokens/shape --radius`
+            - **`from-url`** — From-URL wallpaper source: contributes the From URL tab to the desktop wallpaper picker, emitting a pasted image URL the picker imports (and the server validates) via the import-url endpoint.
+              - Web:
+                - Contributes: `Wallpaper.Provider` "From URL"
+                - Uses:
+                  - `apps/desktop/wallpaper.Wallpaper`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.Input`
+            - **`openverse`** — Openverse wallpaper source: contributes the Openverse tab to the desktop wallpaper picker, reusing the shared search panel over the server-side `openverse` provider. Openverse wallpaper search provider: maps a query to open-license image results via the Openverse API (SSRF-guarded safeFetch), registered into the generic wallpaper provider registry.
+              - Web:
+                - Contributes: `Wallpaper.Provider` "Openverse"
+                - Uses:
+                  - `apps/desktop/wallpaper.Wallpaper`
+                  - `apps/desktop/wallpaper.WallpaperCandidate`
+                  - `apps/desktop/wallpaper.WallpaperSearchPanel`
+              - Server:
+                - Uses:
+                  - `apps/desktop/wallpaper.defineWallpaperProvider`
+                  - `infra/endpoints.HttpError`
+                  - `infra/safe-fetch.parsePublicUrl`
+                  - `infra/safe-fetch.safeFetch`
+                  - `infra/safe-fetch.SsrfError`
+                - Register: `defineWallpaperProvider('openverse')`
+            - **`upload`** — Upload wallpaper source: contributes the Upload tab to the desktop wallpaper picker, emitting a local image file the picker funnels through the upload endpoint.
+              - Web:
+                - Contributes: `Wallpaper.Provider` "Upload"
+                - Uses:
+                  - `apps/desktop/wallpaper.Wallpaper`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `ui/icons.Icon`
+        - **`windows`** — The desktop's windows: the floating-window surface placement (free, draggable/resizable windows over the wallpaper backdrop, inside the work area the shelf leaves), their tabbed titlebar and window menu, snapping, the overview, the shelf's peek, and the keyboard window-management shortcuts.
+          - Web:
+            - Slots: `Desktop.Overlay`
+            - Slot contributors:
+              - `Desktop.Overlay` ← `apps.desktop.launcher`
+              - `Desktop.Overlay` ← `apps.desktop.shelf`
+              - `Desktop.Overlay` ← `apps.desktop.switcher`
+            - Contributes:
+              - `Surface.Placement`
+              - `Shortcuts.Shortcut` "desktop.overview (f3)"
+              - `Shortcuts.Shortcut` "desktop.overview-exit (escape)"
+              - `Shortcuts.Shortcut` "floating.close (mod+w)"
+              - `Shortcuts.Shortcut` "floating.desktop-next (ctrl+alt+pagedown)"
+              - `Shortcuts.Shortcut` "floating.desktop-prev (ctrl+alt+pageup)"
+              - `Shortcuts.Shortcut` "floating.minimize (mod+m)"
+              - `Shortcuts.Shortcut` "floating.new-window (alt+n)"
+              - `Shortcuts.Shortcut` "floating.snap-down (ctrl+alt+arrowdown)"
+              - `Shortcuts.Shortcut` "floating.snap-left (ctrl+alt+arrowleft)"
+              - `Shortcuts.Shortcut` "floating.snap-right (ctrl+alt+arrowright)"
+              - `Shortcuts.Shortcut` "floating.snap-up (ctrl+alt+arrowup)"
+              - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
+              - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
+              - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
+            - Uses: 44 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
+              - `primitives/css/ui-kit` ×8
+              - `apps-core/surface` ×4
+              - `apps/desktop/shell` ×3
+              - `apps/desktop/wallpaper` ×3
+              - `primitives/scope/app-instance` ×3
+              - `primitives/shortcuts` ×3
+              - `primitives/css/layer` ×2
+              - `primitives/css/theme-boundary` ×2
+              - `primitives/overlay/cursor-menu` ×2
+              - `apps-core/app-icon.DEFAULT_APP_ICON`
+              - `apps-core/tabs.useTabs`
+              - `apps-core.Apps`
+              - `config_v2.useConfig`
+              - `primitives/app-shell.useSidebarDrawnOn`
+              - `primitives/css/center.Center`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/text.Text`
+              - `primitives/scope/install-sink.defineInstallSink`
+              - `primitives/slot-render.renderIsolated`
+              - `ui/icons.Icon`
+            - Exports (types):
+              - `DesktopOverlayContribution`
+              - `FloatingWindow`
+              - `RectFraction`
+              - `VirtualDesktop`
+              - `WindowId`
+            - Exports (values):
+              - `bringWindowToFront`
+              - `createDesktop`
+              - `Desktop`
+              - `DesktopWallpaper`
+              - `getDesktopsState`
+              - `getFloatingWindow`
+              - `getWorkAreaReserve`
+              - `minimizeAllWindows`
+              - `moveWindowToDesktop`
+              - `removeDesktop`
+              - `restoreWindow`
+              - `setActiveDesktop`
+              - `setMinimizeTargetResolver`
+              - `setPeekedWindow`
+              - `setWorkAreaReserve`
+              - `tileAllWindows`
+              - `toggleOverview`
+              - `toggleWindowPin`
+              - `topmostWindowOnDesktop`
+              - `useDesktops`
+              - `useFloatingWindows`
+              - `useOverviewActive`
+              - `useWorkAreaReserve`
+              - `windowForTab`
+              - `windowRectFraction`
+              - `WindowSnapshot`
+          - Cross-plugin:
+            - Uses tokens: 23 vars — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
+              - `ui/tokens/color-palette` ×13
+              - `ui/tokens/type-scale` ×8
+              - `ui/tokens/shadow --shadow`
+              - `ui/tokens/shape --spacing`
+            - Imported by:
+              - `apps/desktop/launcher`
+              - `apps/desktop/shelf`
+              - `apps/desktop/switcher`
     - **`events`** — Events — track events from pluggable sources in one database.
       - Plugins:
         - **`event-date`** — The event date format: a schema that states a recurrence once, its pure expander, its human label, its anchor-independent identity key, and the prompt fragment that documents it to the model — one folder so spec, parser and expander cannot drift.
@@ -9559,8 +9974,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Apps.TabBar`
       - `Apps.TabBarActions`
       - `Apps.Overlay`
-    - Slot contributors: 22 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `Apps.App` ×17
+    - Slot contributors: 23 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `Apps.App` ×18
       - `Apps.Overlay` ← `apps-core.app-launcher`
       - `Apps.RailFraming` ← `apps-core.app-rail-framing`
       - `Apps.Surface` ← `apps-core.surface`
@@ -9575,6 +9990,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (types):
       - `ActiveApp`
       - `AppEntry`
+      - `AppLaunch`
       - `HomeApp`
       - `OverlayContribution`
       - `Placement`
@@ -9585,6 +10001,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `Apps`
       - `homeApp`
+      - `isTabApp`
       - `matchAppForPath`
       - `resolveAppForPath`
       - `setFocusedApp`
@@ -9594,9 +10011,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useHomeApp`
       - `usePathname`
   - Cross-plugin:
-    - Imported by: 43 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `apps` ×21
-      - `apps-core` ×12
+    - Imported by: 47 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `apps` ×26
+      - `apps-core` ×11
       - `ui` ×5
       - `config_v2` ×2
       - `plugin-meta/exhibits`
@@ -9608,9 +10025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (types):
       - `Placement`
       - `RailFramingProps`
-    - Exports (values):
-      - `APP_RAIL_WIDTH`
-      - `desktopApp`
+    - Exports (values): `APP_RAIL_WIDTH`
   - Test helpers:
     - Web: `@plugins/apps-core/web/testing`
       - `getFocusedAppId`
@@ -9651,7 +10066,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps-core/app-launcher`
           - `apps-core/app-rail`
-          - `apps-core/surface/floating`
+          - `apps/desktop/shell`
+          - `apps/desktop/windows`
           - `config_v2/settings`
       - Core:
         - Exports (types):
@@ -9850,9 +10266,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`layout`** — Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.
       - Web:
         - Contributes: `Core.Root` → `AppsLayout`
-        - Uses: 21 symbols — full list in [`plugins/apps-core/plugins/layout/REFERENCE.md`](../plugins/apps-core/plugins/layout/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/apps-core/plugins/layout/REFERENCE.md`](../plugins/apps-core/plugins/layout/REFERENCE.md)
+          - `apps-core/tabs` ×6
           - `apps-core` ×5
-          - `apps-core/tabs` ×3
           - `primitives/pane` ×3
           - `primitives/css/ui-kit` ×2
           - `apps-core/tab-surface.AppTabsBody`
@@ -9872,8 +10288,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Surface.Placement`
         - Slot contributors:
           - `Surface.Placement` ← `apps-core.surface.docked`
-          - `Surface.Placement` ← `apps-core.surface.floating`
           - `Surface.Placement` ← `apps-core.surface.solo`
+          - `Surface.Placement` ← `apps.desktop.windows`
         - Contributes:
           - `Apps.Surface` "Surface" → `SurfaceBody`
           - `ActionBar.ViewOption` → `ActionBarPlacementControl`
@@ -9907,199 +10323,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps-core/surface/docked`
-          - `apps-core/surface/floating`
           - `apps-core/surface/solo`
+          - `apps/desktop/windows`
       - Plugins:
         - **`docked`** — Docked surface placement — the full-area tab that fills the surface below the tab strip.
           - Web:
             - Contributes: `Surface.Placement`
             - Uses: `apps-core/surface.Surface`
-        - **`floating`** — Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store, window chrome, and keyboard window-management shortcuts (tile / minimize / close / cycle).
-          - Web:
-            - Contributes:
-              - `Surface.Placement`
-              - `ConfigV2.WebRegister` "floating-chrome"
-              - `ThemeEngine.VariantGroup` "Window titlebar" → `TitlebarStylePicker`
-              - `Shortcuts.Shortcut` "floating.close (mod+w)"
-              - `Shortcuts.Shortcut` "floating.cycle-next (mod+`)"
-              - `Shortcuts.Shortcut` "floating.cycle-prev (mod+shift+~)"
-              - `Shortcuts.Shortcut` "floating.cycle-prev-backquote (mod+shift+`)"
-              - `Shortcuts.Shortcut` "floating.desktop-next (ctrl+alt+pagedown)"
-              - `Shortcuts.Shortcut` "floating.desktop-prev (ctrl+alt+pageup)"
-              - `Shortcuts.Shortcut` "floating.minimize (mod+m)"
-              - `Shortcuts.Shortcut` "floating.snap-down (ctrl+alt+arrowdown)"
-              - `Shortcuts.Shortcut` "floating.snap-left (ctrl+alt+arrowleft)"
-              - `Shortcuts.Shortcut` "floating.snap-right (ctrl+alt+arrowright)"
-              - `Shortcuts.Shortcut` "floating.snap-up (ctrl+alt+arrowup)"
-              - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
-              - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
-              - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-            - Uses: 54 symbols — full list in [`plugins/apps-core/plugins/surface/plugins/floating/REFERENCE.md`](../plugins/apps-core/plugins/surface/plugins/floating/REFERENCE.md)
-              - `primitives/css/ui-kit` ×10
-              - `apps-core/surface` ×4
-              - `apps-core/tabs` ×3
-              - `config_v2` ×3
-              - `primitives/scope/app-instance` ×3
-              - `primitives/shortcuts` ×3
-              - `apps-core/app-icon` ×2
-              - `apps-core/surface/floating/wallpaper` ×2
-              - `primitives/css/layer` ×2
-              - `primitives/css/spacing` ×2
-              - `primitives/hover-reveal` ×2
-              - `primitives/overlay/cursor-menu` ×2
-              - `ui/tab-bar` ×2
-              - `ui/theme-engine` ×2
-              - `apps-core.Apps`
-              - `primitives/css/badge.Badge`
-              - `primitives/css/center.Center`
-              - `primitives/css/cluster.Cluster`
-              - `primitives/css/surface.Surface`
-              - `primitives/css/text.Text`
-              - `primitives/css/toggle-chip.ToggleChip`
-              - `primitives/dom/element-size.useElementSize`
-              - `primitives/icon-button.IconButton`
-              - `primitives/latest-ref.useLatestRef`
-              - `primitives/scope/install-sink.defineInstallSink`
-              - `ui/icons.Icon`
-          - Server:
-            - Contributes: `ConfigV2.Register` "floating-chrome"
-            - Uses: `config_v2.ConfigV2`
-          - Core:
-            - Uses:
-              - `config_v2.defineConfig`
-              - `fields/bool/config.boolField`
-            - Exports (values): `floatingChromeConfig`
-          - Cross-plugin:
-            - Uses tokens: 23 vars — full list in [`plugins/apps-core/plugins/surface/plugins/floating/REFERENCE.md`](../plugins/apps-core/plugins/surface/plugins/floating/REFERENCE.md)
-              - `ui/tokens/color-palette` ×8
-              - `ui/tokens/density` ×5
-              - `ui/tokens/shadow` ×4
-              - `ui/tokens/type-scale` ×4
-              - `ui/tokens/shape` ×2
-          - Plugins:
-            - **`wallpaper`** — Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper: provider registry, search/import/upload endpoints, the machine-global wallpaper store, and the global wallpaper config registration.
-              - Web:
-                - Slots: `Wallpaper.Provider`
-                - Slot contributors:
-                  - `Wallpaper.Provider` ← `apps-core.surface.floating.wallpaper.from-url`
-                  - `Wallpaper.Provider` ← `apps-core.surface.floating.wallpaper.openverse`
-                  - `Wallpaper.Provider` ← `apps-core.surface.floating.wallpaper.upload`
-                - Contributes: `ConfigV2.WebRegister` "wallpaper"
-                - Uses: 22 symbols — full list in [`plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/REFERENCE.md`](../plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/REFERENCE.md)
-                  - `config_v2` ×3
-                  - `infra/endpoints` ×3
-                  - `primitives/css/ui-kit` ×2
-                  - `primitives/overlay/cursor-menu` ×2
-                  - `primitives/css/grid.Grid`
-                  - `primitives/css/pin.Pin`
-                  - `primitives/css/placeholder.Placeholder`
-                  - `primitives/css/scroll.Scroll`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/surface.Surface`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.SegmentedControl`
-                  - `primitives/loading.Loading`
-                  - `primitives/overlay/imperative-dialog.openDialog`
-                  - `primitives/search.SearchInput`
-                  - `ui/icons.Icon`
-                - Exports (types): `WallpaperCandidate`
-                - Exports (values):
-                  - `DesktopContextMenu`
-                  - `openWallpaperPicker`
-                  - `Wallpaper`
-                  - `WallpaperAttribution`
-                  - `WallpaperSearchPanel`
-              - Server:
-                - Contributes: `ConfigV2.Register` "wallpaper"
-                - Uses:
-                  - `config_v2.ConfigV2`
-                  - `infra/endpoints.HttpError`
-                  - `infra/endpoints.implement`
-                  - `infra/safe-fetch.parsePublicUrl`
-                  - `infra/safe-fetch.safeFetch`
-                  - `infra/safe-fetch.SsrfError`
-                - Exports (types): `WallpaperSearchProvider`
-                - Exports (values):
-                  - `defineWallpaperProvider`
-                  - `getWallpaperProvider`
-                - Routes:
-                  - `GET /api/wallpaper/search`
-                  - `POST /api/wallpaper/import-url`
-                  - `POST /api/wallpaper/upload`
-                  - `GET /api/wallpaper/image`
-              - Core:
-                - Uses:
-                  - `config_v2.defineConfig`
-                  - `fields/enum/config.enumField`
-                  - `fields/int/config.intField`
-                  - `fields/object/config.objectField`
-                  - `fields/text/config.textField`
-                  - `infra/endpoints.blob`
-                  - `infra/endpoints.defineEndpoint`
-                  - `infra/endpoints.multipart`
-                - Exports (types):
-                  - `SavedWallpaper`
-                  - `WallpaperAttribution`
-                  - `WallpaperCandidate`
-                  - `WallpaperResult`
-                - Exports (values):
-                  - `importWallpaperUrl`
-                  - `SavedWallpaperSchema`
-                  - `searchWallpaper`
-                  - `uploadWallpaper`
-                  - `WallpaperAttributionSchema`
-                  - `wallpaperConfig`
-                  - `wallpaperImage`
-                  - `WallpaperResultSchema`
-              - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/color-palette --muted`
-                  - `ui/tokens/density --space-2xs`
-                  - `ui/tokens/density --space-xs`
-                  - `ui/tokens/shape --radius`
-                  - `ui/tokens/shape --spacing`
-                - Imported by:
-                  - `apps-core/surface/floating`
-                  - `apps-core/surface/floating/wallpaper/from-url`
-                  - `apps-core/surface/floating/wallpaper/openverse`
-                  - `apps-core/surface/floating/wallpaper/upload`
-                - Endpoint callers: `floating`
-              - Exemptions:
-                - Exempts itself from: `live/no-endpoint-read` — `web/components/wallpaper-search-panel.tsx` (debt)
-              - Plugins:
-                - **`from-url`** — From-URL wallpaper source: contributes the From URL tab to the desktop wallpaper picker, emitting a pasted image URL the picker imports (and the server validates) via the import-url endpoint.
-                  - Web:
-                    - Contributes: `Wallpaper.Provider` "From URL"
-                    - Uses:
-                      - `apps-core/surface/floating/wallpaper.Wallpaper`
-                      - `primitives/css/spacing.Stack`
-                      - `primitives/css/text.Text`
-                      - `primitives/css/ui-kit.Button`
-                      - `primitives/css/ui-kit.Input`
-                - **`openverse`** — Openverse wallpaper source: contributes the Openverse tab to the desktop wallpaper picker, reusing the shared search panel over the server-side `openverse` provider. Openverse wallpaper search provider: maps a query to open-license image results via the Openverse API (SSRF-guarded safeFetch), registered into the generic wallpaper provider registry.
-                  - Web:
-                    - Contributes: `Wallpaper.Provider` "Openverse"
-                    - Uses:
-                      - `apps-core/surface/floating/wallpaper.Wallpaper`
-                      - `apps-core/surface/floating/wallpaper.WallpaperCandidate`
-                      - `apps-core/surface/floating/wallpaper.WallpaperSearchPanel`
-                  - Server:
-                    - Uses:
-                      - `apps-core/surface/floating/wallpaper.defineWallpaperProvider`
-                      - `infra/endpoints.HttpError`
-                      - `infra/safe-fetch.parsePublicUrl`
-                      - `infra/safe-fetch.safeFetch`
-                      - `infra/safe-fetch.SsrfError`
-                    - Register: `defineWallpaperProvider('openverse')`
-                - **`upload`** — Upload wallpaper source: contributes the Upload tab to the desktop wallpaper picker, emitting a local image file the picker funnels through the upload endpoint.
-                  - Web:
-                    - Contributes: `Wallpaper.Provider` "Upload"
-                    - Uses:
-                      - `apps-core/surface/floating/wallpaper.Wallpaper`
-                      - `primitives/css/spacing.Stack`
-                      - `primitives/css/text.Text`
-                      - `primitives/css/ui-kit.Button`
-                      - `ui/icons.Icon`
         - **`solo`** — Solo (fullscreen) surface mode — the default boot mode: only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating), with an Esc shortcut back to the previous mode.
           - Web:
             - Contributes:
@@ -10139,27 +10369,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
     - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
       - Web:
-        - Uses:
-          - `apps-core.Apps`
-          - `apps-core/tabs.appPathFor`
-          - `apps-core/tabs.loadScopePrefixFor`
-          - `apps-core/tabs.Tab`
-          - `apps-core/tabs.useTabs`
+        - Uses: 21 symbols — full list in [`plugins/apps-core/plugins/tab-surface/REFERENCE.md`](../plugins/apps-core/plugins/tab-surface/REFERENCE.md)
+          - `primitives/pane` ×7
+          - `apps-core/tabs` ×4
+          - `apps-core` ×2
+          - `primitives/sync-status` ×2
+          - `primitives/undo-redo` ×2
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.appThemeScope`
           - `primitives/overlay/surface-overlay.SurfaceOverlayHost`
-          - `primitives/pane.PaneBasePathContext`
-          - `primitives/pane.PaneStore`
-          - `primitives/pane.PaneSurfaceProvider`
-          - `primitives/pane.useIndexMatch`
-          - `primitives/pane.usePaneTitle`
-          - `primitives/pane.useRoute`
-          - `primitives/pane.useRouteState`
           - `primitives/slot-render.renderIsolated`
-          - `primitives/sync-status.SyncStatusIndicator`
-          - `primitives/sync-status.SyncStatusProvider`
-          - `primitives/undo-redo.UndoRedoProvider`
-          - `primitives/undo-redo.useUndoRedoShortcuts`
         - Exports (values):
           - `AppTabsBody`
           - `SurfaceCore`
@@ -10199,6 +10418,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `peekDefaultPlacement`
           - `placementHasAppThemeScope`
           - `placementIsNewTabFollows`
+          - `placementOwnsChrome`
           - `registerPlacementCapabilities`
           - `setSurfaceMode`
           - `TabsProvider`
@@ -10212,9 +10432,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps-core` ×10
-          - `apps` ×7
+        - Imported by: 38 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps` ×12
+          - `apps-core` ×9
           - `debug` ×7
           - `primitives` ×2
           - `shell` ×2
@@ -11871,8 +12091,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `withOverrideLegend`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/shape --spacing`
-    - Imported by: 105 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×23
+    - Imported by: 109 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×29
       - `debug` ×14
       - `backup` ×13
       - `conversations` ×13
@@ -11881,7 +12101,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks` ×4
       - `config_v2` ×3
       - `primitives` ×3
-      - `apps-core` ×2
       - `infra` ×2
       - `stats` ×2
       - `build`
@@ -21228,12 +21447,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 31 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `debug` ×13
               - `apps` ×6
               - `conversations` ×4
               - `tasks` ×2
-              - `apps-core/surface/floating`
               - `history/engine`
               - `infra/host/duress`
               - `page/block-entity`
@@ -21677,7 +21895,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `enumSample`
           - Cross-plugin:
             - Imported by:
-              - `apps-core/surface/floating/wallpaper`
+              - `apps/desktop/wallpaper`
               - `apps/events/sources/dmda`
               - `apps/events/sources/url-extract`
               - `apps/sonata/look`
@@ -21895,11 +22113,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: 36 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `debug` ×13
-              - `apps` ×7
+              - `apps` ×8
               - `infra` ×4
               - `conversations` ×3
               - `backup` ×2
-              - `apps-core/surface/floating/wallpaper`
               - `build/run-ledger`
               - `fields/object/config`
               - `release`
@@ -22215,7 +22432,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-lg`
               - `ui/tokens/shape --spacing`
             - Imported by:
-              - `apps-core/surface/floating/wallpaper`
+              - `apps/desktop/wallpaper`
               - `config_v2`
     - **`rank`** — Rank field type: identity only, extends text — a fractional-indexing string stored in the rank_text (C-collation) domain, reusing text's cell and filter via the extends chain.
       - Web:
@@ -22480,6 +22697,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/deployments`
+              - `apps/desktop/shell`
               - `build/run-ledger`
               - `page/links`
               - `plugin-meta/composition`
@@ -22632,16 +22850,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textSample`
           - Cross-plugin:
             - Imported by: 58 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
-              - `apps` ×16
+              - `apps` ×17
               - `conversations` ×7
               - `debug` ×5
               - `infra` ×5
               - `page` ×5
               - `tasks` ×5
-              - `apps-core` ×2
               - `build` ×2
               - `fields` ×2
               - `plugin-meta` ×2
+              - `apps-core/app-launcher`
               - `backup`
               - `history/engine`
               - `primitives/usage-rank`
@@ -25636,7 +25854,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unsupportedEndpointResponse`
       - Cross-plugin:
         - Imported by: 204 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×53
+          - `apps` ×55
           - `conversations` ×29
           - `debug` ×17
           - `infra` ×16
@@ -25647,7 +25865,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui` ×6
           - `auth` ×5
           - `stats` ×4
-          - `apps-core` ×3
           - `code-explorer` ×3
           - `reports` ×3
           - `active-data` ×2
@@ -25655,6 +25872,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `history` ×2
           - `integrations` ×2
           - `review` ×2
+          - `apps-core/app-usage`
           - `backup`
           - `database/fork`
           - `framework/browser-server`
@@ -27251,7 +27469,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isRelease`
           - `LEGACY_LAYOUT`
           - `listWorktreeDirs`
-          - `META_APP_ROOTS`
           - `planMigration`
           - `PLUGINS_DIR`
           - `pruneWorktreeCheckArtifacts`
@@ -27330,7 +27547,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isRelease`
           - `listWorktreeDirs`
           - `listWorktreeDirsAsync`
-          - `META_APP_ROOTS`
           - `PGREP`
           - `PLUGINS_DIR`
           - `pruneWorktreeBuildArtifacts`
@@ -27649,9 +27865,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
         - Imported by:
-          - `apps-core/surface/floating/wallpaper`
-          - `apps-core/surface/floating/wallpaper/openverse`
           - `apps/browser/proxy`
+          - `apps/desktop/wallpaper`
+          - `apps/desktop/wallpaper/openverse`
           - `apps/events/sources/coworkmeet`
           - `apps/events/sources/dmda`
           - `apps/events/sources/salsanueva`
@@ -29169,8 +29385,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
           - `live/no-endpoint-read` — `web` (sanctioned)
         - Exempted by:
-          - `apps-core/surface/floating/wallpaper` (1 debt)
           - `apps/deploy/analytics/dashboard` (1 debt)
+          - `apps/desktop/wallpaper` (1 debt)
           - `apps/file-explorer/browser` (4 debt)
           - `apps/file-explorer/git` (1 debt)
           - `apps/file-explorer/places` (2 debt)
@@ -33870,6 +34086,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SidebarItem`
           - `SidebarPaneSection`
           - `useBrandDrawnOn`
+          - `useSidebarDrawnOn`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/density --chrome-pad-x`
@@ -33884,8 +34101,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/sidebar-palette --sidebar-accent`
           - `ui/tokens/sidebar-palette --sidebar-foreground`
           - `ui/tokens/sidebar-palette --sidebar-icon`
-        - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
-          - `apps` ×16
+        - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
+          - `apps` ×17
           - `conversations` ×2
           - `tasks` ×2
           - `apps-core/app-launcher`
@@ -34323,7 +34540,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 169 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 168 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×37
               - `conversations` ×24
@@ -34336,9 +34553,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×3
               - `infra` ×3
               - `page` ×3
-              - `apps-core` ×2
               - `auth` ×2
               - `runs` ×2
+              - `apps-core/layout`
               - `backup/runs-arm`
               - `config_v2/settings`
               - `database/query-deadline`
@@ -34402,14 +34619,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×28
+            - Imported by: 113 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×32
               - `primitives` ×24
               - `page` ×17
               - `conversations` ×6
               - `debug` ×6
               - `ui` ×6
-              - `apps-core` ×4
+              - `apps-core` ×3
               - `plugin-meta` ×3
               - `fields` ×2
               - `integrations` ×2
@@ -34435,8 +34652,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
-              - `apps` ×18
+            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+              - `apps` ×20
               - `primitives` ×10
               - `conversations` ×7
               - `debug` ×7
@@ -34461,15 +34678,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `Cluster`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
-              - `apps` ×22
+            - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+              - `apps` ×24
               - `debug` ×11
               - `conversations` ×7
               - `plugin-meta` ×6
               - `primitives` ×6
               - `fields` ×2
               - `page` ×2
-              - `apps-core/surface/floating`
               - `config_v2/fields`
               - `infra/claude-cli`
               - `stats/commits`
@@ -34666,8 +34882,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fillClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 157 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
-              - `apps` ×45
+            - Imported by: 161 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+              - `apps` ×49
               - `primitives` ×29
               - `conversations` ×23
               - `debug` ×16
@@ -34691,14 +34907,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `Grid`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
-              - `apps` ×14
+            - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
+              - `apps` ×17
               - `primitives` ×9
               - `ui` ×3
               - `conversations` ×2
               - `debug` ×2
               - `stats` ×2
-              - `apps-core/surface/floating/wallpaper`
               - `infra/claude-cli`
               - `page/formatting/color`
               - `screenshot`
@@ -34778,25 +34993,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layerClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by:
-              - `apps-core/surface/floating`
-              - `apps/places/places-map`
-              - `apps/prototypes/canvas`
-              - `apps/sonata/piano-keyboard`
-              - `apps/sonata/piano-roll`
-              - `apps/sonata/primitives/keyboard`
-              - `apps/sonata/progress/bars`
-              - `apps/sonata/progress/keys`
-              - `apps/sonata/progress/loop`
-              - `apps/sonata/progress/scrubber`
+            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
+              - `apps` ×13
+              - `primitives` ×5
               - `integrations/youtube`
               - `map`
               - `page/code-block`
-              - `primitives/css/color-picker`
-              - `primitives/data-view`
-              - `primitives/overlay/image-viewer`
-              - `primitives/syntax-highlight/overlay-textarea`
-              - `primitives/tree`
         - **`layout-harness`** — Layout-primitive geometry harness, web half: the bare measurer page and the bun:test geometry suite that measure every geometry-gated exhibit across its width sweep.
           - Web:
             - Uses:
@@ -34850,8 +35052,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 104 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
-              - `apps` ×28
+            - Imported by: 108 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+              - `apps` ×32
               - `primitives` ×17
               - `conversations` ×14
               - `debug` ×7
@@ -34946,11 +35148,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×17
-              - `apps` ×15
+              - `apps` ×16
               - `page` ×9
               - `conversations` ×4
-              - `apps-core` ×2
               - `tasks` ×2
+              - `apps-core/app-rail`
               - `map`
               - `reorder/editor`
               - `screenshot/draw-on-app`
@@ -34971,14 +35173,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
             - Imported by: 83 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
-              - `apps` ×27
+              - `apps` ×28
               - `debug` ×19
               - `primitives` ×13
               - `page` ×7
               - `conversations` ×4
               - `build` ×2
               - `config_v2` ×2
-              - `apps-core/surface/floating/wallpaper`
               - `code-explorer/commit-detail`
               - `history/dialog`
               - `infra/background/catalog`
@@ -35038,8 +35239,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
-              - `apps` ×21
+            - Imported by: 116 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+              - `apps` ×26
               - `conversations` ×20
               - `primitives` ×17
               - `debug` ×11
@@ -35119,9 +35320,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 94 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×25
-              - `apps` ×20
+              - `apps` ×22
               - `primitives` ×14
               - `debug` ×12
               - `page` ×4
@@ -35130,7 +35331,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra` ×2
               - `review` ×2
               - `stats` ×2
-              - `apps-core/surface/floating/wallpaper`
               - `code-explorer/file-resolve`
               - `config_v2/settings`
               - `fields/json/config`
@@ -35221,8 +35421,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 394 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×100
+            - Imported by: 395 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×105
               - `conversations` ×62
               - `primitives` ×51
               - `debug` ×35
@@ -35230,8 +35430,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×24
               - `plugin-meta` ×15
               - `tasks` ×11
-              - `apps-core` ×10
               - `fields` ×9
+              - `apps-core` ×6
               - `stats` ×6
               - `build` ×5
               - `auth` ×4
@@ -35376,10 +35576,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
             - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
-              - `apps` ×9
+              - `apps` ×11
               - `primitives` ×6
               - `page` ×4
-              - `apps-core` ×2
               - `infra` ×2
               - `map` ×2
               - `conversations/agents`
@@ -35443,8 +35642,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 367 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×97
+            - Imported by: 371 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×105
               - `conversations` ×71
               - `primitives` ×42
               - `debug` ×34
@@ -35453,7 +35652,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×14
               - `tasks` ×12
               - `fields` ×9
-              - `apps-core` ×6
               - `stats` ×6
               - `build` ×5
               - `auth` ×4
@@ -35462,6 +35660,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations` ×3
               - `reorder` ×3
               - `active-data` ×2
+              - `apps-core` ×2
               - `backup` ×2
               - `code-explorer` ×2
               - `config_v2` ×2
@@ -35514,6 +35713,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/tab-bar`
               - `apps-core/tab-surface`
               - `apps-core/theme-scope`
+              - `apps/desktop/shell`
+              - `apps/desktop/windows`
               - `apps/file-explorer/browser`
               - `apps/prototypes/compare/exhibit`
               - `apps/website/pages/apps`
@@ -35548,15 +35749,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/density` ×7
               - `ui/tokens/type-scale` ×6
-            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
-              - `apps` ×21
+            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+              - `apps` ×22
               - `primitives` ×7
               - `stats` ×5
-              - `apps-core` ×3
               - `debug` ×3
               - `fields` ×3
               - `config_v2` ×2
               - `page` ×2
+              - `apps-core/surface`
               - `build/serve-composition`
               - `conversations/conversation-ui/chip`
               - `review`
@@ -35732,16 +35933,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 410 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 414 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×105
-              - `apps` ×84
+              - `apps` ×92
               - `conversations` ×54
               - `page` ×25
               - `debug` ×22
               - `ui` ×21
               - `tasks` ×15
-              - `apps-core` ×14
               - `fields` ×11
+              - `apps-core` ×10
               - `plugin-meta` ×10
               - `build` ×5
               - `review` ×5
@@ -35809,9 +36010,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `primitives` ×8
-              - `apps` ×6
+              - `apps` ×7
               - `conversations` ×5
               - `debug` ×4
               - `ui` ×3
@@ -37014,10 +37215,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×18
-              - `apps` ×7
+              - `apps` ×8
               - `shell` ×2
               - `active-data/go`
-              - `apps-core/surface/floating`
               - `reorder`
               - `screenshot`
           - Exemptions:
@@ -37069,6 +37269,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps-core/tab-bar`
+              - `apps/desktop/launcher`
               - `apps/places/places-map`
               - `apps/sonata/chord-chart`
               - `apps/sonata/lyrics-hud`
@@ -37584,12 +37785,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useHoverReveal`
       - Cross-plugin:
         - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
-          - `apps` ×9
+          - `apps` ×10
           - `page` ×8
           - `primitives` ×7
           - `ui` ×4
           - `conversations` ×2
-          - `apps-core/surface/floating`
           - `integrations/youtube`
           - `layouts/miller`
           - `tasks/task-description`
@@ -37608,7 +37808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 116 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 115 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×38
           - `primitives` ×21
           - `conversations` ×20
@@ -37617,11 +37817,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×5
           - `config_v2` ×3
           - `infra` ×3
-          - `apps-core` ×2
           - `build` ×2
           - `screenshot` ×2
           - `shell` ×2
           - `ui` ×2
+          - `apps-core/tab-bar`
           - `fields/enum/column-config`
           - `map/google`
     - **`icon-picker`** — Searchable, categorized picker over the Material Symbols set: a windowed grid of runtime-symbol cells browsing and searching Google's vendored Material Symbols metadata; onSelect hands back the picked SavedSymbolName. avatar, the page icon button and the callout panel compose it.
@@ -37711,12 +37911,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×32
-          - `apps` ×20
+          - `apps` ×22
           - `page` ×4
-          - `apps-core` ×2
           - `conversations` ×2
+          - `apps-core/tabs`
           - `build/serve-composition`
           - `debug/slow-ops`
           - `integrations/youtube`
@@ -38013,8 +38213,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 242 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×67
+        - Imported by: 243 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×68
           - `conversations` ×42
           - `debug` ×22
           - `tasks` ×22
@@ -38106,7 +38306,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
         - Imported by: 189 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×62
+          - `apps` ×63
           - `ui` ×19
           - `conversations` ×18
           - `debug` ×17
@@ -38118,9 +38318,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review` ×4
           - `auth` ×3
           - `active-data` ×2
-          - `apps-core` ×2
           - `integrations` ×2
           - `map` ×2
+          - `apps-core/layout`
           - `backup`
           - `code-explorer/commit-detail`
           - `config_v2/settings`
@@ -38798,8 +38998,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
-              - `apps-core/surface/floating`
-              - `apps-core/surface/floating/wallpaper`
+              - `apps/desktop/launcher`
+              - `apps/desktop/shelf`
+              - `apps/desktop/wallpaper`
+              - `apps/desktop/windows`
           - Exemptions:
             - Exempts itself from: `layout/no-adhoc-layout` — `.` (sanctioned)
         - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
@@ -39054,10 +39256,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `openDialog`
           - Cross-plugin:
             - Imported by:
-              - `apps-core/surface/floating/wallpaper`
               - `apps/deploy/deployments`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
+              - `apps/desktop/wallpaper`
               - `apps/events/sources`
               - `apps/home/app-cards`
               - `apps/sonata/sources/ultimate-guitar`
@@ -39196,6 +39398,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --line-height-2xs`
             - Imported by:
               - `apps/chord/trainer`
+              - `apps/desktop/launcher`
               - `apps/prototypes/present`
               - `page/formatting/bold`
               - `page/formatting/code`
@@ -39456,8 +39659,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --background`
           - `ui/tokens/density --chrome-pane-pad-end`
           - `ui/tokens/shape --spacing`
-        - Imported by: 173 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×61
+        - Imported by: 174 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×62
           - `conversations` ×29
           - `debug` ×26
           - `active-data` ×10
@@ -39849,8 +40052,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
-              - `apps-core/surface/floating`
               - `apps-core/tabs`
+              - `apps/desktop/windows`
           - Test helpers:
             - Web: `@plugins/primitives/plugins/scope/plugins/app-instance/web/testing`
               - `resetAppInstanceForTests` — Drop the memoized generation (and its `pageshow` listener) between tests.
@@ -39871,8 +40074,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`install-sink`** — Installed-sink primitive: defineInstallSink declares the module-level slot a higher layer installs an implementation into and a lower layer calls (the navigator, the history adapter, the overlay fallback). Presence is answerable from render ONLY through the subscribed useInstalled(), so a late install re-renders whoever asked early; the imperative sample is named peek… so install-sink/no-render-phase-peek can keep it out of render.
           - Cross-plugin:
             - Imported by:
-              - `apps-core/surface/floating`
               - `apps-core/tabs`
+              - `apps/desktop/launcher`
+              - `apps/desktop/switcher`
+              - `apps/desktop/windows`
               - `primitives/overlay/overlay-boundary`
               - `primitives/pane`
           - Web:
@@ -39973,11 +40178,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-body`
           - `ui/tokens/type-scale --line-height-label`
         - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/search/REFERENCE.md`](../plugins/primitives/plugins/search/REFERENCE.md)
-          - `apps` ×12
+          - `apps` ×13
           - `primitives` ×4
           - `page` ×2
           - `ui` ×2
-          - `apps-core/surface/floating/wallpaper`
           - `conversations/conversation-view/dependencies`
           - `debug/read-set`
           - `search/quick-find`
@@ -40077,8 +40281,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `Shortcuts.Shortcut`
         - Slot contributors:
-          - `Shortcuts.Shortcut` ← `apps-core.surface.floating`
           - `Shortcuts.Shortcut` ← `apps-core.surface.solo`
+          - `Shortcuts.Shortcut` ← `apps.desktop.launcher`
+          - `Shortcuts.Shortcut` ← `apps.desktop.switcher`
+          - `Shortcuts.Shortcut` ← `apps.desktop.windows`
           - `Shortcuts.Shortcut` ← `reorder.edit-mode`
         - Contributes: `Core.Root` → `ShortcutManager`
         - Uses:
@@ -40096,10 +40302,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFocusedSurfaceId`
           - `useSurfaceShortcuts`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+          - `apps` ×12
           - `primitives` ×11
-          - `apps` ×9
-          - `apps-core` ×3
+          - `apps-core` ×2
           - `reorder/edit-mode`
           - `tasks/task-draft-form`
       - Exemptions:
@@ -40159,8 +40365,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/density --control-height-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 82 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
-          - `apps` ×25
+        - Imported by: 83 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+          - `apps` ×26
           - `conversations` ×13
           - `primitives` ×13
           - `ui` ×5
@@ -41388,6 +41594,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/shape --spacing`
     - Imported by:
       - `apps-core/app-launcher`
+      - `apps/desktop/launcher`
       - `conversations/conversation-view/artifacts`
       - `page/editor`
       - `primitives/collapsible-wrap`
@@ -42731,23 +42938,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
           - `ActionBar.Item` → `ViewOptionsButton`
           - `ConfigV2.WebRegister` "config"
-        - Uses:
-          - `apps-core.Apps`
+        - Uses: 21 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
+          - `apps-core/tabs` ×3
+          - `config_v2` ×2
+          - `primitives/css/ui-kit` ×2
+          - `primitives/overlay/floating-action` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
-          - `apps-core/tabs.useSurfaceMode`
-          - `config_v2.ConfigV2`
-          - `config_v2.useConfig`
+          - `apps-core.Apps`
           - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
-          - `primitives/css/ui-kit.ControlSize`
-          - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/dom/element-size.useResizeObserver`
           - `primitives/embed.isChromelessDocument`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/icon-button.IconButton`
-          - `primitives/overlay/floating-action.FloatingAction`
-          - `primitives/overlay/floating-action.FloatingActionFadeIn`
           - `primitives/slot-render.SlotItemLayout`
           - `shell/action-bar.ActionBar`
           - `shell/health-report.HealthReportButton`
@@ -45387,20 +45591,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 303 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×65
+        - Imported by: 305 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×70
           - `conversations` ×55
           - `primitives` ×41
           - `page` ×40
           - `fields` ×33
           - `debug` ×14
           - `ui` ×8
-          - `apps-core` ×6
           - `tasks` ×6
           - `active-data` ×4
           - `plugin-meta` ×4
           - `reorder` ×4
           - `review` ×4
+          - `apps-core` ×3
           - `build` ×3
           - `auth` ×2
           - `backup` ×2
@@ -45868,7 +46072,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
         - Imported by:
-          - `apps-core/surface/floating`
           - `apps-core/tab-bar`
           - `ui/tab-bar/chip`
           - `ui/tab-bar/connected`
@@ -45970,8 +46173,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.ThemeSource`
         - Slot contributors: 38 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×16
-          - `ThemeEngine.Theme` ×8
-          - `ThemeEngine.VariantGroup` ×7
+          - `ThemeEngine.Theme` ×9
+          - `ThemeEngine.VariantGroup` ×6
           - `ThemeEngine.SubTheme` ×4
           - `ThemeEngine.ThemeSource` ×2
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
@@ -46079,8 +46282,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
         - Imported by: 40 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×26
-          - `apps` ×10
-          - `apps-core` ×2
+          - `apps` ×11
+          - `apps-core/chrome-theme`
           - `plugin-meta/token-usage`
           - `reports/theme-resolution`
       - Plugins:
@@ -46455,8 +46658,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 475 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×100
+            - Tokens used by: 480 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×107
               - `conversations` ×84
               - `primitives` ×75
               - `debug` ×33
@@ -46466,10 +46669,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×14
               - `fields` ×12
               - `reports` ×12
-              - `apps-core` ×7
               - `active-data` ×6
               - `build` ×6
               - `stats` ×6
+              - `apps-core` ×5
               - `review` ×5
               - `auth` ×4
               - `infra` ×4
@@ -46514,9 +46717,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 312 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 313 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `apps` ×66
               - `primitives` ×65
-              - `apps` ×63
               - `conversations` ×46
               - `debug` ×26
               - `page` ×20
@@ -46524,10 +46727,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×13
               - `fields` ×7
               - `tasks` ×6
-              - `apps-core` ×5
               - `review` ×5
               - `auth` ×4
               - `reorder` ×4
+              - `apps-core` ×3
               - `build` ×3
               - `infra` ×3
               - `shell` ×3
@@ -46771,12 +46974,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 61 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
-              - `apps` ×22
+            - Tokens used by: 65 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+              - `apps` ×27
               - `primitives` ×17
               - `framework` ×4
               - `ui` ×4
-              - `apps-core` ×3
+              - `apps-core` ×2
               - `page` ×2
               - `screenshot` ×2
               - `tasks` ×2
@@ -46808,8 +47011,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 659 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `apps` ×136
+            - Tokens used by: 664 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `apps` ×143
               - `primitives` ×124
               - `conversations` ×99
               - `page` ×46
@@ -46820,7 +47023,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×19
               - `plugin-meta` ×17
               - `fields` ×16
-              - `apps-core` ×13
+              - `apps-core` ×11
               - `packages` ×8
               - `stats` ×6
               - `build` ×5
@@ -46946,8 +47149,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 223 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
-              - `apps` ×55
+            - Tokens used by: 226 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+              - `apps` ×59
               - `primitives` ×38
               - `conversations` ×37
               - `debug` ×16
@@ -46960,11 +47163,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth` ×3
               - `build` ×3
               - `stats` ×3
-              - `apps-core` ×2
               - `code-explorer` ×2
               - `config_v2` ×2
               - `infra` ×2
               - `shell` ×2
+              - `apps-core/app-launcher`
               - `backup/runs-arm`
               - `framework/web-core`
               - `integrations/youtube`

@@ -205,16 +205,16 @@ await withBrowser(async (h) => {
   r.ok("re-enabling shows it again live", shownAgain.ok);
 
   // ── 6. Settings → Config detail pane (a descriptor with per-app scopes) ──
-  // `floating-chrome` is customized for several apps, so its pane reads the
-  // document, the scopes map (its tabs), conflicts and tiers.
+  // `theme` (the theme selection) is customized for several apps, so its pane
+  // reads the document, the scopes map (its tabs), conflicts and tiers.
   await boot(a.page, pathUrl("/settings/config"), { settleMs: 4000 });
   await a.page
     .getByPlaceholder(/^Search/)
     .first()
-    .fill("floating-chrome");
+    .fill("theme");
   await a.page.waitForTimeout(1500);
   // The nav row is the store plugin's leaf name.
-  const row = a.page.locator('text="floating"').first();
+  const row = a.page.locator('text="theme-engine"').first();
   const rowFound = (await row.count()) > 0;
   if (rowFound) {
     await row.click();

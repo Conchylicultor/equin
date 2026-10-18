@@ -41,11 +41,10 @@ its table/filter capabilities from `number` via the identity `extends` chain.
 - Cross-plugin:
   - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×13
-    - `apps` ×7
+    - `apps` ×8
     - `infra` ×4
     - `conversations` ×3
     - `backup` ×2
-    - `apps-core/surface/floating/wallpaper`
     - `build/run-ledger`
     - `fields/object/config`
     - `release`

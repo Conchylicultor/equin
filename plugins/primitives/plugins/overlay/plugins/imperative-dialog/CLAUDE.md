@@ -88,10 +88,10 @@ owns only the content + a `DialogTitle` (for a11y). Never wrap your own
   - Exports (values): `openDialog`
 - Cross-plugin:
   - Imported by:
-    - `apps-core/surface/floating/wallpaper`
     - `apps/deploy/deployments`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
+    - `apps/desktop/wallpaper`
     - `apps/events/sources`
     - `apps/home/app-cards`
     - `apps/sonata/sources/ultimate-guitar`

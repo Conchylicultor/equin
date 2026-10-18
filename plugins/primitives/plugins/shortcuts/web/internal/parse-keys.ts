@@ -42,8 +42,28 @@ export function parseCombo(keys: string): ParsedCombo | null {
   return combo;
 }
 
+/**
+ * The layout-independent letter / digit a physical key stands for (`KeyN` →
+ * `n`, `Digit1` → `1`), or null for any other key.
+ */
+function codeChar(code: string): string | null {
+  const m = /^(?:Key([A-Z])|Digit([0-9]))$/.exec(code);
+  return m ? (m[1] ?? m[2]!).toLowerCase() : null;
+}
+
+/**
+ * Whether the event's key is the combo's key. With Alt held, a letter or digit
+ * is matched on the PHYSICAL key (`e.code`): on macOS ⌥ composes a different
+ * character (⌥N is the dead key "˜", ⌥P is "π"), so `e.key` would never equal
+ * the combo's letter and every alt+<letter> shortcut would be dead there.
+ */
+function keyMatches(parsed: ParsedCombo, e: KeyboardEvent): boolean {
+  if (e.key.toLowerCase() === parsed.key) return true;
+  return e.altKey && codeChar(e.code) === parsed.key;
+}
+
 export function matchesEvent(parsed: ParsedCombo, e: KeyboardEvent): boolean {
-  if (e.key.toLowerCase() !== parsed.key) return false;
+  if (!keyMatches(parsed, e)) return false;
 
   if (isMac) {
     if (parsed.mod !== e.metaKey) return false;

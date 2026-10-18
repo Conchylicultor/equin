@@ -238,21 +238,6 @@ export interface AppIdentity {
   readonly id: string;
 }
 
-/**
- * The closed table of META-APPS: app id → the top-level plugin path that is its
- * root, for an app whose root is not `apps/plugins/<id>`.
- *
- * `desktop` is the app-switcher shell itself (`apps-core`) — the thing the
- * floating-window desktop and its wallpaper belong to, though no
- * `apps/plugins/desktop` folder exists. Adding a row is a reviewed edit, the
- * same principle as {@link DATA_DIR_KINDS}: a meta-app is a claim that some
- * plugin outside `apps/` owns an `apps/*` directory, and that claim should cost
- * a conversation.
- */
-export const META_APP_ROOTS: Readonly<Record<string, string>> = {
-  desktop: "apps-core",
-};
-
 // A name is ONE path segment, lowercase-kebab. Same regex (and same
 // throw-on-violation discipline) as `createHostSemaphore`'s pool name, since
 // both end up as a literal directory name on disk.
@@ -748,7 +733,7 @@ function appDirConstName(id: string): string {
  * users' content, always). Re-derivable output still belongs in `cache/`.
  *
  * Called from the app's ROOT plugin — `plugins/apps/plugins/<id>/data-dirs/index.ts`,
- * or a meta-app's root from {@link META_APP_ROOTS} — and imported from there
+ * — and imported from there
  * by the sub-plugins that read it. `paths:app-data-dirs` holds the call site to
  * that, which is what makes the structural `app` parameter honest.
  *

@@ -185,6 +185,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `peekDefaultPlacement`
     - `placementHasAppThemeScope`
     - `placementIsNewTabFollows`
+    - `placementOwnsChrome`
     - `registerPlacementCapabilities`
     - `setSurfaceMode`
     - `TabsProvider`
@@ -198,9 +199,9 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
-  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps-core` ×10
-    - `apps` ×7
+  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×12
+    - `apps-core` ×9
     - `debug` ×7
     - `primitives` ×2
     - `shell` ×2

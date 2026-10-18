@@ -282,8 +282,8 @@ to reconcile them; they never needed reconciling.
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
-  - Imported by: 367 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×97
+  - Imported by: 371 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×105
     - `conversations` ×71
     - `primitives` ×42
     - `debug` ×34
@@ -292,7 +292,6 @@ to reconcile them; they never needed reconciling.
     - `ui` ×14
     - `tasks` ×12
     - `fields` ×9
-    - `apps-core` ×6
     - `stats` ×6
     - `build` ×5
     - `auth` ×4
@@ -301,6 +300,7 @@ to reconcile them; they never needed reconciling.
     - `integrations` ×3
     - `reorder` ×3
     - `active-data` ×2
+    - `apps-core` ×2
     - `backup` ×2
     - `code-explorer` ×2
     - `config_v2` ×2

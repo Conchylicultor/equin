@@ -34,7 +34,6 @@ export type { ReleaseIdentity } from "../core/internal/paths";
 // it or on re-reading its environment variable.
 export {
   DATA_DIR_KINDS,
-  META_APP_ROOTS,
   dataRoot,
   defineAppDataDir,
   defineDataDir,

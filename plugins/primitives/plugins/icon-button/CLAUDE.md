@@ -62,7 +62,7 @@ icon+count button it stands in for — carries a per-site
   - Exports (values): `IconButton`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 116 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 115 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×38
     - `primitives` ×21
     - `conversations` ×20
@@ -71,11 +71,11 @@ icon+count button it stands in for — carries a per-site
     - `debug` ×5
     - `config_v2` ×3
     - `infra` ×3
-    - `apps-core` ×2
     - `build` ×2
     - `screenshot` ×2
     - `shell` ×2
     - `ui` ×2
+    - `apps-core/tab-bar`
     - `fields/enum/column-config`
     - `map/google`
 

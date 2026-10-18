@@ -19,7 +19,7 @@ import {
   UndoRedoProvider,
   useUndoRedoShortcuts,
 } from "@plugins/primitives/plugins/undo-redo/web";
-import { Apps } from "@plugins/apps-core/web";
+import { Apps, isTabApp } from "@plugins/apps-core/web";
 import {
   appPathFor,
   loadScopePrefixFor,
@@ -85,6 +85,12 @@ export function SurfaceCore({
   const apps = Apps.App.useContributions();
   const app = apps.find((a) => a.id === appId);
   if (!app) throw new Error(`SurfaceCore: no app "${appId}" is registered.`);
+  // A surface-mode app (the desktop) switches the surface; it has no layout
+  // and can never be a tab — reaching here means a tab was minted for it.
+  if (!isTabApp(app))
+    throw new Error(
+      `SurfaceCore: app "${appId}" is a surface mode, not a tab app.`,
+    );
   return (
     <PaneSurfaceProvider
       store={store}

@@ -204,6 +204,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/app-launcher`
+    - `apps/desktop/launcher`
     - `conversations/conversation-view/artifacts`
     - `page/editor`
     - `primitives/collapsible-wrap`

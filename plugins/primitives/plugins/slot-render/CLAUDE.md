@@ -305,8 +305,8 @@ the outcome too, with no separate code path.
   - Uses tokens:
     - `ui/tokens/density --control-height-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 82 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×25
+  - Imported by: 83 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×26
     - `conversations` ×13
     - `primitives` ×13
     - `ui` ×5

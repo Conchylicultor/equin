@@ -13,8 +13,6 @@ import type { DataDirSpec } from "./data-dir";
 // failing on the smallest declaration set that breaks it, and passing on the
 // layout it is meant to produce.
 
-const META = { desktop: "apps-core" } as const;
-
 const never = { kind: "never", reason: "only copy" } as const;
 const safe = { kind: "safe" } as const;
 
@@ -34,23 +32,18 @@ function decl(
 }
 
 test("the layout the design produces passes every rule", () => {
-  const offenders = evaluateDataDirDeclarations(
-    [
-      decl("apps/plugins/prototypes", { kind: "apps", name: "prototypes" }),
-      decl("apps/plugins/sonata", { kind: "apps", name: "sonata" }),
-      // The desktop meta-app, declared from its META_APP_ROOTS root.
-      decl("apps-core", { kind: "apps", name: "desktop" }),
-      // A re-derivable cache inside an app's subtree is allowed outside the app dir.
-      decl("apps/plugins/prototypes/plugins/thumbnails", {
-        kind: "cache",
-        name: "prototypes-thumbnails",
-        reclaim: safe,
-      }),
-      // Shared infra keeps its durable dirs under state/.
-      decl("infra/plugins/attachments", { kind: "state", name: "attachments" }),
-    ],
-    META,
-  );
+  const offenders = evaluateDataDirDeclarations([
+    decl("apps/plugins/prototypes", { kind: "apps", name: "prototypes" }),
+    decl("apps/plugins/sonata", { kind: "apps", name: "sonata" }),
+    // A re-derivable cache inside an app's subtree is allowed outside the app dir.
+    decl("apps/plugins/prototypes/plugins/thumbnails", {
+      kind: "cache",
+      name: "prototypes-thumbnails",
+      reclaim: safe,
+    }),
+    // Shared infra keeps its durable dirs under state/.
+    decl("infra/plugins/attachments", { kind: "state", name: "attachments" }),
+  ]);
   expect(offenders).toEqual([]);
 });
 
@@ -58,43 +51,30 @@ test("owner is derived by dropping every /plugins/ segment", () => {
   expect(ownerForPluginPath("apps/plugins/prototypes/plugins/files")).toBe(
     "apps/prototypes/files",
   );
-  expect(ownerForPluginPath("apps-core")).toBe("apps-core");
-  expect(ownerForPluginPath("apps-core/plugins/surface/plugins/floating")).toBe(
-    "apps-core/surface/floating",
-  );
+  expect(ownerForPluginPath("apps/plugins/desktop")).toBe("apps/desktop");
 });
 
-test("the app a plugin sits in: apps/plugins/<x> and below, or a meta-app root and below", () => {
-  expect(appOfPluginPath("apps/plugins/prototypes", META)).toBe("prototypes");
+test("the app a plugin sits in: apps/plugins/<x> and below", () => {
+  expect(appOfPluginPath("apps/plugins/prototypes")).toBe("prototypes");
   expect(
-    appOfPluginPath("apps/plugins/prototypes/plugins/files/plugins/x", META),
+    appOfPluginPath("apps/plugins/prototypes/plugins/files/plugins/x"),
   ).toBe("prototypes");
-  expect(appOfPluginPath("apps-core", META)).toBe("desktop");
-  expect(
-    appOfPluginPath(
-      "apps-core/plugins/surface/plugins/floating/plugins/wallpaper",
-      META,
-    ),
-  ).toBe("desktop");
-  // Neither the `apps` umbrella itself nor a name that merely STARTS like a root.
-  expect(appOfPluginPath("apps", META)).toBeNull();
-  expect(appOfPluginPath("apps-core-extras", META)).toBeNull();
-  expect(appOfPluginPath("infra/plugins/attachments", META)).toBeNull();
+  // Neither the `apps` umbrella itself nor a name that merely STARTS like an app folder.
+  expect(appOfPluginPath("apps")).toBeNull();
+  expect(appOfPluginPath("apps-core")).toBeNull();
+  expect(appOfPluginPath("infra/plugins/attachments")).toBeNull();
 });
 
 // ── A ────────────────────────────────────────────────────────────────────────
 
 test("A: a second apps/* dir from inside an app fails, and points at subdir()", () => {
   // The miss that motivated the rule.
-  const [offender, ...rest] = evaluateDataDirDeclarations(
-    [
-      decl("apps/plugins/prototypes/plugins/files", {
-        kind: "apps",
-        name: "prototype-history",
-      }),
-    ],
-    META,
-  );
+  const [offender, ...rest] = evaluateDataDirDeclarations([
+    decl("apps/plugins/prototypes/plugins/files", {
+      kind: "apps",
+      name: "prototype-history",
+    }),
+  ]);
   expect(rest).toEqual([]);
   expect(offender).toContain(
     'apps/prototype-history is declared by apps/plugins/prototypes/plugins/files, which is inside app "prototypes"',
@@ -105,15 +85,12 @@ test("A: a second apps/* dir from inside an app fails, and points at subdir()", 
 });
 
 test("A: an app's own dir declared from a sub-plugin fails, and says to move it to the root", () => {
-  const offenders = evaluateDataDirDeclarations(
-    [
-      decl("apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders", {
-        kind: "apps",
-        name: "sonata",
-      }),
-    ],
-    META,
-  );
+  const offenders = evaluateDataDirDeclarations([
+    decl("apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders", {
+      kind: "apps",
+      name: "sonata",
+    }),
+  ]);
   expect(offenders).toHaveLength(1);
   expect(offenders[0]).toContain('a sub-plugin of app "sonata"');
   expect(offenders[0]).toContain(
@@ -122,67 +99,38 @@ test("A: an app's own dir declared from a sub-plugin fails, and says to move it 
 });
 
 test("A: an apps/* dir named for no app, from outside any app, fails", () => {
-  const offenders = evaluateDataDirDeclarations(
-    [decl("infra/plugins/attachments", { kind: "apps", name: "attachments" })],
-    META,
-  );
+  const offenders = evaluateDataDirDeclarations([
+    decl("infra/plugins/attachments", { kind: "apps", name: "attachments" }),
+  ]);
   expect(offenders).toHaveLength(1);
   expect(offenders[0]).toContain(
     "declared only by its app's root plugin — plugins/apps/plugins/attachments/data-dirs/index.ts",
   );
-  expect(offenders[0]).toContain("META_APP_ROOTS");
-});
-
-test("A: a meta-app's dir is declared by its META_APP_ROOTS root, and nowhere else", () => {
-  const fromBelow = evaluateDataDirDeclarations(
-    [
-      decl("apps-core/plugins/surface/plugins/floating/plugins/wallpaper", {
-        kind: "apps",
-        name: "desktop",
-      }),
-    ],
-    META,
-  );
-  expect(fromBelow).toHaveLength(1);
-  expect(fromBelow[0]).toContain("plugins/apps-core/data-dirs/index.ts");
-
-  // And an app folder cannot claim a meta-app's name.
-  const impostor = evaluateDataDirDeclarations(
-    [decl("apps/plugins/desktop", { kind: "apps", name: "desktop" })],
-    META,
-  );
-  expect(impostor).toHaveLength(1);
 });
 
 // ── B ────────────────────────────────────────────────────────────────────────
 
 test("B: durable (reclaim: never) data declared inside an app, outside its app dir, fails", () => {
   // The escape route beside rule A: `state/prototype-history`.
-  const offenders = evaluateDataDirDeclarations(
-    [
-      decl("apps/plugins/prototypes/plugins/files", {
-        kind: "state",
-        name: "prototype-history",
-      }),
-    ],
-    META,
-  );
+  const offenders = evaluateDataDirDeclarations([
+    decl("apps/plugins/prototypes/plugins/files", {
+      kind: "state",
+      name: "prototype-history",
+    }),
+  ]);
   expect(offenders).toHaveLength(1);
   expect(offenders[0]).toContain(
     'durable data of app prototypes belongs in apps/prototypes — delete this declaration and use prototypesDir.subdir("prototype-history")',
   );
 });
 
-test("B: applies to a meta-app's subtree too", () => {
-  const offenders = evaluateDataDirDeclarations(
-    [
-      decl("apps-core/plugins/surface/plugins/floating/plugins/wallpaper", {
-        kind: "state",
-        name: "wallpaper",
-      }),
-    ],
-    META,
-  );
+test("B: applies to a sub-plugin of any app, naming its subdir() area", () => {
+  const offenders = evaluateDataDirDeclarations([
+    decl("apps/plugins/desktop/plugins/wallpaper", {
+      kind: "state",
+      name: "wallpaper",
+    }),
+  ]);
   expect(offenders).toHaveLength(1);
   expect(offenders[0]).toContain('desktopDir.subdir("wallpaper")');
 });
@@ -195,42 +143,35 @@ test("B: reclaimable kinds inside an app are allowed", () => {
     { kind: "keep", keep: 3 } as const,
   ])
     expect(
-      evaluateDataDirDeclarations(
-        [
-          decl("apps/plugins/prototypes/plugins/thumbnails", {
-            kind: "cache",
-            name: "prototypes-thumbnails",
-            reclaim,
-          }),
-        ],
-        META,
-      ),
+      evaluateDataDirDeclarations([
+        decl("apps/plugins/prototypes/plugins/thumbnails", {
+          kind: "cache",
+          name: "prototypes-thumbnails",
+          reclaim,
+        }),
+      ]),
     ).toEqual([]);
 });
 
 test("B: durable data outside every app is not this rule's business", () => {
   expect(
-    evaluateDataDirDeclarations(
-      [decl("config_v2", { kind: "state", name: "config" })],
-      META,
-    ),
+    evaluateDataDirDeclarations([
+      decl("config_v2", { kind: "state", name: "config" }),
+    ]),
   ).toEqual([]);
 });
 
 // ── C ────────────────────────────────────────────────────────────────────────
 
 test("C: an owner that is not the declaring plugin's path fails, naming the right one", () => {
-  const offenders = evaluateDataDirDeclarations(
-    [
-      decl("framework/plugins/tooling/plugins/checks", {
-        kind: "cache",
-        name: "check",
-        reclaim: safe,
-        owner: "checks",
-      }),
-    ],
-    META,
-  );
+  const offenders = evaluateDataDirDeclarations([
+    decl("framework/plugins/tooling/plugins/checks", {
+      kind: "cache",
+      name: "check",
+      reclaim: safe,
+      owner: "checks",
+    }),
+  ]);
   expect(offenders).toHaveLength(1);
   expect(offenders[0]).toContain(
     'carries owner "checks" — the owner is the declaring plugin\'s path with /plugins/ removed: "framework/tooling/checks"',
@@ -245,13 +186,10 @@ test("C: another plugin's DataDir re-exported in a default export fails for the 
     description: "fixture",
     reclaim: never,
   };
-  const offenders = evaluateDataDirDeclarations(
-    [
-      { pluginPath: "config_v2", spec },
-      { pluginPath: "infra/plugins/secrets", spec },
-    ],
-    META,
-  );
+  const offenders = evaluateDataDirDeclarations([
+    { pluginPath: "config_v2", spec },
+    { pluginPath: "infra/plugins/secrets", spec },
+  ]);
   expect(offenders).toHaveLength(1);
   expect(offenders[0]).toContain(
     "state/config is exported by infra/plugins/secrets/data-dirs",
@@ -298,7 +236,9 @@ test("D: a declaring call outside a data-dirs/index.ts fails; tests and the path
     site(
       "plugins/packages/plugins/host-semaphore/server/internal/host-semaphore.test.ts",
     ),
-    site("plugins/apps-core/web/__tests__/wallpaper.test.tsx"),
+    site(
+      "plugins/apps/plugins/desktop/plugins/wallpaper/web/__tests__/wallpaper.test.tsx",
+    ),
     site("plugins/infra/plugins/paths/core/internal/data-dir.ts"),
     // Offenders: invisible to codegen's collection.
     site(

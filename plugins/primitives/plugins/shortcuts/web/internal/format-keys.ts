@@ -24,6 +24,19 @@ const PC_LABELS: Record<string, string> = {
 
 const MODIFIERS = new Set(Object.keys(MAC_SYMBOLS));
 
+/** Named keys drawn as their glyph on every platform (`arrowup` → `↑`). */
+const KEY_GLYPHS: Record<string, string> = {
+  arrowup: "↑",
+  arrowdown: "↓",
+  arrowleft: "←",
+  arrowright: "→",
+  escape: "Esc",
+  enter: "↵",
+  backquote: "`",
+  pageup: "PgUp",
+  pagedown: "PgDn",
+};
+
 export function formatShortcutLabel(keys: string): string {
   const tokens = keys.toLowerCase().split("+").filter(Boolean);
   const mods: string[] = [];
@@ -34,7 +47,9 @@ export function formatShortcutLabel(keys: string): string {
       const label = isMac ? MAC_SYMBOLS[token]! : PC_LABELS[token]!;
       if (!mods.includes(label)) mods.push(label);
     } else {
-      key = token.length === 1 ? token.toUpperCase() : capitalize(token);
+      key =
+        KEY_GLYPHS[token] ??
+        (token.length === 1 ? token.toUpperCase() : capitalize(token));
     }
   }
 

@@ -44,16 +44,16 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `textSample`
 - Cross-plugin:
   - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×16
+    - `apps` ×17
     - `conversations` ×7
     - `debug` ×5
     - `infra` ×5
     - `page` ×5
     - `tasks` ×5
-    - `apps-core` ×2
     - `build` ×2
     - `fields` ×2
     - `plugin-meta` ×2
+    - `apps-core/app-launcher`
     - `backup`
     - `history/engine`
     - `primitives/usage-rank`

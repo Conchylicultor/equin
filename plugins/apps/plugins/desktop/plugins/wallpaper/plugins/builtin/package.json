@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-desktop-wallpaper-builtin",
+  "description": "Built-in wallpapers source for the desktop wallpaper picker.",
+  "private": true,
+  "version": "0.0.1"
+}

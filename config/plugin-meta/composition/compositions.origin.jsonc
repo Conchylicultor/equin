@@ -1,4 +1,4 @@
-// @hash 9da3647e0096
+// @hash 5a6a0638125f
 {
   "manifests": [
     {
@@ -444,7 +444,7 @@
         "apps-core.app-rail-framing.rail",
         "apps-core.surface",
         "apps-core.surface.docked",
-        "apps-core.surface.floating",
+        "apps.desktop",
         "apps-core.surface.solo"
       ],
       "extends": [],

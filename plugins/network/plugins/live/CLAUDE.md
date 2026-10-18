@@ -2068,8 +2068,8 @@ never add one.
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - `live/no-endpoint-read` — `web` (sanctioned)
   - Exempted by:
-    - `apps-core/surface/floating/wallpaper` (1 debt)
     - `apps/deploy/analytics/dashboard` (1 debt)
+    - `apps/desktop/wallpaper` (1 debt)
     - `apps/file-explorer/browser` (4 debt)
     - `apps/file-explorer/git` (1 debt)
     - `apps/file-explorer/places` (2 debt)

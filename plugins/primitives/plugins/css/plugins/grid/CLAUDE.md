@@ -72,14 +72,13 @@ Shared (both paths):
   - Exports (values): `Grid`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×14
+  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×17
     - `primitives` ×9
     - `ui` ×3
     - `conversations` ×2
     - `debug` ×2
     - `stats` ×2
-    - `apps-core/surface/floating/wallpaper`
     - `infra/claude-cli`
     - `page/formatting/color`
     - `screenshot`

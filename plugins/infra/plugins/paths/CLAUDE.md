@@ -138,9 +138,6 @@ export const prototypesDir = defineAppDataDir(prototypesApp, { owner: "apps/prot
   output still goes to `cache/`, declared normally.
 - Sub-plugins import the root's declaration. The app's `shell/core` must never
   import it back: the root's `data-dirs` imports `shell/core`, so that edge is a cycle.
-- A **meta-app** (root not at `apps/plugins/<id>`) is a row in the closed
-  `META_APP_ROOTS` table (`core/internal/data-dir.ts`): today `desktop → apps-core`.
-  Adding a row is a reviewed edit, like adding a kind.
 - A second `defineAppDataDir` for the same app throws, naming the fix.
 
 **A sub-plugin's space is an area, not a directory:** `desktopDir.subdir("wallpaper")`
@@ -182,7 +179,7 @@ Tree-scoped, so it runs in every build, check and push. It calls each generated
 `data-dirs` entry's loader itself, pairing every declaration with the plugin that
 really made it (the registry has forgotten), and fails on:
 
-- **A** — `apps/<n>` not declared by `apps/plugins/<n>` (or `META_APP_ROOTS[n]`).
+- **A** — `apps/<n>` not declared by `apps/plugins/<n>`.
   What makes the structural `app` param honest: `{ id: "prototype-history" }`
   type-checks, and fails here.
 - **B** — a `reclaim: never` dir declared inside an app's subtree other than the
@@ -296,7 +293,6 @@ run everywhere.
     - `isRelease`
     - `LEGACY_LAYOUT`
     - `listWorktreeDirs`
-    - `META_APP_ROOTS`
     - `planMigration`
     - `PLUGINS_DIR`
     - `pruneWorktreeCheckArtifacts`
@@ -375,7 +371,6 @@ run everywhere.
     - `isRelease`
     - `listWorktreeDirs`
     - `listWorktreeDirsAsync`
-    - `META_APP_ROOTS`
     - `PGREP`
     - `PLUGINS_DIR`
     - `pruneWorktreeBuildArtifacts`

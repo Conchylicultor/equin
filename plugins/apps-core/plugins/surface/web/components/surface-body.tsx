@@ -119,6 +119,9 @@ export function SurfaceBody() {
         appThemeScope: new Set(
           sorted.filter((d) => d.themeScope === "app").map((d) => d.id),
         ),
+        ownsChrome: new Set(
+          sorted.filter((d) => d.ownsChrome).map((d) => d.id),
+        ),
       }),
     [sorted, defaultId],
   );

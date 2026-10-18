@@ -15,6 +15,13 @@ import type { ReactNode } from "react";
 export interface RailFramingProps {
   /** The active app's content subtree (already wrapped in PaneBasePathContext). */
   body: ReactNode;
+  /**
+   * False while the surface mode draws its own frame (solo, the desktop): a
+   * variant then renders no rail, but keeps `body` at the SAME position in the
+   * tree — `{showRail ? <Rail/> : null}`, never a different wrapper — because
+   * `body` holds every keep-alive tab, and a re-parented body remounts them all.
+   */
+  showRail: boolean;
 }
 
 /**

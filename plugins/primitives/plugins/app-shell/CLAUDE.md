@@ -84,6 +84,7 @@ reads what is on screen rather than a per-app flag.
     - `SidebarItem`
     - `SidebarPaneSection`
     - `useBrandDrawnOn`
+    - `useSidebarDrawnOn`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/density --chrome-pad-x`
@@ -98,8 +99,8 @@ reads what is on screen rather than a per-app flag.
     - `ui/tokens/sidebar-palette --sidebar-accent`
     - `ui/tokens/sidebar-palette --sidebar-foreground`
     - `ui/tokens/sidebar-palette --sidebar-icon`
-  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×16
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×17
     - `conversations` ×2
     - `tasks` ×2
     - `apps-core/app-launcher`

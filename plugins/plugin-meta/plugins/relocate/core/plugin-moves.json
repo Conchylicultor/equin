@@ -8,5 +8,15 @@
     "at": "2026-10-02T13:38:28.892Z",
     "from": "plugin-meta.specimens",
     "to": "plugin-meta.exhibits"
+  },
+  {
+    "at": "2026-10-18T01:08:39.311Z",
+    "from": "apps-core.surface.floating.wallpaper",
+    "to": "apps.desktop.wallpaper"
+  },
+  {
+    "at": "2026-10-18T01:08:39.311Z",
+    "from": "apps-core.surface.floating",
+    "to": "apps.desktop.windows"
   }
 ]

@@ -31,6 +31,9 @@ import {
   TabsProvider,
   useTabs,
   appLinkProps,
+  placementOwnsChrome,
+  usePlacementCapabilities,
+  useSurfaceMode,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
 import { isChromelessDocument } from "@plugins/primitives/plugins/embed/web";
@@ -64,7 +67,7 @@ function redirectTo(url: string) {
  * railless surface. The `--app-rail-width: 0px` keeps the rail-width var
  * consistent for any downstream reader (mirrors `app-rail-framing/hidden`).
  */
-function RaillessFraming({ body }: RailFramingProps) {
+function RaillessFraming({ body }: Pick<RailFramingProps, "body">) {
   return (
     <Stack
       direction="row"
@@ -287,11 +290,6 @@ function NoSuchRouteSurface({
   );
 }
 
-/** Renders the tab strip via the `Apps.TabBar` slot; nothing when no
- * contributor is present (chrome-less surface — the tab bar is opt-in), and
- * nothing in a chromeless embed (`?embed=1`, see `primitives/embed`): the
- * frame around it is someone else's chrome. An embed that keeps its chrome
- * (`?embed=chrome`) draws it. */
 /** Every `Apps.Overlay` contribution, each isolated in its own boundary. */
 function OverlayHost() {
   const overlays = Apps.Overlay.useContributions();
@@ -302,9 +300,22 @@ function OverlayHost() {
   ));
 }
 
+/** Whether the focused surface mode draws its own frame (solo, the desktop):
+ * no tab bar, no rail — read off the mode's `ownsChrome` capability, so the
+ * layout never names a mode. */
+function useModeOwnsChrome(): boolean {
+  return placementOwnsChrome(usePlacementCapabilities(), useSurfaceMode());
+}
+
+/** Renders the tab strip via the `Apps.TabBar` slot; nothing when no
+ * contributor is present (chrome-less surface — the tab bar is opt-in), nothing
+ * while the surface mode draws its own frame, and nothing in a chromeless embed
+ * (`?embed=1`, see `primitives/embed`): the frame around it is someone else's
+ * chrome. An embed that keeps its chrome (`?embed=chrome`) draws it. */
 function TabBarHost() {
   const tabBar = Apps.TabBar.useContributions()[0];
-  if (isChromelessDocument()) return null;
+  const modeOwnsChrome = useModeOwnsChrome();
+  if (isChromelessDocument() || modeOwnsChrome) return null;
   return tabBar
     ? renderIsolated(Apps.TabBar, tabBar as unknown as Contribution, {})
     : null;
@@ -314,6 +325,7 @@ function TabBarHost() {
 function FramedSurface() {
   const framing = Apps.RailFraming.useContributions()[0];
   const surface = Apps.Surface.useContributions()[0];
+  const modeOwnsChrome = useModeOwnsChrome();
   // The `surface` plugin owns the multi-placement body; with no contributor,
   // `apps` degrades to its built-in docked-only strip.
   const body = surface ? (
@@ -321,12 +333,15 @@ function FramedSurface() {
   ) : (
     <AppTabsBody />
   );
-  const props: RailFramingProps = { body };
+  // A mode that owns its frame hides the rail INSIDE the same framing — never
+  // by swapping to `RaillessFraming`, which would re-parent `body` and remount
+  // every keep-alive tab on each mode switch.
+  const props: RailFramingProps = { body, showRail: !modeOwnsChrome };
   // A chromeless embed takes the railless path whatever variant is
   // configured: the rail is app chrome, and a chromeless embed has none.
   return framing && !isChromelessDocument() ? (
     renderIsolated(Apps.RailFraming, framing as unknown as Contribution, props)
   ) : (
-    <RaillessFraming {...props} />
+    <RaillessFraming body={body} />
   );
 }

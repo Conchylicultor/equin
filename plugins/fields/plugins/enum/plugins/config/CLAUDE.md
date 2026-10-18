@@ -40,7 +40,7 @@ string. `FieldHeader` comes from the slot owner
     - `enumSample`
 - Cross-plugin:
   - Imported by:
-    - `apps-core/surface/floating/wallpaper`
+    - `apps/desktop/wallpaper`
     - `apps/events/sources/dmda`
     - `apps/events/sources/url-extract`
     - `apps/sonata/look`

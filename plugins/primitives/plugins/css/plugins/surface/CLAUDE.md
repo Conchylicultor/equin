@@ -124,10 +124,9 @@ never be clobbered.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×9
+    - `apps` ×11
     - `primitives` ×6
     - `page` ×4
-    - `apps-core` ×2
     - `infra` ×2
     - `map` ×2
     - `conversations/agents`

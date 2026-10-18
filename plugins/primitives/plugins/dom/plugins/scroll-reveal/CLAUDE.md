@@ -35,6 +35,7 @@ Extend this primitive rather than hand-rolling `scrollIntoView` again.
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/tab-bar`
+    - `apps/desktop/launcher`
     - `apps/places/places-map`
     - `apps/sonata/chord-chart`
     - `apps/sonata/lyrics-hud`

@@ -1,0 +1,7 @@
+{
+  "name": "@singularity/plugin-apps-desktop",
+  "description": "Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.",
+  "private": true,
+  "version": "0.0.1",
+  "singularity": { "collapsed": true }
+}

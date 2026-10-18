@@ -32,6 +32,7 @@ export {
   usePlacementCapabilities,
   placementIsNewTabFollows,
   placementHasAppThemeScope,
+  placementOwnsChrome,
   type PlacementCapabilities,
 } from "./internal/placement-registry";
 

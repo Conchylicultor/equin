@@ -1075,8 +1075,8 @@ See "Open questions" in the design doc.
     - `ui/tokens/color-palette --background`
     - `ui/tokens/density --chrome-pane-pad-end`
     - `ui/tokens/shape --spacing`
-  - Imported by: 173 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×61
+  - Imported by: 174 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×62
     - `conversations` ×29
     - `debug` ×26
     - `active-data` ×10

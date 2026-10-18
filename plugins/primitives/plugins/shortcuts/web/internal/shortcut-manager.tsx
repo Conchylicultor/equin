@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Shortcuts } from "../slots";
 import { getCachedCombo, matchesEvent } from "./parse-keys";
-import { comboHasModifier, targetClaimsKey } from "./target-claims-key";
+import { comboIsCommand, targetClaimsKey } from "./target-claims-key";
 import { useDynamicShortcuts } from "./dynamic-registry";
 import { getFocusedSurfaceId } from "./focused-surface";
 
@@ -54,9 +54,9 @@ export function ShortcutManager() {
         if (!parsed) continue;
         if (!matchesEvent(parsed, e)) continue;
         // While typing, plain-key shortcuts yield to the field so the keystroke
-        // is inserted. Modifier combos (Cmd/Ctrl/Alt) are deliberate commands
-        // and still fire; a shortcut may opt in via enableInInputs.
-        if (editable && !comboHasModifier(parsed) && !shortcut.enableInInputs)
+        // is inserted. Commands (Cmd/Ctrl/Alt combos, function keys) never
+        // type, so they still fire; a shortcut may opt in via enableInInputs.
+        if (editable && !comboIsCommand(parsed) && !shortcut.enableInInputs)
           continue;
         if (shortcut.when && !shortcut.when(e)) continue;
         if (

@@ -14,7 +14,6 @@ export interface CollectedEntry {
 
 export const exemptEntries: CollectedEntry[] = [
   { pluginPath: "apps-core/plugins/layout", id: "apps-core.layout", loader: () => import("@plugins/apps-core/plugins/layout/exempt"), dependsOn: [] },
-  { pluginPath: "apps-core/plugins/surface/plugins/floating/plugins/wallpaper", id: "apps-core.surface.floating.wallpaper", loader: () => import("@plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/browser/plugins/shell", id: "apps.browser.shell", loader: () => import("@plugins/apps/plugins/browser/plugins/shell/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/chord/plugins/curriculum", id: "apps.chord.curriculum", loader: () => import("@plugins/apps/plugins/chord/plugins/curriculum/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/chord/plugins/progress", id: "apps.chord.progress", loader: () => import("@plugins/apps/plugins/chord/plugins/progress/exempt"), dependsOn: [] },
@@ -23,6 +22,7 @@ export const exemptEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/deploy/plugins/analytics/plugins/dashboard", id: "apps.deploy.analytics.dashboard", loader: () => import("@plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/deploy/plugins/deployments", id: "apps.deploy.deployments", loader: () => import("@plugins/apps/plugins/deploy/plugins/deployments/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/deploy/plugins/health", id: "apps.deploy.health", loader: () => import("@plugins/apps/plugins/deploy/plugins/health/exempt"), dependsOn: [] },
+  { pluginPath: "apps/plugins/desktop/plugins/wallpaper", id: "apps.desktop.wallpaper", loader: () => import("@plugins/apps/plugins/desktop/plugins/wallpaper/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/events/plugins/events-core", id: "apps.events.events-core", loader: () => import("@plugins/apps/plugins/events/plugins/events-core/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/file-explorer/plugins/browser", id: "apps.file-explorer.browser", loader: () => import("@plugins/apps/plugins/file-explorer/plugins/browser/exempt"), dependsOn: [] },
   { pluginPath: "apps/plugins/file-explorer/plugins/git", id: "apps.file-explorer.git", loader: () => import("@plugins/apps/plugins/file-explorer/plugins/git/exempt"), dependsOn: [] },

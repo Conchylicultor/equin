@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-core-surface-floating-wallpaper-openverse",
-  "description": "Openverse open-license image search source for the desktop wallpaper picker.",
-  "private": true,
-  "version": "0.0.1"
-}

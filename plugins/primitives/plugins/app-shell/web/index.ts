@@ -14,6 +14,7 @@ export type {
 export { SidebarItem } from "./components/sidebar-nav-item";
 export { AppShellBrand } from "./components/app-shell-brand";
 export { useBrandDrawnOn } from "./internal/brand-presence";
+export { useSidebarDrawnOn } from "./internal/sidebar-presence";
 export { SidebarPaneSection } from "./components/sidebar-pane-section";
 export { AppShell } from "./slots";
 export type {

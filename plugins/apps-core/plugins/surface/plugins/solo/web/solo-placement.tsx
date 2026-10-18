@@ -32,6 +32,7 @@ export const soloDef: PlacementDef = {
   // A single app fills the viewport, so `:root` carries the app's theme (like
   // docked, unlike floating's multi-window backdrop) — see useRootThemeScope.
   themeScope: "app",
+  ownsChrome: true,
   // No frame chrome: a fullscreen tab is edge to edge, and its canvas comes from
   // the host's `<Theme surface="canvas">` container like every other mode's.
   // The way out is the global action bar, which floats over the top-right

@@ -27,8 +27,10 @@ exemption, e.g. Sonata's hold-to-scrub seek) must apply the same three rules.
 - Web:
   - Slots: `Shortcuts.Shortcut`
   - Slot contributors:
-    - `Shortcuts.Shortcut` ← `apps-core.surface.floating`
     - `Shortcuts.Shortcut` ← `apps-core.surface.solo`
+    - `Shortcuts.Shortcut` ← `apps.desktop.launcher`
+    - `Shortcuts.Shortcut` ← `apps.desktop.switcher`
+    - `Shortcuts.Shortcut` ← `apps.desktop.windows`
     - `Shortcuts.Shortcut` ← `reorder.edit-mode`
   - Contributes: `Core.Root` → `ShortcutManager`
   - Uses:
@@ -46,10 +48,10 @@ exemption, e.g. Sonata's hold-to-scrub seek) must apply the same three rules.
     - `useFocusedSurfaceId`
     - `useSurfaceShortcuts`
 - Cross-plugin:
-  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×12
     - `primitives` ×11
-    - `apps` ×9
-    - `apps-core` ×3
+    - `apps-core` ×2
     - `reorder/edit-mode`
     - `tasks/task-draft-form`
 - Exemptions:

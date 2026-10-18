@@ -1,0 +1,9 @@
+// @hash 229102bb7c88
+{
+  // The desktop's chrome (shelf, launcher, menus, previews) paints its own
+  // designed theme, `desktop`, contributed by the desktop shell
+  // (`plugins/apps/plugins/desktop/plugins/shell/web/internal/theme.ts`) —
+  // independent of the theme its windows' apps wear, and of the fixed graphite
+  // chrome the global action bar wears.
+  "theme": "desktop"
+}

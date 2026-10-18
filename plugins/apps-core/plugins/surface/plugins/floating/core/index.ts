@@ -1,1 +1,0 @@
-export { floatingChromeConfig } from "./config";
