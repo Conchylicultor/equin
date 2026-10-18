@@ -121,6 +121,7 @@ export {
   splitRuns,
   mergeRuns,
   runsEqual,
+  changedSpanEnd,
   coalesce,
   TextRunSchema,
   RichTextSchema,

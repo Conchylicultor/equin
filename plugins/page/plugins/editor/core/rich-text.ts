@@ -256,3 +256,46 @@ export function mergeRuns(a: RichText, b: RichText): RichText {
 export function runsEqual(a: RichText, b: RichText): boolean {
   return JSON.stringify(coalesce(a)) === JSON.stringify(coalesce(b));
 }
+
+// ---------------------------------------------------------------------------
+// Change span
+// ---------------------------------------------------------------------------
+
+/**
+ * Where the change that turns `from` into `to` ENDS, as a linear offset in
+ * `to`: the common prefix and common suffix are trimmed (compared per
+ * character, attributes included, so a format-only change has a span too) and
+ * what is left is the changed region. This is where a caret belongs once a
+ * block has been brought to `to` — after the text an undo restores
+ * (`xxxx|yyyy` → `xxxxtext deleted|yyyy`), after the text a redo re-types.
+ * Derived from the two texts alone, so a replay needs no recorded caret. Equal
+ * texts have no change; the end of `to` is returned.
+ */
+export function changedSpanEnd(from: RichText, to: RichText): number {
+  const a = charKeys(from);
+  const b = charKeys(to);
+  let prefix = 0;
+  while (prefix < a.length && prefix < b.length && a[prefix] === b[prefix])
+    prefix++;
+  let suffix = 0;
+  while (
+    suffix < a.length - prefix &&
+    suffix < b.length - prefix &&
+    a[a.length - 1 - suffix] === b[b.length - 1 - suffix]
+  )
+    suffix++;
+  return b.length - suffix;
+}
+
+/**
+ * One comparable key per UTF-16 unit — the basis {@link runsLength} and every
+ * linear caret offset count in — holding the unit and its run's attributes.
+ */
+function charKeys(runs: RichText): string[] {
+  const keys: string[] = [];
+  for (const run of runs) {
+    const attrs = attrKey(run);
+    for (let i = 0; i < run.text.length; i++) keys.push(run.text[i] + attrs);
+  }
+  return keys;
+}

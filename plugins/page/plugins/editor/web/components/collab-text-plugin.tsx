@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { CollaborationPlugin } from "@lexical/react/LexicalCollaborationPlugin";
 import { LexicalCollaboration } from "@lexical/react/LexicalCollaborationContext";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -22,7 +22,6 @@ import {
 } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import {
-  $linearCaretOffset,
   $xmlBasisContentLength,
   serializeBlockRuns,
 } from "../internal/block-text-extensions";
@@ -30,7 +29,6 @@ import {
   collabHydrationReportSink,
   type CollabHydrationReason,
 } from "../internal/hydration-report";
-import type { BlockRunsEdit } from "../internal/block-run-tracker";
 import {
   useCollabBlockDoc,
   useLocalCollabBlockDoc,
@@ -245,56 +243,18 @@ function useHydrationVerification(doc: CollabBlockDoc): void {
   }, [editor, verifyRendered]);
 }
 
-/**
- * The text-history callback handed to whichever content-doc hook runs.
- * Storage-agnostic: the run tracker closes runs identically on the server and
- * in-memory paths.
- *
- * Each closed local editing run in this block's content doc — the owner's run
- * tracker does the grouping (a 500 ms idle window) and keeps remote applies,
- * replays and `untracked` surgeries out — arrives as DATA, the block's runs
- * before and after it, and is recorded as one entry on the app's single
- * document-level undo stack, interleaved with structural entries in true
- * chronological order. The entry holds no pointer into this block's doc, so it
- * replays whether or not this editor still exists.
- *
- * The caret is stamped HERE, because only this component has an editor: the
- * tracker observes the doc and cannot read a selection. A replay lands in the
- * binding as a remote edit, so without a recorded offset the caret would drift
- * to wherever Lexical parks it. `caretAfter` is the live caret at the moment
- * the run closes — an APPROXIMATION of where the run ended (the idle timer
- * fires up to 500 ms later, and the caret may have moved without editing in
- * between). `caretBefore` is the previous run's `caretAfter` for this block
- * when there is one (runs on one block are recorded in order, so that IS
- * where the caret stood when this run opened), else the live offset clamped
- * into the `before` text — the first run of a session has no earlier entry to
- * read from. The recorder clamps both into the restored text at replay.
- *
- * The `doc → data.text` projection used to be its sibling here. It is now owned
- * by the seam (`use-collab-block-doc.ts`), which holds the canonical doc it
- * reads — this component no longer participates in it at all.
- */
-function useRunsEditRecorder(): (edit: BlockRunsEdit) => void {
-  const [editor] = useLexicalComposerContext();
-  const { recordTextEdit } = useBlockEditor();
-  const lastCaretAfterRef = useRef<number | undefined>(undefined);
-  return useEventCallback((edit: BlockRunsEdit) => {
-    const caretAfter =
-      editor.getEditorState().read($linearCaretOffset) ?? undefined;
-    const caretBefore =
-      lastCaretAfterRef.current ??
-      (caretAfter === undefined
-        ? undefined
-        : Math.min(caretAfter, runsLength(edit.before)));
-    lastCaretAfterRef.current = caretAfter;
-    recordTextEdit({ ...edit, caretBefore, caretAfter });
-  });
-}
-
 /** Server-synced content-doc binding: the CRDT transport (subscription + FK gate). */
 function ServerCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
-  const onRunsEdit = useRunsEditRecorder();
-  const { projectText, rowTruthOf } = useBlockEditor();
+  // Text history: each closed local editing run in this block's content doc —
+  // the owner's run tracker groups them (a 500 ms idle window) and keeps
+  // remote applies, replays and `untracked` surgeries out — arrives as DATA
+  // (the block's runs before and after it) and is recorded as one entry on the
+  // app's single document-level undo stack. The entry holds no pointer into
+  // this block's doc or editor (not even a caret: replay derives it from the
+  // runs), so it replays whether or not this editor still exists. Stable, so
+  // the doc observers never resubscribe on a context re-render.
+  const { projectText, rowTruthOf, recordTextEdit } = useBlockEditor();
+  const onRunsEdit = useEventCallback(recordTextEdit);
   // What this client knows about the block id in server truth
   // (`internal/row-truth.ts`). `"present"` lifts the doc-init FK gate (Stage
   // 4a): a freshly created / split block renders from the optimistic overlay
@@ -318,8 +278,8 @@ function ServerCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
 
 /** In-memory content-doc binding (`persist={false}`): a purely local `Y.Doc`, no network. */
 function LocalCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
-  const onRunsEdit = useRunsEditRecorder();
-  const { projectText } = useBlockEditor();
+  const { projectText, recordTextEdit } = useBlockEditor();
+  const onRunsEdit = useEventCallback(recordTextEdit);
   const doc = useLocalCollabBlockDoc(
     block.id,
     (block.data as Record<string, unknown> | null)?.text,

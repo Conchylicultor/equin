@@ -66,18 +66,13 @@ export const TEXT_RUN_IDLE_MS = 500;
  * The whole of a text undo entry — replaying it is bringing the block to
  * `before` (undo) or `after` (redo), on whichever host holds the block then.
  *
- * `caretBefore` / `caretAfter` are the linear caret offsets at the run's
- * boundaries, so a replay can land the caret where the user was. The tracker
- * cannot read them — it observes the doc, not an editor — so it emits them
- * `undefined` and the component recorder (`collab-text-plugin.tsx`), which
- * has the editor, stamps them before recording.
+ * It carries no caret: where a replay lands it is derived from `before` and
+ * `after` alone (`changedSpanEnd` — the end of what the replay changed).
  */
 export interface BlockRunsEdit {
   readonly blockId: string;
   readonly before: RichText;
   readonly after: RichText;
-  readonly caretBefore?: number;
-  readonly caretAfter?: number;
 }
 
 export interface BlockRunTrackerOptions {

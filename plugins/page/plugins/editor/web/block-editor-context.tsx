@@ -27,6 +27,7 @@ import {
   nextVisibleLine,
   runsOfNode,
   runsLength,
+  changedSpanEnd,
   runsEqual,
   splitRuns,
   mergeRuns,
@@ -1357,9 +1358,10 @@ export function BlockEditorProviderInner({
   //  - on undo replays each runs edit's `before` and THEN dispatches the
   //    reverse patch; on redo dispatches the forward patch and THEN replays
   //    each `after` — a doc edit always runs while its row exists;
-  //  - restores focus at the recorded caret when the entry carries one for the
-  //    block it lands on (a replay lands in the binding as a remote edit, so
-  //    without it the cursor would drift), else a plain focus.
+  //  - restores focus at the end of what the replay changed when the entry
+  //    carries a runs edit for the block it lands on (a replay lands in the
+  //    binding as a remote edit, so without it the cursor would drift), else a
+  //    plain focus.
   //
   // The thunks are async only for the replay's sake; the undo-redo primitive
   // serializes turns, so a second Cmd+Z during an in-flight stored-doc write
@@ -1383,19 +1385,18 @@ export function BlockEditorProviderInner({
         undoFocus: focusId,
         redoFocus: focusId,
       };
-      // The recorded caret for the block undo/redo lands on, clamped into the
-      // text that replay restores there (the offset is an approximation read
-      // at run close — see `useRunsEditRecorder` — and must never exceed it).
+      // The caret for the block undo/redo lands on: the end of what the replay
+      // changed in it (after the text an undo restores or a redo re-types),
+      // derived from the edit's own runs — never a caret read while typing.
       const caretFor = (
         id: string | null,
         direction: "undo" | "redo",
       ): number | undefined => {
         const edit = runsEdits.find((e) => e.blockId === id);
         if (!edit) return undefined;
-        const caret = direction === "undo" ? edit.caretBefore : edit.caretAfter;
-        if (caret === undefined) return undefined;
-        const restored = direction === "undo" ? edit.before : edit.after;
-        return Math.min(caret, runsLength(restored));
+        return direction === "undo"
+          ? changedSpanEnd(edit.after, edit.before)
+          : changedSpanEnd(edit.before, edit.after);
       };
       const land = (id: string | null, caret: number | undefined): void => {
         // Undo/redo reveals the affected block — it may be off-screen.

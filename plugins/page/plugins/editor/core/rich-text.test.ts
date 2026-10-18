@@ -14,6 +14,7 @@ import {
   splitRuns,
   type RichText,
   runsEqual,
+  changedSpanEnd,
 } from "./rich-text";
 
 describe("runsOf", () => {
@@ -210,5 +211,53 @@ describe("runsEqual", () => {
 
   test("a text difference is a difference", () => {
     expect(runsEqual([{ text: "ab" }], [{ text: "a" }])).toBe(false);
+  });
+});
+
+describe("changedSpanEnd", () => {
+  const t = (text: string): RichText => [{ text }];
+
+  test("undoing a deletion lands after the restored text", () => {
+    const before = t("xxxxtext deletedyyyy");
+    const after = t("xxxxyyyy");
+    expect(changedSpanEnd(after, before)).toBe("xxxxtext deleted".length);
+  });
+
+  test("redoing a deletion lands at the cut", () => {
+    expect(changedSpanEnd(t("xxxxtext deletedyyyy"), t("xxxxyyyy"))).toBe(4);
+  });
+
+  test("an insertion lands after the inserted text, an undo at its start", () => {
+    expect(changedSpanEnd(t("hello"), t("heXYllo"))).toBe(4);
+    expect(changedSpanEnd(t("heXYllo"), t("hello"))).toBe(2);
+  });
+
+  test("a replacement lands after the replacing text", () => {
+    expect(changedSpanEnd(t("a cat b"), t("a doggo b"))).toBe(7);
+  });
+
+  test("run boundaries do not count as a change", () => {
+    expect(
+      changedSpanEnd([{ text: "ab" }, { text: "cd" }], [{ text: "abXcd" }]),
+    ).toBe(3);
+  });
+
+  test("a format-only change spans the reformatted text", () => {
+    const plain = t("one two three");
+    const bold: RichText = [
+      { text: "one " },
+      { text: "two", marks: ["bold"] },
+      { text: " three" },
+    ];
+    expect(changedSpanEnd(plain, bold)).toBe(7);
+    expect(changedSpanEnd(bold, plain)).toBe(7);
+  });
+
+  test("counts UTF-16 units, the linear caret basis", () => {
+    expect(changedSpanEnd(t("a😀b"), t("a😀Xb"))).toBe(4);
+  });
+
+  test("equal texts land at the end", () => {
+    expect(changedSpanEnd(t("same"), t("same"))).toBe(4);
   });
 });

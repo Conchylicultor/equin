@@ -3543,12 +3543,15 @@ Design: [`research/2026-09-09-page-data-based-text-undo-entries-v2.md`](../../..
   waits on the transport; on a purged block host B's `doc-init` 404s and the
   replay throws. (2) Entries are still mount-scoped (they close over the page's
   optimistic store), so Cmd+Z does not reach back after navigating away — a
-  follow-up. (3) The caret a replay lands on is an APPROXIMATION: the tracker
-  observes the doc, not an editor, so `collab-text-plugin`'s recorder stamps
-  `caretAfter` from the live selection when the run closes (up to 500 ms after
-  the last keystroke) and `caretBefore` from the previous run's `caretAfter`
-  on that block (else the live offset clamped into `before`); replay clamps
-  both into the restored text.
+  follow-up.
+- **The caret a replay lands on is DERIVED, never recorded.** A runs edit
+  carries no caret: replay lands it at `changedSpanEnd(from, to)` (`core/rich-text.ts`)
+  — the end of what the replay changed in the block, so undoing a deletion puts
+  the caret after the restored text (`xxxx|yyyy` → `xxxxtext deleted|yyyy`) and
+  redoing a typing run puts it after the re-typed text. It used to be read off
+  the live selection when the run closed, which a deletion run never brackets
+  (the caret is at the cut, and the previous run's end is wherever the user last
+  typed) — undo landed at either end of the restored text depending on history.
 - **Inverse pairs are handled by the overlay's ordering rule, not by absorption.**
   An undo patch followed by a redo patch before the undo's confirming push arrives
   leaves the undo op unable to ever confirm — every later snapshot shows X present,
@@ -4743,6 +4746,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `canIndent`
     - `canOutdent`
     - `changedFields`
+    - `changedSpanEnd`
     - `childrenOf`
     - `coalesce`
     - `collapsedAnchorAbove`
