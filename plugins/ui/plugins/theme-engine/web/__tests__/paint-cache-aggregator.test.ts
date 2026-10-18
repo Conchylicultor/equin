@@ -13,6 +13,7 @@ import {
   reportPaintStyle,
   setPaintContext,
 } from "../internal/paint-cache-aggregator";
+import { CACHE_BUDGET } from "../internal/theme-cache";
 
 const KEY = "theme-engine:critical-css";
 
@@ -28,7 +29,11 @@ function addStyleEl(id: string): HTMLStyleElement {
 
 interface Envelope {
   v: number;
-  entries: Record<string, { styles: Record<string, string>; mode: string }>;
+  css: Record<string, string>;
+  entries: Record<
+    string,
+    { styles: Record<string, string>; mode: string; at: number }
+  >;
 }
 
 function readEnvelope(): Envelope | null {
@@ -45,7 +50,14 @@ function entryOf(path: string): {
   if (!env) throw new Error("no envelope written");
   const entry = env.entries[path];
   if (!entry) throw new Error(`no entry for path ${JSON.stringify(path)}`);
-  return entry;
+  // Entries name their CSS by hash; resolve to text so assertions read it.
+  const styles: Record<string, string> = {};
+  for (const [id, hash] of Object.entries(entry.styles)) {
+    const text = env.css[hash];
+    if (text === undefined) throw new Error(`dangling css hash for ${id}`);
+    styles[id] = text;
+  }
+  return { styles, mode: entry.mode };
 }
 
 /** Count the envelope writes a block of work performs. */
@@ -79,7 +91,7 @@ describe("paint-cache-aggregator", () => {
     );
     await flushMicrotasks();
 
-    expect(readEnvelope()?.v).toBe(3);
+    expect(readEnvelope()?.v).toBe(4);
     expect(entryOf("/agents").styles).toEqual({
       "theme-engine-color-palette": ":root{--a:1}",
       "theme-scope-app:agents-color-palette":
@@ -159,6 +171,69 @@ describe("paint-cache-aggregator", () => {
     setPaintContext({ appPath: "/agents", mode: "dark", rootIsGlobal: true });
     await flushMicrotasks();
     expect(entryOf("/agents").mode).toBe("dark");
+  });
+
+  test("identical CSS across app paths is stored once", async () => {
+    for (const appPath of ["/agents", "/files", "/mail"]) {
+      setPaintContext({ appPath, mode: "dark", rootIsGlobal: false });
+      reportPaintStyle("theme-engine-a", ":root{--a:1}");
+      await flushMicrotasks();
+    }
+    const env = readEnvelope();
+    expect(Object.keys(env?.entries ?? {}).sort()).toEqual([
+      "/agents",
+      "/files",
+      "/mail",
+    ]);
+    expect(Object.values(env?.css ?? {})).toEqual([":root{--a:1}"]);
+  });
+
+  test("a CSS text no entry names any more is dropped", async () => {
+    setPaintContext({ appPath: "/agents", mode: "dark", rootIsGlobal: false });
+    reportPaintStyle("theme-engine-a", "old");
+    await flushMicrotasks();
+    reportPaintStyle("theme-engine-a", "new");
+    await flushMicrotasks();
+    expect(Object.values(readEnvelope()?.css ?? {})).toEqual(["new"]);
+  });
+
+  test("over budget, the least recently written app paths are evicted", async () => {
+    // Each app paints its own distinct ~0.4 × budget block, so only two fit.
+    const big = (tag: string) => tag.repeat(CACHE_BUDGET * 0.4);
+    const t0 = Date.now();
+    const now = vi.spyOn(Date, "now");
+    now.mockReturnValue(t0);
+    setPaintContext({ appPath: "/global", mode: "dark", rootIsGlobal: true });
+    reportPaintStyle("theme-engine-a", big("g"));
+    await flushMicrotasks();
+    now.mockReturnValue(t0 + 1000);
+    setPaintContext({ appPath: "/old", mode: "dark", rootIsGlobal: false });
+    reportPaintStyle("theme-engine-a", big("o"));
+    await flushMicrotasks();
+    now.mockReturnValue(t0 + 2000);
+    setPaintContext({ appPath: "/new", mode: "dark", rootIsGlobal: false });
+    reportPaintStyle("theme-engine-a", big("n"));
+    await flushMicrotasks();
+
+    const raw = localStorage.getItem(KEY) ?? "";
+    expect(raw.length).toBeLessThanOrEqual(CACHE_BUDGET);
+    // The written path and the "" fallback are kept. "/global" (oldest) goes
+    // first, but "" still names its CSS so that frees nothing — "/old" follows.
+    expect(Object.keys(readEnvelope()?.entries ?? {}).sort()).toEqual([
+      "",
+      "/new",
+    ]);
+  });
+
+  test("a pre-v4 envelope is replaced, not merged", async () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ v: 3, entries: { "/x": { styles: {}, mode: "dark" } } }),
+    );
+    setPaintContext({ appPath: "/agents", mode: "dark", rootIsGlobal: false });
+    reportPaintStyle("theme-engine-a", "1");
+    await flushMicrotasks();
+    expect(Object.keys(readEnvelope()?.entries ?? {})).toEqual(["/agents"]);
   });
 
   test("prune removes unclaimed theme-* elements, keeps claimed ones", async () => {

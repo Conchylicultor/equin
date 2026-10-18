@@ -25232,8 +25232,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 40 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×38
+        - Slot contributors: 41 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×39
           - `Core.Boot` ×2
       - Core:
         - Uses:
@@ -40638,16 +40638,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `framework/web-core`
           - Web:
             - Exports (values): `yieldToMain`
-    - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten observes every write and clear in the tab.
-      - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
-          - `apps` ×9
-          - `primitives` ×8
-          - `conversations` ×6
-          - `map`
-          - `page/editor`
-          - `tasks/task-draft-form`
+    - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten observes every write and clear in the tab; onDraftWriteFailed every write the browser refused.
       - Web:
+        - Slots: `DraftSlots.Root`
+        - Slot contributors: `DraftSlots.Root` ← `primitives.persistent-draft.unsaved-warning`
+        - Contributes: `Core.Root`
         - Exports (types):
           - `DraftOptions`
           - `DraftWrite`
@@ -40655,10 +40650,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `clearDraft`
           - `DEFAULT_DRAFT_TTL`
           - `draftKey`
+          - `DraftSlots`
+          - `onDraftWriteFailed`
           - `onDraftWritten`
           - `readDraft`
           - `useDraft`
           - `writeDraft`
+      - Cross-plugin:
+        - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
+          - `apps` ×9
+          - `primitives` ×9
+          - `conversations` ×6
+          - `map`
+          - `page/editor`
+          - `tasks/task-draft-form`
+      - Plugins:
+        - **`unsaved-warning`** — Warns once per page load, with an error toast, when the browser refuses to save a draft (storage full or blocked) — the text then lives only in memory and a reload loses it.
+          - Web:
+            - Contributes: `DraftSlots.Root` → `UnsavedDraftWarning`
+            - Uses:
+              - `primitives/persistent-draft.DraftSlots`
+              - `primitives/persistent-draft.onDraftWriteFailed`
+              - `shell/toast.showToast`
     - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
       - Web:
         - Slots: `PromptEditorSlots.FloatingAction`
@@ -44146,11 +44159,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by: 22 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+        - Imported by: 23 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
           - `apps` ×8
+          - `primitives` ×3
           - `conversations` ×2
           - `page` ×2
-          - `primitives` ×2
           - `apps-core/app-embed`
           - `build/serve-composition`
           - `config_v2/settings`

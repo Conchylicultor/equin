@@ -113,10 +113,35 @@ export function writeDraft<T>(
   } catch (err) {
     // Quota exhaustion and blocked storage are the two expected failures, and a
     // draft that cannot be persisted must never break the surface the user is
-    // typing into. Anything else rethrows.
-    if (err instanceof DOMException) return;
+    // typing into — but it must not go unnoticed either: the user keeps typing
+    // into an editor that looks saved and loses it all on reload. Anything else
+    // rethrows.
+    if (err instanceof DOMException) {
+      announceFailure(err);
+      return;
+    }
     throw err;
   }
+}
+
+const DRAFT_FAILED_EVENT = "singularity:draft-write-failed";
+
+function announceFailure(err: DOMException): void {
+  window.dispatchEvent(new CustomEvent(DRAFT_FAILED_EVENT, { detail: err }));
+}
+
+/**
+ * Observe every draft write the browser refused (storage full or blocked) — the
+ * draft stayed only in memory and is lost on reload, so the user must be told.
+ * Returns the unsubscribe.
+ */
+export function onDraftWriteFailed(
+  listener: (err: DOMException) => void,
+): () => void {
+  const handle = (e: Event) =>
+    listener((e as CustomEvent<DOMException>).detail);
+  window.addEventListener(DRAFT_FAILED_EVENT, handle);
+  return () => window.removeEventListener(DRAFT_FAILED_EVENT, handle);
 }
 
 export function clearDraft(key: string, options?: DraftOptions): void {

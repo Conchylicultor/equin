@@ -11,6 +11,7 @@
          The cache is keyed by app path: it longest-prefix matches the current
          pathname (mirroring apps' appMatchesPath) and falls back to the ""
          (global) entry, so a full-surface app's reload replays its own theme.
+         Entries reference their CSS by hash into env.css (stored once).
          No structural change was needed here for the "base layer owns `:root`"
          model: ThemeInjector now renders the FOCUSED app's theme into its
          `theme-engine-*` `:root` blocks, so the per-app-path entry already
@@ -36,7 +37,7 @@
           var env = JSON.parse(
             localStorage.getItem("theme-engine:critical-css"),
           );
-          if (env && env.v === 3 && env.entries) {
+          if (env && env.v === 4 && env.css && env.entries) {
             // Same canonicalization as `normalizeRoutePath` (pane/core): a
             // hand-typed `//agents/x` must prefix-match `/agents` here exactly
             // as it does in the app, or the pre-paint replay picks the global
@@ -56,9 +57,13 @@
               for (var id in entry.styles) {
                 if (!Object.prototype.hasOwnProperty.call(entry.styles, id))
                   continue;
+                // Entries name their CSS by hash (each distinct text is
+                // stored once in env.css); a dangling hash is just skipped.
+                var css = env.css[entry.styles[id]];
+                if (typeof css !== "string") continue;
                 var el = document.createElement("style");
                 el.id = id;
-                el.textContent = entry.styles[id];
+                el.textContent = css;
                 document.head.appendChild(el);
               }
               var m = entry.mode;
@@ -70,7 +75,7 @@
             }
           }
         } catch (e) {
-          /* corrupt / pre-v3 / unavailable cache → fall through to the cold floor */
+          /* corrupt / pre-v4 / unavailable cache → fall through to the cold floor */
         }
         if (prefersDark) document.documentElement.classList.add("dark");
       })();

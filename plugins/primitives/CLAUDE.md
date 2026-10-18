@@ -131,6 +131,8 @@ relatives under an umbrella.
       - **`latency-signal`** — The closed vocabulary of client latency signals (update: a pushed change applied; confirm: an optimistic write confirmed), each a fixed tuple of named phases, as plain data; ClientLatencySample (a…
       - **`scheduler`** — Main-thread scheduling primitives (yieldToMain: scheduler.yield → postTask → setTimeout(0)) for cooperative boot/work batching.
   - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs)…
+    - Plugins:
+      - **`unsaved-warning`** — Warns once per page load, with an error toast, when the browser refuses to save a draft (storage full or blocked) — the text then lives only in memory and a reload loses it.
   - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
     - Plugins:
       - **`voice-input`** — Voice dictation for the prompt editor via the Web Speech API.

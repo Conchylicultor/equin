@@ -5314,6 +5314,10 @@
       "name": "@singularity/plugin-primitives-persistent-draft",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/persistent-draft/plugins/unsaved-warning": {
+      "name": "@singularity/plugin-primitives-persistent-draft-unsaved-warning",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/prompt-editor": {
       "name": "@singularity/plugin-primitives-prompt-editor",
       "version": "0.0.1",
@@ -9325,6 +9329,8 @@
     "@singularity/plugin-primitives-perfs-scheduler": ["@singularity/plugin-primitives-perfs-scheduler@workspace:plugins/primitives/plugins/perfs/plugins/scheduler"],
 
     "@singularity/plugin-primitives-persistent-draft": ["@singularity/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
+
+    "@singularity/plugin-primitives-persistent-draft-unsaved-warning": ["@singularity/plugin-primitives-persistent-draft-unsaved-warning@workspace:plugins/primitives/plugins/persistent-draft/plugins/unsaved-warning"],
 
     "@singularity/plugin-primitives-prompt-editor": ["@singularity/plugin-primitives-prompt-editor@workspace:plugins/primitives/plugins/prompt-editor"],
 
