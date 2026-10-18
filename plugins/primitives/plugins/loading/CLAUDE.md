@@ -21,6 +21,14 @@ arrives first and the node unmounts before it ever paints, so fast loads show
 loads (WS down → HTTP fallback). Hand-rolled `Loading…` text can't do this —
 which is what the `no-adhoc-loading-text` lint rule enforces.
 
+## `aria-busy`
+
+Every variant renders `role="status"` + `aria-busy="true"`. It is the page's
+machine-readable "still loading" signal for every surface that loads through
+this primitive (a hand-rolled skeleton is not marked). The agent browser's recordings wait on it
+(`infra/mcp/browser`, `server/internal/record-call.ts`) before filming a call's
+result.
+
 ## Division of labor
 
 - **`Loading`** — the loading state (this plugin).
@@ -73,11 +81,11 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by: 189 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 190 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×63
     - `ui` ×19
     - `conversations` ×18
-    - `debug` ×17
+    - `debug` ×18
     - `primitives` ×17
     - `tasks` ×13
     - `page` ×8

@@ -17,6 +17,7 @@ export type { TaskReport } from "./task-reports";
 export { defineGuard } from "./define-guard";
 export { MODULE_EXTENSION } from "./module-extension";
 export { parseShell } from "./parse-shell";
+export { TOOL_USE_ID_ENV, TOOL_USE_ID_RE, toolUseIdFrom } from "./tool-use-id";
 export { parseArgv, redirectionTargets } from "./argv";
 export type { ParsedArgv, FileOperand, KnownCommand } from "./argv";
 export { createContext } from "./context";

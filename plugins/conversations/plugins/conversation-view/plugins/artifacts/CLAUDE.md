@@ -151,6 +151,7 @@ here.
     - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.research`
     - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.screenshot`
     - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.skill`
+    - `ConversationArtifacts.Kind` ← `debug.browser-recordings`
   - Contributes: `Conversation.ActionBar` → `ArtifactsButton`
   - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×3
@@ -197,6 +198,7 @@ here.
     - `conversations/conversation-view/artifacts/research`
     - `conversations/conversation-view/artifacts/screenshot`
     - `conversations/conversation-view/artifacts/skill`
+    - `debug/browser-recordings`
 - Core:
   - Exports (types):
     - `ArtifactHit`

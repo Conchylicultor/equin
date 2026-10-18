@@ -72,6 +72,7 @@ client sees them at connect (Claude Code connects once per conversation).
     - `McpScope`
     - `McpScopeResolver`
     - `McpTool`
+    - `McpToolCallContext`
     - `McpToolContext`
     - `McpToolResult`
   - Exports (values): `Mcp`

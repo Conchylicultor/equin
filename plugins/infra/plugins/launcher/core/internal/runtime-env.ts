@@ -155,6 +155,8 @@ export const RUNTIME_FORWARDED_TOOL_ENV: Readonly<Record<string, string>> = {};
 export const RUNTIME_WITHHELD_ENV = {
   SINGULARITY_CONVERSATION_ID:
     "agent-session identity; the tmux runtime delivers it into that agent's own pane with `tmux -e`, where the commit hook and op-log read it",
+  SINGULARITY_TOOL_USE_ID:
+    "the Bash tool call an e2e script was launched by; a PreToolUse guard exports it into that one command, never a backend's",
   SINGULARITY_PARENT_HOST:
     "the host an agent's MCP client dials back to; delivered into that agent's own pane with `tmux -e`",
   SINGULARITY_PARENT_LIFELINE:

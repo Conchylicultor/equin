@@ -31,6 +31,7 @@ import { arg, flag, usage } from "./args";
 import { capture, type Captured } from "./capture";
 import { detectOsColorScheme, type ColorScheme } from "./color-scheme";
 import { onBeforeFinish } from "./report";
+import { createRecorder } from "./recorder";
 import { repairAgentWrites, settleAgentWrites } from "./agent-writes";
 import { assertDeployIdentity } from "./deploy-identity";
 import { isTargetOrigin, targetNamespace, unconsumedPage } from "./target";
@@ -264,10 +265,27 @@ export async function withBrowser<T>(
     throw launchFailure(err, installed);
   }
 
+  // Every run is recorded: each API call the script makes is a step, filmed
+  // at full resolution, filed under the Bash tool call that launched the
+  // script, so the conversation view shows the steps under that call. The
+  // environment names only that transcript row — never the deploy to drive.
+  // `--no-record` opts out, for a script whose timings the screencast would
+  // skew (a profiler).
+  const recorder = flag("no-record")
+    ? null
+    : createRecorder(browser, process.argv[1] ?? "e2e", process.env);
+
   let torndown = false;
   const teardown = async (): Promise<void> => {
     if (torndown) return;
     torndown = true;
+    // The screencasts are stopped through the open pages, so the recording is
+    // written before anything closes. Its failure is re-thrown at the end:
+    // it must not skip the close and the revert below.
+    const recording = await (recorder?.finish() ?? Promise.resolve()).then(
+      () => null,
+      (err: unknown) => ({ err }),
+    );
     // ORDER IS LOAD-BEARING. Close first: a pending DataView write lives in a
     // `setTimeout` inside the page, so closing the context kills the timer and
     // bounds what can still reach the server to what is already dispatched.
@@ -276,6 +294,7 @@ export async function withBrowser<T>(
     await settleAgentWrites();
     await repairAgentWrites("end");
     assertPageWasConsumed();
+    if (recording !== null) throw recording.err;
   };
 
   // `finish()` ends in `process.exit()`, which skips `finally` — and 86 of the
@@ -307,6 +326,8 @@ export async function withBrowser<T>(
           extraHTTPHeaders: agentOriginHeaders(originSource()),
         });
         await keepOriginHeadersOnTarget(context);
+        // Before the first page, so every page is filmed from its first paint.
+        recorder?.attach(context);
         // Before the first page, so every page is tracked from its first
         // request (see `network-idle.ts`).
         trackContextNetwork(context);
@@ -393,10 +414,22 @@ async function withAttachedBrowser<T>(
     );
   }
 
+  // Recorded like a launched run: the ticket's tab, and any page the script
+  // opens in its context, filed under the Bash call that ran the script.
+  const recorder = flag("no-record")
+    ? null
+    : createRecorder(browser, process.argv[1] ?? "e2e", process.env);
+
   let torndown = false;
   const teardown = async (): Promise<void> => {
     if (torndown) return;
     torndown = true;
+    // The screencasts are stopped through the connection, so before it drops;
+    // a failure is re-thrown once it has.
+    const recording = await (recorder?.finish() ?? Promise.resolve()).then(
+      () => null,
+      (err: unknown) => ({ err }),
+    );
     const at = page.isClosed() ? "closed by the script" : page.url();
     // Drops this connection only: the tab and its session stay up.
     await browser.close();
@@ -405,6 +438,7 @@ async function withAttachedBrowser<T>(
         `continue with browser_read_page({ tab: "${ticket.tab}" })`,
     );
     assertPageWasConsumed();
+    if (recording !== null) throw recording.err;
   };
   const release = onBeforeFinish(teardown);
 
@@ -424,6 +458,8 @@ async function withAttachedBrowser<T>(
           colorScheme: opts.colorScheme ?? detectOsColorScheme(),
         });
         const context = page.context();
+        recorder?.attach(context);
+        recorder?.film(page);
         trackContextNetwork(context);
         const label = opts.label ?? "";
         return {

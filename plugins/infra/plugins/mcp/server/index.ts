@@ -9,6 +9,7 @@ export type {
   McpScope,
   McpScopeResolver,
   McpTool,
+  McpToolCallContext,
   McpToolContext,
   McpToolResult,
 } from "./internal/mcp";

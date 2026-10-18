@@ -90,6 +90,13 @@ export interface GuardContext {
    * `agent_type` instead — which is also set for a `--agent` main session.
    */
   agent: { id: string; type: string } | null;
+  /**
+   * The id of the tool call being judged, straight off the PreToolUse payload —
+   * the same id the transcript pairs the call's result by. `null` when the
+   * payload carries none (a replay, a test). A guard that hands it to the
+   * command lets what the command leaves behind be shown under that call.
+   */
+  toolUseId: string | null;
   hasBypass(token: string): boolean;
   allow(): AllowVerdict;
   deny(reason: string): DenyVerdict;

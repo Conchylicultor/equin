@@ -13343,6 +13343,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.research`
               - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.screenshot`
               - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.skill`
+              - `ConversationArtifacts.Kind` ← `debug.browser-recordings`
             - Contributes: `Conversation.ActionBar` → `ArtifactsButton`
             - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md)
               - `primitives/live-state` ×3
@@ -13389,6 +13390,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/artifacts/research`
               - `conversations/conversation-view/artifacts/screenshot`
               - `conversations/conversation-view/artifacts/skill`
+              - `debug/browser-recordings`
           - Core:
             - Exports (types):
               - `ArtifactHit`
@@ -15035,7 +15037,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses tokens: `ui/tokens/color-palette --muted-foreground`
             - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
               - Web:
-                - Slots: `JsonlViewerTool.Renderer`
+                - Slots:
+                  - `JsonlViewerTool.Renderer`
+                  - `JsonlViewerTool.Footer`
                 - Slot contributors:
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.agent`
@@ -15053,6 +15057,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.web-search`
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.workflow`
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.write`
+                  - `JsonlViewerTool.Footer` ← `debug.browser-recordings`
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                   - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
@@ -15069,8 +15074,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
                   - `primitives/slot-render.defineDispatchSlot`
+                  - `primitives/slot-render.defineRenderSlot`
                   - `primitives/slot-render.DispatchContribution`
-                - Exports (types): `ToolRendererContribution`
+                - Exports (types):
+                  - `ToolFooterContribution`
+                  - `ToolFooterProps`
+                  - `ToolRendererContribution`
                 - Exports (values):
                   - `JsonlViewerTool`
                   - `ToolCallCard`
@@ -15112,6 +15121,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/write`
+                  - `debug/browser-recordings`
               - Core:
                 - Exports (types):
                   - `ToolCallEvent`
@@ -18799,6 +18809,63 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `broadcastEntries`
           - `writeBroadcasts`
           - `WriteBroadcastsBodySchema`
+    - **`browser-recordings`** — Shows the recording of the browser a tool call drove — an e2e run's filmstrip (the page after each step) or a browser_* call's frame, opening the full-window viewer — under its card in the conversation, and gathered as the conversation's Browser recordings artifact. Serves the browser recordings filed under one tool call (the browser-recordings.runs live value) — an e2e run's steps, or a browser_* MCP call's frame — pushed when a run's manifest lands in the browser-recordings data dir.
+      - Web:
+        - Contributes:
+          - `JsonlViewerTool.Footer` "browser-recording" → `RecordingFooter`
+          - `ConversationArtifacts.Kind` "Browser recordings"
+        - Uses:
+          - `conversations/conversation-view/artifacts.ConversationArtifacts`
+          - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
+          - `network/live.useLive`
+          - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/live-state.ResourceErrorInline`
+          - `primitives/loading.Loading`
+          - `primitives/overlay/image-viewer.ImageGallery`
+          - `primitives/overlay/image-viewer.ViewerThumbnail`
+      - Server:
+        - Contributes: `resource.declare` "browser-recordings.runs"
+        - Uses:
+          - `infra/file-watcher.acquireDirWatch`
+          - `network/live.serveValue`
+        - Resources: `browser-recordings.runs` (push, notified)
+      - Core:
+        - Uses: `network/live.liveValue`
+        - Exports (types):
+          - `BrowserRecordingRun`
+          - `RecordingManifest`
+          - `RecordingSource`
+          - `RecordingStep`
+        - Exports (values):
+          - `browserRecordingRuns`
+          - `isRecordedToolCall`
+          - `MANIFEST_FILE`
+          - `RECORDED_BROWSER_TOOLS`
+          - `RecordingManifestSchema`
+          - `RecordingSourceSchema`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --destructive`
+          - `ui/tokens/density --space-2xs`
+          - `ui/tokens/density --space-md`
+          - `ui/tokens/density --space-sm`
+          - `ui/tokens/shape --radius`
+        - Imported by: `debug/browser-recordings/writer`
+      - Plugins:
+        - **`writer`** — Writes one browser recording (node-only, so the web never bundles node:fs): openRecording files a run under its tool call, stores each step's frame once (by content), writes the manifest last — what the conversation view's push keys on — and keeps the newest 200 runs. The one path the e2e harness and the browser_* MCP tools both record through.
+          - Core:
+            - Uses:
+              - `debug/browser-recordings.MANIFEST_FILE`
+              - `debug/browser-recordings.RecordingManifest`
+              - `debug/browser-recordings.RecordingSource`
+              - `debug/browser-recordings.RecordingStep`
+              - `framework/tooling/guards.TOOL_USE_ID_RE`
+            - Exports (types):
+              - `FrameFormat`
+              - `Recording`
+            - Exports (values): `openRecording`
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) as a live DataView — searchable over prompt/output/error, filterable by source, model, status, duration and time — with a detail pane per call (prompt, system, output or error, context, meta).
       - Web:
         - Slots:
@@ -24269,12 +24336,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 165 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 166 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
               - `primitives` ×26
               - `page` ×24
               - `conversations` ×22
-              - `debug` ×7
+              - `debug` ×8
               - `apps-core` ×5
               - `tasks` ×5
               - `active-data` ×3
@@ -24397,12 +24464,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readTaskReport`
               - `redirectionTargets`
               - `THRESHOLD`
+              - `TOOL_USE_ID_ENV`
+              - `TOOL_USE_ID_RE`
+              - `toolUseIdFrom`
               - `watchSubjects`
               - `WINDOW_MS`
               - `WINDOW_SIZE`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: `framework/tooling/e2e-harness`
+            - Imported by:
+              - `debug/browser-recordings/writer`
+              - `framework/tooling/e2e-harness`
           - Exemptions:
             - Exempts itself from:
               - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts` (sanctioned)
@@ -26371,10 +26443,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 29 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+          - `debug` ×7
           - `infra` ×7
           - `conversations` ×6
-          - `debug` ×6
           - `apps` ×2
           - `build`
           - `config_v2`
@@ -27343,6 +27415,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpScope`
           - `McpScopeResolver`
           - `McpTool`
+          - `McpToolCallContext`
           - `McpToolContext`
           - `McpToolResult`
         - Exports (values): `Mcp`
@@ -27406,7 +27479,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-watcher.FileWatcher`
               - `infra/jobs.defineJob`
               - `infra/mcp.Mcp`
-              - `infra/mcp.McpToolContext`
+              - `infra/mcp.McpToolCallContext`
               - `infra/spawn/daemon.DaemonInstance`
               - `infra/spawn/daemon.defineDaemon`
               - `network/live.serveValue`
@@ -29441,11 +29514,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 242 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 243 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×70
           - `conversations` ×40
           - `tasks` ×27
-          - `debug` ×25
+          - `debug` ×26
           - `infra` ×13
           - `active-data` ×12
           - `page` ×10
@@ -35412,11 +35485,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 94 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 95 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×25
               - `apps` ×22
               - `primitives` ×14
-              - `debug` ×12
+              - `debug` ×13
               - `page` ×4
               - `build` ×3
               - `plugin-meta` ×3
@@ -35513,11 +35586,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 395 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 396 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×62
               - `primitives` ×51
-              - `debug` ×35
+              - `debug` ×36
               - `ui` ×28
               - `page` ×24
               - `plugin-meta` ×15
@@ -35734,11 +35807,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 371 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 372 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×71
               - `primitives` ×42
-              - `debug` ×34
+              - `debug` ×35
               - `page` ×21
               - `plugin-meta` ×14
               - `ui` ×14
@@ -38306,10 +38379,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 243 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 244 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×68
           - `conversations` ×42
-          - `debug` ×22
+          - `debug` ×23
           - `tasks` ×22
           - `ui` ×22
           - `page` ×12
@@ -38398,11 +38471,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 189 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 190 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×63
           - `ui` ×19
           - `conversations` ×18
-          - `debug` ×17
+          - `debug` ×18
           - `primitives` ×17
           - `tasks` ×13
           - `page` ×8
@@ -39276,6 +39349,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer/user-image`
               - `conversations/conversation-view/jsonl-viewer/user-text`
               - `conversations/conversation-view/markdown-extensions`
+              - `debug/browser-recordings`
               - `page/bookmark`
               - `page/image`
               - `page/read-only-view`
@@ -41640,8 +41714,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 243 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×243
+    - Contributes: 244 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×244
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -41674,8 +41748,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderListMiddleware`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 242 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×242
+    - Contributes: 243 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×243
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -46760,11 +46834,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 480 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 481 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×107
               - `conversations` ×84
               - `primitives` ×75
-              - `debug` ×33
+              - `debug` ×34
               - `page` ×32
               - `plugin-meta` ×26
               - `ui` ×21
@@ -46819,11 +46893,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 313 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 314 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×66
               - `primitives` ×65
               - `conversations` ×46
-              - `debug` ×26
+              - `debug` ×27
               - `page` ×20
               - `ui` ×16
               - `plugin-meta` ×13
@@ -47113,12 +47187,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 663 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 664 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×143
               - `primitives` ×124
               - `conversations` ×99
               - `page` ×46
-              - `debug` ×39
+              - `debug` ×40
               - `ui` ×34
               - `framework` ×21
               - `infra` ×20

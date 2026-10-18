@@ -30,6 +30,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "database", id: "database", loader: () => import("@plugins/database/data-dirs"), dependsOn: [] },
   { pluginPath: "database/plugins/embedded", id: "database.embedded", loader: () => import("@plugins/database/plugins/embedded/data-dirs"), dependsOn: [] },
   { pluginPath: "debug", id: "debug", loader: () => import("@plugins/debug/data-dirs"), dependsOn: [] },
+  { pluginPath: "debug/plugins/browser-recordings", id: "debug.browser-recordings", loader: () => import("@plugins/debug/plugins/browser-recordings/data-dirs"), dependsOn: [] },
   { pluginPath: "debug/plugins/profiling/plugins/op-log", id: "debug.profiling.op-log", loader: () => import("@plugins/debug/plugins/profiling/plugins/op-log/data-dirs"), dependsOn: [] },
   { pluginPath: "debug/plugins/sentinel/plugins/status-file", id: "debug.sentinel.status-file", loader: () => import("@plugins/debug/plugins/sentinel/plugins/status-file/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli", id: "framework.cli", loader: () => import("@plugins/framework/plugins/cli/data-dirs"), dependsOn: [] },

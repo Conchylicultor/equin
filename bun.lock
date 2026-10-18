@@ -2307,6 +2307,14 @@
       "name": "@singularity/plugin-debug-broadcasts",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/browser-recordings": {
+      "name": "@singularity/plugin-debug-browser-recordings",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/browser-recordings/plugins/writer": {
+      "name": "@singularity/plugin-debug-browser-recordings-writer",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/claude-cli-calls": {
       "name": "@singularity/plugin-debug-claude-cli-calls",
       "version": "0.0.1",
@@ -7861,6 +7869,10 @@
     "@singularity/plugin-debug-boot-watchdog": ["@singularity/plugin-debug-boot-watchdog@workspace:plugins/debug/plugins/boot-watchdog"],
 
     "@singularity/plugin-debug-broadcasts": ["@singularity/plugin-debug-broadcasts@workspace:plugins/debug/plugins/broadcasts"],
+
+    "@singularity/plugin-debug-browser-recordings": ["@singularity/plugin-debug-browser-recordings@workspace:plugins/debug/plugins/browser-recordings"],
+
+    "@singularity/plugin-debug-browser-recordings-writer": ["@singularity/plugin-debug-browser-recordings-writer@workspace:plugins/debug/plugins/browser-recordings/plugins/writer"],
 
     "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
 

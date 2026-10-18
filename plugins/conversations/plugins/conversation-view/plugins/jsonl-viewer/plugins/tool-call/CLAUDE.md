@@ -6,7 +6,9 @@
 
 - Description: Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
 - Web:
-  - Slots: `JsonlViewerTool.Renderer`
+  - Slots:
+    - `JsonlViewerTool.Renderer`
+    - `JsonlViewerTool.Footer`
   - Slot contributors:
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.agent`
@@ -24,6 +26,7 @@
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.web-search`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.workflow`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.write`
+    - `JsonlViewerTool.Footer` ← `debug.browser-recordings`
   - Contributes:
     - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
     - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
@@ -40,8 +43,12 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/slot-render.defineDispatchSlot`
+    - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.DispatchContribution`
-  - Exports (types): `ToolRendererContribution`
+  - Exports (types):
+    - `ToolFooterContribution`
+    - `ToolFooterProps`
+    - `ToolRendererContribution`
   - Exports (values):
     - `JsonlViewerTool`
     - `ToolCallCard`
@@ -83,6 +90,7 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call/web-search`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/jsonl-viewer/tool-call/write`
+    - `debug/browser-recordings`
 - Core:
   - Exports (types):
     - `ToolCallEvent`

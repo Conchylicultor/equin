@@ -15,6 +15,16 @@ export interface McpToolContext {
   conversationId: string;
 }
 
+/**
+ * What a tool's handler gets: the conversation, plus the id of the agent's
+ * tool call this request answers — the transcript row the call renders as, so
+ * a tool can file what it produced under it. Claude Code sends it in the
+ * request's `_meta` (`claudecode/toolUseId`); `null` when the client did not.
+ */
+export interface McpToolCallContext extends McpToolContext {
+  toolUseId: string | null;
+}
+
 export type McpToolResult = {
   content: Array<
     | { type: "text"; text: string }
@@ -54,7 +64,7 @@ export interface McpTool<T extends z.ZodRawShape = z.ZodRawShape> {
   profiles?: readonly string[];
   handler: (
     args: z.objectOutputType<T, z.ZodTypeAny>,
-    ctx: McpToolContext,
+    ctx: McpToolCallContext,
   ) => Promise<McpToolResult> | McpToolResult;
 }
 

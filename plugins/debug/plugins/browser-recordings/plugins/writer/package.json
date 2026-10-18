@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-debug-browser-recordings-writer",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Writes one browser recording (node-only, so the web never bundles node:fs): openRecording files a run under its tool call, stores each step's frame once (by content), writes the manifest last — what the conversation view's push keys on — and keeps the newest 200 runs. The one path the e2e harness and the browser_* MCP tools both record through."
+}

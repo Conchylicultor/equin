@@ -1,4 +1,4 @@
-// @hash 7a19e94c7c7a
+// @hash 284dc84bf2cc
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -11,6 +11,7 @@
     "conversations.conversation-view.artifacts.prototype:prototype",
     "conversations.conversation-view.artifacts.research:research",
     "conversations.conversation-view.artifacts.screenshot:screenshot",
-    "conversations.conversation-view.artifacts.skill:skill"
+    "conversations.conversation-view.artifacts.skill:skill",
+    "debug.browser-recordings:browser-recording"
   ]
 }

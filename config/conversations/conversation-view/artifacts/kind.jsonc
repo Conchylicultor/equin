@@ -1,4 +1,4 @@
-// @hash 7a19e94c7c7a
+// @hash 284dc84bf2cc
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -8,14 +8,16 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // The popover reads top to bottom, so these are ordered by how much of the
 // conversation's own work each kind carries: what it designed, then what it
-// wrote, then what it read. Skills last — they are what the agent was told,
-// not what it produced.
+// wrote, then what it read (screenshots, then the browser drives it recorded
+// on the way). Skills last — they are what the agent was told, not what it
+// produced.
 {
   "items": [
     "conversations.conversation-view.artifacts.prototype:prototype",
     "conversations.conversation-view.artifacts.page:page",
     "conversations.conversation-view.artifacts.research:research",
     "conversations.conversation-view.artifacts.screenshot:screenshot",
+    "debug.browser-recordings:browser-recording",
     "conversations.conversation-view.artifacts.skill:skill"
   ]
 }

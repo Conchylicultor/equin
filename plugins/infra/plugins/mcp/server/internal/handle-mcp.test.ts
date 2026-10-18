@@ -269,3 +269,43 @@ describe("Mcp.tool when", () => {
     expect(json.result.content[0]?.text).toBe("shown");
   });
 });
+
+describe("Mcp.tool call context", () => {
+  let calls = 0;
+  async function toolUseIdSeen(meta: unknown): Promise<string | null> {
+    let seen: string | null | undefined;
+    const name = `who-${++calls}`;
+    void Mcp.tool({
+      name,
+      description: "Who called",
+      inputSchema: {},
+      handler: (_args, ctx) => {
+        seen = ctx.toolUseId;
+        return { content: [{ type: "text", text: "ok" }] };
+      },
+    }).register();
+    await post({
+      jsonrpc: "2.0",
+      id: 9,
+      method: "tools/call",
+      params: {
+        name,
+        arguments: {},
+        ...(meta !== undefined ? { _meta: meta } : {}),
+      },
+    });
+    if (seen === undefined) throw new Error("the handler never ran");
+    return seen;
+  }
+
+  test("the client's tool-use id reaches the handler", async () => {
+    expect(await toolUseIdSeen({ "claudecode/toolUseId": "toolu_abc" })).toBe(
+      "toolu_abc",
+    );
+  });
+
+  test("no id sent is null", async () => {
+    expect(await toolUseIdSeen(undefined)).toBeNull();
+    expect(await toolUseIdSeen({ other: 1 })).toBeNull();
+  });
+});

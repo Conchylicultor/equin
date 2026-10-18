@@ -7,7 +7,7 @@ import {
   renderInstructions,
 } from "./instructions";
 import { MCP_SERVER_NAME } from "../../core";
-import type { McpTool, McpToolContext } from "./mcp";
+import type { McpTool, McpToolCallContext, McpToolContext } from "./mcp";
 import { registry, scopeRegistry } from "./registry";
 import { toolsInScope } from "./scope";
 
@@ -97,11 +97,25 @@ export function mountTool(
   server.registerTool(
     tool.name,
     { description, inputSchema: tool.inputSchema },
-    async (args: Record<string, unknown>) => {
-      const result = await tool.handler(args, ctx);
+    async (args: Record<string, unknown>, extra: { _meta?: unknown }) => {
+      const callCtx: McpToolCallContext = {
+        ...ctx,
+        toolUseId: toolUseIdOf(extra._meta),
+      };
+      const result = await tool.handler(args, callCtx);
       return result;
     },
   );
+}
+
+/** Where Claude Code names the tool call a `tools/call` request answers. */
+const TOOL_USE_ID_META = "claudecode/toolUseId";
+
+/** The request's tool-use id, when its client sent one. */
+function toolUseIdOf(meta: unknown): string | null {
+  if (typeof meta !== "object" || meta === null) return null;
+  const id = (meta as Record<string, unknown>)[TOOL_USE_ID_META];
+  return typeof id === "string" && id !== "" ? id : null;
 }
 
 /**

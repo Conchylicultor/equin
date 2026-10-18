@@ -154,12 +154,17 @@ can blind or deafen all of them at once.
     - `readTaskReport`
     - `redirectionTargets`
     - `THRESHOLD`
+    - `TOOL_USE_ID_ENV`
+    - `TOOL_USE_ID_RE`
+    - `toolUseIdFrom`
     - `watchSubjects`
     - `WINDOW_MS`
     - `WINDOW_SIZE`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: `framework/tooling/e2e-harness`
+  - Imported by:
+    - `debug/browser-recordings/writer`
+    - `framework/tooling/e2e-harness`
 - Exemptions:
   - Exempts itself from:
     - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts` (sanctioned)

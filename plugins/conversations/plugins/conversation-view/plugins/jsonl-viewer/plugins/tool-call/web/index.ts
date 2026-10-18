@@ -6,7 +6,11 @@ import { ToolCallRow } from "./components/tool-call-row";
 import { CopyToolResultAction } from "./components/copy-result-action";
 
 export { JsonlViewerTool } from "./slots";
-export type { ToolRendererContribution } from "./slots";
+export type {
+  ToolFooterContribution,
+  ToolFooterProps,
+  ToolRendererContribution,
+} from "./slots";
 export { ToolCallCard, ToolCallFrame } from "./components/tool-call-card";
 export { ToolNameLabel } from "./components/tool-name-label";
 

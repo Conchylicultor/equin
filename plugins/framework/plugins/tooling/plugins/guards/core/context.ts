@@ -56,12 +56,15 @@ export function createContext(
    * they are; a test that cares passes it.
    */
   agent: { id: string; type: string } | null = null,
+  /** `tool_use_id` off the payload — see `GuardContext.toolUseId`. */
+  toolUseId: string | null = null,
 ): GuardContext {
   return {
     cwd,
     sessionId,
     writableDataDirs,
     agent,
+    toolUseId,
     readTranscript(): TranscriptRead {
       if (!transcriptPath)
         return {

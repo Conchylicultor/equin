@@ -31,6 +31,10 @@ function Shimmer({ className }: { className?: string }) {
  *
  * Every variant mounts invisible and fades in only after ~120ms (see
  * `loading.css`), so a fast load unmounts it before it ever paints — no flash.
+ *
+ * Every variant is `aria-busy`: the standard "this region is still loading",
+ * which assistive tech reads and automation waits on (the agent browser's
+ * recordings wait for no busy region before filming a call's result).
  */
 export function Loading({
   variant = "text",
@@ -41,7 +45,11 @@ export function Loading({
   switch (variant) {
     case "text":
       return (
-        <div role="status" className={cn("loading-delayed", className)}>
+        <div
+          role="status"
+          aria-busy="true"
+          className={cn("loading-delayed", className)}
+        >
           <Placeholder>{label ?? "Loading…"}</Placeholder>
         </div>
       );
@@ -52,6 +60,7 @@ export function Loading({
           gap="sm"
           align="center"
           role="status"
+          aria-busy="true"
           className={cn(
             "loading-delayed px-md py-sm text-body text-muted-foreground",
             className,
@@ -65,6 +74,7 @@ export function Loading({
       return (
         <Stack
           role="status"
+          aria-busy="true"
           aria-label="Loading"
           gap="sm"
           className={cn("loading-delayed rail-follow py-sm", className)}
@@ -78,6 +88,7 @@ export function Loading({
       return (
         <Grid
           role="status"
+          aria-busy="true"
           aria-label="Loading"
           minCellWidth="200px"
           gap="lg"
@@ -95,6 +106,7 @@ export function Loading({
       return (
         <div
           role="status"
+          aria-busy="true"
           aria-label="Loading"
           className={cn("loading-delayed", className)}
         >

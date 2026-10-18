@@ -2,6 +2,7 @@ import { agentModelGuard } from "./guards/agent-model";
 import { backgroundOpsGuard } from "./guards/background-ops";
 import { backgroundTimeoutGuard } from "./guards/background-timeout";
 import { bunScriptGuard } from "./guards/bun-script";
+import { e2eToolUseIdGuard } from "./guards/e2e-tool-use-id";
 import { findGuard } from "./guards/find";
 import { gitDiffMainGuard } from "./guards/git-diff-main";
 import { gitPushGuard } from "./guards/git-push";
@@ -32,6 +33,7 @@ export const GUARDS: Guard<any>[] = [
   // Rewrites run after every judging guard, so those see what the agent typed.
   pipefailGuard,
   backgroundTimeoutGuard,
+  e2eToolUseIdGuard,
   // File writes
   mainEditsGuard,
   // Bash + file writes

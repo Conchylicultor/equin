@@ -68,6 +68,9 @@ export function BootScreen(props: BootScreenProps) {
     <Center
       data-boot-state={view.kind}
       role={view.kind === "waiting" ? "status" : "alert"}
+      // Still loading — the standard mark automation waits on (the agent
+      // browser's recordings film a page once nothing is aria-busy).
+      aria-busy={view.kind === "waiting"}
       // The boot root fills the viewport: no app shell exists yet to size it.
       className="h-dvh p-lg"
     >

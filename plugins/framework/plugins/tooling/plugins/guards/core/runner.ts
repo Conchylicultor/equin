@@ -36,6 +36,8 @@ export interface HookInput {
    */
   agent_id?: string;
   agent_type?: string;
+  /** The id of the tool call this hook is judging — what the transcript keys its result by. */
+  tool_use_id?: string;
 }
 
 function matches(g: Guard["matcher"], tool: string): boolean {
@@ -88,6 +90,7 @@ export async function runHook(
     input.agent_id === undefined
       ? null
       : { id: input.agent_id, type: input.agent_type ?? "unknown" },
+    input.tool_use_id ?? null,
   );
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
 

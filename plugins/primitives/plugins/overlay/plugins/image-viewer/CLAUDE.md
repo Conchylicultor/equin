@@ -198,6 +198,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `conversations/conversation-view/jsonl-viewer/user-image`
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `conversations/conversation-view/markdown-extensions`
+    - `debug/browser-recordings`
     - `page/bookmark`
     - `page/image`
     - `page/read-only-view`

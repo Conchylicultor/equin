@@ -71,6 +71,13 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
   tabs, idle deadlines, recent host-side failures (an idle close or a revert
   nobody was waiting on lands in the status's `errors`).
 - Debug → Background activity → `mcp-browser.host`.
+- **Recordings**: a page-changing call (`RECORDED_BROWSER_TOOLS`, owned by
+  `debug/browser-recordings`) is recorded under the agent's tool call — the MCP
+  context's `toolUseId`, which Claude Code sends in `_meta` — as one step whose
+  frame is the tab's viewport once the page settled — loaded, first
+  content painted, nothing `aria-busy`, ≤ 5 s — (`server/internal/record-call.ts`,
+  through the host's own `browser_screenshot`, so the host is untouched). The
+  conversation shows it under the call, like an e2e run's filmstrip.
 
 ## Targeting
 
@@ -144,7 +151,7 @@ under it.
     - `infra/file-watcher.FileWatcher`
     - `infra/jobs.defineJob`
     - `infra/mcp.Mcp`
-    - `infra/mcp.McpToolContext`
+    - `infra/mcp.McpToolCallContext`
     - `infra/spawn/daemon.DaemonInstance`
     - `infra/spawn/daemon.defineDaemon`
     - `network/live.serveValue`

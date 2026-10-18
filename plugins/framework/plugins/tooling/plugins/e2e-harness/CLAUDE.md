@@ -182,6 +182,17 @@ refusing main, whose database is the user's — and the script deletes what it
 seeded itself (`onBeforeFinish`, with a run-unique id prefix and a sweep of a
 killed run's leftovers first).
 
+## Every run is recorded
+
+`withBrowser` records every run (`e2e/recorder.ts`): each Playwright API call
+the script makes is a step (Playwright's client instrumentation reports them),
+and every page of a `session()` context is filmed by a CDP screencast at full
+resolution, so each step keeps the frame (JPEG q90) of the page as it ended. At teardown the
+recording is filed under the Bash tool call that launched the script — the
+conversation view shows it as a filmstrip under that call. Nothing to opt into;
+`--no-record` opts out for a profiler. See
+[`debug/browser-recordings`](../../../../../debug/plugins/browser-recordings/CLAUDE.md).
+
 ## Network idle is measured here, not by Playwright
 
 Playwright's `networkidle` never fires on this app. The live sockets run in a
@@ -307,12 +318,12 @@ own `requestfailed` listener calls it too. Diagnosis:
   - Uses: `framework/tooling/guards.MODULE_EXTENSION`
   - Exports (values): `isE2eScriptPath`
 - Cross-plugin:
-  - Imported by: 165 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 166 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×50
     - `primitives` ×26
     - `page` ×24
     - `conversations` ×22
-    - `debug` ×7
+    - `debug` ×8
     - `apps-core` ×5
     - `tasks` ×5
     - `active-data` ×3
