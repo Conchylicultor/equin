@@ -118,6 +118,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.website.pages.vision.section", pluginId: "apps.website.pages.vision", configName: "section" },
   { slotId: "apps.website.shell.header", pluginId: "apps.website.shell", configName: "header" },
   { slotId: "apps.website.shell.section", pluginId: "apps.website.shell", configName: "section" },
+  { slotId: "auth.accounts-provider.actions", pluginId: "auth", configName: "accounts-provider.actions" },
   { slotId: "auth.accounts.actions", pluginId: "auth", configName: "accounts.actions" },
   { slotId: "auth.apple-signing.setup-wizard.apple-setup.actions", pluginId: "auth.apple-signing.setup-wizard", configName: "apple-setup.actions" },
   { slotId: "auth.google-maps.setup-wizard.google-maps-setup.actions", pluginId: "auth.google-maps.setup-wizard", configName: "google-maps-setup.actions" },

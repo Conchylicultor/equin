@@ -152,7 +152,7 @@ over:
 
 ## Plugin reference
 
-- Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the pane's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
+- Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane — listed in Settings → Accounts as the Google Maps 'Live map' row — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the pane's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
 - Web:
   - Slots:
     - `google-maps-live-map-setup.actions`
@@ -160,12 +160,14 @@ over:
   - Slot contributors:
     - `google-maps-live-map-setup.actions` ← `primitives.pane`
     - `LiveMapSetup.MapIdPreview` ← `map.google`
-  - Contributes: `Pane.Register` "google-maps-live-map-setup"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes:
+    - `Pane.Register` "google-maps-live-map-setup"
+    - `Auth.Integration` "Live map"
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×10
-    - `primitives/live-state` ×3
+    - `primitives/live-state` ×5
+    - `auth` ×3
     - `primitives/pane` ×3
-    - `auth` ×2
     - `infra/endpoints` ×2
     - `primitives/css/ui-kit` ×2
     - `apps-core/tabs.appLinkProps`

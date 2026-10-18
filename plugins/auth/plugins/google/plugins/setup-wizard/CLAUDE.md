@@ -9,12 +9,12 @@
   - Slots: `googleSetupPane.Actions`
   - Slot contributors: `googleSetupPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "google-setup"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×6
     - `auth` ×4
+    - `primitives/pane` ×3
     - `primitives/css/ui-kit` ×2
     - `primitives/live-state` ×2
-    - `primitives/pane` ×2
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`

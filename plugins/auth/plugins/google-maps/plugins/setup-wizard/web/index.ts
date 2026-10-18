@@ -19,7 +19,9 @@ export default {
     Pane.Register({ pane: googleMapsSetupPane }),
     Auth.Provider({
       id: GOOGLE_MAPS_PROVIDER_ID,
-      name: "Google Maps Platform",
+      name: "Places API key",
+      service: "Google Maps",
+      description: "Server-side key for place search and details.",
       icon: brand("googlemaps"),
       helpUrl: "https://console.cloud.google.com/apis/credentials",
       credentialsPane: googleMapsSetupPane,

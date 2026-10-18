@@ -20,6 +20,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "agents-list", pluginId: "conversations.agents" },
   { id: "all-conversations", pluginId: "conversations.all-conversations" },
   { id: "apps-core.launcher", pluginId: "apps-core.app-launcher" },
+  { id: "auth.accounts", pluginId: "auth" },
   { id: "config_v2.settings.nav", pluginId: "config_v2.settings" },
   { id: "conversations-sidebar", pluginId: "conversations.conversations-view.data-view" },
   { id: "conversations.op-status.queue", pluginId: "conversations.conversation-view.op-status" },

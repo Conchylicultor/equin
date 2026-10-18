@@ -7,6 +7,12 @@
       "parent": null
     },
     {
+      "paneId": "accounts-provider",
+      "segment": "provider/:providerId",
+      "appIndex": false,
+      "parent": "accounts"
+    },
+    {
       "paneId": "agent-detail",
       "segment": "ag/:id",
       "appIndex": false,

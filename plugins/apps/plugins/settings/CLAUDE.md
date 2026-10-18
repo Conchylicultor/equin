@@ -6,7 +6,7 @@
 
 - Description: Settings app.
 - Sub-plugins:
-  - **`accounts`** — Account settings surface: registers the accounts pane and its Settings sidebar entry.
+  - **`accounts`** — Account settings surface: registers the accounts and provider panes and the Settings sidebar entry.
   - **`appearance`** — Appearance settings surface: opens the theme customizer (presets, variants, tokens) as a Settings sidebar entry. The same customizer is also reachable from the floating action bar.
   - **`config`** — Config settings surface: the config nav as the Settings app's default pane, its sidebar entry, and the rail-icon conflict dot.
   - **`shell`** — App shell for Settings. Registers the /settings app entry, defines the Settings.Sidebar + Settings.RailBadge slots, and surfaces an attention dot on the rail icon.

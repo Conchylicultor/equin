@@ -1,6 +1,5 @@
-import { Icon } from "@plugins/ui/plugins/icons/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -9,14 +8,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { AuthAccountState } from "@plugins/auth/core";
 import { Auth, type AuthProviderContribution } from "../slots";
 import { useAuthState } from "../hooks";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
@@ -25,12 +21,18 @@ import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperati
 import { currentWorktreeName, disconnect, startConnectFlow } from "../connect";
 import { ScopeGrantNotice } from "./scope-grant-notice";
 import { PasswordSignInDialog } from "./password-sign-in-dialog";
+import { useProviderStatus } from "./provider-status";
+import {
+  IntegrationHeader,
+  IntegrationStatusBadge,
+} from "./integration-presentation";
 
-interface Props {
-  providerId: string;
-}
-
-export function DefaultProviderRow({ providerId }: Props) {
+/**
+ * One provider's pane: what it is, its account (who, scopes, missing grants,
+ * the last refresh failure) and the buttons that connect, set up or
+ * disconnect it.
+ */
+export function ProviderDetail({ providerId }: { providerId: string }) {
   // Read the whole auth state rather than `useAccountStatus`, whose `null`
   // means two things: "the state has not arrived yet" and "it arrived and
   // central has no such provider". The second is normal in an agent worktree —
@@ -39,22 +41,25 @@ export function DefaultProviderRow({ providerId }: Props) {
   const providers = Auth.Provider.useContributions();
   const provider = providers.find((p) => p.id === providerId);
 
-  if (!provider) return null;
-  const icon = provider.icon;
+  if (!provider) {
+    return (
+      <Text as="div" variant="body" className="p-xl text-muted-foreground">
+        No installed plugin provides the account &ldquo;{providerId}&rdquo;.
+      </Text>
+    );
+  }
 
   // Four states, each with its own rendering: the state has not arrived yet
-  // (a spinner, never a guessed "Disconnected"), its read failed (the error
-  // control, whose click retries), central does not know the provider, or the
+  // (a skeleton, never a guessed "Disconnected"), its read failed (the error
+  // block, whose button retries), central does not know the provider, or the
   // provider's account state.
-  let pill: ReactNode = null;
-  let details: ReactNode = null;
-  let controls: ReactNode;
+  let body: ReactNode;
   if (authState.status === "loading") {
-    controls = <Loading variant="spinner" />;
+    body = <Loading variant="rows" count={3} />;
   } else if (authState.status === "error") {
-    controls = (
+    body = (
       <ResourceErrorInline
-        variant="icon"
+        variant="block"
         subject="the account state"
         error={authState.error}
         refetch={authState.refetch}
@@ -62,38 +67,37 @@ export function DefaultProviderRow({ providerId }: Props) {
     );
   } else {
     const status = authState.data.providers[providerId];
-    if (status) {
-      pill = <StatusPill status={status} />;
-      details = <AccountDetails providerId={providerId} status={status} />;
-      controls = <AccountControls provider={provider} status={status} />;
-    } else {
-      pill = <Badge variant="muted">Unavailable</Badge>;
-      details = (
-        <Text as="div" variant="body" className="text-muted-foreground">
-          The main app doesn&apos;t include this provider yet, so it can&apos;t
-          be connected from here.
-        </Text>
-      );
-      controls = null;
-    }
+    body = status ? (
+      <Stack gap="md">
+        <AccountDetails providerId={providerId} status={status} />
+        <Stack direction="row" gap="sm" align="center">
+          <AccountControls provider={provider} status={status} />
+        </Stack>
+      </Stack>
+    ) : (
+      <Text as="div" variant="body" className="text-muted-foreground">
+        The main app doesn&apos;t include this provider yet, so it can&apos;t be
+        connected from here.
+      </Text>
+    );
   }
 
   return (
-    <Stack direction="row" gap="lg" align="start" className="p-lg">
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset to baseline-align icon with adjacent text */}
-      <Icon icon={icon} className={cn("mt-1 h-6 w-6", rigidClass())} />
-      <Fill>
-        <Stack direction="row" align="center" gap="sm">
-          <span className="font-medium">{provider.name}</span>
-          {pill}
-        </Stack>
-        {details}
-      </Fill>
-      <Stack direction="row" gap="sm" align="center" className={rigidClass()}>
-        {controls}
-      </Stack>
+    <Stack gap="lg" className="p-xl">
+      <IntegrationHeader
+        icon={provider.icon}
+        name={provider.name}
+        service={provider.service ?? provider.name}
+        description={provider.description}
+        status={<ProviderStatusBadge providerId={providerId} />}
+      />
+      {body}
     </Stack>
   );
+}
+
+function ProviderStatusBadge({ providerId }: { providerId: string }) {
+  return <IntegrationStatusBadge result={useProviderStatus(providerId)} />;
 }
 
 /** The row's buttons for a provider central knows — one arm per kind. */
@@ -186,7 +190,7 @@ function AccountControls({
   //    credential at the provider.
   const credentialSetup = activationProps(
     provider.credentialsPane
-      ? openPane.to(provider.credentialsPane, {}, { mode: "root" })
+      ? openPane.to(provider.credentialsPane, {}, { mode: "push" })
       : openPane.to(configNavPane, {}, { mode: "push" }),
   );
 
@@ -336,40 +340,4 @@ function AccountDetails({
       ) : null}
     </>
   );
-}
-
-function StatusPill({ status }: { status: AuthAccountState }) {
-  switch (status.kind) {
-    case "apikey":
-      // `credentialsConfigured` is hardcoded `true` for every non-oauth2 provider
-      // (auth/central/internal/auth-state.ts), so "Setup required" can never fire
-      // here. Whether a key has been stored is the only real signal.
-      return status.connected ? (
-        <Badge variant="success">Connected</Badge>
-      ) : (
-        <Badge variant="muted">Not set up</Badge>
-      );
-    case "password":
-      // Same single signal as an api key: whether a sign-in token is stored.
-      return status.connected ? (
-        <Badge variant="success">Connected</Badge>
-      ) : (
-        <Badge variant="muted">Not signed in</Badge>
-      );
-    case "oauth2":
-      if (!status.credentialsConfigured) {
-        return <Badge variant="muted">Setup required</Badge>;
-      }
-      if (status.needsReconsent) {
-        return <Badge variant="warning">Needs reconsent</Badge>;
-      }
-      if (status.connected) {
-        return <Badge variant="success">Connected</Badge>;
-      }
-      return <Badge variant="muted">Disconnected</Badge>;
-    default: {
-      const unknownKind: never = status.kind;
-      throw new Error(`auth: unhandled provider kind "${String(unknownKind)}"`);
-    }
-  }
 }

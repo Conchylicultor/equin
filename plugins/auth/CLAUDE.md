@@ -20,6 +20,15 @@ The closed list is `AUTH_PROVIDER_KINDS` in `core/internal/lib.ts`; everything t
 - **A provider added on a branch reads "Unavailable" in its own worktree's Accounts pane.** Central runs main's code, so it knows the provider only once the branch is merged; the row says so instead of offering a Connect that central would reject.
 - **Cross-worktree sync is automatic.** When central mutates auth state (connect, disconnect, refresh) it calls `authStateServed.notify()` and central pushes updates to every browser tab subscribed to `/ws/central-notifications`. No fanout, no `~/.singularity/worktrees/*.json` enumeration.
 
+## The Accounts pane
+
+Settings → Accounts is a DataView (`auth.accounts`, grouped by service) over two slots, presented alike:
+
+- **`Auth.Provider`** — an account central holds a credential for. Its row opens the generic provider pane (`accounts/provider/:providerId`: status, identity, scopes, Connect / Disconnect); its `credentialsPane` (a setup wizard) opens from there, pushed to the right.
+- **`Auth.Integration`** — a setup surface that is not a provider (a second key of a service, like the Google Maps live map; Apple signing's config). Its row opens its own `pane`, and its `useStatus` hook answers the row's badge as a read.
+
+Every row opens exactly one pane to the right of the list, so a setup pane is reachable from Accounts only by contributing one of the two — a pane chained off `accountsRoute` with neither has no way in. Each such pane wraps its body in `PaneChrome` (title, ×). Group a row with its siblings through `service`.
+
 ## How a consumer plugin uses it
 
 In-process (another central plugin):
@@ -91,32 +100,38 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 
 ## Plugin reference
 
-- Description: Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- Description: Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening its pane to the right (the provider pane, or the integration's own) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 - Load-bearing: yes
 - Web:
   - Slots:
     - `Auth.Provider`
+    - `Auth.Integration`
     - `Auth.ScopeRequirement`
     - `accountsPane.Actions`
+    - `providerPane.Actions`
   - Slot contributors:
-    - `Auth.Provider` ← `auth.apple-signing.setup-wizard`
     - `Auth.Provider` ← `auth.google`
     - `Auth.Provider` ← `auth.google-maps.setup-wizard`
     - `Auth.Provider` ← `auth.hooktheory`
     - `Auth.Provider` ← `auth.notion`
+    - `Auth.Integration` ← `auth.apple-signing.setup-wizard`
+    - `Auth.Integration` ← `integrations.google-maps`
     - `Auth.ScopeRequirement` ← `backup.targets.google-drive`
     - `Auth.ScopeRequirement` ← `integrations.gmail`
     - `accountsPane.Actions` ← `primitives.pane`
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `providerPane.Actions` ← `primitives.pane`
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×7
     - `primitives/css/ui-kit` ×5
     - `infra/endpoints` ×4
     - `primitives/collapsible` ×4
     - `primitives/live-state` ×4
-    - `primitives/pane` ×3
+    - `primitives/data-view` ×3
     - `config_v2/settings.configNavPane`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -126,12 +141,13 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `shell/notifications.toast`
     - `ui/icons.Icon`
   - Exports (types):
+    - `AuthIntegrationContribution`
     - `AuthProviderContribution`
-    - `AuthProviderRowProps`
     - `AuthScopeRequirement`
     - `ConnectArgs`
     - `ConnectButtonProps`
     - `ConnectResult`
+    - `IntegrationStatus`
   - Exports (values):
     - `accountsPane`
     - `accountsRoute`
@@ -141,6 +157,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `disconnect`
     - `GrantAccessButton`
     - `missingScopes`
+    - `providerPane`
     - `startConnectFlow`
     - `useAccountStatus`
     - `useAuthState`
@@ -250,7 +267,6 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-caption`
-    - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
@@ -283,7 +299,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Sub-plugins:
   - **`apple-signing`** — Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload +…
     - Plugins:
-      - **`setup-wizard`** — Apple code-signing UI: the Accounts 'Apple Developer' provider row plus the guided certificate + App Store Connect API key setup wizard pane.
+      - **`setup-wizard`** — Apple code-signing UI: the Accounts 'Apple Developer' integration row (opening the wizard) plus the guided certificate + App Store Connect API key setup wizard pane.
   - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental…
     - Plugins:
       - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.

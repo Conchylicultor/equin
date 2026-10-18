@@ -81,7 +81,7 @@ primitive exists to name.
     - `fillClasses`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 161 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 160 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×49
     - `primitives` ×29
     - `conversations` ×23
@@ -92,11 +92,11 @@ primitive exists to name.
     - `infra` ×3
     - `plugin-meta` ×3
     - `review` ×3
-    - `auth` ×2
     - `config_v2` ×2
     - `shell` ×2
     - `active-data/go`
     - `apps-core/app-launcher`
+    - `auth`
     - `build/deployment`
     - `code-explorer/commit-detail`
 

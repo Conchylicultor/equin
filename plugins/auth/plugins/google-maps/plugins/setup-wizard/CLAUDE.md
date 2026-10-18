@@ -10,7 +10,7 @@
   - Slot contributors: `googleMapsSetupPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "google-maps-setup"
-    - `Auth.Provider` "Google Maps Platform"
+    - `Auth.Provider` "Places API key"
   - Uses:
     - `auth.accountsRoute`
     - `auth.Auth`
@@ -25,7 +25,7 @@
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
-    - `primitives/pane.PaneScroll`
+    - `primitives/pane.PaneChrome`
     - `primitives/setup-steps.Step`
     - `primitives/setup-steps.StepDone`
     - `primitives/setup-steps.StepLink`

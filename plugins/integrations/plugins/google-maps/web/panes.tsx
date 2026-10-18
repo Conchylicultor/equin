@@ -1,4 +1,8 @@
-import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { accountsRoute } from "@plugins/auth/web";
 import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
 import { LiveMapSetupPane } from "./components/live-map-setup-pane";
@@ -13,7 +17,16 @@ export const liveMapSetupPane = Pane.define({
     parent: accountsRoute,
   }),
   app: settingsApp,
-  component: LiveMapSetupPane,
+  component: LiveMapSetupPaneBody,
   title: "Live map",
   chrome: { history: false, close: true },
 });
+
+// The standard pane header (title, ×) like every pane an Accounts row opens.
+function LiveMapSetupPaneBody() {
+  return (
+    <PaneChrome pane={liveMapSetupPane}>
+      <LiveMapSetupPane />
+    </PaneChrome>
+  );
+}

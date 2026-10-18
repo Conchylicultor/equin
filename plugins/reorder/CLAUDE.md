@@ -152,8 +152,8 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
 - Description: Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
 - Load-bearing: yes
 - Web:
-  - Contributes: 242 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×242
+  - Contributes: 243 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×243
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
@@ -186,8 +186,8 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ReorderListMiddleware`
     - `useReorderedEntries`
 - Server:
-  - Contributes: 241 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×241
+  - Contributes: 242 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×242
   - Uses: `config_v2.ConfigV2`
   - Exports (values):
     - `reorderableSlots`

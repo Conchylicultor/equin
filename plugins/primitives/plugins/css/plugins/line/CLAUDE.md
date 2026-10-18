@@ -32,7 +32,7 @@ attribute type carries.
   - Exports (types): `LineProps`
   - Exports (values): `Line`
 - Cross-plugin:
-  - Imported by: 108 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 109 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×32
     - `primitives` ×17
     - `conversations` ×14
@@ -47,6 +47,7 @@ attribute type carries.
     - `infra` ×2
     - `reorder` ×2
     - `shell` ×2
+    - `auth`
     - `code-explorer/commit-detail`
     - `integrations/youtube`
     - `map`

@@ -10,6 +10,7 @@ export default {
     Auth.Provider({
       id: HOOKTHEORY_PROVIDER_ID,
       name: "Hooktheory",
+      description: "TheoryTab chord progressions for songs.",
       icon: symbol("music-note"),
       helpUrl: "https://www.hooktheory.com",
       passwordSignIn: {

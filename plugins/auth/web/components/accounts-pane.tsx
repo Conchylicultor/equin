@@ -1,83 +1,239 @@
+import { useMemo, type ReactElement } from "react";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { SECRETS_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import {
+  DataView,
+  defineDataView,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
+import {
+  PaneChrome,
+  usePaneMatch,
+  useOpenPane,
+  type PaneObject,
+} from "@plugins/primitives/plugins/pane/web";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   asNamespace,
   namespaceUrl,
   MAIN_COMPOSITION_ID,
 } from "@plugins/infra/plugins/namespace/core";
-import { Auth } from "../slots";
+import { Auth, type IntegrationStatus } from "../slots";
 import { useAuthState } from "../hooks";
-import { DefaultProviderRow } from "./default-provider-row";
+import { accountsPane, providerPane } from "../panes";
+import { useProviderStatus } from "./provider-status";
+import { IntegrationStatusBadge } from "./integration-presentation";
+
+// Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
+const ACCOUNTS_VIEW = defineDataView("auth.accounts");
 
 /** The main app — where the shared token store lives. */
 const MAIN_URL = namespaceUrl(asNamespace(MAIN_COMPOSITION_ID));
 
-export function AccountsPane() {
+/**
+ * One Accounts row: an auth provider or an integration, presented alike. Every
+ * row opens one pane to the right of the list — the provider pane, or the
+ * integration's own — so there is one way in to each of them.
+ */
+interface AccountRow {
+  id: string;
+  name: string;
+  icon: IconRef;
+  service: string;
+  description: string;
+  useStatus: Hook<() => ResourceResult<IntegrationStatus>>;
+  opens:
+    | { kind: "provider"; providerId: string }
+    | { kind: "integration"; pane: PaneObject };
+  /** The panes that, open beside the list, mean this row is the selected one. */
+  paneIds: readonly string[];
+}
+
+export function AccountsPane(): ReactElement {
   const authState = useAuthState();
   const providers = Auth.Provider.useContributions();
+  const integrations = Auth.Integration.useContributions();
+  const openPane = useOpenPane();
+  const match = usePaneMatch();
+
+  const rows = useMemo<AccountRow[]>(
+    () => [
+      ...providers.map((p) => ({
+        id: p.id,
+        name: p.name,
+        icon: p.icon,
+        service: p.service ?? p.name,
+        description: p.description ?? "",
+        useStatus: () => useProviderStatus(p.id),
+        opens: { kind: "provider" as const, providerId: p.id },
+        // The provider's setup wizard opens from its pane (pushed to the
+        // right) or straight from a link; either way it is this row's.
+        paneIds: p.credentialsPane ? [p.credentialsPane.id] : [],
+      })),
+      ...integrations.map((i) => ({
+        id: i.id,
+        name: i.name,
+        icon: i.icon,
+        service: i.service,
+        description: i.description,
+        useStatus: i.useStatus,
+        opens: { kind: "integration" as const, pane: i.pane },
+        paneIds: [i.pane.id],
+      })),
+    ],
+    [providers, integrations],
+  );
+
+  // The selected row is the one whose pane sits right of the list.
+  const panes = match?.panes ?? [];
+  const child =
+    panes[panes.findIndex((e) => e.pane.id === accountsPane.id) + 1];
+  const selectedId = !child
+    ? undefined
+    : child.pane.id === providerPane.id
+      ? child.params.providerId
+      : rows.find((r) => r.paneIds.includes(child.pane.id))?.id;
+
+  const fields = useMemo<FieldDef<AccountRow>[]>(() => {
+    const services = [...new Set(rows.map((r) => r.service))].sort();
+    return [
+      {
+        id: "name",
+        label: "Name",
+        type: "text",
+        primary: true,
+        value: (r) => r.name,
+        sortable: true,
+      },
+      {
+        id: "service",
+        label: "Service",
+        type: "enum",
+        value: (r) => r.service,
+        options: services.map((s) => ({ value: s, label: s })),
+        filterable: true,
+        groupable: true,
+        sortable: true,
+        visible: false,
+      },
+      {
+        id: "description",
+        label: "What it unlocks",
+        type: "text",
+        value: (r) => r.description,
+        visible: false,
+      },
+    ];
+  }, [rows]);
 
   return (
-    <Stack gap="lg" className="p-xl">
-      <Stack direction="row" align="center" justify="between" gap="none">
-        <div>
-          <Text as="h1" variant="heading">
-            Accounts
-          </Text>
-          <Text as="p" variant="body" className="text-muted-foreground">
-            Connect third-party services. Tokens are stored encrypted in
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline-code chip needs horizontal breathing room in flowing prose */}
-            <code className="mx-1">{SECRETS_DIR_DISPLAY}/</code>
-            on the main app and shared with all worktrees.
-          </Text>
-        </div>
-      </Stack>
-
-      {authState.status === "ready" && authState.data.mainOffline ? (
-        <Text
-          as="div"
-          variant="body"
-          className="rounded-md border border-warning/50 bg-warning/10 p-md text-warning"
-        >
-          The main app is offline. Worktrees can't read tokens until it comes
-          back. Visit{" "}
-          <a
-            className="underline"
-            href={MAIN_URL}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {MAIN_URL}
-          </a>{" "}
-          to start it.
+    <PaneChrome pane={accountsPane}>
+      <Stack gap="md" className="rail-lg">
+        <Text as="p" variant="caption" tone="muted" className="px-md">
+          Tokens and keys are stored encrypted in
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline-code chip needs horizontal breathing room in flowing prose */}
+          <code className="mx-1">{SECRETS_DIR_DISPLAY}/</code>
+          on the main app and shared with all worktrees.
         </Text>
-      ) : null}
 
-      {authState.status === "error" ? (
-        <ResourceErrorInline
-          variant="inline"
-          subject="the auth state"
-          error={authState.error}
-          refetch={authState.refetch}
-        />
-      ) : null}
-
-      <Stack gap="none" className="divide-y rounded-md border">
-        {providers.length === 0 ? (
-          <Text as="div" variant="body" className="p-lg text-muted-foreground">
-            No providers registered. Install an auth provider plugin (e.g.
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline-code chip needs horizontal breathing room in flowing prose */}
-            <code className="mx-1">auth-google</code>).
+        {authState.status === "ready" && authState.data.mainOffline ? (
+          <Text
+            as="div"
+            variant="body"
+            className="rounded-md border border-warning/50 bg-warning/10 p-md text-warning"
+          >
+            The main app is offline. Worktrees can&apos;t read tokens until it
+            comes back. Visit{" "}
+            <a
+              className="underline"
+              href={MAIN_URL}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {MAIN_URL}
+            </a>{" "}
+            to start it.
           </Text>
-        ) : (
-          // eslint-disable-next-line data-view/no-adhoc-row-list -- closed plugin-contributed provider set (settings form, not data browsing)
-          providers.map((p) => {
-            const Row = p.rowComponent ?? DefaultProviderRow;
-            return <Row key={p.id} providerId={p.id} />;
-          })
-        )}
+        ) : null}
+
+        {authState.status === "error" ? (
+          <ResourceErrorInline
+            variant="inline"
+            subject="the auth state"
+            error={authState.error}
+            refetch={authState.refetch}
+          />
+        ) : null}
+
+        <DataView<AccountRow>
+          rows={rows}
+          fields={fields}
+          rowKey={(r) => r.id}
+          views={["list"]}
+          storageKey={ACCOUNTS_VIEW}
+          selectedRowId={selectedId}
+          rowActivation={(r) =>
+            r.opens.kind === "provider"
+              ? openPane.to(
+                  providerPane,
+                  { providerId: r.opens.providerId },
+                  { mode: "push" },
+                )
+              : openPane.to(r.opens.pane, {}, { mode: "push" })
+          }
+          searchAccessor={(r) => `${r.name} ${r.service} ${r.description}`}
+          searchPlaceholder="Search accounts…"
+          viewOptions={{
+            list: {
+              leading: (r: AccountRow) => <Icon icon={r.icon} />,
+              renderRow: (r: AccountRow) => <AccountRowBody row={r} />,
+            },
+          }}
+          emptyState={<>No account or integration plugin is installed.</>}
+        />
       </Stack>
-    </Stack>
+    </PaneChrome>
+  );
+}
+
+/**
+ * A row: its name over who is signed in (or what it unlocks), then its status.
+ * Each line is its own line container, so a long subtitle ellipsizes instead of
+ * pushing the badge out.
+ */
+function AccountRowBody({ row }: { row: AccountRow }): ReactElement {
+  const status = row.useStatus();
+  const summary =
+    status.status === "ready" && status.data.summary
+      ? status.data.summary
+      : row.description;
+  return (
+    <>
+      <Fill>
+        <Stack gap="none">
+          <Line>
+            <Text variant="label">{row.name}</Text>
+          </Line>
+          {summary ? (
+            <Line>
+              <Text variant="caption" tone="muted">
+                {summary}
+              </Text>
+            </Line>
+          ) : null}
+        </Stack>
+      </Fill>
+      <div className={rigidClass()}>
+        <IntegrationStatusBadge result={status} />
+      </div>
+    </>
   );
 }

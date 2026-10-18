@@ -11,6 +11,7 @@ export default {
     Auth.Provider({
       id: "notion",
       name: "Notion",
+      description: "Read and write Notion pages.",
       icon: brand("notion"),
       helpUrl: "https://www.notion.so/my-integrations",
     }),

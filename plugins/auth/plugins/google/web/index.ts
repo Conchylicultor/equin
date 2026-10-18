@@ -12,6 +12,7 @@ export default {
     Auth.Provider({
       id: "google",
       name: "Google",
+      description: "Gmail, Drive backups and other Google APIs.",
       icon: brand("google"),
       helpUrl: "https://console.cloud.google.com/apis/credentials",
       credentialsPane: googleSetupPane,

@@ -4,29 +4,25 @@
 
 ## Plugin reference
 
-- Description: Apple code-signing UI: the Accounts 'Apple Developer' provider row plus the guided certificate + App Store Connect API key setup wizard pane.
+- Description: Apple code-signing UI: the Accounts 'Apple Developer' integration row (opening the wizard) plus the guided certificate + App Store Connect API key setup wizard pane.
 - Web:
   - Slots: `appleSetupPane.Actions`
   - Slot contributors: `appleSetupPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "apple-setup"
-    - `Auth.Provider` "Apple Developer"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Auth.Integration` "Apple Developer"
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×5
-    - `primitives/live-state` ×3
+    - `primitives/live-state` ×4
     - `primitives/pane` ×3
     - `auth` ×2
     - `primitives/css/ui-kit` ×2
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
-    - `primitives/css/badge.Badge`
-    - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
-    - `ui/icons.Icon`
   - Exports (values): `appleSetupPane`
 - Cross-plugin:
   - Uses tokens:
@@ -34,10 +30,8 @@
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-caption`
-    - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
 

@@ -1,0 +1,21 @@
+// @hash 6ec84829688d
+// Every account and integration, grouped by the service it belongs to, so a
+// second key of one service (the Google Maps live map) sits beside the first.
+// The set is declared in code and small: one list is the whole page.
+{
+  "views": [
+    {
+      "id": "all",
+      "name": "All",
+      "icon": "key",
+      "view": {
+        "type": "list",
+        "groupBy": { "fieldId": "service", "groupingId": "value" },
+        "sort": [{ "fieldId": "name", "direction": "asc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}
