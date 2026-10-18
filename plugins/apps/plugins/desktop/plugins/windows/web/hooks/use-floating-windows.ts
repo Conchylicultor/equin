@@ -738,12 +738,21 @@ export function placeWindows(
 
 /** Minimise every given window in one commit (mockup "Minimise all windows"). */
 export function minimizeWindows(ids: Iterable<WindowId>) {
+  setWindowsMinimized(ids, true);
+}
+
+/** Un-minimise every given window in one commit (show desktop, toggled back). */
+export function unminimizeWindows(ids: Iterable<WindowId>) {
+  setWindowsMinimized(ids, false);
+}
+
+function setWindowsMinimized(ids: Iterable<WindowId>, minimized: boolean) {
   hydrate();
   let changed = false;
   for (const id of ids) {
     const win = windows.get(id);
-    if (!win || win.geo.minimized) continue;
-    windows.set(id, { ...win, geo: { ...win.geo, minimized: true } });
+    if (!win || win.geo.minimized === minimized) continue;
+    windows.set(id, { ...win, geo: { ...win.geo, minimized } });
     changed = true;
   }
   if (!changed) return;

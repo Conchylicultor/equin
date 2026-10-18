@@ -48,6 +48,7 @@ export {
   toggleOverview,
   tileAllWindows,
   minimizeAllWindows,
+  toggleShowDesktop,
 } from "./window-commands";
 export { WindowSnapshot } from "./components/window-snapshot";
 export {

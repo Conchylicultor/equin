@@ -53,8 +53,8 @@ desktop's own theme (`app:desktop`).
 - Description: The desktop's bottom shelf: a centred dock with the launcher button, the pinned apps and the running ones (grouped per app, with window pips, hover thumbnails and a right-click app menu), and the tray — the pager's mini-desktops with their desktop previews, the overview button and the clock. Reserves the desktop's bottom work area and is where windows minimise to.
 - Web:
   - Contributes: `Desktop.Overlay` "Desktop overlay" → `Shelf`
-  - Uses: 51 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/desktop/windows` ×24
+  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/desktop/windows` ×25
     - `primitives/css/ui-kit` ×4
     - `apps-core` ×3
     - `config_v2` ×2

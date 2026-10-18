@@ -36,7 +36,9 @@ export function visibleWindowsOf(
  * The tray's pager (mockup `.pager`): one mini-desktop per virtual desktop —
  * its windows drawn at their real positions, the focused one in the accent —
  * each with a × on hover while there are several desktops; a "+" (shown while
- * the pager is hovered) for a new desktop; then the overview button.
+ * the pager is hovered) for a new desktop; then the overview button. A click
+ * on a mini picks it (`onPick`): the shelf switches to another desktop, and
+ * toggles show desktop on the current one.
  *
  * Hovering a mini asks for its desktop preview (`onPeekDesktop`), and a
  * right-click asks for its menu — both owned by the shelf, which places them.
@@ -48,7 +50,7 @@ export function Pager({
   focusedWindowId,
   desktopW,
   desktopH,
-  onSwitch,
+  onPick,
   onCreate,
   onRemove,
   onOverview,
@@ -61,7 +63,7 @@ export function Pager({
   focusedWindowId: string | null;
   desktopW: number;
   desktopH: number;
-  onSwitch: (desktopId: string) => void;
+  onPick: (desktopId: string) => void;
   onCreate: () => void;
   onRemove: (desktopId: string) => void;
   onOverview: () => void;
@@ -86,7 +88,7 @@ export function Pager({
               type="button"
               aria-label={`Desktop ${index + 1}`}
               aria-pressed={active}
-              onClick={() => onSwitch(d.id)}
+              onClick={() => onPick(d.id)}
               onPointerOver={(e: PointerEvent<HTMLButtonElement>) =>
                 onPeekDesktop(d.id, e.currentTarget)
               }

@@ -49,7 +49,8 @@ Cross-plugin channels the overlays use, all exported from the web barrel:
 minimises to — the shelf entry; the motion falls back to a straight drop),
 `setPeekedWindow` (raise one window over all and fade the rest — the shelf's
 thumbnails), `toggleOverview` / `useOverviewActive`, `tileAllWindows`,
-`minimizeAllWindows`, and `WindowSnapshot` (a hover snapshot of a window's DOM).
+`minimizeAllWindows`, `toggleShowDesktop` (minimise the active desktop's
+windows, or restore the ones it last hid — the shelf's current-desktop mini), and `WindowSnapshot` (a hover snapshot of a window's DOM).
 
 ## The work area
 
@@ -184,6 +185,7 @@ new window of the focused window's app; F3 toggles the overview.
     - `setWorkAreaReserve`
     - `tileAllWindows`
     - `toggleOverview`
+    - `toggleShowDesktop`
     - `toggleWindowPin`
     - `topmostWindowOnDesktop`
     - `useDesktops`

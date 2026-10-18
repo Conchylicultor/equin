@@ -28,6 +28,7 @@ import {
   setPeekedWindow,
   setWorkAreaReserve,
   toggleOverview,
+  toggleShowDesktop,
   topmostWindowOnDesktop,
   useDesktops,
   useOverviewActive,
@@ -159,6 +160,12 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
     setActiveDesktop(id);
     const top = topmostWindowOnDesktop(id);
     if (top) focusTab(top.activeTabId);
+  };
+  // The current desktop's mini toggles show desktop; another one switches to it.
+  const pickDesktop = (id: string) => {
+    if (id !== activeDesktopId) return switchDesktop(id);
+    hidePeek(false);
+    toggleShowDesktop();
   };
   const newDesktop = () => switchDesktop(createDesktop());
   const closeDesktop = (id: string) => {
@@ -303,7 +310,7 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
                 focusedWindowId={model.focusedWindowId}
                 desktopW={deskW}
                 desktopH={deskH}
-                onSwitch={switchDesktop}
+                onPick={pickDesktop}
                 onCreate={newDesktop}
                 onRemove={closeDesktop}
                 onOverview={() => {

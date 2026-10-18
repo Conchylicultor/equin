@@ -14,6 +14,7 @@ import {
   snapWindowDirection,
   toggleWindowPin,
   topmostWindowOnDesktop,
+  unminimizeWindows,
   windowForTab,
   type FloatingWindow,
   type WindowId,
@@ -190,6 +191,44 @@ export function tileAllWindows() {
 export function minimizeAllWindows() {
   hideOverview();
   minimizeWindows(visibleWindows().map((w) => w.id));
+}
+
+/**
+ * The windows the last "show desktop" hid, and on which desktop — what toggling
+ * it again brings back. Superseded by the next hide; ignored on another desktop.
+ */
+let shownDesktop: { desktopId: string; windowIds: WindowId[] } | null = null;
+
+/**
+ * Show the desktop, or bring its windows back (Windows' "Show desktop"): while
+ * the active desktop has a visible window, minimise them all and remember
+ * which; once it has none, restore the ones the last call hid (those still
+ * minimised there — a window restored or moved meanwhile is left alone) and
+ * focus the front one.
+ */
+export function toggleShowDesktop() {
+  hideOverview();
+  const visible = visibleWindows();
+  const { activeDesktopId } = getDesktopsState();
+  if (visible.length > 0) {
+    shownDesktop = {
+      desktopId: activeDesktopId,
+      windowIds: visible.map((w) => w.id),
+    };
+    minimizeWindows(shownDesktop.windowIds);
+    return;
+  }
+  const hidden = shownDesktop;
+  shownDesktop = null;
+  if (hidden?.desktopId !== activeDesktopId) return;
+  unminimizeWindows(
+    hidden.windowIds.filter((id) => {
+      const w = getFloatingWindow(id);
+      return w?.desktopId === activeDesktopId && w.geo.minimized;
+    }),
+  );
+  const top = topmostWindowOnDesktop(activeDesktopId);
+  if (top) floatingTabsBridgeSink.peek()?.focusTab(top.activeTabId);
 }
 
 /**
