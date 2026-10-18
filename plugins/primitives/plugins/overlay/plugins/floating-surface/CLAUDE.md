@@ -52,6 +52,18 @@ originates inside it) and the `data-open:` / `data-closed:` animation variants
   focuses anything).
 - **`reposition`** — identity change re-runs Floating UI `update()` (keystroke
   caret-follow); `autoUpdate` already covers scroll/resize.
+- **`className`** — the panel's own look, merged last over `OverlayPanel`'s
+  chrome, for a surface whose design is not the menu panel's (the desktop
+  shelf's frosted peek). An entry keyframe (`animate-in …`) is safe: the panel
+  is placed by `left`/`top`, never `transform`, so a keyframe cannot displace it.
+- **`onPointerEnter`** / **`onPointerLeave`** — for hover intent the host owns
+  (a grace-delayed hide the panel cancels).
+
+The panel is **hidden until positioned**: Floating UI's first position lands a
+commit after mount, so for one frame the panel would paint at the viewport
+origin; it fades in where it belongs instead. It cannot *slide* from the origin
+— `app.css` gives every element `transition-property: none`, so only the
+`transition-opacity` named here animates.
 
 Outside-press containment is owned internally (the dismiss listener excludes the
 surface via Floating UI's own node), so there is no `surfaceRef` — the host never
@@ -64,6 +76,7 @@ needs the surface element.
 - Description: Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.
 - Web:
   - Uses:
+    - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.OverlayPanel`
     - `primitives/css/ui-kit.PopoverMaxHeight`
     - `primitives/css/ui-kit.PopoverPadding`
@@ -74,6 +87,7 @@ needs the surface element.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/desktop/shelf`
     - `apps/sonata/progress/scrubber`
     - `conversations/conversation-view/selection-actions`
     - `page/formatting/link`

@@ -2614,7 +2614,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit` ×4
               - `apps-core` ×3
               - `config_v2` ×2
-              - `primitives/dom/element-size` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/overlay/cursor-menu` ×2
               - `apps-core/tabs.useTabs`
@@ -2627,11 +2626,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
+              - `primitives/dom/element-size.useElementSize`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/overlay/floating-surface.FloatingSurface`
               - `ui/icons.Icon`
           - Cross-plugin:
-            - Uses tokens: 27 vars — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
-              - `ui/tokens/color-palette` ×12
+            - Uses tokens: 26 vars — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
+              - `ui/tokens/color-palette` ×11
               - `ui/tokens/type-scale` ×10
               - `ui/tokens/density` ×2
               - `ui/tokens/shape` ×2
@@ -39205,6 +39206,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`floating-surface`** — Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.
           - Web:
             - Uses:
+              - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.OverlayPanel`
               - `primitives/css/ui-kit.PopoverMaxHeight`
               - `primitives/css/ui-kit.PopoverPadding`
@@ -39215,6 +39217,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
+              - `apps/desktop/shelf`
               - `apps/sonata/progress/scrubber`
               - `conversations/conversation-view/selection-actions`
               - `page/formatting/link`

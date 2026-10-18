@@ -30,12 +30,12 @@ desktop's own theme (`app:desktop`).
   `setWorkAreaReserve(dock height + 16)` keeps maximised and snapped windows off
   the dock, and `setMinimizeTargetResolver` aims a minimising window at its app's
   entry.
-- **Popovers are in-layer, menus portal.** The peek (thumbnails, the app-name tip,
-  the desktop preview) is drawn in the shelf's own layer and placed from the
-  anchor's rect (`ShelfPopover`). That keeps it in the desktop's stacking order
-  and theme. The app and desktop menus are `CursorAnchoredMenu`s opened 10px
-  above their element, and they wear the desktop theme through the portal
-  forward.
+- **The peek and the menus are shared overlays.** The peek (thumbnails, the
+  app-name tip, the desktop preview) is a `FloatingSurface` over the hovered
+  element — centred above it, flipped and kept 8px inside the viewport by
+  Floating UI, wearing the mockup's frosted glass over the shared panel. The app
+  and desktop menus are `CursorAnchoredMenu`s opened 10px above their element.
+  Both portal and wear the desktop theme through the portal forward.
 - **Snapshots are taken on every show.** The peek is keyed by its target, so each
   hover mounts fresh `WindowSnapshot`s. Nothing is cached.
 - **The clock is a clock, not polling.** `useMinuteClock` re-arms a timeout at
@@ -58,7 +58,6 @@ desktop's own theme (`app:desktop`).
     - `primitives/css/ui-kit` ×4
     - `apps-core` ×3
     - `config_v2` ×2
-    - `primitives/dom/element-size` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/overlay/cursor-menu` ×2
     - `apps-core/tabs.useTabs`
@@ -71,11 +70,13 @@ desktop's own theme (`app:desktop`).
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/overlay/floating-surface.FloatingSurface`
     - `ui/icons.Icon`
 - Cross-plugin:
-  - Uses tokens: 27 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/color-palette` ×12
+  - Uses tokens: 26 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×11
     - `ui/tokens/type-scale` ×10
     - `ui/tokens/density` ×2
     - `ui/tokens/shape` ×2

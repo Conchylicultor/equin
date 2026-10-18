@@ -1943,6 +1943,20 @@
   * {
     @apply border-border outline-ring/50;
     }
+  /* Nothing transitions unless it names what. CSS's initial
+     `transition-property` is `all`, and Tailwind v4's `duration-*` / `ease-*`
+     set `transition-duration` / `-timing-function` as well as the `--tw-*`
+     var `animate-in` reads — so a `duration-*` written to time an entry
+     keyframe silently armed a transition on EVERY property. A panel placed by
+     measured coordinates (Floating UI, a ResizeObserver writing left/top) then
+     slid from its resting origin to its anchor instead of appearing there: the
+     one-frame "tooltip in the corner, then teleported" bug, fixed three times
+     per surface before this line. Base loses to every utility, so
+     `transition`, `transition-colors`, `transition-[…]` … still name their
+     properties and still animate; only the unnamed `all` is gone. */
+  *, ::before, ::after {
+    transition-property: none;
+    }
   /* Finish the job preflight starts on form controls.
      `text-transform` INHERITS, and Chromium's UA stylesheet sets it to `none` on
      `button`/`select` — a direct rule, so it beats any value inherited from an

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type PointerEventHandler } from "react";
 import {
   useFloating,
   offset,
@@ -9,6 +9,7 @@ import {
   type Placement,
 } from "@floating-ui/react-dom";
 import {
+  cn,
   OverlayPanel,
   type PopoverWidth,
   type PopoverPadding,
@@ -94,6 +95,16 @@ export interface FloatingSurfaceProps {
    * scroll/resize cadence.
    */
   reposition?: unknown;
+  /**
+   * The panel's own look, merged LAST over `OverlayPanel`'s chrome — for a
+   * surface whose design is not the menu panel's (the desktop shelf's frosted
+   * peek). An entry keyframe (`animate-in …`) is safe here: the panel is placed
+   * by `left`/`top`, never `transform`, so the keyframe cannot displace it.
+   */
+  className?: string;
+  /** Hover intent owned by the host (a grace-delayed hide that the panel cancels). */
+  onPointerEnter?: PointerEventHandler<HTMLDivElement>;
+  onPointerLeave?: PointerEventHandler<HTMLDivElement>;
 }
 
 /** A DOMRect anchor is wrapped into a virtual element; a virtual element passes through. */
@@ -125,6 +136,9 @@ export function FloatingSurface({
   sideOffset = 4,
   onDismiss,
   reposition,
+  className,
+  onPointerEnter,
+  onPointerLeave,
 }: FloatingSurfaceProps) {
   // The floating node is tracked as STATE via a callback ref (a `useState`
   // setter), not a React ref — so nothing reads a ref during render (the strict
@@ -140,6 +154,10 @@ export function FloatingSurface({
   const { floatingStyles, update, isPositioned } = useFloating({
     open,
     strategy: "fixed",
+    // Placed by `left`/`top`, not a `transform`: an entry keyframe on the panel
+    // animates `transform`, and while it runs it would override a positioning
+    // transform — the panel would play its entry at the viewport origin.
+    transform: false,
     placement: toPlacement(side, align),
     whileElementsMounted: autoUpdate,
     elements: { reference, floating: floatingEl },
@@ -228,13 +246,18 @@ export function FloatingSurface({
         padding={padding}
         maxHeight={maxHeight}
         scroll={scroll}
-        // Fade in where it belongs, never slide there. Until Floating UI has
-        // measured, the panel sits at the viewport origin; the panel's own
-        // `duration-*` with CSS's default `transition-property: all` would
-        // animate the jump to the anchor (and every later caret-follow) as a
-        // slide. So: hidden until positioned, and only opacity transitions.
+        onPointerEnter={onPointerEnter}
+        onPointerLeave={onPointerLeave}
+        // Hidden until placed. Floating UI's first position lands a commit
+        // after the mount, so for one frame the panel sits at the viewport
+        // origin; it fades in where it belongs instead of painting there.
+        // (It cannot SLIDE from the origin: `app.css` gives every element
+        // `transition-property: none`, and only opacity is named here.)
         data-positioned={isPositioned ? "" : undefined}
-        className="pointer-events-auto transition-opacity not-data-[positioned]:opacity-0"
+        className={cn(
+          "pointer-events-auto transition-opacity not-data-[positioned]:opacity-0",
+          className,
+        )}
       >
         {children}
       </OverlayPanel>

@@ -137,9 +137,8 @@ export function OverflowPanel({
         // Invisible until placed. Closed, the panel has no reference, so its
         // styles sit at the viewport origin; opening shows it in that same
         // commit, and Floating UI's first measurement lands a commit later —
-        // the panel would flash top-left and then jump to its trigger (as a
-        // slide, under OverlayPanel's `transition-property: all`). Same guard
-        // as `floating-surface`: hidden until positioned, only opacity animates.
+        // the panel would flash top-left for a frame. Same guard as
+        // `floating-surface`: hidden until positioned, and it fades in.
         data-positioned={isPositioned ? "" : undefined}
         className="pointer-events-auto transition-opacity not-data-[positioned]:opacity-0"
       >

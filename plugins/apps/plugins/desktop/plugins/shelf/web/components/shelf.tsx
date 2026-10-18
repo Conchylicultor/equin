@@ -1,11 +1,4 @@
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type MouseEvent,
-} from "react";
+import { Fragment, useEffect, useRef, useState, type MouseEvent } from "react";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -15,6 +8,7 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import type { CursorAnchor } from "@plugins/primitives/plugins/overlay/plugins/cursor-menu/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { FloatingSurface } from "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { toggleLauncher } from "@plugins/apps/plugins/desktop/plugins/launcher/web";
@@ -41,7 +35,6 @@ import {
   type ShelfAppEntry,
 } from "../internal/use-shelf-model";
 import { ShelfEntryButton } from "./shelf-entry";
-import { ShelfPopover } from "./shelf-popover";
 import { PeekThumbs } from "./peek-thumbs";
 import { Pager, visibleWindowsOf } from "./pager";
 import { DesktopPreview } from "./desktop-preview";
@@ -57,6 +50,17 @@ const PEEK_HIDE_MS = 140;
 /** How far above its anchor each popover floats (mockup `showPeek` / `showDeskPreview`). */
 const APP_PEEK_GAP = 16;
 const DESKTOP_PEEK_GAP = 20;
+
+/**
+ * The peek's own look over the shared overlay panel: the mockup's frosted menu
+ * glass (`--menu-bg` + blur 30 saturate 1.8), its hairline-plus-lift shadow in
+ * place of the panel's ring (no token spells this shadow), and its entry.
+ */
+const PEEK_CHROME = cn(
+  "ring-0 bg-popover/90 backdrop-blur-[30px] backdrop-saturate-[1.8]",
+  "shadow-[0_0_0_0.5px_var(--input),0_16px_40px_-10px_rgba(0,0,0,0.35),0_2px_6px_rgba(0,0,0,0.08)]",
+  "animate-in fade-in-0 slide-in-from-bottom-1 zoom-in-98 duration-[140ms] ease-[cubic-bezier(.2,.8,.2,1)]",
+);
 
 /** What the hover popover shows, and the element it floats over. */
 type Peek =
@@ -87,16 +91,8 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
   const { desktops, activeDesktopId } = useDesktops();
   const overview = useOverviewActive();
 
-  const [layerEl, setLayerEl] = useState<HTMLElement | null>(null);
   const [layerRef, { width: deskW, height: deskH }] = useElementSize();
   const [dockRef, { height: dockH }] = useElementSize<HTMLDivElement>();
-  const setLayer = useCallback(
-    (el: HTMLElement | null) => {
-      layerRef(el);
-      setLayerEl(el);
-    },
-    [layerRef],
-  );
 
   // The work area: the dock's height plus the gap stays free at the bottom.
   useEffect(
@@ -202,7 +198,7 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
 
   return (
     <Layer
-      ref={setLayer}
+      ref={layerRef}
       layer="overlay"
       decorative
       className="text-foreground"
@@ -335,23 +331,28 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
         </div>
       </Pin>
 
-      {peek && layerEl && (
-        <ShelfPopover
+      {peek && (
+        <FloatingSurface
           key={hoverKey(peek)}
+          open
           anchor={peek.anchor}
-          layer={layerEl}
-          gap={peek.kind === "app" ? APP_PEEK_GAP : DESKTOP_PEEK_GAP}
+          side="top"
+          align="center"
+          sideOffset={peek.kind === "app" ? APP_PEEK_GAP : DESKTOP_PEEK_GAP}
+          padding="none"
+          scroll={false}
           onPointerEnter={cancelHide}
           onPointerLeave={() => hidePeek(true)}
           // eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's peek paddings: the name tip 5px 10px, the thumbnails 6px (off the ramp)
-          className={
+          className={cn(
+            PEEK_CHROME,
             peek.kind === "app" && peekEntry && peekEntry.windows.length === 0
               ? // The app-name tip (mockup `.peek-pop.tip`).
                 "rounded-lg px-[10px] py-[5px] text-caption font-[550]"
               : peek.kind === "app"
                 ? "rounded-2xl p-[6px]"
-                : "rounded-2xl p-sm"
-          }
+                : "rounded-2xl p-sm",
+          )}
         >
           {peek.kind === "app" ? (
             peekEntry === undefined ? null : peekEntry.windows.length === 0 ? (
@@ -386,7 +387,7 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
               desktopH={deskH}
             />
           )}
-        </ShelfPopover>
+        </FloatingSurface>
       )}
 
       <AppMenu
