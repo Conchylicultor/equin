@@ -97,6 +97,8 @@ export interface SessionState {
   sessionId: string | null;
   status: CliSessionStatus | null;
   waitingFor: string | null;
+  /** When the CLI wrote `status` (epoch ms), or null when it did not say. */
+  statusUpdatedAt: number | null;
 }
 
 /**
@@ -177,6 +179,7 @@ const NULL_STATE: SessionState = {
   sessionId: null,
   status: null,
   waitingFor: null,
+  statusUpdatedAt: null,
 };
 
 /** Session-file IO, injectable so resolution is testable without a real /proc. */
@@ -334,6 +337,8 @@ function readSessionState(identity: SessionIdentity): SessionState {
     sessionId: identity.sessionId,
     status,
     waitingFor: readString(raw.waitingFor),
+    statusUpdatedAt:
+      typeof raw.statusUpdatedAt === "number" ? raw.statusUpdatedAt : null,
   };
 }
 

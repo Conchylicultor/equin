@@ -112,7 +112,26 @@ describe("resolveSessionState — the claim rule", () => {
       sessionId: "4a4671db",
       status: "idle",
       waitingFor: null,
+      statusUpdatedAt: null,
     });
+  });
+
+  test("the CLI's statusUpdatedAt is read through", async () => {
+    const deps = depsOf({
+      99082: {
+        json: {
+          sessionId: "4a4671db",
+          status: "busy",
+          statusUpdatedAt: NOW - 5_000,
+          tmux: stamp("%1"),
+          cwd: WT,
+          kind: "interactive",
+        },
+        mtimeMs: NOW - 5_000,
+      },
+    });
+    const state = await resolveSessionState(paneOf(99082), chain(99082), deps);
+    expect(state.statusUpdatedAt).toBe(NOW - 5_000);
   });
 
   test("1. the record stamping %1 beats a fresher one stamping %2", async () => {
@@ -289,6 +308,7 @@ describe("resolveSessionState — the claim rule", () => {
       sessionId: "af01a393",
       status: "busy",
       waitingFor: null,
+      statusUpdatedAt: null,
     });
     expect(anomalies).toEqual([]);
   });
@@ -336,7 +356,12 @@ describe("resolveSessionState — the claim rule", () => {
       anomalies,
     );
     const state = await resolveSessionState(paneOf(1), chain(1, 2), deps);
-    expect(state).toEqual({ sessionId: null, status: null, waitingFor: null });
+    expect(state).toEqual({
+      sessionId: null,
+      status: null,
+      waitingFor: null,
+      statusUpdatedAt: null,
+    });
     expect(kinds(anomalies)).toEqual(["unclaimed-subtree-session"]);
   });
 
@@ -507,7 +532,12 @@ describe("resolveSessionState — the claim rule", () => {
       anomalies,
     );
     const state = await resolveSessionState(paneOf(1), chain(1), deps);
-    expect(state).toEqual({ sessionId: null, status: null, waitingFor: null });
+    expect(state).toEqual({
+      sessionId: null,
+      status: null,
+      waitingFor: null,
+      statusUpdatedAt: null,
+    });
     expect(anomalies).toEqual([]);
   });
 
@@ -519,7 +549,12 @@ describe("resolveSessionState — the claim rule", () => {
       chain(1, 2, 3),
       depsOf({}, anomalies),
     );
-    expect(state).toEqual({ sessionId: null, status: null, waitingFor: null });
+    expect(state).toEqual({
+      sessionId: null,
+      status: null,
+      waitingFor: null,
+      statusUpdatedAt: null,
+    });
     expect(anomalies).toEqual([]);
   });
 
@@ -597,6 +632,7 @@ describe("resolveSessionState — parked background jobs", () => {
       sessionId: "baf9c302-68bf",
       status: "busy",
       waitingFor: null,
+      statusUpdatedAt: null,
     });
   });
 
@@ -650,6 +686,7 @@ describe("resolveSessionState — parked background jobs", () => {
       sessionId: "stub",
       status: "idle",
       waitingFor: null,
+      statusUpdatedAt: null,
     });
   });
 

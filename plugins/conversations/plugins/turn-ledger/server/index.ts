@@ -21,10 +21,13 @@ export {
   hasHeldTurns,
   hasPromptHook,
   holdIfStarting,
+  latestSubmitAt,
   listHeldTurns,
   recordPromptHookLaunch,
   returnTurnByText,
+  returnTurnsSince,
 } from "./internal/store";
+export { onTurnSubmitted } from "./internal/submit-signal";
 export type { AcceptOutcome, NewTurn, TurnRow } from "./internal/store";
 export type { TurnEvent } from "./internal/transition";
 export { promptSubmitHookEntry } from "./internal/mailbox";

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  liveStatusFor,
   planConversationUpdate,
   sessionCandidate,
   STARTING_TIMEOUT_MS,
@@ -39,6 +40,7 @@ function live(overrides: Partial<RuntimeInfo> = {}): Liveness {
       worktreePath: "/wt",
       waitingFor: null,
       menu: null,
+      statusWrittenAt: null,
       ...overrides,
     },
   };
@@ -53,6 +55,7 @@ function ctx(overrides: Partial<PlanContext> = {}): PlanContext {
     now: NOW,
     sessionAccepted: false,
     questionHold: null,
+    lastSubmitAt: null,
     ...overrides,
   };
 }
@@ -567,5 +570,40 @@ describe("planConversationUpdate — a terminal menu on screen", () => {
       kind: "patch",
       patch: { waitingFor: "question" },
     });
+  });
+});
+
+describe("liveStatusFor — a confirmed submit is evidence of work", () => {
+  const SUBMIT = new Date(NOW);
+  const info = (o: Partial<RuntimeInfo>): RuntimeInfo =>
+    (live(o) as Extract<Liveness, { kind: "live" }>).info;
+
+  test("an idle written before the submit is stale: working", () => {
+    expect(
+      liveStatusFor(info({ statusWrittenAt: new Date(NOW - 50) }), SUBMIT),
+    ).toBe("working");
+  });
+
+  test("an idle written after the submit (turn ended, interrupted) stands", () => {
+    // The 2026-10-18 rewind: submitted 15:53:10, idle 15:53:22, hook drained
+    // 15:54:48 — still waiting.
+    expect(
+      liveStatusFor(info({ statusWrittenAt: new Date(NOW + 12_000) }), SUBMIT),
+    ).toBe("waiting");
+  });
+
+  test("no CLI write to weigh (dead pane, a menu) — the submit overrides nothing", () => {
+    expect(liveStatusFor(info({ statusWrittenAt: null }), SUBMIT)).toBe(
+      "waiting",
+    );
+  });
+
+  test("the planner writes it on a waiting row", () => {
+    const plan = planConversationUpdate(
+      row(),
+      live({ statusWrittenAt: new Date(NOW - 50) }),
+      ctx({ lastSubmitAt: SUBMIT }),
+    );
+    expect(plan.kind === "patch" && plan.patch.status).toBe("working");
   });
 });

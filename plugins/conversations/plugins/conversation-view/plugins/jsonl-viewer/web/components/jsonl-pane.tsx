@@ -212,7 +212,9 @@ export function JsonlPane({
   children?: ReactNode;
 }) {
   const eventsResult = useLive(jsonlEvents, { id: conversation.id });
-  const pending = usePendingTurns(conversation.id);
+  // The pending cards are read against the transcript this pane renders: an
+  // echo stands until the transcript shows its turn.
+  const pending = usePendingTurns(conversation.id, eventsResult);
 
   return (
     // Declared out here as well as inside `TranscriptView`, and it is not a

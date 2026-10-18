@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, max } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import {
@@ -16,6 +16,7 @@ import {
   type TurnEvent,
 } from "./transition";
 import { reportTurnMerged, reportTurnUnverified } from "./report-kinds";
+import { notifyTurnSubmitted } from "./submit-signal";
 
 /** One ledger row, as the server holds it. */
 export type TurnRow = typeof _conversationTurns.$inferSelect;
@@ -252,14 +253,16 @@ export async function hasHeldTurns(
 }
 
 /**
- * Resolve the turn the CLI just reported submitting: the first of
+ * Resolve the turn the CLI just reported submitting at `at`: the first of
  * {@link promptCandidates} the hook event still applies to. A prompt matching
  * nothing — typed in the terminal, the launch's own task prompt — is not ours.
- * Returns the resolved row, or null.
+ * Returns the resolved row, or null. A resolved row signals
+ * `onTurnSubmitted`.
  */
 export async function resolvePromptSubmit(
   conversationId: string,
   prompt: string,
+  at: Date,
   conn: NodePgDatabase = db,
 ): Promise<TurnRow | null> {
   const oldestFirst = await conn
@@ -274,12 +277,65 @@ export async function resolvePromptSubmit(
     .orderBy(asc(_conversationTurns.createdAt), asc(_conversationTurns.id));
   for (const candidate of promptCandidates(prompt, oldestFirst)) {
     const applied = await conn.transaction((tx) =>
-      applyInTx(tx, candidate.id, { kind: "hook", prompt }),
+      applyInTx(tx, candidate.id, { kind: "hook", prompt, at }),
     );
     await afterChange(applied);
-    if (applied.changed) return applied.row;
+    if (applied.changed) {
+      notifyTurnSubmitted(conversationId);
+      return applied.row;
+    }
   }
   return null;
+}
+
+/**
+ * When the CLI last confirmed submitting a turn, per conversation (absent: it
+ * never did). The status reconciler's evidence that an agent is working even
+ * while its session file still reads idle — see `liveStatusFor`.
+ */
+export async function latestSubmitAt(
+  conversationIds: readonly string[],
+  conn: Pick<NodePgDatabase, "select"> = db,
+): Promise<Map<string, Date>> {
+  if (conversationIds.length === 0) return new Map();
+  const rows = await conn
+    .select({
+      conversationId: _conversationTurns.conversationId,
+      at: max(_conversationTurns.submittedAt),
+    })
+    .from(_conversationTurns)
+    .where(inArray(_conversationTurns.conversationId, [...conversationIds]))
+    .groupBy(_conversationTurns.conversationId);
+  return new Map(
+    rows.flatMap((row) => (row.at ? [[row.conversationId, row.at]] : [])),
+  );
+}
+
+/**
+ * Mark `returned` every delivered turn sent at or after `since` — the turns a
+ * rewind cut out of the transcript. Returns them.
+ */
+export async function returnTurnsSince(
+  conversationId: string,
+  since: Date,
+  conn: NodePgDatabase = db,
+): Promise<TurnRow[]> {
+  const cut = await conn
+    .select({ id: _conversationTurns.id })
+    .from(_conversationTurns)
+    .where(
+      and(
+        eq(_conversationTurns.conversationId, conversationId),
+        inArray(_conversationTurns.state, ["typed", "accepted", "merged"]),
+        gte(_conversationTurns.createdAt, since),
+      ),
+    )
+    .orderBy(asc(_conversationTurns.createdAt), asc(_conversationTurns.id));
+  const returned: TurnRow[] = [];
+  for (const { id } of cut) {
+    returned.push(await applyTurnEvent(id, { kind: "returned" }, conn));
+  }
+  return returned;
 }
 
 /**

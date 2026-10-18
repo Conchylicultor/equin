@@ -23,6 +23,8 @@ export type CutResult =
       keptLines: string[];
       /** Text of the removed message, to hand back to the prompt editor. */
       messageText: string;
+      /** When the CLI wrote the removed message, or null when its line has no time. */
+      messageAt: Date | null;
       losses: CutLosses;
     }
   | { ok: false; reason: CutRefusal };
@@ -321,11 +323,13 @@ function cutAt(
       !dropped.has(p.index) &&
       (p.obj.type === "user" || p.obj.type === "assistant"),
   );
+  const stamp = str(target.obj.timestamp);
   return {
     cut: {
       ok: true,
       keptLines,
       messageText,
+      messageAt: stamp === null ? null : new Date(stamp),
       losses: { laterUserTurns, lostReports, unreported },
     },
     conversationLeft,

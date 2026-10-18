@@ -39,9 +39,9 @@
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "held-turn-undelivered"
-  - Uses: 75 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 78 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×27
-    - `conversations/turn-ledger` ×10
+    - `conversations/turn-ledger` ×13
     - `conversations/transcript-watcher` ×7
     - `conversations/workspace` ×3
     - `infra/claude-cli/availability` ×3

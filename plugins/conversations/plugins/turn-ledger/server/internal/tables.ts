@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { nullable } from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import {
   defineEntity,
   sqlDefault,
@@ -31,6 +32,10 @@ export const conversationTurnsEntity = defineEntity(
     // `merged` only: the hook's whole prompt, and the part of it that was
     // not this turn (`extraText`).
     submittedText: nullable(textField()),
+    // `accepted` / `merged`: when the CLI submitted it — the hook's mailbox
+    // file mtime, so a late drain still records the CLI's moment. The status
+    // reconciler weighs it against the CLI's own idle/busy write.
+    submittedAt: nullable(dateField()),
   },
   {
     primaryKey: "id",
@@ -58,6 +63,7 @@ export const conversationTurnsEntity = defineEntity(
         state: true,
         hookless: true,
         submittedText: true,
+        submittedAt: true,
         extraText: true,
         error: true,
         id: false,

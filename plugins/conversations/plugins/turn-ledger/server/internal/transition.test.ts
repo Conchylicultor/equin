@@ -10,6 +10,7 @@ import {
 
 const STATES = TurnStateSchema.options;
 const TYPED = "fix the build";
+const AT = new Date("2026-10-18T15:53:10Z");
 
 const EVENTS = {
   hold: { kind: "hold" },
@@ -18,9 +19,13 @@ const EVENTS = {
   typed: { kind: "typed", hookless: false },
   unverified: { kind: "unverified", hookless: false, reason: "box kept text" },
   failed: { kind: "failed", error: "tmux exploded" },
-  "hook-equal": { kind: "hook", prompt: TYPED },
-  "hook-merged": { kind: "hook", prompt: `stale draft\n${TYPED}` },
-  "hook-other": { kind: "hook", prompt: "something the user typed" },
+  "hook-equal": { kind: "hook", prompt: TYPED, at: AT },
+  "hook-merged": { kind: "hook", prompt: `stale draft\n${TYPED}`, at: AT },
+  "hook-other": {
+    kind: "hook",
+    prompt: "something the user typed",
+    at: AT,
+  },
   returned: { kind: "returned" },
   withdraw: { kind: "withdraw" },
 } as const satisfies Record<string, TurnEvent>;
@@ -212,7 +217,15 @@ describe("transitionTurn", () => {
   test("a merge records the other text the CLI submitted", () => {
     expect(transitionTurn(row("typed"), EVENTS["hook-merged"])?.patch).toEqual({
       submittedText: `stale draft\n${TYPED}`,
+      submittedAt: AT,
       extraText: "stale draft",
+      error: null,
+    });
+  });
+
+  test("an accept records when the CLI submitted it", () => {
+    expect(transitionTurn(row("typed"), EVENTS["hook-equal"])?.patch).toEqual({
+      submittedAt: AT,
       error: null,
     });
   });

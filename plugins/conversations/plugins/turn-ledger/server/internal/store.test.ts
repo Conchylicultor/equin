@@ -38,11 +38,15 @@ import {
   getTurn,
   hasHeldTurns,
   holdIfStarting,
+  latestSubmitAt,
   listHeldTurns,
   resolvePromptSubmit,
   returnTurnByText,
+  returnTurnsSince,
   type NewTurn,
 } from "./store";
+
+const AT = new Date("2026-10-18T15:53:10Z");
 
 let t: TestDb;
 // `createTestDb`'s own pool holds ONE connection; the race cases need two
@@ -284,7 +288,7 @@ describe("resolvePromptSubmit", () => {
     const id = await seedConversation("waiting");
     const first = await acceptTurn(id, turn("same"), conn);
     const second = await acceptTurn(id, turn("same"), conn);
-    const resolved = await resolvePromptSubmit(id, "same", conn);
+    const resolved = await resolvePromptSubmit(id, "same", AT, conn);
     expect<string | undefined>(resolved?.id).toBe(
       first.kind === "send" ? first.turn.id : "",
     );
@@ -299,16 +303,14 @@ describe("resolvePromptSubmit", () => {
   test("a prompt matching no row is not ours", async () => {
     const id = await seedConversation("waiting");
     await acceptTurn(id, turn("mine"), conn);
-    expect(await resolvePromptSubmit(id, "typed in the terminal", conn)).toBe(
-      null,
-    );
+    expect(null);
   });
 
   test("the submit check landing after the hook changes nothing", async () => {
     const id = await seedConversation("waiting");
     const accepted = await acceptTurn(id, turn("hi"), conn);
     const turnId = accepted.kind === "send" ? accepted.turn.id : "";
-    await resolvePromptSubmit(id, "hi", conn);
+    await resolvePromptSubmit(id, "hi", AT, conn);
     const after = await applyTurnEvent(
       turnId,
       { kind: "typed", hookless: false },
@@ -323,7 +325,7 @@ describe("returnTurnByText", () => {
     const id = await seedConversation("waiting");
     const accepted = await acceptTurn(id, turn("stop me"), conn);
     const turnId = accepted.kind === "send" ? accepted.turn.id : "";
-    await resolvePromptSubmit(id, "stop me", conn);
+    await resolvePromptSubmit(id, "stop me", AT, conn);
     expect<string | undefined>(
       (await returnTurnByText(id, "stop me\n", conn))?.id,
     ).toBe(turnId);
@@ -334,5 +336,39 @@ describe("returnTurnByText", () => {
     const id = await seedConversation("waiting");
     await acceptTurn(id, turn("kept"), conn);
     expect(await returnTurnByText(id, "something else", conn)).toBe(null);
+  });
+});
+
+describe("latestSubmitAt", () => {
+  test("is when the CLI last confirmed a turn, absent before any", async () => {
+    const id = await seedConversation("waiting");
+    await acceptTurn(id, turn("first"), conn);
+    expect((await latestSubmitAt([id], conn)).has(id)).toBe(false);
+    await resolvePromptSubmit(id, "first", AT, conn);
+    const later = new Date(AT.getTime() + 5_000);
+    await acceptTurn(id, turn("second"), conn);
+    await resolvePromptSubmit(id, "second", later, conn);
+    expect((await latestSubmitAt([id], conn)).get(id)).toEqual(later);
+  });
+});
+
+describe("returnTurnsSince", () => {
+  test("returns the delivered turns sent at or after the cut, not before", async () => {
+    const id = await seedConversation("waiting");
+    const before = await acceptTurn(id, turn("kept"), conn);
+    await resolvePromptSubmit(id, "kept", AT, conn);
+    const [{ now }] = (
+      await t.db.execute<{ now: Date }>(sql`SELECT clock_timestamp() AS now`)
+    ).rows as [{ now: Date }];
+    const after = await acceptTurn(id, turn("cut"), conn);
+    await resolvePromptSubmit(id, "cut", AT, conn);
+    const returned = await returnTurnsSince(id, new Date(now), conn);
+    expect<string[]>(returned.map((row) => row.id)).toEqual([
+      after.kind === "send" ? after.turn.id : "",
+    ]);
+    expect(
+      (await getTurn(before.kind === "send" ? before.turn.id : "", conn))
+        ?.state,
+    ).toBe("accepted");
   });
 });

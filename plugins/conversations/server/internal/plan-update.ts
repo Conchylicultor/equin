@@ -75,6 +75,11 @@ export interface PlanContext {
    * held call.
    */
   questionHold: QuestionHold | null;
+  /**
+   * When the CLI last confirmed submitting a turn (the turn ledger's
+   * `submitted_at`), or null when it never did.
+   */
+  lastSubmitAt: Date | null;
 }
 
 export type UpdatePlan =
@@ -108,8 +113,23 @@ export type UpdatePlan =
       menuOpened: boolean;
     };
 
-export function liveStatusFor(info: RuntimeInfo): ConversationStatus {
-  return info.working ? "working" : "waiting";
+/**
+ * Working when the CLI says so — or when it confirmed submitting a turn after
+ * its last status write. The hook fires at Enter, before the CLI flips its
+ * session file to busy, so an idle written BEFORE the submit is stale evidence;
+ * one written after it (the turn ended, or was interrupted) is current. Causal
+ * order, not a grace timer: a hook drained late still carries the CLI's moment.
+ */
+export function liveStatusFor(
+  info: RuntimeInfo,
+  lastSubmitAt: Date | null,
+): ConversationStatus {
+  if (info.working) return "working";
+  const submittedSince =
+    lastSubmitAt !== null &&
+    info.statusWrittenAt !== null &&
+    lastSubmitAt > info.statusWrittenAt;
+  return submittedSince ? "working" : "waiting";
 }
 
 /**
@@ -146,7 +166,7 @@ export function planConversationUpdate(
     if (info.dead || !info.worktreePath) return { kind: "noop" };
     return {
       kind: "adopt",
-      status: liveStatusFor(info),
+      status: liveStatusFor(info, null),
       title: info.title || null,
     };
   }
@@ -188,7 +208,9 @@ function planLive(
   // A held question: the agent is blocked on it, and the pane — showing no
   // menu — reads as an ordinary idle prompt (or, mid-hook, as busy).
   const heldOpen = ctx.questionHold === "open";
-  const desiredStatus = heldOpen ? "waiting" : liveStatusFor(info);
+  const desiredStatus = heldOpen
+    ? "waiting"
+    : liveStatusFor(info, ctx.lastSubmitAt);
   const titleChanged = desiredTitle !== row.title;
   // Only adopt a new claudeSessionId once the shell's gate accepted it (a
   // transcript exists, in THIS conversation's own projects directory).

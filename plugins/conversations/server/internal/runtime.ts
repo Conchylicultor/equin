@@ -27,6 +27,13 @@ export interface RuntimeInfo {
    * one is open the reconciler records it and the session waits on it.
    */
   menu: TerminalMenu | null;
+  /**
+   * When the CLI itself wrote the status `working` rests on, or null when the
+   * verdict does not rest on the CLI's write (a dead pane, a menu on screen, no
+   * session file). A turn the CLI confirmed submitting AFTER this makes the
+   * session working whatever the write said — see `liveStatusFor`.
+   */
+  statusWrittenAt: Date | null;
 }
 
 /**

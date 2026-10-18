@@ -47,6 +47,7 @@ import type {
   TurnState,
 } from "@plugins/conversations/plugins/turn-ledger/core";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import {
   pendingTurnsOf,
   useOptimisticConversationStatus,
@@ -85,6 +86,32 @@ function row(
   };
 }
 
+/** The transcript line a typed prompt lands as, written `at`. */
+function prompt(text: string, at: Date): JsonlEvent {
+  return {
+    kind: "user-text",
+    at: at.toISOString(),
+    text,
+    uuid: `uuid-${text}`,
+  };
+}
+
+const NO_EVENTS: JsonlEvent[] = [];
+
+/** The transcript read, answered with `events`. */
+function transcript(events: JsonlEvent[]) {
+  return {
+    status: "ready" as const,
+    data: events,
+    refetch: () => Promise.resolve(),
+  };
+}
+
+const NOT_IN_YET = {
+  status: "loading" as const,
+  refetch: () => Promise.resolve(),
+};
+
 function ready(rows: LedgerTurn[]): void {
   ledger.result = {
     status: "ready",
@@ -110,10 +137,9 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
   const CARD: Record<TurnState, boolean> = {
     held: true,
     typing: true,
-    // The CLI's box took it; only the hook refines that, and a typed row whose
-    // hook never comes must not nag.
-    typed: false,
-    accepted: false,
+    // Echoes until the transcript shows the turn (none here).
+    typed: true,
+    accepted: true,
     merged: true,
     returned: false,
     failed: true,
@@ -123,34 +149,53 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
   };
   for (const [state, draws] of Object.entries(CARD) as [TurnState, boolean][]) {
     it(`${state} → ${draws ? "a card" : "nothing"}`, () => {
-      const cards = pendingTurnsOf([row("c", "t1", state)], []);
+      const cards = pendingTurnsOf([row("c", "t1", state)], [], NO_EVENTS);
       expect(cards.map((c) => c.state)).toEqual(draws ? [state] : []);
     });
   }
 
   it("shows a merged warning only while its turn is the newest", () => {
     const merged = row("c", "old", "merged", { extraText: "stale draft" });
-    expect(pendingTurnsOf([merged], [])[0]?.extraText).toBe("stale draft");
+    expect(pendingTurnsOf([merged], [], NO_EVENTS)[0]?.extraText).toBe(
+      "stale draft",
+    );
     const newer = row("c", "new", "accepted");
-    expect(pendingTurnsOf([newer, merged], [])).toEqual([]);
+    const both = [prompt("a", new Date()), prompt("b", new Date())];
+    expect(pendingTurnsOf([newer, merged], [], both)).toEqual([]);
   });
 
   it("draws no in-flight echo for an answer, but its failure card", () => {
     const answer = (state: TurnState) =>
       row("c", "a", state, { kind: "answer" });
-    expect(pendingTurnsOf([answer("typing")], [])).toEqual([]);
-    expect(pendingTurnsOf([answer("held")], [])).toEqual([]);
-    expect(pendingTurnsOf([answer("failed")], []).map((c) => c.state)).toEqual([
-      "failed",
-    ]);
+    expect(pendingTurnsOf([answer("typing")], [], NO_EVENTS)).toEqual([]);
+    expect(pendingTurnsOf([answer("held")], [], NO_EVENTS)).toEqual([]);
+    expect(
+      pendingTurnsOf([answer("failed")], [], NO_EVENTS).map((c) => c.state),
+    ).toEqual(["failed"]);
   });
 
   it("orders cards oldest first (the window reads newest first)", () => {
     const cards = pendingTurnsOf(
       [row("c", "second", "failed"), row("c", "first", "held")],
       [],
+      NO_EVENTS,
     );
     expect(cards.map((c) => c.id)).toEqual(["first", "second"]);
+  });
+
+  it("an echo stands until the transcript shows the turn — whatever the ledger says", () => {
+    const sentAt = new Date(Date.now() - 1_000);
+    const accepted = row("c", "t1", "accepted", { createdAt: sentAt });
+    expect(pendingTurnsOf([accepted], [], NO_EVENTS)).toEqual([
+      expect.objectContaining({ id: "t1", state: "accepted" }),
+    ]);
+    const landed = [prompt("text of t1", new Date())];
+    expect(pendingTurnsOf([accepted], [], landed)).toEqual([]);
+  });
+
+  it("a hookless turn the box took draws nothing: nothing will say more", () => {
+    const slash = row("c", "t1", "typed", { hookless: true });
+    expect(pendingTurnsOf([slash], [], NO_EVENTS)).toEqual([]);
   });
 });
 
@@ -159,8 +204,9 @@ describe("send → optimistic echo → live row", () => {
     const conv = freshConversation();
     ready([]);
     posts.next = null;
+    let events: JsonlEvent[] = [];
     const { result, rerender } = renderHook(() => ({
-      pending: usePendingTurns(conv),
+      pending: usePendingTurns(conv, transcript(events)),
       inFlight: useTurnSendInFlight(conv),
     }));
 
@@ -196,8 +242,18 @@ describe("send → optimistic echo → live row", () => {
     await settle();
     expect(result.current.inFlight).toBe(false);
 
-    // The hook confirmed it: the transcript shows the turn, no card is left.
-    ready([row(conv, turnId, "accepted")]);
+    // The hook confirmed it, but the transcript has not shown it yet: the echo
+    // stays — the message is not on screen.
+    const sentAt = new Date(Date.now() - 1_000);
+    ready([row(conv, turnId, "accepted", { createdAt: sentAt })]);
+    rerender();
+    const confirmed = result.current.pending;
+    expect(confirmed.status === "ready" && confirmed.data).toEqual([
+      expect.objectContaining({ id: turnId, state: "accepted" }),
+    ]);
+
+    // The transcript shows it: no card is left.
+    events = [prompt("fix the build", new Date())];
     rerender();
     const done = result.current.pending;
     expect(done.status === "ready" && done.data).toEqual([]);
@@ -205,7 +261,16 @@ describe("send → optimistic echo → live row", () => {
 
   it("is loading until the ledger answers", () => {
     const conv = freshConversation();
-    const { result } = renderHook(() => usePendingTurns(conv));
+    const { result } = renderHook(() =>
+      usePendingTurns(conv, transcript(NO_EVENTS)),
+    );
+    expect(result.current.status).toBe("loading");
+  });
+
+  it("is loading until the transcript is in", () => {
+    const conv = freshConversation();
+    ready([]);
+    const { result } = renderHook(() => usePendingTurns(conv, NOT_IN_YET));
     expect(result.current.status).toBe("loading");
   });
 
@@ -213,7 +278,9 @@ describe("send → optimistic echo → live row", () => {
     const conv = freshConversation();
     ready([]);
     posts.next = "fail";
-    const { result } = renderHook(() => usePendingTurns(conv));
+    const { result } = renderHook(() =>
+      usePendingTurns(conv, transcript(NO_EVENTS)),
+    );
     let turnId = "";
     act(() => {
       turnId = sendConversationTurn(conv, { text: "hello" });
@@ -260,7 +327,7 @@ describe("useOptimisticConversationStatus", () => {
     expect(result.current).toBe("waiting");
   });
 
-  it("reads working from the instant a turn is sent, until the server row moves", async () => {
+  it("reads working from the instant a turn is sent, until the server can know", async () => {
     const conv = freshConversation();
     ready([]);
     const before = new Date(Date.now() - 1000);
@@ -272,13 +339,22 @@ describe("useOptimisticConversationStatus", () => {
     expect(result.current).toBe("working");
     await settle();
 
-    // Its row was accepted, but the server's status has not caught up yet.
-    ready([row(conv, turnId, "accepted", { createdAt: new Date() })]);
+    // Typed, its hook still to come: the server cannot know yet.
+    ready([row(conv, turnId, "typed", { createdAt: new Date() })]);
     rerender({ status: "waiting", updatedAt: before });
     expect(result.current).toBe("working");
 
-    // The server finished the turn: its row moved after the send.
-    rerender({ status: "waiting", updatedAt: new Date(Date.now() + 5_000) });
+    // The CLI confirmed it: from here the server's status is the one answer —
+    // even one that never moved (the turn ended before a reconcile saw it).
+    ready([row(conv, turnId, "accepted", { createdAt: new Date() })]);
+    rerender({ status: "waiting", updatedAt: before });
+    expect(result.current).toBe("waiting");
+  });
+
+  it("stops overriding once the server status moved after the send", () => {
+    const conv = freshConversation();
+    ready([row(conv, "t1", "typed", { createdAt: new Date() })]);
+    const { result } = render(conv, "waiting", new Date(Date.now() + 5_000));
     expect(result.current).toBe("waiting");
   });
 

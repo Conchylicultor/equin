@@ -136,7 +136,11 @@ async function drainMailbox(dir: string): Promise<void> {
       await removeFile(file.path);
       continue;
     }
-    await resolvePromptSubmit(file.conversationId, prompt);
+    await resolvePromptSubmit(
+      file.conversationId,
+      prompt,
+      new Date(file.mtimeMs),
+    );
     await removeFile(file.path);
   }
 }

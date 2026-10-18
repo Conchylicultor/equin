@@ -133,13 +133,18 @@ describe("PendingTurnCard", () => {
     expect(calls.routes).toEqual([]);
   });
 
-  it("draws nothing for a settled turn", () => {
-    for (const state of [
-      "typed",
-      "accepted",
-      "returned",
-      "withdrawn",
-    ] as const) {
+  it("echoes a typed or accepted turn (pendingTurnsOf drops it once the transcript shows it)", () => {
+    for (const state of ["typed", "accepted"] as const) {
+      const { container } = render(
+        <PendingTurnCard conversationId={CONV} turn={turn(state)} />,
+      );
+      expect(container.textContent).toContain("Sending…");
+      cleanup();
+    }
+  });
+
+  it("draws nothing for a turn given back", () => {
+    for (const state of ["returned", "withdrawn"] as const) {
       const { container } = render(
         <PendingTurnCard conversationId={CONV} turn={turn(state)} />,
       );

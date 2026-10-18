@@ -556,6 +556,7 @@ const NULL_SESSION: SessionState = {
   sessionId: null,
   status: null,
   waitingFor: null,
+  statusUpdatedAt: null,
 };
 
 /**
@@ -634,6 +635,12 @@ async function describePanes(
       worktreePath,
       waitingFor: dead ? null : question ? "question" : resolved.waitingFor,
       menu: dead ? null : numbered,
+      // Only the CLI's own write is weighed against a later submit; a dead
+      // pane or a menu on screen is a verdict no submit overrides.
+      statusWrittenAt:
+        dead || question || numbered || state.statusUpdatedAt == null
+          ? null
+          : new Date(state.statusUpdatedAt),
     });
   });
   return out;

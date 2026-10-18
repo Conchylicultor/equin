@@ -14,7 +14,12 @@ const BARE = "Fix the login bug";
 const session = (
   status: SessionState["status"],
   waitingFor: string | null = null,
-): SessionState => ({ sessionId: "s1", status, waitingFor });
+): SessionState => ({
+  sessionId: "s1",
+  status,
+  waitingFor,
+  statusUpdatedAt: null,
+});
 
 const working = (
   title: string,

@@ -61,7 +61,8 @@ function takeBack(conversationId: string, turn: PendingTurn): Promise<void> {
  * duplicate — a turn the transcript shows has no card; see `pendingTurnsOf`
  * for which turns get one):
  *
- * - `sending` / `held` / `typing` — the dimmed echo;
+ * - `sending` / `held` / `typing` / `typed` / `accepted` — the dimmed echo,
+ *   until the transcript shows the turn;
  * - `merged` — the CLI submitted this turn together with other text (a draft
  *   its input box still held): a warning naming that text;
  * - `failed` / `unverified` / `unsent` — Retry + Copy to draft, with why.

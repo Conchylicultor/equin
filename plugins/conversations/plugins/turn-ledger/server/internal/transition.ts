@@ -29,7 +29,8 @@ import type { TurnState } from "../../core/schemas";
  *   session reports its prompts at all (`hookless`: launched without the
  *   ledger's hook). A row already hookless by its text stays so.
  * - `failed` — the text never reached the box.
- * - `hook` — the CLI's `UserPromptSubmit` reported `prompt`.
+ * - `hook` — the CLI's `UserPromptSubmit` reported `prompt`, `at` the moment
+ *   it fired (the mailbox file's mtime — not when the drain got to it).
  * - `returned` — the CLI gave the text back (Stop, or found in the box).
  * - `withdraw` — the user took a `failed` / `unverified` turn back into the
  *   draft instead of retrying it: the draft is now its only copy.
@@ -41,7 +42,7 @@ export type TurnEvent =
   | { kind: "typed"; hookless: boolean }
   | { kind: "unverified"; hookless: boolean; reason: string }
   | { kind: "failed"; error: string }
-  | { kind: "hook"; prompt: string }
+  | { kind: "hook"; prompt: string; at: Date }
   | { kind: "returned" }
   | { kind: "withdraw" };
 
@@ -57,6 +58,7 @@ export interface TurnPatch {
   typedText?: string;
   hookless?: boolean;
   submittedText?: string;
+  submittedAt?: Date;
   extraText?: string | null;
   error?: string | null;
 }
@@ -212,12 +214,16 @@ export function transitionTurn(
       if (match.kind === "none") return null;
       if (role === "exact" && match.kind !== "equal") return null;
       if (match.kind === "equal") {
-        return { state: "accepted", patch: { error: null } };
+        return {
+          state: "accepted",
+          patch: { submittedAt: event.at, error: null },
+        };
       }
       return {
         state: "merged",
         patch: {
           submittedText: event.prompt,
+          submittedAt: event.at,
           extraText: match.extraText,
           error: null,
         },

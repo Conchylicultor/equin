@@ -47,6 +47,10 @@ import {
   workspaceOfAttempt,
   type WorkspaceAt,
 } from "@plugins/conversations/plugins/workspace/server";
+import {
+  returnTurnByText,
+  returnTurnsSince,
+} from "@plugins/conversations/plugins/turn-ledger/server";
 import { spawnConversationJob } from "./spawn-job";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import { conversationCreated } from "./tables-created-event";
@@ -719,6 +723,22 @@ export async function previewRewind(
 }
 
 /**
+ * The ledger's half of a cut: every turn sent from the cut message on is no
+ * longer in the transcript, so its row is `returned` — otherwise it would
+ * still claim to be the agent's latest turn (an echo with nothing to retire it,
+ * a submit the status reconciler weighs). Later turns first, by send time; then
+ * the cut message itself by its text, which its row carries (the row predates
+ * its own transcript line, so the time cut alone misses it).
+ */
+async function returnCutTurns(
+  conversationId: string,
+  cut: { messageText: string; messageAt: Date | null },
+): Promise<void> {
+  if (cut.messageAt) await returnTurnsSince(conversationId, cut.messageAt);
+  await returnTurnByText(conversationId, cut.messageText);
+}
+
+/**
  * "Rewind to here": continue THIS conversation from just before one of the
  * user's messages, handing that message's text back for the prompt editor.
  *
@@ -761,6 +781,7 @@ export async function rewindConversationAt(
 
   await rename(located.path, backupPath);
   await Bun.write(located.path, serializeTranscript(located.cut.keptLines));
+  await returnCutTurns(id, located.cut);
 
   // Kills the pane — a running turn and any background work with it — and
   // resumes the same session id on the shortened file.

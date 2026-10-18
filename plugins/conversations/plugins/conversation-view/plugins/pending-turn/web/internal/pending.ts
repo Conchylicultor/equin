@@ -3,6 +3,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import {
   foldResource,
   mapResource,
+  useCombinedResources,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -11,7 +12,9 @@ import {
   type TurnKind,
   type TurnState,
 } from "@plugins/conversations/plugins/turn-ledger/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import { landedTurnIds } from "./landed";
 import { settleSentTurns, useSentTurns, type SentTurn } from "./send";
 
 /**
@@ -39,21 +42,21 @@ export type PendingCard = "echo" | "merged" | "failure";
 
 /**
  * The card each state draws — a Record, so a new state cannot be left out:
- * - `sending` (tab only) / `held` / `typing` — the echo, until the CLI takes it;
+ * - `sending` (tab only) / `held` / `typing` / `typed` / `accepted` — the
+ *   echo, until the TRANSCRIPT shows the turn (`landedTurnIds`): the echo
+ *   stands in for the message, so only the message retires it — never the
+ *   ledger's word, which reaches the tab on another channel;
  * - `merged` — the warning naming the other text (see `pendingTurnsOf`);
  * - `failed` / `unverified` / `unsent` (tab only) — Retry and Copy to draft.
  *
- * `typed` draws nothing: the CLI's box took the keystrokes, and only the hook
- * refines that — a `typed` row whose hook never comes must not nag. Nor do
- * `accepted` (the transcript shows the turn), `returned` and `withdrawn` (the
- * draft holds it).
+ * `returned` and `withdrawn` draw nothing: the draft holds them.
  */
 export const CARD_OF: Record<PendingTurnState, PendingCard | null> = {
   sending: "echo",
   held: "echo",
   typing: "echo",
-  typed: null,
-  accepted: null,
+  typed: "echo",
+  accepted: "echo",
   merged: "merged",
   returned: null,
   failed: "failure",
@@ -68,9 +71,20 @@ function draws(turn: { kind: TurnKind; state: PendingTurnState }): boolean {
 }
 
 /**
+ * Whether a ledger row's echo has nothing left to stand in for: the transcript
+ * shows it, or — a hookless turn (a slash command, a `!` line) — the box took
+ * it, which is all anything will ever say about it.
+ */
+function echoRetired(row: LedgerTurn, landed: ReadonlySet<string>): boolean {
+  if (CARD_OF[row.state] !== "echo") return false;
+  return landed.has(row.id) || (row.hookless && row.state === "typed");
+}
+
+/**
  * The cards a conversation's transcript ends with, oldest first: its ledger
  * rows (`newestFirst`, as the live window reads them) that still say
- * something, then this tab's sent turns no row stands for yet.
+ * something, then this tab's sent turns no row stands for yet. `events` is the
+ * transcript the pane renders: an echo shows until it holds the turn.
  *
  * A `merged` warning shows only while its turn is the newest: it explains the
  * reply the agent is giving now, and the next turn makes it history.
@@ -78,14 +92,17 @@ function draws(turn: { kind: TurnKind; state: PendingTurnState }): boolean {
 export function pendingTurnsOf(
   newestFirst: readonly LedgerTurn[],
   sent: readonly SentTurn[],
+  events: readonly JsonlEvent[],
 ): PendingTurn[] {
   const ledgerIds = new Set(newestFirst.map((row) => row.id));
   const unseen = sent.filter((turn) => !ledgerIds.has(turn.id));
   const newestId = unseen.length ? null : (newestFirst[0]?.id ?? null);
+  const landed = landedTurnIds(newestFirst, events);
   const fromLedger: PendingTurn[] = newestFirst
     .filter(
       (row) =>
         CARD_OF[row.state] !== null &&
+        !echoRetired(row, landed) &&
         (row.state !== "merged" || row.id === newestId),
     )
     .map((row) => ({
@@ -110,11 +127,14 @@ export function pendingTurnsOf(
 
 /**
  * The turns a conversation's transcript ends with a card for — its live ledger
- * (`turn-ledger.turns`) merged with this tab's sends whose row has not arrived.
- * Loading until the ledger has answered.
+ * (`turn-ledger.turns`) merged with this tab's sends whose row has not arrived,
+ * less the ones `events` (the transcript the caller renders) already shows.
+ * Loading until the ledger has answered and the transcript is in: which
+ * echoes still stand depends on both.
  */
 export function usePendingTurns(
   conversationId: string,
+  events: ResourceResult<readonly JsonlEvent[]>,
 ): ResourceResult<PendingTurn[]> {
   const ledger = useLive(conversationTurns, { where: { conversationId } });
   const sent = useSentTurns(conversationId);
@@ -128,63 +148,79 @@ export function usePendingTurns(
   useEffect(() => {
     if (rows) settleSentTurns(conversationId, new Set(rows.map((r) => r.id)));
   }, [conversationId, rows]);
+  const both = useCombinedResources({ ledger, events });
   return useMemo(
-    () => mapResource(ledger, (data) => pendingTurnsOf(data, sent)),
-    [ledger, sent],
+    () =>
+      mapResource(both, (data) =>
+        pendingTurnsOf(data.ledger, sent, data.events),
+      ),
+    [both, sent],
   );
 }
 
 /**
- * The states in which a sent turn is on its way into a running agent: being
- * typed, or taken by its CLI. `held` is not (the conversation is starting, and
- * its own status says so), nor are the failures or a turn given back.
+ * The states in which the server cannot know yet that a turn is running: being
+ * typed, or typed with the CLI's hook still to come. From the hook on, the
+ * server's own status is the authority — the status reconciler weighs the
+ * CLI's confirmed submit (`turn-ledger` `submitted_at`) against the CLI's
+ * idle/busy write. `held` is not (the conversation is starting, and its own
+ * status says so), nor are the failures or a turn given back.
  */
-const LIVE_SEND: Record<TurnState, boolean> = {
+const BEFORE_THE_SERVER_KNOWS: Record<TurnState, boolean> = {
   held: false,
   typing: true,
   typed: true,
-  accepted: true,
-  merged: true,
+  accepted: false,
+  merged: false,
   returned: false,
   failed: false,
   unverified: false,
   withdrawn: false,
 };
 
-/** When the newest turn on its way into the agent was sent, or null. */
-export function latestLiveSendAt(
-  conversationId: string,
+/**
+ * Whether a turn sent to the conversation is running ahead of the server's
+ * status: this tab's request is open (or done, its row not here yet), or a
+ * hooked row is being typed or awaits its hook — sent since the server's
+ * status last moved (`updatedAt`), so a row whose hook never comes cannot hold
+ * it once the server has spoken.
+ */
+export function runsAheadOfServer(
+  conversation: { id: string; updatedAt: Date },
   newestFirst: readonly LedgerTurn[],
   sent: readonly SentTurn[],
-): number | null {
-  let latest: number | null = null;
-  for (const turn of sent) {
-    if (turn.status.kind === "unsent") continue;
-    latest = Math.max(latest ?? 0, turn.createdAt.getTime());
-  }
-  for (const row of newestFirst) {
-    if (row.conversationId !== conversationId) continue;
-    if (!LIVE_SEND[row.state]) continue;
-    latest = Math.max(latest ?? 0, row.createdAt.getTime());
-  }
-  return latest;
+): boolean {
+  const since = conversation.updatedAt.getTime();
+  const ledgerIds = new Set(newestFirst.map((row) => row.id));
+  const tabAhead = sent.some(
+    (turn) =>
+      turn.status.kind !== "unsent" &&
+      !ledgerIds.has(turn.id) &&
+      turn.createdAt.getTime() > since,
+  );
+  return (
+    tabAhead ||
+    newestFirst.some(
+      (row) =>
+        row.conversationId === conversation.id &&
+        !row.hookless &&
+        BEFORE_THE_SERVER_KNOWS[row.state] &&
+        row.createdAt.getTime() > since,
+    )
+  );
 }
 
 /**
  * The conversation's status as the user should see it: `working` from the
- * instant a turn is sent, before the server has seen it start.
- *
- * The override holds only while the server reports `waiting` AND its row has
- * not moved since the send — `updatedAt` is touched exactly when the status
- * enters or leaves `working`, so a newer `updatedAt` means the server has
- * accounted for the turn and its status is authoritative again. A send that
- * fails (`unsent`, `failed`, `unverified`) retracts the override with it.
+ * instant a turn is sent, until the server can know about it. Once the CLI's
+ * hook confirmed the turn, the server's status is the one answer (see
+ * {@link runsAheadOfServer}), so every surface reads the same status.
  *
  * It reads the ledger's newest turns across every conversation (the default
  * window, one subscription every row of a list shares): a turn the server has
  * not accounted for yet is always among the newest. Until that read answers,
- * the server's own status stands — it is the authority the override only runs
- * ahead of, never a stand-in for it.
+ * the tab's own sends alone run ahead — the server's status is the authority
+ * the override only runs ahead of, never a stand-in for it.
  */
 export function useOptimisticConversationStatus(conversation: {
   id: string;
@@ -194,15 +230,12 @@ export function useOptimisticConversationStatus(conversation: {
   const recent = useLive(conversationTurns);
   const sent = useSentTurns(conversation.id);
   if (conversation.status !== "waiting") return conversation.status;
-  // No ledger rows yet (or none past a failed read): the tab's own sends
-  // alone can run ahead of the server's status.
   const rows = foldResource(recent, {
     loading: () => [],
     error: (_error, stale) => stale ?? [],
     ready: (data) => data,
   });
-  const sentAt = latestLiveSendAt(conversation.id, rows, sent);
-  return sentAt != null && sentAt > conversation.updatedAt.getTime()
+  return runsAheadOfServer(conversation, rows, sent)
     ? "working"
     : conversation.status;
 }

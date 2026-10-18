@@ -30,19 +30,31 @@ sends, echoes and draws.
 
 ## Reading — `usePendingTurns` and `PendingTurnCard`
 
-`usePendingTurns(conversationId)` is `useLive(conversationTurns, { where: {
-conversationId } })` mapped through `pendingTurnsOf` with the tab's unsettled
-sends — the cards the transcript ends with, oldest first; loading until the
-ledger answers. `jsonl-pane` holds the pane on its loader until then, and shows
-a ledger read error inline where the cards go.
+`usePendingTurns(conversationId, events)` is `useLive(conversationTurns, {
+where: { conversationId } })` mapped through `pendingTurnsOf` with the tab's
+unsettled sends and the transcript the caller renders (`events`, null while it
+loads) — the cards the transcript ends with, oldest first; loading until both
+the ledger and the transcript are in. `jsonl-pane` holds the pane on its loader
+until then, and shows a ledger read error inline where the cards go.
 
 | State | Card |
 |---|---|
-| `sending` (tab only) / `held` / `typing` | dimmed echo — "Waiting for the agent to start…" when held |
-| `typed` | nothing: the box took it; only the hook refines that, so a missing hook never nags |
-| `accepted` / `returned` / `withdrawn` | nothing: the transcript (or the draft) has it |
+| `sending` (tab only) / `held` / `typing` / `typed` / `accepted` | dimmed echo, **until the transcript shows the turn** — "Waiting for the agent to start…" when held |
+| `typed` + `hookless` | nothing: the box took a slash command / `!` line, and nothing will say more |
+| `returned` / `withdrawn` | nothing: the draft has it |
 | `merged` | warning naming the other text (`extraText`) — only while it is the newest turn |
 | `failed` / `unverified` / `unsent` (tab only) | Retry + Copy to draft, with the error |
+
+**The transcript retires the echo, never the ledger.** The echo stands in for
+the message, and the two reach the tab on different channels (the ledger's
+change feed, the transcript watcher): retiring it on the ledger's `typed` left
+the turn on screen nowhere for as long as the transcript lagged.
+`landedTurnIds` (`internal/landed.ts`) joins them causally and ordinally — a
+turn's transcript entry (its user row, or a busy agent's enqueue) is written
+after its ledger row's `createdAt`, and sends are serialized, so the k-th turn
+on its way is the k-th prompt landing after the oldest. There is no shared id
+for a queued turn (see the file). Ambiguity errs toward retiring one landing
+early, never toward an echo held forever.
 
 An `answer` draws no in-flight echo (its question card is its in-flight state)
 but its failure card like any other. A ledger row's Retry is
@@ -52,12 +64,15 @@ Record, `CARD_OF` (`internal/pending.ts`).
 
 ## `useOptimisticConversationStatus`
 
-`working` from the instant a turn is sent, while the server still says
-`waiting` and its row has not moved since (`updatedAt`). It reads the tab's
-sends and the ledger's newest rows across all conversations (the default
-window — one shared subscription for every row of a list): any `typing` /
-`typed` / `accepted` / `merged` turn newer than `updatedAt` holds it; a failure
-retracts it.
+`working` only while the server cannot know about a turn yet: this tab's
+request is open (or done, its row not here yet), or a hooked row is `typing` /
+`typed` awaiting the CLI's hook — sent since the server's status last moved
+(`updatedAt`). From the hook on (`accepted` / `merged`) the server's status is
+the one answer: the status reconciler itself reads the confirmed submit
+(`submitted_at`) against the CLI's own idle/busy write, so every surface — the
+header chip, the sidebar dot — shows the same status. It reads the tab's sends
+and the ledger's newest rows across all conversations (the default window — one
+shared subscription for every row of a list); a failure retracts it.
 
 ## Legacy
 
@@ -88,6 +103,7 @@ render (`reports/turn-unconfirmed`).
     - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.useCombinedResources`
     - `primitives/persistent-draft.writeDraft`
     - `primitives/sync-status.useReportSync`
     - `shell/toast.showToast`

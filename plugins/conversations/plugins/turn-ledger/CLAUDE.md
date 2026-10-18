@@ -21,6 +21,7 @@ at Enter even while the agent is busy), and Stop.
 | `state` | below |
 | `hookless` | no hook will ever confirm it (see below) |
 | `submitted_text`, `extra_text` | `merged` only: the hook's whole prompt, and the part that was not this turn |
+| `submitted_at` | `accepted` / `merged`: when the CLI submitted it — the mailbox file's mtime, so a late drain still records the CLI's moment |
 | `error` | `failed` / `unverified`: why |
 
 ## States — one pure function
@@ -111,6 +112,24 @@ after its write sees it) or the accept sees the new status. Delivery claims a
 held row with the conditional `deliver` transition, so exactly one claimant
 wins.
 
+## Status: the confirmed submit is the reconciler's evidence
+
+The hook fires at Enter, before the CLI writes `busy` to its session file. The
+status reconciler (conversations server) reads `latestSubmitAt` per
+conversation and counts the agent `working` when the CLI confirmed a submit
+after its last status write (`liveStatusFor`): an idle written before the submit
+is stale, one written after it (the turn ended, or was interrupted) stands. A
+resolved hook signals `onTurnSubmitted`, which the reconciler subscribes to, so
+the status follows the hook's arrival. The browser's optimistic status stops at
+`accepted` — the server is the one writer of `working` from there.
+
+## Rewind
+
+A rewind cuts turns out of the transcript; `returnTurnsSince(conversationId,
+cutMessageAt)` plus `returnTurnByText` for the cut message itself make them
+`returned` (conversations `rewindConversationAt`). Without it a cut turn stayed
+`accepted` — the agent's newest turn, as far as the ledger knew.
+
 ## Events and reports
 
 - `conversation.userTurnSent` (owned here, read by task-title) is emitted when a
@@ -181,11 +200,14 @@ removes settled rows (accepted, merged, returned, withdrawn).
     - `hasHeldTurns`
     - `hasPromptHook`
     - `holdIfStarting`
+    - `latestSubmitAt`
     - `listHeldTurns`
+    - `onTurnSubmitted`
     - `promptSubmitHookEntry`
     - `recordPromptHookLaunch`
     - `reportInputNotEmpty`
     - `returnTurnByText`
+    - `returnTurnsSince`
     - `userTurnSent`
   - Register:
     - `defineFileWatcher('turn-ledger.prompt-submits')`
