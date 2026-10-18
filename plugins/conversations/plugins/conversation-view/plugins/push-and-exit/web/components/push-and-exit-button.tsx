@@ -6,6 +6,7 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   isDraftEmpty,
   conversationPane,
+  useAttemptWorkspaceKind,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   useHasActiveSiblingInWorktree,
@@ -35,7 +36,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
-import { deriveExitMode, type Mode } from "./exit-mode";
+import { deriveExitMode, exitDecisionUsesGit, type Mode } from "./exit-mode";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 
 const deleteForeverIcon = symbol("delete-forever");
@@ -157,7 +158,12 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // the request has landed.
   const sendInFlight = useTurnSendInFlight(convId);
 
-  const filesResult = useEditedFiles(convId);
+  // Restore / Send / Stop work in every workspace; the git reads below feed
+  // only the Push-vs-Drop decision, so they run only where there is git.
+  const workspace = useAttemptWorkspaceKind(conversation?.attemptId ?? null);
+  const usesGit = exitDecisionUsesGit(workspace) === "yes";
+
+  const filesResult = useEditedFiles(usesGit ? convId : null);
   // Where this attempt stands relative to `main`, measured from git rather than
   // read off the push ledger — so the destructive Drop-vs-Push default can never
   // be decided by how far a background ingest job happens to have got. The
@@ -167,7 +173,9 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // id — has loaded; the gate below keeps the neutral "Exit" meanwhile.
   const workResult = useLive(
     attemptWork,
-    conversation?.attemptId ? { attemptId: conversation.attemptId } : null,
+    usesGit && conversation?.attemptId
+      ? { attemptId: conversation.attemptId }
+      : null,
   );
   // Derived slice: only re-renders when this worktree's sibling-active answer
   // flips, not on every conversations push. `conversation` may be null on first
@@ -193,9 +201,10 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         conversation,
         live,
         draftEmpty: isDraftEmpty(draft),
+        workspace,
         exitDecision,
       }),
-    [draft, exitDecision, conversation, live],
+    [draft, workspace, exitDecision, conversation, live],
   );
 
   if (!conversation || !live) return null;

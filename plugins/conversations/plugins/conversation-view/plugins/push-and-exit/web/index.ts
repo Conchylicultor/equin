@@ -10,7 +10,9 @@ export default {
   contributions: [
     PromptEditorSlots.FloatingAction({
       id: "push-and-exit",
-      requires: ["git"],
+      // Every workspace: Restore / Send / Stop / Close need no git; the button
+      // itself skips the Push-vs-Drop git reads where there is none.
+      requires: [],
       component: PushAndExitButton,
       alwaysActive: true,
     }),

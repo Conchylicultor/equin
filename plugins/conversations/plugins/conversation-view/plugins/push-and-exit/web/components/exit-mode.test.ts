@@ -72,6 +72,7 @@ const input = (exitDecision: ExitDecision): ExitModeInput => ({
   conversation,
   live,
   draftEmpty: true,
+  workspace: { known: true, kind: "worktree" },
   exitDecision,
 });
 
@@ -252,5 +253,27 @@ describe("deriveExitMode", () => {
     expect(
       deriveExitMode({ ...input(pendingErr), conversation: null }).mode,
     ).toBe("exit");
+  });
+
+  test("a workspace without git closes — no git read is consulted", () => {
+    const scratch = { known: true, kind: "scratch" } as const;
+    expect(deriveExitMode({ ...input(loading), workspace: scratch })).toEqual({
+      mode: "exit",
+      provisional: false,
+    });
+    // Restore needs no git: a done scratch conversation can still be resumed.
+    expect(
+      deriveExitMode({
+        ...input(loading),
+        workspace: scratch,
+        live: { status: "done" },
+      }).mode,
+    ).toBe("restore");
+  });
+
+  test("workspace still loading: neutral provisional Close", () => {
+    expect(
+      deriveExitMode({ ...input(settled()), workspace: { known: false } }),
+    ).toEqual({ mode: "exit", provisional: true });
   });
 });

@@ -3,6 +3,10 @@ import {
   type AttemptWork,
 } from "@plugins/tasks/plugins/attempt-work/core";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  satisfiesCapabilities,
+  type WorkspaceKindState,
+} from "@plugins/conversations/plugins/workspace/core";
 import type {
   CombinedResources,
   ResourceResult,
@@ -58,8 +62,26 @@ export type ExitModeInput = {
   conversation: { attemptId: string } | null;
   live: { status: ConversationStatus } | null;
   draftEmpty: boolean;
+  /**
+   * The conversation's workspace. Restore / Send / Queue / Stop need none of
+   * git, so they are offered in every workspace; only the Push-vs-Drop exit
+   * decision reads git, and a workspace without it (scratch) just closes.
+   */
+  workspace: WorkspaceKindState;
   exitDecision: ExitDecision;
 };
+
+/**
+ * Whether the exit decision's git reads apply to this workspace: `unknown`
+ * while the workspace kind is still loading. The button skips those reads
+ * unless this is `yes`, so they never run against a workspace with no git.
+ */
+export function exitDecisionUsesGit(
+  workspace: WorkspaceKindState,
+): "yes" | "no" | "unknown" {
+  if (!workspace.known) return "unknown";
+  return satisfiesCapabilities(workspace.kind, ["git"]) ? "yes" : "no";
+}
 
 /**
  * The button's whole decision, as a pure function. `provisional` means "we do
@@ -69,6 +91,7 @@ export function deriveExitMode({
   conversation,
   live,
   draftEmpty,
+  workspace,
   exitDecision,
 }: ExitModeInput): { mode: Mode; provisional: boolean } {
   if (!conversation || !live) return { mode: "exit", provisional: false };
@@ -82,6 +105,16 @@ export function deriveExitMode({
       provisional: false,
     };
   if (live.status === "working") return { mode: "stop", provisional: false };
+  // No git (a scratch workspace): nothing to push or drop, so closing is the
+  // whole decision.
+  switch (exitDecisionUsesGit(workspace)) {
+    case "unknown":
+      return { mode: "exit", provisional: true };
+    case "no":
+      return { mode: "exit", provisional: false };
+    case "yes":
+      break;
+  }
   // Still loading ⇒ neutral provisional Close. Any of the three resources
   // FAILING makes the decision undecidable, so the mode is a generic,
   // non-destructive, still-clickable "Close (state unknown)" — never the
