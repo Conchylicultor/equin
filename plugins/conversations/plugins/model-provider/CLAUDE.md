@@ -124,7 +124,6 @@ Single source of truth for the models an agent can run, and for what the user as
     - `conversations`
     - `conversations/agents`
     - `conversations/all-conversations`
-    - `conversations/conversation-view/branch`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/launch-prompts`

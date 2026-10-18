@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
+- Description: Free-form per-conversation notes, auto-saved to the server. The note button opens and hides the note; a dot on it marks a written note it is hiding. Per-conversation free-form notes, auto-saved to the server.
 - Web:
   - Contributes:
     - `Demo.Resource` "conversation-notes"
@@ -17,6 +17,9 @@
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
     - `primitives/css/pin.Pin`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/ui-kit.cn`
     - `primitives/editable-field.EditableField`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`

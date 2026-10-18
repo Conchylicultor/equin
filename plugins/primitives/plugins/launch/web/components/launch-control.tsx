@@ -30,7 +30,7 @@ import {
 } from "@plugins/conversations/plugins/model-provider/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const playArrowIcon = symbol("play-arrow");
@@ -57,7 +57,6 @@ export type LaunchControlProps = {
   openMode?: PaneOpenMode;
   onLaunched?: (conversation: Conversation) => void;
   variant?: "default" | "outline" | "ghost";
-  size?: "default" | "icon";
   /**
    * Stretch the control to fill its container, with the model dropdown growing
    * to absorb the slack and the launch button kept at its natural width. Use
@@ -67,13 +66,30 @@ export type LaunchControlProps = {
   fullWidth?: boolean;
   disabled?: boolean;
   className?: string;
-};
+} & (
+  | { size?: "default"; action?: never }
+  | {
+      /**
+       * The compact form: a [launch | ▾] icon pair — ghost by default, or one
+       * outlined split with a seam between its halves (`variant="outline"`).
+       */
+      size: "icon";
+      /**
+       * What the launch half says it does, when "launch the default model" is
+       * not the whole story (a new conversation beside this one): its glyph
+       * and its accessible name / tooltip lead. Omitted, it is the play glyph
+       * and "Launch <model>".
+       */
+      action?: { icon: IconRef; label: string };
+    }
+);
 
 /**
  * The launch action, generalized over any model choice. `launch(model, e?)`
  * creates a conversation with that choice — a family ("opus") runs its newest
  * version, resolved by the server at spawn. This is the common action the
- * launch plugin exposes; custom UIs (e.g. branch) consume it directly.
+ * launch plugin exposes; custom UIs (rewind, the launch sidebar item) consume
+ * it directly.
  */
 export function useLaunchConversation({
   getRequest,
@@ -181,6 +197,7 @@ export function LaunchControl({
   fullWidth = false,
   disabled,
   className,
+  action,
 }: LaunchControlProps) {
   const { launch, launching } = useLaunchConversation({
     getRequest,
@@ -207,30 +224,58 @@ export function LaunchControl({
   if (size === "icon") {
     return (
       <ButtonGroup className={className}>
-        {/* eslint-disable-next-line icon-button/prefer-icon-button -- per-model glyph size; IconButton hardcodes the glyph */}
+        {/* Not an IconButton: the play glyph is sized per model, and a caller
+            may swap in its own glyph. */}
         <Button
-          variant="ghost"
-          aspect="icon"
+          variant={variant === "outline" ? "outline" : "ghost"}
+          // Outlined, the launch half is the pill's wide end, not a square.
+          aspect={variant === "outline" ? "text" : "icon"}
           disabled={busy}
-          aria-label={`Launch ${choiceLabel(defaultModel)}`}
-          tooltip={launchTitle}
+          aria-label={
+            action
+              ? `${action.label} (${choiceLabel(defaultModel)})`
+              : `Launch ${choiceLabel(defaultModel)}`
+          }
+          tooltip={
+            claudeBlock ??
+            (action
+              ? `${action.label} (${choiceLabel(defaultModel)})`
+              : launchTitle)
+          }
           onClick={() => launch(defaultModel)}
+          className={cn(
+            action && "text-muted-foreground",
+            variant === "outline" && "bg-transparent",
+          )}
         >
-          <Icon icon={playArrowIcon} className={choiceIconSize(defaultModel)} />
+          {action ? (
+            <Icon icon={action.icon} className="size-3.5" />
+          ) : (
+            <Icon
+              icon={playArrowIcon}
+              className={choiceIconSize(defaultModel)}
+            />
+          )}
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
               <Button
-                variant="ghost"
+                variant={variant === "outline" ? "outline" : "ghost"}
                 aspect="icon"
                 disabled={off}
                 aria-label="Choose model"
-                className="px-none"
+                className={cn(
+                  "px-none text-muted-foreground",
+                  variant === "outline" && "bg-transparent",
+                )}
               />
             }
           >
-            <Icon icon={keyboardArrowDownIcon} className="size-3" />
+            <Icon
+              icon={keyboardArrowDownIcon}
+              className={variant === "outline" ? "size-3.5" : "size-3"}
+            />
           </DropdownMenuTrigger>
           {rows}
         </DropdownMenu>

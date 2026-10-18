@@ -1,4 +1,4 @@
-// @hash 6ba9329f01fe
+// @hash a0ed371e33b5
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -11,6 +11,7 @@
     "conversations.conversation-preprompt:preprompt",
     "conversations.conversation-progress:progress",
     "conversations.conversation-view.allow-monitor:allow-monitor",
+    "conversations.conversation-view.dependencies:dependencies",
     "conversations.conversation-view.model:model",
     "conversations.conversation-view.pin:pin",
     "conversations.conversation-view.status:status",

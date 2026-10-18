@@ -4,7 +4,7 @@ import { ForkConversationButtons } from "./components/fork-conversation-buttons"
 
 export default {
   description:
-    "Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.",
+    "Side chat: an icon split under the prompt that opens a new, blank conversation in the same worktree — the icon on the default model, the chevron to pick another.",
   contributions: [
     Conversation.PromptBar({
       id: "fork-conversation",

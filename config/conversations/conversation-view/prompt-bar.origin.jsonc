@@ -1,4 +1,4 @@
-// @hash 5b63ec7611e7
+// @hash 876dab48ff4a
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,8 +7,6 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "conversations.conversation-view.branch:branch",
-    "conversations.conversation-view.dependencies:dependencies",
     "conversations.conversation-view.fork-conversation:fork-conversation",
     "conversations.conversation-view.launch-prompts:launch-prompts",
     "conversations.conversation-view.notes:notes-toggle"

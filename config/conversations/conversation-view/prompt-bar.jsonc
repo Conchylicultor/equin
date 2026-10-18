@@ -1,4 +1,4 @@
-// @hash 5b63ec7611e7
+// @hash 876dab48ff4a
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -8,10 +8,9 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
   "items": [
-    "conversations.conversation-view.dependencies:dependencies",
-    "conversations.conversation-view.branch:branch",
-    "conversations.conversation-view.fork-conversation:fork-conversation",
+    // Icons only (proto-1789643584-ldt6): the note, then Side chat at the edge.
     "conversations.conversation-view.launch-prompts:launch-prompts",
-    "conversations.conversation-view.notes:notes-toggle"
+    "conversations.conversation-view.notes:notes-toggle",
+    "conversations.conversation-view.fork-conversation:fork-conversation"
   ]
 }

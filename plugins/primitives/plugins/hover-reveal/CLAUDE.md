@@ -38,13 +38,13 @@ remove button — the user is editing that row. The reveal ends when focus leave
     - `hoverRevealTargetWithGroupFocus`
     - `useHoverReveal`
 - Cross-plugin:
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×9
     - `page` ×8
     - `primitives` ×7
     - `ui` ×4
+    - `conversations` ×2
     - `apps-core/surface/floating`
-    - `conversations/conversation-view/pin`
     - `integrations/youtube`
     - `layouts/miller`
     - `tasks/task-description`

@@ -130,8 +130,8 @@ function ConversationBody({
                         </Conversation.PromptInput.Render>
                         {hasPromptBar && (
                           // The footer under the prompt is a row of small pills:
-                          // its own `xs` density, one step below the prompt's.
-                          <ControlSizeProvider size="xs">
+                          // its own `sm` density, one step below the prompt's.
+                          <ControlSizeProvider size="sm">
                             <Stack direction="row" gap="none" justify="end">
                               <Stack direction="row" gap="xs" align="center">
                                 <Conversation.PromptBar.Render>

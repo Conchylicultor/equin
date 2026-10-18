@@ -1,4 +1,4 @@
-// @hash 6ba9329f01fe
+// @hash a0ed371e33b5
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -13,6 +13,8 @@
     "conversations.conversation-view.pin:pin",
     // Pushes the chips to the right edge (Mist, proto-1789643584-ldt6).
     { "type": "spacer", "id": "title-end" },
+    // The task's links lead the chips: ↑ open blockers · ↓ open dependents.
+    "conversations.conversation-view.dependencies:dependencies",
     "conversations.conversation-preprompt:preprompt",
     "conversations.conversation-view.allow-monitor:allow-monitor",
     "conversations.conversation-view.model:model",

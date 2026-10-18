@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import {
   useLiveRow,
   type LiveRowResult,
@@ -9,7 +9,7 @@ import {
 } from "@plugins/primitives/plugins/editable-field/web";
 import { conversationNoteRows, type ConversationNote } from "../../shared";
 import { upsertNote, deleteNote } from "./api";
-import { useIsOpen, setIsOpen, toggleIsOpen } from "./notes-visibility-store";
+import { useIsOpen, toggleIsOpen } from "./notes-visibility-store";
 
 export interface ConversationNoteState extends EditableField<string> {
   isVisible: boolean;
@@ -54,12 +54,6 @@ export function useConversationNote(
     debounceMs: 1000,
   });
 
-  useEffect(() => {
-    if (!noteExists && field.value.trim() === "" && !field.isSaving) {
-      setIsOpen(conversationId, false);
-    }
-  }, [conversationId, noteExists, field.value, field.isSaving]);
-
   const toggleVisible = useCallback(
     () => toggleIsOpen(conversationId),
     [conversationId],
@@ -67,7 +61,9 @@ export function useConversationNote(
 
   return {
     ...field,
-    isVisible: noteExists || isManuallyOpen,
+    // The note shows only while toggled open, written or not: the toggle is
+    // the one way in, and its dot says a note is waiting behind it.
+    isVisible: isManuallyOpen,
     noteExists,
     read: note,
     toggleVisible,

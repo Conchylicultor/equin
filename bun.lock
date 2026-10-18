@@ -1565,10 +1565,6 @@
       "name": "@singularity/plugin-conversations-conversation-view-artifacts-skill",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/branch": {
-      "name": "@singularity/plugin-conversations-conversation-view-branch",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversation-view/plugins/code": {
       "name": "@singularity/plugin-conversations-conversation-view-code",
       "version": "0.0.1",
@@ -7469,8 +7465,6 @@
     "@singularity/plugin-conversations-conversation-view-artifacts-screenshot": ["@singularity/plugin-conversations-conversation-view-artifacts-screenshot@workspace:plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/screenshot"],
 
     "@singularity/plugin-conversations-conversation-view-artifacts-skill": ["@singularity/plugin-conversations-conversation-view-artifacts-skill@workspace:plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/skill"],
-
-    "@singularity/plugin-conversations-conversation-view-branch": ["@singularity/plugin-conversations-conversation-view-branch@workspace:plugins/conversations/plugins/conversation-view/plugins/branch"],
 
     "@singularity/plugin-conversations-conversation-view-code": ["@singularity/plugin-conversations-conversation-view-code@workspace:plugins/conversations/plugins/conversation-view/plugins/code"],
 

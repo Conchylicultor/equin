@@ -23,6 +23,8 @@ export const LUCIDE_MAP = {
   "account-tree": "network",
   add: "plus",
   "add-circle": "circle-plus",
+  "add-comment": "message-square-plus",
+  "add-link": "link",
   "add-location-alt": "map-pin-plus",
   "add-reaction": MATERIAL_ONLY,
   adjust: "circle-dot",

@@ -1,11 +1,19 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConversationNote } from "../internal/use-conversation-note";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const stickyNote2Icon = symbol("sticky-note-2");
 
+/**
+ * The one way to the note: opens and hides it whether or not it has text. A
+ * written note it is hiding shows as a dot on the icon's corner.
+ */
 export function NotesToggleButton({
   conversation,
 }: {
@@ -29,15 +37,24 @@ export function NotesToggleButton({
         refetch={read.refetch}
       />
     );
-  if (noteExists) return null;
 
   return (
-    <IconButton
-      icon={stickyNote2Icon}
-      label={isVisible ? "Hide notes" : "Add note"}
-      variant={isVisible ? "secondary" : "ghost"}
-      aria-pressed={isVisible}
-      onClick={toggleVisible}
-    />
+    // The positioning context the hidden-note dot pins to.
+    <Stack as="span" direction="row" gap="none" className="relative">
+      <IconButton
+        icon={stickyNote2Icon}
+        glyph="small"
+        className={cn(!isVisible && "text-muted-foreground")}
+        label={isVisible ? "Hide note" : noteExists ? "Open note" : "Add note"}
+        active={isVisible}
+        aria-pressed={isVisible}
+        onClick={toggleVisible}
+      />
+      {noteExists && !isVisible && (
+        <Pin to="top-right" offset="xs" decorative>
+          <StatusDot colorClass="bg-warning" />
+        </Pin>
+      )}
+    </Stack>
   );
 }

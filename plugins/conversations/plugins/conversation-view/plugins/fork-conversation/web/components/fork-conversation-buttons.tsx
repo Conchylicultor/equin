@@ -1,26 +1,28 @@
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
-import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const forkRightIcon = symbol("fork-right");
+const addCommentIcon = symbol("add-comment");
 
+/**
+ * Side chat: a new, blank conversation in this conversation's worktree — no
+ * pre-prompt. The icon starts one on the default model; the chevron picks
+ * another (or makes it the default).
+ */
 export function ForkConversationButtons({
   conversation,
 }: {
   conversation: ConversationRecord;
 }) {
   return (
-    <WithTooltip content="New conversation in this worktree">
-      <Stack direction="row" gap="xs" align="center">
-        <Icon icon={forkRightIcon} className="size-3.5 text-muted-foreground" />
-        <LaunchControl
-          variant="ghost"
-          getRequest={() => ({ attemptId: conversation.attemptId })}
-        />
-      </Stack>
-    </WithTooltip>
+    <LaunchControl
+      size="icon"
+      variant="outline"
+      action={{
+        icon: addCommentIcon,
+        label: "New conversation in this worktree",
+      }}
+      getRequest={() => ({ attemptId: conversation.attemptId })}
+    />
   );
 }
