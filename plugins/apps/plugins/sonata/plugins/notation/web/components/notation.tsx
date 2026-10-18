@@ -3,7 +3,6 @@ import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
-  scoreEndBeat,
   type PlayPosition,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -208,17 +207,14 @@ function NotationInner({ score }: NotationProps) {
       trackMeta,
     ],
   );
-  const endBeat = useMemo(() => scoreEndBeat(visibleScore), [visibleScore]);
   const hasNotes = visibleScore.notes.length > 0;
 
   // PURE layout plan (no DOM/Renderer) — safe in a memo. Each mounted system
-  // draws itself from this; recomputes on model / width / endBeat change.
+  // draws itself from this; recomputes on model / width change.
   const plan = useMemo<EngravePlan | null>(
     () =>
-      !hasNotes || size.width <= 0
-        ? null
-        : planEngraving(model, size.width, endBeat),
-    [model, size.width, endBeat, hasNotes],
+      !hasNotes || size.width <= 0 ? null : planEngraving(model, size.width),
+    [model, size.width, hasNotes],
   );
   const planRef = useLatestRef(plan);
 

@@ -46,7 +46,11 @@ import type {
   EngVoice,
   StemDir,
 } from "../internal/convert";
-import { playheadPath, type OnsetPoint } from "../internal/anchors";
+import {
+  playheadPath,
+  type MeasureSpan,
+  type OnsetPoint,
+} from "../internal/anchors";
 import {
   measureStaffExtents,
   unionExtent,
@@ -122,8 +126,6 @@ export interface EngravePlan {
   hasLabels: boolean;
   /** Part layout (bracket/brace + labels). */
   parts: readonly EngPart[];
-  /** Score end beat — the terminal anchor's beat. */
-  endBeat: number;
   /** Total sizer height (the sum of every system's `pitch`). */
   totalHeight: number;
 }
@@ -396,11 +398,7 @@ function connect(
  * MEASURE (single-use — formatting mutates them) and discarded; {@link
  * drawSystem} rebuilds fresh voices per system when it draws.
  */
-export function planEngraving(
-  model: EngraveModel,
-  width: number,
-  endBeat: number,
-): EngravePlan {
+export function planEngraving(model: EngraveModel, width: number): EngravePlan {
   // The staff shape is identical in every measure; take it from the first.
   const staffDefs = model.measures[0]?.staves ?? [];
 
@@ -537,7 +535,6 @@ export function planEngraving(
     leftPad,
     hasLabels,
     parts: model.parts,
-    endBeat,
     totalHeight: top,
   };
 }
@@ -568,6 +565,7 @@ export function drawSystem(
   const staffTop = (i: number): number => sys.staffTops[i]!;
 
   const onsets: OnsetPoint[] = [];
+  const spans: MeasureSpan[] = [];
   const notes: NoteEl[] = [];
 
   // Rebuild fresh voices per measure (Pass-1 voices were discarded).
@@ -655,6 +653,16 @@ export function drawSystem(
       });
     });
 
+    const { startBeat, timeSig } = bm.measure;
+    spans.push({
+      startBeat,
+      endBeat:
+        sys.measures[mi + 1]?.startBeat ??
+        startBeat + (timeSig.numerator * 4) / timeSig.denominator,
+      startX: vfStaves[0]?.getNoteStartX() ?? x,
+      endX: x + w,
+    });
+
     x += w;
   });
 
@@ -687,12 +695,10 @@ export function drawSystem(
     drawPartLabels(plan.parts, sys.staffTops, ctx);
   }
 
-  // The playhead glides to the system's closing barline (`x`, past the last
-  // measure) by the beat the next system starts — the score end on the last.
-  const endBeat = plan.systems[systemIndex + 1]?.startBeat ?? plan.endBeat;
-  const anchors = playheadPath(onsets, { beat: endBeat, x }).map(
-    (p): BeatAnchor => ({ ...p, systemIndex }),
-  );
+  const anchors = playheadPath(onsets, spans).map((p): BeatAnchor => ({
+    ...p,
+    systemIndex,
+  }));
 
   return { anchors, notes };
 }

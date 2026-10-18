@@ -113,7 +113,7 @@ measures — is a **pure, unit-tested** pipeline, kept renderer-free:
   Q-steps (a *run* = a span where the sounding set is constant) so chords, rests
   and ties fall out by construction.
 - `web/components/engrave.ts` — split into two phases so systems can be windowed:
-  - `planEngraving(model, width, endBeat)` — **pure** layout (no Renderer, no
+  - `planEngraving(model, width)` — **pure** layout (no Renderer, no
     DOM, safe in a `useMemo`): runs Pass 1 (measure each measure's minimum width,
     then discards the single-use VexFlow voices) + Pass 2 (greedy line-break),
     computes per-system geometry (`top`, `staffTops`, `boxHeight`, `pitch`,
@@ -128,10 +128,13 @@ measures — is a **pure, unit-tested** pipeline, kept renderer-free:
     takes each system's `pitch` as its exact row size.
   - `drawSystem(host, plan, systemIndex, colors)` — draws ONE system into its own
     `<svg>` (rebuilding fresh voices), returning that system's `{ anchors, notes }`.
-- `web/internal/anchors.ts` — `playheadPath(onsets, end)`: a system's beat→x
-  path for the playhead — one point per onset beat at its leftmost x, x never
-  decreasing, ending on the closing barline at the next system's start beat — so
-  the interpolated playhead only moves forward. Pure + tested.
+- `web/internal/anchors.ts` — `playheadPath(onsets, measures)`: a system's
+  beat→x path for the playhead — one point per onset beat at its leftmost x
+  (never going back), pulled halfway (`NOTE_PULL`) toward the measure's
+  constant-speed position, ending on the closing barline. Engraving does not
+  space notes by time, so a playhead pinned to the noteheads goes, stops, goes;
+  the blend keeps its speed above half the measure's average while staying
+  within half a gap of each note. Pure + tested.
 - `web/components/notation-system.tsx` — `<NotationSystem>`: one windowed system
   row. Draws itself in a layout effect and registers its `{ anchors, notes }`
   into a shared `Map<systemIndex, …>` ref (unregisters + clears its SVG on
