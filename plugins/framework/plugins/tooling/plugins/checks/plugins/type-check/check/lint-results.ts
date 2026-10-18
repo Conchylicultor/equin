@@ -21,15 +21,16 @@
 //
 // Host-global and content-addressed: a fresh worktree reuses what a sibling
 // recorded for an identical file. Each entry keeps the last few keys per part
-// (`keep`), so two worktrees on two versions of one rule — or of one hub's API
-// — do not evict each other's results on every run. The entry is rewritten
+// (`keep`), most recently USED first — a key a run reused moves up beside the
+// fresh ones — so two worktrees on two versions of one rule — or of one hub's
+// API — do not evict each other's results on every run. The entry is rewritten
 // read-modify-write and renamed into place; a race between two writers loses
 // one side's additions, which is only a later miss.
 
 import { z } from "zod";
 import type { RawLintMessage } from "../core";
 import { lintResultsV2Dir } from "../data-dirs";
-import { openPassSet, type PassSetBounds } from "./pass-set";
+import { openPassSet, type PassSetBounds } from "../shared/pass-set";
 
 // One entry per (file, content) variant — at most as many as the closure-keyed
 // store it replaces, which had one per (file, closure) and so at least one per
@@ -64,10 +65,16 @@ const entrySchema = z.object({
 
 export type LintEntry = z.infer<typeof entrySchema>;
 
-/** Fresh results for one file, by key, and how many keys of each part to keep. */
+/**
+ * Fresh results for one file, by key; the stored keys this run REUSED (they
+ * move up, so a result in use is never the one evicted); and how many keys of
+ * each part to keep.
+ */
 export interface LintEntryUpdate {
   syntactic: ReadonlyMap<string, readonly RawLintMessage[]>;
   typed: ReadonlyMap<string, readonly RawLintMessage[]>;
+  reusedSyntactic: ReadonlySet<string>;
+  reusedTyped: ReadonlySet<string>;
   keepSyntactic: number;
   keepTyped: number;
 }
@@ -75,20 +82,31 @@ export interface LintEntryUpdate {
 export interface LintResultStore {
   /** The entry for this (file, content), or undefined when none was recorded. */
   read(relPath: string, contentHash: string): LintEntry | undefined;
-  /** Add fresh results, keeping the newest keys per part. Atomic (write-then-rename). */
+  /**
+   * Add fresh results and move reused keys up, keeping the most recently used
+   * keys per part. Atomic (write-then-rename); no write when the merge changes
+   * nothing.
+   */
   add(relPath: string, contentHash: string, update: LintEntryUpdate): void;
 }
 
-/** Fresh keys first, then the prior ones not re-recorded, `keep` in all. */
+/**
+ * Fresh keys first, then the prior ones this run reused, then the rest — each
+ * group in its prior order, so a run that only reuses keys already in front
+ * changes nothing — `keep` in all.
+ */
 function mergeKeys(
   prior: readonly string[],
   fresh: ReadonlyMap<string, unknown>,
+  reused: ReadonlySet<string>,
   keep: number,
 ): string[] {
-  return [...fresh.keys(), ...prior.filter((k) => !fresh.has(k))].slice(
-    0,
-    keep,
-  );
+  const old = prior.filter((k) => !fresh.has(k));
+  return [
+    ...fresh.keys(),
+    ...old.filter((k) => reused.has(k)),
+    ...old.filter((k) => !reused.has(k)),
+  ].slice(0, keep);
 }
 
 /** Merge fresh results into an entry: per part, fresh first, then the rest. */
@@ -99,9 +117,15 @@ export function mergeLintEntry(
   const syntactic = mergeKeys(
     prior?.syntactic ?? [],
     update.syntactic,
+    update.reusedSyntactic,
     update.keepSyntactic,
   );
-  const typed = mergeKeys(prior?.typed ?? [], update.typed, update.keepTyped);
+  const typed = mergeKeys(
+    prior?.typed ?? [],
+    update.typed,
+    update.reusedTyped,
+    update.keepTyped,
+  );
   const messages: LintEntry["messages"] = {};
   const keep = (
     key: string,
@@ -113,6 +137,17 @@ export function mergeLintEntry(
   for (const k of syntactic) keep(k, update.syntactic.get(k));
   for (const k of typed) keep(k, update.typed.get(k));
   return { syntactic, typed, messages };
+}
+
+/** Whether two entries hold the same keys in the same order (and so the same messages). */
+export function sameEntry(a: LintEntry, b: LintEntry): boolean {
+  const same = (x: readonly string[], y: readonly string[]): boolean =>
+    x.length === y.length && x.every((k, i) => k === y[i]);
+  return (
+    same(a.syntactic, b.syntactic) &&
+    same(a.typed, b.typed) &&
+    JSON.stringify(a.messages) === JSON.stringify(b.messages)
+  );
 }
 
 /** Open (and lazily create) the global lint result store. */
@@ -132,7 +167,9 @@ export function openLintResultStore(): LintResultStore {
   return {
     read,
     add(relPath, contentHash, update) {
-      const merged = mergeLintEntry(read(relPath, contentHash), update);
+      const prior = read(relPath, contentHash);
+      const merged = mergeLintEntry(prior, update);
+      if (prior !== undefined && sameEntry(prior, merged)) return;
       set.record(key(relPath, contentHash), {
         relPath,
         contentHash,

@@ -172,36 +172,67 @@ in parts, each under its own key:
 | Part | Key | Re-linted when |
 | --- | --- | --- |
 | each syntactic group (base + one per contribution) | the group's fp | the file's text, or that group's rules/engine |
-| ONE typed part, `LINT_GROUP_TYPED` | `typedResultKey(typed fp, type fp)` | the text, a declaration it can see, or any type-aware rule |
+| each typed part — the type-aware rules of one group that has any (`(types) <group>`) | `typedResultKey(typed group fp, type fp)` | the text, a declaration it can name, or that group's type-aware rules |
 | a directive file, whole (`LINT_GROUP_ALL`) | `typedResultKey(all fp, type fp)` | any of the above |
 
 It used to be keyed on the source of the file's whole import closure, so a
 body-only edit in a hub re-linted every transitive importer: a median of 470
 files per main commit, p90 6,218. Design:
-`research/2026-10-17-global-lint-keyed-on-what-it-reads.md`.
+`research/2026-10-17-global-lint-keyed-on-what-it-reads.md`, and for the typed
+key's contract graph and per-group typed parts
+`research/2026-10-18-global-typed-lint-key-stops-at-contracts.md`.
 
 **The rules half** (`check/lint-groups.ts`) — one fingerprint per GROUP, each
 folding in the **engine**: the config builder's import closure
-(`LINT_CONFIG_SOURCE`, generated registries not followed), `shared/worker.ts`
-and `shared/type-fingerprint.ts`, the root tsconfigs and `package.json`,
+(`LINT_CONFIG_SOURCE`, generated registries not followed), `shared/worker.ts`,
+the root tsconfigs and `package.json`,
 ambient `.d.ts`, `patches/**`, the lockfile **minus its workspace entries**
 (`lockfileLintDigest`), and the declared `@utility` set (`lintDataKey`). The
 **base** group is the builder's own rules (typescript-eslint, react-hooks,
 eslint core); each **contribution** (`lintContributionPaths()`) is the import
 closure of `plugins/<p>/lint/index.ts`, stopping at engine files (a rule's
-`*.test.ts` is not in it; a helper it imports from outside `lint/` is). The
-**typed fp** is the hash of just the groups that hold a type-aware rule
-(`typeAwareLintGroups`, loaded in prepare through the same classifier), so a
-syntactic-only rule edit stales no typed result.
+`*.test.ts` is not in it; a helper it imports from outside `lint/` is). Each
+group that holds a type-aware rule (`typeAwareLintGroups`, loaded in prepare
+through the same classifier) has a **typed group fp** (`typedGroupFps`): its
+group fp plus the **typed engine** — `shared/type-fingerprint.ts`,
+`shared/contract-refs.ts`, `shared/emit-options.ts`, which only parts that read
+types depend on. So a syntactic-only rule edit stales no typed part, one
+type-aware rule edit stales its group's typed part only, and editing the type
+fingerprint's code re-runs no syntactic result. A file whose type fp moved runs
+all its stale typed parts in ONE pass with the program.
 
-**The types half** — the **type fp** (`shared/type-fingerprint.ts`): a Merkle
-hash over the strongly-connected-component condensation of the buildinfo's
-`referencedMap`, each component hashing its members' `signature` (the hash of
+**The types half** — the **type fp** (`shared/type-fingerprint.ts`): what the
+checker can tell a rule about the file is a function of the `.d.ts` of what it
+imports directly, of every file those `.d.ts` NAME (a re-export, a type-only
+import, the `import("./e").T` tsc writes for an inferred type), transitively,
+and of the global scope. So the type fp hashes the **contract graph**: a Merkle
+hash over the strongly-connected-component condensation of the contract edges
+(`shared/contract-refs.ts`: for a repo source file, the specifiers its emitted
+`.d.ts` names, resolved from its source location; for a declaration input, its
+`referencedMap`), each component hashing its members' `signature` (the hash of
 their `.d.ts`; the version where tsc wrote a placeholder) and its successors'
-hashes, with the signatures of every `affectsGlobalScope` file folded into
-every file's. A body edit leaves the signature, and every importer's type fp,
-unchanged; an API change moves its transitive referencers (a superset of what
-tsc re-checks); a global file moves everyone. O(V + E), in the worker.
+hashes. A file's type fp is the hashes of its direct imports' components plus
+the global fp: every `affectsGlobalScope` file and every file whose `.d.ts`
+augments a module (`declare module "x"` — its importers never name it). A body
+edit moves nothing; an API change moves the direct importers, and theirs only
+while their contract names it — the chain stops at an importer whose `.d.ts`
+does not mention the change. That is never wider than a closure over
+`referencedMap`, never narrower than tsc's own re-check (direct referencers and
+the re-export chain). Following a contract chain one hop is not enough: `D.d.ts`
+can name `E`'s `T` and `E.d.ts` name `G`, so a change to `G` reaches `D`'s
+importers through two byte-identical contracts. O(V + E), in the worker.
+
+The `.d.ts` texts come from the run's own emit, which covers only the files tsc
+re-checked, so every other file's specifiers come from the **contract-refs
+store** (`shared/contract-refs-store.ts`, `type-check-contract-refs`: per (file,
+signature) — a signature is the hash of the `.d.ts` text — host-global). A miss
+emits that one file's declaration (`emitted alone` in the transcript): every
+file once per host after this landed, then only file versions this host never
+emitted. A specifier into a dependency is dropped (the lockfile is in the
+engine); one into a repo file outside the program throws.
+`scripts/typed-key-oracle.ts` is the correctness gate for any change to this
+key: it snapshots two trees' fingerprints and a digest of every type a rule can
+observe, and reports a file whose digest changed while its fingerprint did not.
 
 **When the type fp is known.** Fresh signatures exist only after tsc runs, in
 the worker. So `finalize` records each program's **signature table**
@@ -209,8 +240,8 @@ the worker. So `finalize` records each program's **signature table**
 file's type fp, concatenated in lintable-list order, ~180 KB) whenever a worker
 comes back — whatever the verdict, since signatures are facts of the program —
 under the key it recomputes from the buildinfo the worker wrote. A later run
-whose program key has a table decides every typed part in prepare (`run` or
-`fresh`), so an all-fresh tree on a PASS program skips the worker. Without one
+whose program key has a table decides every typed part in prepare
+(`decided`: which parts are stale, under which keys), so an all-fresh tree on a PASS program skips the worker. Without one
 (the program changed, or a cold run) each file's typed part goes to the worker
 **deferred**, carrying its few stored typed keys; the worker computes the key
 and runs the part only if it is not among them.
@@ -231,11 +262,17 @@ disable directive is unused depends on every rule, so it is re-linted whole
 whenever any rule or its type fp changes.
 
 What a change costs: a body-only edit — the file itself; an exported-type
-change — the file plus the typed part of its transitive referencers; a
-workspace-only lockfile, an exemption, or an app.css token edit — nothing; one
-syntactic rule — that group on every file (directive files whole); one
-type-aware rule — the typed part of every file; the lint core, a tsconfig, a
-`.d.ts`, a real dependency bump — everything.
+change — the file plus the typed parts of its direct importers and of the files
+whose imports' contracts name it; a workspace-only lockfile, an exemption, or
+an app.css token edit — nothing; one syntactic rule — that group on every file
+(directive files whole); one type-aware rule — that group's typed part on every
+file; the type fingerprint's code — every typed part; the lint core, a
+tsconfig, a `.d.ts`, a real dependency bump — everything.
+
+Each entry keeps a few keys per part, most recently USED first: a key a run
+reused (from prepare or the worker) moves up beside the fresh ones, so two
+worktrees on two versions of a hub keep each other's results. `finalize`
+writes an entry only when that order changes.
 
 ## Host-wide worker admission — `server/spawnTypeCheckWorker`
 
@@ -312,7 +349,7 @@ the shape of a report that hides a broken key.
 
 The store is `programPassDir` (host-global, content-addressed, 14-day age
 bound), a sibling of the lint result store and the signature tables over the
-shared `check/pass-set.ts`. A skipped run re-records both its PASS and its
+shared `shared/pass-set.ts`. A skipped run re-records both its PASS and its
 table, so each ages as "unused for 14 days".
 
 `--no-cache` (and `SINGULARITY_CHECK_NO_CACHE=1`) disarms the skip, via
@@ -430,16 +467,19 @@ lines per run, and they are the instrument every claim about this check is made 
   keyed at all.
 - `type-check: lint 412/11455 files (61 whole, 351 partial; syntactic 20,
   typed 400; 11455 sent; 99 groups, engine 28 files; typed keys from worker (no
-  table for this program yet)) — stale: (types) 392, ui/plugins/icons 12` —
+  table for this program yet)) — stale: (types) (base) 392, ui/plugins/icons 12` —
   every run, AFTER the worker (a skipped run prints `lint 0/…`): how many files
   the worker actually linted, how many whole (every part stale, or a directive
   file) vs only some parts, how many ran syntactic rules and how many typed
   ones, how many jobs were sent (with no table every file is, its typed part
   deferred), whether the typed decisions came from a signature `table` or the
   `worker` (and why there was no table), and the parts with the most stale
-  files. The instrument for "did that edit cost its group, its importers, or
-  the repo". `type-check: no signature table recorded — <why>` follows when the
-  worker could not read the buildinfo it wrote.
+  files (`(types) <group>` is a typed part). The instrument for "did that edit
+  cost its group, its importers, or the repo". `type-check: no signature table
+  recorded — <why>` follows when the worker could not read the buildinfo it
+  wrote; otherwise `type-check: contracts of N files: S stored, E from this
+  run's emit, A emitted alone, Tms` says where the contract edges came from and
+  what they cost.
 - `type-check worker repo: cpu 186.6s (sys 12.0s), wall 95.2s, maxRSS 7.2 GB, slot wait 3.1s`
   — only when the worker RAN (a skipped run has no line, by construction). These
   are the numbers `TYPE_CHECK_WORKER_UNITS` is measured from, so a grep over many
@@ -447,6 +487,11 @@ lines per run, and they are the instrument every claim about this check is made 
   memory pressure, not this program's work; `wall` is the slot's hold time
   (every queued worker waits it out); `slot wait` is what the
   `type-check-worker` cap cost this run.
+- `type-check worker repo phases: tsc 97.8s, type fps 1.0s, lint 20.5s (cpu)` —
+  beside the cost line: where the worker's CPU went (its own clock, so process
+  start-up is left out). Measured 2026-10-18: a hub API change costs ~96 s of
+  tsc re-check — about a cold build — and ~20 s of lint, so the remaining cost of
+  a wide change, and its ~21 GB peak, is tsc's, not lint's.
 - `type-check worker repo: lane background, priority foreground (slot holder)` —
   when the worker is about to run: the grant's lane (which slot window it
   queued in) and its tier — always the foreground as the slot's holder, or
@@ -522,15 +567,17 @@ measures the queue, so any per-check cost claim needs `./singularity check --job
     - `TypeCheckWorkerJob`
     - `TypeCheckWorkerResult`
     - `TypedDecision`
-    - `TypedOutcome`
+    - `TypedPartFp`
+    - `TypedPartOutcome`
     - `TypeFpTable`
   - Exports (values):
     - `LINT_GROUP_ALL`
     - `LINT_GROUP_BASE`
-    - `LINT_GROUP_TYPED`
     - `TYPE_CHECK_WORKER_PEAK_BYTES`
     - `TYPE_CHECK_WORKER_UNITS`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
+  - Uses tokens:
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shape --spacing`
 
 <!-- AUTOGENERATED:END -->

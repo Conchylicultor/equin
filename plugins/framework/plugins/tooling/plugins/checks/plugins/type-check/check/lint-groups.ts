@@ -12,10 +12,15 @@
 // edits among them changed an npm resolution. So (c) is split:
 //
 //   - the ENGINE, what every rule's result depends on: the lint config builder
-//     and what it imports, this check's own worker and type fingerprint, the
-//     lockfile's npm resolutions, the root tsconfigs, ambient `.d.ts`,
-//     dependency patches, and what rules read from the lint data files
-//     (`lintDataKey`). Folded into every group below.
+//     and what it imports, this check's own worker, the lockfile's npm
+//     resolutions, the root tsconfigs, ambient `.d.ts`, dependency patches,
+//     and what rules read from the lint data files (`lintDataKey`). Folded
+//     into every group below.
+//   - the TYPED ENGINE, what only a result that reads types depends on: the
+//     type fingerprint, the contract edges it walks, and the emit options
+//     that decide what a signature says. Folded into every typed part and
+//     every directive file's whole result, so editing them re-runs no
+//     syntactic result.
 //   - the BASE group: the rules the config builder enables itself
 //     (typescript-eslint, react-hooks, eslint core) — the engine alone.
 //   - one group per lint CONTRIBUTION (`plugins/<p>/lint/index.ts`): its own
@@ -23,12 +28,12 @@
 //     imports from outside `lint/` is.
 //
 // Each group's fingerprint keys that group's SYNTACTIC rules, which read the
-// text alone. The type-aware rules of every group run as ONE more part,
-// `LINT_GROUP_TYPED`, keyed on `typedFp` — the fingerprints of just the groups
-// that hold a type-aware rule — together with the file's type fingerprint. One
-// typed part, not one per group: a typed-rule edit is rare (a dozen rules), it
-// costs resolving types for every file whichever typed rule changed, and the
-// worker's job stays small.
+// text alone. A group that holds a type-aware rule also has a TYPED part — its
+// type-aware rules — keyed on `typedGroupFps` (the group's fingerprint and the
+// typed engine) together with the file's type fingerprint. One typed part per
+// group, like the syntactic ones, so editing one type-aware rule re-runs that
+// group's typed part only; a file whose type fingerprint moved still runs all
+// its stale typed parts in ONE pass with the program.
 //
 // Exemption manifests are in none of them: an exemption only decides which
 // messages are DROPPED, so the result store keeps messages unfiltered and the
@@ -48,7 +53,7 @@ import {
   lintContributionPaths,
   lintDataKey,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import { LINT_GROUP_ALL, LINT_GROUP_BASE, LINT_GROUP_TYPED } from "../core";
+import { LINT_GROUP_ALL, LINT_GROUP_BASE } from "../core";
 import { safeRead, type ImportGraphs } from "./import-graph";
 import type { TreeListing } from "./fingerprint";
 
@@ -118,24 +123,32 @@ function isEngineConfigFile(rel: string): boolean {
   return false;
 }
 
-/**
- * Repo-relative paths of this check's worker, whose lint loop is engine too,
- * of the type fingerprint, which decides when a typed result is reused, and of
- * the emit options, which decide what the signatures it reads say. The files
- * alone, not their imports: those are the spawn protocol and process plumbing,
- * which cannot change a message.
- */
-function workerSources(root: string): string[] {
-  return [
-    "../shared/worker.ts",
-    "../shared/type-fingerprint.ts",
-    "../shared/emit-options.ts",
-  ].map((f) =>
+/** Repo-relative paths of files beside this one. */
+function ownSources(root: string, files: readonly string[]): string[] {
+  return files.map((f) =>
     relative(root, join(import.meta.dir, f))
       .split("\\")
       .join("/"),
   );
 }
+
+/**
+ * This check's worker, whose lint loop is engine too. The file alone, not its
+ * imports: those are the spawn protocol and process plumbing, which cannot
+ * change a message — and the typed engine below.
+ */
+const WORKER_SOURCES = ["../shared/worker.ts"];
+
+/**
+ * The typed engine: the type fingerprint, which decides when a typed result is
+ * reused; the contract edges it walks; and the emit options, which decide what
+ * the signatures it reads say.
+ */
+const TYPED_ENGINE_SOURCES = [
+  "../shared/type-fingerprint.ts",
+  "../shared/contract-refs.ts",
+  "../shared/emit-options.ts",
+];
 
 /** A repo-relative file's content hash, memoized for the run. */
 export type ContentHasher = (rel: string) => string;
@@ -148,10 +161,12 @@ export interface LintGroups {
   fps: Map<string, string>;
   /** How many files the engine's fingerprint covers (for the transcript). */
   engineFiles: number;
+  /** The typed engine's fingerprint: folded into every part that reads types. */
+  typedEngineFp: string;
   /**
    * The rules half of a directive file's single `LINT_GROUP_ALL` result key: a
-   * hash of every group's fingerprint, so a change to any rule re-lints it
-   * whole.
+   * hash of every group's fingerprint and the typed engine, so a change to any
+   * rule re-lints it whole.
    */
   allFp: string;
 }
@@ -163,32 +178,35 @@ export interface TypeAwareGroups {
 }
 
 /**
- * The rules half of the typed part's key (`LINT_GROUP_TYPED`): the
- * fingerprints of the groups that hold a type-aware rule, so an edit to a
- * syntactic-only contribution leaves every typed result standing.
+ * The rules half of each typed part's key, by group: one per group that holds a
+ * type-aware rule (`LINT_GROUP_BASE` first, then contributions in path order),
+ * each the group's fingerprint and the typed engine — so an edit to one
+ * type-aware contribution stales that group's typed part only, and one to a
+ * syntactic-only contribution none.
  *
  * Throws on a type-aware contribution with no group: the loaded contributions
  * and the generated registry the groups come from disagree, and a typed key
  * that silently left one out would keep a stale result.
  */
-export function typedGroupFp(
+export function typedGroupFps(
   groups: LintGroups,
   typeAware: TypeAwareGroups,
-): string {
+): Map<string, string> {
   const members = [
     ...(typeAware.base ? [LINT_GROUP_BASE] : []),
     ...[...typeAware.contributions].sort(),
   ];
-  const lines = members.map((g) => {
-    const fp = groups.fps.get(g);
-    if (fp === undefined) {
-      throw new Error(
-        `type-check: the type-aware lint contribution "${g}" has no rule group — the loaded contributions and lint.generated.ts disagree`,
-      );
-    }
-    return `${g}\0${fp}`;
-  });
-  return groupHash(`${LINT_GROUP_TYPED}\n${lines.join("\n")}`);
+  return new Map(
+    members.map((g) => {
+      const fp = groups.fps.get(g);
+      if (fp === undefined) {
+        throw new Error(
+          `type-check: the type-aware lint contribution "${g}" has no rule group — the loaded contributions and lint.generated.ts disagree`,
+        );
+      }
+      return [g, groupHash(`(types)\n${g}\n${fp}\n${groups.typedEngineFp}`)];
+    }),
+  );
 }
 
 /**
@@ -239,7 +257,7 @@ export function computeLintGroups(
   // config files the graph cannot see, plus the lockfile's resolutions and
   // what rules read from the lint data files.
   const engine = closureOf(graphs, LINT_CONFIG_SOURCE, new Set());
-  for (const f of workerSources(root)) engine.add(f);
+  for (const f of ownSources(root, WORKER_SOURCES)) engine.add(f);
   for (const rel of listing.files) if (isEngineConfigFile(rel)) engine.add(rel);
   const lock = listing.files.includes("bun.lock")
     ? lockfileLintDigest(safeRead(join(root, "bun.lock")) ?? "")
@@ -258,8 +276,11 @@ export function computeLintGroups(
       groupHash(`${pluginPath}\n${engineFp}\n${body(closure, ch)}`),
     );
   }
-  const allFp = groupHash(
-    `${LINT_GROUP_ALL}\n${[...fps].map(([g, fp]) => `${g}\0${fp}`).join("\n")}`,
+  const typedEngineFp = groupHash(
+    `(typed engine)\n${body(ownSources(root, TYPED_ENGINE_SOURCES), ch)}`,
   );
-  return { fps, engineFiles: engine.size, allFp };
+  const allFp = groupHash(
+    `${LINT_GROUP_ALL}\n${typedEngineFp}\n${[...fps].map(([g, fp]) => `${g}\0${fp}`).join("\n")}`,
+  );
+  return { fps, engineFiles: engine.size, typedEngineFp, allFp };
 }

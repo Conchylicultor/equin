@@ -72,6 +72,7 @@ async function runWorker(
     tsconfigPath: program.tsconfigPath,
     buildInfoPath: tsBuildInfoPath(root, program.name),
     lintFiles,
+    typeFps: true,
     grant,
   });
   return {
@@ -300,6 +301,16 @@ const check: Check = {
         result?.slotWaitMs,
       );
       if (costLine !== null) ctx.log?.(costLine, "stderr");
+      // Where that CPU went, phase by phase (in the worker's own clock, so it
+      // excludes process start-up): tsc's build and re-check, the type
+      // fingerprints, lint.
+      if (result) {
+        const { tsc, typeFps, lint } = result.phaseCpuSeconds;
+        ctx.log?.(
+          `type-check worker ${program.name} phases: tsc ${tsc.toFixed(1)}s, type fps ${typeFps.toFixed(1)}s, lint ${lint.toFixed(1)}s (cpu)`,
+          "stderr",
+        );
+      }
 
       // The record phase, on the thread that holds the session: the warm base,
       // the per-file lint results, the signature table, the lint verdict, the

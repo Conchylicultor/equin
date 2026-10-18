@@ -43,18 +43,25 @@ import {
 import { loadExemptions } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import { typeAwareLintGroups } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import {
-  LINT_GROUP_TYPED,
+  LINT_GROUP_ALL,
   type LintFileJob,
   type LintFileResult,
   type RawLintMessage,
   type TypedDecision,
+  type TypedPartFp,
   type TypeFpTable,
 } from "../core";
 import { typedResultKey } from "../shared/type-fingerprint";
 import { buildImportGraphs } from "./import-graph";
 import { computeContentHashes, type TreeListing } from "./fingerprint";
-import { computeLintGroups, typedGroupFp } from "./lint-groups";
-import { openLintResultStore, type LintEntry } from "./lint-results";
+import { computeLintGroups, typedGroupFps } from "./lint-groups";
+import {
+  mergeLintEntry,
+  openLintResultStore,
+  sameEntry,
+  type LintEntry,
+  type LintEntryUpdate,
+} from "./lint-results";
 import { lintViolationLines } from "./lint-verdict";
 import {
   openProgramKeyContext,
@@ -159,7 +166,14 @@ interface FileState {
   entry: LintEntry | undefined;
   /** Messages of the parts prepare found fresh in the store. */
   cached: RawLintMessage[];
+  /** The stored keys prepare reused, by kind: moved up when recorded. */
+  reusedSyntactic: Set<string>;
+  reusedTyped: Set<string>;
 }
+
+/** A typed part's name in the transcript's stale breakdown. */
+const typedLabel = (group: string): string =>
+  group === LINT_GROUP_ALL ? group : `(types) ${group}`;
 
 const toRel = (root: string, abs: string): string =>
   relative(root, abs).split("\\").join("/");
@@ -237,12 +251,23 @@ export async function openPreparation({
   }
 
   // The rules half of every result key (`./lint-groups`): one fingerprint per
-  // syntactic group, the typed part's over just the groups that hold a
-  // type-aware rule — learned by loading the contributions through the same
+  // syntactic group, one per typed part — a part for each group that holds a
+  // type-aware rule, learned by loading the contributions through the same
   // classifier the config builder registers rules with — and a directive
   // file's over all of them.
   const groups = computeLintGroups(listing, graphs, ch);
-  const typedFp = typedGroupFp(groups, await typeAwareLintGroups(root));
+  const typedFps = typedGroupFps(groups, await typeAwareLintGroups(root));
+  const typedParts: TypedPartFp[] = [...typedFps].map(([group, fp]) => ({
+    group,
+    fp,
+  }));
+  const wholeParts: TypedPartFp[] = [
+    { group: LINT_GROUP_ALL, fp: groups.allFp },
+  ];
+  // Keys kept per part: a few versions of each, so two worktrees on two
+  // versions of one rule — or of one hub's API — do not evict each other.
+  const keepSyntactic = 3 * groups.fps.size;
+  const keepTyped = 3 * typedParts.length;
 
   // Pick the incremental base: the pooled entry whose recorded file contents
   // best match this tree, or the local base when nothing beats it. That is what
@@ -299,32 +324,56 @@ export async function openPreparation({
   const lintFiles: LintFileJob[] = [];
   for (const rel of graphs.files) {
     const entry = store.read(rel, ch(rel));
-    const cached: RawLintMessage[] = [];
-    states.set(rel, { entry, cached });
-    const decide = (partFp: string): TypedDecision => {
-      if (table.kind === "none") {
-        return { kind: "deferred", fp: partFp, known: entry?.typed ?? [] };
-      }
-      const k = typedResultKey(partFp, table.fps.get(rel)!);
-      if (!entry?.typed.includes(k)) return { kind: "run", key: k };
-      cached.push(...(entry.messages[k] ?? []));
-      return { kind: "fresh" };
+    const state: FileState = {
+      entry,
+      cached: [],
+      reusedSyntactic: new Set(),
+      reusedTyped: new Set(),
     };
+    states.set(rel, state);
+    const decide = (parts: TypedPartFp[]): TypedDecision => {
+      if (table.kind === "none") {
+        return { kind: "deferred", parts, known: entry?.typed ?? [] };
+      }
+      const typeFp = table.fps.get(rel)!;
+      const stale: { group: string; key: string }[] = [];
+      for (const { group, fp } of parts) {
+        const key = typedResultKey(fp, typeFp);
+        if (entry?.typed.includes(key)) {
+          state.cached.push(...(entry.messages[key] ?? []));
+          state.reusedTyped.add(key);
+        } else {
+          stale.push({ group, key });
+        }
+      }
+      return { kind: "decided", stale };
+    };
+    const needsRun = (d: TypedDecision): boolean =>
+      d.kind === "deferred" || d.stale.length > 0;
     if (directives.has(rel)) {
-      const typed = decide(groups.allFp);
-      if (typed.kind !== "fresh") {
-        lintFiles.push({ file: join(root, rel), unit: "whole", typed });
+      const typed = decide(wholeParts);
+      if (needsRun(typed)) {
+        lintFiles.push({
+          file: join(root, rel),
+          unit: "whole",
+          syntactic: [],
+          typed,
+        });
       }
       continue;
     }
     const known = new Set(entry?.syntactic);
     const syntactic: string[] = [];
     for (const [g, fp] of groups.fps) {
-      if (known.has(fp)) cached.push(...(entry?.messages[fp] ?? []));
-      else syntactic.push(g);
+      if (known.has(fp)) {
+        state.cached.push(...(entry?.messages[fp] ?? []));
+        state.reusedSyntactic.add(fp);
+      } else {
+        syntactic.push(g);
+      }
     }
-    const typed = decide(typedFp);
-    if (syntactic.length === 0 && typed.kind === "fresh") continue;
+    const typed = decide(typedParts);
+    if (syntactic.length === 0 && !needsRun(typed)) continue;
     lintFiles.push({ file: join(root, rel), unit: "split", syntactic, typed });
   }
 
@@ -416,8 +465,14 @@ export async function openPreparation({
       whole: 0,
       syntactic: 0,
       typed: 0,
-      byGroup: new Map<string, number>(),
+      byPart: new Map<string, number>(),
     };
+    const count = (part: string): void => {
+      ran.byPart.set(part, (ran.byPart.get(part) ?? 0) + 1);
+    };
+    // The files the worker answered; every other file's update (only reused
+    // keys) is recorded after the loop.
+    const answered = new Set<string>();
     if (outcome) {
       // A worker whose program parsed answers every job: one that silently
       // dropped a file would leave it with no verdict at all. (One whose
@@ -438,68 +493,67 @@ export async function openPreparation({
             `type-check: the worker returned a lint result for ${rel}, which the plan never sent`,
           );
         }
+        answered.add(rel);
         const messages: RawLintMessage[] = [];
         const syntactic = new Map<string, RawLintMessage[]>();
-        if (r.unit === "split") {
-          for (const [g, m] of Object.entries(r.syntactic)) {
-            const fp = groups.fps.get(g);
-            if (fp === undefined) {
-              throw new Error(
-                `type-check: the worker returned lint group "${g}" for ${rel}, which the plan never asked for`,
-              );
-            }
-            syntactic.set(fp, m);
-            messages.push(...m);
-            ran.byGroup.set(g, (ran.byGroup.get(g) ?? 0) + 1);
-          }
-        }
-        const typed = new Map<string, RawLintMessage[]>();
-        if (r.typed.kind === "ran") {
-          typed.set(r.typed.key, r.typed.messages);
-          messages.push(...r.typed.messages);
-        } else if (r.typed.kind === "cached") {
-          // The worker found the deferred key among the ones the job carried,
-          // which came out of this very entry.
-          const { key: k } = r.typed;
-          if (!state.entry?.typed.includes(k)) {
+        for (const [g, m] of Object.entries(r.syntactic)) {
+          const fp = groups.fps.get(g);
+          if (fp === undefined) {
             throw new Error(
-              `type-check: the worker reused typed result ${k} for ${rel}, which the store does not hold`,
+              `type-check: the worker returned lint group "${g}" for ${rel}, which the plan never asked for`,
             );
           }
-          messages.push(...(state.entry.messages[k] ?? []));
+          syntactic.set(fp, m);
+          messages.push(...m);
+          count(g);
+        }
+        const typed = new Map<string, RawLintMessage[]>();
+        for (const part of r.typed) {
+          if (part.kind === "ran") {
+            typed.set(part.key, part.messages);
+            messages.push(...part.messages);
+            count(typedLabel(part.group));
+            continue;
+          }
+          // The worker found the deferred key among the ones the job carried,
+          // which came out of this very entry.
+          if (!state.entry?.typed.includes(part.key)) {
+            throw new Error(
+              `type-check: the worker reused typed result ${part.key} for ${rel}, which the store does not hold`,
+            );
+          }
+          messages.push(...(state.entry.messages[part.key] ?? []));
+          state.reusedTyped.add(part.key);
         }
         fresh.set(rel, messages);
 
-        const typedRan = r.typed.kind === "ran";
-        if (r.unit === "whole") {
-          if (typedRan) {
-            ran.files++;
+        const typedRan = r.typed.some((p) => p.kind === "ran");
+        if (syntactic.size > 0 || typedRan) {
+          ran.files++;
+          if (r.unit === "whole") {
             ran.whole++;
             ran.syntactic++;
             ran.typed++;
+          } else {
+            if (syntactic.size > 0) ran.syntactic++;
+            if (typedRan) ran.typed++;
+            if (
+              syntactic.size === groups.fps.size &&
+              r.typed.filter((p) => p.kind === "ran").length ===
+                typedParts.length
+            ) {
+              ran.whole++;
+            }
           }
-        } else if (syntactic.size > 0 || typedRan) {
-          ran.files++;
-          if (syntactic.size > 0) ran.syntactic++;
-          if (typedRan) {
-            ran.typed++;
-            ran.byGroup.set(
-              LINT_GROUP_TYPED,
-              (ran.byGroup.get(LINT_GROUP_TYPED) ?? 0) + 1,
-            );
-          }
-          if (typedRan && syntactic.size === groups.fps.size) ran.whole++;
         }
-        // Keep a few versions per part, so two worktrees on two versions of
-        // one rule — or of one hub's API — do not evict each other's results.
-        if (syntactic.size > 0 || typed.size > 0) {
-          store.add(rel, ch(rel), {
-            syntactic,
-            typed,
-            keepSyntactic: 3 * groups.fps.size,
-            keepTyped: 3,
-          });
-        }
+        store.add(rel, ch(rel), {
+          syntactic,
+          typed,
+          reusedSyntactic: state.reusedSyntactic,
+          reusedTyped: state.reusedTyped,
+          keepSyntactic,
+          keepTyped,
+        });
       }
 
       // The signature table of the program just built, under its built key:
@@ -507,6 +561,7 @@ export async function openPreparation({
       // program, not of whether it type-checks.
       if (builtKey !== undefined) {
         if (outcome.typeFps.kind === "table") {
+          lines.push(`type-check: ${outcome.typeFps.contracts}`);
           tables.record(
             program.name,
             builtKey,
@@ -521,10 +576,33 @@ export async function openPreparation({
       }
     }
 
+    // Every file no worker answered whose reused keys are not already in
+    // front: one write moves them up, so a result in use is never the one a
+    // sibling's newer version evicts. Judged on the entry prepare read, so the
+    // common case — every reused key already in front — reads and writes
+    // nothing more. A skipped program records too: its results were in use.
+    if (outcome || skipped) {
+      for (const [rel, state] of states) {
+        if (answered.has(rel) || state.entry === undefined) continue;
+        const update: LintEntryUpdate = {
+          syntactic: new Map(),
+          typed: new Map(),
+          reusedSyntactic: state.reusedSyntactic,
+          reusedTyped: state.reusedTyped,
+          keepSyntactic,
+          keepTyped,
+        };
+        if (sameEntry(state.entry, mergeLintEntry(state.entry, update))) {
+          continue;
+        }
+        store.add(rel, ch(rel), update);
+      }
+    }
+
     // One greppable line: how much the worker linted, of which kinds, and which
     // parts are why — the instrument for "did that edit cost its group, its
     // importers, or the repo".
-    const topStale = [...ran.byGroup]
+    const topStale = [...ran.byPart]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([g, n]) => `${g} ${n}`)

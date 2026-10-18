@@ -22,7 +22,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
 import { LINT_DATA_FILES } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import type { LintFileResult, RawLintMessage } from "../core";
+import type {
+  LintFileJob,
+  LintFileResult,
+  RawLintMessage,
+  TypedPartOutcome,
+} from "../core";
 import { typedResultKey } from "../shared/type-fingerprint";
 import { readTreeListing } from "./fingerprint";
 import {
@@ -107,6 +112,21 @@ async function prepare(): Promise<Extract<Preparation, { finalize: unknown }>> {
   return p;
 }
 
+/** A deferred job's typed parts, each with the key the worker would compute. */
+function deferredKeys(job: LintFileJob, rel: string) {
+  if (job.typed.kind !== "deferred") {
+    throw new Error("expected a deferred typed part");
+  }
+  return job.typed.parts.map(({ group, fp }) => ({
+    group,
+    key: typedResultKey(fp, TYPE_FPS[rel]!),
+  }));
+}
+
+/** Every typed part of a deferred job, run, with no messages. */
+const ranAll = (job: LintFileJob, rel: string): TypedPartOutcome[] =>
+  deferredKeys(job, rel).map((p) => ({ ...p, kind: "ran", messages: [] }));
+
 const violation: RawLintMessage = {
   ruleId: "x/syntactic",
   fatal: false,
@@ -128,9 +148,7 @@ test(
     // The worker's answer: every syntactic group clean but one message on b,
     // every typed part run under the key it computes from the type fps.
     const lint: LintFileResult[] = first.plan.lintFiles.map((job) => {
-      if (job.unit !== "split" || job.typed.kind !== "deferred") {
-        throw new Error("expected split jobs with deferred typed parts");
-      }
+      if (job.unit !== "split") throw new Error("expected split jobs");
       const rel = job.file.slice(root.length + 1);
       return {
         file: job.file,
@@ -141,17 +159,13 @@ test(
             rel === "src/b.ts" && i === 0 ? [violation] : [],
           ]),
         ),
-        typed: {
-          kind: "ran",
-          key: typedResultKey(job.typed.fp, TYPE_FPS[rel]!),
-          messages: [],
-        },
+        typed: ranAll(job, rel),
       };
     });
     const outcome: ProgramOutcome = {
       tscClean: true,
       lint,
-      typeFps: { kind: "table", fps: TYPE_FPS },
+      typeFps: { kind: "table", fps: TYPE_FPS, contracts: "contracts" },
     };
     const done = await first.finalize(outcome);
     expect(done.lintViolations).toBe("src/b.ts:1:1  x/syntactic  stored");
@@ -172,7 +186,7 @@ test(
     const again = await second.finalize({
       tscClean: true,
       lint: [],
-      typeFps: { kind: "table", fps: TYPE_FPS },
+      typeFps: { kind: "table", fps: TYPE_FPS, contracts: "contracts" },
     });
     expect(again.lintViolations).toBe("src/b.ts:1:1  x/syntactic  stored");
     expect(again.lintLine).toContain("type-check: lint 0/2 files");
@@ -203,9 +217,12 @@ test(
       join(root, "src/a.ts"),
       join(root, "src/b.ts"),
     ]);
-    const keyA = typedResultKey(jobA.typed.fp, TYPE_FPS["src/a.ts"]!);
+    const keysA = deferredKeys(jobA, "src/a.ts");
+    expect(keysA.length).toBeGreaterThan(0);
     expect(jobA.syntactic).toEqual([]);
-    expect(jobA.typed.known).toEqual([keyA]);
+    expect([...jobA.typed.known].sort()).toEqual(
+      keysA.map((p) => p.key).sort(),
+    );
     expect(jobB.typed.known).toEqual([]);
 
     // a's type fingerprint did not move (a body edit in b cannot move it), so
@@ -217,20 +234,16 @@ test(
           file: jobA.file,
           unit: "split",
           syntactic: {},
-          typed: { kind: "cached", key: keyA },
+          typed: keysA.map((p) => ({ ...p, kind: "cached" as const })),
         },
         {
           file: jobB.file,
           unit: "split",
           syntactic: Object.fromEntries(jobB.syntactic.map((g) => [g, []])),
-          typed: {
-            kind: "ran",
-            key: typedResultKey(jobB.typed.fp, TYPE_FPS["src/b.ts"]!),
-            messages: [],
-          },
+          typed: ranAll(jobB, "src/b.ts"),
         },
       ],
-      typeFps: { kind: "table", fps: TYPE_FPS },
+      typeFps: { kind: "table", fps: TYPE_FPS, contracts: "contracts" },
     });
     expect(done.lintViolations).toBe("");
     expect(done.lintLine).toContain(

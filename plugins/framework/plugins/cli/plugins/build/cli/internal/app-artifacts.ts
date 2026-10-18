@@ -728,6 +728,8 @@ export async function fastValidationJobs(opts: {
       // Type-checking only: linting belongs to the check pass this path is
       // skipping, and an empty list is what the worker reads as "none".
       lintFiles: [],
+      // Nor the type fingerprints: only the check records a signature table.
+      typeFps: false,
       grant,
     });
     end({ maxRssBytes: run.maxRssBytes });

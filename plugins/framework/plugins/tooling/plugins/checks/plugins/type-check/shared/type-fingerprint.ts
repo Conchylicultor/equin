@@ -1,37 +1,49 @@
 // The TYPE fingerprint of each file: a hash of everything the type checker can
-// tell a type-aware lint rule about it, read off the `.tsbuildinfo` tsc wrote.
+// tell a type-aware lint rule about it.
 //
-// A type-aware rule reads the file's own text plus the checker's types for it,
-// and those types are a function of the file plus the DECLARATIONS of what it
-// can see: the files it transitively references and the global-scope files. It
-// never reads another file's source. tsc records exactly those two things per
-// file — `referencedMap` (what each file references, module augmentations and
-// ambient modules included) and `fileInfos[].signature` (the hash of the file's
-// emitted `.d.ts`, i.e. its public shape) — so a type fingerprint is a Merkle
-// hash over that graph:
+// A type-aware rule reads the file's own text plus the checker's types for it.
+// Those types are a function of the file plus the DECLARATIONS it can name: the
+// contract (emitted `.d.ts`) of each file it imports directly, every file those
+// contracts name in turn (a re-export, a type-only import, the `import("./e").T`
+// tsc writes for an inferred type — `./contract-refs.ts`), and so on, plus the
+// global scope. It never reads another file's source, and never a file only a
+// BODY imports. So the key follows two graphs:
 //
-//   comp(C)   = H( sorted (path, sig) of C's members, sorted comp(D) for each
-//                  component D ≠ C that a member of C references )
-//   global    = H( sorted (path, sig) of every `affectsGlobalScope` file )
-//   typeFp(f) = H( global, comp(SCC of f) )
+//   - the SOURCE graph for the first hop — tsc's `referencedMap`, what the file
+//     itself imports (module augmentations and ambient modules included);
+//   - the CONTRACT graph from there on — for a repo source file, the files its
+//     `.d.ts` names; for a declaration input (`node_modules`, an ambient
+//     `.d.ts`), its `referencedMap`, which is exactly what it imports.
 //
-// over the strongly-connected-component condensation of `referencedMap` (import
-// cycles are common, and a cycle's members see each other). `sig` is the
-// signature where tsc computed one, else the version (the hash of the text):
-// tsc writes a placeholder for files it did not emit — a bare string entry, an
-// object with no `signature`, or `signature: false` — and the version is the
-// conservative side, since it changes on every edit.
+// Each file's shape is its `fileInfos[].signature` (the hash of its `.d.ts`), or
+// the version where tsc wrote a placeholder — a bare string entry, an object
+// with no `signature`, or `signature: false` — the conservative side, since it
+// moves on every edit. Then, over the strongly-connected-component condensation
+// of the CONTRACT graph (import cycles are common, and a cycle's members see
+// each other):
 //
-// So a body-only edit leaves the file's signature, and every importer's type
-// fingerprint, unchanged; an API change moves its transitive referencers (a
-// superset of what tsc itself re-checks), and a global file's change moves
-// everyone (tsc's own rule). The whole computation is O(V + E).
+//   cHash(C)  = H( sorted (path, shape) of C's members, sorted cHash(D) for
+//                  each component D ≠ C a member of C names )
+//   global    = H( sorted (path, shape) of every `affectsGlobalScope` file and
+//                  every file whose contract augments a module )
+//   typeFp(f) = H( global, sorted cHash of each file f references )
 //
-// PURE — buildinfo text in, `rel → typeFp` out — because two processes need the
-// same answer: the worker computes it from the buildinfo it just wrote, and the
-// check stores it as the signature table a later run's prepare decides from.
-// It is part of the lint engine's fingerprint (`../check/lint-groups.ts`).
-// See research/2026-10-17-global-lint-keyed-on-what-it-reads.md.
+// So a body-only edit moves nothing; an exported-type change moves the files
+// that import the changed file directly, and the files that import a file whose
+// contract NAMES it (transitively) — the chain stops at an importer whose
+// contract does not mention it, where the source graph would keep going through
+// every body. Never wider than a closure over `referencedMap` (a contract only
+// names files its source can reach), never narrower than tsc's own
+// re-check (direct referencers plus the re-export chain). An augmentation is
+// global because every importer of the augmented module sees it without naming
+// the augmenting file. O(V + E).
+//
+// PURE — buildinfo graph and contract edges in, `rel → typeFp` out — because
+// two processes need the same answer: the worker computes it from the buildinfo
+// it just wrote, and the check stores it as the signature table a later run's
+// prepare decides from. It keys only the typed parts (`../check/lint-groups.ts`,
+// the typed engine). See research/2026-10-17-global-lint-keyed-on-what-it-reads.md
+// and research/2026-10-18-global-typed-lint-key-stops-at-contracts.md.
 
 import { createHash } from "crypto";
 import { relative, resolve } from "path";
@@ -54,11 +66,11 @@ export type TypeFingerprints =
   | { kind: "unreadable"; why: string };
 
 /**
- * The result key of a part of a file's lint result that reads types: the typed
- * rule group (`LINT_GROUP_TYPED`) or a directive file's whole result
- * (`LINT_GROUP_ALL`). `partFp` is the rules' fingerprint, `typeFp` the file's
- * type fingerprint. Shortened like a group fingerprint: a store entry holds a
- * handful of these, and 64 bits keeps a collision among them out of reach.
+ * The result key of a part of a file's lint result that reads types: a typed
+ * rule group's part, or a directive file's whole result (`LINT_GROUP_ALL`).
+ * `partFp` is the rules' fingerprint, `typeFp` the file's type fingerprint.
+ * Shortened like a group fingerprint: a store entry holds a handful of these,
+ * and 64 bits keeps a collision among them out of reach.
  *
  * Here rather than beside the group fingerprints because the worker computes
  * it too, for a part prepare could not decide (no signature table yet).
@@ -67,16 +79,49 @@ export function typedResultKey(partFp: string, typeFp: string): string {
   return sha256(`${partFp}\n${typeFp}`).slice(0, 16);
 }
 
+/** One `.tsbuildinfo`'s program graph, 0-based, paths relative to the repo root. */
+export interface BuildInfoGraph {
+  /** Each file's repo-relative path (`../…` outside the root). */
+  paths: string[];
+  /** Each file's signature, or its version where tsc stored a placeholder. */
+  shapes: string[];
+  /** Whether tsc marked the file `affectsGlobalScope`. */
+  global: boolean[];
+  /** What each file references (`referencedMap`). */
+  succ: number[][];
+}
+
+export type BuildInfoGraphResult =
+  | { kind: "graph"; graph: BuildInfoGraph }
+  | { kind: "unreadable"; why: string };
+
+/** A file the repo owns: not a dependency, not outside the root. */
+export function isRepoPath(p: string): boolean {
+  return (
+    !p.startsWith("../") && p !== ".." && !p.split("/").includes("node_modules")
+  );
+}
+
+/**
+ * Whether a graph node needs its CONTRACT's edges supplied: a repo source file
+ * whose emitted `.d.ts` decides what its importers see. A declaration input
+ * (`.d.ts`, dependencies included) is its own contract, so its `referencedMap`
+ * edges stand; a JSON module names nothing.
+ */
+export function needsContract(path: string): boolean {
+  return (
+    isRepoPath(path) && !/\.d\.[mc]?ts$/.test(path) && !path.endsWith(".json")
+  );
+}
+
 const isFileId = (n: unknown, count: number): n is number =>
   typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= count;
 
 /**
- * Read one `.tsbuildinfo`'s program graph into type fingerprints.
+ * Read one `.tsbuildinfo`'s program graph.
  *
  * `buildInfoDir` is the directory the buildinfo was WRITTEN for (its paths are
  * relative to it), `root` the repo root the returned paths are relative to.
- * Only repo files are returned (nothing under `node_modules`, nothing outside
- * `root`); every file, dependency or not, takes part in the hash.
  *
  * The layout is TypeScript's incremental `getBuildInfo` (TS 6): `fileNames[]`;
  * `fileInfos[]` parallel to it; `fileIdsList[][]` of file ids; `referencedMap`
@@ -84,11 +129,11 @@ const isFileId = (n: unknown, count: number): n is number =>
  * returns `fileNames.length` after the push, `toFilePath(id)` reads
  * `filePaths[id - 1]`). Anything else is `unreadable`, never a guess.
  */
-export function computeTypeFingerprints(
+export function readBuildInfoGraph(
   buildInfoText: string,
   buildInfoDir: string,
   root: string,
-): TypeFingerprints {
+): BuildInfoGraphResult {
   let doc: unknown;
   try {
     doc = JSON.parse(buildInfoText);
@@ -218,31 +263,65 @@ export function computeTypeFingerprints(
       why: "buildinfo has fileIdsList but no referencedMap",
     };
   }
+  return { kind: "graph", graph: { paths, shapes, global, succ } };
+}
+
+/** A repo source file's contract, as graph edges. */
+export interface Contract {
+  /** The nodes its `.d.ts` names (resolved; dependencies may be left out). */
+  refs: readonly number[];
+  /** Its `.d.ts` augments a module (`declare module "x"`). */
+  augments: boolean;
+}
+
+/**
+ * Every repo file's type fingerprint.
+ *
+ * `contracts` must hold an entry for every node `needsContract` names — a
+ * missing one is a bug in the caller, not a file to guess about, and throws.
+ */
+export function computeTypeFingerprints(
+  graph: BuildInfoGraph,
+  contracts: ReadonlyMap<number, Contract>,
+): Map<string, string> {
+  const { paths, shapes, global, succ } = graph;
+  const n = paths.length;
+  const contractSucc: (readonly number[])[] = new Array<number[]>(n);
+  const inGlobal = global.slice();
+  for (let i = 0; i < n; i++) {
+    if (!needsContract(paths[i]!)) {
+      contractSucc[i] = succ[i]!;
+      continue;
+    }
+    const c = contracts.get(i);
+    if (c === undefined) {
+      throw new Error(
+        `type fingerprint: ${paths[i]} is a source file with no contract edges`,
+      );
+    }
+    contractSucc[i] = c.refs;
+    if (c.augments) inGlobal[i] = true;
+  }
 
   const line = (i: number): string => `${paths[i]}\0${shapes[i]}`;
   const globalFp = sha256(
     paths
       .map((_, i) => i)
-      .filter((i) => global[i])
+      .filter((i) => inGlobal[i])
       .map(line)
       .sort()
       .join("\n"),
   );
 
-  const compHash = condensationHashes(n, succ, line);
+  const compHash = condensationHashes(n, contractSucc, line);
   const fps = new Map<string, string>();
   for (let i = 0; i < n; i++) {
     const p = paths[i]!;
-    if (
-      p.startsWith("../") ||
-      p === ".." ||
-      p.split("/").includes("node_modules")
-    ) {
-      continue;
-    }
-    fps.set(p, sha256(`${globalFp}\n${compHash[i]}`).slice(0, 16));
+    if (!isRepoPath(p)) continue;
+    const seen = [...new Set(succ[i]!.map((d) => compHash[d]!))].sort();
+    fps.set(p, sha256(`${globalFp}\n${seen.join("\n")}`).slice(0, 16));
   }
-  return { kind: "fps", fps };
+  return fps;
 }
 
 /**
@@ -254,7 +333,7 @@ export function computeTypeFingerprints(
  */
 function condensationHashes(
   n: number,
-  succ: readonly number[][],
+  succ: readonly (readonly number[])[],
   line: (i: number) => string,
 ): string[] {
   const index = new Int32Array(n).fill(-1);

@@ -88,9 +88,31 @@ export const typeFpTablesDir = defineDataDir({
   reclaim: { kind: "safe" },
 });
 
+/**
+ * The contract-refs store: per (file, signature), the module specifiers the
+ * file's emitted `.d.ts` names — the edges of the declaration graph the type
+ * fingerprint walks. tsc emits only the files it re-checked; this is what lets
+ * every other file's contract edges be known without emitting it again.
+ *
+ * Content-addressed (a signature is the hash of the `.d.ts` text), host-global,
+ * and its own store: one small entry per file API version, aged independently
+ * of the lint results.
+ *
+ * @see plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/shared/contract-refs-store.ts
+ */
+export const contractRefsDir = defineDataDir({
+  kind: "cache",
+  name: "type-check-contract-refs",
+  owner: "framework/tooling/checks/type-check",
+  description:
+    "Per (file, signature) module specifiers its emitted .d.ts names, host-global so the type fingerprint knows every file's contract edges without re-emitting it",
+  reclaim: { kind: "safe" },
+});
+
 export default [
   lintResultsV2Dir,
   retiredLintResultsDir,
   programPassDir,
   typeFpTablesDir,
+  contractRefsDir,
 ];

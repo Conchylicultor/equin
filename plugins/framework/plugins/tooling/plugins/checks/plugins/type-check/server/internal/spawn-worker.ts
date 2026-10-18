@@ -84,9 +84,11 @@ export async function spawnTypeCheckWorker(opts: {
   tsconfigPath: string;
   buildInfoPath: string;
   lintFiles: TypeCheckWorkerJob["lintFiles"];
+  typeFps: TypeCheckWorkerJob["typeFps"];
   grant: Grant;
 }): Promise<TypeCheckWorkerRun> {
-  const { root, name, tsconfigPath, buildInfoPath, lintFiles, grant } = opts;
+  const { root, name, tsconfigPath, buildInfoPath, lintFiles, typeFps, grant } =
+    opts;
   const queuedAt = performance.now();
   return typeCheckWorkerPool.run(
     (slot) => {
@@ -96,7 +98,14 @@ export async function spawnTypeCheckWorker(opts: {
           ...(await spawnWorker({
             root,
             name,
-            job: { root, name, tsconfigPath, buildInfoPath, lintFiles },
+            job: {
+              root,
+              name,
+              tsconfigPath,
+              buildInfoPath,
+              lintFiles,
+              typeFps,
+            },
             slot,
           })),
           slotWaitMs,

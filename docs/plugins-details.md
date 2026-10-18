@@ -24054,16 +24054,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `TypeCheckWorkerJob`
                   - `TypeCheckWorkerResult`
                   - `TypedDecision`
-                  - `TypedOutcome`
+                  - `TypedPartFp`
+                  - `TypedPartOutcome`
                   - `TypeFpTable`
                 - Exports (values):
                   - `LINT_GROUP_ALL`
                   - `LINT_GROUP_BASE`
-                  - `LINT_GROUP_TYPED`
                   - `TYPE_CHECK_WORKER_PEAK_BYTES`
                   - `TYPE_CHECK_WORKER_UNITS`
               - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
+                - Uses tokens:
+                  - `ui/tokens/shadow --shadow`
+                  - `ui/tokens/shape --spacing`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses: 89 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
@@ -47074,10 +47076,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 65 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 66 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×27
               - `primitives` ×17
-              - `framework` ×4
+              - `framework` ×5
               - `ui` ×4
               - `apps-core` ×2
               - `page` ×2

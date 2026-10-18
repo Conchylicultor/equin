@@ -141,7 +141,7 @@ test(
         syntactic: everyGroup,
         typed: {
           kind: "deferred" as const,
-          fp: expect.any(String) as string,
+          parts: expect.any(Array) as { group: string; fp: string }[],
           known: [],
         },
       });

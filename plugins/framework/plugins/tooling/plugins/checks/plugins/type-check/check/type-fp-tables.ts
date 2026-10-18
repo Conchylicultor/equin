@@ -24,7 +24,7 @@
 import { createHash } from "crypto";
 import { z } from "zod";
 import { typeFpTablesDir } from "../data-dirs";
-import { openPassSet, type PassSetBounds } from "./pass-set";
+import { openPassSet, type PassSetBounds } from "../shared/pass-set";
 
 /** A type fingerprint's length (`computeTypeFingerprints`: 16 hex digits). */
 const FP_LENGTH = 16;

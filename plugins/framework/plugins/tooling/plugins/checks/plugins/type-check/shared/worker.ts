@@ -34,17 +34,28 @@ import {
 // implements them. Through the barrel, not the file: a deep import into the
 // plugin's own `core/` is what the browser build cannot inline.
 import {
+  LINT_GROUP_ALL,
   LINT_GROUP_BASE,
   type LintFileResult,
   type RawLintMessage,
-  type TypedDecision,
-  type TypedOutcome,
+  type TypedPartOutcome,
   type TypeFpTable,
   type TypeCheckWorkerJob as Job,
   type TypeCheckWorkerResult as Result,
 } from "../core";
+import {
+  canonical,
+  contractEdges,
+  contractSpecifiers,
+  type ContractSpecifiers,
+} from "./contract-refs";
+import { openContractRefsStore } from "./contract-refs-store";
 import { signatureEmitOptions } from "./emit-options";
-import { computeTypeFingerprints, typedResultKey } from "./type-fingerprint";
+import {
+  computeTypeFingerprints,
+  readBuildInfoGraph,
+  typedResultKey,
+} from "./type-fingerprint";
 
 function rel(root: string, abs: string): string {
   return relative(root, abs).split("\\").join("/");
@@ -73,7 +84,10 @@ function formatTscDiagnostic(root: string, d: ts.Diagnostic): string {
  */
 function readTypeFps(
   job: Job,
+  program: ts.Program,
+  options: ts.CompilerOptions,
   written: string | undefined,
+  emitted: ReadonlyMap<string, ContractSpecifiers>,
   rootNames: readonly string[],
 ): TypeFpTable {
   let text = written;
@@ -83,22 +97,35 @@ function readTypeFps(
     }
     text = readFileSync(job.buildInfoPath, "utf8");
   }
-  const r = computeTypeFingerprints(text, dirname(job.buildInfoPath), job.root);
-  if (r.kind !== "fps") return { kind: "unavailable", why: r.why };
-  // tsc's own identity for a path: lower-cased where the filesystem ignores case.
-  const canonical = (p: string): string =>
-    ts.sys.useCaseSensitiveFileNames ? p : p.toLowerCase();
+  const r = readBuildInfoGraph(text, dirname(job.buildInfoPath), job.root);
+  if (r.kind !== "graph") return { kind: "unavailable", why: r.why };
+  const { contracts, summary } = contractEdges(
+    job.root,
+    program,
+    options,
+    r.graph,
+    emitted,
+    openContractRefsStore(),
+  );
+  const computed = computeTypeFingerprints(r.graph, contracts);
   const onDisk = new Map<string, string>();
   for (const name of rootNames) {
     const p = rel(job.root, name);
     onDisk.set(canonical(p), p);
   }
   const fps: Record<string, string> = {};
-  for (const [p, fp] of r.fps) fps[onDisk.get(canonical(p)) ?? p] = fp;
-  return { kind: "table", fps };
+  for (const [p, fp] of computed) fps[onDisk.get(canonical(p)) ?? p] = fp;
+  return { kind: "table", fps, contracts: summary };
+}
+
+/** This process's CPU seconds so far (user + system). */
+function cpuSeconds(): number {
+  const { user, system } = process.cpuUsage();
+  return (user + system) / 1e6;
 }
 
 async function run(job: Job): Promise<Result> {
+  const cpuStart = cpuSeconds();
   // 1. Parse the tsconfig (glob resolution only — no type-check yet).
   const cfg = ts.readConfigFile(job.tsconfigPath, ts.sys.readFile);
   if (cfg.error) {
@@ -107,6 +134,7 @@ async function run(job: Job): Promise<Result> {
       tscErrors: formatTscDiagnostic(job.root, cfg.error),
       lint: [],
       typeFps: { kind: "unavailable", why: "the tsconfig did not parse" },
+      phaseCpuSeconds: { tsc: cpuSeconds() - cpuStart, typeFps: 0, lint: 0 },
     };
   }
   const parsed = ts.parseJsonConfigFileContent(
@@ -122,9 +150,14 @@ async function run(job: Job): Promise<Result> {
   //    The options emit declarations, so every file carries a real signature,
   //    and order types stably, so that signature is a function of the code
   //    (`./emit-options.ts`).
+  const options = signatureEmitOptions(
+    parsed.options,
+    job.root,
+    job.buildInfoPath,
+  );
   const builder = ts.createIncrementalProgram({
     rootNames: parsed.fileNames,
-    options: signatureEmitOptions(parsed.options, job.root, job.buildInfoPath),
+    options,
   });
   const diags: ts.Diagnostic[] = [
     ...builder.getConfigFileParsingDiagnostics(),
@@ -139,15 +172,22 @@ async function run(job: Job): Promise<Result> {
     ...builder.getDeclarationDiagnostics(),
   ];
   // Emit through a writer that persists ONLY the .tsbuildinfo. The .d.ts text
-  // is computed (that is what fills in the signatures) and dropped. The
+  // is computed (that is what fills in the signatures) and dropped, after
+  // reading off what it names — its contract edges (`./contract-refs.ts`). The
   // buildinfo text is also KEPT: it is what the type fingerprints are read off.
   let buildInfoText: string | undefined;
+  const emitted = new Map<string, ContractSpecifiers>();
   const emitResult = builder.emit(
     undefined,
-    (fileName, text, writeByteOrderMark) => {
+    (fileName, text, writeByteOrderMark, _onError, sourceFiles) => {
       if (fileName.endsWith(".tsbuildinfo")) {
         ts.sys.writeFile(fileName, text, writeByteOrderMark);
         buildInfoText = text;
+      } else if (/\.d\.[mc]?ts$/.test(fileName) && sourceFiles?.length === 1) {
+        emitted.set(
+          canonical(rel(job.root, sourceFiles[0]!.fileName)),
+          contractSpecifiers(text),
+        );
       }
     },
     undefined,
@@ -160,13 +200,25 @@ async function run(job: Job): Promise<Result> {
     .join("\n");
 
   // 3. The type fingerprints of the program just built
-  //    (`./type-fingerprint.ts`), read off the buildinfo the emit wrote. tsc
-  //    writes one only when its state changed, and an unchanged program left
-  //    the one on disk describing exactly this program — so that is the
-  //    fallback, not a guess. A shape we cannot read is `unavailable`: fatal
-  //    below only if a job needs it, so the build's fast path (no lint files)
-  //    never fails over a table nobody asked for.
-  const typeFps = readTypeFps(job, buildInfoText, parsed.fileNames);
+  //    (`./type-fingerprint.ts`), read off the buildinfo the emit wrote and
+  //    every source file's contract edges. tsc writes a buildinfo only when its
+  //    state changed, and an unchanged program left the one on disk describing
+  //    exactly this program — so that is the fallback, not a guess. A shape we
+  //    cannot read is `unavailable`: fatal below only if a job needs it, so the
+  //    build's fast path (no lint files) never fails over a table nobody asked
+  //    for.
+  const program = builder.getProgram();
+  const cpuTsc = cpuSeconds();
+  const typeFps: TypeFpTable = job.typeFps
+    ? readTypeFps(
+        job,
+        program,
+        options,
+        buildInfoText,
+        emitted,
+        parsed.fileNames,
+      )
+    : { kind: "unavailable", why: "the job did not ask for them" };
 
   // 4. Lint, in up to three passes per file, each with its own config:
   //
@@ -174,17 +226,16 @@ async function run(job: Job): Promise<Result> {
   //      Only rules that read nothing but the text are registered (`kind:
   //      "syntactic"`), and a type-aware rule misdeclared as syntactic throws
   //      in `getParserServices` instead of storing an answer that read types;
-  //    - the TYPED part — every type-aware rule, whatever group it is in —
-  //      with the program, when its key is not already stored;
+  //    - the stale TYPED parts — the type-aware rules of each group whose part
+  //      is not already stored — in one pass with the program;
   //    - a directive file WHOLE, every rule with the program.
   //
   //    Messages come back RAW — before exemptions, which the check applies when
   //    it reads them — and split by part, so each lands under its own key.
+  const cpuTypeFps = cpuSeconds();
   const lint: LintFileResult[] = [];
   if (job.lintFiles.length > 0) {
-    const program = builder.getProgram();
     const contributions = await loadLintContributions(job.root);
-    const allContributions = new Set(contributions.map((c) => c.relPath));
     // A rule id's namespace is its contribution's `name`; anything else (the
     // config builder's own typescript-eslint / react-hooks / core rules) and
     // a null id (the linter itself: a parse failure) belong to the base group.
@@ -197,42 +248,35 @@ async function run(job: Job): Promise<Result> {
       const ns = slash < 0 ? "" : ruleId.slice(0, slash);
       return groupOfNamespace.get(ns) ?? LINT_GROUP_BASE;
     };
-    const syntacticConfigs = new Map<string, Linter.Config[]>();
-    const syntacticConfig = async (
-      groups: string[],
+    // One config per (kind, group set), built on first use: a run sees a
+    // handful of distinct sets (every group on a cold run, one after a rule
+    // edit).
+    const configs = new Map<string, Promise<Linter.Config[]>>();
+    const configFor = (
+      kind: "syntactic" | "type-aware",
+      groups: readonly string[],
     ): Promise<Linter.Config[]> => {
-      const key = groups.join("\n");
-      let config = syntacticConfigs.get(key);
+      const key = `${kind}\n${groups.join("\n")}`;
+      let config = configs.get(key);
       if (config === undefined) {
-        config = await buildLintConfig({
+        config = buildLintConfig({
           root: job.root,
-          typeSource: { none: true },
+          typeSource:
+            kind === "syntactic" ? { none: true } : { programs: [program] },
           exemptions: "report",
           rules: {
             base: groups.includes(LINT_GROUP_BASE),
             contributions: new Set(groups),
-            kind: "syntactic",
+            kind,
           },
         });
-        syntacticConfigs.set(key, config);
+        configs.set(key, config);
       }
       return config;
     };
-    let typedConfig: Linter.Config[] | undefined;
-    let wholeConfig: Linter.Config[] | undefined;
-    const typedOnly = async (): Promise<Linter.Config[]> =>
-      (typedConfig ??= await buildLintConfig({
-        root: job.root,
-        typeSource: { programs: [program] },
-        exemptions: "report",
-        rules: {
-          base: true,
-          contributions: allContributions,
-          kind: "type-aware",
-        },
-      }));
-    const whole = async (): Promise<Linter.Config[]> =>
-      (wholeConfig ??= await buildLintConfig({
+    let wholeConfig: Promise<Linter.Config[]> | undefined;
+    const whole = (): Promise<Linter.Config[]> =>
+      (wholeConfig ??= buildLintConfig({
         root: job.root,
         typeSource: { programs: [program] },
         exemptions: "report",
@@ -255,13 +299,15 @@ async function run(job: Job): Promise<Result> {
           column: m.column,
           message: m.message,
         }));
-    // Where the typed part's result goes, and whether it must run: decided
-    // by prepare (`run`), or here, now that the type fingerprints exist.
-    const typedKey = (
+    // Which typed parts run and under which key: decided by prepare, or here,
+    // now that the type fingerprints exist.
+    const typedParts = (
       file: string,
-      typed: Exclude<TypedDecision, { kind: "fresh" }>,
-    ): { run: boolean; key: string } => {
-      if (typed.kind === "run") return { run: true, key: typed.key };
+      typed: Job["lintFiles"][number]["typed"],
+    ): { group: string; key: string; run: boolean }[] => {
+      if (typed.kind === "decided") {
+        return typed.stale.map((p) => ({ ...p, run: true }));
+      }
       if (typeFps.kind !== "table") {
         throw new Error(
           `type-check worker: ${rel(job.root, file)} needs its type fingerprint, and the program's could not be read: ${typeFps.why}`,
@@ -273,8 +319,10 @@ async function run(job: Job): Promise<Result> {
           `type-check worker: ${rel(job.root, file)} is not in the program it was sent to be linted under`,
         );
       }
-      const key = typedResultKey(typed.fp, typeFp);
-      return { run: !typed.known.includes(key), key };
+      return typed.parts.map(({ group, fp }) => {
+        const key = typedResultKey(fp, typeFp);
+        return { group, key, run: !typed.known.includes(key) };
+      });
     };
 
     for (const fileJob of job.lintFiles) {
@@ -283,17 +331,30 @@ async function run(job: Job): Promise<Result> {
       if (code === undefined) {
         throw new Error(`type-check worker: cannot read ${file}`);
       }
+      const parts = typedParts(file, fileJob.typed);
+      const typed: TypedPartOutcome[] = parts
+        .filter((p) => !p.run)
+        .map(({ group, key }) => ({ group, kind: "cached", key }));
+      const toRun = parts.filter((p) => p.run);
+
       if (fileJob.unit === "whole") {
-        const { run, key } = typedKey(file, fileJob.typed);
-        lint.push({
-          file,
-          unit: "whole",
-          typed: run
-            ? { kind: "ran", key, messages: verify(file, code, await whole()) }
-            : { kind: "cached", key },
-        });
+        for (const { group, key } of toRun) {
+          if (group !== LINT_GROUP_ALL) {
+            throw new Error(
+              `type-check worker: directive file ${rel(job.root, file)} was sent typed part "${group}"`,
+            );
+          }
+          typed.push({
+            group,
+            kind: "ran",
+            key,
+            messages: verify(file, code, await whole()),
+          });
+        }
+        lint.push({ file, unit: "whole", syntactic: {}, typed });
         continue;
       }
+
       const syntactic: Record<string, RawLintMessage[]> = {};
       if (fileJob.syntactic.length > 0) {
         for (const g of fileJob.syntactic) syntactic[g] = [];
@@ -303,35 +364,59 @@ async function run(job: Job): Promise<Result> {
         for (const m of verify(
           file,
           code,
-          await syntacticConfig(fileJob.syntactic),
+          await configFor("syntactic", fileJob.syntactic),
         )) {
           syntactic[groupOf(m.ruleId)]?.push(m);
         }
       }
-      let typed: TypedOutcome = { kind: "fresh" };
-      if (fileJob.typed.kind !== "fresh") {
-        const { run, key } = typedKey(file, fileJob.typed);
-        typed = run
-          ? {
-              kind: "ran",
-              key,
-              // Null-id messages (a parse failure) belong to the syntactic
-              // base part: the same text produced them there, run or stored.
-              messages: verify(file, code, await typedOnly()).filter(
-                (m) => m.ruleId !== null,
-              ),
-            }
-          : { kind: "cached", key };
+      if (toRun.length > 0) {
+        const byGroup = new Map<string, RawLintMessage[]>(
+          toRun.map((p) => [p.group, []]),
+        );
+        const messages = verify(
+          file,
+          code,
+          await configFor(
+            "type-aware",
+            toRun.map((p) => p.group),
+          ),
+        );
+        for (const m of messages) {
+          // Null-id messages (a parse failure) belong to the syntactic base
+          // part: the same text produced them there, run or stored.
+          if (m.ruleId === null) continue;
+          const bucket = byGroup.get(groupOf(m.ruleId));
+          if (bucket === undefined) {
+            throw new Error(
+              `type-check worker: ${m.ruleId} reported on ${rel(job.root, file)} from a typed part that was not run`,
+            );
+          }
+          bucket.push(m);
+        }
+        for (const { group, key } of toRun) {
+          typed.push({
+            group,
+            kind: "ran",
+            key,
+            messages: byGroup.get(group)!,
+          });
+        }
       }
       lint.push({ file, unit: "split", syntactic, typed });
     }
   }
 
+  const cpuEnd = cpuSeconds();
   return {
     name: job.name,
     tscErrors,
     lint,
     typeFps,
+    phaseCpuSeconds: {
+      tsc: cpuTsc - cpuStart,
+      typeFps: cpuTypeFps - cpuTsc,
+      lint: cpuEnd - cpuTypeFps,
+    },
   };
 }
 

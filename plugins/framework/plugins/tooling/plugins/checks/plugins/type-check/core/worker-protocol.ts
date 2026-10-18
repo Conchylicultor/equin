@@ -21,55 +21,46 @@ export const LINT_GROUP_BASE = "(base)";
  */
 export const LINT_GROUP_ALL = "(all)";
 
-/**
- * Every TYPE-AWARE rule at once, as one result: the part of a file's lint that
- * reads the program. Its key folds in the file's type fingerprint
- * (`../shared/type-fingerprint.ts`), so it goes stale when a declaration the
- * file can see changes — where every other group's result is a function of the
- * file's text alone.
- */
-export const LINT_GROUP_TYPED = "(types)";
+/** One typed part to key: its rule group, and the rules half of its key. */
+export interface TypedPartFp {
+  group: string;
+  fp: string;
+}
 
 /**
- * Whether a file's typed part (its `LINT_GROUP_TYPED` result, or a directive
- * file's whole `LINT_GROUP_ALL` result) must run.
+ * Which of a file's typed parts must run: its typed rule groups' parts (a
+ * split file), or its whole result (a directive file, one part under
+ * `LINT_GROUP_ALL`).
  *
- * - `fresh` — prepare found the result under its key: nothing to run.
- * - `run` — prepare computed the key from a signature table and found no
- *   result; `key` is where the fresh one goes.
- * - `deferred` — no signature table for this program, so the key is not known
- *   until the worker has the program's type fingerprints: the worker computes
- *   `typedResultKey(fp, typeFp)` and runs the part iff that key is not among
- *   `known` (the file's stored typed keys, a handful).
+ * - `decided` — prepare computed every key from a signature table; `stale` are
+ *   the parts with no stored result, each with the key its fresh one goes
+ *   under (empty: nothing typed to run).
+ * - `deferred` — no signature table for this program, so no key is known until
+ *   the worker has the program's type fingerprints: for each part it computes
+ *   `typedResultKey(fp, typeFp)` and runs it iff that key is not among `known`
+ *   (the file's stored typed keys, a few per part).
  */
 export type TypedDecision =
-  | { kind: "fresh" }
-  | { kind: "run"; key: string }
-  | { kind: "deferred"; fp: string; known: string[] };
+  | { kind: "decided"; stale: { group: string; key: string }[] }
+  | { kind: "deferred"; parts: TypedPartFp[]; known: string[] };
 
 /**
  * One file to lint, and which of its parts to run.
  *
  * Two units, because a directive file cannot be split: whether a disable
- * directive is unused depends on every rule, so its whole result is one part,
- * keyed on the types too. Every other file splits into its syntactic groups —
- * each a function of the file's text, run with no program — and its one typed
- * part.
+ * directive is unused depends on every rule, so its whole result is one part
+ * (`LINT_GROUP_ALL`), keyed on the types too. Every other file splits into its
+ * syntactic groups — each a function of the file's text, run with no program —
+ * and one typed part per type-aware group.
  */
-export type LintFileJob =
-  | {
-      /** Absolute path. */
-      file: string;
-      unit: "split";
-      /** The syntactic groups whose stored result is stale (possibly none). */
-      syntactic: string[];
-      typed: TypedDecision;
-    }
-  | {
-      file: string;
-      unit: "whole";
-      typed: Exclude<TypedDecision, { kind: "fresh" }>;
-    };
+export interface LintFileJob {
+  /** Absolute path. */
+  file: string;
+  unit: "split" | "whole";
+  /** The syntactic groups whose stored result is stale (none for `whole`). */
+  syntactic: string[];
+  typed: TypedDecision;
+}
 
 /** One error-level (or fatal) lint message, before any exemption applies. */
 export interface RawLintMessage {
@@ -82,37 +73,41 @@ export interface RawLintMessage {
 }
 
 /**
- * What became of a job's typed part. `cached`: the worker found the deferred
- * key among `known`, so the stored result under `key` stands. `ran`: fresh
- * messages, to be stored under `key`.
+ * What became of one typed part the job named (a `decided` stale part, or any
+ * `deferred` one). `cached`: the worker found the deferred key among `known`,
+ * so the stored result under `key` stands. `ran`: fresh messages, to be stored
+ * under `key`.
  */
-export type TypedOutcome =
-  | { kind: "fresh" }
-  | { kind: "cached"; key: string }
-  | { kind: "ran"; key: string; messages: RawLintMessage[] };
+export type TypedPartOutcome =
+  | { group: string; kind: "cached"; key: string }
+  | { group: string; kind: "ran"; key: string; messages: RawLintMessage[] };
 
 /** One job's results, part by part. */
-export type LintFileResult =
-  | {
-      /** Absolute path, as the job named it. */
-      file: string;
-      unit: "split";
-      /** Every syntactic group the job named, each with its messages (possibly none). */
-      syntactic: Record<string, RawLintMessage[]>;
-      typed: TypedOutcome;
-    }
-  | {
-      file: string;
-      unit: "whole";
-      typed: Exclude<TypedOutcome, { kind: "fresh" }>;
-    };
+export interface LintFileResult {
+  /** Absolute path, as the job named it. */
+  file: string;
+  unit: "split" | "whole";
+  /** Every syntactic group the job named, each with its messages (possibly none). */
+  syntactic: Record<string, RawLintMessage[]>;
+  /** One per typed part the job named. */
+  typed: TypedPartOutcome[];
+}
 
 /**
  * The program's type fingerprints as the worker read them off the buildinfo it
  * wrote, by repo-relative path — or why it could not.
  */
 export type TypeFpTable =
-  | { kind: "table"; fps: Record<string, string> }
+  | {
+      kind: "table";
+      fps: Record<string, string>;
+      /**
+       * Where the contract edges came from, for the transcript: how many source
+       * files, how many the store answered, how many the program's own emit,
+       * how many had to be emitted alone (a store miss), and what it cost.
+       */
+      contracts: string;
+    }
   | { kind: "unavailable"; why: string };
 
 /** The job file handed to the worker as `argv[2]` (see `../shared/worker.ts`). */
@@ -123,6 +118,13 @@ export interface TypeCheckWorkerJob {
   buildInfoPath: string;
   /** The files to lint under this program — only their stale parts. */
   lintFiles: LintFileJob[];
+  /**
+   * Whether to compute the program's type fingerprints (and so every source
+   * file's contract edges). The check always does — it records them as the
+   * signature table; the build's type-check-only fast path never reads them.
+   * Implied by a deferred typed part, which cannot be decided without them.
+   */
+  typeFps: boolean;
 }
 
 /** The worker's JSON stdout contract (see `../shared/worker.ts`). */
@@ -137,4 +139,11 @@ export interface TypeCheckWorkerResult {
    * decides every typed part before spawning anything.
    */
   typeFps: TypeFpTable;
+  /**
+   * CPU seconds the worker spent in each phase: building and checking the
+   * program (diagnostics and emit), computing the type fingerprints (contract
+   * edges included), and linting. What tells a run whose cost is tsc's
+   * re-check from one whose cost is lint.
+   */
+  phaseCpuSeconds: { tsc: number; typeFps: number; lint: number };
 }

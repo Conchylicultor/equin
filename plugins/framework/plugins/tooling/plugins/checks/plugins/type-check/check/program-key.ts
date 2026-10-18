@@ -54,7 +54,7 @@ import {
 import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { programPassDir } from "../data-dirs";
 import { findFiles, type TreeListing } from "./fingerprint";
-import { openPassSet, type PassSetBounds } from "./pass-set";
+import { openPassSet, type PassSetBounds } from "../shared/pass-set";
 
 // Entries are per (program name, program key) — one or two per run, against
 // the lint result store's thousands — so the count bound is a formality and the
