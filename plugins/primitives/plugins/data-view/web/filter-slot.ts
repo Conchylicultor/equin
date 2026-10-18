@@ -1,5 +1,8 @@
 import { useCallback } from "react";
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  defineSlot,
+  useCompanionLookup,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { resolveTypeChain } from "@plugins/fields/core";
 import type { FilterOperatorSet } from "../core";
 import { useFieldIdentities } from "./internal/use-field-identities";
@@ -22,17 +25,12 @@ export function useResolveOperatorSet(): (
   typeId: string,
 ) => FilterOperatorSet | undefined {
   const identities = useFieldIdentities();
-  const contributions = Filter.useContributions();
+  const lookup = useCompanionLookup(Filter, Filter.useContributions());
   return useCallback(
-    (typeId) => {
-      const chain = resolveTypeChain(typeId, identities);
-      for (const id of chain) {
-        const c = contributions.find((x) => x.match === id);
-        if (c) return c as unknown as FilterOperatorSet;
-      }
-      return undefined;
-    },
-    [identities, contributions],
+    (typeId) =>
+      lookup(resolveTypeChain(typeId, identities)) as unknown as
+        FilterOperatorSet | undefined,
+    [identities, lookup],
   );
 }
 

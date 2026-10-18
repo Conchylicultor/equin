@@ -1,6 +1,9 @@
 import { topoSortPlugins } from "@plugins/framework/plugins/plugin-loader/core";
 import { declarePluginSlots } from "@plugins/framework/plugins/slot-declaration/core";
-import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import type {
+  SlotHandle,
+  SlotNamingEntry,
+} from "@plugins/framework/plugins/slot-declaration/core";
 import type { Contribution, LoadedPlugin } from "./types";
 
 /**
@@ -28,6 +31,8 @@ export interface PluginRegistryReader {
   subscribe(slot: SlotHandle, listener: () => void): () => void;
   /** Replace the whole plugin set (`PluginProvider`'s `plugins` prop). */
   replace(plugins: readonly LoadedPlugin[]): void;
+  /** Every slot the loaded plugins declare, as the last declaration pass named them. */
+  declared(): readonly SlotNamingEntry[];
 }
 
 /** Shared "no contributions" list, so an empty slot's snapshot is stable. */
@@ -91,6 +96,7 @@ export function readerOf(registry: PluginRegistry): PluginRegistryReader {
 export function createPluginRegistry(): PluginRegistry {
   let plugins: readonly LoadedPlugin[] = [];
   let bySlot = new Map<SlotHandle, readonly Contribution[]>();
+  let declared: readonly SlotNamingEntry[] = [];
   const listeners = new Map<SlotHandle, Set<() => void>>();
   // Each contribution is stamped ONCE per plugin, so its identity survives
   // every later append — which is what lets an unchanged slot keep its array.
@@ -128,7 +134,7 @@ export function createPluginRegistry(): PluginRegistry {
     // `"registry"`: `ordered` IS the registry — the plugin set this browser
     // loaded — so a slot this pass does not name is one no loaded plugin
     // declares, not one some disabled plugin owns off-screen.
-    declarePluginSlots(ordered, "registry");
+    declared = declarePluginSlots(ordered, "registry").declarations();
 
     // Every slot is re-derived, not only the batch's: a plugin's contributions
     // array may be rewritten by the declaration pass above (reorder's per-slot
@@ -188,6 +194,7 @@ export function createPluginRegistry(): PluginRegistry {
       };
     },
     replace,
+    declared: () => declared,
   });
   return registry;
 }

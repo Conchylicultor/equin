@@ -86,6 +86,10 @@ export const CLIENT_REPORT_SOURCES = [
   // A Core.Boot task failed or ran past App's boot deadline (web-core's
   // boot-tasks): the page is showing its boot waiting / error screen.
   "client-boot-task",
+  // A companion the repo provides is missing from the running bundle once
+  // every plugin loaded (web-sdk's `missingCompanions`): its owner degrades
+  // with no error of its own.
+  "client-missing-companion",
   "plugin-load",
   "client-storage",
 ] as const;

@@ -23,6 +23,8 @@ export interface ResolvedViewInstance<T extends ViewTypeMeta = ViewTypeMeta> {
  *     its source returns — mirroring the orphan view-type hazard below), or
  *   - no view-type is registered for `view.type` (an *orphan* row — a renamed /
  *     removed view-type id, same documented hazard as reorder node-type ids).
+ *     The entry's `onOrphanType` hears of it first, and may throw: a renderer
+ *     the repo provides but the bundle lacks is not an orphan.
  *
  * The entry's `views` whitelist is deliberately NOT applied here — it gates
  * the add menu only, never authored rows (matching the single-source `views`
@@ -43,7 +45,10 @@ export function buildInstanceFromRow<T extends ViewTypeMeta>(
   const entry = entries.find((e) => e.id === row.source);
   if (!entry) return null;
   const viewType = entry.contributions.find((c) => c.type === row.view.type);
-  if (!viewType) return null;
+  if (!viewType) {
+    entry.onOrphanType?.(row.view.type);
+    return null;
+  }
   const instance: ViewInstance = {
     id: row.id,
     name: row.name,

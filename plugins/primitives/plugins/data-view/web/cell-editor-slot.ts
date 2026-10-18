@@ -1,7 +1,7 @@
 import { useCallback, type ReactNode } from "react";
 import {
+  useCompanionLookup,
   useRawContributions,
-  type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
 import {
   defineDispatchSlot,
@@ -39,29 +39,27 @@ export function useResolveCellEditor(): (
   args: ResolveCellEditorArgs,
 ) => ReactNode | undefined {
   const identities = useFieldIdentities();
-  const raw0 = useRawContributions(CellEditor);
+  const lookup = useCompanionLookup(
+    CellEditor,
+    useRawContributions(CellEditor),
+  );
   return useCallback(
     ({ field, value, values, raw, onCommit, onCommitValues, onCancel }) => {
-      const chain = resolveTypeChain(field.type ?? "text", identities);
-      for (const typeId of chain) {
-        const contribution = raw0.find(
-          (c) => (c as { match?: unknown }).match === typeId,
-        ) as Contribution | undefined;
-        if (contribution) {
-          return renderIsolated(CellEditor, contribution, {
-            value,
-            values,
-            field,
-            raw,
-            onCommit,
-            onCommitValues,
-            onCancel,
-          } satisfies CellEditorProps);
-        }
-      }
-      return undefined;
+      const contribution = lookup(
+        resolveTypeChain(field.type ?? "text", identities),
+      );
+      if (!contribution) return undefined;
+      return renderIsolated(CellEditor, contribution, {
+        value,
+        values,
+        field,
+        raw,
+        onCommit,
+        onCommitValues,
+        onCancel,
+      } satisfies CellEditorProps);
     },
-    [raw0, identities],
+    [lookup, identities],
   );
 }
 

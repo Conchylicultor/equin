@@ -207,7 +207,11 @@ to do.
 **Orphan hazard.** A config row whose `view.type` references a renamed/removed
 view-type **fail-soft skips** in `buildInstanceFromRow` — the same documented hazard as reorder
 node-type ids. The row stays in the config; it just isn't rendered until its
-view-type returns.
+view-type returns. A type whose renderer the repo DOES provide (a keyed
+companion of `View`) but the bundle lacks is not an orphan: it throws
+`MissingCompanionError` (`onOrphanType` → `useCompanionLookup`), and so does a
+cell, editor, filter, codec, column config or grouping lookup that misses a
+provided field type — a missing companion is never a quiet fallback.
 
 That skip is only safe while nothing the USER can click puts a row into it: the
 settings popover's type picker and the add menu list the same usable types

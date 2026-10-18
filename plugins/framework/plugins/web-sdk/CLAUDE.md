@@ -350,6 +350,8 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `markDeferredLoadComplete`
     - `markDeferredPluginsFailed`
     - `markDeferredPluginsLoaded`
+    - `MissingCompanionError`
+    - `missingCompanions`
     - `partitionWebEntries`
     - `pluginLoadReportSink`
     - `PluginProvider`
@@ -357,6 +359,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `slots`
     - `subscribeDeferredLoadState`
     - `UNSAFE_unsealSlotComponent`
+    - `useCompanionLookup`
     - `useComposition`
     - `useDeferredLoadComplete`
     - `useFailedPluginPaths`

@@ -8,7 +8,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { BadgeVariant } from "../../core";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
-import { copiesAsOwnText } from "@plugins/primitives/plugins/dom/plugins/copy-source-text/core";
+import { copiesAsOwnText } from "@plugins/primitives/plugins/dom/plugins/copy-source-text/web";
 import type React from "react";
 
 // Re-exported so every existing `import { BadgeVariant } from ".../badge/web"`

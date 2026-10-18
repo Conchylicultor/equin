@@ -1,4 +1,7 @@
-import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  Core,
+  type PluginDefinition,
+} from "@plugins/framework/plugins/web-sdk/core";
 
 import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { Apps } from "@plugins/apps-core/web";
@@ -23,6 +26,7 @@ export default {
       badge: MailRailBadge,
     }),
     Pane.Register({ pane: mailRootPane }),
+    Core.Root({ slot: Mail.Root }),
   ],
   slots: { ...Mail, "mail-root": mailRootPane },
 } satisfies PluginDefinition;

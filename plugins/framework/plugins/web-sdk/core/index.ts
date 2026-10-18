@@ -27,6 +27,11 @@ export {
 } from "./context";
 export type { CompositionIdentity, SlotReadDetail } from "./context";
 export { createPluginRegistry } from "./registry";
+export {
+  MissingCompanionError,
+  missingCompanions,
+  useCompanionLookup,
+} from "./companions";
 export type { PluginRegistry } from "./registry";
 export type {
   PluginDefinition,

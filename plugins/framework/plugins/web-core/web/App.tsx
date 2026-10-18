@@ -8,6 +8,7 @@ import {
   markDeferredPluginsLoaded,
   markDeferredLoadComplete,
   markDeferredPluginsFailed,
+  missingCompanions,
   pluginLoadReportSink,
   UNSAFE_unsealSlotComponent,
 } from "@plugins/framework/plugins/web-sdk/core";
@@ -68,6 +69,24 @@ function bootTasksOf(plugins: LoadedPlugin[]): BootTask[] {
       .filter((c) => c._slot === Core.Boot)
       .map((c) => c as unknown as BootTask),
   );
+}
+
+// A companion the repo provides that this bundle lacks (see
+// `missingCompanions`): the capability that needs it degrades with no error of
+// its own, so this is the only signal. Same funnel as a boot problem.
+function reportMissingCompanion(message: string): void {
+  console.error(`[companions] ${message}`);
+  void report({
+    kind: "crash",
+    source: "client-missing-companion",
+    message,
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    data: {
+      errorType: "MissingCompanion",
+      stack: new Error(message).stack ?? null,
+    },
+  });
 }
 
 // A failed or overdue boot task, into the alert funnel. `report()` is a direct
@@ -382,6 +401,10 @@ export default function App() {
         "Deferred plugin tier loaded",
       );
       markDeferredLoadComplete();
+      // Every plugin has loaded or failed: a companion still absent is one the
+      // bundle lacks, and its owner is degrading silently right now.
+      for (const message of missingCompanions(registry))
+        reportMissingCompanion(message);
     })();
 
     return () => {

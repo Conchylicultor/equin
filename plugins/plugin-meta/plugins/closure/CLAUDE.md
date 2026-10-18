@@ -318,6 +318,8 @@ Run with `./singularity test plugins/plugin-meta/plugins/closure`.
     - `plugin-meta/facets/cross-refs.crossRefsFacetDef`
     - `plugin-meta/facets/slots.slotsFacetDef`
   - Exports (types):
+    - `CompanionEntry`
+    - `CompanionSlot`
     - `Composition`
     - `CompositionManifest`
     - `Edge`
@@ -334,6 +336,7 @@ Run with `./singularity test plugins/plugin-meta/plugins/closure`.
     - `UsageRule`
   - Exports (values):
     - `classifyEdges`
+    - `collectCompanionSlots`
     - `deserializeEdgeGraph`
     - `expandEntrySeeds`
     - `explainInclusion`
@@ -346,6 +349,7 @@ Run with `./singularity test plugins/plugin-meta/plugins/closure`.
     - `removalClosure`
     - `resolveComposition`
     - `serializeEdgeGraph`
+    - `slotGroupOwners`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:

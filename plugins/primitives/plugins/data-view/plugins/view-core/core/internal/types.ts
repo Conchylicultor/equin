@@ -94,6 +94,13 @@ export interface ViewSourceEntry<T extends ViewTypeMeta = ViewTypeMeta> {
   views?: string[];
   /** Code-supplied per-type options merged under each row's `view` blob. */
   viewOptions?: Record<string, unknown>;
+  /**
+   * Called for an authored row whose `view.type` no contribution renders,
+   * before that row is skipped. A surface whose view types are companions
+   * throws here when the repo provides the renderer and the bundle lacks it
+   * (data-view's `useCompanionLookup`); a type nothing provides stays a skip.
+   */
+  onOrphanType?: (type: string) => void;
 }
 
 /** A view-type the add-menu offers (capability-gated). */

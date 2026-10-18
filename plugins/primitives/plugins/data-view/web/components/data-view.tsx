@@ -35,6 +35,7 @@ import {
 } from "../internal/use-data-view-model";
 import type { DataViewShellChrome } from "../internal/body-types";
 import { useDataViewDevGuards } from "../internal/use-dev-guards";
+import { useOrphanViewTypeGuard } from "../internal/use-orphan-view-type-guard";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { CreatorsControl, hostedCreators } from "./creators-control";
 import { DataViewBody, DataViewSectionsBody } from "./data-view-body";
@@ -59,9 +60,10 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   // undefined): every config row (all source-less) resolves through it, and the
   // add menu stays the flat single-group fast path.
   const { views, viewOptions } = props;
+  const onOrphanType = useOrphanViewTypeGuard(contributions);
   const entries = useMemo<ViewSourceEntry<DataViewContribution>[]>(
-    () => [{ contributions, views, viewOptions }],
-    [contributions, views, viewOptions],
+    () => [{ contributions, views, viewOptions, onOrphanType }],
+    [contributions, views, viewOptions, onOrphanType],
   );
   const viewModel = useDataViewModel(
     props.storageKey,

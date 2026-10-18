@@ -1,8 +1,8 @@
 import { useCallback, type ComponentType, type ReactNode } from "react";
 import {
   defineSlot,
+  useCompanionLookup,
   useRawContributions,
-  type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { resolveTypeChain } from "@plugins/fields/core";
@@ -43,20 +43,18 @@ export function useResolveColumnConfig(): (
   props: ColumnConfigProps,
 ) => ReactNode | null {
   const identities = useFieldIdentities();
-  const raw0 = useRawContributions(ColumnConfig);
+  const lookup = useCompanionLookup(
+    ColumnConfig,
+    useRawContributions(ColumnConfig),
+  );
   return useCallback(
     (typeId, props) => {
-      const chain = resolveTypeChain(typeId, identities);
-      for (const type of chain) {
-        const contribution = raw0.find(
-          (c) => (c as { match?: unknown }).match === type,
-        ) as Contribution | undefined;
-        if (contribution)
-          return renderIsolated(ColumnConfig, contribution, props);
-      }
-      return null;
+      const contribution = lookup(resolveTypeChain(typeId, identities));
+      return contribution
+        ? renderIsolated(ColumnConfig, contribution, props)
+        : null;
     },
-    [raw0, identities],
+    [lookup, identities],
   );
 }
 
@@ -77,17 +75,14 @@ export function useResolveColumnDerive(): (
   config: unknown,
 ) => Partial<FieldDef<unknown>> {
   const identities = useFieldIdentities();
-  const contributions = ColumnConfig.useContributions();
+  const lookup = useCompanionLookup(
+    ColumnConfig,
+    ColumnConfig.useContributions(),
+  );
   return useCallback(
-    (typeId, config) => {
-      const chain = resolveTypeChain(typeId, identities);
-      for (const type of chain) {
-        const contribution = contributions.find((c) => c.match === type);
-        if (contribution) return contribution.derive?.(config) ?? {};
-      }
-      return {};
-    },
-    [contributions, identities],
+    (typeId, config) =>
+      lookup(resolveTypeChain(typeId, identities))?.derive?.(config) ?? {},
+    [lookup, identities],
   );
 }
 

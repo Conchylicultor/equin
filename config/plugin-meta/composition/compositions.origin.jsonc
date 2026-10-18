@@ -1,4 +1,4 @@
-// @hash 5a6a0638125f
+// @hash 0669cd8d5770
 {
   "manifests": [
     {
@@ -402,6 +402,61 @@
       "home": ""
     },
     {
+      "id": "reporters",
+      "name": "reporters",
+      "category": "subsystem",
+      "entryPoints": [
+        "reports.adaptive-bar.**",
+        "reports.caret-flight.**",
+        "reports.collab-hydration.**",
+        "reports.endpoint-errors.**",
+        "reports.live-state-stale-drop.**",
+        "reports.mutation-errors.**",
+        "reports.optimistic-divergence.**",
+        "reports.optimistic-rejection.**",
+        "reports.page-undo-conflict.**",
+        "reports.panel-overflow.**",
+        "reports.plugin-load-errors.**",
+        "reports.render-loop.**",
+        "reports.resource-errors.**",
+        "reports.theme-resolution.**",
+        "reports.viewport-escape.**"
+      ],
+      "selectedContributors": [],
+      "extends": [],
+      "excludes": [],
+      "serve": "off",
+      "home": ""
+    },
+    {
+      "id": "diagnostics",
+      "name": "diagnostics",
+      "category": "subsystem",
+      "entryPoints": [
+        "debug.latency-ledger.**",
+        "debug.live-state-churn.emit.**",
+        "debug.render-profiler.**"
+      ],
+      "selectedContributors": [],
+      "extends": [],
+      "excludes": [],
+      "serve": "off",
+      "home": ""
+    },
+    {
+      "id": "root-features",
+      "name": "root-features",
+      "category": "subsystem",
+      "entryPoints": [
+        "primitives.command-palette.**"
+      ],
+      "selectedContributors": [],
+      "extends": [],
+      "excludes": [],
+      "serve": "off",
+      "home": ""
+    },
+    {
       "id": "self-improvement",
       "name": "self-improvement",
       "category": "pack",
@@ -413,7 +468,9 @@
         "reports.launch-fix",
         "screenshot.draw-on-app"
       ],
-      "extends": [],
+      "extends": [
+        "reporters"
+      ],
       "excludes": [],
       "serve": "off",
       "home": ""
@@ -445,7 +502,8 @@
         "apps-core.surface",
         "apps-core.surface.docked",
         "apps.desktop",
-        "apps-core.surface.solo"
+        "apps-core.surface.solo",
+        "shell.global-action-bar"
       ],
       "extends": [],
       "excludes": [],

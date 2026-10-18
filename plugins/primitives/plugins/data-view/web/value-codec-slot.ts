@@ -1,5 +1,8 @@
 import { useCallback } from "react";
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  defineSlot,
+  useCompanionLookup,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { resolveTypeChain } from "@plugins/fields/core";
 import { IDENTITY_CODEC, type ValueCodec } from "../core";
 import { useFieldIdentities } from "./internal/use-field-identities";
@@ -22,17 +25,14 @@ const ValueCodecSlot = defineSlot<{ match: string; codec: ValueCodec }>({
 /** Resolve a field type id → its ValueCodec, honoring `extends`; identity default. */
 export function useResolveValueCodec(): (typeId: string) => ValueCodec {
   const identities = useFieldIdentities();
-  const contributions = ValueCodecSlot.useContributions();
+  const lookup = useCompanionLookup(
+    ValueCodecSlot,
+    ValueCodecSlot.useContributions(),
+  );
   return useCallback(
-    (typeId) => {
-      const chain = resolveTypeChain(typeId, identities);
-      for (const id of chain) {
-        const c = contributions.find((x) => x.match === id);
-        if (c) return c.codec;
-      }
-      return IDENTITY_CODEC;
-    },
-    [identities, contributions],
+    (typeId) =>
+      lookup(resolveTypeChain(typeId, identities))?.codec ?? IDENTITY_CODEC,
+    [identities, lookup],
   );
 }
 

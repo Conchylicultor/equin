@@ -63,6 +63,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `primitives/css/ui-kit.Tooltipped`
     - `primitives/css/ui-kit.useControlSize`
     - `primitives/css/ui-kit.WithTooltip`
+    - `primitives/dom/copy-source-text.copiesAsOwnText`
   - Exports (types):
     - `BadgeProps`
     - `BadgeShape`

@@ -1,5 +1,6 @@
 import { useCallback, type ReactNode } from "react";
 import {
+  useCompanionLookup,
   useRawContributions,
   type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
@@ -62,19 +63,12 @@ function useFindCellContribution(): (
   field: FieldDef<unknown>,
 ) => (Contribution & CellContributionMeta) | undefined {
   const identities = useFieldIdentities();
-  const raw0 = useRawContributions(Cell);
+  const lookup = useCompanionLookup(Cell, useRawContributions(Cell));
   return useCallback(
-    (field) => {
-      const chain = resolveTypeChain(field.type ?? "text", identities);
-      for (const typeId of chain) {
-        const contribution = raw0.find(
-          (c) => (c as { match?: unknown }).match === typeId,
-        ) as (Contribution & CellContributionMeta) | undefined;
-        if (contribution) return contribution;
-      }
-      return undefined;
-    },
-    [raw0, identities],
+    (field) =>
+      lookup(resolveTypeChain(field.type ?? "text", identities)) as
+        (Contribution & CellContributionMeta) | undefined,
+    [lookup, identities],
   );
 }
 

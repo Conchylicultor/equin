@@ -1,6 +1,6 @@
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { copiesAsText } from "@plugins/primitives/plugins/dom/plugins/copy-source-text/core";
+import { copiesAsText } from "@plugins/primitives/plugins/dom/plugins/copy-source-text/web";
 
 /**
  * An item's box, sitting in the text run — the agent's checklist rows and

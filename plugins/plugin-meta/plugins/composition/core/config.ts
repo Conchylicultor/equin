@@ -347,22 +347,65 @@ export const compositionsConfig = defineConfig({
           "primitives.dom.overscroll-hint",
         ]),
 
-        // ── Packs: reusable contributor sets apps opt into via `extends` ────────
-        pack("self-improvement", [
-          "improve.element-picker",
-          "review",
-          "reports.crash",
-          "reports.launch-fix",
-          "screenshot.draw-on-app",
+        // ── Opt-in root mounts ───────────────────────────────────────────────────
+        // A plugin mounted from `Core.Root` that nothing imports cannot be a
+        // selected contributor (it soft-contributes to nothing a bundle holds),
+        // so an opt-in one is an ENTRY of a row like these. The
+        // `root-mounts-reached` check requires every such plugin to be named by
+        // some row other than main — that naming is the decision of what it is.
+        //
+        // The browser-side reporters: each watches one capability (the page
+        // editor's caret, optimistic mutations, live-state pushes, endpoint
+        // calls, …) and files a report. Reports feed the self-improvement loop,
+        // so they ship with it — the pack below extends this row — and an app
+        // released without self-improvement ships none of them.
+        subsystem("reporters", [
+          "reports.adaptive-bar",
+          "reports.caret-flight",
+          "reports.collab-hydration",
+          "reports.endpoint-errors",
+          "reports.live-state-stale-drop",
+          "reports.mutation-errors",
+          "reports.optimistic-divergence",
+          "reports.optimistic-rejection",
+          "reports.page-undo-conflict",
+          "reports.panel-overflow",
+          "reports.plugin-load-errors",
+          "reports.render-loop",
+          "reports.resource-errors",
+          "reports.theme-resolution",
+          "reports.viewport-escape",
         ]),
+        // Debug instrumentation mounted at the root: the render profiler, the
+        // latency ledger and the synthetic live-state emitter. Main only today.
+        subsystem("diagnostics", [
+          "debug.latency-ledger",
+          "debug.live-state-churn.emit",
+          "debug.render-profiler",
+        ]),
+        // Opt-in root features no released app selects yet: the Cmd+K palette.
+        subsystem("root-features", ["primitives.command-palette"]),
+
+        // ── Packs: reusable contributor sets apps opt into via `extends` ────────
+        {
+          ...pack("self-improvement", [
+            "improve.element-picker",
+            "review",
+            "reports.crash",
+            "reports.launch-fix",
+            "screenshot.draw-on-app",
+          ]),
+          extends: ["reporters"],
+        },
         pack("theming", [
           "ui.theme-toggle",
           "ui.tweakcn",
           "ui.tweakcn.community-browser",
         ]),
         // The app-surface CHROME, opt-in and extended by nothing: the tab strip,
-        // the app rail (its default `rail` variant), and the multi-placement
-        // surface (docked / floating / solo). `apps-core.layout` (in
+        // the app rail (its default `rail` variant), the multi-placement
+        // surface (docked / floating / solo) and the global action bar.
+        // `apps-core.layout` (in
         // served-baseline) renders a chrome-less surface — tabs + tab-surface
         // substrate only — so a composition ships the tab bar / rail / placements
         // only by `extends`-ing this pack (or selecting individual contributors).
@@ -374,6 +417,9 @@ export const compositionsConfig = defineConfig({
           "apps-core.surface.docked",
           "apps.desktop",
           "apps-core.surface.solo",
+          // The floating action bar (Improve, theme, view options). Opt-in: an
+          // app is releasable without it, and then shows no action strip.
+          "shell.global-action-bar",
         ]),
       ],
     }),

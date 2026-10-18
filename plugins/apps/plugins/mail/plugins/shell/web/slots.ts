@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { AppShellSidebarItem } from "@plugins/primitives/plugins/app-shell/web";
+import { defineRootSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
 export const Mail = {
@@ -21,4 +22,10 @@ export const Mail = {
    * surfaces themselves rather than the shell naming any one of them.
    */
   RailBadge: defineRenderSlot<{ component: ComponentType }>(),
+  /**
+   * App-wide headless listeners Mail needs whichever app is focused (sync
+   * resuming when Gmail is reconnected). Companions: they ship wherever Mail
+   * does, since nothing imports them.
+   */
+  Root: defineRootSlot(),
 };

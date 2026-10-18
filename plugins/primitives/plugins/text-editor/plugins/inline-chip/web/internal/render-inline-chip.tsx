@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from "react";
-import { copiesAsText } from "@plugins/primitives/plugins/dom/plugins/copy-source-text/core";
+import { copiesAsText } from "@plugins/primitives/plugins/dom/plugins/copy-source-text/web";
 import { inlineChipFor } from "./inline-registry";
 import { ChipBoundary } from "./chip-boundary";
 

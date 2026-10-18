@@ -1,5 +1,5 @@
 import { InlineCode } from "@plugins/primitives/plugins/markdown/web";
-import { copiesAsText } from "@plugins/primitives/plugins/dom/plugins/copy-source-text/core";
+import { copiesAsText } from "@plugins/primitives/plugins/dom/plugins/copy-source-text/web";
 import {
   fullMatch,
   useActiveDataCodeCandidates,

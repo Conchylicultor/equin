@@ -18,6 +18,10 @@ import {
 } from "./fields-eager-gen";
 import { iconManifestPath, renderIconManifest } from "./icon-manifest-gen";
 import {
+  companionManifestPath,
+  renderCompanionManifest,
+} from "./companion-manifest-gen";
+import {
   eagerTierManifestPath,
   renderEagerTierManifest,
 } from "./eager-tier-gen";
@@ -53,6 +57,8 @@ import {
  *   - fieldsEager / eagerTier: barrel-free `skipBarrelImport` tree scans.
  *   - iconManifest: a plain source-file walk for `symbol("…")` / `brand("…")`
  *     literals; the icon sprites server barrel reaches it at module-load.
+ *   - companionManifest: a barrel-free `skipBarrelImport` tree scan; the
+ *     web-sdk core barrel reaches it at module-load.
  *
  * A manifest whose renderer NEEDS barrels cannot satisfy that rule and does not
  * belong here — see {@link postWebManifests}.
@@ -108,6 +114,15 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
     id: "iconManifest",
     path: iconManifestPath,
     render: renderIconManifest,
+  },
+  {
+    // Which plugin provides each companion, repo-wide. The web-sdk core barrel
+    // reads it (to fail loudly on a companion missing at runtime), and its
+    // renderer is a barrel-free tree scan, so regenerating it pre-barrel is
+    // sound.
+    id: "companionManifest",
+    path: companionManifestPath,
+    render: renderCompanionManifest,
   },
 ];
 

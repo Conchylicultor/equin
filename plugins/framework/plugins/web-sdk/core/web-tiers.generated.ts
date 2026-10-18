@@ -19,7 +19,6 @@
 //   - apps/plugins/events/plugins/events-core: dependency closure (imported by an eager plugin)
 //   - apps/plugins/events/plugins/sources: dependency closure (imported by an eager plugin)
 //   - apps/plugins/file-explorer/plugins/browser: dependency closure (imported by an eager plugin)
-//   - apps/plugins/mail/plugins/sync/plugins/auto-resume: watched boot slot Core.Root
 //   - apps/plugins/pages/plugins/auto-icon: dependency closure (imported by an eager plugin)
 //   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/canvas: dependency closure (imported by an eager plugin)
@@ -98,6 +97,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/mail/plugins/reading-pane",
   "apps/plugins/mail/plugins/search",
   "apps/plugins/mail/plugins/sync-status",
+  "apps/plugins/mail/plugins/sync/plugins/auto-resume",
   "apps/plugins/mail/plugins/threads",
   "apps/plugins/pages/plugins/agent-origin",
   "apps/plugins/pages/plugins/content-search",

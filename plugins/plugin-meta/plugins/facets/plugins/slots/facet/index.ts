@@ -327,6 +327,8 @@ function parseSlotsFromSource(dir: string, pluginId: string): SlotDef[] {
           groupName,
           kind: "slot",
           contributors: [],
+          // `defineRootSlot()` always opens its slot to companions.
+          companions: true,
         }),
       ),
       ...parseDefineGroup(

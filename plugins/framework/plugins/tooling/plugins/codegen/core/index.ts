@@ -126,6 +126,11 @@ export {
 } from "./reorderable-slots-gen";
 
 export {
+  companionManifestPath,
+  renderCompanionManifest,
+} from "./companion-manifest-gen";
+
+export {
   assertSlotsDeclared,
   declareSlotsFromBarrels,
 } from "./slot-declaration-guard";

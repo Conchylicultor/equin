@@ -28,15 +28,15 @@ rather than reading as "not preloaded". A factory's own declaration
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 89 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 90 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×14
     - `framework/plugin-id` ×12
     - `plugin-meta/parse-utils` ×12
     - `plugin-meta/barrel-import` ×6
+    - `plugin-meta/closure` ×5
     - `plugin-meta/composition` ×5
     - `plugin-meta/facets` ×5
     - `framework/tooling/resource-vocabulary` ×4
-    - `plugin-meta/closure` ×4
     - `plugin-meta/plugin-tree` ×4
     - `framework/slot-declaration` ×3
     - `framework/tooling/web-artifacts` ×3
@@ -94,6 +94,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `collectImportGraph`
     - `collectTokenGroupVars`
     - `committedRegistryBundle`
+    - `companionManifestPath`
     - `compositionFilteredRegistries`
     - `compositionRegistryFileName`
     - `compositionRegistryPath`
@@ -152,6 +153,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `renderBarrelStubs`
     - `renderCollectedDirRegistry`
     - `renderCompactDoc`
+    - `renderCompanionManifest`
     - `renderConfigGitLayer`
     - `renderConfigOriginContent`
     - `renderCustomUtilities`

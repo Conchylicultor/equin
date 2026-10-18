@@ -1,4 +1,6 @@
 export { classifyEdges } from "./classify-edges";
+export { collectCompanionSlots, slotGroupOwners } from "./companion-slots";
+export type { CompanionSlot, CompanionEntry } from "./companion-slots";
 export {
   resolveComposition,
   hardClosure,

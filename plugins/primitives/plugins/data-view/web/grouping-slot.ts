@@ -1,5 +1,8 @@
 import { useCallback, useMemo } from "react";
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  defineSlot,
+  useCompanionLookup,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { resolveTypeChain } from "@plugins/fields/core";
 import type { FieldGrouping, FieldGroupingSet } from "../core";
 import {
@@ -33,17 +36,13 @@ export function useResolveGroupings(): (
   typeId: string,
 ) => FieldGroupingSet | undefined {
   const identities = useFieldIdentities();
-  const contributions = GroupingSlot.useContributions();
+  const lookup = useCompanionLookup(
+    GroupingSlot,
+    GroupingSlot.useContributions(),
+  );
   return useCallback(
-    (typeId) => {
-      const chain = resolveTypeChain(typeId, identities);
-      for (const id of chain) {
-        const c = contributions.find((x) => x.match === id);
-        if (c) return c;
-      }
-      return undefined;
-    },
-    [identities, contributions],
+    (typeId) => lookup(resolveTypeChain(typeId, identities)),
+    [identities, lookup],
   );
 }
 

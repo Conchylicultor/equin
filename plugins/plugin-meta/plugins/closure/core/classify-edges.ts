@@ -5,10 +5,9 @@ import {
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
-import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
-import type { KeySpace } from "@plugins/framework/plugins/slot-declaration/core";
 import type { EdgeGraph, Edge, HardEdgeVia, UsageRule } from "./types";
+import { collectCompanionSlots, slotGroupOwners } from "./companion-slots";
 
 function pushUnique(
   map: Map<PluginId, PluginId[]>,
@@ -122,20 +121,7 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
 
   // ── Soft edges: slot-group ownership × static contributions ───────────
   // groupName → owning PluginId. Skip `_runtimeOnly` slots; first-writer-wins.
-  // `Group.Member` → the slot's keyed companion option, for the usage rules.
-  const groupOwner = new Map<string, PluginId>();
-  const keyedSlots = new Map<string, { key: string; space: KeySpace }>();
-  for (const node of tree.byDir.values()) {
-    const slots = getFacet(node, slotsFacetDef) ?? [];
-    for (const slot of slots) {
-      if ((slot as { _runtimeOnly?: boolean })._runtimeOnly) continue;
-      if (!groupOwner.has(slot.groupName))
-        groupOwner.set(slot.groupName, node.id);
-      const ref = `${slot.groupName}.${slot.memberName}`;
-      if (typeof slot.companions === "object" && !keyedSlots.has(ref))
-        keyedSlots.set(ref, slot.companions);
-    }
-  }
+  const groupOwner = slotGroupOwners(tree);
 
   for (const node of tree.byDir.values()) {
     const data = getFacet(node, contributionsFacetDef);
@@ -179,37 +165,20 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
       else usersOf.set(k, [node.id]);
     }
   const rules: UsageRule[] = [];
-  for (const node of tree.byDir.values()) {
-    const data = getFacet(node, contributionsFacetDef);
-    if (!data) continue;
-    for (const contribution of data.static) {
-      if (!contribution.companion) continue;
-      const head = contribution.slot.split(".")[0];
-      const owner = head ? groupOwner.get(head) : undefined;
-      if (!owner || owner === node.id) continue;
-      const keyed = keyedSlots.get(contribution.slot);
-      if (!keyed) {
-        addHard(owner, node.id, "companion");
+  for (const slot of collectCompanionSlots(tree, groupOwner)) {
+    for (const companion of slot.companions) {
+      if (!slot.keyed) {
+        addHard(slot.owner, companion.plugin, "companion");
         continue;
       }
-      // The key is what decides whether this ships, so it must be readable:
-      // a computed one would make the contribution a companion of nothing.
-      const raw = contribution.props[keyed.key]?.trim() ?? "";
-      const literal = /^"([^"\\]+)"$/.exec(raw);
-      if (!literal)
-        throw new Error(
-          `${node.id}: \`${contribution.slot}({ ${keyed.key}: ${raw || "…"}, companion: true })\` — ` +
-            `a companion of a keyed slot must spell its \`${keyed.key}\` as a string literal ` +
-            `at the call: the closure engine ships it only when that ${keyed.space} is used.`,
-        );
-      const key = literal[1]!;
+      const key = companion.key!;
       rules.push({
-        then: node.id,
-        owner,
-        users: [...new Set(usersOf.get(`${keyed.space}\0${key}`) ?? [])]
-          .filter((u) => u !== node.id)
+        then: companion.plugin,
+        owner: slot.owner,
+        users: [...new Set(usersOf.get(`${slot.keyed.space}\0${key}`) ?? [])]
+          .filter((u) => u !== companion.plugin)
           .sort(),
-        space: keyed.space,
+        space: slot.keyed.space,
         key,
       });
     }

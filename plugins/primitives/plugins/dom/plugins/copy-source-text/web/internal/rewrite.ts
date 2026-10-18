@@ -1,4 +1,4 @@
-import { COPY_SOURCE_ATTR } from "../../core";
+import { COPY_SOURCE_ATTR } from "./attr";
 
 /**
  * Swap every declaring element in a cloned selection for the text it declared.

@@ -1,5 +1,5 @@
 import { selectionRange } from "@plugins/primitives/plugins/dom/plugins/dom-selection/web";
-import { COPY_SOURCE_ATTR } from "../../core";
+import { COPY_SOURCE_ATTR } from "./attr";
 import { isInsideEditable } from "./inside-editable";
 import "./selection-units.css";
 

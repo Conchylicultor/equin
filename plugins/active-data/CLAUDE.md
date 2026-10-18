@@ -136,7 +136,7 @@ Behavior:
   - Contributes:
     - `MarkdownEnhancerSlot`
     - `InlineTextWalkerSlot`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/markdown` ×5
     - `primitives/text-editor/inline-chip` ×5
     - `primitives/inline-text` ×4
@@ -144,6 +144,7 @@ Behavior:
     - `page/editor` ×2
     - `primitives/live-state` ×2
     - `network/live.useLive`
+    - `primitives/dom/copy-source-text.copiesAsText`
   - Exports (types):
     - `ActiveDataBindingHandle`
     - `ActiveDataBlockContribution`

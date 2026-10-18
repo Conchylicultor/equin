@@ -19,8 +19,9 @@ and no import of `@plugins/auth/*` (the Gmail integration brokers the signal).
 
 - Description: Auto-resumes Mail sync when the Gmail scope is (re)granted: an app-wide headless listener that POSTs the sync kick endpoint on the connect edge.
 - Web:
-  - Contributes: `Core.Root` → `GmailReconnectResume`
+  - Contributes: `Mail.Root` → `GmailReconnectResume`
   - Uses:
+    - `apps/mail/shell.Mail`
     - `infra/endpoints.useEndpointMutation`
     - `integrations/gmail.useGmailAccess`
 

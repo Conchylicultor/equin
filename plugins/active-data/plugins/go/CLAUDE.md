@@ -153,7 +153,7 @@ back the same way.
     - `ActiveData.Tag` "go" → `GoBlock`
     - `InlineTextWalkerSlot`
     - `TextEditorSlots.Plugin` → `GoRegionPlugin`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/inline-text` ×5
     - `active-data` ×3
     - `primitives/css/ui-kit` ×3
@@ -168,6 +168,7 @@ back the same way.
     - `primitives/css/selection-indicator.CheckboxIndicator`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/dom/copy-source-text.copiesAsText`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`

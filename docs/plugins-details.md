@@ -17,7 +17,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes:
       - `MarkdownEnhancerSlot`
       - `InlineTextWalkerSlot`
-    - Uses: 21 symbols — full list in [`plugins/active-data/REFERENCE.md`](../plugins/active-data/REFERENCE.md)
+    - Uses: 22 symbols — full list in [`plugins/active-data/REFERENCE.md`](../plugins/active-data/REFERENCE.md)
       - `primitives/markdown` ×5
       - `primitives/text-editor/inline-chip` ×5
       - `primitives/inline-text` ×4
@@ -25,6 +25,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `page/editor` ×2
       - `primitives/live-state` ×2
       - `network/live.useLive`
+      - `primitives/dom/copy-source-text.copiesAsText`
     - Exports (types):
       - `ActiveDataBindingHandle`
       - `ActiveDataBlockContribution`
@@ -216,7 +217,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActiveData.Tag` "go" → `GoBlock`
           - `InlineTextWalkerSlot`
           - `TextEditorSlots.Plugin` → `GoRegionPlugin`
-        - Uses: 29 symbols — full list in [`plugins/active-data/plugins/go/REFERENCE.md`](../plugins/active-data/plugins/go/REFERENCE.md)
+        - Uses: 30 symbols — full list in [`plugins/active-data/plugins/go/REFERENCE.md`](../plugins/active-data/plugins/go/REFERENCE.md)
           - `primitives/inline-text` ×5
           - `active-data` ×3
           - `primitives/css/ui-kit` ×3
@@ -231,6 +232,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/selection-indicator.CheckboxIndicator`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/dom/copy-source-text.copiesAsText`
           - `primitives/dom/element-size.useResizeObserver`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
@@ -4436,15 +4438,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Mail.Sidebar`
               - `Mail.Banner`
               - `Mail.RailBadge`
+              - `Mail.Root`
               - `mail-root.actions`
             - Slot contributors:
               - `Mail.Sidebar` ← `apps.mail.search`
               - `Mail.Banner` ← `apps.mail.sync-status`
               - `Mail.RailBadge` ← `apps.mail.sync-status`
+              - `Mail.Root` ← `apps.mail.sync.auto-resume`
               - `mail-root.actions` ← `primitives.pane`
             - Contributes:
               - `Apps.App` "Mail" → `MailLayout`
               - `Pane.Register` "mail-root"
+              - `Core.Root`
             - Uses:
               - `apps-core.Apps`
               - `apps-core/tabs.navigate`
@@ -4469,6 +4474,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/mail/search`
               - `apps/mail/sync-status`
+              - `apps/mail/sync/auto-resume`
         - **`sync`** — Gmail sync engine (on-demand model): a bounded, metadata-only backfill mirrors a recent window of message envelopes; history.list incremental delta keeps them fresh (with a bounded full-resync fallback on historyId expiry) via a scheduled main-only delta tick (the documented no-polling exception). Message bodies + attachments are hydrated lazily on first open and cached (POST /api/mail/hydrate). Mirrors threads/messages/labels into the mail-core tables.
           - Server:
             - Contributes: `resource.declare` "mail-sync-state"
@@ -4510,8 +4516,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Plugins:
             - **`auto-resume`** — Auto-resumes Mail sync when the Gmail scope is (re)granted: an app-wide headless listener that POSTs the sync kick endpoint on the connect edge.
               - Web:
-                - Contributes: `Core.Root` → `GmailReconnectResume`
+                - Contributes: `Mail.Root` → `GmailReconnectResume`
                 - Uses:
+                  - `apps/mail/shell.Mail`
                   - `infra/endpoints.useEndpointMutation`
                   - `integrations/gmail.useGmailAccess`
         - **`sync-status`** — Mail sync-status banner: a full-width strip above the mailbox surface that surfaces in-progress syncs and classified sync failures (warning/error) with remediation copy and actions (reconnect, enable API, retry). Silent when the mailbox is healthy.
@@ -24159,15 +24166,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape --spacing`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 89 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 90 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `config_v2` ×14
               - `framework/plugin-id` ×12
               - `plugin-meta/parse-utils` ×12
               - `plugin-meta/barrel-import` ×6
+              - `plugin-meta/closure` ×5
               - `plugin-meta/composition` ×5
               - `plugin-meta/facets` ×5
               - `framework/tooling/resource-vocabulary` ×4
-              - `plugin-meta/closure` ×4
               - `plugin-meta/plugin-tree` ×4
               - `framework/slot-declaration` ×3
               - `framework/tooling/web-artifacts` ×3
@@ -24225,6 +24232,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `collectImportGraph`
               - `collectTokenGroupVars`
               - `committedRegistryBundle`
+              - `companionManifestPath`
               - `compositionFilteredRegistries`
               - `compositionRegistryFileName`
               - `compositionRegistryPath`
@@ -24283,6 +24291,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderBarrelStubs`
               - `renderCollectedDirRegistry`
               - `renderCompactDoc`
+              - `renderCompanionManifest`
               - `renderConfigGitLayer`
               - `renderConfigOriginContent`
               - `renderCustomUtilities`
@@ -24870,6 +24879,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `markDeferredLoadComplete`
           - `markDeferredPluginsFailed`
           - `markDeferredPluginsLoaded`
+          - `MissingCompanionError`
+          - `missingCompanions`
           - `partitionWebEntries`
           - `pluginLoadReportSink`
           - `PluginProvider`
@@ -24877,6 +24888,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slots`
           - `subscribeDeferredLoadState`
           - `UNSAFE_unsealSlotComponent`
+          - `useCompanionLookup`
           - `useComposition`
           - `useDeferredLoadComplete`
           - `useFailedPluginPaths`
@@ -32756,6 +32768,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/facets/cross-refs.crossRefsFacetDef`
           - `plugin-meta/facets/slots.slotsFacetDef`
         - Exports (types):
+          - `CompanionEntry`
+          - `CompanionSlot`
           - `Composition`
           - `CompositionManifest`
           - `Edge`
@@ -32772,6 +32786,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UsageRule`
         - Exports (values):
           - `classifyEdges`
+          - `collectCompanionSlots`
           - `deserializeEdgeGraph`
           - `expandEntrySeeds`
           - `explainInclusion`
@@ -32784,6 +32799,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `removalClosure`
           - `resolveComposition`
           - `serializeEdgeGraph`
+          - `slotGroupOwners`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
@@ -34724,6 +34740,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.Tooltipped`
               - `primitives/css/ui-kit.useControlSize`
               - `primitives/css/ui-kit.WithTooltip`
+              - `primitives/dom/copy-source-text.copiesAsOwnText`
             - Exports (types):
               - `BadgeProps`
               - `BadgeShape`
@@ -37385,21 +37402,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/virtual-rows`
           - Exemptions:
             - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)
-        - **`copy-source-text`** — Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText (core), and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable. A substituting element also SELECTS as one unit: its letters take no highlight, and a selectionchange listener rings the whole element while the selection overlaps it — so the selection shows exactly what the copy will carry.
+        - **`copy-source-text`** — Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText — exported beside the handler, so importing them ships it — and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable. A substituting element also SELECTS as one unit: its letters take no highlight, and a selectionchange listener rings the whole element while the selection overlaps it — so the selection shows exactly what the copy will carry.
           - Web:
             - Contributes: `Core.Root` → `CopySourceTextHost`
             - Uses: `primitives/dom/dom-selection.selectionRange`
-            - Exports (values): `installCopySourceText`
-          - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --background`
-              - `ui/tokens/color-palette --ring`
-          - Core:
             - Exports (types): `CopySourceProps`
             - Exports (values):
               - `copiesAsOwnText`
               - `copiesAsText`
               - `COPY_SOURCE_ATTR`
+              - `installCopySourceText`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --ring`
+            - Imported by:
+              - `active-data`
+              - `active-data/go`
+              - `primitives/css/badge`
+              - `primitives/text-editor/inline-chip`
         - **`dom-selection`** — The one sanctioned home for the guarded document-selection read: selectionRange() states the three-part guard (no selection → rangeCount 0 → getRangeAt(0) throwing IndexSizeError) that four hand-rolled copies each remembered a different subset of, selectionRect() is that range's bounding rect, hasBox(rect) is the one statement of 'a rect with no box is not an anchor', and selectionIsCollapsed() answers 'does the user have anything highlighted right now' — the question Lexical's model gets wrong for a whole task after a one-step selection gesture. Named for the DOM selection to keep it apart from Lexical's model $getSelection; owns the range read too, since a copy handler wants the range for its content, not its geometry.
           - Cross-plugin:
             - Imported by:
@@ -40991,6 +41012,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `InlineChip.Tag` ← `active-data.task-link`
               - `InlineChip.Tag` ← `primitives.ui-context.element-picker`
             - Uses:
+              - `primitives/dom/copy-source-text.copiesAsText`
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/text-editor.registerNodeExtensionSource`
               - `primitives/text-editor/token-extension/node.TokenFrame`

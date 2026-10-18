@@ -24,6 +24,7 @@ import type {
 } from "../internal/define-data-view-sources";
 import { DataViewShellFrame } from "./data-view";
 import { DataViewBody } from "./data-view-body";
+import { useOrphanViewTypeGuard } from "../internal/use-orphan-view-type-guard";
 
 /** The surface chrome (`title` / `actions` / `toolbar`) is the part of
  *  `DataViewProps`' union that shows ONE active instance — a hosted toolbar
@@ -93,6 +94,7 @@ export function DataViewSwitcher<THostProps>(
   // One `ViewSourceEntry` per contributed source, from static metadata only —
   // no `viewOptions` (code-only options can't exist before the source mounts;
   // the body re-merges the bundle's `viewOptions` under the instance options).
+  const onOrphanType = useOrphanViewTypeGuard(contributions);
   const entries = useMemo<ViewSourceEntry<DataViewContribution>[]>(
     () =>
       sourceContribs.map((c) => ({
@@ -101,8 +103,9 @@ export function DataViewSwitcher<THostProps>(
         icon: c.icon,
         contributions,
         views: c.views,
+        onOrphanType,
       })),
-    [sourceContribs, contributions],
+    [sourceContribs, contributions, onOrphanType],
   );
 
   const viewModel = useDataViewModel(storageKey, entries, defaultView);

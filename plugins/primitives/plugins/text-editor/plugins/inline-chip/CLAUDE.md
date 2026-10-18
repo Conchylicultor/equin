@@ -170,6 +170,7 @@ rendered chip out of a read surface puts the token back on the clipboard.
     - `InlineChip.Tag` ← `active-data.task-link`
     - `InlineChip.Tag` ← `primitives.ui-context.element-picker`
   - Uses:
+    - `primitives/dom/copy-source-text.copiesAsText`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/text-editor.registerNodeExtensionSource`
     - `primitives/text-editor/token-extension/node.TokenFrame`
