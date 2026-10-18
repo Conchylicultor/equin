@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readFile, rm } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
@@ -44,7 +44,12 @@ let cachedRepoRoot: string | null = null;
 const LIST_TIMEOUT_MS = 60_000; // ~640x the 94 ms p50
 const ADD_TIMEOUT_MS = 600_000; // ~160x the 3.8 s p50; its false positive is the destructive one
 const PRUNE_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as list
-const REMOVE_TIMEOUT_MS = 300_000; // ~250x the 1.2 s p50; still frees the flock inside one hourly tick
+// Deleting a trashed checkout's files (~16k files plus node_modules). Not a
+// wedge detector like the bounds above — it runs OUTSIDE the mutate gate, on a
+// tree already out of `.claude/worktrees/`, so a kill here costs nothing but a
+// later retry by `emptyWorktreeTrash`. Kept below TRASH_GRACE_MS so a sweep never
+// races a removal still deleting its own entry.
+const TRASH_RM_TIMEOUT_MS = 30 * 60_000;
 const LOCK_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as prune
 const REF_TIMEOUT_MS = 60_000; // one ref read, same starvation exposure as list
 const MOVE_TIMEOUT_MS = 60_000; // a rename + admin-dir rewrite, same exposure as lock
@@ -268,6 +273,75 @@ async function ensureWorktreeLocked(
   );
 }
 
+// Where a removed checkout goes before its files are deleted: a sibling of
+// `.claude/worktrees/`, so on the same volume (the rename is atomic and instant)
+// and outside the directory every checkout scanner enumerates.
+export function worktreeTrashDir(repoRoot: string): string {
+  return join(repoRoot, ".claude", "worktree-trash");
+}
+
+// How long a trash entry is left to the removal that created it. Past this, the
+// entry is a leftover (its rm was killed, its process died) and
+// `emptyWorktreeTrash` deletes it.
+const TRASH_GRACE_MS = 60 * 60_000;
+
+// `<ms>-<name>`: the time it was trashed rides in the name, because a rename
+// keeps the dir's own mtime, and the same id may be trashed more than once.
+function trashEntryName(wtPath: string, now: number): string {
+  return `${now}-${basename(wtPath)}`;
+}
+
+function trashedAtMs(entry: string): number | undefined {
+  const m = /^(\d+)-/.exec(entry);
+  return m ? Number(m[1]) : undefined;
+}
+
+// Delete one trash entry's files. Demoted to the background tier, because this is
+// the heavy disk part of a removal and it no longer holds a mutate slot. A failure
+// is logged, not thrown: the checkout is already gone from `.claude/worktrees/`
+// and git, so the removal the caller asked for has happened; what is left is
+// disk space that `emptyWorktreeTrash` reclaims on the reaper's next sweep.
+async function deleteTrashEntry(path: string): Promise<void> {
+  const r = await spawnCaptured(["rm", "-rf", path], {
+    tier: "background",
+    timeoutMs: TRASH_RM_TIMEOUT_MS,
+  });
+  if (r.timedOut || r.exitCode !== 0) {
+    console.warn(
+      `[worktree] deleting trashed checkout ${path} did not finish ` +
+        `(${r.timedOut ? `timed out after ${TRASH_RM_TIMEOUT_MS} ms` : `exit ${r.exitCode}`}): ` +
+        `${r.stderr.trim() || "<no stderr>"} — the next emptyWorktreeTrash retries it`,
+    );
+  }
+}
+
+/**
+ * Delete every trash entry older than the grace period — the files of removals
+ * whose own delete was killed or whose process died. Called by the reaper once
+ * per sweep. Entries inside the grace period belong to a removal that may still
+ * be deleting them, so they are left alone; an entry whose name carries no time
+ * is not one `removeWorktree` wrote, but it is in our trash dir, so it goes too.
+ */
+export async function emptyWorktreeTrash(now: number): Promise<number> {
+  const repoRoot = await ensureMainWorktreeRoot();
+  const dir = worktreeTrashDir(repoRoot);
+  let entries: string[];
+  try {
+    entries = await readdir(dir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return 0;
+    throw err;
+  }
+  let deleted = 0;
+  for (const entry of entries) {
+    const at = trashedAtMs(entry);
+    if (at !== undefined && now - at < TRASH_GRACE_MS) continue;
+    await deleteTrashEntry(join(dir, entry));
+    deleted++;
+  }
+  return deleted;
+}
+
 /**
  * Release our own lock so the removal that follows can proceed.
  *
@@ -292,8 +366,11 @@ async function unlockWorktreeForRemoval(
   );
   // "is not locked" is the desired end state, not a failure.
   if (r.exitCode === 0 || r.stderr.includes("is not locked")) return;
-  console.warn(
-    `[worktree] could not unlock ${wtPath} before removal ` +
+  // Thrown BEFORE the dir moves: `prune` skips a locked registration, so moving
+  // the tree away from a lock we could not release would leak its
+  // `.git/worktrees` entry silently, forever.
+  throw new Error(
+    `could not unlock ${wtPath} before removal ` +
       `(${r.timedOut ? `timed out after ${LOCK_TIMEOUT_MS} ms` : `exit ${r.exitCode}`}): ` +
       `${r.stderr.trim() || "<no stderr>"}`,
   );
@@ -759,98 +836,82 @@ export async function setupWorktree(
   return { source };
 }
 
+/**
+ * Remove a checkout: atomically out of `.claude/worktrees/`, then its files.
+ *
+ * Two phases, and the split is the point. Inside the host-wide mutate gate, only
+ * metadata work and one rename: unlock our lock, rename the dir into
+ * `worktreeTrashDir` (same volume, so atomic and instant), and `git worktree
+ * prune` the registration whose dir is now gone. Then, with the slot released,
+ * delete the trashed files.
+ *
+ * This replaced `git worktree remove --force`, which deleted the tree file by
+ * file while holding a slot, under a 300 s kill. On a large or busy disk it ran
+ * out of time and was killed part-way, leaving a half-deleted checkout in place.
+ * That leftover read as dirty (every deleted tracked file is a change), so the
+ * reaper's clean path never picked it again: each timeout parked a checkout on
+ * disk until the 90-day floor — 66 of them when this landed. With a rename, the
+ * checkout is either fully in place or fully gone; there is no half state for a
+ * kill to leave behind, and the slow part is retried, not stranded.
+ *
+ * The branch ref is untouched, as it was with `git worktree remove`: every
+ * commit the checkout made survives in the main repo.
+ */
 export async function removeWorktree(
   wtPath: string,
   signal?: AbortSignal,
 ): Promise<void> {
   const repoRoot = await ensureMainWorktreeRoot(signal);
-  // Gate the heavy full-tree `rm` host-wide (~1.2 s / 77 MB), the same disk offender
-  // as `add` — one shared budget bounds add+remove contention across all callers.
-  await withWorktreeMutateSlot(async () => {
-    // A dir can outlive its git registration (a `git worktree prune` after the dir
-    // was made unreachable, an interrupted removal, a repo re-clone). `git worktree
-    // remove` fails hard on such a dir — "is not a working tree" — so the strategy
-    // is chosen from an explicit registration check rather than discovered from a
-    // nonzero exit, which would be indistinguishable from a real failure.
-    //
+  // Re-assert the canonical-path invariant here rather than trusting the caller —
+  // the dir is about to be moved into the trash and deleted, and the guard must
+  // sit at the syscall, not one frame above it.
+  if (!isCanonicalWorktreePath(wtPath, repoRoot)) {
+    throw new Error(
+      `refusing to remove non-canonical worktree path ${wtPath} (not a direct child of ${gitWorktreesDir(repoRoot)})`,
+    );
+  }
+  const trashDir = worktreeTrashDir(repoRoot);
+  const trashPath = join(trashDir, trashEntryName(wtPath, Date.now()));
+  const trashed = await withWorktreeMutateSlot(async () => {
     // Read INSIDE the gate: registration is exactly the state a concurrent
-    // add/remove mutates, so checking it outside would race a holder of the slot
-    // and pick a strategy for a repo state that no longer holds.
+    // add/remove mutates, so checking it outside would race a holder of the slot.
+    // A dir can outlive its registration (a `git worktree prune` after the dir
+    // was made unreachable, a repo re-clone); such a leftover has no lock to
+    // release, and `git worktree unlock` on it fails with "is not a working tree".
     const registered = (
       await worktreeListPaths(
         [GIT, "-C", repoRoot, "worktree", "list", "--porcelain"],
         signal,
       )
     ).includes(wtPath);
-    if (!registered) {
-      // Unregistered leftover: git will not touch it, so the dir itself is the
-      // only thing left to reclaim. Re-assert the canonical-path invariant here
-      // rather than trusting the caller — this branch is a recursive delete, and
-      // the guard must sit at the syscall, not one frame above it.
-      if (!isCanonicalWorktreePath(wtPath, repoRoot)) {
-        throw new Error(
-          `refusing to remove non-canonical worktree path ${wtPath} (not a direct child of ${gitWorktreesDir(repoRoot)})`,
-        );
-      }
-      await rm(wtPath, { recursive: true, force: true });
-      // Drop any stale administrative entry left behind in .git/worktrees.
-      //
-      // The outcome is now READ — the old code awaited `.exited` and never looked
-      // at `exitCode`, so a prune that failed was indistinguishable from one that
-      // worked. It is logged rather than thrown on purpose: the destructive `rm`
-      // above already succeeded, so failing the call here would report a completed
-      // removal as a failure and, in the reaper, lose the work every retry redoes.
-      // A stale admin entry is harmless and the next prune clears it. For the
-      // same reason it is deliberately NOT signal-bound: it runs after a
-      // destructive `rm`, so it is the tail of an operation already committed to,
-      // and an abort here would leave the repo in the one state this call exists
-      // to clean up. Its own timeout bounds it instead.
-      const pruned = await spawnCaptured(
-        [GIT, "-C", repoRoot, "worktree", "prune"],
-        {
-          tier: "background",
-          timeoutMs: PRUNE_TIMEOUT_MS,
-        },
-      );
-      if (pruned.timedOut || pruned.exitCode !== 0) {
-        console.warn(
-          `[worktree] 'worktree prune' after removing ${wtPath} did not succeed ` +
-            `(${pruned.timedOut ? `timed out after ${PRUNE_TIMEOUT_MS} ms` : `exit ${pruned.exitCode}`}): ` +
-            `${pruned.stderr.trim() || "<no stderr>"}`,
-        );
-      }
-      return;
+    if (registered) await unlockWorktreeForRemoval(repoRoot, wtPath, signal);
+
+    let moved = false;
+    if (existsSync(wtPath)) {
+      await mkdir(trashDir, { recursive: true });
+      await rename(wtPath, trashPath);
+      moved = true;
     }
-    // Our own lock, released immediately before the removal that needs it gone.
-    // Only on this branch: an unregistered leftover has no registration to hold
-    // a lock, and `git worktree unlock` on one fails with "is not a working
-    // tree" — a confusing warning for a state that cannot be locked.
-    await unlockWorktreeForRemoval(repoRoot, wtPath, signal);
-    // Demoted (`tier: "background"` applies backgroundArgv/darwinbg): removal is
-    // cleanup/reap work, never interactive.
-    //
-    // This is the site of the 2026-08-17 outage: it holds a host-wide
-    // `worktree-mutate` slot, and with no bound a wedged git here blocked worktree
-    // checkouts on every backend on the machine until someone noticed. 120 s is
-    // ~100× the 1.2 s p50 — loose enough to never fire on real work, short enough
-    // that a wedged hourly reap frees the flock within its own tick.
-    const r = await spawnCaptured(
-      [GIT, "-C", repoRoot, "worktree", "remove", wtPath, "--force"],
-      { tier: "background", timeoutMs: REMOVE_TIMEOUT_MS, signal },
+    // Drops the registration whose dir just left (and any other stale admin
+    // entry). Logged rather than thrown, and deliberately NOT signal-bound: the
+    // rename above is the removal, already committed to, so failing here would
+    // report a completed removal as a failure. A stale admin entry is harmless
+    // and the next prune clears it. Its own timeout bounds it instead.
+    const pruned = await spawnCaptured(
+      [GIT, "-C", repoRoot, "worktree", "prune"],
+      {
+        tier: "background",
+        timeoutMs: PRUNE_TIMEOUT_MS,
+      },
     );
-    if (r.timedOut) {
-      throw new WorktreeGitTimeoutError({
-        message:
-          `git worktree remove for ${wtPath} did not finish within ${REMOVE_TIMEOUT_MS} ms ` +
-          `and was killed; the host-wide worktree-mutate slot is released and the next ` +
-          `sweep retries`,
-        command: `${GIT} -C ${repoRoot} worktree remove ${wtPath} --force`,
-        timeoutMs: REMOVE_TIMEOUT_MS,
-        worktreePath: wtPath,
-      });
+    if (pruned.timedOut || pruned.exitCode !== 0) {
+      console.warn(
+        `[worktree] 'worktree prune' after removing ${wtPath} did not succeed ` +
+          `(${pruned.timedOut ? `timed out after ${PRUNE_TIMEOUT_MS} ms` : `exit ${pruned.exitCode}`}): ` +
+          `${pruned.stderr.trim() || "<no stderr>"}`,
+      );
     }
-    if (r.exitCode !== 0) {
-      throw new Error(`git worktree remove failed: ${r.stderr}`);
-    }
+    return moved;
   }, signal);
+  if (trashed) await deleteTrashEntry(trashPath);
 }

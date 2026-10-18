@@ -46,6 +46,19 @@ checkout. The refill job, its boot warm-up and its daily cron live in the
   mtime — an `unlock` touches the admin dir), and ready spares older than a day,
   taken by `unlock` first so a concurrent claim wins.
 
+## Removal is a rename (`removeWorktree`)
+
+Inside the mutate gate: unlock → `rename` the dir into `.claude/worktree-trash/<ms>-<name>`
+(same volume: atomic, instant) → `git worktree prune`. Outside the gate: a
+background-tier `rm -rf` of the trash entry. The branch ref is kept.
+
+It used to be `git worktree remove --force` under a 300 s kill, holding a slot
+while it deleted file by file. A kill left a half-deleted checkout in place, which
+read as dirty, so the reaper's clean path never took it again. A rename has no half
+state. A trash delete that is killed or dies with its process is retried by
+`emptyWorktreeTrash`, which the reaper calls each sweep for entries older than an
+hour (younger ones may still be under their own removal's delete).
+
 ## Cancellation
 
 `setupWorktree(id, path, compositionIds, signal?)`,
@@ -53,7 +66,7 @@ checkout. The refill job, its boot warm-up and its daily cron live in the
 an optional ambient `AbortSignal` — a job handler passes its `ctx.signal`.
 
 This is the gate where cancellation matters most. A handler stuck inside the
-`worktree-mutate` acquire, or inside a `git worktree remove` while holding one of
+`worktree-mutate` acquire, or inside a git child while holding one of
 its three host-wide slots, is not stalling itself: it is stalling worktree
 checkouts on every backend on the machine (the 2026-08-17 outage). Aborting such a
 handler means nothing unless the abort reaches the wait, so the signal is forwarded
@@ -62,8 +75,8 @@ back immediately) and every git child underneath, which `spawnCaptured` kills on
 abort before throwing `signal.reason`.
 
 Two children are deliberately left unbound, and both for the same reason: the
-`git worktree prune` after a killed `worktree add`, and the one after the
-unregistered-leftover `rm`. Each is the tail of an operation already committed to,
+`git worktree prune` after a killed `worktree add`, and the one after a
+removal's rename into the trash. Each is the tail of an operation already committed to,
 so cancelling it would trade a released flock for a partial checkout the next retry
 mistakes for a finished one, or a leaked `.git/worktrees` entry. Their own timeouts
 bound them instead.
@@ -130,6 +143,7 @@ pid liveness.
   - Exports (values):
     - `countReadySpares`
     - `createSpareWorktree`
+    - `emptyWorktreeTrash`
     - `ensureMainWorktreeRoot`
     - `gitWorktreesDir`
     - `hasCompositionMarker`

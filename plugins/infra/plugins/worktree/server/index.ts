@@ -10,6 +10,7 @@ export {
   type WorktreeSetup,
   type CheckoutSource,
   removeWorktree,
+  emptyWorktreeTrash,
   WorktreeGitTimeoutError,
 } from "./internal/worktree";
 export {

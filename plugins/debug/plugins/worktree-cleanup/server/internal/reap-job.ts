@@ -2,7 +2,10 @@ import { z } from "zod";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
-import { WorktreeGitTimeoutError } from "@plugins/infra/plugins/worktree/server";
+import {
+  emptyWorktreeTrash,
+  WorktreeGitTimeoutError,
+} from "@plugins/infra/plugins/worktree/server";
 import { reclaimNamespace } from "@plugins/infra/plugins/worktree/plugins/reclaim/server";
 import {
   collectReapable,
@@ -66,6 +69,13 @@ export const worktreeReapJob = defineSupervisedJob({
   schedule: { cron: "0 * * * *" }, // hourly
   runAttempts: 1,
   async run(_input, { log }) {
+    // Files of earlier removals whose own delete was killed or whose process
+    // died. `removeWorktree` moves a checkout into the trash atomically, so
+    // whatever is left there is disk space only, never a half-removed checkout.
+    const trashed = await emptyWorktreeTrash(Date.now());
+    if (trashed > 0)
+      log(`auto-reap: emptied ${trashed} leftover trash entries`);
+
     const scan = await collectReapable(Date.now());
     const targets = scan.targets;
     const namespaceTargets = scan.namespaceTargets;

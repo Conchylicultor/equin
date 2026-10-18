@@ -98,8 +98,8 @@ the panel until it is given something to say.
   - Exports (values): `worktreeCleanupPane`
 - Server:
   - Contributes: `report-kind` "worktree-reap-failed"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/worktree` ×9
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/worktree` ×10
     - `infra/worktree/reclaim` ×4
     - `database/admin` ×3
     - `tasks/tasks-core` ×3

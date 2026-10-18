@@ -21032,8 +21032,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `worktreeCleanupPane`
       - Server:
         - Contributes: `report-kind` "worktree-reap-failed"
-        - Uses: 28 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
-          - `infra/worktree` ×9
+        - Uses: 29 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+          - `infra/worktree` ×10
           - `infra/worktree/reclaim` ×4
           - `database/admin` ×3
           - `tasks/tasks-core` ×3
@@ -28041,6 +28041,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `countReadySpares`
           - `createSpareWorktree`
+          - `emptyWorktreeTrash`
           - `ensureMainWorktreeRoot`
           - `gitWorktreesDir`
           - `hasCompositionMarker`
