@@ -5,31 +5,30 @@ import {
   DROP_TARGET_RING,
   useIsBackgroundDropTarget,
   type RowDnd,
+  type SectionEnds,
 } from "../internal/row-dnd";
 
 /**
  * A view's empty space as a drop target (`rowDrop.background`): the box around
  * one section's rows (`group`; `null` ungrouped), so a drop between them, below
  * them or on a row that does not accept it lands here, highlighted while it
- * would — ringed for a drop into the view, the insertion line after its last
- * row under `placement: "between"`. Without a background drop, its children
- * as they are — no box.
+ * would — ringed for a drop into the view; under `placement: "between"` the
+ * gap above the first row or after the last (see `RowDnd.backgroundProps`).
+ * Without a background drop, its children as they are — no box.
  */
 export function DropBackground({
   dnd,
   group,
+  firstKey,
   lastKey,
   children,
 }: {
   dnd: RowDnd<unknown> | null;
   group: string | null;
-  /** The section's last painted row — the gap a `"between"` drop here goes
-   *  in (`null` when it has none). */
-  lastKey: string | null;
   children: ReactNode;
-}): ReactNode {
+} & SectionEnds): ReactNode {
   const over = useIsBackgroundDropTarget(dnd, group);
-  const handlers = dnd?.backgroundProps(group, lastKey);
+  const handlers = dnd?.backgroundProps(group, { firstKey, lastKey });
   if (!handlers) return children;
   const between = dnd?.placement === "between";
   return (

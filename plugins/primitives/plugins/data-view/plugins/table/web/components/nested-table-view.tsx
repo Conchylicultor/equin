@@ -359,7 +359,7 @@ export function NestedTableView(
 
   if (hierarchy.rows.length === 0 && props.emptyState !== undefined) {
     return (
-      <DropBackground dnd={dnd} group={null} lastKey={null}>
+      <DropBackground dnd={dnd} group={null} firstKey={null} lastKey={null}>
         {props.emptyState}
       </DropBackground>
     );
@@ -775,7 +775,7 @@ export function NestedTableView(
               />
             </div>
           )}
-          <DropBackground dnd={dnd} group={null} lastKey={null}>
+          <DropBackground dnd={dnd} group={null} firstKey={null} lastKey={null}>
             {renderTable(activeId)}
           </DropBackground>
           {addLabel != null && (

@@ -73,6 +73,12 @@ export interface RowDndHierarchy<TRow> {
   rowOf: (key: string) => TRow | undefined;
 }
 
+/** A section's first and last painted rows (`null` for an empty one). */
+export interface SectionEnds {
+  firstKey: string | null;
+  lastKey: string | null;
+}
+
 /** A `"between"` view's rows as painted, by key — what gives a gap its one
  *  spelling: the gap above a row is the one after the row above it. */
 export interface RowDndSequence<TRow> {
@@ -90,13 +96,13 @@ export interface RowDndSequence<TRow> {
  */
 export interface RowDnd<TRow> {
   rowProps: (key: string, row: TRow) => RowDndProps;
-  /** The empty space of a section (`group`; `null` ungrouped) whose last
-   *  painted row is `lastKey` (`null` when it has none) — where a
-   *  `"between"` drop there is inserted. `undefined` when the view takes no
-   *  drop there. */
+  /** The empty space of a section (`group`; `null` ungrouped) whose first
+   *  and last painted rows are `ends` (`null` when it has none) — under
+   *  `"between"`, the space above the first row is its gap, the rest the
+   *  gap after the last. `undefined` when the view takes no drop there. */
   backgroundProps: (
     group: string | null,
-    lastKey: string | null,
+    ends: SectionEnds,
   ) => DropTargetProps | undefined;
   /** Into rows, or between them (`rowDrop.placement`). */
   placement: "into" | "between";
@@ -397,18 +403,24 @@ export function useRowDnd<TRow>(args: {
 
     const backgroundProps = (
       group: string | null,
-      lastKey: string | null,
+      { firstKey, lastKey }: SectionEnds,
     ): DropTargetProps | undefined => {
       if (!hasBackground) return undefined;
       const setter = backgroundSetter(group);
-      // Under `"between"` the space after the rows is the last row's own
-      // `"after"` gap — one target, one line — when that row takes it.
+      // Under `"between"` the space above the first row is that row's
+      // `"before"` gap, and the rest (below the rows) the last row's
+      // `"after"` — each one target and one line with the row's own half,
+      // when the row takes it.
       const endGap = (e: DragEvent<HTMLElement>) => {
-        if (placement !== "between" || lastKey === null) return null;
+        if (placement !== "between") return null;
+        const { sequence } = latest.current;
+        const top = firstKey !== null && isAboveRow(e, firstKey);
+        const key = top ? firstKey : lastKey;
+        if (key === null) return null;
         const target = resolveGap(
-          lastKey,
-          latest.current.sequence?.rowOf(lastKey),
-          "after",
+          key,
+          sequence?.rowOf(key),
+          top ? "before" : "after",
           types(e),
         );
         return target.kind === "row" ? target : null;
@@ -465,6 +477,17 @@ export function useRowDnd<TRow>(args: {
     return { rowProps, backgroundProps, placement, store, isWithin };
   }, [latest, hasDrag, hasDrop, hasBackground, placement]);
   return hasDrag || hasDrop ? dnd : null;
+}
+
+/** Is the pointer above the row `key` painted inside this box (its
+ *  `data-row-key` element — every view stamps one)? `false` when the row is
+ *  not mounted (windowed out). */
+function isAboveRow(e: DragEvent<HTMLElement>, key: string): boolean {
+  for (const el of e.currentTarget.querySelectorAll("[data-row-key]")) {
+    if (el.getAttribute("data-row-key") === key)
+      return e.clientY < el.getBoundingClientRect().top;
+  }
+  return false;
 }
 
 /** `dragleave` fires when the pointer moves onto a child of the same element

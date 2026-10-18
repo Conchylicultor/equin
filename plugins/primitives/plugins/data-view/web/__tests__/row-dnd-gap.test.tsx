@@ -36,6 +36,17 @@ function dragAt(y: number): DragEvent<HTMLElement> {
   } as unknown as DragEvent<HTMLElement>;
 }
 
+/** A drag event over a section's band whose first row (`a`) starts 10px
+ *  down — the band's top padding above it — the pointer at `y`. */
+function bandDragAt(y: number): DragEvent<HTMLElement> {
+  const band = document.createElement("div");
+  const first = document.createElement("div");
+  first.setAttribute("data-row-key", "a");
+  first.getBoundingClientRect = () => new DOMRect(0, 10, 100, 20);
+  band.append(first);
+  return { ...dragAt(y), currentTarget: band } as DragEvent<HTMLElement>;
+}
+
 function mount(onDrop = vi.fn()) {
   const rowDrop: ViewRowDropConfig<Row> = {
     placement: "between",
@@ -74,8 +85,21 @@ describe("useRowDnd — between: one spelling per gap", () => {
     const { dnd } = mount();
     dnd.rowProps("c", ROWS[2]!).onDragOver!(dragAt(15));
     const fromRow = dnd.store.get();
-    dnd.backgroundProps(null, "c")!.onDragOver(dragAt(30));
+    dnd
+      .backgroundProps(null, { firstKey: "a", lastKey: "c" })!
+      .onDragOver(bandDragAt(80));
     expect(dnd.store.get()).toEqual(fromRow);
+  });
+
+  it("the band's top padding is the first row's gap, not the end", () => {
+    const { dnd } = mount();
+    dnd.rowProps("a", ROWS[0]!).onDragOver!(dragAt(5));
+    const fromRow = dnd.store.get();
+    dnd
+      .backgroundProps(null, { firstKey: "a", lastKey: "c" })!
+      .onDragOver(bandDragAt(4));
+    expect(dnd.store.get()).toEqual(fromRow);
+    expect(fromRow).toEqual({ kind: "row", key: "a", edge: "before" });
   });
 
   it("a drop in the upper half of b lands after a", () => {

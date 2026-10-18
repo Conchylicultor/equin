@@ -1637,8 +1637,10 @@ hoist — it works under any field sort, and it is the path to OS drag-out.
   per row, it was two targets drawn on two edges, and the line hopped as the
   pointer crossed the boundary. So `useRowDnd` resolves every gap to `"after"`
   the row painted above it (`"before"` only for a section's first row), and
-  the section's trailing empty space to its last row's `"after"` when that
-  row accepts — one store value, one line, one `accepts` / `onDrop` call per
+  the section's empty space to the nearest end's gap when that row accepts:
+  above the first row (the band's top padding) its `"before"`, anywhere else
+  the last row's `"after"` (the band finds its first row by `data-row-key`,
+  `DropBackground firstKey lastKey`) — one store value, one line, one `accepts` / `onDrop` call per
   gap. The view says what "above" is: `sequence: RowDndSequence`
   (`above(key)`, `rowOf(key)`, its sections' entries as painted), required
   under `"between"` (it throws without).

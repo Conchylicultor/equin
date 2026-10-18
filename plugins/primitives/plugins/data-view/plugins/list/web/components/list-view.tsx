@@ -419,7 +419,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);
   if (totalCount === 0) {
     return (
-      <DropBackground dnd={dnd} group={null} lastKey={null}>
+      <DropBackground dnd={dnd} group={null} firstKey={null} lastKey={null}>
         <Center axis="both" className="py-xl">
           <Text as="div" variant="body" className="text-muted-foreground">
             {props.emptyState}
@@ -479,6 +479,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       <DropBackground
         dnd={dnd}
         group={group}
+        firstKey={entries[0]?.key ?? null}
         lastKey={entries.at(-1)?.key ?? null}
       >
         <SectionBody
