@@ -20,6 +20,7 @@ import {
 } from "../core";
 import { browserSessionSource, type HostTarget } from "../shared/protocol";
 import { revertSessionWritesOn } from "../shared/revert";
+import { trackWrites, type WriteDrain } from "./write-drain";
 
 /**
  * The sessions the host holds — the ONE Chromium, a `BrowserContext` per
@@ -46,6 +47,12 @@ export const SESSION_IDLE_MS = 30 * 60_000;
 export const HOST_IDLE_MS = 5 * 60_000;
 const LOG_CAP = 500;
 const BOUND_MS = 30_000;
+/**
+ * How long closing waits for a session's in-flight writes before reverting
+ * anyway: a localhost write answers in milliseconds, so one still open after
+ * this is stuck, and must not keep the user's data changed.
+ */
+const DRAIN_MS = 10_000;
 /**
  * An action on an element that never becomes actionable (covered, hidden, a
  * stale ref) fails fast: the agent reads why and retries, rather than waiting
@@ -89,6 +96,8 @@ export interface Session {
    */
   origins: Set<string>;
   context: BrowserContext;
+  /** Its writes still on the wire, which closing waits for before reverting. */
+  writes: WriteDrain;
   tabs: Map<string, Tab>;
   /** The tab a call naming none acts on: the last one used. */
   current: string | null;
@@ -319,6 +328,7 @@ export async function getSession(
     target,
     origins: new Set(),
     context,
+    writes: trackWrites(context, isDeployOrigin),
     tabs: new Map(),
     current: null,
     nextTab: 1,
@@ -461,7 +471,8 @@ export async function closeTab(session: Session, id: string): Promise<void> {
 }
 
 /**
- * Close a conversation's session: drop its context, then revert the durable
+ * Close a conversation's session: stop it sending anything new, wait for the
+ * writes it already sent to land, drop its context, then revert the durable
  * writes IT made on every deploy it reached — its own request-origin source only, so
  * another conversation's session or an e2e run on the same deploy keeps
  * theirs. Returns false when there was none.
@@ -472,6 +483,15 @@ export async function closeSession(conversationId: string): Promise<boolean> {
   sessions.delete(conversationId);
   if (session.idle) clearTimeout(session.idle);
   try {
+    const drained = await session.writes.drain(DRAIN_MS);
+    if (drained.kind === "timeout") {
+      recordHostError(
+        `drain-writes ${conversationId}`,
+        new Error(
+          `${drained.pending.length} write(s) still unanswered after ${DRAIN_MS}ms, reverting anyway — if one lands later it is not reverted: ${drained.pending.join(", ")}`,
+        ),
+      );
+    }
     await closeBounded(session.context.close(), "context");
     await revertSessionWritesOn([...session.origins], conversationId);
   } finally {

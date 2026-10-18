@@ -80,6 +80,16 @@ export const AgentBrowserHostStatusSchema = z.object({
   /** When the host exits for want of sessions; `null` while any is open. */
   idleExitAt: z.string().nullable(),
   sessions: z.array(AgentBrowserSessionSchema).max(MAX_SESSIONS),
+  /**
+   * Page-driving calls under a host `e2e` slot right now, and queued for one.
+   * Defaulted: a host from before admission wrote none.
+   */
+  drives: z
+    .object({
+      running: z.number().int().min(0),
+      waiting: z.number().int().min(0),
+    })
+    .default({ running: 0, waiting: 0 }),
   errors: z.array(AgentBrowserHostErrorSchema).max(MAX_HOST_ERRORS),
 });
 export type AgentBrowserHostStatus = z.infer<

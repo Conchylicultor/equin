@@ -45,6 +45,7 @@ import {
   recordHostError,
   wireHost,
 } from "./host-session";
+import { drivesSnapshot, wireDrives } from "./host-drives";
 import { runTool } from "./host-tools";
 
 const dir = agentBrowserDir.ensure();
@@ -76,6 +77,7 @@ function writeStatus(state: "ready" | "exited"): void {
     exitReason: state === "exited" ? exiting : null,
     updatedAt: new Date().toISOString(),
     ...hostSnapshot(),
+    drives: drivesSnapshot(),
   };
   const path = file(HOST_FILES.status);
   const tmp = `${path}.tmp-${process.pid}`;
@@ -169,6 +171,7 @@ const server = Bun.serve({
 });
 
 writeFileSync(file(HOST_FILES.pid), `${process.pid}\n`);
+wireDrives(publish);
 wireHost({
   onChange: publish,
   onIdle: () => {

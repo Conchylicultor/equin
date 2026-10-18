@@ -74,24 +74,36 @@ export const actionSchema = z.object({
 });
 export type Action = z.infer<typeof actionSchema>;
 
+/**
+ * What a call costs the machine. `drive` makes Chromium work — load or boot a
+ * page, run input, script or a capture — so the host runs it under a slot of
+ * the host-wide `e2e` pool, the one e2e scripts take: one budget for every
+ * headless page driven at once. `read` answers from a tree or a log the page
+ * already has, and never queues behind a running script.
+ */
+export type ToolCost = "drive" | "read";
+
 interface ToolSpec<S extends z.ZodRawShape> {
+  cost: ToolCost;
   description: string;
   inputSchema: S;
 }
 
 function spec<S extends z.ZodRawShape>(
+  cost: ToolCost,
   description: string,
   inputSchema: S,
 ): ToolSpec<S> {
-  return { description: `${PREAMBLE}\n\n${description}`, inputSchema };
+  return { cost, description: `${PREAMBLE}\n\n${description}`, inputSchema };
 }
 
 export const browserToolSpecs = {
-  browser_tabs: spec("List, open or close this session's tabs.", {
+  browser_tabs: spec("read", "List, open or close this session's tabs.", {
     action: z.enum(["list", "new", "close"]).default("list"),
     tab: tabArg.describe("close: the tab to close."),
   }),
   browser_navigate: spec(
+    "drive",
     'Navigate a tab (opening the first one when there is none) to a route of this worktree\'s build, an absolute URL, or "back" / "forward".',
     {
       url: z
@@ -103,6 +115,7 @@ export const browserToolSpecs = {
     },
   ),
   browser_read_page: spec(
+    "read",
     "The page's accessibility tree as YAML, each interactive element tagged [ref=eN] for browser_act. The default way to look at a page — far cheaper than a screenshot.",
     {
       tab: tabArg,
@@ -116,6 +129,7 @@ export const browserToolSpecs = {
     },
   ),
   browser_find: spec(
+    "read",
     "Find elements whose accessibility-tree line matches a text or role (case-insensitive), with their refs.",
     {
       query: z
@@ -126,14 +140,17 @@ export const browserToolSpecs = {
     },
   ),
   browser_get_page_text: spec(
+    "read",
     "The page's visible text (document.body.innerText).",
     { tab: tabArg },
   ),
   browser_act: spec(
+    "drive",
     "One action on a tab: click / double_click / right_click / hover / fill / type / press / select / scroll / wait. Target by ref (preferred), selector, or coordinate. Returns the tab's url/title after it and any console errors it caused.",
     { ...actionSchema.shape, tab: tabArg },
   ),
   browser_batch: spec(
+    "drive",
     "Several browser_act actions in one call, in order; stops at the first failure and says which.",
     {
       actions: z.array(actionSchema).min(1),
@@ -141,6 +158,7 @@ export const browserToolSpecs = {
     },
   ),
   browser_javascript: spec(
+    "drive",
     "Evaluate JavaScript in the page and return its (awaited, JSON-serialized) result. The code is a function body: use `return`.",
     {
       code: z
@@ -151,6 +169,7 @@ export const browserToolSpecs = {
     },
   ),
   browser_screenshot: spec(
+    "drive",
     "A PNG of the tab's viewport (or full page, or one element). Use when looks matter; prefer browser_read_page otherwise.",
     {
       tab: tabArg,
@@ -159,6 +178,7 @@ export const browserToolSpecs = {
     },
   ),
   browser_console: spec(
+    "read",
     "The tab's console messages, page errors and dismissed dialogs, recorded since the tab opened (last 500).",
     {
       tab: tabArg,
@@ -168,6 +188,7 @@ export const browserToolSpecs = {
     },
   ),
   browser_network: spec(
+    "read",
     "The tab's network requests since it opened (last 500): method, url, status or failure.",
     {
       tab: tabArg,
@@ -180,6 +201,7 @@ export const browserToolSpecs = {
     },
   ),
   browser_viewport: spec(
+    "drive",
     "Resize a tab's viewport and/or switch its color scheme.",
     {
       tab: tabArg,
@@ -189,10 +211,12 @@ export const browserToolSpecs = {
     },
   ),
   browser_attach: spec(
+    "read",
     "Run an e2e script INSIDE this session: opens a fresh tab and returns a ticket. Pass it as `./singularity run <script>.ts --attach <ticket>` — the script drives that tab instead of launching its own browser, and leaves it here when it ends, passing or failing. Then inspect or continue from the exact step it stopped at with the other browser_* tools on that tab. One ticket per run; single-session scripts only.",
     {},
   ),
   browser_close: spec(
+    "read",
     "Close this conversation's whole session (every tab) and revert the durable writes it made. Sessions also close after 30 idle minutes and when the conversation ends.",
     {},
   ),

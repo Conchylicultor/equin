@@ -19,13 +19,17 @@ const NO_SESSIONS: AgentBrowserSession[] = [];
 
 function hostLine(s: AgentBrowserStatus, now: number): string | null {
   if (s.kind !== "running") return null;
-  const { pid, startedAt, idleExitAt, codeId } = s.host;
+  const { pid, startedAt, idleExitAt, codeId, drives } = s.host;
   const since = new Date(startedAt).toLocaleTimeString();
   const exit =
     idleExitAt === null
       ? ""
       : ` · exits ${untilText(idleExitAt, now)} unless used`;
-  return `Host pid ${pid}, up since ${since}, code ${codeId}${exit}`;
+  const driving =
+    drives.running + drives.waiting === 0
+      ? ""
+      : ` · ${drives.running} driving, ${drives.waiting} waiting for a browser slot`;
+  return `Host pid ${pid}, up since ${since}, code ${codeId}${exit}${driving}`;
 }
 
 /**

@@ -22,8 +22,9 @@ function plural(n: number, one: string): string {
  *
  * - loading → `unknown` ("Checking…"), never `ok`;
  * - no host (never launched, or exited) → `ok`: it starts on the first call;
- * - running → `ok` with its sessions and tabs, or `attention` while a failure
- *   it hit on its own (an idle close, a revert) is recent;
+ * - running → `ok` with its sessions and tabs (and calls queued for a
+ *   browser slot), or `attention` while a failure it hit on its own (an idle
+ *   close, a revert, a write drain that timed out) is recent;
  * - a status naming a dead pid → `attention`: the host died without closing
  *   its sessions (the next call relaunches it and reverts their writes);
  * - unreadable → `unknown` with why.
@@ -62,7 +63,7 @@ export function agentBrowserVerdict(
         summary: `Status file unreadable: ${s.reason}`,
       };
     case "running": {
-      const { sessions, errors, idleExitAt } = s.host;
+      const { sessions, errors, idleExitAt, drives } = s.host;
       const recent = errors.filter(
         (e) => now - Date.parse(e.at) < RECENT_ERROR_MS,
       );
@@ -80,9 +81,13 @@ export function agentBrowserVerdict(
         };
       }
       const tabs = sessions.reduce((n, x) => n + x.tabs.length, 0);
+      const queued =
+        drives.waiting === 0
+          ? ""
+          : `, ${plural(drives.waiting, "call")} waiting for a browser slot`;
       return {
         state: "ok",
-        summary: `${plural(sessions.length, "session")}, ${plural(tabs, "tab")}`,
+        summary: `${plural(sessions.length, "session")}, ${plural(tabs, "tab")}${queued}`,
       };
     }
   }

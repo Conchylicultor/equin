@@ -18,6 +18,7 @@ import {
   type Tab,
 } from "./host-session";
 import { issueAttachTicket } from "./host-attach";
+import { withDriveSlot } from "./host-drives";
 
 /**
  * Every tool of `shared/tools.ts`, implemented on the host's live pages. A
@@ -349,7 +350,8 @@ const impls: Impls = {
 /**
  * Run one tool call. The args are parsed here, against the same schema the
  * backend advertised: the socket is a process boundary, and a backend running
- * other code may send what this host does not accept.
+ * other code may send what this host does not accept. A `drive` call runs
+ * under a host `e2e` slot (`host-drives.ts`).
  */
 export function runTool<N extends BrowserToolName>(
   name: N,
@@ -359,5 +361,7 @@ export function runTool<N extends BrowserToolName>(
   const args = z
     .object(browserToolSpecs[name].inputSchema)
     .parse(rawArgs ?? {}) as BrowserToolArgs<N>;
-  return impls[name](args, ctx);
+  return browserToolSpecs[name].cost === "drive"
+    ? withDriveSlot(() => impls[name](args, ctx))
+    : impls[name](args, ctx);
 }
