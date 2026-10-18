@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import type { AttachmentRendererProps } from "../core";
+import type { AttachmentEvent, AttachmentRendererProps } from "../core";
 import { JsonlViewerAttachment } from "./slots";
 
 /**
@@ -13,6 +13,9 @@ import { JsonlViewerAttachment } from "./slots";
  * - `conversation` — something that happened in the conversation (a file the
  *   user attached, a hook error, a queued prompt). It stays a row and breaks a
  *   fold.
+ *
+ * A subtype whose events differ (a hook's output is context at SessionStart, a
+ * row mid-turn) decides per event: `role` is then a function of the event.
  *
  * A subtype nobody renders is `ambient`: it joins a fold it sits in, never
  * starts one (`unrenderedAttachmentRole`).
@@ -32,14 +35,18 @@ export function attachmentRenderer({
 }: {
   match: string;
   component: ComponentType<AttachmentRendererProps>;
-  role: AttachmentRole;
+  role: AttachmentRole | ((event: AttachmentEvent) => AttachmentRole);
 }) {
   return [
     JsonlViewerAttachment.Renderer({ match, component }),
     JsonlViewer.ContextRole({
       id: `attachment:${match}`,
       role: (e) =>
-        e.kind === "attachment" && e.subtype === match ? role : undefined,
+        e.kind === "attachment" && e.subtype === match
+          ? typeof role === "function"
+            ? role(e)
+            : role
+          : undefined,
     }),
   ] as const;
 }

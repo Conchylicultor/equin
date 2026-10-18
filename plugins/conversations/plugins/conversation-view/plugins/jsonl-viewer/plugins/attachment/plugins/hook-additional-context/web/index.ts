@@ -1,6 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { attachmentRenderer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
-import { HookAdditionalContextView } from "./components/hook-additional-context-view";
+import {
+  HookAdditionalContextView,
+  hookAdditionalContextRole,
+} from "./components/hook-additional-context-view";
 
 export default {
   collapsed: true,
@@ -10,7 +13,7 @@ export default {
     ...attachmentRenderer({
       match: "hook_additional_context",
       component: HookAdditionalContextView,
-      role: "conversation",
+      role: hookAdditionalContextRole,
     }),
   ],
 } satisfies PluginDefinition;
