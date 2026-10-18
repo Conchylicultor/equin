@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/plugins/framework/plugins/tooling/plugins/guards/bin/guard.ts\""
+            "command": "command -v bun >/dev/null 2>&1 || { echo 'guards: bun is not on PATH, so no PreToolUse guard can run; every tool call is blocked until it is (an agent pane seeds PATH with the mise shims: runtime-tmux agentSessionPath)' >&2; exit 2; }; bun \"$CLAUDE_PROJECT_DIR/plugins/framework/plugins/tooling/plugins/guards/bin/guard.ts\""
           }
         ]
       }
