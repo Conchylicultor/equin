@@ -1,6 +1,6 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -82,33 +82,19 @@ export function HoverCardBody({ card }: { card: HoverCardContent }) {
 }
 
 /**
- * The path as a vertical stepper: one line per step, its marker lit up to the
- * current one, then what the current step means. One line each, not a row of
- * columns: a fixed-width card cannot fit any path's names side by side (the
- * trigger is usually the horizontal bar already).
+ * The path as a stepper: one equal segment per step with its name under it,
+ * the current one lit, then what the current step means.
  */
 function StepsPath({ steps }: { steps: HoverCardSteps }) {
   const { items, current, caption } = steps;
   return (
     <Stack gap="xs">
-      <Stack as="ol" gap="2xs">
+      <Grid as="ol" cols={items.length} gap="sm">
         {items.map((step, i) => {
           const state = i < current ? "done" : i === current ? "now" : "todo";
           return (
-            <Stack
-              as="li"
-              key={step.id}
-              direction="row"
-              gap="xs"
-              align="center"
-            >
-              <span
-                className={cn(
-                  "h-1 w-3 rounded-sm",
-                  rigidClass(),
-                  SEGMENT[state],
-                )}
-              />
+            <Stack as="li" key={step.id} gap="2xs">
+              <span className={cn("h-1 rounded-sm", SEGMENT[state])} />
               <Text
                 variant="caption"
                 tone={state === "now" ? "default" : "muted"}
@@ -119,7 +105,7 @@ function StepsPath({ steps }: { steps: HoverCardSteps }) {
             </Stack>
           );
         })}
-      </Stack>
+      </Grid>
       {caption != null && (
         <Text variant="caption" tone="muted">
           {caption}

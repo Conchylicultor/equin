@@ -84,7 +84,10 @@
 //
 // `card` is a hover card (`overlay/hover-card`): one subject described in a
 // title, a sentence, chips and a footer. Fixed, so moving the pointer down a
-// menu's rows swaps the card's content without resizing it.
+// menu's rows swaps the card's content without resizing it. `card-wide` is the
+// same card when it holds a row of side-by-side columns (a stepper's step names):
+// at least the card width, growing to fit them (to a cap) so no column overflows
+// into its neighbour.
 export type PopoverWidth =
   | "content"
   | "fit"
@@ -97,6 +100,7 @@ export type PopoverWidth =
   | "builder"
   | "picker"
   | "card"
+  | "card-wide"
   | "xs"
   | "sm"
   | "md"
@@ -123,6 +127,8 @@ export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
   builder: "w-(--popover-width-builder) max-w-(--available-width)", // a six-track rule row
   picker: "w-(--popover-width-picker) max-w-(--available-width)", // a panel whose body is a grid
   card: "w-(--popover-width-card) max-w-(--available-width)", // a hover card describing one thing
+  "card-wide":
+    "w-max min-w-[min(var(--popover-width-card),var(--available-width,100vw))] max-w-[min(28rem,var(--available-width,100vw))]", // a hover card holding side-by-side columns
   xs: "w-48 max-w-(--available-width)",
   sm: "w-56 max-w-(--available-width)",
   md: "w-64 max-w-(--available-width)",

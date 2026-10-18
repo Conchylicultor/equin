@@ -32,7 +32,7 @@ hangs off.
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
-    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/grid.Grid`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.closestOverlayPanel`

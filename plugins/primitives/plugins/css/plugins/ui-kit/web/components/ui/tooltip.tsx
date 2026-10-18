@@ -90,13 +90,17 @@ function TooltipCardContent({
   sideOffset = 6,
   align = "start",
   anchor,
+  wide = false,
   children,
   ...props
 }: Omit<TooltipPrimitive.Popup.Props, "render" | "className"> &
   Pick<
     TooltipPrimitive.Positioner.Props,
     "align" | "side" | "sideOffset" | "anchor"
-  >) {
+  > & {
+    /** The card holds side-by-side columns: grow past the card width to fit them. */
+    wide?: boolean;
+  }) {
   const forwarded = usePortalForwardedAttrs();
   const container = usePortalContainer();
   return (
@@ -113,7 +117,11 @@ function TooltipCardContent({
           data-slot="tooltip-card"
           {...props}
           render={
-            <OverlayPanel width="card" padding="sm" scroll={false}>
+            <OverlayPanel
+              width={wide ? "card-wide" : "card"}
+              padding="sm"
+              scroll={false}
+            >
               {children}
             </OverlayPanel>
           }

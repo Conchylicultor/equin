@@ -143,6 +143,9 @@ export function WithHoverCard({
         anchor={anchor}
         side={side ?? (beside === "panel" ? "right" : "top")}
         align={beside === "panel" ? "start" : "center"}
+        // A stepper's names sit side by side, one column each: the card grows
+        // to fit them rather than overlapping them.
+        wide={card.steps != null}
       >
         <HoverCardBody card={card} />
       </TooltipCardContent>
