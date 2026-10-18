@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DiskReadingSchema } from "./disk";
 
 // The machine watcher's latest reading — the host-global `vitals.json` beside
 // the `status.<pid>.json` files. The sentinel WORKER writes it every tick (not main), so the
@@ -51,6 +52,11 @@ export const SentinelVitalsRecordSchema = z.object({
     freeMemMb: z.number().nullable(),
     inFlightBuilds: z.number().nullable(),
     runningBackends: z.number().nullable(),
+    /**
+     * The home volume; null when unreadable this tick. Defaults to null so a
+     * file written by a watcher that predates the reading still parses.
+     */
+    disk: DiskReadingSchema.nullable().default(null),
   }),
 });
 export type SentinelVitalsRecord = z.infer<typeof SentinelVitalsRecordSchema>;

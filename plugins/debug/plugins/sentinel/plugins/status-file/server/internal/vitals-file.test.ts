@@ -33,7 +33,12 @@ const RECORD: SentinelVitalsRecord = {
   },
   elevated: [],
   tripped: false,
-  context: { freeMemMb: 9_600, inFlightBuilds: 1, runningBackends: 7 },
+  context: {
+    freeMemMb: 9_600,
+    inFlightBuilds: 1,
+    runningBackends: 7,
+    disk: { totalBytes: 1_000, freeBytes: 600, fillBytesPerSec: null },
+  },
 };
 
 describe("sentinel vitals file", () => {

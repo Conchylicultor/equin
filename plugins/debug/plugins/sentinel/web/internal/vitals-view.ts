@@ -1,5 +1,8 @@
 import {
+  bytesText,
+  diskAlarmOf,
   SIGNAL_KEYS,
+  type DiskAlarm,
   type SentinelVitalsRecord,
   type SignalKey,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
@@ -88,7 +91,7 @@ export interface SignalLineView {
 }
 
 export interface GlanceFigureView {
-  key: "load" | "free" | "builds";
+  key: "load" | "free" | "disk" | "builds";
   /** Plain words before the emphasised value. */
   before: string;
   value: string;
@@ -179,6 +182,42 @@ function bannerOf(
   };
 }
 
+const DISK_TONE: Record<DiskAlarm, VitalTone> = {
+  ok: "neutral",
+  low: "warn",
+  filling: "warn",
+  "full-soon": "bad",
+  full: "bad",
+};
+
+/** "412 GB disk free", with how fast it is falling while that is alarming. */
+function diskFigure(
+  disk: SentinelVitalsRecord["context"]["disk"],
+): GlanceFigureView {
+  if (disk === null) {
+    return {
+      key: "disk",
+      before: "",
+      value: `${MISSING} GB`,
+      after: " disk free",
+      tone: "neutral",
+    };
+  }
+  const alarm = diskAlarmOf(disk);
+  const rate = disk.fillBytesPerSec;
+  const falling =
+    (alarm === "filling" || alarm === "full-soon") && rate !== null
+      ? ` (−${bytesText(rate * 60)}/min)`
+      : "";
+  return {
+    key: "disk",
+    before: "",
+    value: bytesText(disk.freeBytes),
+    after: ` disk free${falling}`,
+    tone: DISK_TONE[alarm],
+  };
+}
+
 function glanceOf(vitals: SentinelVitalsRecord): GlanceFigureView[] {
   const load = vitals.signals.loadRatio;
   const { freeMemMb, inFlightBuilds } = vitals.context;
@@ -198,7 +237,7 @@ function glanceOf(vitals: SentinelVitalsRecord): GlanceFigureView[] {
         freeMemMb === null
           ? `${MISSING} GB`
           : `${(freeMemMb / 1024).toFixed(1)} GB`,
-      after: " free",
+      after: " memory free",
       tone:
         freeMemMb === null
           ? "neutral"
@@ -208,6 +247,7 @@ function glanceOf(vitals: SentinelVitalsRecord): GlanceFigureView[] {
               ? "warn"
               : "neutral",
     },
+    diskFigure(vitals.context.disk),
     {
       key: "builds",
       before: "",

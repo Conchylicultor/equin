@@ -1,11 +1,13 @@
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
-import { statSync } from "node:fs";
+import { statfsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { cpus, loadavg } from "node:os";
 import {
+  HOME_DIR,
   listWorktreeDirs,
   worktreesDir,
 } from "@plugins/infra/plugins/paths/core";
+import type { DiskReading } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import {
   HealthSampleSchema,
   HostSampleSchema,
@@ -18,6 +20,8 @@ import {
   counterDelta,
   countBuildProcesses,
   mapPgStatsRow,
+  pushFreeSpace,
+  type FreeSpacePoint,
 } from "../sample-math";
 import type { SentinelPg } from "./pg";
 
@@ -172,6 +176,32 @@ export function readHostCompressor(worktree: string): HostCompressorReading {
   };
 }
 
+/**
+ * The home volume's size and free space (one statfs syscall), with the fill
+ * rate over `window`. Null — and a log line — when the statfs fails; the
+ * window is left as it was, so one failed read does not restart the rate.
+ */
+export function readDisk(
+  window: FreeSpacePoint[],
+  log: Logger,
+  path: string = HOME_DIR,
+): DiskReading | null {
+  let fs: ReturnType<typeof statfsSync>;
+  try {
+    fs = statfsSync(path);
+    // eslint-disable-next-line promise-safety/no-absorbed-failure -- null IS the discriminated "disk unreadable this tick" state: disk is nullable in the sample and vitals schemas and the failure is logged to the sentinel channel; a statfs hiccup must not lose the tick's other vitals
+  } catch (err) {
+    log(`disk statfs failed: ${String(err)}`);
+    return null;
+  }
+  const freeBytes = fs.bavail * fs.bsize;
+  return {
+    totalBytes: fs.blocks * fs.bsize,
+    freeBytes,
+    fillBytesPerSec: pushFreeSpace(window, { wall: Date.now(), freeBytes }),
+  };
+}
+
 export interface SampleGatherer {
   gather(): Promise<ClusterSample>;
 }
@@ -189,6 +219,7 @@ export function createSampleGatherer(
   let prevBlkReadTimeMs: number | null = null;
   let prevXactCommit: number | null = null;
   let lastRollup: Record<string, number> = {};
+  const freeSpace: FreeSpacePoint[] = [];
 
   return {
     async gather(): Promise<ClusterSample> {
@@ -223,6 +254,7 @@ export function createSampleGatherer(
       if (tickCount % ROLLUP_EVERY_N_TICKS === 1)
         lastRollup = readBackendP99Rollup();
       const host = readHostCompressor(MAIN_WORKTREE_NAME);
+      const disk = readDisk(freeSpace, log);
 
       return {
         wall: Date.now(),
@@ -242,6 +274,7 @@ export function createSampleGatherer(
         decompressionsPerSec: host.decompressionsPerSec,
         compressorMb: host.compressorMb,
         freeMemMb: host.freeMemMb,
+        disk,
       };
     },
   };

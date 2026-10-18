@@ -177,6 +177,7 @@ function vitalsRecord(
       freeMemMb: sample.freeMemMb ?? null,
       inFlightBuilds: sample.inFlightBuilds,
       runningBackends: sample.runningBackends,
+      disk: sample.disk ?? null,
     },
   };
 }

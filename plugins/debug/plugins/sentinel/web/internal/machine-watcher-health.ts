@@ -1,5 +1,6 @@
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
+import type { DiskAlarm } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import type { SentinelStatusValue } from "../../core";
 
 /** What a dead or missing watcher costs, said once so every critical row agrees. */
@@ -18,6 +19,25 @@ function withError(summary: string, lastError: string | null): string {
     ? summary
     : `${summary} — last error: ${clampOneLine(lastError)}`;
 }
+
+/**
+ * The row's verdict for a disk that needs a look; `ok` has none (the watcher's
+ * own "Running since" stands). The numbers live in the glance, which follows
+ * every tick — this summary changes only when the verdict does.
+ */
+const DISK_STATUS: Record<DiskAlarm, HealthStatus | null> = {
+  ok: null,
+  low: { state: "attention", summary: "Disk space is running low" },
+  filling: {
+    state: "attention",
+    summary: "The disk is filling fast — something is writing a lot",
+  },
+  "full-soon": {
+    state: "critical",
+    summary: "The disk will be full within the hour at this rate",
+  },
+  full: { state: "critical", summary: "The disk is almost full" },
+};
 
 export function clockTime(at: number): string {
   return new Date(at).toLocaleTimeString([], {
@@ -38,6 +58,9 @@ export function clockTime(at: number): string {
  *   up. Red means the watcher is broken and needs you; duress is the machine
  *   under load with the watcher already handling it (builds held back), so it
  *   asks for a look, not an intervention.
+ * - while running, the disk verdict: `critical` when it is (nearly) full or
+ *   will be within the hour — that needs you, and outranks duress —, else
+ *   `attention` when it is low or filling fast (after duress).
  */
 export function machineWatcherVerdict(
   result: ResourceResult<SentinelStatusValue>,
@@ -50,7 +73,7 @@ export function machineWatcherVerdict(
     };
   }
 
-  const { watch, duress } = result.data;
+  const { watch, duress, disk } = result.data;
   switch (watch.kind) {
     case "none":
       return {
@@ -80,17 +103,21 @@ export function machineWatcherVerdict(
     };
   }
   switch (status.state) {
-    case "running":
+    case "running": {
+      const diskStatus = disk === null ? null : DISK_STATUS[disk];
+      if (diskStatus?.state === "critical") return diskStatus;
       if (duress !== null) {
         return {
           state: "attention",
           summary: `Under duress since ${clockTime(duress.since)} · builds held back`,
         };
       }
+      if (diskStatus) return diskStatus;
       return {
         state: "ok",
         summary: `Running since ${clockTime(status.since)}`,
       };
+    }
     case "starting":
       return { state: "attention", summary: "Starting…", transitioning: true };
     case "respawning":

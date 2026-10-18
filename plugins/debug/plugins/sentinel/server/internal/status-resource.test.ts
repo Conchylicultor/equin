@@ -7,7 +7,11 @@ import {
   writeSentinelVitals,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
 import type { SentinelVitalsRecord } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
-import { readVitalsValue, resourcesForFile } from "./status-resource";
+import {
+  diskAlarmFrom,
+  readVitalsValue,
+  resourcesForFile,
+} from "./status-resource";
 
 const dirs: string[] = [];
 function newDir(): string {
@@ -20,7 +24,12 @@ afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
 });
 
-function record(pid: number): SentinelVitalsRecord {
+const GIB = 1024 ** 3;
+
+function record(
+  pid: number,
+  disk: SentinelVitalsRecord["context"]["disk"] = null,
+): SentinelVitalsRecord {
   return {
     pid,
     wall: Date.now(),
@@ -34,7 +43,12 @@ function record(pid: number): SentinelVitalsRecord {
     },
     elevated: [],
     tripped: false,
-    context: { freeMemMb: 8_000, inFlightBuilds: 0, runningBackends: 3 },
+    context: {
+      freeMemMb: 8_000,
+      inFlightBuilds: 0,
+      runningBackends: 3,
+      disk,
+    },
   };
 }
 
@@ -104,5 +118,29 @@ describe("the status watcher's routing", () => {
       status: false,
       vitals: false,
     });
+  });
+});
+
+describe("the status value's disk verdict", () => {
+  test("comes from the running watcher's reading only", () => {
+    const dir = newDir();
+    createStatusWriter(dir, { pid: 100, alive })({
+      state: "running",
+      since: Date.now(),
+    });
+    const low = {
+      totalBytes: 926 * GIB,
+      freeBytes: 20 * GIB,
+      fillBytesPerSec: 0,
+    };
+
+    writeSentinelVitals(dir, record(100, low));
+    expect(diskAlarmFrom(readVitalsValue(dir, alive))).toBe("low");
+
+    // No disk reading this tick, or a reading from a watcher that is not running.
+    writeSentinelVitals(dir, record(100, null));
+    expect(diskAlarmFrom(readVitalsValue(dir, alive))).toBeNull();
+    writeSentinelVitals(dir, record(99, low));
+    expect(diskAlarmFrom(readVitalsValue(dir, alive))).toBeNull();
   });
 });

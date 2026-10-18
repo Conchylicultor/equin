@@ -25,3 +25,10 @@ export type {
   SignalKey,
   SignalVital,
 } from "./internal/vitals";
+export {
+  bytesText,
+  DiskAlarmSchema,
+  diskAlarmOf,
+  DiskReadingSchema,
+} from "./internal/disk";
+export type { DiskAlarm, DiskReading } from "./internal/disk";

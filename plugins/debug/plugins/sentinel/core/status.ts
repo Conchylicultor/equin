@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import {
+  DiskAlarmSchema,
   SentinelDownStatusSchema,
   SentinelVitalsRecordSchema,
   SentinelWatchSchema,
@@ -31,6 +32,12 @@ export const SentinelStatusValueSchema = z.object({
   watch: SentinelWatchSchema,
   /** The duress latch while its lease is fresh; `null` when the machine is not under duress. */
   duress: z.object({ since: z.number() }).nullable(),
+  /**
+   * The disk verdict from the running watcher's latest reading; `null` when
+   * there is no current reading of the disk. Rides this value (re-pushed only
+   * when the verdict changes) for the same reason the latch does.
+   */
+  disk: DiskAlarmSchema.nullable(),
 });
 export type SentinelStatusValue = z.infer<typeof SentinelStatusValueSchema>;
 

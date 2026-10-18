@@ -259,6 +259,8 @@ describe("sentinel worker latch lifecycle", () => {
       freeMemMb: 8_000,
       inFlightBuilds: 0,
       runningBackends: 3,
+      // The synthetic sample carries no disk reading.
+      disk: null,
     });
 
     // ── Clear: calm samples for offTicks → latch unlinked.

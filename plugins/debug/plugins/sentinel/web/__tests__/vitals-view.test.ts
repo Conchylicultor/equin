@@ -12,6 +12,7 @@ import type {
 import { toneOf, vitalsView } from "../internal/vitals-view";
 
 const WALL = new Date(2026, 8, 17, 18, 10).getTime();
+const GIB = 1024 ** 3;
 
 function vitals(
   overrides: Partial<SentinelVitalsRecord> = {},
@@ -29,7 +30,12 @@ function vitals(
     },
     elevated: [],
     tripped: false,
-    context: { freeMemMb: 9_626, inFlightBuilds: 1, runningBackends: 11 },
+    context: {
+      freeMemMb: 9_626,
+      inFlightBuilds: 1,
+      runningBackends: 11,
+      disk: { totalBytes: 926 * GIB, freeBytes: 606 * GIB, fillBytesPerSec: 0 },
+    },
     ...overrides,
   };
 }
@@ -99,16 +105,26 @@ describe("vitalsView", () => {
     });
   });
 
-  it("the glance gives load per core, GB free and builds", () => {
+  it("the glance gives load per core, memory and disk free, and builds", () => {
     const view = vitalsView(vitals(), true, WALL);
     expect(view.glance.map((f) => `${f.before}${f.value}${f.after}`)).toEqual([
       "Load 0.26 per core",
-      "9.4 GB free",
+      "9.4 GB memory free",
+      "606 GB disk free",
       "1 build",
     ]);
     const low = vitalsView(
       vitals({
-        context: { freeMemMb: 400, inFlightBuilds: 6, runningBackends: 13 },
+        context: {
+          freeMemMb: 400,
+          inFlightBuilds: 6,
+          runningBackends: 13,
+          disk: {
+            totalBytes: 926 * GIB,
+            freeBytes: 40 * GIB,
+            fillBytesPerSec: 0,
+          },
+        },
       }),
       true,
       WALL,
@@ -116,9 +132,47 @@ describe("vitalsView", () => {
     expect(low.glance.map((f) => f.tone)).toEqual([
       "neutral",
       "bad",
+      "warn",
       "neutral",
     ]);
-    expect(low.glance[2]?.after).toBe(" builds");
+    expect(low.glance[3]?.after).toBe(" builds");
+  });
+
+  it("the disk figure says how fast a filling disk is falling", () => {
+    const filling = vitalsView(
+      vitals({
+        context: {
+          freeMemMb: 9_626,
+          inFlightBuilds: 1,
+          runningBackends: 11,
+          disk: {
+            totalBytes: 926 * GIB,
+            freeBytes: 30 * GIB,
+            fillBytesPerSec: (2 * GIB) / 60,
+          },
+        },
+      }),
+      true,
+      WALL,
+    );
+    const disk = filling.glance.find((f) => f.key === "disk");
+    expect(disk && `${disk.value}${disk.after}`).toBe(
+      "30 GB disk free (−2.0 GB/min)",
+    );
+    expect(disk?.tone).toBe("bad");
+    const unread = vitalsView(
+      vitals({
+        context: {
+          freeMemMb: 9_626,
+          inFlightBuilds: 1,
+          runningBackends: 11,
+          disk: null,
+        },
+      }),
+      true,
+      WALL,
+    );
+    expect(unread.glance.find((f) => f.key === "disk")?.value).toBe("— GB");
   });
 
   it("names what tripped the watcher", () => {

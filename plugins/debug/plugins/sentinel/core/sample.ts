@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DiskReadingSchema } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 
 // One cluster-vitals sample, emitted into the "cluster" trace ring every
 // sentinel tick. `wall` is the wall-clock anchor (Date.now()); the ring's own
@@ -41,6 +42,11 @@ export const ClusterSampleSchema = z.object({
   decompressionsPerSec: z.number().nullable().optional(),
   compressorMb: z.number().nullable().optional(),
   freeMemMb: z.number().nullable().optional(),
+  /**
+   * The home volume's free space and how fast it is falling; null when the
+   * statfs failed this tick. Optional so pre-cutover ring slices still parse.
+   */
+  disk: DiskReadingSchema.nullable().optional(),
 });
 export type ClusterSample = z.infer<typeof ClusterSampleSchema>;
 

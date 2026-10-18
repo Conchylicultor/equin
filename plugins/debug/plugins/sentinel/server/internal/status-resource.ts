@@ -16,6 +16,10 @@ import {
   type SentinelVitals,
 } from "../../core";
 import {
+  diskAlarmOf,
+  type DiskAlarm,
+} from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
+import {
   readSentinelVitals,
   readSentinelWatch,
   isStatusFilename,
@@ -38,7 +42,15 @@ export function readStatusValue(): SentinelStatusValue {
   return {
     watch: readSentinelWatch(sentinelStatusDir.path),
     duress: latch === null ? null : { since: latch.setAt },
+    disk: diskAlarmFrom(readVitalsValue()),
   };
+}
+
+/** The disk verdict of a reading, when it is the running watcher's and has one. */
+export function diskAlarmFrom(vitals: SentinelVitals): DiskAlarm | null {
+  if (vitals.kind !== "recorded" || !vitals.current) return null;
+  const { disk } = vitals.vitals.context;
+  return disk === null ? null : diskAlarmOf(disk);
 }
 
 export const sentinelStatusServed = serveValue(sentinelStatus, {
@@ -76,7 +88,8 @@ export const sentinelVitalsServed = serveValue(sentinelVitals, {
 
 /**
  * Which resources a changed file feeds. Routed by name so the per-tick vitals
- * write (every 5 s) never re-reads and re-pushes the status to every tab.
+ * write (every 5 s) does not re-push the status to every tab — only a change of
+ * its disk verdict does (`startStatusWatcher`).
  */
 export function resourcesForFile(path: string): {
   status: boolean;
@@ -104,6 +117,13 @@ export const sentinelStatusWatcher = defineFileWatcher({
 
 let watcher: FileWatcher | null = null;
 
+/**
+ * The disk verdict last pushed with the status. A vitals write (every tick)
+ * re-pushes the status only when it moves the verdict, so tabs hear about a
+ * filling disk without a 5 s stream of identical statuses.
+ */
+let lastDiskAlarm: DiskAlarm | null | undefined;
+
 export async function startStatusWatcher(): Promise<void> {
   if (watcher) return;
   // Subscribing to a missing directory fails; both dirs are host-global and cheap.
@@ -118,6 +138,11 @@ export async function startStatusWatcher(): Promise<void> {
         const hit = resourcesForFile(event.path);
         status ||= hit.status;
         vitals ||= hit.vitals;
+      }
+      if (status || vitals) {
+        const disk = diskAlarmFrom(readVitalsValue());
+        status ||= disk !== lastDiskAlarm;
+        lastDiskAlarm = disk;
       }
       if (status) sentinelStatusServed.notify();
       if (vitals) sentinelVitalsServed.notify();

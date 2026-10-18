@@ -73,3 +73,34 @@ export function countBuildProcesses(psOutput: string): number {
   }
   return n;
 }
+
+/** One free-space reading of the home volume, at its wall clock. */
+export interface FreeSpacePoint {
+  wall: number;
+  freeBytes: number;
+}
+
+/** The window the fill rate is measured over. */
+export const FILL_WINDOW_MS = 2 * 60 * 1000;
+/** The rate reads null until the readings span at least this much. */
+export const FILL_MIN_SPAN_MS = 60 * 1000;
+
+/**
+ * Appends `point` to the rolling free-space window (dropping what is older than
+ * {@link FILL_WINDOW_MS}) and returns how fast free space fell across it, in
+ * bytes/s — null while the window spans less than {@link FILL_MIN_SPAN_MS}.
+ * A two-point difference, not a fit: a burst that comes back (a build's temp
+ * files) cancels out, and a steady fill shows in full.
+ */
+export function pushFreeSpace(
+  window: FreeSpacePoint[],
+  point: FreeSpacePoint,
+): number | null {
+  window.push(point);
+  while (window.length > 1 && point.wall - window[0]!.wall > FILL_WINDOW_MS)
+    window.shift();
+  const oldest = window[0]!;
+  const spanMs = point.wall - oldest.wall;
+  if (spanMs < FILL_MIN_SPAN_MS) return null;
+  return ((oldest.freeBytes - point.freeBytes) / spanMs) * 1000;
+}

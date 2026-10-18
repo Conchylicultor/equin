@@ -17,16 +17,22 @@ const refetch = () => Promise.resolve();
 function settled(
   watch: SentinelWatch,
   duress: SentinelStatusValue["duress"] = null,
+  disk: SentinelStatusValue["disk"] = "ok",
 ): ResourceResult<SentinelStatusValue> {
-  return { status: "ready", data: { watch, duress }, refetch };
+  return { status: "ready", data: { watch, duress, disk }, refetch };
 }
 
 function recorded(
   status: SentinelStatus,
   ownerAlive = true,
   duress: SentinelStatusValue["duress"] = null,
+  disk: SentinelStatusValue["disk"] = "ok",
 ): ResourceResult<SentinelStatusValue> {
-  return settled({ kind: "recorded", status, pid: 42, ownerAlive }, duress);
+  return settled(
+    { kind: "recorded", status, pid: 42, ownerAlive },
+    duress,
+    disk,
+  );
 }
 
 describe("Machine watcher health row", () => {
@@ -69,6 +75,41 @@ describe("Machine watcher health row", () => {
     expect("summary" in verdict && verdict.summary).toMatch(
       /^Under duress since .*02.* · builds held back$/,
     );
+  });
+
+  it("asks for attention while the disk is low or filling fast, after duress", () => {
+    const running = { state: "running", since: Date.now() } as const;
+    expect(machineWatcherVerdict(recorded(running, true, null, "low"))).toEqual(
+      {
+        state: "attention",
+        summary: "Disk space is running low",
+      },
+    );
+    expect(
+      machineWatcherVerdict(recorded(running, true, null, "filling")).state,
+    ).toBe("attention");
+    const both = machineWatcherVerdict(
+      recorded(running, true, { since: Date.now() }, "filling"),
+    );
+    expect("summary" in both && both.summary).toMatch(/^Under duress/);
+    expect(
+      machineWatcherVerdict(recorded(running, true, null, null)).state,
+    ).toBe("ok");
+  });
+
+  it("is critical when the disk is full or will be within the hour, over duress", () => {
+    const running = { state: "running", since: Date.now() } as const;
+    expect(
+      machineWatcherVerdict(
+        recorded(running, true, { since: Date.now() }, "full-soon"),
+      ),
+    ).toEqual({
+      state: "critical",
+      summary: "The disk will be full within the hour at this rate",
+    });
+    expect(
+      machineWatcherVerdict(recorded(running, true, null, "full")).state,
+    ).toBe("critical");
   });
 
   it("does not claim duress when the watcher is not running", () => {

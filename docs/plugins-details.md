@@ -20142,7 +20142,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/workspace.workspaceOfConversation`
           - `infra/mcp.Mcp`
         - Register: `mcpTool('scratch_hello_where')`
-    - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone, attention while it restarts or the machine is under duress, read from the sentinel.status push resource), with its stats — load per core, free memory and builds at a glance, and each signal that can trip duress against its limit when expanded — read from the sentinel.vitals push resource. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
+    - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone or the disk is nearly full, attention while it restarts, the machine is under duress or the disk is low or filling fast, read from the sentinel.status push resource), with its stats — load per core, free memory, free disk and builds at a glance, and each signal that can trip duress against its limit when expanded — read from the sentinel.vitals push resource. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "sentinel"
@@ -20199,6 +20199,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `config_v2.defineConfig`
+          - `debug/sentinel/status-file.DiskAlarmSchema`
+          - `debug/sentinel/status-file.DiskReadingSchema`
           - `debug/sentinel/status-file.SentinelDownStatusSchema`
           - `debug/sentinel/status-file.SentinelVitalsRecordSchema`
           - `debug/sentinel/status-file.SentinelWatchSchema`
@@ -20244,6 +20246,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status files (one per watcher host, the newest claim reported): their schemas, the writer main's watcher host uses, the per-tick vitals file the watcher's worker writes (the latest reading, limits and trip state), the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
           - Cross-plugin:
+            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `debug/sentinel`
           - Server:
             - Exports (types): `SentinelVitalsRead`
@@ -20259,6 +20262,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `writeSentinelVitals`
           - Core:
             - Exports (types):
+              - `DiskAlarm`
+              - `DiskReading`
               - `DuressGuard`
               - `SentinelStatus`
               - `SentinelStatusRecord`
@@ -20267,6 +20272,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SignalKey`
               - `SignalVital`
             - Exports (values):
+              - `bytesText`
+              - `diskAlarmOf`
+              - `DiskAlarmSchema`
+              - `DiskReadingSchema`
               - `duressGuard`
               - `SentinelDownStatusSchema`
               - `SentinelStatusRecordSchema`
@@ -46852,12 +46861,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 662 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 663 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×136
               - `primitives` ×124
               - `conversations` ×103
               - `page` ×46
-              - `debug` ×38
+              - `debug` ×39
               - `ui` ×34
               - `framework` ×21
               - `infra` ×20

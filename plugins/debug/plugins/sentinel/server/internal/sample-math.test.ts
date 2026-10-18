@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import {
   countBuildProcesses,
   counterDelta,
+  FILL_WINDOW_MS,
   mapPgStatsRow,
+  pushFreeSpace,
+  type FreeSpacePoint,
 } from "./sample-math";
 
 describe("mapPgStatsRow", () => {
@@ -77,5 +80,42 @@ describe("countBuildProcesses", () => {
   });
   test("empty output → 0", () => {
     expect(countBuildProcesses("")).toBe(0);
+  });
+});
+
+describe("pushFreeSpace", () => {
+  test("is null until the window spans a minute, then the fall per second", () => {
+    const window: FreeSpacePoint[] = [];
+    expect(pushFreeSpace(window, { wall: 0, freeBytes: 1_000_000 })).toBeNull();
+    expect(
+      pushFreeSpace(window, { wall: 30_000, freeBytes: 970_000 }),
+    ).toBeNull();
+    expect(pushFreeSpace(window, { wall: 60_000, freeBytes: 940_000 })).toBe(
+      1_000,
+    );
+  });
+
+  test("measures across the last two minutes only", () => {
+    const window: FreeSpacePoint[] = [];
+    // A fall long ago, then a flat disk: the old fall leaves the window.
+    pushFreeSpace(window, { wall: 0, freeBytes: 2_000_000 });
+    pushFreeSpace(window, { wall: 10_000, freeBytes: 1_000_000 });
+    for (let wall = 20_000; wall <= FILL_WINDOW_MS + 20_000; wall += 5_000)
+      pushFreeSpace(window, { wall, freeBytes: 1_000_000 });
+    expect(
+      pushFreeSpace(window, {
+        wall: FILL_WINDOW_MS + 25_000,
+        freeBytes: 1_000_000,
+      }),
+    ).toBe(0);
+    expect(window[0]!.wall).toBeGreaterThanOrEqual(25_000);
+  });
+
+  test("reads negative while space comes back", () => {
+    const window: FreeSpacePoint[] = [];
+    pushFreeSpace(window, { wall: 0, freeBytes: 0 });
+    expect(pushFreeSpace(window, { wall: 100_000, freeBytes: 100_000 })).toBe(
+      -1_000,
+    );
   });
 });
