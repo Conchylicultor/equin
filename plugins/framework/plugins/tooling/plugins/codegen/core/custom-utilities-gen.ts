@@ -57,6 +57,16 @@ const BUILTIN_GROUP_IDS = new Set([
   "rounded",
   "shadow",
   "border-w-b",
+  "backdrop-filter",
+  "backdrop-blur",
+  "backdrop-brightness",
+  "backdrop-contrast",
+  "backdrop-grayscale",
+  "backdrop-hue-rotate",
+  "backdrop-invert",
+  "backdrop-opacity",
+  "backdrop-saturate",
+  "backdrop-sepia",
 ]);
 
 const MANIFEST_HEADER = [

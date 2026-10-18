@@ -30,6 +30,16 @@ const REPRESENTATIVE: Record<string, string> = {
   rounded: "rounded-md",
   z: "z-10",
   "font-size": "text-sm",
+  "backdrop-filter": "backdrop-filter-none",
+  "backdrop-blur": "backdrop-blur-md",
+  "backdrop-brightness": "backdrop-brightness-50",
+  "backdrop-contrast": "backdrop-contrast-50",
+  "backdrop-grayscale": "backdrop-grayscale",
+  "backdrop-hue-rotate": "backdrop-hue-rotate-90",
+  "backdrop-invert": "backdrop-invert",
+  "backdrop-opacity": "backdrop-opacity-50",
+  "backdrop-saturate": "backdrop-saturate-150",
+  "backdrop-sepia": "backdrop-sepia",
 };
 
 function representativeFor(builtin: string, group: string): string {
@@ -233,4 +243,12 @@ it("rail-bleed and a rail class stay mutually exclusive in both orders", () => {
   // and opening one remain two jobs for two elements.
   expect<string>(cn("rail-lg", "rail-bleed")).toBe("rail-bleed");
   expect<string>(cn("rail-bleed", "rail-lg")).toBe("rail-lg");
+});
+
+it("a panel's own backdrop-blur replaces the overlay's themed backdrop, not the reverse", () => {
+  // The floating action bar's glass lost its blur when `backdrop-popover`
+  // (default `none`) sat beside its `backdrop-blur-[18px]` and won the cascade.
+  expect<string>(
+    cn("backdrop-popover", "backdrop-blur-[18px] backdrop-saturate-[1.6]"),
+  ).toBe("backdrop-blur-[18px] backdrop-saturate-[1.6]");
 });

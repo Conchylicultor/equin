@@ -61,7 +61,17 @@ export type BuiltinGroupId =
   | "gap-y"
   | "rounded"
   | "shadow"
-  | "border-w-b";
+  | "border-w-b"
+  | "backdrop-filter"
+  | "backdrop-blur"
+  | "backdrop-brightness"
+  | "backdrop-contrast"
+  | "backdrop-grayscale"
+  | "backdrop-hue-rotate"
+  | "backdrop-invert"
+  | "backdrop-opacity"
+  | "backdrop-saturate"
+  | "backdrop-sepia";
 
 /** A `under:` relation: one built-in group, and why it is one-directional. */
 export interface UnderRelation {
