@@ -50,9 +50,8 @@ export function presentPath({
 }
 
 /**
- * One frame presented as a page of its own: what the Present menu's new-tab
- * icons open — in a new app tab (inside the app, tab bar and all) or in a new
- * browser tab (chromeless, `?embed=1`). It draws the same stage as the in-app
+ * One frame presented as a page of its own: what the Present menu's
+ * new-browser-tab icon opens, chromeless (`?embed=1`). It draws the same stage as the in-app
  * presentations, options pill and size chip included.
  *
  * A root route, not a child of the gallery: opened alone it is the only column,

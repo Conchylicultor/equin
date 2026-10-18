@@ -13,7 +13,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import {
   usePrototypeDetail,
@@ -21,10 +20,9 @@ import {
   type FrameActionRow,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { presentPath } from "../panes";
-import { BrowserTabOpener, frameTarget } from "./frame-link";
+import { BrowserTabOpener } from "./frame-link";
 import { PresentOverlay, type PresentPlacement } from "./present-overlay";
-import { type IconRef, navIcons, symbol } from "@plugins/ui/plugins/icons/core";
+import { type IconRef, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { NewTabMenuItem } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 
@@ -34,8 +32,8 @@ const webAssetIcon = symbol("web-asset");
 
 /**
  * "Present" — one frame's menu of the ways to see it without the app around
- * it, ordered by how much they cover: this app tab (with a new-app-tab icon),
- * this browser tab (with a new-browser-tab icon), and full screen (`F`).
+ * it, ordered by how much they cover: this app tab, this browser tab (with a
+ * new-browser-tab icon), and full screen (`F`).
  *
  * A frame action (`PrototypeFrameActions`) on each canvas frame, so this whole
  * feature is one folder the canvas knows nothing about. The menu of the
@@ -95,19 +93,6 @@ export function PresentMenu({ row }: ItemActionProps<FrameActionRow>) {
               label="In this app tab"
               hint="The tab bar stays, so you can switch tabs."
               onClick={() => present("surface")}
-              newTab={
-                <NewTabItem
-                  label="Open in a new app tab"
-                  open={
-                    frame.kind === "prototype"
-                      ? () =>
-                          navigate(presentPath(frameTarget(frame, meta)), {
-                            newTab: true,
-                          })
-                      : undefined
-                  }
-                />
-              }
             />
             <PresentRow
               icon={webAssetIcon}
@@ -181,29 +166,6 @@ function PresentRow({
       </DropdownMenuItem>
       {newTab}
     </Stack>
-  );
-}
-
-/** The trailing new-app-tab icon: disabled when there is nothing to open. */
-function NewTabItem({
-  label,
-  open,
-}: {
-  label: string;
-  open: (() => void) | undefined;
-}) {
-  return (
-    <DropdownMenuItem
-      aria-label={label}
-      title={
-        open === undefined ? `${label} — not available for this frame` : label
-      }
-      disabled={open === undefined}
-      onClick={open}
-      className="w-auto"
-    >
-      <Icon icon={navIcons.newAppTab} className="size-4" />
-    </DropdownMenuItem>
   );
 }
 

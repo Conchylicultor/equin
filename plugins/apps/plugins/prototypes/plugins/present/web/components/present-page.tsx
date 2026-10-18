@@ -20,8 +20,8 @@ import { PresentBox } from "./present-box";
 import { PresentStage } from "./present-stage";
 
 /**
- * One frame presented as a page of its own (a new app tab, or a chromeless new
- * browser tab): the frame filling the page, its chrome on hover. No Exit — the
+ * One frame presented as a page of its own (a chromeless new browser tab): the
+ * frame filling the page, its chrome on hover. No Exit — the
  * tab itself is the presentation, and closing it is how you leave.
  *
  * It mounts a one-frame canvas: the URL's version (looked up in the history,

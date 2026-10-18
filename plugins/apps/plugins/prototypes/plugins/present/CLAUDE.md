@@ -8,16 +8,14 @@ The menu, headed "Present B", has three rows, ordered by how much they cover:
 
 - **In this app tab** — a `<SurfaceOverlay>` filling the tab's surface. The
   Singularity tab bar and app rail stay visible and clickable, so the user can
-  leave a frame presented and keep working in other tabs. Its trailing icon,
-  **Open in a new app tab**, opens the frame's present page in a new app tab
-  (`navigate(…, { newTab: true })` from `apps-core/tabs`).
+  leave a frame presented and keep working in other tabs. It has no new-tab
+  icon: "new tab" means a new browser tab, so the one new-tab icon is the next
+  row's.
 - **In this browser tab** — a `<ViewportOverlay layer="max">`: the whole page,
   app chrome included. Its trailing icon, **Open in a new browser tab**, opens
   the frame's present page chromeless (`embedUrl(…, "chromeless")`, so no tab
   bar, rail or action bar). For a source frame (the real app) it opens the
-  source's own `href` instead, and is disabled when the source has none. The
-  new-app-tab icon is disabled on a source frame: the present page shows only
-  prototype frames.
+  source's own `href` instead, and is disabled when the source has none.
 - **Full screen** (`F`) — the viewport overlay, also handed to the browser's
   Fullscreen API. Escape exits fullscreen (the browser handles it), and the
   resulting `fullscreenchange` closes the overlay, so one key still leaves.
@@ -125,7 +123,7 @@ embedded document): a reload reopens the canvas the link carries.
 
 ## Plugin reference
 
-- Description: Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays) plus a new-app-tab icon, In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame); beside it, an Open responsive in a new tab button (the chromeless present page at the Responsive size, filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks. In the canvas header, Open the canvas in a new tab opens the whole canvas (frames, versions, picks, size, zoom, layout, encoded in present-canvas/<id>/<canvas>) chromeless in a new browser tab, so the frames get the whole screen to compare.
+- Description: Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays), In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame); beside it, an Open responsive in a new tab button (the chromeless present page at the Responsive size, filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks. In the canvas header, Open the canvas in a new tab opens the whole canvas (frames, versions, picks, size, zoom, layout, encoded in present-canvas/<id>/<canvas>) chromeless in a new browser tab, so the frames get the whole screen to compare.
 - Web:
   - Slots:
     - `prototypes-present.actions`
@@ -139,14 +137,14 @@ embedded document): a reload reopens the canvas the link carries.
     - `prototypeDetailPane.Actions` "open-canvas" → `OpenCanvasAction`
     - `PrototypeFrameActions` "present" → `PresentMenu`
     - `PrototypeFrameActions` "open-responsive" → `OpenResponsiveAction`
-  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/prototypes/canvas` ×25
     - `primitives/css/ui-kit` ×8
-    - `apps-core/tabs` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/latest-ref` ×2
     - `primitives/link-gesture/new-tab` ×2
     - `primitives/pane` ×2
+    - `apps-core/tabs.useSurfaceFocused`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.fillClasses`

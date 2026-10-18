@@ -13,7 +13,7 @@ import type {
 import { presentPath } from "../panes";
 
 /** What a prototype frame's page shows: its version, and its own picks (not A's). */
-export function frameTarget(frame: PrototypeFrame, meta: PrototypeMeta) {
+function frameTarget(frame: PrototypeFrame, meta: PrototypeMeta) {
   return {
     name: meta.name,
     sha: frame.version?.sha,
