@@ -12,8 +12,12 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
-import { useCollapsible, type UseCollapsibleOptions } from "./use-collapsible";
-import { FOLD_EASING, FOLD_MS } from "../../core";
+import {
+  useCollapsible,
+  type CollapsibleWarmHandlers,
+  type UseCollapsibleOptions,
+} from "./use-collapsible";
+import { foldTiming } from "../../core";
 import { prefersReducedMotion, startFold } from "./fold-clock";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -23,6 +27,10 @@ const chevronRightIcon = symbol("chevron-right");
 export interface CollapsibleCtx {
   open: boolean;
   toggle: () => void;
+  /** See `UseCollapsibleReturn.warm`: a trigger drives it through
+   *  `warmHandlers`, and the content is mounted (hidden) while it holds. */
+  warm: boolean;
+  warmHandlers: CollapsibleWarmHandlers;
   contentId: string;
 }
 
@@ -68,15 +76,15 @@ export function CollapsibleProvider({
   onOpenChange,
   children,
 }: CollapsibleProviderProps) {
-  const { open, toggle, contentId } = useCollapsible({
+  const { open, toggle, warm, warmHandlers, contentId } = useCollapsible({
     defaultOpen,
     open: controlledOpen,
     onOpenChange,
   });
 
   const ctxValue = useMemo(
-    () => ({ open, toggle, contentId }),
-    [open, toggle, contentId],
+    () => ({ open, toggle, warm, warmHandlers, contentId }),
+    [open, toggle, warm, warmHandlers, contentId],
   );
 
   return <CollapsibleContext value={ctxValue}>{children}</CollapsibleContext>;
@@ -127,9 +135,13 @@ export interface CollapsibleTriggerProps extends ComponentProps<"button"> {}
 
 export function CollapsibleTrigger({
   className,
+  onPointerEnter,
+  onPointerLeave,
+  onFocus,
+  onBlur,
   ...props
 }: CollapsibleTriggerProps) {
-  const { open, toggle, contentId } = useCtx();
+  const { open, toggle, warmHandlers, contentId } = useCtx();
 
   return (
     // Line container: single-line by contract (the `region-line` root already
@@ -142,6 +154,22 @@ export function CollapsibleTrigger({
         aria-expanded={open}
         aria-controls={contentId}
         onClick={toggle}
+        onPointerEnter={(e) => {
+          warmHandlers.onPointerEnter();
+          onPointerEnter?.(e);
+        }}
+        onPointerLeave={(e) => {
+          warmHandlers.onPointerLeave();
+          onPointerLeave?.(e);
+        }}
+        onFocus={(e) => {
+          warmHandlers.onFocus();
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          warmHandlers.onBlur();
+          onBlur?.(e);
+        }}
         // eslint-disable-next-line layout/no-adhoc-layout -- the trigger is a real <button> (needs type=button); Stack/Frame can't carry button-only attrs, so the flex row stays here
         className={cn("flex w-full region-line text-left", className)}
         {...props}
@@ -167,10 +195,11 @@ export function CollapsibleContent({
   children,
   ...props
 }: CollapsibleContentProps) {
-  const { open, contentId } = useCtx();
+  const { open, warm, contentId } = useCtx();
   return (
     <FoldMotion
       open={open}
+      warm={warm}
       data-slot="collapsible-content"
       id={contentId}
       role="region"
@@ -185,6 +214,13 @@ export function CollapsibleContent({
 export interface FoldMotionProps extends ComponentProps<"div"> {
   /** Shown, or folded away. */
   open: boolean;
+  /**
+   * Keep the children mounted while closed (hidden, `display: none`), so an
+   * unfold starts at once instead of after mounting them — `useCollapsible`'s
+   * `warm`, held while the pointer rests on the trigger or focus is on it.
+   * Default false: closed content is unmounted.
+   */
+  warm?: boolean;
 }
 
 /**
@@ -200,14 +236,23 @@ export interface FoldMotionProps extends ComponentProps<"div"> {
  * INSIDE it: the tween clips this box, and anything on it would stop the fold
  * at its padding and then jump.
  */
-export function FoldMotion({ open, children, ...props }: FoldMotionProps) {
+export function FoldMotion({
+  open,
+  warm = false,
+  children,
+  ...props
+}: FoldMotionProps) {
   const { ref, present } = useFoldMotion(open);
-  if (!present) return null;
+  // Warm and closed: the same element, so opening keeps the mounted children.
+  if (!present && !warm) return null;
   return (
     <div
       {...props}
       ref={ref}
       data-state={open ? "open" : "closed"}
+      // Warm and closed: mounted, laid out nowhere. Inline, so no class on
+      // the box can out-rank it.
+      style={present ? props.style : { ...props.style, display: "none" }}
       // Folding away: still painted, no longer there for focus or a reader.
       inert={!open}
     >
@@ -283,20 +328,24 @@ function useFoldMotion(open: boolean) {
     running.current = null;
     el.style.overflow = "hidden";
 
-    const start = (duration: number, startTime: number) => {
+    const start = (reduced: boolean, startTime: number) => {
       pinned.current = false;
       // Released first, so an unfold measures the size the box settles at.
       el.style.maxHeight = "";
       el.style.opacity = "";
       const to = motion.opening ? el.getBoundingClientRect().height : 0;
+      const timing = foldTiming({
+        opening: motion.opening,
+        distance: to - from.height,
+      });
       const anim = el.animate(
         [
           { maxHeight: `${from.height}px`, opacity: from.opacity },
           { maxHeight: `${to}px`, opacity: motion.opening ? 1 : 0 },
         ],
         {
-          duration,
-          easing: FOLD_EASING,
+          duration: reduced ? 0 : timing.duration,
+          easing: timing.easing,
           // Backwards: a frame stamped before the start time below still
           // paints the first keyframe, never the unclipped box. A fold-away
           // also holds its last frame (height 0) until React unmounts the box.
@@ -325,7 +374,7 @@ function useFoldMotion(open: boolean) {
     // No motion wanted: nothing to protect from a slow commit, and pinning
     // would paint one empty frame for nothing.
     if (prefersReducedMotion()) {
-      start(0, performance.now());
+      start(true, performance.now());
       return;
     }
     // Pin the first frame now (before paint), start the tween next frame.
@@ -334,7 +383,7 @@ function useFoldMotion(open: boolean) {
     pinned.current = true;
     // A flip before the start re-runs this from the pinned frame; an unmount
     // drops the box with it.
-    return startFold((startTime) => start(FOLD_MS, startTime));
+    return startFold((startTime) => start(false, startTime));
   }, [motion]);
 
   return { ref, present };

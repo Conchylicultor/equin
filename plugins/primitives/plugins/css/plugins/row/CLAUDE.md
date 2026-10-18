@@ -174,6 +174,7 @@ genuine transient-chrome list escapes with
 - Web:
   - Uses:
     - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.CollapsibleWarmHandlers`
     - `primitives/collapsible.useCollapsibleContext`
     - `primitives/css/line.Line`
     - `primitives/css/ui-kit.cn`

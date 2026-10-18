@@ -4,6 +4,7 @@ import type React from "react";
 import {
   CollapsibleChevron,
   useCollapsibleContext,
+  type CollapsibleWarmHandlers,
 } from "@plugins/primitives/plugins/collapsible/web";
 import {
   hoverRevealClass,
@@ -135,6 +136,29 @@ export function SectionHeaderRow({
   ...rest
 }: SectionHeaderRowProps) {
   const ctx = useCollapsibleContext();
+  // Resting the pointer on (or focusing) the header warms its content, so the
+  // click that opens it does not first pay for mounting it
+  // (`CollapsibleCtx.warm`); leaving lets it go. Each collapsible path below
+  // lands these after the passthrough, composed with the caller's own
+  // handlers (read by name).
+  type WarmHandler =
+    ((e: React.SyntheticEvent<HTMLElement>) => void) | undefined;
+  const warmOn =
+    (warmer: keyof CollapsibleWarmHandlers, caller: WarmHandler) =>
+    (e: React.SyntheticEvent<HTMLElement>) => {
+      ctx?.warmHandlers[warmer]();
+      caller?.(e);
+    };
+  const onWarmEnter = warmOn(
+    "onPointerEnter",
+    rest.onPointerEnter as WarmHandler,
+  );
+  const onWarmLeave = warmOn(
+    "onPointerLeave",
+    rest.onPointerLeave as WarmHandler,
+  );
+  const onWarmFocus = warmOn("onFocus", rest.onFocus as WarmHandler);
+  const onWarmBlur = warmOn("onBlur", rest.onBlur as WarmHandler);
   const open = openProp ?? ctx?.open ?? false;
   const onClick = onClickProp ?? ctx?.toggle;
   const trailing = disclosure === "trailing";
@@ -176,18 +200,12 @@ export function SectionHeaderRow({
     // destination: pointer enter/leave land on the row BOX (so hovering any of
     // it reveals), focus/blur on the CONTROL (so Tab reaching the header does).
     // Each is composed with a caller's own handler rather than replacing it.
+    // The caller's own handlers come through the `onWarm*` composers above
+    // (read by NAME off the passthrough — inspecting the bag, not diverting
+    // it: the whole bag is still spread onto `Row` below, and the composed
+    // handler written after it is the one that lands).
     const { groupProps } = reveal;
-    // A caller's own handlers for the four keys, read by NAME off the
-    // passthrough (inspecting the bag, not diverting it — the whole bag is
-    // still spread onto `Row` below, and the composed handler written after
-    // it is the one that lands).
-    type Handler = ((e: React.SyntheticEvent<HTMLElement>) => void) | undefined;
-    const caller = {
-      onPointerEnter: rest.onPointerEnter as Handler,
-      onPointerLeave: rest.onPointerLeave as Handler,
-      onFocus: rest.onFocus as Handler,
-      onBlur: rest.onBlur as Handler,
-    };
+
     return (
       <Row
         aria-expanded={open}
@@ -199,19 +217,19 @@ export function SectionHeaderRow({
         {...rest}
         onPointerEnter={(e: React.PointerEvent<HTMLElement>) => {
           groupProps.onPointerEnter();
-          caller.onPointerEnter?.(e);
+          onWarmEnter(e);
         }}
         onPointerLeave={(e: React.PointerEvent<HTMLElement>) => {
           groupProps.onPointerLeave();
-          caller.onPointerLeave?.(e);
+          onWarmLeave(e);
         }}
         onFocus={(e) => {
           groupProps.onFocus(e);
-          caller.onFocus?.(e);
+          onWarmFocus(e);
         }}
         onBlur={(e) => {
           groupProps.onBlur(e);
-          caller.onBlur?.(e);
+          onWarmBlur(e);
         }}
       >
         {children}
@@ -249,6 +267,10 @@ export function SectionHeaderRow({
           className,
         )}
         {...rest}
+        onPointerEnter={onWarmEnter}
+        onPointerLeave={onWarmLeave}
+        onFocus={onWarmFocus}
+        onBlur={onWarmBlur}
       >
         {children}
       </Row>
@@ -265,6 +287,10 @@ export function SectionHeaderRow({
       icon={<CollapsibleChevron open={open} />}
       className={cn(VARIANT_CLASS[variant], className)}
       {...rest}
+      onPointerEnter={onWarmEnter}
+      onPointerLeave={onWarmLeave}
+      onFocus={onWarmFocus}
+      onBlur={onWarmBlur}
     >
       {children}
     </Row>

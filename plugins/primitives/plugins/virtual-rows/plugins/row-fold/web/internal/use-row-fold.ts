@@ -1,8 +1,5 @@
 import { useId, useLayoutEffect, useMemo, useState } from "react";
-import {
-  FOLD_EASING,
-  FOLD_MS,
-} from "@plugins/primitives/plugins/collapsible/core";
+import { foldTiming } from "@plugins/primitives/plugins/collapsible/core";
 import {
   prefersReducedMotion,
   startFold,
@@ -140,23 +137,35 @@ export function useRowFold<T>({
     pinned.pin(plan());
     const cancelStart = startFold((start) => {
       pinned.release();
+      const motions = plan();
+      // How far the fold travels: the rows below a run move by its height.
+      const distance = Math.max(
+        0,
+        ...motions.map(({ from, to }) => Math.abs(to.y - from.y)),
+      );
+      const { duration, easing } = foldTiming({
+        // A toggle that only reveals is an opening; one that hides anything
+        // folds away on the closing curve.
+        opening: disclosure.hidden.length === 0,
+        distance,
+      });
       const timing: KeyframeAnimationOptions = {
-        duration: FOLD_MS,
-        easing: FOLD_EASING,
+        duration,
+        easing,
         // Held at both ends until this fold is over: before its start time
         // a frame paints the first keyframe, and a hidden row's last frame
         // (folded away, the rows below slid up) holds until the commit that
         // drops it — which cancels it in the same frame.
         fill: "both",
       };
-      for (const { el, from, to } of plan()) {
+      for (const { el, from, to } of motions) {
         const anim = el.animate([rowKeyframe(from), rowKeyframe(to)], timing);
         anim.startTime = start;
         running.push(anim);
       }
       // The fold's own clock, on the host — which outlives any row a window
       // scrolls away mid-fold.
-      const clock = hostEl.animate([], { duration: FOLD_MS });
+      const clock = hostEl.animate([], { duration });
       clock.startTime = start;
       running.push(clock);
       clock.onfinish = () =>

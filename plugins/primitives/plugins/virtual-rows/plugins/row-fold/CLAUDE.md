@@ -2,8 +2,9 @@
 
 Disclosure motion for **flat** lists — where opening a node inserts sibling
 rows rather than growing a nested box (that case is collapsible's
-`FoldMotion`). Same look, same clock (`FOLD_MS` / `FOLD_EASING`, read from
-`collapsible/core`, the one fold timing).
+`FoldMotion`). Same look, same clock (`foldTiming`, read from `collapsible/core`, the one
+fold timing: its duration from the distance the rows below travel, the opening
+curve when the toggle only reveals).
 
 ## The renderer owns it; the owner only states its open set
 
@@ -64,7 +65,7 @@ a 60 fps display paints). It passes on the tween clock.
 
 ## Plugin reference
 
-- Description: Disclosure motion for flat lists: useRowFold — given the rows and the open keys they were flattened under, rows a disclosure reveals grow in, rows it hides fold out (kept drawn until gone) and the rows below slide; any other change (scroll, search, live data, paging) lands as is. Owned by the flat renderers (VirtualRows, DataTable). Core: the pure disclosure diff; the fold timing is collapsible's (FOLD_MS / FOLD_EASING), one clock for every fold.
+- Description: Disclosure motion for flat lists: useRowFold — given the rows and the open keys they were flattened under, rows a disclosure reveals grow in, rows it hides fold out (kept drawn until gone) and the rows below slide; any other change (scroll, search, live data, paging) lands as is. Owned by the flat renderers (VirtualRows, DataTable). Core: the pure disclosure diff; the fold timing is collapsible's (foldTiming), one clock for every fold.
 - Web:
   - Uses:
     - `primitives/collapsible.prefersReducedMotion`

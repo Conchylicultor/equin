@@ -1,1 +1,2 @@
-export { FOLD_EASING, FOLD_MS } from "./internal/fold-timing";
+export { FOLD_MS, foldTiming } from "./internal/fold-timing";
+export type { FoldTiming } from "./internal/fold-timing";

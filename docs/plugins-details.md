@@ -34127,6 +34127,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CollapsibleProviderProps`
           - `CollapsibleTriggerControlProps`
           - `CollapsibleTriggerProps`
+          - `CollapsibleWarmHandlers`
           - `ExpandAllButtonProps`
           - `FoldMotionProps`
           - `UseCollapsibleOptions`
@@ -34171,9 +34172,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reorder/node-types/header`
           - `shell/health-report`
       - Core:
+        - Exports (types): `FoldTiming`
         - Exports (values):
-          - `FOLD_EASING`
           - `FOLD_MS`
+          - `foldTiming`
     - **`collapsible-wrap`** — Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
       - Web:
         - Uses:
@@ -35108,6 +35110,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Uses:
               - `primitives/collapsible.CollapsibleChevron`
+              - `primitives/collapsible.CollapsibleWarmHandlers`
               - `primitives/collapsible.useCollapsibleContext`
               - `primitives/css/line.Line`
               - `primitives/css/ui-kit.cn`
@@ -41141,7 +41144,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view/list`
           - `primitives/icon-picker`
       - Plugins:
-        - **`row-fold`** — Disclosure motion for flat lists: useRowFold — given the rows and the open keys they were flattened under, rows a disclosure reveals grow in, rows it hides fold out (kept drawn until gone) and the rows below slide; any other change (scroll, search, live data, paging) lands as is. Owned by the flat renderers (VirtualRows, DataTable). Core: the pure disclosure diff; the fold timing is collapsible's (FOLD_MS / FOLD_EASING), one clock for every fold.
+        - **`row-fold`** — Disclosure motion for flat lists: useRowFold — given the rows and the open keys they were flattened under, rows a disclosure reveals grow in, rows it hides fold out (kept drawn until gone) and the rows below slide; any other change (scroll, search, live data, paging) lands as is. Owned by the flat renderers (VirtualRows, DataTable). Core: the pure disclosure diff; the fold timing is collapsible's (foldTiming), one clock for every fold.
           - Web:
             - Uses:
               - `primitives/collapsible.prefersReducedMotion`
