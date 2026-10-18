@@ -9,6 +9,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { BarRegistryContext } from "./registry";
+import { rendersNothing } from "./presence";
 
 /**
  * The yielding cell's floor, in multiples of its own font size: the width below
@@ -61,21 +62,6 @@ const YIELD_FLOOR_EM = 8;
  * which jsdom resolves faithfully.
  */
 const MEDIUM_FONT_PX = 16;
-
-/**
- * Does this cell render anything at all?
- *
- * The same rule an occupant's container is judged by (`childElementCount === 0`
- * in `reconcile`), plus text: an occupant is always a component, while a
- * yielding child may legitimately hold a bare string.
- *
- * It is asked because an EMPTY yielding cell reserves nothing. Reserving room
- * for a title that is not there would relocate an occupant to protect a blank —
- * and a title-less header has to land its actions exactly where it does today.
- */
-function rendersNothing(el: HTMLElement): boolean {
-  return el.childElementCount === 0 && (el.textContent ?? "").trim() === "";
-}
 
 /**
  * The room this bar must hold back from its occupants for the yielding cell.

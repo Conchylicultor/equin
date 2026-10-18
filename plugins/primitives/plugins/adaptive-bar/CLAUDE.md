@@ -37,7 +37,10 @@ mechanics the bar owns.
 
 `<AdaptiveBar.Collapsed label>` is the same machinery with the width taken out:
 every occupant relocates, unconditionally, for a slot whose layout config already
-says "these live behind a `⋯`". `overflow` is `"panel"` (default) | `"scroll"`
+says "these live behind a `⋯`" — except when only ONE occupant is present on
+that row (the rest rendered nothing): a menu holding one action is the action
+plus a click, so that occupant stays inline at its full form and no `⋯` is
+drawn. `overflow` is `"panel"` (default) | `"scroll"`
 (nothing leaves; the row scrolls) | `"clip"`.
 
 A slot rendered inside a bar composes through `.Render`, wrapped in whatever the
@@ -113,7 +116,8 @@ Two edges, both pinned in `web/__tests__/row-inset.test.tsx`:
 - **An empty cell reserves nothing.** A title-less header must land its actions
   exactly where it always did, so the floor is held back only while the cell
   renders something — judged by the same rule an occupant's container is judged
-  by (`childElementCount === 0`), plus text. A title that arrives late says so
+  by (`rendersNothing`: no text, and no element inside but `display: contents`
+  wrappers). A title that arrives late says so
   through its own `MutationObserver`, for the reason an occupant has one: the
   row's width does not move when a title loads.
 - **A row narrower than the floor** clamps the budget at 0 rather than going

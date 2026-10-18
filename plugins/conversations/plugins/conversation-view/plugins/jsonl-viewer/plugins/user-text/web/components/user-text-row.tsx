@@ -11,7 +11,6 @@ import {
   UserMessageCard,
   UserMessageText,
 } from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Expandable } from "@plugins/primitives/plugins/expandable/web";
 import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 
@@ -69,11 +68,13 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
 
   return (
     <UserMessageCard>
-      <Pin to="top-right" offset="sm">
-        <EventRowActions floating />
-      </Pin>
       <Expandable expanded={expanded} onToggle={setExpanded}>
-        {body}
+        {/* The actions float first so the message wraps around them;
+            flow-root keeps a one-line message as tall as its actions. */}
+        <div className="flow-root">
+          <EventRowActions float />
+          {body}
+        </div>
       </Expandable>
     </UserMessageCard>
   );

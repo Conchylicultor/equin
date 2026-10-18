@@ -26,11 +26,11 @@ required `draftKey`.
   - Exports (values): `InlinePopover`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `page` ×6
-    - `conversations` ×5
     - `primitives` ×5
     - `apps` ×4
+    - `conversations` ×4
     - `fields` ×2
     - `reorder` ×2
     - `shell` ×2

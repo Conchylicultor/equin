@@ -15,8 +15,9 @@ type OverflowPayload = { label?: string };
  * The `overflow` container node type's box. Two forms, keyed on edit mode:
  *
  * - **live** — an `AdaptiveBar.Collapsed`: the bar's item/panel machinery with
- *   the measurement taken out, so every member relocates unconditionally into
- *   the `⋯` panel. Membership here is AUTHORED in the slot's config, which is
+ *   the measurement taken out, so every member relocates into the `⋯` panel —
+ *   unless only one member rendered on this row, which the bar keeps inline
+ *   (a one-item menu is that item plus a click). Membership here is AUTHORED in the slot's config, which is
  *   exactly what "no width has a say in it" means.
  * - **edit mode** — a labelled inline box (mirroring `HeaderBox`) so an author
  *   can see and drag the bucket's members. A closed panel would hide them from
@@ -38,7 +39,8 @@ type OverflowPayload = { label?: string };
  * - **no authored members at all** — the guard below, and the box renders no DOM
  *   whatsoever (not even the bar's always-mounted panel).
  * - **members that all rendered nothing** — the bar's own answer. Each member is
- *   mounted exactly once into its own container, so `childElementCount === 0`
+ *   mounted exactly once into its own container, so a container holding no
+ *   text and only `display: contents` wrappers (`presence.ts`)
  *   says it drew nothing; such a member is `hidden`, is never eligible for the
  *   panel, and the `⋯` follows the panel's occupancy rather than the member
  *   count. No trigger is painted for a bucket that came to nothing on this row.

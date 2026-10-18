@@ -18,7 +18,6 @@ import {
   insetClass,
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 
 /**
  * Apply to the row element whose **hover** should reveal its {@link RowActions}.
@@ -75,7 +74,7 @@ const INTENT_EVENTS = ["pointerover", "pointermove", "focusin"] as const;
  * - **`has-[…]`, not `group-…/row-actions`**, asks the focus question about the
  *   CLUSTER rather than the row. `:has()` matches descendants only, and these
  *   classes ride the outermost node the primitive renders (the `Pin`, or the
- *   `Stack`/`Surface` when `pin={null}`), which contains exactly the action
+ *   `Stack` when `pin={null}`), which contains exactly the action
  *   buttons — so nothing in the row body can satisfy it. Keying on the row is
  *   what pinned the cluster after an ordinary click: clicking a row puts focus
  *   somewhere inside it on every surface (a collapsible card's toggle, a
@@ -108,11 +107,9 @@ interface RowActionsCommonProps {
 }
 
 /**
- * `pin` and `surface` are a discriminated pair, not two free booleans: a pinned
- * cluster already paints the row's own `--scrim` through `Pin mask`, so stacking
- * an overlay surface on top of it would double-paint. Only an UNPINNED cluster
- * (one floating over prose rather than over a row's trailing edge) can ask for
- * its own chrome, and the type is what says so.
+ * `pin` and `float` are a discriminated pair, not two free booleans: a pinned
+ * cluster is out of flow by definition, so only an UNPINNED cluster can take
+ * part in a text flow, and the type is what says so.
  */
 export type RowActionsProps = RowActionsCommonProps &
   (
@@ -120,17 +117,17 @@ export type RowActionsProps = RowActionsCommonProps &
         /** Where to pin the cluster relative to its `rowActionsAnchor` row.
          *  Defaults to the right edge (`"right"`). */
         pin?: PinAnchor;
-        surface?: never;
+        float?: never;
       }
     | {
         /** Render the cluster inline instead of absolutely positioning it —
          *  inside an existing trailing flex slot, or a reserved grid track. */
         pin: null;
-        /** Paint the cluster on its own `overlay` surface. For a cluster that
-         *  floats over CONTENT (a headerless transcript turn) rather than over a
-         *  row's trailing edge, where there is no row tint for a mask to pick up
-         *  and the buttons would otherwise sit unreadable on top of prose. */
-        surface?: boolean;
+        /** Float the cluster at the inline end of a text flow (a headerless
+         *  transcript turn): the prose wraps around it instead of running under
+         *  it. Its box is held whether or not it is revealed, so revealing it
+         *  never reflows the text. Place it BEFORE the prose it sits beside. */
+        float?: boolean;
       }
   );
 
@@ -155,7 +152,7 @@ export type RowActionsProps = RowActionsCommonProps &
  * reveal that changed layout would slide the open menu sideways the moment the
  * pointer left the row.
  */
-export function RowActions(props: RowActionsProps & { surface?: boolean }) {
+export function RowActions(props: RowActionsProps) {
   // Only a PINNED, hover-revealed cluster can wait: it is out of flow, so
   // whether its buttons exist changes no geometry. An in-flow cluster
   // (`pin={null}` — a table's reserved track) sizes its track by its content,
@@ -215,9 +212,9 @@ function RowActionsCluster({
   children,
   pin = "right",
   alwaysVisible = false,
-  surface = false,
+  float = false,
   className: placement,
-}: RowActionsProps & { surface?: boolean }) {
+}: RowActionsProps) {
   const cluster = (className?: string) => (
     <Stack
       direction="row"
@@ -266,18 +263,13 @@ function RowActionsCluster({
             </Pin>
           );
         }
-        // Unpinned + own chrome: the Surface IS the outermost node, so it fades
-        // with its buttons — a pill that stayed painted while its contents faded
-        // would read as an empty floating box.
-        return surface ? (
-          <Surface
-            level="overlay"
-            className={cn(insetClass({ x: "xs", y: "2xs" }), outer)}
-          >
-            {cluster()}
-          </Surface>
-        ) : (
-          cluster(outer)
+        // Floated: the float and its gutter (start + below, as padding so the
+        // ramp owns it) ride the outermost node with the reveal, so the held box
+        // and the visible buttons are the same box.
+        return cluster(
+          float
+            ? cn("float-right", insetClass({ l: "sm", b: "2xs" }), outer)
+            : outer,
         );
       }}
     </PopupOpenScope>

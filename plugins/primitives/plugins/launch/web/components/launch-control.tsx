@@ -73,7 +73,7 @@ export type LaunchControlProps = {
  * The launch action, generalized over any model choice. `launch(model, e?)`
  * creates a conversation with that choice — a family ("opus") runs its newest
  * version, resolved by the server at spawn. This is the common action the
- * launch plugin exposes; custom UIs (fork-session, branch) consume it directly.
+ * launch plugin exposes; custom UIs (e.g. branch) consume it directly.
  */
 export function useLaunchConversation({
   getRequest,

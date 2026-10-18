@@ -1,7 +1,8 @@
 # rewind
 
-On each of your own messages in the transcript, a small history button offers
-two ways to go back to just before that message:
+On each of your own messages in the transcript, two row actions go back to just
+before that message (Rewind to here inline; Fork from here behind the row's `⋯`
+by default — placement is the row-actions config, not code):
 
 - **Rewind to here** — this conversation continues from that point. Everything
   after it is removed from the conversation.
@@ -32,9 +33,9 @@ kept history is byte-identical, so the prompt cache hits in full.
   being killed still holds the old file open, so anything it appends on its way
   down follows the moved file instead of landing after the cut.
 - **Fork** writes the shortened transcript under a fresh session id in the same
-  `~/.claude/projects/<dir>/` and plain-resumes it. This is NOT the `fork-session`
-  plugin's mechanism: that one asks the CLI to copy the *whole* history
-  (`--fork-session`); the CLI has no way to copy part of one.
+  `~/.claude/projects/<dir>/` and plain-resumes it — not `--fork-session`, which
+  asks the CLI to copy the *whole* history; the CLI has no way to copy part of
+  one.
 
 The cut itself — which lines stay, and what is lost — is one pure function,
 `cutTranscriptAt` in `conversations/server`. The Stop button's "give me my
@@ -84,26 +85,23 @@ rename throws before anything has changed.
 
 ## Plugin reference
 
-- Description: Row action on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back. useGoBackToMessage is the same flow for a surface that stands for a hidden message (e.g. a question's answer), with the caller deciding where the removed text goes.
+- Description: Row actions on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back. useGoBackToMessage is the same flow for a surface that stands for a hidden message (e.g. a question's answer), with the caller deciding where the removed text goes.
 - Web:
-  - Contributes: `JsonlRowActions.Item` "rewind" → `RewindAction`
+  - Contributes:
+    - `JsonlRowActions.Item` "rewind" → `RewindAction`
+    - `JsonlRowActions.Item` "fork-from-message" → `ForkFromMessageAction`
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
-    - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
     - `conversations/conversation-view/prompt-input.setConversationPromptDraft`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/ui-kit.DropdownMenu`
-    - `primitives/css/ui-kit.DropdownMenuContent`
-    - `primitives/css/ui-kit.DropdownMenuItem`
-    - `primitives/css/ui-kit.DropdownMenuTrigger`
+    - `primitives/icon-button.IconButton`
     - `primitives/launch.useLaunchConversation`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `shell/notifications.toast`
-    - `ui/icons.Icon`
   - Exports (types): `RewindMode`
   - Exports (values): `useGoBackToMessage`
 - Server:
@@ -128,7 +126,6 @@ rename throws before anything has changed.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`

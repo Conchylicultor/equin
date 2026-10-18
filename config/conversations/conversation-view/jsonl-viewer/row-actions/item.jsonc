@@ -1,4 +1,4 @@
-// @hash b1fc77d469c8
+// @hash 48f69d50a19e
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -7,27 +7,31 @@
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
-  // Hide: { "item": "<key>", "hidden": true }
-  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
-  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
-  //
-  // Left-to-right order of the hover strip at a row's right edge. Reads as
-  // metadata → inspection → view toggles → copy → launch-an-agent actions, so
-  // the consequential actions sit last, furthest from the pointer's resting
-  // position: the two that create a conversation, then rewind — which can also
-  // remove messages from this one — at the very end. A question's "change
-  // answers" is that same rewind for the hidden answer turn, so it sits beside it.
+  // Left-to-right order of the strip at a row's top-right (beside a message's
+  // text, or in a card's header). Reads as metadata → copy → actions → the ⋯:
+  // rewind sits after the everyday copy because it can remove messages from
+  // this one, and a question's "change answers" is that same rewind for the
+  // hidden answer turn, so it sits beside it. Behind the ⋯: Fork from here
+  // (a new conversation — rarer than rewinding in place), then the debug views
+  // (raw / rendered text, raw JSON). A row where only one of those applies
+  // shows it directly instead of a ⋯.
   "items": [
     "conversations.conversation-view.jsonl-viewer:timestamp",
-    "conversations.conversation-view.jsonl-viewer:raw-json",
-    "conversations.conversation-view.jsonl-viewer.assistant-text:stop-reason",
-    "conversations.conversation-view.jsonl-viewer.assistant-text:markdown-toggle",
     "conversations.conversation-view.jsonl-viewer.assistant-text:copy-assistant-text",
-    "conversations.conversation-view.jsonl-viewer.user-text:raw-text-toggle",
+    "conversations.conversation-view.jsonl-viewer.user-text:copy-user-text",
     "conversations.conversation-view.jsonl-viewer.tool-call:copy-tool-result",
     "conversations.conversation-view.jsonl-viewer.investigate-event:investigate-event",
-    "conversations.conversation-view.fork-session:fork-session",
     "conversations.conversation-view.rewind:rewind",
-    "conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question:change-answers"
+    "conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question:change-answers",
+    {
+      "type": "overflow",
+      "id": "row-debug",
+      "items": [
+        "conversations.conversation-view.rewind:fork-from-message",
+        "conversations.conversation-view.jsonl-viewer.assistant-text:markdown-toggle",
+        "conversations.conversation-view.jsonl-viewer.user-text:raw-text-toggle",
+        "conversations.conversation-view.jsonl-viewer:raw-json"
+      ]
+    }
   ]
 }

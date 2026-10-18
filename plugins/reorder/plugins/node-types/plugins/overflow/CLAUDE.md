@@ -36,8 +36,11 @@ Two different emptinesses, answered in two places:
 - **members that all rendered nothing** — an item action returns `null` for a row
   it does not apply to (Close on an already-closed conversation), so a bucket of
   five authored actions can come to nothing on one row. The bar reads that off
-  the one live instance (`childElementCount === 0`), hides that member, and paints
-  the `⋯` from the panel's occupancy — never from the member count.
+  the one live instance (no text, and nothing inside but `display: contents`
+  wrappers — the slot's own wrappers are always there), hides that member, and
+  paints the `⋯` from the panel's occupancy — never from the member count;
+- **exactly one member rendered** — a one-item menu is that item plus a click,
+  so the bar keeps it inline at its full form and paints no `⋯`.
 
 Payload is `{ label? }` (default `"More"`, the trigger's aria-label and the
 panel's accessible name). Container creation and membership are config-only, so

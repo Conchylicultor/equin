@@ -184,8 +184,8 @@
     - `withdrawConversationTurn`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×50
+  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×49
     - `tasks` ×4
     - `apps` ×3
     - `review` ×3
@@ -235,7 +235,6 @@
       - **`exit-menu`** — Ghost icon button next to Push & Exit that opens a menu of exit actions (hold, exit, drop, drop dependents). Hosts the ExitMenu.Item slot each action contributes to.
       - **`explorer`** — Conversation toolbar button opening a side pane that browses the agent's worktree with the file explorer's <FileBrowser/>, rooted at the checkout (git status from the file explorer's git lens).
       - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
-      - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
       - **`header`** — HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips in the conversation pane header share.
       - **`hold-and-exit`** — Exit-menu entry that marks the task as held and closes the conversation.
       - **`jsonl-viewer`** [exempt] — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL…
@@ -287,7 +286,7 @@
       - **`push-counter`**
       - **`push-profiling`** — Toolbar button showing the op Gantt scoped to the conversation's worktree.
       - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
-      - **`rewind`** — Row action on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back.…
+      - **`rewind`** — Row actions on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back.…
       - **`running-agents`** — The sub-agents working for this conversation, in a card above the prompt box: a summary line (how many are working, how long the longest has been going) that folds the list, and one row per agent…
       - **`selection-actions`** — Selecting text in an agent's reply pops a toolbar above it: Quote puts the selection in the prompt as a quote, and the quick answers (Go, Explain — a setting of its own) are the prompt templates'…
       - **`status`** — Displays the conversation status as a colored badge in the toolbar.

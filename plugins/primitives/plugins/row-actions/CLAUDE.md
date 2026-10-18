@@ -11,16 +11,18 @@ own **placement only** — never a reveal. Placement is a closed set:
 | Gallery card (hover cluster) | `<RowActions pin="top-right">` |
 | Gallery card footer (actions that live at rest) | `<RowActions pin={null} alwaysVisible>` |
 | Table (reserved `auto` grid track) | `<RowActions pin={null}>`, persistent twin `pin={null} alwaysVisible` before it |
-| Floating over prose (no row tint to mask) | `<RowActions pin={null} surface>` |
+| Beside prose (a headerless transcript turn) | `<RowActions pin={null} float>` — the text wraps around it |
 
 `alwaysVisible` is **per-cluster by design** — a cluster either fades or doesn't.
 Which cluster a given action belongs to is the *action's* call, declared once as
 `data-view`'s `ItemActionContribution.zone`; a view then paints at most one
 cluster per zone. Don't reach for a per-action `alwaysVisible` here.
 
-`pin`/`surface` are a discriminated pair: a pinned cluster already paints
-`--scrim` via `Pin mask`, so an overlay surface would double-paint. The
-`--scrim` obligation on the host likewise applies **only when pinned**.
+`pin`/`float` are a discriminated pair: a pinned cluster is out of flow, so
+only an unpinned one can take part in a text flow. A cluster beside prose
+floats rather than overlaying it — an overlay over text hides the words under
+it whatever chrome it paints. The `--scrim` obligation on the host applies
+**only when pinned**.
 
 Enforced by `row-actions/no-raw-actions-slot` (this plugin's `lint/`): an
 `actions`-shaped prop must *reach* `RowActions` — as its child or forwarded as
@@ -127,7 +129,6 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `primitives/css/pin.PinAnchor`
     - `primitives/css/spacing.insetClass`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/surface.Surface`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/overlay/popup-open.PopupOpenScope`

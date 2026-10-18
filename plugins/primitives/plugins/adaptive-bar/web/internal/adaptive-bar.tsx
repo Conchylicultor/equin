@@ -97,6 +97,7 @@ import {
 } from "./relocate";
 import { AdaptiveBarYield, yieldFloorPx } from "./bar-yield";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { rendersNothing } from "./presence";
 
 const moreHorizIcon = symbol("more-horiz");
 
@@ -493,6 +494,17 @@ function rungOf(placement: Placement, id: string): number | null {
   return placement.has(id) ? (placement.get(id) ?? null) : 0;
 }
 
+/**
+ * The rung an occupant of the AUTHORED bucket ({@link AdaptiveBarCollapsed})
+ * sits at. The default flips: an occupant nothing has been decided about is
+ * behind the `⋯`, because that is what the author asked for. Only the one case
+ * the collapsed pass rules otherwise — a single present occupant, recorded as
+ * rung 0 — comes back inline (see that pass for why).
+ */
+function collapsedRungOf(placement: Placement, id: string): number | null {
+  return placement.get(id) === 0 ? 0 : null;
+}
+
 function AdaptiveBarShell({
   gap,
   label,
@@ -792,7 +804,7 @@ function AdaptiveBarShell({
         // `hidden` is where the last pass recorded absence, so this compares
         // the new truth against the committed one and stays quiet otherwise —
         // a widget re-rendering its own internals must not cost a fit pass.
-        const absent = entry.container.childElementCount === 0;
+        const absent = rendersNothing(entry.container);
         if (absent !== (entry.container.hidden === true)) bump();
       },
       claimYield(cell) {
@@ -832,7 +844,13 @@ function AdaptiveBarShell({
   const forms = useMemo<ReadonlyMap<string, ActionForm>>(() => {
     const map = new Map<string, ActionForm>();
     for (const [id, ladder] of ladders) {
-      map.set(id, formFor(ladder, collapsed ? null : rungOf(effective, id)));
+      map.set(
+        id,
+        formFor(
+          ladder,
+          collapsed ? collapsedRungOf(effective, id) : rungOf(effective, id),
+        ),
+      );
     }
     return map;
   }, [ladders, effective, collapsed]);
@@ -888,12 +906,14 @@ function AdaptiveBarShell({
     // ── 1. Apply the committed placement ──────────────────────────────────
     const evicted: string[] = [];
     for (const { id, anchor, entry } of order) {
-      const absent = entry.container.childElementCount === 0;
+      const absent = rendersNothing(entry.container);
       // An absent occupant contributes no width AND NO GAP. A 0×0 flex item
       // would still be paid for on both sides, so absence has to be `hidden`
       // (not a flex item at all) rather than a zero width.
       entry.container.hidden = absent;
-      const rung = collapsed ? null : rungOf(effective, id);
+      const rung = collapsed
+        ? collapsedRungOf(effective, id)
+        : rungOf(effective, id);
       if (rung === null && !absent) {
         evicted.push(id);
       } else {
@@ -942,11 +962,21 @@ function AdaptiveBarShell({
     // relocated out of a row measuring nothing" — and a recovery there would
     // commit the ceiling only for this branch to put everything straight back
     // out on the next pass, for ever.
+    //
+    // One exception, and it is about the `⋯`, not about width: a bucket whose
+    // members came to ONE on this row would put a single action behind a menu
+    // trigger that costs the same click and the same room as the action itself.
+    // So a lone present occupant stays inline at its full rung, and the trigger
+    // (which follows the evicted count) is not painted. Presence is per row —
+    // members that rendered nothing were recorded `hidden` above — so the same
+    // authored bucket is a `⋯` on one row and a plain button on the next.
     if (collapsed) {
+      const present = order.filter(
+        ({ entry }) => entry.container.hidden !== true,
+      );
+      const lone = present.length === 1;
       const next = new Map<string, number | null>();
-      for (const { id, entry } of order) {
-        if (entry.container.hidden !== true) next.set(id, null);
-      }
+      for (const { id } of present) next.set(id, lone ? 0 : null);
       if (!samePlacement(next, placement)) setPlacement(next);
       return;
     }

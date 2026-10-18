@@ -15,7 +15,6 @@ the transcript's other images. Nothing expands inline.
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
-    - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/overlay/image-viewer.ViewerThumbnail`

@@ -5,10 +5,13 @@
 **Which** actions a JSONL transcript row carries — never how they look or reveal:
 
 - **`JsonlRowActions.Item`** — the slot every row action contributes to (timestamp,
-  raw-json, copy, markdown/raw toggles, fork-session, …). Its id string is
+  copy, rewind / fork, raw JSON, text toggles, …). Its id string is
   `"conversation.jsonl-viewer.row-action"` and must stay byte-for-byte stable:
   persisted reorder directives are keyed on it, so renaming the slot silently drops
-  every user's saved action order.
+  every user's saved action order. Which actions sit on the row and which fold
+  behind its ⋯ is the slot's config (`config/…/row-actions/item.jsonc`, an
+  `overflow` node), not code — so an action is an `IconButton`, which renders as a
+  labelled row once it lands in the ⋯ panel.
 - **`EventActionProvider` / `EventRowActions`** — the per-event context published once
   by `EventRow`, and the strip that reads it and renders the contributions. Actions
   take no props beyond `event`; they read whatever else they need from their own
@@ -16,6 +19,11 @@
 - **`RowActionButton` / `rowActionClass`** — the shared action-glyph styling. Use the
   component for a normal button; use the class helper when the element is owned by
   something else (a base-ui trigger rendering its own native `<button>`).
+
+**Placement is always in the flow, never over the content.** Card renderers put
+the strip in their header's trailing slot; the headerless text/image renderers
+render `<EventRowActions float />` FIRST inside their text, so the prose wraps
+around it (a floating overlay hid the words under it).
 
 The cluster itself is not ours: `EventRowActions` is a thin wrapper over
 `primitives/row-actions` — the one row-action implementation in the app, which owns
@@ -65,7 +73,6 @@ event kind — that is the standard gate, not a filter on the slot.
 - Web:
   - Slots: `JsonlRowActions.Item`
   - Slot contributors:
-    - `JsonlRowActions.Item` ← `conversations.conversation-view.fork-session`
     - `JsonlRowActions.Item` ← `conversations.conversation-view.jsonl-viewer`
     - `JsonlRowActions.Item` ← `conversations.conversation-view.jsonl-viewer.assistant-text`
     - `JsonlRowActions.Item` ← `conversations.conversation-view.jsonl-viewer.investigate-event`
@@ -98,7 +105,6 @@ event kind — that is the standard gate, not a filter on the slot.
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
   - Imported by:
-    - `conversations/conversation-view/fork-session`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`

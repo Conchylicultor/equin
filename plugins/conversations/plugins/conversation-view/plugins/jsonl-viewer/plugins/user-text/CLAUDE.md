@@ -8,20 +8,20 @@
 - Web:
   - Contributes:
     - `JsonlViewer.EventRenderer` "user-text" → `UserTextRow`
+    - `JsonlRowActions.Item` "copy-user-text" → `CopyUserTextAction`
     - `JsonlRowActions.Item` "raw-text-toggle" → `RawTextToggleAction`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
     - `conversations/conversation-view/jsonl-viewer.useSectionExpand`
+    - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
     - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
     - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
-    - `conversations/conversation-view/jsonl-viewer/row-actions.RowActionButton`
     - `conversations/conversation-view/user-message.UserMessageCard`
     - `conversations/conversation-view/user-message.UserMessageText`
-    - `primitives/css/pin.Pin`
     - `primitives/expandable.Expandable`
+    - `primitives/icon-button.IconButton`
     - `primitives/overlay/image-viewer.ViewerThumbnail`
-    - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
 

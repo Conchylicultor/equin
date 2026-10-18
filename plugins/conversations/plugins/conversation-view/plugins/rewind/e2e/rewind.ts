@@ -97,7 +97,7 @@ async function userRows(id: string): Promise<UserTextEvent[]> {
   return events.filter((e) => e.kind === "user-text");
 }
 
-const GO_BACK = "Go back to this message";
+const REWIND = "Rewind to here";
 const RECALL =
   "List every word I asked you to remember so far. Reply with the words only.";
 const created: string[] = [];
@@ -173,9 +173,9 @@ try {
       marker: "[data-event-index]",
       settleMs: 2500,
     });
-    const buttons = page.locator(`[aria-label="${GO_BACK}"]`);
+    const buttons = page.locator(`[aria-label="${REWIND}"]`);
     r.ok(
-      `one "go back" button per user message (found ${await buttons.count()})`,
+      `one "rewind" button per user message (found ${await buttons.count()})`,
       (await buttons.count()) === 2,
     );
     // The strip is revealed by hovering its row (opacity + pointer-events).
@@ -183,8 +183,7 @@ try {
       .locator("[data-event-index]", { has: page.getByText("BANANA") })
       .first();
     await row.hover();
-    await row.locator(`[aria-label="${GO_BACK}"]`).click();
-    await page.getByRole("menuitem", { name: "Rewind to here" }).click();
+    await row.locator(`[aria-label="${REWIND}"]`).click();
     // Nothing is lost by this cut, so no dialog: the message goes straight back
     // into the prompt editor.
     const draft = await waitFor(

@@ -303,7 +303,7 @@ export default createRule({
         "diverge from every other one (reveal, popup-hold, pointerdown guard, size). Render it " +
         "through the primitive: `<RowActions pin={…}>{{{prop}}}</RowActions>` from " +
         "@plugins/primitives/plugins/row-actions/web (placement axes: pin right | top-right | null, " +
-        "alwaysVisible, surface — see plugins/primitives/plugins/row-actions/CLAUDE.md), or forward " +
+        "alwaysVisible, float — see plugins/primitives/plugins/row-actions/CLAUDE.md), or forward " +
         "it on as an `actions={…}` attribute to a host that does. There is no allowlist: this rule " +
         "asks whether the binding REACHES the primitive, so no edit to the wrapper can satisfy it.",
     },

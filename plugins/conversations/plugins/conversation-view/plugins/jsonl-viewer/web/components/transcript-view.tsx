@@ -20,7 +20,6 @@ import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-re
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { ImageGallery } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { EventRow } from "./event-row";
-import { LastAssistantProvider } from "./last-assistant-context";
 import { ConversationIdProvider } from "./conversation-id-context";
 import {
   TranscriptSubjectProvider,
@@ -216,12 +215,6 @@ function TranscriptViewInner({
   // Plugin-contributed hide predicates, via the shared owner — every surface
   // that enumerates the transcript must agree on which events exist.
   const visibleEvents = useVisibleEvents(events);
-  const lastAssistantEvent = useMemo(() => {
-    for (let i = events.length - 1; i >= 0; i--) {
-      if (events[i]?.kind === "assistant-text") return events[i] ?? null;
-    }
-    return null;
-  }, [events]);
 
   // Destructure at the call site: react-hooks/refs taints the handle object
   // (it carries scrollRef), so member access on it during render is flagged;
@@ -280,9 +273,7 @@ function TranscriptViewInner({
           {visibleEvents.length === 0 ? (
             empty
           ) : (
-            <LastAssistantProvider event={lastAssistantEvent}>
-              <EventSections events={visibleEvents} />
-            </LastAssistantProvider>
+            <EventSections events={visibleEvents} />
           )}
           {children}
         </Stack>

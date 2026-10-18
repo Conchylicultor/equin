@@ -123,9 +123,9 @@ never be clobbered.
   - Exports (values): `Surface`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×9
-    - `primitives` ×7
+    - `primitives` ×6
     - `page` ×4
     - `apps-core` ×2
     - `infra` ×2

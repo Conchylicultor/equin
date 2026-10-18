@@ -21,7 +21,6 @@ export type { TranscriptViewProps } from "./components/transcript-view";
 export { useVisibleEvents } from "./use-visible-events";
 export { EventLine } from "./components/event-line";
 export { useRowMarkdown } from "./components/row-markdown-context";
-export { useLastAssistantEvent } from "./components/last-assistant-context";
 export { useTranscriptEvents } from "./components/transcript-events-context";
 export { useTranscriptSubject } from "./components/transcript-subject-context";
 export type { TranscriptSubject } from "./components/transcript-subject-context";

@@ -107,7 +107,6 @@ started" notification confirms it), so its props are the form's minus
     - `config_v2/settings/conflict-agent`
     - `conversations/conversation-view/branch`
     - `conversations/conversation-view/fork-conversation`
-    - `conversations/conversation-view/fork-session`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `conversations/conversation-view/rewind`
     - `conversations/conversations-view`

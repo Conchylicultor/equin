@@ -1613,10 +1613,6 @@
       "name": "@singularity/plugin-conversations-conversation-view-fork-conversation",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/fork-session": {
-      "name": "@singularity/plugin-conversations-conversation-view-fork-session",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversation-view/plugins/header": {
       "name": "@singularity/plugin-conversations-conversation-view-header",
       "version": "0.0.1",
@@ -7497,8 +7493,6 @@
     "@singularity/plugin-conversations-conversation-view-explorer": ["@singularity/plugin-conversations-conversation-view-explorer@workspace:plugins/conversations/plugins/conversation-view/plugins/explorer"],
 
     "@singularity/plugin-conversations-conversation-view-fork-conversation": ["@singularity/plugin-conversations-conversation-view-fork-conversation@workspace:plugins/conversations/plugins/conversation-view/plugins/fork-conversation"],
-
-    "@singularity/plugin-conversations-conversation-view-fork-session": ["@singularity/plugin-conversations-conversation-view-fork-session@workspace:plugins/conversations/plugins/conversation-view/plugins/fork-session"],
 
     "@singularity/plugin-conversations-conversation-view-header": ["@singularity/plugin-conversations-conversation-view-header@workspace:plugins/conversations/plugins/conversation-view/plugins/header"],
 

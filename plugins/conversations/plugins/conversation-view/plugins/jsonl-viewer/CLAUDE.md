@@ -155,12 +155,12 @@ back.
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations/conversation-view/jsonl-viewer/row-actions` ×4
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
+    - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
     - `conversations/conversation-view/pending-turn` ×3
+    - `primitives/css/ui-kit` ×3
     - `primitives/live-state` ×3
-    - `primitives/css/ui-kit` ×2
     - `primitives/dom/auto-scroll` ×2
     - `primitives/relative-time` ×2
     - `primitives/slot-render` ×2
@@ -176,9 +176,10 @@ back.
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
     - `primitives/dom/scroll-reveal.revealElement`
+    - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/image-viewer.ImageGallery`
-    - `primitives/overlay/popover.InlinePopover`
+    - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/row-actions.rowActionsAnchor`
     - `primitives/scope/dom-scope.defineDomScope`
     - `primitives/scope/surface-id.useSurfaceTabId`
@@ -205,7 +206,6 @@ back.
     - `TranscriptView`
     - `useHostedContext`
     - `useJsonlConversationId`
-    - `useLastAssistantEvent`
     - `useRowMarkdown`
     - `useSectionExpand`
     - `useTranscriptEvents`
@@ -235,8 +235,8 @@ back.
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×42
+  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×41
     - `apps/agent-manager/demo`
     - `tasks/outcome-report`
 - Exemptions:

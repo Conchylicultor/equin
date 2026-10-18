@@ -4,14 +4,21 @@ import { JsonlRowActions } from "@plugins/conversations/plugins/conversation-vie
 import { AssistantTextRow } from "./components/assistant-text-row";
 import { CopyAssistantTextAction } from "./components/copy-text-action";
 import { MarkdownToggleAction } from "./components/markdown-toggle-action";
-import { StopReasonAction } from "./components/stop-reason-action";
 
 export default {
   description: "Renders assistant text events in the JSONL viewer, with optional markdown rendering.",
   contributions: [
-    JsonlViewer.EventRenderer({ match: "assistant-text", component: AssistantTextRow }),
-    JsonlRowActions.Item({ id: "stop-reason", component: StopReasonAction }),
-    JsonlRowActions.Item({ id: "markdown-toggle", component: MarkdownToggleAction }),
-    JsonlRowActions.Item({ id: "copy-assistant-text", component: CopyAssistantTextAction }),
+    JsonlViewer.EventRenderer({
+      match: "assistant-text",
+      component: AssistantTextRow,
+    }),
+    JsonlRowActions.Item({
+      id: "markdown-toggle",
+      component: MarkdownToggleAction,
+    }),
+    JsonlRowActions.Item({
+      id: "copy-assistant-text",
+      component: CopyAssistantTextAction,
+    }),
   ],
 } satisfies PluginDefinition;

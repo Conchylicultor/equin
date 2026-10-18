@@ -6,6 +6,7 @@ import { OverflowBox } from "../components/overflow-box";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const closeIcon = symbol("close");
+const pinIcon = symbol("push-pin");
 
 // The bucket's members are AUTHORED in config, but each one decides per row
 // whether it applies (an item action returns null on a row it has nothing to do
@@ -29,6 +30,11 @@ function Applicable(): ReactElement {
     mounts["close"] = (mounts["close"] ?? 0) + 1;
   }, []);
   return <IconButton icon={closeIcon} label="Close conversation" />;
+}
+
+/** A second applicable action, so a bucket holds more than one present member. */
+function Pin(): ReactElement {
+  return <IconButton icon={pinIcon} label="Pin conversation" />;
 }
 
 /**
@@ -75,11 +81,12 @@ describe("OverflowBox", () => {
     expect(triggerPainted()).toBe(false);
   });
 
-  it("paints the ⋯ when at least one member renders", () => {
+  it("paints the ⋯ when two or more members render", () => {
     render(
       <OverflowBox payload={{}} editMode={false}>
         <NotApplicable />
         <Applicable />
+        <Pin />
       </OverflowBox>,
     );
 
@@ -106,6 +113,53 @@ describe("OverflowBox", () => {
     );
   });
 
+  it("keeps a lone rendered member inline, with no ⋯", () => {
+    render(
+      <OverflowBox payload={{}} editMode={false}>
+        <NotApplicable />
+        <Applicable />
+      </OverflowBox>,
+    );
+
+    // Two authored members, one of which applies to this row: a menu holding
+    // one action costs the same click and the same room as the action, so the
+    // action is drawn where the ⋯ would have been — as its icon, not a row.
+    expect(triggerPainted()).toBe(false);
+    const button = document.querySelector<HTMLElement>(
+      "button[aria-label='Close conversation']",
+    );
+    expect(button).not.toBeNull();
+    expect(isInPanel(button)).toBe(false);
+  });
+
+  it("sees through the slot's display:contents wrappers", () => {
+    // Through `.Render` every member arrives inside reorder's and slot-render's
+    // wrappers whether or not it rendered anything. An inline style rather than
+    // a class because jsdom applies no stylesheet; this way `getComputedStyle`
+    // reports `contents` for real, as it does in the app.
+    const wrap = (child: ReactElement) => (
+      <span style={{ display: "contents" }}>
+        <div style={{ display: "contents" }}>{child}</div>
+      </span>
+    );
+    render(
+      <OverflowBox payload={{}} editMode={false}>
+        {wrap(<NotApplicable />)}
+        {wrap(<NotApplicable />)}
+        {wrap(<Applicable />)}
+      </OverflowBox>,
+    );
+
+    // Counting child elements would see the wrappers, call all three present
+    // and paint a ⋯ over one action. The one that rendered stays inline.
+    expect(triggerPainted()).toBe(false);
+    expect(
+      isInPanel(
+        document.querySelector("button[aria-label='Close conversation']"),
+      ),
+    ).toBe(false);
+  });
+
   it("renders nothing at all with no authored members", () => {
     const { container } = render(
       <OverflowBox payload={{}} editMode={false}>
@@ -123,6 +177,7 @@ describe("OverflowBox", () => {
     render(
       <OverflowBox payload={{ label: "Row actions" }} editMode={false}>
         <Applicable />
+        <Pin />
       </OverflowBox>,
     );
 
@@ -142,6 +197,7 @@ describe("OverflowBox", () => {
     render(
       <OverflowBox payload={{}} editMode={false}>
         <Slider />
+        <Pin />
       </OverflowBox>,
     );
 

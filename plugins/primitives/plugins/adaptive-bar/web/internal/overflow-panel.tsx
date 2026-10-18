@@ -67,7 +67,7 @@ export function OverflowPanel({
 }: OverflowPanelProps): ReactElement {
   const [floatingEl, setFloatingEl] = useState<HTMLElement | null>(null);
 
-  const { floatingStyles } = useFloating({
+  const { floatingStyles, isPositioned } = useFloating({
     open,
     strategy: "fixed",
     placement: "bottom-end",
@@ -134,7 +134,14 @@ export function OverflowPanel({
         inert={!open}
         aria-hidden={!open}
         padding="xs"
-        className="pointer-events-auto"
+        // Invisible until placed. Closed, the panel has no reference, so its
+        // styles sit at the viewport origin; opening shows it in that same
+        // commit, and Floating UI's first measurement lands a commit later —
+        // the panel would flash top-left and then jump to its trigger (as a
+        // slide, under OverlayPanel's `transition-property: all`). Same guard
+        // as `floating-surface`: hidden until positioned, only opacity animates.
+        data-positioned={isPositioned ? "" : undefined}
+        className="pointer-events-auto transition-opacity not-data-[positioned]:opacity-0"
       >
         <Stack ref={dockRef} gap="2xs" align="stretch" {...dockAttrs} />
       </OverlayPanel>

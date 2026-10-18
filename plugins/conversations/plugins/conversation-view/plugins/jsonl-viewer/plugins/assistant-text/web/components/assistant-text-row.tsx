@@ -9,7 +9,6 @@ import { EventRowActions } from "@plugins/conversations/plugins/conversation-vie
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 
 type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
 
@@ -18,15 +17,17 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
   const { markdownMode } = useRowMarkdown();
   const { convId } = conversationPane.useParams();
   const segments = useActiveDataSegments(e.text);
+  // First in the text so the prose wraps around it rather than running under it.
+  const actions = <EventRowActions float />;
 
   return (
     <ContentScope>
-      <div className="relative px-md py-sm">
-        <Pin to="top-right" offset="sm">
-          <EventRowActions floating />
-        </Pin>
+      {/* flow-root contains the floated actions, so a one-line message never
+          lets them hang into the next row. */}
+      <div className="flow-root px-md py-sm">
         {markdownMode ? (
           <Text as="div" variant="body">
+            {actions}
             {(() => {
               const counts = new Map<string, number>();
               return segments.map((seg, i) => {
@@ -54,7 +55,14 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
             })()}
           </Text>
         ) : (
-          <Text as="div" variant="body" className="whitespace-pre-wrap break-words">{e.text}</Text>
+          <Text
+            as="div"
+            variant="body"
+            className="whitespace-pre-wrap break-words"
+          >
+            {actions}
+            {e.text}
+          </Text>
         )}
       </div>
     </ContentScope>

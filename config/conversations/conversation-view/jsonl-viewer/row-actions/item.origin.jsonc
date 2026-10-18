@@ -1,4 +1,4 @@
-// @hash b1fc77d469c8
+// @hash 48f69d50a19e
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,16 +7,16 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "conversations.conversation-view.fork-session:fork-session",
     "conversations.conversation-view.jsonl-viewer:timestamp",
     "conversations.conversation-view.jsonl-viewer:raw-json",
-    "conversations.conversation-view.jsonl-viewer.assistant-text:stop-reason",
     "conversations.conversation-view.jsonl-viewer.assistant-text:markdown-toggle",
     "conversations.conversation-view.jsonl-viewer.assistant-text:copy-assistant-text",
     "conversations.conversation-view.jsonl-viewer.investigate-event:investigate-event",
     "conversations.conversation-view.jsonl-viewer.tool-call:copy-tool-result",
     "conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question:change-answers",
+    "conversations.conversation-view.jsonl-viewer.user-text:copy-user-text",
     "conversations.conversation-view.jsonl-viewer.user-text:raw-text-toggle",
-    "conversations.conversation-view.rewind:rewind"
+    "conversations.conversation-view.rewind:rewind",
+    "conversations.conversation-view.rewind:fork-from-message"
   ]
 }
