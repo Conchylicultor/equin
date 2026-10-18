@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
@@ -15,12 +16,12 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
-  flattenTagTree,
+  placeTags,
   tagPlaceCounts,
   type Place,
   type PlaceTag,
-  type TagTreeEntry,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import {
   useCreatePlaceTag,
@@ -38,10 +39,8 @@ import { TagParentSelect } from "./tag-parent-select";
  */
 const TAGS_VIEW = defineDataView("places.tags");
 
-/** The width of one tree level in the Tag column. */
-const INDENT_PX = 22;
-
-type TagRow = TagTreeEntry<PlaceTag>;
+/** Open on first paint: the manager shows the whole tree. */
+const TAG_TABLE_OPTIONS = { defaultExpanded: true, addLabel: null };
 
 export interface TagManagerPanelProps {
   /** Every saved place — what the Places column counts. */
@@ -58,15 +57,16 @@ export interface TagManagerPanelProps {
 
 /**
  * Manage tags: the one tag tree as an editable table, as a floating card. A
- * row per tag in tree order (indented by depth): colour (own or inherited),
+ * row per tag, nested under its parent: colour (own or inherited),
  * icon, name (edited in place), parent (never itself or a descendant), the
  * Google types that set it automatically, how many places carry it (nested
  * tags included), and Shade children (a parent's colourless children as a
  * light → deep ramp of its colour) / + Child / Delete. Every edit goes straight to the tag
  * endpoints; the live tag collection brings it back to every surface.
  *
- * The rows are a DataView (the table view) over the flattened tree — sorting
- * is off on every column, since the tree order IS the meaning.
+ * The rows are a DataView (the table view) nesting the tag collection by
+ * `parentId` — sorting is off on every column, since the tree order IS the
+ * meaning.
  */
 export function TagManagerPanel({
   places,
@@ -76,8 +76,23 @@ export function TagManagerPanel({
 }: TagManagerPanelProps) {
   const [focus, setFocus] = useState<string | null>(focusTagId);
   const { mutateAsync: createTag } = useCreatePlaceTag();
-  const rows = useMemo(() => flattenTagTree(tags), [tags]);
   const counts = useMemo(() => tagPlaceCounts(places, tags), [places, tags]);
+  // A tag's parent is its `parentId`; siblings keep the order the tags arrive
+  // in (the collection is in `rank` order), so each tag's tree rank is its
+  // position, as an evenly spaced fractional key.
+  const hierarchy = useMemo(() => {
+    const ranks = new Map(
+      Rank.nBetween(null, null, tags.length).map((r, i) => [tags[i]!.id, r]),
+    );
+    return {
+      getParentId: (t: PlaceTag) => t.parentId,
+      getRank: (t: PlaceTag) => {
+        const rank = ranks.get(t.id);
+        if (rank === undefined) throw new Error(`no rank for tag ${t.id}`);
+        return rank;
+      },
+    };
+  }, [tags]);
 
   const addTag = useCallback(
     async (parentId: string | null) => {
@@ -87,40 +102,41 @@ export function TagManagerPanel({
     [createTag],
   );
 
-  const fields = useMemo<FieldDef<TagRow>[]>(
+  // The tag and the Google types are the collection's, derived; what the
+  // manager changes of them is their cell (and the tag's label).
+  const overrides = useMemo(
+    () =>
+      fieldOverrides(placeTags, {
+        name: {
+          label: "Tag",
+          cell: (t) => (
+            <TagNameCell tag={t} tags={tags} autoFocus={t.id === focus} />
+          ),
+          width: "18rem",
+        },
+        googleTypes: { cell: (t) => <GoogleTypes types={t.googleTypes} /> },
+      }),
+    [tags, focus],
+  );
+
+  // The columns the manager computes: the parent (an editable pick of the
+  // tree), the place count and the row actions.
+  const extraFields = useMemo<FieldDef<PlaceTag>[]>(
     () => [
-      {
-        id: "name",
-        label: "Tag",
-        type: "text",
-        primary: true,
-        value: (r) => r.tag.name,
-        cell: (r) => (
-          <TagNameCell row={r} tags={tags} autoFocus={r.tag.id === focus} />
-        ),
-        width: "18rem",
-      },
       {
         id: "parent",
         label: "Parent",
         type: "text",
-        value: (r) =>
-          tags.find((t) => t.id === r.tag.parentId)?.name ?? "Top level",
-        cell: (r) => <TagParentSelect tag={r.tag} tags={tags} />,
+        value: (t) =>
+          tags.find((p) => p.id === t.parentId)?.name ?? "Top level",
+        cell: (t) => <TagParentSelect tag={t} tags={tags} />,
         width: "11rem",
-      },
-      {
-        id: "googleTypes",
-        label: "Auto-set from Google types",
-        type: "tags",
-        values: (r) => [...r.tag.googleTypes],
-        cell: (r) => <GoogleTypes types={r.tag.googleTypes} />,
       },
       {
         id: "places",
         label: "Places",
         type: "number",
-        value: (r) => counts.get(r.tag.id) ?? 0,
+        value: (t) => counts.get(t.id) ?? 0,
         align: "end",
         width: "5rem",
       },
@@ -128,17 +144,17 @@ export function TagManagerPanel({
         id: "actions",
         label: "Actions",
         header: false,
-        cell: (r) => (
+        cell: (t) => (
           <TagRowActions
-            tag={r.tag}
-            hasChildren={tags.some((t) => t.parentId === r.tag.id)}
-            onAddChild={() => addTag(r.tag.id)}
+            tag={t}
+            hasChildren={tags.some((c) => c.parentId === t.id)}
+            onAddChild={() => addTag(t.id)}
           />
         ),
         width: "16rem",
       },
     ],
-    [tags, counts, focus, addTag],
+    [tags, counts, addTag],
   );
 
   return (
@@ -166,11 +182,15 @@ export function TagManagerPanel({
           </Line>
         }
         body={
-          <DataView<TagRow>
+          <DataView<PlaceTag>
             storageKey={TAGS_VIEW}
-            rows={rows}
-            rowKey={(r) => r.tag.id}
-            fields={fields}
+            rows={tags}
+            collection={placeTags}
+            overrides={overrides}
+            extraFields={extraFields}
+            hierarchy={hierarchy}
+            viewOptions={{ table: TAG_TABLE_OPTIONS }}
+            rowKey={(t) => t.id}
             views={["table"]}
             density="compact"
             searchPlaceholder="Find a tag…"
@@ -182,20 +202,19 @@ export function TagManagerPanel({
 }
 
 function TagNameCell({
-  row,
+  tag,
   tags,
   autoFocus,
 }: {
-  row: TagRow;
+  tag: PlaceTag;
   tags: readonly PlaceTag[];
   autoFocus: boolean;
 }): ReactNode {
   const updateTag = useUpdatePlaceTag();
-  const { tag, depth } = row;
   const update = (body: Parameters<typeof updateTag.mutateAsync>[0]["body"]) =>
     updateTag.mutateAsync({ params: { id: tag.id }, body });
   return (
-    <Line className="gap-xs" style={{ paddingLeft: depth * INDENT_PX }}>
+    <Line className="gap-xs">
       <TagColorButton
         tag={tag}
         tags={tags}

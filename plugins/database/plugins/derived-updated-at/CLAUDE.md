@@ -128,7 +128,6 @@ are in `infra/entities/server/internal/`
     - `database/migrations`
     - `debug/profiling/op-log/op-store`
     - `infra/entities`
-    - `page/editor`
     - `page/editor-collab`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-order`

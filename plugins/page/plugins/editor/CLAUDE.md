@@ -110,13 +110,13 @@ link block, the inline node and the page chips).
 
 **Declared by fields, over the `page_blocks` entity.** `pagesTree` is
 `liveCollection({ from: pagesEntityRef, fields: { editedAt }, carry })`
-(`core/block-entity.ts`): `pagesEntityRef = entityRef("page_blocks",
-blockFields)`, the block WIRE fields (`BlockSchema`'s; `rank` / `docRank` as the
-`Rank` value object, `rankWireField`). The table itself stays the raw
-`pgTable` — its CHECK constraint (`page_blocks_trash_flags_agree`) has no
-spelling in an entity's meta and its `data` column is branded `BlockData` — so
-the ref names it for the browser and the server binds its fields by column
-name. Because the rows reach that entity, every extension EXPOSING fields of a
+(`page/block-entity`): `pagesEntityRef = entityRef("page_blocks",
+blockFields)`, the block's STORED fields (`rank` the raw key, `data` the branded
+`BlockData` its column decodes to). The table is built from it —
+`defineEntity(pagesEntityRef, { docRank, deletedAt, trashEntryId }, meta)` in
+`server/internal/tables.ts`, those three server-only — so the ref and the table
+cannot disagree. `pagesTree` carries the wire `Rank` of `rank` and `docRank`
+itself (`rankValueField`). Because the rows reach that entity, every extension EXPOSING fields of a
 block folds into them under `$columns` (starred, agent-origin's `origin`, page
 tags' `tags`), and the pages sidebar derives them with no field code. The
 derived row is pinned equal to `PageRow` (`_PinPagesTreeRow`).
@@ -4576,11 +4576,11 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `database.db`
     - `database.DbExecutor`
     - `database/derived-tables.DerivedTable`
-    - `database/derived-updated-at.deriveUpdatedAt`
-    - `database/sql-column.parsedJson`
     - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/events.defineTriggerEvent`
     - `infra/trash._trashEntries`
     - `infra/trash.defineTrashSource`
@@ -4656,7 +4656,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `POST /api/pages/:pageId/blocks/op`
     - `POST /api/pages/:pageId/blocks/patch`
 - Core:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×3
     - `network/live` ×3
     - `primitives/collab-doc` ×3
@@ -4665,6 +4665,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `page/block-entity` ×2
     - `primitives/rank` ×2
     - `fields/date/config.dateField`
+    - `fields/rank/config.rankValueField`
     - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `infra/endpoints.defineEndpoint`
@@ -4675,7 +4676,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Block`
     - `BlockAudience`
     - `BlockAuthor`
-    - `BlockData`
     - `BlockDiff`
     - `BlockFieldChanges`
     - `BlockHandle`

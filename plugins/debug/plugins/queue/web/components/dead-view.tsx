@@ -1,5 +1,8 @@
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
-import { deadJobs, type DeadJobRow } from "@plugins/infra/plugins/jobs/core";
+import {
+  deadJobs,
+  type DeadJobListRow,
+} from "@plugins/infra/plugins/jobs/core";
 import {
   DataView,
   defineDataView,
@@ -34,7 +37,7 @@ export function DeadView({
   linkTo: (id: string) => LinkTarget;
 }) {
   return (
-    <DataView<DeadJobRow>
+    <DataView<DeadJobListRow>
       storageKey={DEAD_VIEW}
       overrides={overrides}
       views={["table", "list"]}

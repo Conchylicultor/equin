@@ -50,17 +50,18 @@ descriptor the strip renders without knowing what produced it. Header: the
     - `slowEventsPane.Actions` ← `primitives.pane`
     - `traceDetailPane.Actions` ← `primitives.pane`
   - Contributes:
+    - `FieldPresentation.Register` "collection:debug.traces"
     - `Pane.Register` "trace-detail"
     - `Pane.Register` "traces"
     - `SlowEvents.View` "Events" → `EventsView`
     - `DebugApp.Sidebar` "Slow Events"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `network/live` ×5
+    - `primitives/data-view` ×4
     - `debug/profiling` ×3
-    - `primitives/data-view` ×3
+    - `primitives/live-state` ×3
     - `primitives/pane` ×3
     - `debug/trace/engine` ×2
-    - `network/live` ×2
-    - `primitives/live-state` ×2
     - `apps/debug/shell.DebugApp`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`

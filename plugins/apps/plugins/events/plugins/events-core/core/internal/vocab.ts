@@ -40,9 +40,28 @@ export const REFRESH_CADENCES = [
 ] as const;
 export type RefreshCadence = (typeof REFRESH_CADENCES)[number];
 
+/** How each cadence presents (the `refresh` field's options). */
+export const REFRESH_CADENCE_META: {
+  readonly [C in RefreshCadence]: FieldOptionMeta;
+} = {
+  manual: { label: "Manual" },
+  hourly: { label: "Hourly" },
+  daily: { label: "Daily" },
+  weekly: { label: "Weekly" },
+};
+
 /** Runtime state of a source row, written by the refresh engine. */
 export const SOURCE_STATUSES = ["idle", "running", "error"] as const;
 export type SourceStatus = (typeof SOURCE_STATUSES)[number];
+
+/** How each source status presents (the `status` field's options): its label and chip tint. */
+export const SOURCE_STATUS_META: {
+  readonly [S in SourceStatus]: FieldOptionMeta;
+} = {
+  idle: { label: "Idle", variant: "muted" },
+  running: { label: "Running", variant: "info" },
+  error: { label: "Error", variant: "destructive" },
+};
 
 /**
  * How a single refresh run ended.

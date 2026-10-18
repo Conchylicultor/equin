@@ -1,5 +1,6 @@
 export {
   savedBootTraceFields,
+  bootTracesEntityRef,
   SavedBootTraceSchema,
   BootTraceSchema,
 } from "./fields";

@@ -257,13 +257,13 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `Pane.Register` "automations"
     - `Shell.Sidebar` "Automations"
     - `FieldPresentation.Register` "exposure:tasks_ext_origin"
-  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `primitives/live-state` ×5
     - `primitives/pane` ×5
     - `network/live` ×4
+    - `primitives/data-view` ×4
     - `config_v2` ×3
-    - `primitives/data-view` ×3
     - `tasks/task-status` ×3
     - `conversations/model-provider` ×2
     - `infra/background/catalog` ×2

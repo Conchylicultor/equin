@@ -7,7 +7,6 @@ export {
   DeadJobRowSchema,
   DeadJobsPayloadSchema,
   jobRuns,
-  JobRunRowSchema,
   JobRunOutcomeSchema,
 } from "./resources";
 export type {
@@ -15,6 +14,7 @@ export type {
   JobState,
   JobsPayload,
   DeadJobRow,
+  DeadJobListRow,
   DeadJobsPayload,
   JobRunRow,
   JobRunOutcome,

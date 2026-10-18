@@ -13,7 +13,7 @@ import { useConfigResult } from "@plugins/config_v2/web";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { releaseHistory, type ReleaseRun } from "@plugins/release/core";
+import { releaseHistory, type ReleaseHistoryRow } from "@plugins/release/core";
 import { releaseDetailPane } from "../panes";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
@@ -27,7 +27,7 @@ const releaseHistorySource = liveDataSource(releaseHistory, {
   searchable: ["composition", "target", "platform"],
 });
 
-function statusBadge(run: ReleaseRun): ReactNode {
+function statusBadge(run: ReleaseHistoryRow): ReactNode {
   if (run.status === "running") {
     return (
       <Badge
@@ -132,7 +132,7 @@ function ReleaseHistory({
   );
 
   return (
-    <DataView<ReleaseRun>
+    <DataView<ReleaseHistoryRow>
       storageKey={RELEASE_HISTORY_VIEW}
       overrides={overrides}
       views={["list", "table"]}

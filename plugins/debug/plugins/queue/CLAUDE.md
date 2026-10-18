@@ -24,6 +24,7 @@
     - `job-actions` ← `debug.queue`
     - `trigger-actions` ← `debug.queue`
   - Contributes:
+    - `FieldPresentation.Register` "collection:debug.queue.job-row"
     - `Pane.Register` "queue"
     - `Pane.Register` "queue-dead"
     - `Pane.Register` "queue-emission"
@@ -35,12 +36,12 @@
     - `trigger-actions` "enabled" → `TriggerEnabledAction`
     - `trigger-actions` "delete" → `DeleteTriggerAction`
     - `DebugApp.Sidebar` "Queue"
-  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×8
     - `primitives/live-state` ×6
+    - `network/live` ×5
     - `primitives/data-view` ×5
     - `infra/endpoints` ×2
-    - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
     - `apps/debug/shell.DebugApp`
@@ -68,8 +69,20 @@
     - `ui/icons.Icon`
   - Exports (values): `queuePane`
 - Core:
-  - Uses: `primitives/pane.defineRoute`
-  - Exports (values): `queueRoute`
+  - Uses:
+    - `fields.nullable`
+    - `fields/date/config.dateField`
+    - `fields/int/config.intField`
+    - `fields/text/config.enumTextField`
+    - `fields/text/config.textField`
+    - `infra/jobs.HOLD_CLASSES`
+    - `network/live.rowKind`
+    - `primitives/pane.defineRoute`
+  - Exports (values):
+    - `JOB_LIST_STATUSES`
+    - `JOB_PROBLEMS`
+    - `jobListRow`
+    - `queueRoute`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

@@ -18,13 +18,12 @@ import {
   InfiniteScrollFooter,
   useInfiniteScroll,
 } from "@plugins/primitives/plugins/cursor-pagination/web";
-import { notifications } from "../../shared/resources";
+import { notifications, type Notification } from "../../shared/resources";
 import { countedUnread, countedUnreadFilterable } from "../../shared/unread";
 import {
   dismissNotification,
   dismissAllNotifications,
 } from "../../shared/endpoints";
-import type { Notification } from "../../shared/schema";
 import { notificationsRoute } from "../../core";
 import { NotificationBody, notificationLink } from "./notification-body";
 

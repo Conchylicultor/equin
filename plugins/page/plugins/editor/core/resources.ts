@@ -11,10 +11,8 @@ import {
   liveValue,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-import {
-  pagesEntityRef,
-  rankWireField,
-} from "@plugins/page/plugins/block-entity/core";
+import { pagesEntityRef } from "@plugins/page/plugins/block-entity/core";
+import { rankValueField } from "@plugins/fields/plugins/rank/plugins/config/core";
 import { BlockSchema, type PageRow } from "./schemas";
 
 // All live pages (`type="page"` blocks), the WHOLE set (`all`): the sidebar
@@ -63,15 +61,18 @@ export const pagesTree = liveCollection("pages.tree", {
       "parentId",
       "type",
       "data",
-      "rank",
       "expanded",
       "createdAt",
       "updatedAt",
     ],
-    // The page row's place in its sidebar group: set on every live page row
-    // (invariant I-DR), so carried non-null here though the entity's column
-    // is NULL on content rows.
-    fields: { docRank: rankWireField() },
+    fields: {
+      // The wire `Rank` value object over the stored key.
+      rank: rankValueField(),
+      // The page row's place in its sidebar group: set on every live page row
+      // (invariant I-DR), so carried non-null here though its (server-only)
+      // column is NULL on content rows.
+      docRank: rankValueField(),
+    },
   },
   id: "id",
   all: {

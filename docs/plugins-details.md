@@ -2063,6 +2063,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.defineEndpoint`
               - `infra/entities.entityRef`
               - `network/live.liveCollection`
+              - `network/live.LiveRowsCollection`
               - `network/live.liveValue`
               - `primitives/pane.defineRoute`
             - Exports (types):
@@ -2809,6 +2810,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `eventSourceRunsEntityRef`
               - `eventSources`
               - `EventSourceSchema`
+              - `eventSourcesEntityRef`
               - `externalUrl`
               - `ExtractedEventSchema`
               - `EXTRACTION_STATUSES`
@@ -2816,6 +2818,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `extractionStatus`
               - `getEventSource`
               - `listEventSources`
+              - `REFRESH_CADENCE_META`
               - `REFRESH_CADENCES`
               - `refreshAllEventSources`
               - `RefreshAllResultSchema`
@@ -2828,6 +2831,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `runEvents`
               - `RunEventSchema`
               - `SOURCE_STATES`
+              - `SOURCE_STATUS_META`
               - `SOURCE_STATUSES`
               - `SourcedEventSchema`
               - `sourceRefOf`
@@ -2947,15 +2951,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "event-source-detail"
               - `Pane.Register` "event-sources"
+              - `FieldPresentation.Register` "entity:event_sources"
               - `Events.Sidebar` "Sources"
               - `EventSourceActions` "open" → `SourceOpenAction`
               - `EventSourceActions` "enabled" → `SourceToggleAction`
               - `EventSourceActions` "delete" → `SourceDeleteAction`
-            - Uses: 40 symbols — full list in [`plugins/apps/plugins/events/plugins/sources/REFERENCE.md`](../plugins/apps/plugins/events/plugins/sources/REFERENCE.md)
+            - Uses: 43 symbols — full list in [`plugins/apps/plugins/events/plugins/sources/REFERENCE.md`](../plugins/apps/plugins/events/plugins/sources/REFERENCE.md)
               - `apps/events/events-core` ×7
               - `primitives/css/ui-kit` ×5
               - `primitives/data-view` ×5
               - `primitives/pane` ×5
+              - `network/live` ×3
               - `apps/events/shell.Events`
               - `config_v2/fields.FieldRenderer`
               - `infra/endpoints.getEndpointErrorMessage`
@@ -2982,7 +2988,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SourceTypeLookup`
             - Exports (values):
               - `CADENCE_LABEL`
-              - `CADENCE_OPTIONS`
               - `describeRun`
               - `EventSourceActions`
               - `EventSourceDetail`
@@ -3001,7 +3006,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RUN_OUTCOME_VARIANT`
               - `SOURCE_STATE_OPTIONS`
               - `SOURCE_STATUS_LABEL`
-              - `SOURCE_STATUS_OPTIONS`
               - `SOURCE_STATUS_VARIANT`
               - `SourceConfigForm`
               - `useEventSource`
@@ -4657,7 +4661,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineItemActions`
-              - `primitives/data-view.FieldDef`
+              - `primitives/data-view.fieldOverrides`
               - `primitives/data-view.ItemActionProps`
               - `primitives/data-view.liveDataSource`
               - `primitives/icon-button.IconButton`
@@ -4867,27 +4871,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PATCH /api/places/tags/:id`
               - `DELETE /api/places/tags/:id`
           - Core:
-            - Uses:
-              - `fields.FieldsRecord`
-              - `fields.fieldsToZodObject`
-              - `fields.nullable`
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
+              - `fields` ×4
+              - `fields/text/config` ×3
+              - `ids` ×3
+              - `integrations/google-maps/places-api` ×3
+              - `network/live` ×2
+              - `ui/icons/saved-names` ×2
               - `fields/date/config.dateField`
               - `fields/int/config.intField`
               - `fields/json/config.jsonField`
               - `fields/location.locationField`
-              - `fields/text/config.enumTextField`
-              - `fields/text/config.parsedTextField`
-              - `fields/text/config.textField`
-              - `ids.defineIdKind`
-              - `ids.idKindField`
-              - `ids.IdOf`
+              - `fields/tags/config.tagsField`
               - `infra/endpoints.defineEndpoint`
-              - `integrations/google-maps/places-api.BUSINESS_STATUSES`
-              - `integrations/google-maps/places-api.PlaceSuggestionSchema`
-              - `network/live.liveCollection`
-              - `network/live.liveValue`
-              - `ui/icons/saved-names.parseSavedSymbolName`
-              - `ui/icons/saved-names.SavedSymbolNameSchema`
+              - `infra/entities.entityRef`
             - Exports (types):
               - `ChildColorMode`
               - `CreateCustomPlaceBody`
@@ -4932,10 +4929,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placeSearch`
               - `PlaceSearchQuerySchema`
               - `PlaceSearchResultSchema`
+              - `placesEntityRef`
               - `placeTagFields`
               - `placeTagIdKind`
               - `placeTags`
               - `PlaceTagSchema`
+              - `placeTagsEntityRef`
               - `regeneratePlaceIcon`
               - `RegeneratePlaceIconResultSchema`
               - `ringColors`
@@ -4963,14 +4962,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slot contributors: `places-map.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "places-map"
+              - `FieldPresentation.Register` "entity:places"
               - `GeoMap.Pin` → `SavedPlacePin`
-            - Uses: 80 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 85 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×9
+              - `primitives/data-view` ×7
               - `map` ×6
-              - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
               - `primitives/css/ui-kit` ×4
-              - `primitives/live-state` ×3
+              - `primitives/live-state` ×4
+              - `network/live` ×3
               - `ui/icons` ×3
               - `apps/places/tag-manager` ×2
               - `integrations/google-maps` ×2
@@ -5038,10 +5039,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-sm`
         - **`tag-manager`** — The Places tag manager: the one tag tree as an editable table (colour, icon, name, parent, Google types, place count, + Child, Delete) on a floating card the map opens; and TagMark, how a tag shows beside its name everywhere (its tinted icon, else a dot of its colour).
           - Web:
-            - Uses: 29 symbols — full list in [`plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md`](../plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md)
+            - Uses: 30 symbols — full list in [`plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md`](../plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
+              - `primitives/data-view` ×4
               - `apps/places/places-core` ×3
-              - `primitives/data-view` ×3
               - `primitives/css/control-panel` ×2
               - `primitives/css/badge.Badge`
               - `primitives/css/cluster.Cluster`
@@ -10680,12 +10681,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/date/config.dateField`
       - `fields/int/config.intField`
       - `fields/json/config.jsonField`
+      - `fields/text/config.enumTextField`
       - `fields/text/config.textField`
       - `infra/entities.entityRef`
       - `primitives/pane.defineRoute`
     - Exports (types):
       - `BackupArchive`
       - `BackupManifest`
+      - `BackupRunStatus`
       - `BackupSourceFailed`
       - `BackupSourceIncluded`
       - `BackupSourceItem`
@@ -10696,6 +10699,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `BACKUP_CATEGORY_ID`
       - `BACKUP_RUN_KIND`
+      - `BACKUP_RUN_STATUSES`
       - `BackupManifestSchema`
       - `backupRoute`
       - `backupRunFields`
@@ -10764,17 +10768,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `backup.BACKUP_RUN_KIND`
+          - `backup.backupRunFields`
+          - `backup.backupRunsEntityRef`
           - `backup.BackupSourceReportSchema`
-          - `backup.BackupTargetResultSchema`
           - `fields.nullable`
           - `fields/int/config.intField`
           - `fields/json/config.jsonField`
-          - `fields/text/config.enumTextField`
           - `network/live.liveArm`
           - `runs.runs`
-        - Exports (types): `BackupRunStatus`
         - Exports (values):
-          - `BACKUP_RUN_STATUSES`
           - `BACKUP_STATUS_OUTCOME`
           - `backupRunArm`
       - Cross-plugin:
@@ -11054,6 +11056,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Core:
     - Uses:
       - `build/run-ledger.buildRunFields`
+      - `build/run-ledger.buildRunsEntityRef`
       - `fields.fieldsToZodObject`
       - `infra/endpoints.defineEndpoint`
       - `infra/namespace.MAIN_COMPOSITION_ID`
@@ -12354,15 +12357,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Item.Avatar` → `AgentAvatarRow`
           - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
           - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-        - Uses: 58 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
+        - Uses: 60 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
           - `primitives/pane` ×8
+          - `primitives/data-view` ×5
           - `primitives/avatar` ×4
           - `primitives/collapsible` ×4
           - `primitives/live-state` ×4
           - `conversations/conversation-ui/item` ×3
           - `network/live` ×3
           - `primitives/css/ui-kit` ×3
-          - `primitives/data-view` ×3
           - `primitives/css/spacing` ×2
           - `primitives/css/status-dot` ×2
           - `primitives/css/text` ×2
@@ -15690,19 +15693,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Conversation.AbovePromptInput` → `OpStatusBanner`
               - `Item.Chips` → `OpStatusChip`
+              - `FieldPresentation.Register` "collection:op-status.queue-row"
               - `queue-actions` "open-conversation" → `OpenConversationAction`
-            - Uses: 35 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md)
-              - `primitives/data-view` ×5
+            - Uses: 37 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/op-status/REFERENCE.md)
+              - `primitives/data-view` ×6
               - `primitives/live-state` ×4
               - `conversations/conversation-view` ×2
               - `conversations` ×2
+              - `network/live` ×2
               - `primitives/css/fill` ×2
               - `primitives/css/ui-kit` ×2
               - `primitives/relative-time` ×2
               - `conversations/conversation-ui/item.Item`
               - `debug/profiling/ops.opDetailPane`
               - `infra/host/machine-sleep.useSleepNowForFold`
-              - `network/live.useLive`
               - `primitives/collapsible.FoldMotion`
               - `primitives/css/clip.Clip`
               - `primitives/css/inline.Inline`
@@ -15715,6 +15719,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/link-gesture.activationProps`
               - `primitives/pane.useOpenPane`
               - `ui/icons.Icon`
+          - Core:
+            - Uses:
+              - `fields.nullable`
+              - `fields/bool/config.boolField`
+              - `fields/float/config.floatField`
+              - `fields/int/config.intField`
+              - `fields/text/config.enumTextField`
+              - `fields/text/config.textField`
+              - `network/live.rowKind`
+            - Exports (types): `OpRowPhase`
+            - Exports (values):
+              - `OP_ROW_PHASES`
+              - `opQueueRow`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -17848,7 +17865,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/migrations`
           - `debug/profiling/op-log/op-store`
           - `infra/entities`
-          - `page/editor`
           - `page/editor-collab`
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/view-order`
@@ -18165,7 +18181,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 23 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×5
           - `conversations` ×5
           - `fields` ×4
@@ -18173,7 +18189,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/latency-ledger`
           - `ids`
           - `network/live`
-          - `page/editor`
           - `primitives/collab-doc`
           - `search/engine`
           - `ui/theme-engine/saved-themes`
@@ -18447,6 +18462,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/json/config.jsonField`
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
+          - `infra/entities.entityRef`
           - `network/live.liveCollection`
           - `network/live.LiveRowsCollection`
         - Exports (types):
@@ -18456,6 +18472,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `bootTrace`
           - `bootTraces`
           - `BootTraceSchema`
+          - `bootTracesEntityRef`
           - `savedBootTraceFields`
           - `SavedBootTraceSchema`
       - Cross-plugin:
@@ -19712,6 +19729,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `job-actions` ← `debug.queue`
           - `trigger-actions` ← `debug.queue`
         - Contributes:
+          - `FieldPresentation.Register` "collection:debug.queue.job-row"
           - `Pane.Register` "queue"
           - `Pane.Register` "queue-dead"
           - `Pane.Register` "queue-emission"
@@ -19723,12 +19741,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `trigger-actions` "enabled" → `TriggerEnabledAction`
           - `trigger-actions` "delete" → `DeleteTriggerAction`
           - `DebugApp.Sidebar` "Queue"
-        - Uses: 50 symbols — full list in [`plugins/debug/plugins/queue/REFERENCE.md`](../plugins/debug/plugins/queue/REFERENCE.md)
+        - Uses: 53 symbols — full list in [`plugins/debug/plugins/queue/REFERENCE.md`](../plugins/debug/plugins/queue/REFERENCE.md)
           - `primitives/pane` ×8
           - `primitives/live-state` ×6
+          - `network/live` ×5
           - `primitives/data-view` ×5
           - `infra/endpoints` ×2
-          - `network/live` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/ui-kit` ×2
           - `apps/debug/shell.DebugApp`
@@ -19756,8 +19774,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
         - Exports (values): `queuePane`
       - Core:
-        - Uses: `primitives/pane.defineRoute`
-        - Exports (values): `queueRoute`
+        - Uses:
+          - `fields.nullable`
+          - `fields/date/config.dateField`
+          - `fields/int/config.intField`
+          - `fields/text/config.enumTextField`
+          - `fields/text/config.textField`
+          - `infra/jobs.HOLD_CLASSES`
+          - `network/live.rowKind`
+          - `primitives/pane.defineRoute`
+        - Exports (values):
+          - `JOB_LIST_STATUSES`
+          - `JOB_PROBLEMS`
+          - `jobListRow`
+          - `queueRoute`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --border`
@@ -20371,17 +20401,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/json/config.jsonField`
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
+          - `infra/entities.entityRef`
           - `infra/host/contention.ContentionSnapshotSchema`
           - `infra/runtime-profiler.SPAN_MEASURES`
           - `infra/runtime-profiler.SpanMeasure`
           - `infra/runtime-profiler.WaitBreakdown`
           - `network/live.liveCollection`
+          - `network/live.LiveRowsCollection`
           - `primitives/pane.defineRoute`
         - Exports (types):
           - `CallerRef`
           - `MeasureStat`
           - `SlowOp`
           - `SlowOpCaller`
+          - `SlowOpCallerListRow`
           - `SlowOpListRow`
           - `SlowOpMarker`
           - `SlowOpMeasures`
@@ -20398,15 +20431,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slowOpCallerFields`
           - `slowOpCallers`
           - `SlowOpCallerSchema`
+          - `slowOpCallersEntityRef`
           - `slowOpConfig`
           - `slowOpDetailRoute`
           - `slowOpFields`
-          - `SlowOpListRowSchema`
           - `SlowOpMarkerSchema`
           - `SlowOpMeasuresSchema`
           - `SlowOpReportPayloadSchema`
           - `SlowOpSampleSchema`
           - `SlowOpSchema`
+          - `slowOpsEntityRef`
           - `slowOpsList`
           - `VARIANT_CAP`
           - `VariantBreakdownSchema`
@@ -20471,8 +20505,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `SlowEvents.View` "Aggregates" → `SlowOpsView`
               - `Pane.Register` "slow-op-detail"
-            - Uses: 21 symbols — full list in [`plugins/debug/plugins/slow-ops/plugins/pane/REFERENCE.md`](../plugins/debug/plugins/slow-ops/plugins/pane/REFERENCE.md)
-              - `primitives/data-view` ×4
+            - Uses: 22 symbols — full list in [`plugins/debug/plugins/slow-ops/plugins/pane/REFERENCE.md`](../plugins/debug/plugins/slow-ops/plugins/pane/REFERENCE.md)
+              - `primitives/data-view` ×5
               - `primitives/pane` ×3
               - `apps-core/tabs.appLink`
               - `debug/trace/pane.SlowEvents`
@@ -20815,7 +20849,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/json/config.jsonField`
               - `fields/text/config.textField`
               - `fields/uuid/config.uuidField`
+              - `infra/entities.entityRef`
               - `network/live.liveCollection`
+              - `network/live.LiveRowsCollection`
               - `primitives/pane.defineRoute`
             - Exports (types):
               - `RingEvent`
@@ -20830,9 +20866,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `traceDetailRoute`
               - `traceEvents`
               - `traceFields`
-              - `TraceListItemSchema`
               - `traceListRoute`
               - `TraceSchema`
+              - `tracesEntityRef`
               - `TraceSnapshotSchema`
               - `TraceTriggerSchema`
           - Cross-plugin:
@@ -20886,17 +20922,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `slowEventsPane.Actions` ← `primitives.pane`
               - `traceDetailPane.Actions` ← `primitives.pane`
             - Contributes:
+              - `FieldPresentation.Register` "collection:debug.traces"
               - `Pane.Register` "trace-detail"
               - `Pane.Register` "traces"
               - `SlowEvents.View` "Events" → `EventsView`
               - `DebugApp.Sidebar` "Slow Events"
-            - Uses: 28 symbols — full list in [`plugins/debug/plugins/trace/plugins/pane/REFERENCE.md`](../plugins/debug/plugins/trace/plugins/pane/REFERENCE.md)
+            - Uses: 33 symbols — full list in [`plugins/debug/plugins/trace/plugins/pane/REFERENCE.md`](../plugins/debug/plugins/trace/plugins/pane/REFERENCE.md)
+              - `network/live` ×5
+              - `primitives/data-view` ×4
               - `debug/profiling` ×3
-              - `primitives/data-view` ×3
+              - `primitives/live-state` ×3
               - `primitives/pane` ×3
               - `debug/trace/engine` ×2
-              - `network/live` ×2
-              - `primitives/live-state` ×2
               - `apps/debug/shell.DebugApp`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
@@ -21089,12 +21126,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×26
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 92 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 94 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×48
       - `apps` ×11
+      - `debug` ×5
       - `infra` ×5
-      - `debug` ×4
-      - `conversations` ×3
+      - `conversations` ×4
       - `page` ×3
       - `tasks` ×3
       - `backup` ×2
@@ -21242,10 +21279,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 32 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `debug` ×13
               - `apps` ×6
-              - `conversations` ×3
+              - `conversations` ×4
               - `tasks` ×2
               - `apps-core/surface/floating`
               - `history/engine`
@@ -21384,11 +21421,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 39 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×9
+              - `debug` ×5
               - `infra` ×5
               - `conversations` ×4
-              - `debug` ×4
               - `page` ×4
               - `tasks` ×3
               - `backup`
@@ -21784,6 +21821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/sonata/library`
               - `apps/sonata/track-mixer`
+              - `conversations/conversation-view/op-status`
               - `debug/live-state-churn/monitor`
               - `debug/profiling/op-log/op-store`
               - `debug/queue-health`
@@ -21906,12 +21944,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
-              - `debug` ×12
+            - Imported by: 36 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+              - `debug` ×13
               - `apps` ×7
               - `infra` ×4
+              - `conversations` ×3
               - `backup` ×2
-              - `conversations` ×2
               - `apps-core/surface/floating/wallpaper`
               - `build/run-ledger`
               - `fields/object/config`
@@ -22046,9 +22084,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `fields.Fields`
       - Core:
         - Uses:
+          - `fields.declaredDefault`
           - `fields.defineFieldIdentity`
           - `fields.defineFieldType`
+          - `fields.ExactOptions`
           - `fields.FieldDef`
+          - `fields.FieldMarks`
           - `fields.FieldMeta`
           - `fields.pickMeta`
           - `ui/icons.symbol`
@@ -22267,6 +22308,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/agents`
               - `conversations/conversations-view/queue`
               - `page/block-entity`
+              - `page/editor`
               - `tasks/tasks-core`
         - **`storage`** — Rank field type: DB storage capability — maps to the rank_text (C-collation) Postgres domain column.
           - Server:
@@ -22548,6 +22590,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources/coworkmeet`
               - `apps/events/sources/salsanueva`
               - `apps/mail/threads`
+              - `apps/places/places-core`
               - `page/tags`
         - **`filter`** — Tags (multi-value) field type: data-view filter operator set (contains / contains-any-of …).
           - Web:
@@ -22639,18 +22682,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 57 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 58 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×16
-              - `conversations` ×6
+              - `conversations` ×7
+              - `debug` ×5
               - `infra` ×5
               - `page` ×5
               - `tasks` ×5
-              - `debug` ×4
               - `apps-core` ×2
-              - `backup` ×2
               - `build` ×2
               - `fields` ×2
               - `plugin-meta` ×2
+              - `backup`
               - `history/engine`
               - `primitives/usage-rank`
               - `release`
@@ -24587,10 +24630,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.defineEndpoint`
           - `infra/entities.entityRef`
           - `network/live.liveCollection`
+          - `network/live.LiveRowsCollection`
           - `network/live.liveValue`
         - Exports (types):
           - `Version`
           - `VersionId`
+          - `VersionRow`
           - `VersionWithSnapshot`
         - Exports (values):
           - `entityVersionsEntityRef`
@@ -25147,6 +25192,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/text/config.parsedTextField`
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
+          - `infra/entities.entityRef`
           - `network/live.liveCollection`
           - `network/live.LiveRowsCollection`
           - `network/live.liveValue`
@@ -25159,6 +25205,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `claudeCliCallFields`
           - `claudeCliCalls`
           - `ClaudeCliCallSchema`
+          - `claudeCliCallsEntityRef`
           - `claudeCliCallsFor`
           - `ClaudeCliCallsResultSchema`
           - `ClaudeCliCallStatusSchema`
@@ -25724,12 +25771,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+        - Imported by: 32 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
           - `apps` ×8
           - `infra` ×5
           - `conversations` ×4
           - `debug` ×4
-          - `page` ×2
+          - `page` ×3
           - `backup`
           - `build/run-ledger`
           - `history/engine`
@@ -25865,7 +25912,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
           - `infra/endpoints.defineEndpoint`
+          - `infra/entities.entityRef`
           - `network/live.liveCollection`
+          - `network/live.LiveRowsCollection`
           - `network/live.liveValue`
         - Exports (types):
           - `EmissionListRow`
@@ -25877,13 +25926,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggersPayload`
         - Exports (values):
           - `deleteTriggerEndpoint`
-          - `EmissionListRowSchema`
           - `EmissionMatchSchema`
           - `EmissionRowSchema`
           - `EMISSIONS_CAP`
           - `EmissionsPayloadSchema`
           - `eventEmissionFields`
           - `eventEmissions`
+          - `eventEmissionsEntityRef`
           - `eventTriggers`
           - `listEmissions`
           - `listTriggers`
@@ -26756,8 +26805,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.defineEndpoint`
           - `infra/entities.entityRef`
           - `network/live.liveCollection`
+          - `network/live.LiveRowsCollection`
           - `network/live.liveValue`
         - Exports (types):
+          - `DeadJobListRow`
           - `DeadJobRow`
           - `DeadJobsPayload`
           - `HoldClass`
@@ -26781,7 +26832,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `holdForTask`
           - `JobRowSchema`
           - `JobRunOutcomeSchema`
-          - `JobRunRowSchema`
           - `jobRuns`
           - `jobsList`
           - `JobsPayloadSchema`
@@ -26797,11 +26847,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 70 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 71 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×19
           - `conversations` ×14
           - `infra` ×12
-          - `debug` ×9
+          - `debug` ×10
           - `tasks` ×4
           - `database` ×3
           - `page` ×3
@@ -27957,9 +28007,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.defineEndpoint`
           - `infra/entities.entityRef`
           - `network/live.liveCollection`
+          - `network/live.LiveRowsCollection`
         - Exports (types):
           - `TrashEntry`
           - `TrashEntryId`
+          - `TrashEntryRow`
           - `TrashOutcome`
         - Exports (values):
           - `listTrash`
@@ -28869,8 +28921,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `FieldPresentation.Register`
           - `ClientFields.Resolve`
-        - Slot contributors: 31 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `FieldPresentation.Register` ×28
+        - Slot contributors: 36 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `FieldPresentation.Register` ×33
           - `ClientFields.Resolve` ×3
         - Uses:
           - `primitives/live-state.PagedResourceResult`
@@ -29133,8 +29185,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 240 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×68
+        - Imported by: 242 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×70
           - `conversations` ×40
           - `tasks` ×27
           - `debug` ×25
@@ -30039,12 +30091,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
-    - **`block-entity`** — The `page_blocks` entity by reference (pagesEntityRef: its name and wire fields) and the Rank wire field. A leaf, so a browser-safe declaration a server schema file also loads — an extension shape's `exposes.parent` (starred, agent-origin, tags) — names the entity without reaching the editor's core barrel, whose Lexical / Yjs modules cannot load synchronously.
+    - **`block-entity`** — The `page_blocks` entity by reference (pagesEntityRef: its name and stored fields, the table built from it by page/editor) and the BlockData brand its `data` column decodes to. A leaf, so a browser-safe declaration a server schema file also loads — an extension shape's `exposes.parent` (starred, agent-origin, tags) — names the entity without reaching the editor's core barrel, whose Lexical / Yjs modules cannot load synchronously.
       - Core:
         - Uses:
-          - `fields.FieldDef`
           - `fields.FieldsRecord`
-          - `fields.FieldType`
           - `fields.nullable`
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
@@ -30052,12 +30102,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/rank/config.rankField`
           - `fields/text/config.textField`
           - `infra/entities.entityRef`
-          - `primitives/rank.Rank`
-          - `primitives/rank.RankSchema`
+        - Exports (types): `BlockData`
         - Exports (values):
+          - `asBlockData`
           - `blockFields`
           - `pagesEntityRef`
-          - `rankWireField`
+          - `StoredBlockDataSchema`
       - Cross-plugin:
         - Imported by:
           - `page/editor`
@@ -30521,11 +30571,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
           - `database.DbExecutor`
           - `database/derived-tables.DerivedTable`
-          - `database/derived-updated-at.deriveUpdatedAt`
-          - `database/sql-column.parsedJson`
           - `ids.IdKinds`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
           - `infra/events.defineTriggerEvent`
           - `infra/trash._trashEntries`
           - `infra/trash.defineTrashSource`
@@ -30601,7 +30651,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/pages/:pageId/blocks/op`
           - `POST /api/pages/:pageId/blocks/patch`
       - Core:
-        - Uses: 26 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `fields` ×3
           - `network/live` ×3
           - `primitives/collab-doc` ×3
@@ -30610,6 +30660,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/block-entity` ×2
           - `primitives/rank` ×2
           - `fields/date/config.dateField`
+          - `fields/rank/config.rankValueField`
           - `fields/text/config.textField`
           - `ids.defineIdKind`
           - `infra/endpoints.defineEndpoint`
@@ -30620,7 +30671,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Block`
           - `BlockAudience`
           - `BlockAuthor`
-          - `BlockData`
           - `BlockDiff`
           - `BlockFieldChanges`
           - `BlockHandle`
@@ -39708,7 +39758,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversations-view/grouped`
           - `conversations/conversations-view/queue`
           - `fields/rank/config`
-          - `page/block-entity`
           - `page/editor`
           - `page/markdown-apply`
           - `primitives/data-view/view-order`
@@ -41192,6 +41241,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/endpoints.defineEndpoint`
       - `infra/entities.entityRef`
       - `network/live.liveCollection`
+      - `network/live.LiveRowsCollection`
       - `network/live.liveValue`
       - `release/bundles.ReleaseManifestSchema`
       - `release/bundles.releaseRunIdKind`
@@ -41200,6 +41250,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `PlatformTagResult`
       - `Preview`
       - `ReleaseCandidate`
+      - `ReleaseHistoryRow`
       - `ReleaseIntent`
       - `ReleaseLogLine`
       - `ReleaseLogsResponse`
@@ -42858,8 +42909,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DebugApp.Sidebar` "Notifications"
           - `notification-actions` "open" → `OpenNotificationAction`
           - `notification-actions` "dismiss" → `DismissNotificationAction`
-        - Uses: 39 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
-          - `primitives/data-view` ×4
+        - Uses: 40 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+          - `primitives/data-view` ×5
           - `infra/endpoints` ×2
           - `primitives/css/coords` ×2
           - `primitives/css/ui-kit` ×2
@@ -43730,13 +43781,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "automations"
           - `Shell.Sidebar` "Automations"
           - `FieldPresentation.Register` "exposure:tasks_ext_origin"
-        - Uses: 55 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
+        - Uses: 56 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `primitives/live-state` ×5
           - `primitives/pane` ×5
           - `network/live` ×4
+          - `primitives/data-view` ×4
           - `config_v2` ×3
-          - `primitives/data-view` ×3
           - `tasks/task-status` ×3
           - `conversations/model-provider` ×2
           - `infra/background/catalog` ×2

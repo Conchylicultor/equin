@@ -3,8 +3,10 @@ export {
   EVENT_CATEGORY_META,
   type EventCategory,
   REFRESH_CADENCES,
+  REFRESH_CADENCE_META,
   type RefreshCadence,
   SOURCE_STATUSES,
+  SOURCE_STATUS_META,
   type SourceStatus,
   RUN_OUTCOMES,
   RUN_OUTCOME_META,
@@ -69,6 +71,7 @@ export {
 } from "./internal/endpoints";
 export {
   eventsEntityRef,
+  eventSourcesEntityRef,
   eventSourceRunsEntityRef,
 } from "./internal/entity-refs";
 export {

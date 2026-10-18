@@ -4,6 +4,7 @@ import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/ite
 import {
   OpQueueItemActions,
   OpStatusBanner,
+  opQueueRowPresentation,
   OpenConversationAction,
 } from "./components/op-status-banner";
 import { OpStatusChip } from "./components/op-status-chip";
@@ -18,6 +19,7 @@ export default {
       component: OpStatusBanner,
     }),
     Item.Chips({ id: "op-status", component: OpStatusChip }),
+    opQueueRowPresentation,
     OpQueueItemActions({
       id: "open-conversation",
       component: OpenConversationAction,

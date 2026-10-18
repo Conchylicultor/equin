@@ -2,7 +2,8 @@ import { test, expect } from "bun:test";
 import { z } from "zod";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { defineBlock, textBlockSchema, type BlockData } from "../../core";
+import type { BlockData } from "@plugins/page/plugins/block-entity/core";
+import { defineBlock, textBlockSchema } from "../../core";
 import { pageBlockHandle } from "../../core/schemas";
 import { Editor, resolveBlockHandle } from "./block-registry";
 import {

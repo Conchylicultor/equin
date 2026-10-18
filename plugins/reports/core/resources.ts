@@ -1,12 +1,6 @@
-import { z } from "zod";
-import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
-import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
-import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
-import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { nullable } from "@plugins/fields/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import type { LiveRowsCollection } from "@plugins/network/plugins/live/core";
+import { reportsEntityRef } from "./entity";
 
 /**
  * The Debug → Reports DataView's id (its `storageKey`): the surface
@@ -33,30 +27,31 @@ export const reportsList = liveCollection("reports.list", {
   // server-side by each kind's ReportKindSpec.schema), and kind-specific
   // rendering is delegated to the matching Reports.KindView. `message` and
   // `fingerprint` are searched (filterable text, hidden by default).
-  fields: {
-    kind: textField({ label: "Kind" }),
-    source: textField({ label: "Source" }),
-    noise: boolField({ label: "Noise" }),
-    rateLimited: boolField({ label: "Rate-limited" }),
-    count: intField({ label: "×" }),
-    lastSeenAt: dateField({ label: "When" }),
-    message: textField({ label: "Message" }),
-    fingerprint: textField({ label: "Fingerprint" }),
-  },
+  from: reportsEntityRef,
+  pick: [
+    "kind",
+    "source",
+    "noise",
+    "rateLimited",
+    "count",
+    "lastSeenAt",
+    "message",
+    "fingerprint",
+  ],
   carry: {
-    fields: {
-      id: textField(),
-      worktree: textField(),
-      url: nullable(textField()),
-      userAgent: nullable(textField()),
-      data: jsonField({ schema: z.record(z.unknown()), default: {} }),
-      lastClientId: nullable(textField()),
-      lastBuildId: nullable(textField()),
-      taskId: nullable(textField()),
-      firstSeenAt: dateField(),
-      createdAt: dateField(),
-      updatedAt: dateField(),
-    },
+    pick: [
+      "id",
+      "worktree",
+      "url",
+      "userAgent",
+      "data",
+      "lastClientId",
+      "lastBuildId",
+      "taskId",
+      "firstSeenAt",
+      "createdAt",
+      "updatedAt",
+    ],
   },
   id: "id",
   sortable: ["kind", "source", "count", "lastSeenAt"],

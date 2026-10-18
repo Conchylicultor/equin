@@ -18,13 +18,17 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type {
   FieldDef,
   FilterOperatorSet,
+  fieldOverrides,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { LiveDataSource } from "@plugins/primitives/plugins/data-view/core";
-import { resolveLiveFields } from "@plugins/primitives/plugins/data-view/web/testing";
+import {
+  deriveFields,
+  resolveLiveFields,
+} from "@plugins/primitives/plugins/data-view/web/testing";
 import { filterColumns } from "@plugins/network/plugins/live/plugins/filter/core";
 import {
   trashEntries,
-  type TrashEntry,
+  type TrashEntryRow,
 } from "@plugins/infra/plugins/trash/core";
 import { PAGES_TRASH_SOURCE } from "@plugins/page/plugins/editor/core";
 import { PagesTrash } from "../components/pages-trash";
@@ -34,6 +38,9 @@ import {
   TrashItemActions,
 } from "../components/trash-item-actions";
 import plugin from "../index";
+
+/** The overrides the dialog hands its DataView. */
+type TrashOverrides = ReturnType<typeof fieldOverrides<typeof trashEntries>>;
 
 /** What the stubbed seams hold. */
 const stub = vi.hoisted(() => ({
@@ -57,11 +64,11 @@ vi.mock(
     DataView: (props: Record<string, unknown>) => {
       stub.props = props;
       stub.renders++;
-      const fields = props.fields as FieldDef<TrashEntry>[];
-      const label = fields.find((f) => f.primary)!;
+      const overrides = props.overrides as TrashOverrides;
+      const label = overrides.byId.label!;
       return (
         <ul>
-          {(stub.rows as TrashEntry[]).map((entry) => (
+          {(stub.rows as TrashEntryRow[]).map((entry) => (
             <li key={entry.id} data-testid={`row-${entry.id}`}>
               <span>{label.cell!(entry)}</span>
               <RestoreTrashEntryAction row={entry} hasChildren={false} />
@@ -106,13 +113,14 @@ vi.mock(
 const RESTORE = "POST /api/trash/:sourceId/:entryId/restore";
 const PURGE = "POST /api/trash/:sourceId/:entryId/purge";
 
-const entry = (id: string, label: string): TrashEntry => ({
-  id: id as TrashEntry["id"],
+const entry = (id: string, label: string): TrashEntryRow => ({
+  id: id as TrashEntryRow["id"],
   sourceId: PAGES_TRASH_SOURCE,
   rootEntityId: `blk-${id}`,
   label,
   deletedAt: new Date("2026-10-01T12:00:00Z"),
   meta: {},
+  $columns: {},
 });
 
 beforeEach(() => {
@@ -144,7 +152,7 @@ describe("<PagesTrash>", () => {
     expect(props.density).toBe("compact");
     expect(props.itemActions).toBe(TrashItemActions);
     expect(props.emptyState).toBe("Trash is empty");
-    const source = props.source as LiveDataSource<TrashEntry>;
+    const source = props.source as LiveDataSource<TrashEntryRow>;
     expect(source.collection.key).toBe(trashEntries.key);
     expect(source.searchable).toEqual(["label"]);
     expect(source.scope.kind).toBe("where");
@@ -229,9 +237,14 @@ const resolveOperatorSet = (type: string): FilterOperatorSet | undefined =>
 describe("the field schema over the trash source", () => {
   it("resolves at mount: deletedAt sorts on the server, the scope is not a filter", () => {
     openTrash();
-    const source = stub.props!.source as LiveDataSource<TrashEntry>;
-    const fields = stub.props!.fields as FieldDef<TrashEntry>[];
-    const plan = resolveLiveFields<TrashEntry>(
+    const source = stub.props!.source as LiveDataSource<TrashEntryRow>;
+    const overrides = stub.props!.overrides as TrashOverrides;
+    // The list's schema: the derived fields with its overrides applied.
+    const fields = deriveFields(trashEntries, true, []).fields.map(
+      (f): FieldDef<TrashEntryRow> =>
+        ({ ...f, ...overrides.byId[f.id] }) as FieldDef<TrashEntryRow>,
+    );
+    const plan = resolveLiveFields<TrashEntryRow>(
       fields,
       source,
       resolveOperatorSet,

@@ -4,6 +4,7 @@ import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { slowEventsPane, traceDetailPane } from "./panes";
 import { SlowEvents } from "./slots";
 import { EventsView } from "./components/events-view";
+import { triggerKindPresentation } from "./internal/presentation";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { SlowEvents } from "./slots";
@@ -19,6 +20,7 @@ export default {
   description:
     "Debug → Slow Events: the tabbed pane host (Events list + detail Gantt) over the durable trace store, and the SlowEvents.View tab slot the Slow Ops aggregate/cluster views merge into.",
   contributions: [
+    triggerKindPresentation,
     Pane.Register({ pane: slowEventsPane }),
     Pane.Register({ pane: traceDetailPane }),
     SlowEvents.View({

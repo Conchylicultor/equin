@@ -34,6 +34,7 @@ import {
   historyVersions,
   restoreVersion,
   type Version,
+  type VersionRow,
 } from "@plugins/history/plugins/engine/core";
 import { useNewestVersion } from "../internal/use-newest-version";
 import {
@@ -78,7 +79,7 @@ const overrides = fieldOverrides(historyVersions, {
 
 // One timeline row: the label, then when — and whether it is a checkpoint and
 // who made it, only when it says so.
-function TimelineRowBody({ version }: { version: Version }) {
+function TimelineRowBody({ version }: { version: VersionRow }) {
   return (
     <Stack gap="2xs" className={yieldClass("x")}>
       <Text as="span" variant="body" className="truncate">
@@ -94,7 +95,7 @@ function TimelineRowBody({ version }: { version: Version }) {
 }
 
 const timelineViewOptions = {
-  list: { renderRow: (v: Version) => <TimelineRowBody version={v} /> },
+  list: { renderRow: (v: VersionRow) => <TimelineRowBody version={v} /> },
 };
 
 export function VersionHistoryDialog({
@@ -105,7 +106,7 @@ export function VersionHistoryDialog({
   renderPreview,
 }: VersionHistoryDialogProps) {
   // Version pending a restore confirmation (null = no confirmation open).
-  const [pendingRestore, setPendingRestore] = useState<Version | null>(null);
+  const [pendingRestore, setPendingRestore] = useState<VersionRow | null>(null);
 
   // No invalidation: the timeline is live, so the restore's "Before restore"
   // point and its new version land in it through the change feed.
@@ -195,10 +196,10 @@ function VersionHistoryBody({
   sourceId: string;
   entityId: string;
   renderPreview: (version: Version) => ReactNode;
-  onRestore: (version: Version) => void;
+  onRestore: (version: VersionRow) => void;
 }) {
   // The user's explicit pick (null = none yet: the newest is previewed).
-  const [picked, setPicked] = useState<Version | null>(null);
+  const [picked, setPicked] = useState<VersionRow | null>(null);
   const newest = useNewestVersion(sourceId, entityId);
   const source = useMemo(
     () => versionsSource.scoped({ where: { sourceId, entityId } }),
@@ -211,7 +212,7 @@ function VersionHistoryBody({
     <HistoryPanes
       timeline={
         <RestoreVersionContext.Provider value={onRestore}>
-          <DataView<Version>
+          <DataView<VersionRow>
             storageKey={VERSIONS_VIEW}
             source={source}
             overrides={overrides}
@@ -241,7 +242,7 @@ function VersionPreview({
   newest,
   renderPreview,
 }: {
-  active: Version | null;
+  active: VersionRow | null;
   newest: ReturnType<typeof useNewestVersion>;
   renderPreview: (version: Version) => ReactNode;
 }) {

@@ -19,9 +19,11 @@ import {
   EVENT_CATEGORIES,
   EVENT_CATEGORY_META,
   REFRESH_CADENCES,
+  REFRESH_CADENCE_META,
   RUN_EVENT_ACTIONS,
   RUN_OUTCOMES,
   RUN_OUTCOME_META,
+  SOURCE_STATUS_META,
   SOURCE_STATUSES,
 } from "./vocab";
 
@@ -62,21 +64,30 @@ const UNREACHABLE_DATE_DEFAULT: EventDate = {
  */
 export const eventSourceFields = {
   id: idKindField(eventSourceIdKind),
-  /** The `EventSourceType.id` this row dispatches to (`url`, `manual`, …). */
-  type: textField(),
+  /**
+   * The `EventSourceType.id` this row dispatches to (`url`, `manual`, …). A list
+   * reads its options from the live registry of source types.
+   */
+  type: textField({ label: "Type" }),
   /** User label; defaulted from the URL host at create time. */
-  name: textField(),
+  name: textField({ label: "Name", primary: true }),
   /** Per-type user input, validated against the type's `configFields` on write. */
   config: jsonField<Record<string, unknown>>({
     schema: z.record(z.string(), z.unknown()),
     default: {},
   }),
-  refresh: enumTextField(REFRESH_CADENCES),
-  enabled: boolField(),
-  status: enumTextField(SOURCE_STATUSES),
+  refresh: enumTextField(REFRESH_CADENCES, {
+    label: "Cadence",
+    options: REFRESH_CADENCE_META,
+  }),
+  enabled: boolField({ label: "Enabled" }),
+  status: enumTextField(SOURCE_STATUSES, {
+    label: "Status",
+    options: SOURCE_STATUS_META,
+  }),
   /** The probe cache key. The engine calls `extract` ONLY when this moves. */
   lastFingerprint: nullable(textField()),
-  lastRunAt: nullable(dateField()),
+  lastRunAt: nullable(dateField({ label: "Last run" })),
   /** Scheduler watermark — the cadence tick reads this, not a cron per source. */
   nextRunAt: nullable(dateField()),
   /** Classified TERMINAL failure only; a transient failure stays on the run row. */

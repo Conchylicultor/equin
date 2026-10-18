@@ -10,9 +10,9 @@ import { describe, expect, test } from "bun:test";
 import { claudeCliCalls } from "./resources";
 
 describe("claude-cli-calls fields", () => {
+  // `status` is the collection's own field, which lists after the picked ones.
   test("the list fields keep their ids, in order", () => {
     expect(Object.keys(claudeCliCalls.fields)).toEqual([
-      "status",
       "createdAt",
       "sourceName",
       "model",
@@ -20,6 +20,7 @@ describe("claude-cli-calls fields", () => {
       "prompt",
       "output",
       "error",
+      "status",
     ]);
   });
 

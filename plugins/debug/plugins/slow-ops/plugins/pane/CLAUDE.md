@@ -39,8 +39,8 @@ same `SlowEvents.View` slot; it fans out across every worktree DB fork.
   - Contributes:
     - `SlowEvents.View` "Aggregates" → `SlowOpsView`
     - `Pane.Register` "slow-op-detail"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×4
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×5
     - `primitives/pane` ×3
     - `apps-core/tabs.appLink`
     - `debug/trace/pane.SlowEvents`

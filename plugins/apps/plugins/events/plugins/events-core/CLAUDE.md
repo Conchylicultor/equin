@@ -320,6 +320,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `eventSourceRunsEntityRef`
     - `eventSources`
     - `EventSourceSchema`
+    - `eventSourcesEntityRef`
     - `externalUrl`
     - `ExtractedEventSchema`
     - `EXTRACTION_STATUSES`
@@ -327,6 +328,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `extractionStatus`
     - `getEventSource`
     - `listEventSources`
+    - `REFRESH_CADENCE_META`
     - `REFRESH_CADENCES`
     - `refreshAllEventSources`
     - `RefreshAllResultSchema`
@@ -339,6 +341,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `runEvents`
     - `RunEventSchema`
     - `SOURCE_STATES`
+    - `SOURCE_STATUS_META`
     - `SOURCE_STATUSES`
     - `SourcedEventSchema`
     - `sourceRefOf`

@@ -1,9 +1,10 @@
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
-  VERSION_CARRIED,
-  VERSION_LISTED,
-  VersionWithSnapshotSchema,
-} from "./schemas";
+  liveCollection,
+  liveValue,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
+import { entityVersionsEntityRef } from "./entity";
+import { VersionWithSnapshotSchema } from "./schemas";
 
 /**
  * Version metadata (no snapshot blobs — the timeline is cheap to list) as a
@@ -19,13 +20,18 @@ import {
  * dialog's DataView reads it as live key-range pages.
  */
 export const historyVersions = liveCollection("history.versions", {
-  fields: VERSION_LISTED,
-  carry: { fields: VERSION_CARRIED },
+  from: entityVersionsEntityRef,
+  pick: ["label", "createdAt", "author", "sourceId", "entityId"],
+  carry: { pick: ["id", "pinned"] },
   id: "id",
   sortable: ["createdAt"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
   maxLimit: 500,
 });
+
+/** One version of a timeline, as `historyVersions` delivers it (no snapshot). */
+export type VersionRow =
+  typeof historyVersions extends LiveRowsCollection<infer R> ? R : never;
 
 /**
  * One version with its opaque per-source snapshot. A `db` value, not immutable:

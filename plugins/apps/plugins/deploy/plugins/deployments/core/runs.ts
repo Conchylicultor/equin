@@ -9,7 +9,11 @@ import {
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { idKindField } from "@plugins/ids/core";
 import { deployRunIdKind } from "./id-kinds";
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import {
+  liveCollection,
+  liveValue,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
 import {
   DEPLOY_PHASES,
   DEPLOY_VERBS,
@@ -197,7 +201,6 @@ export const DeployRunRecordSchema = z.object({
   /** On failure: the CLI's own words, stored and rendered verbatim. */
   message: z.string().nullable(),
 });
-export type DeployRunRecord = z.infer<typeof DeployRunRecordSchema>;
 
 /**
  * A deploy run's fields — the one record of them: the history list's listed
@@ -284,33 +287,28 @@ const DEPLOY_HISTORY_VIEW_ID = "deploy.deployment.history";
  * history surface, so that surface's custom columns sort and filter it.
  */
 export const deployRunHistory = liveCollection("deploy.run-history", {
-  // Declared by FIELDS: the run record's listed fields (label, type, options,
-  // filter domain) are derived into the History DataView, which names none of
-  // them. The row is `DeployRunRecord` (the ledger's columns by name): what no
-  // list shows rides in `carry`. Each is the ledger's own field
-  // (`deployRunFields`).
-  fields: {
-    status: deployRunFields.status,
-    verb: deployRunFields.verb,
-    commitSha: deployRunFields.commitSha,
-    releaseRunId: deployRunFields.releaseRunId,
-    startedAt: deployRunFields.startedAt,
-    message: deployRunFields.message,
+  // Declared FROM the `deploy_runs` entity (`deployRunsEntityRef`): the run
+  // record's listed fields (label, type, options, filter domain) are derived
+  // into the History DataView, which names none of them. The row is
+  // `DeployRunRecord` (the ledger's columns by name): what no list shows rides
+  // in `carry`.
+  from: deployRunsEntityRef,
+  pick: [
+    "status",
+    "verb",
+    "commitSha",
+    "releaseRunId",
+    "startedAt",
+    "message",
     // Filterable (and, for `finishedAt`, sortable) without being a column the
     // History shows: `deploymentId` is the scope every window states
     // (`scoped({ where: { deploymentId } })`), which can only name a listed
     // field.
-    deploymentId: deployRunFields.deploymentId,
-    finishedAt: deployRunFields.finishedAt,
-  },
+    "deploymentId",
+    "finishedAt",
+  ],
   carry: {
-    fields: {
-      id: deployRunFields.id,
-      serverId: deployRunFields.serverId,
-      compositionId: deployRunFields.compositionId,
-      phaseFailed: deployRunFields.phaseFailed,
-      exitCode: deployRunFields.exitCode,
-    },
+    pick: ["id", "serverId", "compositionId", "phaseFailed", "exitCode"],
   },
   id: "id",
   sortable: [
@@ -325,3 +323,7 @@ export const deployRunHistory = liveCollection("deploy.run-history", {
   maxLimit: 500,
   columnScope: DEPLOY_HISTORY_VIEW_ID,
 });
+
+/** A run record as `deployRunHistory` delivers it: the ledger's columns and the exposed `$columns`. */
+export type DeployRunRecord =
+  typeof deployRunHistory extends LiveRowsCollection<infer R> ? R : never;

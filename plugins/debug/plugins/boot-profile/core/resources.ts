@@ -1,10 +1,8 @@
-import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import {
   liveCollection,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-import { savedBootTraceFields } from "./fields";
+import { bootTracesEntityRef } from "./fields";
 
 /**
  * The saved boot traces (`boot_traces`), newest first, as the Boot Profiles
@@ -14,11 +12,8 @@ import { savedBootTraceFields } from "./fields";
  * sweep reaches it through the change feed.
  */
 export const bootTraces = liveCollection("debug.boot-traces", {
-  fields: {
-    worktree: textField({ label: "Worktree", primary: true }),
-    id: textField({ label: "Id", filterable: false }),
-    createdAt: dateField({ label: "When" }),
-  },
+  from: bootTracesEntityRef,
+  pick: ["worktree", "id", "createdAt"],
   id: "id",
   sortable: ["createdAt", "worktree"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },
@@ -35,6 +30,7 @@ export type BootTraceItem =
  * `found: false` is "no such snapshot".
  */
 export const bootTrace = liveCollection("debug.boot-trace", {
-  carry: { fields: savedBootTraceFields },
+  from: bootTracesEntityRef,
+  carry: { pick: ["id", "worktree", "snapshot", "createdAt"] },
   id: "id",
 });

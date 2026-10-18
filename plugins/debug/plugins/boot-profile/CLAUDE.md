@@ -140,6 +140,7 @@ unbounded.
     - `fields/json/config.jsonField`
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
   - Exports (types):
@@ -149,6 +150,7 @@ unbounded.
     - `bootTrace`
     - `bootTraces`
     - `BootTraceSchema`
+    - `bootTracesEntityRef`
     - `savedBootTraceFields`
     - `SavedBootTraceSchema`
 - Cross-plugin:

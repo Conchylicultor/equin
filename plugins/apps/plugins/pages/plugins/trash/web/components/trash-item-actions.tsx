@@ -7,7 +7,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   restoreTrash,
-  type TrashEntry,
+  type TrashEntryRow,
 } from "@plugins/infra/plugins/trash/core";
 import { PAGES_TRASH_SOURCE } from "@plugins/page/plugins/editor/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -16,7 +16,7 @@ const restoreFromTrashIcon = symbol("restore-from-trash");
 const deleteForeverIcon = symbol("delete-forever");
 
 /** Row actions of the pages trash list. */
-export const TrashItemActions = defineItemActions<TrashEntry>();
+export const TrashItemActions = defineItemActions<TrashEntryRow>();
 
 /**
  * Who handles a permanent delete: the open Trash dialog, which asks for
@@ -25,7 +25,7 @@ export const TrashItemActions = defineItemActions<TrashEntry>();
  * around its list.
  */
 export const PurgeTrashEntryContext = createContext<
-  ((entry: TrashEntry) => void) | null
+  ((entry: TrashEntryRow) => void) | null
 >(null);
 
 /**
@@ -34,7 +34,7 @@ export const PurgeTrashEntryContext = createContext<
  */
 export function RestoreTrashEntryAction({
   row,
-}: ItemActionProps<TrashEntry>): ReactElement {
+}: ItemActionProps<TrashEntryRow>): ReactElement {
   const restore = useEndpointMutation(restoreTrash);
   return (
     <IconButton
@@ -54,7 +54,7 @@ export function RestoreTrashEntryAction({
 /** Delete permanently — opens the dialog's confirmation for this entry. */
 export function PurgeTrashEntryAction({
   row,
-}: ItemActionProps<TrashEntry>): ReactElement {
+}: ItemActionProps<TrashEntryRow>): ReactElement {
   const onPurge = useContext(PurgeTrashEntryContext);
   if (onPurge === null) {
     throw new Error(

@@ -667,8 +667,10 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
+    - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
   - Exports (types):
+    - `DeadJobListRow`
     - `DeadJobRow`
     - `DeadJobsPayload`
     - `HoldClass`
@@ -692,7 +694,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `holdForTask`
     - `JobRowSchema`
     - `JobRunOutcomeSchema`
-    - `JobRunRowSchema`
     - `jobRuns`
     - `jobsList`
     - `JobsPayloadSchema`
@@ -708,11 +709,11 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
 - Cross-plugin:
-  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×19
     - `conversations` ×14
     - `infra` ×12
-    - `debug` ×9
+    - `debug` ×10
     - `tasks` ×4
     - `database` ×3
     - `page` ×3

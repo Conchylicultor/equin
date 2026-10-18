@@ -4,10 +4,10 @@ import {
   type ItemActionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { Version } from "@plugins/history/plugins/engine/core";
+import type { VersionRow } from "@plugins/history/plugins/engine/core";
 
 /** Row actions of the version timeline. */
-export const VersionItemActions = defineItemActions<Version>();
+export const VersionItemActions = defineItemActions<VersionRow>();
 
 /**
  * Who handles a Restore: the open dialog, which asks for confirmation first.
@@ -15,13 +15,13 @@ export const VersionItemActions = defineItemActions<Version>();
  * around its timeline.
  */
 export const RestoreVersionContext = createContext<
-  ((version: Version) => void) | null
+  ((version: VersionRow) => void) | null
 >(null);
 
 /** Restore — opens the dialog's confirmation for this version. */
 export function RestoreVersionAction({
   row,
-}: ItemActionProps<Version>): ReactElement {
+}: ItemActionProps<VersionRow>): ReactElement {
   const onRestore = useContext(RestoreVersionContext);
   if (onRestore === null) {
     throw new Error(

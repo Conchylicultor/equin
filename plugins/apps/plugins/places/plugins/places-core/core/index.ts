@@ -1,4 +1,5 @@
 export { placeFields, placeTagFields } from "./internal/fields";
+export { placesEntityRef, placeTagsEntityRef } from "./internal/entity-refs";
 export {
   PlaceSchema,
   type Place,

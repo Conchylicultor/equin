@@ -188,6 +188,7 @@ block keep taking a plain `ClaudeCliCall`.
     - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
@@ -200,6 +201,7 @@ block keep taking a plain `ClaudeCliCall`.
     - `claudeCliCallFields`
     - `claudeCliCalls`
     - `ClaudeCliCallSchema`
+    - `claudeCliCallsEntityRef`
     - `claudeCliCallsFor`
     - `ClaudeCliCallsResultSchema`
     - `ClaudeCliCallStatusSchema`

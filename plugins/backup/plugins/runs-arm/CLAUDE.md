@@ -176,17 +176,15 @@ compiler — a real follow-up, and a bigger change than it looks.
 - Core:
   - Uses:
     - `backup.BACKUP_RUN_KIND`
+    - `backup.backupRunFields`
+    - `backup.backupRunsEntityRef`
     - `backup.BackupSourceReportSchema`
-    - `backup.BackupTargetResultSchema`
     - `fields.nullable`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
-    - `fields/text/config.enumTextField`
     - `network/live.liveArm`
     - `runs.runs`
-  - Exports (types): `BackupRunStatus`
   - Exports (values):
-    - `BACKUP_RUN_STATUSES`
     - `BACKUP_STATUS_OUTCOME`
     - `backupRunArm`
 - Cross-plugin:

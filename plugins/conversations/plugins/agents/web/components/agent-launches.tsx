@@ -48,7 +48,10 @@ function launchTitle(launch: AgentLaunchWithStatus): string {
   );
 }
 
-const FIELDS: FieldDef<AgentLaunchWithStatus>[] = [
+// The fields the list computes itself: the title and status come from the
+// launch's joined latest conversation, not from a column. (The `agent-launches`
+// collection lists no field of its own.)
+const EXTRA_FIELDS: FieldDef<AgentLaunchWithStatus>[] = [
   {
     id: "title",
     label: "Conversation",
@@ -103,7 +106,8 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
       </SectionLabel>
       <DataView<AgentLaunchWithStatus>
         rows={launches}
-        fields={FIELDS}
+        collection={agentLaunchRows}
+        extraFields={EXTRA_FIELDS}
         rowKey={(l) => l.id}
         views={["list"]}
         storageKey={AGENT_LAUNCHES_VIEW}

@@ -17,6 +17,8 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
+  type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -39,6 +41,33 @@ const deleteIcon = symbol("delete");
 export { patchAgent } from "./patch-agent";
 
 const AGENTS_LIST_VIEW = defineDataView("agents-list");
+
+// The name is the entity's field (label and title flag included); the list says
+// only that it edits in place.
+const overrides = fieldOverrides(agentRows, {
+  name: {
+    onEdit: (a, next) =>
+      patchAgent(a.id, {
+        name: String(next ?? "").trim() || "Untitled",
+      }),
+  },
+});
+
+// The agent's avatar is a field, not a tree option: every view that has a
+// leading slot draws it there, ahead of `leadingIcon`'s status dot. It is
+// drawn from two columns, so the list computes it itself.
+const extraFields: FieldDef<Agent>[] = [
+  avatarFieldDef<Agent>({
+    id: "avatar",
+    label: "Avatar",
+    leading: true,
+    avatar: (a) => ({
+      icon: a.icon ?? DEFAULT_AGENT_AVATAR.icon,
+      color: a.iconColor ?? DEFAULT_AGENT_AVATAR.color,
+      fallbackKey: a.id,
+    }),
+  }),
+];
 
 function randomFrom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)] as T;
@@ -113,30 +142,9 @@ export function AgentsList({
       <SystemFolder selectedSystemId={selectedSystemId} />
       <DataView<Agent>
         rows={rows}
-        fields={[
-          // The agent's avatar is a field, not a tree option: every view that has
-          // a leading slot draws it there, ahead of `leadingIcon`'s status dot.
-          avatarFieldDef<Agent>({
-            id: "avatar",
-            label: "Avatar",
-            leading: true,
-            avatar: (a) => ({
-              icon: a.icon ?? DEFAULT_AGENT_AVATAR.icon,
-              color: a.iconColor ?? DEFAULT_AGENT_AVATAR.color,
-              fallbackKey: a.id,
-            }),
-          }),
-          {
-            id: "name",
-            label: "Name",
-            primary: true,
-            value: (a) => a.name,
-            onEdit: (a, next) =>
-              patchAgent(a.id, {
-                name: String(next ?? "").trim() || "Untitled",
-              }),
-          },
-        ]}
+        collection={agentRows}
+        overrides={overrides}
+        extraFields={extraFields}
         rowKey={(a) => a.id}
         views={["table"]}
         storageKey={AGENTS_LIST_VIEW}

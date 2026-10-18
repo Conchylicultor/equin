@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
 } from "@plugins/primitives/plugins/data-view/web";
 import { floatingToolbar } from "@plugins/primitives/plugins/data-view/plugins/floating-toolbar/web";
 import type { MapViewOptions } from "@plugins/primitives/plugins/data-view/plugins/map/web";
@@ -19,6 +20,7 @@ import type { LatLng } from "@plugins/map/core";
 import {
   placeFlags,
   placeName,
+  places as placesCollection,
   type Place,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
@@ -30,7 +32,7 @@ import {
   useUpdatePlace,
 } from "@plugins/apps/plugins/places/plugins/places-core/web";
 import { TagManagerPanel } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
-import { placeFieldDefs, placeSearchText } from "../internal/fields";
+import { placeExtraFields, placeSearchText } from "../internal/fields";
 import { useClickAway } from "../internal/use-click-away";
 import { useCoveredEdges } from "../internal/use-covered-edges";
 import { SAVED_PLACE_PIN_TYPE, placeVisual } from "../internal/place-visual";
@@ -46,6 +48,14 @@ import { TagSidebar } from "./tag-sidebar";
  * `config/apps/places/places-map/places.map.jsonc`.
  */
 const PLACES_VIEW = defineDataView("places.map");
+
+/**
+ * The location is the map's axis, not an ordering: it is the one derived
+ * field the list does not sort by.
+ */
+const PLACE_OVERRIDES = fieldOverrides(placesCollection, {
+  location: { sortable: false },
+});
 
 /**
  * Where floating cards on the right start: below the toolbar's tools card
@@ -108,7 +118,7 @@ function PlacesSurface({
   const { mutateAsync: createCustomPlace } = useCreateCustomPlace();
   const { mutateAsync: updatePlace } = useUpdatePlace();
 
-  const fields = useMemo(() => placeFieldDefs(tags), [tags]);
+  const extraFields = useMemo(() => placeExtraFields(tags), [tags]);
   const selected =
     selectedId === null ? undefined : places.find((p) => p.id === selectedId);
   // The card and the tag manager share the right side: the manager, while
@@ -236,10 +246,12 @@ function PlacesSurface({
       <DataView<Place>
         storageKey={PLACES_VIEW}
         rows={places}
+        collection={placesCollection}
+        overrides={PLACE_OVERRIDES}
+        extraFields={extraFields}
         rowKey={(p) => p.id}
         searchAccessor={placeSearchText}
         searchPlaceholder="Search places"
-        fields={fields}
         views={["map", "gallery", "list"]}
         toolbar={floatingToolbar}
         backdrop="map"

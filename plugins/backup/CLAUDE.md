@@ -178,12 +178,14 @@ row with a rising count and a new source starting to fail mints its own.
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
+    - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `infra/entities.entityRef`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `BackupArchive`
     - `BackupManifest`
+    - `BackupRunStatus`
     - `BackupSourceFailed`
     - `BackupSourceIncluded`
     - `BackupSourceItem`
@@ -194,6 +196,7 @@ row with a rising count and a new source starting to fail mints its own.
   - Exports (values):
     - `BACKUP_CATEGORY_ID`
     - `BACKUP_RUN_KIND`
+    - `BACKUP_RUN_STATUSES`
     - `BackupManifestSchema`
     - `backupRoute`
     - `backupRunFields`

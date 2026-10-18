@@ -485,6 +485,7 @@ remote is built here.
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
+    - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
     - `release/bundles.ReleaseManifestSchema`
     - `release/bundles.releaseRunIdKind`
@@ -493,6 +494,7 @@ remote is built here.
     - `PlatformTagResult`
     - `Preview`
     - `ReleaseCandidate`
+    - `ReleaseHistoryRow`
     - `ReleaseIntent`
     - `ReleaseLogLine`
     - `ReleaseLogsResponse`

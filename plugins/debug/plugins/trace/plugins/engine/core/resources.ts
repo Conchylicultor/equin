@@ -1,10 +1,10 @@
-import { z } from "zod";
-import { fieldsToZodObject } from "@plugins/fields/core";
-import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { liveCollection } from "@plugins/network/plugins/live/core";
-import { traceFields } from "./fields";
+import {
+  liveCollection,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
+import { tracesEntityRef } from "./fields";
 
 /**
  * One trace's list-row metadata — NO snapshot blob, so the list stays cheap even
@@ -13,24 +13,10 @@ import { traceFields } from "./fields";
  * are two scalar extractions off the unprojected snapshot, for read-side
  * incident grouping.
  */
-const TRACE_LIST_LISTED = {
-  triggerKind: textField({ label: "Trigger" }),
-  createdAt: dateField({ label: "When" }),
-};
 const TRACE_LIST_CARRIED = {
-  id: traceFields.id,
-  worktree: traceFields.worktree,
-  triggerLabel: traceFields.triggerLabel,
-  durationMs: traceFields.durationMs,
-  thresholdMs: traceFields.thresholdMs,
   wallTime: textField(),
   windowSpanMs: floatField(),
 };
-export const TraceListItemSchema = fieldsToZodObject({
-  ...TRACE_LIST_CARRIED,
-  ...TRACE_LIST_LISTED,
-});
-export type TraceListItem = z.infer<typeof TraceListItemSchema>;
 
 /**
  * The recent slow-event traces (`traces`), newest first — the Slow Events list
@@ -41,13 +27,21 @@ export type TraceListItem = z.infer<typeof TraceListItemSchema>;
  * exactly when the system is slow.
  */
 export const traceEvents = liveCollection("debug.traces", {
-  fields: TRACE_LIST_LISTED,
-  carry: { fields: TRACE_LIST_CARRIED },
+  from: tracesEntityRef,
+  pick: ["createdAt", "triggerKind", "triggerLabel", "durationMs"],
+  carry: {
+    pick: ["id", "worktree", "thresholdMs"],
+    fields: TRACE_LIST_CARRIED,
+  },
   id: "id",
   sortable: ["createdAt", "durationMs"],
   default: { orderBy: [["createdAt", "desc"]], limit: 200 },
   maxLimit: 500,
 });
+
+/** One trace's list row: its metadata, no snapshot blob. */
+export type TraceListItem =
+  typeof traceEvents extends LiveRowsCollection<infer R> ? R : never;
 
 /**
  * One trace with its full snapshot, read by id (`useLiveRow`) for the detail
@@ -55,6 +49,18 @@ export const traceEvents = liveCollection("debug.traces", {
  * "no such trace" (an unknown id, or one the sweep removed).
  */
 export const traceById = liveCollection("debug.trace", {
-  carry: { fields: traceFields },
+  from: tracesEntityRef,
+  carry: {
+    pick: [
+      "id",
+      "worktree",
+      "triggerKind",
+      "triggerLabel",
+      "durationMs",
+      "thresholdMs",
+      "snapshot",
+      "createdAt",
+    ],
+  },
   id: "id",
 });

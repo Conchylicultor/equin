@@ -1,8 +1,5 @@
-import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
-import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
-import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
+import { deployDeploymentsEntityRef } from "./deployment-entity";
 
 /**
  * Every deployment, as a live collection over `deploy_deployments`: a bounded
@@ -21,19 +18,21 @@ import { liveCollection } from "@plugins/network/plugins/live/core";
  * the collection's, not a promise that the set stays small.
  */
 export const deployments = liveCollection("deploy.deployments", {
-  // Declared by FIELDS, the row being `Deployment` (the table's columns by
-  // name). `serverId` is the one listed field — the scope a reader filters by;
-  // the rest ride on the row for the pane and the list's own columns.
-  fields: { serverId: textField({ label: "Server" }) },
+  // Declared FROM the `deploy_deployments` entity, the row being `Deployment`
+  // (the table's columns by name). `serverId` is the one listed field — the
+  // scope a reader filters by; the rest ride on the row for the pane and the
+  // list's own columns.
+  from: deployDeploymentsEntityRef,
+  pick: ["serverId"],
   carry: {
-    fields: {
-      id: textField(),
-      compositionId: textField(),
-      hostnames: stringListField(),
-      loopbackPort: intField(),
-      createdAt: dateField(),
-      updatedAt: dateField(),
-    },
+    pick: [
+      "id",
+      "compositionId",
+      "hostnames",
+      "loopbackPort",
+      "createdAt",
+      "updatedAt",
+    ],
   },
   id: "id",
   sortable: ["createdAt"],

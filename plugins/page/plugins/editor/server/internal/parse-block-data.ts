@@ -1,10 +1,12 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import type { BlockData } from "../../core";
+import {
+  asBlockData,
+  type BlockData,
+} from "@plugins/page/plugins/block-entity/core";
 // Deep relative imports on purpose: this file is in every `tables.ts` schema
 // graph (via the server barrel), which drizzle-kit must load SYNCHRONOUSLY —
 // the core barrel would pull the async lexical/yjs bridges in with it.
 import {
-  asBlockData,
   PAGE_BLOCK_TYPE,
   pageData,
   pageKindOf,

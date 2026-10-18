@@ -15,14 +15,7 @@ export {
   pageBlockMarkdown,
   pageBlockAuthor,
 } from "./schemas";
-export type {
-  Block,
-  PageRow,
-  PageData,
-  PageKind,
-  PageCover,
-  BlockData,
-} from "./schemas";
+export type { Block, PageRow, PageData, PageKind, PageCover } from "./schemas";
 
 export {
   pagesTree,

@@ -4,6 +4,7 @@ export {
   ClaudeCliCallSchema,
   ClaudeCliCallsResultSchema,
   claudeCliCallFields,
+  claudeCliCallsEntityRef,
   ClaudeCliCallStatusSchema,
 } from "./resources";
 export type {

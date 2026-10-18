@@ -14,30 +14,13 @@ import {
   mapResource,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
+import { JOB_LIST_STATUSES, JOB_PROBLEMS } from "../../core";
 
-/**
- * Every status a row of the Jobs list can be in: graphile's four queue states
- * for a row still in the queue, a recorded run's outcome for a finished one.
- */
-export type JobListStatus =
-  | "pending"
-  | "running"
-  | "retrying"
-  | "dead"
-  | "succeeded"
-  | "failed"
-  | "suspended";
+/** Every status a row of the Jobs list can be in (see `jobListRow`). */
+export type JobListStatus = (typeof JOB_LIST_STATUSES)[number];
 
-/**
- * What is wrong with a running queue row, when something is:
- * - `no-worker` — nobody holds the job's advisory lock any more (the owning
- *   backend died, or dispatch is inside its sub-second acquisition window);
- *   the stuck-lock sweeper will reclaim the row.
- * - `forfeited` — the opposite: a worker IS still there, it passed its hold
- *   class's deadline, ignored the abort, and the pool stopped counting its
- *   slot. The row is untouched and its lock still held.
- */
-export type JobProblem = "no-worker" | "forfeited";
+/** What is wrong with a running queue row, when something is (see `JOB_PROBLEMS`). */
+export type JobProblem = (typeof JOB_PROBLEMS)[number];
 
 interface JobListRowBase {
   /** `live:<graphile id>` or `run:<run id>` — unique across both sources. */

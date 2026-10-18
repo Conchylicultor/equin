@@ -1,12 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import {
-  BlockSchema,
-  PAGE_BLOCK_TYPE,
-  type Block,
-  type BlockData,
-} from "../../core/schemas";
+import { BlockSchema, PAGE_BLOCK_TYPE, type Block } from "../../core/schemas";
+import type { BlockData } from "@plugins/page/plugins/block-entity/core";
 import { liveBlocks } from "./live-blocks";
 import { withPageForest, type ForestExecutor } from "./page-forest";
 import { updateBlockFields } from "./forest-writer";

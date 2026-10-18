@@ -3,24 +3,16 @@
 // `@plugins/conversations/plugins/agents/server/api`.
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { nullable } from "@plugins/fields/core";
-import {
-  parsedTextField,
-  textField,
-} from "@plugins/fields/plugins/text/plugins/config/core";
+import { parsedTextField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
-import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { rankValueField } from "@plugins/fields/plugins/rank/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
-import {
-  SavedSymbolNameSchema,
-  parseSavedSymbolName,
-} from "@plugins/ui/plugins/icons/plugins/saved-names/core";
-import {
-  DEFAULT_MODEL_CHOICE,
-  StoredModelChoiceSchema,
-} from "@plugins/conversations/plugins/model-provider/core";
 import { ConversationStatusSchema } from "@plugins/tasks/plugins/tasks-core/core";
-import { AgentLaunchConversationRefSchema } from "../core";
+import {
+  AgentLaunchConversationRefSchema,
+  agentLaunchesEntityRef,
+  agentsEntityRef,
+} from "../core";
 
 export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./schemas";
 
@@ -45,29 +37,28 @@ export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./schemas";
 // Boot-critical (`preload: "boot"`): the sidebar and the conversation avatars
 // paint settled on the first frame.
 export const agentRows = liveCollection("agents.roster", {
+  // Declared by FIELDS over the `agents` entity: the name (the list's one
+  // shown field — label and title flag are the entity's) is picked, the rest of
+  // the record rides the row. `rank` is the entity's stored key read as a
+  // `Rank` value object (`rankValueField`), and `isFolder` is `prompt IS NULL`:
+  // both stay the collection's own. No base exposures: the roster's wire row is
+  // pinned (the oracle below), and no extension exposes agent fields.
+  from: agentsEntityRef,
+  pick: ["name"],
+  baseExposures: false,
   carry: {
+    pick: [
+      "id",
+      "parentId",
+      "prompt",
+      "model",
+      "icon",
+      "iconColor",
+      "createdAt",
+      "updatedAt",
+    ],
     fields: {
-      id: textField(),
-      parentId: nullable(textField()),
-      name: textField(),
-      prompt: nullable(textField()),
-      // A family ("sonnet" — its newest version) or a pinned version; null =
-      // default. The inner default is never reached (nullable).
-      model: nullable(
-        parsedTextField(StoredModelChoiceSchema, {
-          default: DEFAULT_MODEL_CHOICE,
-        }),
-      ),
-      // A picked Material Symbols name; null = the default avatar.
-      icon: nullable(
-        parsedTextField(SavedSymbolNameSchema, {
-          default: parseSavedSymbolName("smart-toy"),
-        }),
-      ),
-      iconColor: nullable(textField()),
       rank: rankValueField(),
-      createdAt: dateField(),
-      updatedAt: dateField(),
       isFolder: boolField(),
     },
   },
@@ -106,12 +97,14 @@ export const agentRows = liveCollection("agents.roster", {
 //
 // Boot-critical (`preload: "boot"`): the avatars paint settled.
 export const agentLaunchRows = liveCollection("agent-launches", {
+  // The launch record is the `agent_launches` entity's; the status of the
+  // task's latest conversation, and that conversation, are joined in
+  // (`../server/internal/agent-launch-rows.ts`) and so the collection's own.
+  from: agentLaunchesEntityRef,
+  baseExposures: false,
   carry: {
+    pick: ["id", "agentId", "taskId", "createdAt"],
     fields: {
-      id: textField(),
-      agentId: textField(),
-      taskId: textField(),
-      createdAt: dateField(),
       latestConversationStatus: nullable(
         parsedTextField(ConversationStatusSchema, { default: "starting" }),
       ),

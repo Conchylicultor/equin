@@ -174,14 +174,16 @@ pin*, starts pick mode for a place Google does not know.
   - Slot contributors: `places-map.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "places-map"
+    - `FieldPresentation.Register` "entity:places"
     - `GeoMap.Pin` → `SavedPlacePin`
-  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 85 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×9
+    - `primitives/data-view` ×7
     - `map` ×6
-    - `primitives/data-view` ×6
     - `primitives/collapsible` ×5
     - `primitives/css/ui-kit` ×4
-    - `primitives/live-state` ×3
+    - `primitives/live-state` ×4
+    - `network/live` ×3
     - `ui/icons` ×3
     - `apps/places/tag-manager` ×2
     - `integrations/google-maps` ×2

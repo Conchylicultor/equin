@@ -166,15 +166,17 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
   - Contributes:
     - `Pane.Register` "event-source-detail"
     - `Pane.Register` "event-sources"
+    - `FieldPresentation.Register` "entity:event_sources"
     - `Events.Sidebar` "Sources"
     - `EventSourceActions` "open" → `SourceOpenAction`
     - `EventSourceActions` "enabled" → `SourceToggleAction`
     - `EventSourceActions` "delete" → `SourceDeleteAction`
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/events/events-core` ×7
     - `primitives/css/ui-kit` ×5
     - `primitives/data-view` ×5
     - `primitives/pane` ×5
+    - `network/live` ×3
     - `apps/events/shell.Events`
     - `config_v2/fields.FieldRenderer`
     - `infra/endpoints.getEndpointErrorMessage`
@@ -201,7 +203,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `SourceTypeLookup`
   - Exports (values):
     - `CADENCE_LABEL`
-    - `CADENCE_OPTIONS`
     - `describeRun`
     - `EventSourceActions`
     - `EventSourceDetail`
@@ -220,7 +221,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `RUN_OUTCOME_VARIANT`
     - `SOURCE_STATE_OPTIONS`
     - `SOURCE_STATUS_LABEL`
-    - `SOURCE_STATUS_OPTIONS`
     - `SOURCE_STATUS_VARIANT`
     - `SourceConfigForm`
     - `useEventSource`

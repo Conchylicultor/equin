@@ -4,7 +4,7 @@ import {
 } from "@plugins/network/plugins/live/web";
 import {
   historyVersions,
-  type Version,
+  type VersionRow,
 } from "@plugins/history/plugins/engine/core";
 
 // The newest version of one (sourceId, entityId) — what the dialog previews
@@ -14,7 +14,7 @@ import {
 export function useNewestVersion(
   sourceId: string,
   entityId: string,
-): LiveListResult<Version> {
+): LiveListResult<VersionRow> {
   return useLive(historyVersions, {
     where: { sourceId, entityId },
     orderBy: [["createdAt", "desc"]],

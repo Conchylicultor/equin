@@ -26,7 +26,7 @@
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineItemActions`
-    - `primitives/data-view.FieldDef`
+    - `primitives/data-view.fieldOverrides`
     - `primitives/data-view.ItemActionProps`
     - `primitives/data-view.liveDataSource`
     - `primitives/icon-button.IconButton`

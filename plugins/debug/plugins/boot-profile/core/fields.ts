@@ -7,6 +7,7 @@ import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import type { BootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 
 // Explicit zod mirror of the cross-runtime `BootTrace` shape (boot-trace/core).
@@ -84,12 +85,23 @@ void _assertBootTrace;
 // `getBootTrace()` capture, written only on an explicit "Copy permalink" click.
 // The table + the `SavedBootTrace` wire schema both derive from this single
 // record (server/internal/tables.ts), so a column/schema drift is unrepresentable.
+// The labels are the Boot Profiles browse pane's columns: the `bootTraces`
+// collection picks them.
 export const savedBootTraceFields = {
-  id:        uuidField(),
-  worktree:  textField(),
-  snapshot:  jsonField<BootTrace>({ schema: BootTraceSchema, default: {} as BootTrace }),
-  createdAt: dateField(),
+  id: uuidField({ label: "Id", filterable: false }),
+  worktree: textField({ label: "Worktree", primary: true }),
+  snapshot: jsonField<BootTrace>({
+    schema: BootTraceSchema,
+    default: {} as BootTrace,
+  }),
+  createdAt: dateField({ label: "When" }),
 } satisfies FieldsRecord;
+
+/** The `boot_traces` entity: the table is built from these fields (`server/internal/tables.ts`). */
+export const bootTracesEntityRef = entityRef(
+  "boot_traces",
+  savedBootTraceFields,
+);
 
 export const SavedBootTraceSchema = fieldsToZodObject(savedBootTraceFields);
 export type SavedBootTrace = z.infer<typeof SavedBootTraceSchema>;

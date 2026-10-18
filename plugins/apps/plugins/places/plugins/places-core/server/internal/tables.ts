@@ -4,14 +4,14 @@ import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
-import { placeFields, placeTagFields } from "../../core";
+import { placesEntityRef, placeTagsEntityRef } from "../../core";
 
 // Physical tables for the Places app, derived from the field records in
 // `core/internal/fields.ts`. A load-order leaf (no other plugin's tables, no
 // top-level await): drizzle-kit's sync loader evaluates it. Re-exported with a
 // leading `_` for drizzle-kit's schema glob.
 
-const places = defineEntity("places", placeFields, {
+const places = defineEntity(placesEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (a DB trigger derives it). Everything the
   // user sees; `fetchedAt` is bookkeeping.
@@ -58,7 +58,7 @@ const places = defineEntity("places", placeFields, {
   ],
 });
 
-const placeTags = defineEntity("place_tags", placeTagFields, {
+const placeTags = defineEntity(placeTagsEntityRef, {
   primaryKey: "id",
   updatedAt: {
     touchedBy: {

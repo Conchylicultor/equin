@@ -16,6 +16,21 @@
       "icon": "grid-view",
       "view": {
         "type": "gallery",
+        // The fields in reading order: the place's name first, then the stored
+        // fields the list derives, then its own yes / no flags — the list's
+        // computed fields would otherwise follow every derived one.
+        "properties": [
+          { "id": "name" },
+          { "id": "address" },
+          { "id": "tags" },
+          { "id": "want" },
+          { "id": "been" },
+          { "id": "businessStatus", "hidden": true },
+          { "id": "googleLost", "hidden": true },
+          { "id": "location", "hidden": true },
+          { "id": "note", "hidden": true },
+          { "id": "createdAt", "hidden": true }
+        ],
         "sort": [{ "fieldId": "createdAt", "direction": "desc" }]
       }
     },
@@ -25,6 +40,21 @@
       "icon": "list",
       "view": {
         "type": "list",
+        // The fields in reading order: the place's name first, then the stored
+        // fields the list derives, then its own yes / no flags — the list's
+        // computed fields would otherwise follow every derived one.
+        "properties": [
+          { "id": "name" },
+          { "id": "address" },
+          { "id": "tags" },
+          { "id": "want" },
+          { "id": "been" },
+          { "id": "businessStatus", "hidden": true },
+          { "id": "googleLost", "hidden": true },
+          { "id": "location", "hidden": true },
+          { "id": "note", "hidden": true },
+          { "id": "createdAt", "hidden": true }
+        ],
         "sort": [{ "fieldId": "name", "direction": "asc" }]
       }
     }

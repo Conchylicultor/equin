@@ -12,7 +12,7 @@ import {
 import {
   DataView,
   defineDataView,
-  type FieldDef,
+  fieldOverrides,
 } from "@plugins/primitives/plugins/data-view/web";
 import type {
   HostedToolbar,
@@ -51,8 +51,7 @@ import {
 } from "../../shared/config";
 import { answerTriageEndpoint, retriageEndpoint } from "../../shared/endpoints";
 import {
-  LAUNCH_LANE_LABELS,
-  LAUNCH_LANES,
+  launchListRowKind,
   launchListRows,
   type LaunchListRow,
 } from "../../shared/launch-list";
@@ -89,10 +88,12 @@ function triageByTask(
 
 const NO_ROWS: LaunchListRow[] = [];
 
-const LANE_OPTIONS = LAUNCH_LANES.map((lane) => ({
-  value: lane,
-  label: LAUNCH_LANE_LABELS[lane],
-}));
+// The title is the row's face; where it stands and the launch order are
+// dimensions to group, filter and sort by, left out of the body.
+const LAUNCH_LIST_OVERRIDES = fieldOverrides(launchListRowKind, {
+  lane: { visible: false },
+  rank: { visible: false },
+});
 
 const VERDICT_BADGE: Record<
   TriageVerdict,
@@ -226,37 +227,6 @@ export function LaunchListSection(): ReactElement {
     (r) => (r.lane === "proposed" || r.lane === "obsolete") && ticked(r),
   );
 
-  const fields = useMemo<FieldDef<LaunchListRow>[]>(
-    () => [
-      {
-        id: "title",
-        label: "Sidequest",
-        type: "text",
-        primary: true,
-        value: (r) => r.task.title,
-      },
-      {
-        id: "lane",
-        label: "Where it stands",
-        type: "enum",
-        value: (r) => r.lane,
-        options: LANE_OPTIONS,
-        filterable: true,
-        groupable: true,
-        visible: false,
-      },
-      {
-        id: "rank",
-        label: "Launch order",
-        type: "number",
-        value: (r) => r.rank,
-        sortable: true,
-        visible: false,
-      },
-    ],
-    [],
-  );
-
   return (
     <Stack gap="sm">
       {entry !== null ? (
@@ -269,8 +239,9 @@ export function LaunchListSection(): ReactElement {
       ) : null}
       <DataView<LaunchListRow>
         rows={rows}
-        fields={fields}
-        rowKey={(r) => r.task.id}
+        collection={launchListRowKind}
+        overrides={LAUNCH_LIST_OVERRIDES}
+        rowKey={(r) => r.id}
         views={["list"]}
         storageKey={LAUNCH_LIST_VIEW}
         readiness={result}

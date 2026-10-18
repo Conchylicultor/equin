@@ -1,5 +1,5 @@
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { placeFields, placeTagFields } from "./fields";
+import { placesEntityRef, placeTagsEntityRef } from "./entity-refs";
 import { PlaceSearchQuerySchema, PlaceSearchResultSchema } from "./maps";
 
 /**
@@ -15,7 +15,28 @@ import { PlaceSearchQuerySchema, PlaceSearchResultSchema } from "./maps";
  * one gets `unknown-key` (a `skew` verdict) and never parses these rows.
  */
 export const places = liveCollection("places.places.all", {
-  carry: { fields: placeFields },
+  from: placesEntityRef,
+  // The stored fields the Places DataView lists, in list order — their labels,
+  // options and filter domains the entity's. The list adds the four it computes
+  // from the tag tree (the name the app shows, Want to go, Been, Google link
+  // lost); the rest of the row is carried.
+  pick: ["address", "tags", "businessStatus", "location", "note", "createdAt"],
+  carry: {
+    pick: [
+      "id",
+      "googlePlaceId",
+      "name",
+      "title",
+      "primaryType",
+      "types",
+      "mapsUrl",
+      "googleLostAt",
+      "icon",
+      "autoTags",
+      "fetchedAt",
+      "updatedAt",
+    ],
+  },
   id: "id",
   all: {
     orderBy: [["createdAt", "desc"]],
@@ -36,7 +57,23 @@ export const places = liveCollection("places.places.all", {
  * `places`).
  */
 export const placeTags = liveCollection("places.tags.all", {
-  carry: { fields: placeTagFields },
+  from: placeTagsEntityRef,
+  // The tag manager lists the name and the Google types; the rest of the row
+  // (the tree's links, colour, icon, rank, role) is carried.
+  pick: ["name", "googleTypes"],
+  carry: {
+    pick: [
+      "id",
+      "parentId",
+      "color",
+      "childColors",
+      "icon",
+      "rank",
+      "role",
+      "createdAt",
+      "updatedAt",
+    ],
+  },
   id: "id",
   all: {
     orderBy: [["rank", "asc"]],

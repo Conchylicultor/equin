@@ -9,12 +9,15 @@ A floating card (`Surface level="overlay"`) the map screen
 (`places-map`) lays over the map, right of the tag sidebar, when the sidebar's
 "Manage tags" or "+ New tag" is clicked. It holds a `DataView` (surface id
 `places.tags`, one `table` view authored in
-`config/apps/places/tag-manager/places.tags.jsonc`) over `flattenTagTree(tags)`
-— the tree in depth-first rank order, so the table reads as the tree:
+`config/apps/places/tag-manager/places.tags.jsonc`) over the `places.tags.all`
+collection, nested by `parentId` (`hierarchy`; siblings in rank order, open on
+first paint) — the table reads as the tree. The tag and the Google types are
+the collection's derived fields (cells overridden); the parent, the place
+count and the actions are the manager's own `extraFields`:
 
 | Column | Cell |
 |---|---|
-| Tag | indent by depth · `TagColorButton` (palette of 18 + Inherit / No colour) · `TagIconButton` (`IconPicker` + No icon) · `TagNameInput` (saved on blur / Enter) |
+| Tag | `TagColorButton` (palette of 18 + Inherit / No colour) · `TagIconButton` (`IconPicker` + No icon) · `TagNameInput` (saved on blur / Enter) |
 | Parent | `TagParentSelect`: Top level or any tag but itself and its descendants (`wouldCycle`) |
 | Auto-set from Google types | the tag's `googleTypes` as mono chips, else "manual" (read-only) |
 | Places | `tagPlaceCounts` over every place — nested tags included |
@@ -42,10 +45,10 @@ The colour is user data (a stored hex), painted through `style`.
 
 - Description: The Places tag manager: the one tag tree as an editable table (colour, icon, name, parent, Google types, place count, + Child, Delete) on a floating card the map opens; and TagMark, how a tag shows beside its name everywhere (its tinted icon, else a dot of its colour).
 - Web:
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
+    - `primitives/data-view` ×4
     - `apps/places/places-core` ×3
-    - `primitives/data-view` ×3
     - `primitives/css/control-panel` ×2
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`

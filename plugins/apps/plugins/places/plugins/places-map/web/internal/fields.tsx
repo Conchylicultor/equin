@@ -1,23 +1,30 @@
-import type {
-  FieldDef,
-  FieldOption,
-} from "@plugins/primitives/plugins/data-view/web";
+import { useMemo } from "react";
+import {
+  FieldPresentation,
+  type LiveFieldOption,
+  type LiveFieldOptionsRead,
+} from "@plugins/network/plugins/live/web";
+import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
+import {
+  mapResource,
+  ResourceView,
+} from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   placeFlags,
   placeName,
+  placesEntityRef,
   type Place,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
-import type { BusinessStatus } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
+import { usePlaceTags } from "@plugins/apps/plugins/places/plugins/places-core/web";
 import { PlaceTagChips } from "../components/tag-chip";
-import { TAGS_FIELD_ID } from "./sidebar-filter";
 
-/**
- * The tag tree as the tags field's options: each tag names its parent, so
- * the nested operators (`has-nested` / `lacks-nested`, the sidebar's rules)
- * reach a tag's descendants and the filter builder lists the tree.
- */
-export function tagOptions(tags: readonly PlaceTag[]): FieldOption[] {
+// A tag as the tags field's option: each names its parent, so the nested
+// operators (`has-nested` / `lacks-nested`, the sidebar's rules) reach a tag's
+// descendants and the filter builder lists the tree. Stable (module-level), so
+// the mapped read changes only with the tag tree.
+function tagOptions(tags: readonly PlaceTag[]): readonly LiveFieldOption[] {
   return tags.map((t) => ({
     value: t.id,
     label: t.name,
@@ -25,20 +32,44 @@ export function tagOptions(tags: readonly PlaceTag[]): FieldOption[] {
   }));
 }
 
-/** Google's business status, as the status field's options (null is "None"). */
-const BUSINESS_STATUS_OPTIONS: FieldOption[] = [
-  { value: "OPERATIONAL", label: "Open", variant: "success" },
-  {
-    value: "CLOSED_TEMPORARILY",
-    label: "Temporarily closed",
-    variant: "warning",
+/**
+ * The tags field's options: the LIVE tag tree. Loading until it is known —
+ * never an empty vocabulary, or the sidebar's rules would match nothing.
+ */
+function useTagFieldOptions(): LiveFieldOptionsRead {
+  const tags = usePlaceTags();
+  return useMemo(() => mapResource(tags, tagOptions), [tags]);
+}
+
+/** A place's tags as chips, the tree read where the cell is drawn. */
+function PlaceTagsCell({ tagIds }: { tagIds: readonly string[] }) {
+  const tags = usePlaceTags();
+  return (
+    <ResourceView resource={tags} fallback={<Loading variant="block" />}>
+      {(all) => <PlaceTagChips tagIds={tagIds} tags={all} />}
+    </ResourceView>
+  );
+}
+
+/**
+ * How the stored place fields present in the Places list: the tags as the tag
+ * tree's options and coloured chips (Been / Want to go left out — each has its
+ * own column), and the dimensions a body leaves out by default — Google's
+ * status, the map's location axis, the note and the saved date.
+ */
+export const placePresentation = FieldPresentation.Register({
+  owner: placesEntityRef,
+  fields: {
+    tags: {
+      useOptions: useTagFieldOptions,
+      cell: (tagIds) => <PlaceTagsCell tagIds={tagIds} />,
+    },
+    businessStatus: { visible: false },
+    location: { visible: false },
+    note: { visible: false },
+    createdAt: { visible: false },
   },
-  {
-    value: "CLOSED_PERMANENTLY",
-    label: "Permanently closed",
-    variant: "destructive",
-  },
-] satisfies (FieldOption & { value: BusinessStatus })[];
+});
 
 /**
  * What the search box matches a place on — the DataView's `searchAccessor`,
@@ -50,16 +81,15 @@ export function placeSearchText(p: Place): string {
 }
 
 /**
- * The Places DataView schema. `name` is the name the app shows (`placeName`:
- * the user's title, else Google's or a custom place's). `tags` filters on
- * EVERY tag id the place carries (Been / Want to go included, so the sidebar
- * can include / exclude them), and draws the others as coloured chips; `want`
- * and `been` are the same two facts as their own groupable yes / no columns;
- * `businessStatus` is Google's word on whether the place is still open (none
- * for a custom place); `googleLost` whether Google no longer finds the place's
- * id (its details frozen as last fetched).
+ * The fields the Places list computes itself; every stored one it derives from
+ * `places` (address, tags, Google's status, location, note, saved date).
+ * `name` is the name the app shows (`placeName`: the user's title, else
+ * Google's or a custom place's). `want` and `been` are the tags' Been / Want
+ * to go facts as their own groupable yes / no columns, and `googleLost`
+ * whether Google no longer finds the place's id (its details frozen as last
+ * fetched). The tag tree decides the flags, so the list is built from it.
  */
-export function placeFieldDefs(tags: readonly PlaceTag[]): FieldDef<Place>[] {
+export function placeExtraFields(tags: readonly PlaceTag[]): FieldDef<Place>[] {
   return [
     {
       id: "name",
@@ -68,23 +98,6 @@ export function placeFieldDefs(tags: readonly PlaceTag[]): FieldDef<Place>[] {
       primary: true,
       value: (p) => placeName(p),
       sortable: true,
-      filterable: true,
-    },
-    {
-      id: "address",
-      label: "Address",
-      type: "text",
-      value: (p) => p.address,
-      sortable: true,
-      filterable: true,
-    },
-    {
-      id: TAGS_FIELD_ID,
-      label: "Tags",
-      type: "tags",
-      values: (p) => p.tags,
-      options: tagOptions(tags),
-      cell: (p) => <PlaceTagChips tagIds={p.tags} tags={tags} />,
       filterable: true,
     },
     {
@@ -108,17 +121,6 @@ export function placeFieldDefs(tags: readonly PlaceTag[]): FieldDef<Place>[] {
       width: "5rem",
     },
     {
-      id: "businessStatus",
-      label: "Google status",
-      type: "enum",
-      value: (p) => p.businessStatus,
-      options: BUSINESS_STATUS_OPTIONS,
-      sortable: true,
-      filterable: true,
-      groupable: true,
-      visible: false,
-    },
-    {
       id: "googleLost",
       label: "Google link lost",
       type: "bool",
@@ -126,31 +128,6 @@ export function placeFieldDefs(tags: readonly PlaceTag[]): FieldDef<Place>[] {
       sortable: true,
       filterable: true,
       groupable: true,
-      visible: false,
-    },
-    {
-      id: "location",
-      label: "Location",
-      type: "location",
-      data: (p) => p.location,
-      // The map's axis, not a column worth reading in a list.
-      visible: false,
-    },
-    {
-      id: "note",
-      label: "Note",
-      type: "text",
-      value: (p) => p.note,
-      filterable: true,
-      visible: false,
-    },
-    {
-      id: "createdAt",
-      label: "Saved",
-      type: "date",
-      value: (p) => p.createdAt,
-      sortable: true,
-      filterable: true,
       visible: false,
     },
   ];

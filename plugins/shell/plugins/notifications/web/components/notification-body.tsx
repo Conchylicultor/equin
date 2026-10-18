@@ -7,7 +7,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { Notification } from "../../shared/schema";
+import type { Notification } from "../../shared/resources";
 
 const VARIANT_TEXT: Record<Notification["variant"], string> = {
   error: "text-destructive",

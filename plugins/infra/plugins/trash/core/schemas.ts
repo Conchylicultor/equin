@@ -22,7 +22,8 @@ export const TRASH_ENTRY_LISTED = {
 export const TRASH_ENTRY_CARRIED = {
   id: idKindField(trashEntryIdKind),
   rootEntityId: textField(),
-  deletedAt: dateField(),
+  // Listed by the pages trash (the one column it sorts by), never filtered.
+  deletedAt: dateField({ label: "Deleted", filterable: false }),
   meta: jsonField({ schema: z.record(z.unknown()), default: {} }),
 };
 export const TrashEntrySchema = fieldsToZodObject({

@@ -112,19 +112,20 @@ spawn / control-file / banner helpers both scripts share are `e2e/synthetic.ts`.
   - Contributes:
     - `Conversation.AbovePromptInput` → `OpStatusBanner`
     - `Item.Chips` → `OpStatusChip`
+    - `FieldPresentation.Register` "collection:op-status.queue-row"
     - `queue-actions` "open-conversation" → `OpenConversationAction`
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×5
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×6
     - `primitives/live-state` ×4
     - `conversations/conversation-view` ×2
     - `conversations` ×2
+    - `network/live` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/relative-time` ×2
     - `conversations/conversation-ui/item.Item`
     - `debug/profiling/ops.opDetailPane`
     - `infra/host/machine-sleep.useSleepNowForFold`
-    - `network/live.useLive`
     - `primitives/collapsible.FoldMotion`
     - `primitives/css/clip.Clip`
     - `primitives/css/inline.Inline`
@@ -137,6 +138,19 @@ spawn / control-file / banner helpers both scripts share are `e2e/synthetic.ts`.
     - `primitives/link-gesture.activationProps`
     - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
+- Core:
+  - Uses:
+    - `fields.nullable`
+    - `fields/bool/config.boolField`
+    - `fields/float/config.floatField`
+    - `fields/int/config.intField`
+    - `fields/text/config.enumTextField`
+    - `fields/text/config.textField`
+    - `network/live.rowKind`
+  - Exports (types): `OpRowPhase`
+  - Exports (values):
+    - `OP_ROW_PHASES`
+    - `opQueueRow`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

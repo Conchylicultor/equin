@@ -14,7 +14,11 @@ import {
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { idKindField } from "@plugins/ids/core";
 import { releaseRunIdKind } from "@plugins/release/plugins/bundles/core";
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import {
+  liveCollection,
+  liveValue,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
 import { ReleaseLogsResponseSchema } from "./endpoints";
 import { RELEASE_TARGETS } from "./targets";
 
@@ -141,7 +145,26 @@ export type ReleaseRun = z.infer<typeof ReleaseRunSchema>;
 // deep in Studio, not first paint). The server projects exactly this schema's
 // keys, so `pid` — absent here — never reaches the wire.
 export const releaseRuns = liveCollection("release.runs", {
-  carry: { fields: releaseRunFields },
+  from: releaseRunsEntityRef,
+  carry: {
+    pick: [
+      "id",
+      "namespace",
+      "kind",
+      "exitCode",
+      "artifactPath",
+      "port",
+      "commitSha",
+      "commitDirty",
+      "error",
+      "target",
+      "status",
+      "platform",
+      "startedAt",
+      "finishedAt",
+      "composition",
+    ],
+  },
   id: "id",
 });
 
@@ -166,14 +189,38 @@ const RELEASE_HISTORY_VIEW_ID = "studio.release.history";
 // whichever namespace produced it, while this window is namespace-scoped (a
 // collection's base `where` applies to its `:rows` read too).
 export const releaseHistory = liveCollection("release.history", {
-  fields: RELEASE_RUN_LISTED,
-  carry: { fields: RELEASE_RUN_CARRIED },
+  from: releaseRunsEntityRef,
+  pick: [
+    "target",
+    "status",
+    "platform",
+    "startedAt",
+    "finishedAt",
+    "composition",
+  ],
+  carry: {
+    pick: [
+      "id",
+      "namespace",
+      "kind",
+      "exitCode",
+      "artifactPath",
+      "port",
+      "commitSha",
+      "commitDirty",
+      "error",
+    ],
+  },
   id: "id",
   sortable: ["target", "status", "platform", "startedAt", "finishedAt"],
   default: { orderBy: [["startedAt", "desc"]], limit: 100 },
   maxLimit: 500,
   columnScope: RELEASE_HISTORY_VIEW_ID,
 });
+
+/** A history row as `releaseHistory` delivers it: the run's fields and its exposed `$columns`. */
+export type ReleaseHistoryRow =
+  typeof releaseHistory extends LiveRowsCollection<infer R> ? R : never;
 
 // One running (or stopping) preview of a release run's artifact.
 export const PreviewSchema = z.object({

@@ -6,24 +6,21 @@ import {
   DataView,
   defineDataView,
   defineItemActions,
+  fieldOverrides,
   liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
-import type {
-  FieldDef,
-  ItemActionProps,
-} from "@plugins/primitives/plugins/data-view/web";
+import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
-import { notifications } from "../../shared/resources";
+import { notifications, type Notification } from "../../shared/resources";
 import {
   dismissAllNotifications,
   dismissNotification,
   markAllNotificationsRead,
 } from "../../shared/endpoints";
-import type { Notification } from "../../shared/schema";
 import {
   NotificationBody,
   VARIANT_FILL,
@@ -90,7 +87,7 @@ export function NotificationsView(): ReactElement {
   return (
     <DataView<Notification>
       storageKey={NOTIFICATIONS_VIEW}
-      fields={fields}
+      overrides={overrides}
       views={["list"]}
       source={notificationsSource}
       searchPlaceholder="Search notifications…"
@@ -143,67 +140,13 @@ function BulkActions(): ReactElement {
   );
 }
 
-// Static: nothing derives from the loaded rows. Every field reads its own
-// column of the `notifications` collection (same-name binding); `type` and
-// `variant` declare no `options` — their option lists are the source's facets.
-// The rows draw through `renderRow`, so these are the Sort / Filter / Group-by
-// vocabulary — the config is written against these ids.
-export const fields: FieldDef<Notification>[] = [
-  {
-    id: "title",
-    label: "Title",
-    type: "text",
-    value: (n) => n.title,
-    primary: true,
-    sortable: false,
-    filterable: true,
-  },
-  {
-    id: "type",
-    label: "Type",
-    type: "enum",
-    value: (n) => n.type,
-    sortable: false,
-    filterable: true,
-  },
-  {
-    id: "variant",
-    label: "Variant",
-    type: "enum",
-    value: (n) => n.variant,
-    sortable: false,
-    filterable: true,
-  },
-  {
-    // The raw `read` column — not the badge's "counted unread", which also
-    // requires an unmuted error or warning: an unread info row is unread here.
-    id: "read",
-    label: "Read",
-    type: "bool",
-    value: (n) => n.read,
-    // The pane's sections: "Unread" first, then "Read" — not the bool's Yes / No.
-    options: [
-      { value: "false", label: "Unread" },
-      { value: "true", label: "Read" },
-    ],
-    sortable: false,
-    filterable: true,
-  },
-  {
-    id: "muted",
-    label: "Muted",
-    type: "bool",
-    value: (n) => n.muted,
-    sortable: false,
-    filterable: true,
-  },
-  {
-    id: "createdAt",
-    label: "Surfaced",
-    type: "date",
-    value: (n) => n.createdAt,
-    sortable: true,
-    filterable: false,
-    visible: false,
-  },
-];
+// How the derived fields present here: every field reads its own column of the
+// `notifications` collection (same-name binding), and its label, type and
+// options are the entity's (`read`'s Unread / Read sections included). `type`
+// and `variant` declare no `options` — their option lists are the source's
+// facets. The rows draw through `renderRow`, so these are the Sort / Filter /
+// Group-by vocabulary — the config is written against these ids. `createdAt` is
+// the sort only, never a shown column.
+export const overrides = fieldOverrides(notifications, {
+  createdAt: { visible: false },
+});

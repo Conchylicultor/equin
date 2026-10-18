@@ -1,8 +1,9 @@
 export {
   slowOpFields,
+  slowOpsEntityRef,
   SlowOpSchema,
-  SlowOpListRowSchema,
   slowOpCallerFields,
+  slowOpCallersEntityRef,
   SlowOpCallerSchema,
   CallerRefSchema,
   SlowOpSampleSchema,
@@ -15,7 +16,6 @@ export {
 } from "./schema";
 export type {
   SlowOp,
-  SlowOpListRow,
   SlowOpCaller,
   CallerRef,
   SlowOpSample,
@@ -25,6 +25,7 @@ export type {
   SlowOpMeasures,
 } from "./schema";
 export { slowOpsList, slowOpById, slowOpCallers } from "./resources";
+export type { SlowOpListRow, SlowOpCallerListRow } from "./resources";
 export { slowOpDetailRoute } from "./routes";
 export { slowOpConfig, CLIENT_SIGNAL_THRESHOLD } from "./config";
 export { MAX_CLIENT_SLOW_OP_ITEMS } from "./limits";

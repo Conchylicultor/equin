@@ -111,27 +111,20 @@
     - `PATCH /api/places/tags/:id`
     - `DELETE /api/places/tags/:id`
 - Core:
-  - Uses:
-    - `fields.FieldsRecord`
-    - `fields.fieldsToZodObject`
-    - `fields.nullable`
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×4
+    - `fields/text/config` ×3
+    - `ids` ×3
+    - `integrations/google-maps/places-api` ×3
+    - `network/live` ×2
+    - `ui/icons/saved-names` ×2
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/location.locationField`
-    - `fields/text/config.enumTextField`
-    - `fields/text/config.parsedTextField`
-    - `fields/text/config.textField`
-    - `ids.defineIdKind`
-    - `ids.idKindField`
-    - `ids.IdOf`
+    - `fields/tags/config.tagsField`
     - `infra/endpoints.defineEndpoint`
-    - `integrations/google-maps/places-api.BUSINESS_STATUSES`
-    - `integrations/google-maps/places-api.PlaceSuggestionSchema`
-    - `network/live.liveCollection`
-    - `network/live.liveValue`
-    - `ui/icons/saved-names.parseSavedSymbolName`
-    - `ui/icons/saved-names.SavedSymbolNameSchema`
+    - `infra/entities.entityRef`
   - Exports (types):
     - `ChildColorMode`
     - `CreateCustomPlaceBody`
@@ -176,10 +169,12 @@
     - `placeSearch`
     - `PlaceSearchQuerySchema`
     - `PlaceSearchResultSchema`
+    - `placesEntityRef`
     - `placeTagFields`
     - `placeTagIdKind`
     - `placeTags`
     - `PlaceTagSchema`
+    - `placeTagsEntityRef`
     - `regeneratePlaceIcon`
     - `RegeneratePlaceIconResultSchema`
     - `ringColors`

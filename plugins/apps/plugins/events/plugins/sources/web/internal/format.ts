@@ -2,10 +2,12 @@ import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge
 import {
   EXTRACTION_STATUSES,
   REFRESH_CADENCES,
+  REFRESH_CADENCE_META,
   RUN_OUTCOMES,
   RUN_OUTCOME_META,
   SOURCE_STATES,
   SOURCE_STATUSES,
+  SOURCE_STATUS_META,
   type EventSourceRun,
   type ExtractionStatus,
   type RefreshCadence,
@@ -25,40 +27,25 @@ import {
 // The `*_OPTIONS` arrays are what a DataView field hands to the chip cell, and
 // they carry the LABEL, the TINT and the TOOLTIP together: an option describes
 // how it presents, so no render site has to join a label map to a variant map by
-// hand. The maps stay exported where a surface outside a DataView still paints a
-// chip itself (the source-detail Status section, the run rows).
+// hand. The stored vocabularies (cadence, status, run outcome) declare theirs
+// once with the entity's field in `events-core`, which every list derives its
+// chips from; the maps here read them for the surfaces outside a DataView that
+// still paint a chip themselves (the source-detail Status section, the run
+// rows).
 
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
-export const CADENCE_LABEL: Record<RefreshCadence, string> = {
-  manual: "Manual",
-  hourly: "Hourly",
-  daily: "Daily",
-  weekly: "Weekly",
-};
+export const CADENCE_LABEL = Object.fromEntries(
+  REFRESH_CADENCES.map((c) => [c, REFRESH_CADENCE_META[c].label]),
+) as Record<RefreshCadence, string>;
 
-export const CADENCE_OPTIONS = REFRESH_CADENCES.map((c) => ({
-  value: c,
-  label: CADENCE_LABEL[c],
-}));
+export const SOURCE_STATUS_LABEL = Object.fromEntries(
+  SOURCE_STATUSES.map((s) => [s, SOURCE_STATUS_META[s].label]),
+) as Record<SourceStatus, string>;
 
-export const SOURCE_STATUS_LABEL: Record<SourceStatus, string> = {
-  idle: "Idle",
-  running: "Running",
-  error: "Error",
-};
-
-export const SOURCE_STATUS_VARIANT: Record<SourceStatus, BadgeVariant> = {
-  idle: "muted",
-  running: "info",
-  error: "destructive",
-};
-
-export const SOURCE_STATUS_OPTIONS = SOURCE_STATUSES.map((s) => ({
-  value: s,
-  label: SOURCE_STATUS_LABEL[s],
-  variant: SOURCE_STATUS_VARIANT[s],
-}));
+export const SOURCE_STATUS_VARIANT = Object.fromEntries(
+  SOURCE_STATUSES.map((s) => [s, SOURCE_STATUS_META[s].variant ?? "muted"]),
+) as Record<SourceStatus, BadgeVariant>;
 
 /**
  * The derived "is this source working?" vocabulary (`extractionStatus`), as

@@ -293,17 +293,20 @@ bar).
     - `fields/json/config.jsonField`
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
+    - `infra/entities.entityRef`
     - `infra/host/contention.ContentionSnapshotSchema`
     - `infra/runtime-profiler.SPAN_MEASURES`
     - `infra/runtime-profiler.SpanMeasure`
     - `infra/runtime-profiler.WaitBreakdown`
     - `network/live.liveCollection`
+    - `network/live.LiveRowsCollection`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `CallerRef`
     - `MeasureStat`
     - `SlowOp`
     - `SlowOpCaller`
+    - `SlowOpCallerListRow`
     - `SlowOpListRow`
     - `SlowOpMarker`
     - `SlowOpMeasures`
@@ -320,15 +323,16 @@ bar).
     - `slowOpCallerFields`
     - `slowOpCallers`
     - `SlowOpCallerSchema`
+    - `slowOpCallersEntityRef`
     - `slowOpConfig`
     - `slowOpDetailRoute`
     - `slowOpFields`
-    - `SlowOpListRowSchema`
     - `SlowOpMarkerSchema`
     - `SlowOpMeasuresSchema`
     - `SlowOpReportPayloadSchema`
     - `SlowOpSampleSchema`
     - `SlowOpSchema`
+    - `slowOpsEntityRef`
     - `slowOpsList`
     - `VARIANT_CAP`
     - `VariantBreakdownSchema`

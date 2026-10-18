@@ -4,6 +4,7 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -21,7 +22,7 @@ import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/co
 import {
   slowOpById,
   slowOpCallers,
-  type SlowOpCaller,
+  type SlowOpCallerListRow,
   type SlowOp,
   type SlowOpMeasures,
   type SlowOpSample,
@@ -174,27 +175,21 @@ function SlowOpBody({ op }: { op: SlowOp }): ReactElement {
   );
 }
 
-const callerFields: FieldDef<SlowOpCaller>[] = [
-  {
-    id: "callerKind",
-    label: "Kind",
-    type: "enum",
-    value: (r) => r.callerKind,
+// How the derived fields present here (the collection declares their labels,
+// types and filters). The op's own key columns only scope the window (stated as
+// data below), so they are filter-only here.
+const callerOverrides = fieldOverrides(slowOpCallers, {
+  operationKind: { visible: false },
+  operation: { visible: false },
+  callerKind: {
     cell: (r) => (
       <Badge variant="muted" mono>
         {r.callerKind}
       </Badge>
     ),
-    sortable: false,
-    filterable: true,
     width: "6rem",
   },
-  {
-    id: "callerLabel",
-    label: "Caller",
-    type: "text",
-    primary: true,
-    value: (r) => r.callerLabel,
+  callerLabel: {
     cell: (r) => (
       <Text
         as="span"
@@ -205,54 +200,25 @@ const callerFields: FieldDef<SlowOpCaller>[] = [
         {r.callerLabel}
       </Text>
     ),
-    sortable: false,
-    filterable: true,
     width: "minmax(0,1fr)",
   },
-  {
-    id: "count",
-    label: "Count",
-    type: "number",
-    value: (r) => r.count,
-    sortable: true,
-    filterable: false,
-    align: "end",
-    width: "4rem",
-  },
-  {
-    id: "totalMs",
-    label: "Total (ms)",
-    type: "number",
-    value: (r) => r.totalMs,
+  count: { align: "end", width: "4rem" },
+  totalMs: {
     cell: (r) => <span className="tabular-nums">{Math.round(r.totalMs)}</span>,
-    sortable: true,
-    filterable: false,
     align: "end",
     width: "5.5rem",
   },
-  {
-    id: "maxMs",
-    label: "Max (ms)",
-    type: "number",
-    value: (r) => r.maxMs,
+  maxMs: {
     cell: (r) => <span className="tabular-nums">{Math.round(r.maxMs)}</span>,
-    sortable: true,
-    filterable: false,
     align: "end",
     width: "5rem",
   },
-  {
-    id: "lastSeenAt",
-    label: "Last seen",
-    type: "date",
-    value: (r) => r.lastSeenAt,
+  lastSeenAt: {
     cell: (r) => <RelativeTime date={r.lastSeenAt} />,
-    sortable: true,
-    filterable: false,
     align: "end",
     width: "6rem",
   },
-];
+});
 
 // This op's callers: the `slow-ops.callers` window scoped to the op's key,
 // stated as data (never a filter the user's Filter control could widen).
@@ -268,8 +234,8 @@ function CallersView({
     [operationKind, operation],
   );
   return (
-    <DataView<SlowOpCaller>
-      fields={callerFields}
+    <DataView<SlowOpCallerListRow>
+      overrides={callerOverrides}
       source={source}
       storageKey={SLOW_OP_CALLERS}
       views={["table"]}

@@ -4,13 +4,14 @@ import {
   defaultNow,
   defaultRandom,
 } from "@plugins/infra/plugins/entities/server";
-import { claudeCliCallFields } from "../../core";
+import { claudeCliCallsEntityRef } from "../../core";
 
 // Durable recent-call log for one-shot `claude --print` invocations. The table
 // and the `ClaudeCliCall` wire schema both derive from the single
-// `claudeCliCallFields` record (core), so a column/schema drift is
-// unrepresentable. Trimmed to the most recent N rows after every insert.
-const claudeCliCalls = defineEntity("claude_cli_calls", claudeCliCallFields, {
+// `claudeCliCallFields` record (core, named by `claudeCliCallsEntityRef`), so a
+// column/schema drift is unrepresentable. Trimmed to the most recent N rows
+// after every insert.
+const claudeCliCalls = defineEntity(claudeCliCallsEntityRef, {
   primaryKey: "id",
   columns: {
     id: { default: defaultRandom() },

@@ -1,9 +1,12 @@
 import { z } from "zod";
 import {
+  declaredDefault,
   defineFieldType,
   defineFieldIdentity,
   pickMeta,
+  type ExactOptions,
   type FieldDef,
+  type FieldMarks,
   type FieldMeta,
 } from "@plugins/fields/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -41,13 +44,16 @@ export interface LocationFieldDef extends FieldDef<Location> {
  * A geographic point with an optional address. Wrap in `nullable(...)` for a
  * column that may hold no location yet; the default here is the 0,0 point.
  */
-export function locationField(
-  opts?: FieldMeta & { default?: Location },
-): LocationFieldDef {
+export function locationField<
+  const O extends FieldMeta & { default?: Location } = Record<never, never>,
+>(
+  opts?: ExactOptions<O, FieldMeta & { default?: Location }>,
+): LocationFieldDef & FieldMarks<O> {
   return Object.freeze({
     type: locationFieldType,
     schema: LocationSchema,
     defaultValue: opts?.default ?? { lat: 0, lng: 0 },
+    ...declaredDefault(opts),
     meta: pickMeta(opts),
-  });
+  }) as LocationFieldDef & FieldMarks<O>;
 }

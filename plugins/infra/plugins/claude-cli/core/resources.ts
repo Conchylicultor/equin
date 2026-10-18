@@ -22,11 +22,13 @@ import {
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 
 // One recorded `claude --print` call. The physical `claude_cli_calls` table
 // (server/internal/tables.ts) and the public `ClaudeCliCall` wire schema below
 // both derive from this single field record, so a column ↔ schema drift is
-// unrepresentable. Keyed by JS prop name IN COLUMN ORDER.
+// unrepresentable. Keyed by JS prop name IN COLUMN ORDER. The labels are the
+// call log's columns: the `claudeCliCalls` collection picks them.
 //
 // `model` is a plain `text` column in the DDL, decoded by the tolerant
 // `StoredModelSchema` — so the `ConversationModel` in its type is what really
@@ -41,22 +43,24 @@ import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 // never fires.
 export const claudeCliCallFields = {
   id: uuidField(),
-  createdAt: dateField(),
+  createdAt: dateField({ label: "Time" }),
   model: parsedTextField(StoredModelSchema, {
+    label: "Model",
     default: FALLBACK_MODEL,
   }),
-  sourceName: textField(),
+  sourceName: textField({ label: "Source" }),
   sourceContext: nullable(
     jsonField<Record<string, unknown>>({
       schema: z.record(z.unknown()),
       default: {},
     }),
   ),
-  prompt: textField(),
+  // Filter-only text columns in the log ("Prompt contains …", "Error is not empty").
+  prompt: textField({ label: "Prompt" }),
   system: nullable(textField()),
-  output: nullable(textField()),
-  error: nullable(textField()),
-  durationMs: intField(),
+  output: nullable(textField({ label: "Output" })),
+  error: nullable(textField({ label: "Error" })),
+  durationMs: intField({ label: "Duration" }),
   // The domain record this call was made FOR — a run id, a task id, whatever row
   // the caller is explaining. Free-form and NOT namespaced by `sourceName`, so it
   // must be a globally unique row id (a UUID); a per-caller counter would collide
@@ -64,6 +68,12 @@ export const claudeCliCallFields = {
   // record still reads in physical column order.
   correlationId: nullable(textField()),
 } satisfies FieldsRecord;
+
+/** The `claude_cli_calls` entity: the table is built from these fields (`server/internal/tables.ts`). */
+export const claudeCliCallsEntityRef = entityRef(
+  "claude_cli_calls",
+  claudeCliCallFields,
+);
 
 // No `model` re-widening: the field's own schema IS `StoredModelSchema` now, so
 // `fieldsToZodObject` already derives the tolerant arm — a malformed stored
@@ -108,6 +118,17 @@ export type ClaudeCliCallStatus = z.infer<typeof ClaudeCliCallStatusSchema>;
  * the row (`carry`).
  */
 export const claudeCliCalls = liveCollection("claude-cli-calls", {
+  from: claudeCliCallsEntityRef,
+  pick: [
+    "createdAt",
+    "sourceName",
+    "model",
+    "durationMs",
+    // Filter-only text columns ("Prompt contains …", "Error is not empty").
+    "prompt",
+    "output",
+    "error",
+  ],
   fields: {
     status: enumTextField(CLAUDE_CLI_CALL_STATUSES, {
       label: "Status",
@@ -116,26 +137,8 @@ export const claudeCliCalls = liveCollection("claude-cli-calls", {
         error: { label: "Failed", variant: "destructive" },
       },
     }),
-    createdAt: dateField({ label: "Time" }),
-    sourceName: textField({ label: "Source" }),
-    model: parsedTextField(StoredModelSchema, {
-      label: "Model",
-      default: FALLBACK_MODEL,
-    }),
-    durationMs: intField({ label: "Duration" }),
-    // Filter-only text columns ("Prompt contains …", "Error is not empty").
-    prompt: textField({ label: "Prompt" }),
-    output: nullable(textField({ label: "Output" })),
-    error: nullable(textField({ label: "Error" })),
   },
-  carry: {
-    fields: {
-      id: claudeCliCallFields.id,
-      system: claudeCliCallFields.system,
-      sourceContext: claudeCliCallFields.sourceContext,
-      correlationId: claudeCliCallFields.correlationId,
-    },
-  },
+  carry: { pick: ["id", "system", "sourceContext", "correlationId"] },
   id: "id",
   sortable: ["createdAt", "durationMs", "sourceName", "model"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },

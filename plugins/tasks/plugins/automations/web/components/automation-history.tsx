@@ -7,6 +7,7 @@ import {
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import type {
@@ -41,19 +42,21 @@ const HISTORY_VIEW = defineDataView("tasks.automations.history");
 // filings past it are said to exist (below the list), never silently dropped.
 const HISTORY_LIMIT = 200;
 
-/** One filing, joined to its task — `null` for a task deleted since (its
- * origin row goes with it, so this lasts only until the delete is pushed). */
-interface HistoryRow {
-  origin: AutomationTaskRow;
-  task: TaskListItem | null;
-}
+const NO_ROWS: AutomationTaskRow[] = [];
 
-const NO_ROWS: HistoryRow[] = [];
+const NO_TASKS: ReadonlyMap<string, TaskListItem> = new Map();
 
 const STATUS_OPTIONS = TaskStatusSchema.options.map((status) => ({
   value: status,
   label: STATUS_META[status].label,
 }));
+
+// The rows are the origin collection's (`automationTasks`: one per task the
+// automation filed or started); its one listed column, the automation itself,
+// is the scope this list is already narrowed by — a dimension of nothing here.
+const HISTORY_OVERRIDES = fieldOverrides(automationTasks, {
+  automationId: { visible: false },
+});
 
 // The heading IS the list's header, in the same eyebrow the settings panel's
 // sections wear above it: one automation's tasks are few, so a toolbar band of
@@ -110,30 +113,39 @@ export function AutomationHistory({
       foldResource(result, {
         loading: () => NO_ROWS,
         error: () => NO_ROWS,
-        ready: (d) =>
-          d.filings.map((origin) => ({
-            origin,
-            task: d.tasks.get(origin.taskId) ?? null,
-          })),
+        ready: (d) => d.filings,
       }),
     [result],
   );
+  // A task deleted since its filing is absent from the map: its origin row goes
+  // with it, so that lasts only until the delete is pushed.
+  const taskById = useMemo(
+    () =>
+      foldResource(tasks, {
+        loading: () => NO_TASKS,
+        error: () => NO_TASKS,
+        ready: (byId) => byId,
+      }),
+    [tasks],
+  );
   const truncated = filings.status === "ready" && filings.canGrow;
 
-  const fields = useMemo<FieldDef<HistoryRow>[]>(
+  // The fields the history computes itself, from the task each filing made;
+  // the filing's own are the collection's.
+  const extraFields = useMemo<FieldDef<AutomationTaskRow>[]>(
     () => [
       {
         id: "title",
         label: "Task",
         type: "text",
         primary: true,
-        value: (r) => r.task?.title ?? "",
+        value: (r) => taskById.get(r.taskId)?.title ?? "",
       },
       {
         id: "status",
         label: "Status",
         type: "enum",
-        value: (r) => r.task?.status ?? null,
+        value: (r) => taskById.get(r.taskId)?.status ?? null,
         options: STATUS_OPTIONS,
         filterable: true,
         groupable: true,
@@ -143,46 +155,52 @@ export function AutomationHistory({
         id: "filedAt",
         label: "Filed or started",
         type: "date",
-        value: (r) => new Date(r.origin.filedAt),
+        value: (r) => new Date(r.filedAt),
         sortable: true,
         visible: false,
       },
     ],
-    [],
+    [taskById],
+  );
+
+  const viewOptions = useMemo(
+    () => ({
+      list: {
+        leading: (r: AutomationTaskRow) => {
+          const task = taskById.get(r.taskId);
+          return task === undefined ? null : (
+            <StatusIcon status={task.status} />
+          );
+        },
+        renderRow: (r: AutomationTaskRow) => (
+          <HistoryRowBody row={r} task={taskById.get(r.taskId) ?? null} />
+        ),
+        detail: (r: AutomationTaskRow) => (
+          <TaskDetail taskId={r.taskId} automationId={automationId} />
+        ),
+      },
+    }),
+    [taskById, automationId],
   );
 
   return (
     <Stack gap="xs">
-      <DataView<HistoryRow>
+      <DataView<AutomationTaskRow>
         rows={rows}
-        fields={fields}
-        rowKey={(r) => r.origin.taskId}
+        collection={automationTasks}
+        overrides={HISTORY_OVERRIDES}
+        extraFields={extraFields}
+        rowKey={(r) => r.taskId}
         views={["list"]}
         storageKey={HISTORY_VIEW}
         readiness={result}
         toolbar={HISTORY_TOOLBAR}
         rowActivation={(r) =>
-          openPane.to(
-            taskDetailPane,
-            { taskId: r.origin.taskId },
-            { mode: "push" },
-          )
+          openPane.to(taskDetailPane, { taskId: r.taskId }, { mode: "push" })
         }
-        searchAccessor={(r) => r.task?.title ?? ""}
+        searchAccessor={(r) => taskById.get(r.taskId)?.title ?? ""}
         searchPlaceholder="Search its tasks…"
-        viewOptions={{
-          list: {
-            leading: (r: HistoryRow) =>
-              r.task === null ? null : <StatusIcon status={r.task.status} />,
-            renderRow: (r: HistoryRow) => <HistoryRowBody row={r} />,
-            detail: (r: HistoryRow) => (
-              <TaskDetail
-                taskId={r.origin.taskId}
-                automationId={automationId}
-              />
-            ),
-          },
-        }}
+        viewOptions={viewOptions}
         emptyState={<>It has not filed or started a task yet.</>}
       />
       {truncated ? (
@@ -194,21 +212,27 @@ export function AutomationHistory({
   );
 }
 
-function HistoryRowBody({ row }: { row: HistoryRow }): ReactElement {
+function HistoryRowBody({
+  row,
+  task,
+}: {
+  row: AutomationTaskRow;
+  task: TaskListItem | null;
+}): ReactElement {
   return (
     <>
       <Fill>
         <Line>
-          <Text variant="label" tone={row.task === null ? "muted" : "default"}>
-            {row.task?.title ?? "Deleted task"}
+          <Text variant="label" tone={task === null ? "muted" : "default"}>
+            {task?.title ?? "Deleted task"}
           </Text>
         </Line>
       </Fill>
       <Stack direction="row" gap="sm" align="center" className={rigidClass()}>
-        {row.task !== null ? <StatusSignal status={row.task.status} /> : null}
+        {task !== null ? <StatusSignal status={task.status} /> : null}
         <Text variant="caption" tone="muted">
-          {row.origin.role === "launched" ? "Started " : null}
-          <RelativeTime date={new Date(row.origin.filedAt)} />
+          {row.role === "launched" ? "Started " : null}
+          <RelativeTime date={new Date(row.filedAt)} />
         </Text>
       </Stack>
     </>

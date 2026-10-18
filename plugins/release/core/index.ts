@@ -48,4 +48,4 @@ export {
   releasePreviews,
   releaseRunLogs,
 } from "./resources";
-export type { ReleaseRun, Preview } from "./resources";
+export type { ReleaseRun, ReleaseHistoryRow, Preview } from "./resources";

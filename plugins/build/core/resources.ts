@@ -1,12 +1,17 @@
 import { z } from "zod";
 import { fieldsToZodObject } from "@plugins/fields/core";
-import { buildRunFields } from "@plugins/build/plugins/run-ledger/core";
+import {
+  buildRunFields,
+  buildRunsEntityRef,
+} from "@plugins/build/plugins/run-ledger/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 
 // One build run as the client sees it: the ledger's fields (run-ledger's
 // `buildRunFields`) but `namespace`, which the server scopes the collection by.
-// `ledger.pid` is internal and no field at all. All carried: the build
-// surfaces read rows by id / newest-first, none filters.
+// `ledger.pid` is internal and no field at all. `BuildRunSchema` is the wire
+// row's client type; the collection below derives the same fields from the
+// entity (`from` / `carry.pick`), all carried: the build surfaces read rows by
+// id / newest-first, none filters.
 const { id, trigger, commitHash, targets, startedAt, finishedAt, exitCode } =
   buildRunFields;
 const BUILD_RUN_FIELDS = {
@@ -49,7 +54,18 @@ export type BuildRun = z.infer<typeof BuildRunSchema>;
  * its 50 rows fresh.
  */
 export const buildHistory = liveCollection("build.history", {
-  carry: { fields: BUILD_RUN_FIELDS },
+  from: buildRunsEntityRef,
+  carry: {
+    pick: [
+      "id",
+      "trigger",
+      "commitHash",
+      "targets",
+      "startedAt",
+      "finishedAt",
+      "exitCode",
+    ],
+  },
   id: "id",
   sortable: ["startedAt"],
   default: { orderBy: [["startedAt", "desc"]], limit: 50 },

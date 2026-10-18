@@ -3,8 +3,8 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
-  type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -40,30 +40,20 @@ const ms = (v: number): string => `${Math.round(v)}`;
 
 const boltIcon = symbol("bolt");
 
-// Static: every sortable / filterable field's id IS its collection column.
-const fields: FieldDef<SlowOpListRow>[] = [
-  {
-    id: "operationKind",
-    label: "Kind",
-    type: "enum",
-    value: (r) => r.operationKind,
+// How the derived fields present here (the collection declares their labels,
+// types and filters; every sortable / filterable field's id IS its column).
+const overrides = fieldOverrides(slowOpsList, {
+  operationKind: {
     cell: (r) => (
       <Badge variant="muted" mono>
         {r.operationKind}
       </Badge>
     ),
-    sortable: false,
-    filterable: true,
     width: "7rem",
   },
-  {
-    id: "operation",
-    label: "Operation",
-    type: "text",
-    primary: true,
-    value: (r) => r.operation,
-    // The operation, plus a deep link to the newest sample's trace when the
-    // engine admitted one (`lastTraceId`, derived server-side).
+  // The operation, plus a deep link to the newest sample's trace when the
+  // engine admitted one (`lastTraceId`, derived server-side).
+  operation: {
     cell: (r) => (
       <Stack
         direction="row"
@@ -91,76 +81,35 @@ const fields: FieldDef<SlowOpListRow>[] = [
         )}
       </Stack>
     ),
-    sortable: false,
-    filterable: true,
     width: "minmax(0,1fr)",
   },
-  {
-    id: "count",
-    label: "Count",
-    type: "number",
-    value: (r) => r.count,
-    sortable: true,
-    filterable: true,
-    align: "end",
-    width: "4rem",
-  },
-  {
-    id: "totalMs",
-    label: "Total (ms)",
-    type: "number",
-    value: (r) => r.totalMs,
+  count: { align: "end", width: "4rem" },
+  totalMs: {
     cell: (r) => <span className="tabular-nums">{ms(r.totalMs)}</span>,
-    sortable: true,
-    filterable: true,
     align: "end",
     width: "5.5rem",
   },
-  {
-    id: "waitMs",
-    label: "Wait (ms)",
-    type: "number",
-    value: (r) => r.waitMs,
+  waitMs: {
     cell: (r) => <span className="tabular-nums">{ms(r.waitMs)}</span>,
-    sortable: true,
-    filterable: false,
     align: "end",
     width: "5.5rem",
   },
-  {
-    id: "maxMs",
-    label: "Max (ms)",
-    type: "number",
-    value: (r) => r.maxMs,
+  maxMs: {
     cell: (r) => <span className="tabular-nums">{ms(r.maxMs)}</span>,
-    sortable: true,
-    filterable: false,
     align: "end",
     width: "5rem",
   },
-  {
-    id: "lastMs",
-    label: "Last (ms)",
-    type: "number",
-    value: (r) => r.lastMs,
+  lastMs: {
     cell: (r) => <span className="tabular-nums">{ms(r.lastMs)}</span>,
-    sortable: true,
-    filterable: false,
     align: "end",
     width: "5rem",
   },
-  {
-    id: "lastSeenAt",
-    label: "Last seen",
-    type: "date",
-    value: (r) => r.lastSeenAt,
+  lastSeenAt: {
     cell: (r) => <RelativeTime date={r.lastSeenAt} />,
-    sortable: true,
-    filterable: true,
     align: "end",
     width: "7rem",
   },
-];
+});
 
 // The Aggregates tab: every slow op of this worktree, ranked by total time and
 // paged from the server. Opening a row shows its callers, waits, variants,
@@ -170,7 +119,7 @@ export function SlowOpsView(): ReactElement {
   const selectedId = slowOpDetailPane.useRouteEntry()?.params.id;
   return (
     <DataView<SlowOpListRow>
-      fields={fields}
+      overrides={overrides}
       source={opsSource}
       storageKey={SLOW_OPS_LOCAL}
       views={["table", "list"]}

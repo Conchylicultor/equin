@@ -4,7 +4,7 @@ import {
   defaultNow,
   defaultRandom,
 } from "@plugins/infra/plugins/entities/server";
-import { eventEmissionFields } from "../../core";
+import { eventEmissionsEntityRef } from "../../core";
 
 // Capped ring-buffer log of every emit() call. Written from dispatch() in
 // event.ts, including zero-match emits — that case is the primary debugging
@@ -13,9 +13,10 @@ import { eventEmissionFields } from "../../core";
 // so the table stays bounded without a background job.
 //
 // The table + the `EmissionRow` wire schema both derive from the single
-// `eventEmissionFields` record (core), so a column/schema drift is
-// unrepresentable and `loadEmissions` returns `db.select()` rows verbatim.
-const eventEmissions = defineEntity("event_emissions", eventEmissionFields, {
+// `eventEmissionFields` record (core, named by `eventEmissionsEntityRef`), so a
+// column/schema drift is unrepresentable and `loadEmissions` returns
+// `db.select()` rows verbatim.
+const eventEmissions = defineEntity(eventEmissionsEntityRef, {
   primaryKey: "id",
   columns: {
     id: { default: defaultRandom() },

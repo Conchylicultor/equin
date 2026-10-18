@@ -1,3 +1,10 @@
+import type { FieldOptionMeta } from "@plugins/fields/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import {
+  enumTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
+import { rowKind } from "@plugins/network/plugins/live/core";
 import type { LaunchDecision } from "@plugins/tasks/plugins/automations/core";
 import {
   triageScore,
@@ -27,14 +34,38 @@ export const LAUNCH_LANES = [
 ] as const;
 export type LaunchLane = (typeof LAUNCH_LANES)[number];
 
-export const LAUNCH_LANE_LABELS: Record<LaunchLane, string> = {
-  approved: "Approved",
-  proposed: "Proposed by triage",
-  "needs-call": "Needs your call",
-  obsolete: "Looks obsolete",
-  triaging: "Triaging",
-  excluded: "Excluded",
+/** How each lane presents (the `lane` field's options). */
+export const LAUNCH_LANE_META: {
+  readonly [L in LaunchLane]: FieldOptionMeta;
+} = {
+  approved: { label: "Approved" },
+  proposed: { label: "Proposed by triage" },
+  "needs-call": { label: "Needs your call" },
+  obsolete: { label: "Looks obsolete" },
+  triaging: { label: "Triaging" },
+  excluded: { label: "Excluded" },
 };
+
+/**
+ * A launch-list row as every list of it shows it: the sidequest's title, where
+ * it stands, its launch order. The rows are joined in the browser from several
+ * reads (tasks, triage, the person's decisions), so they are no database data:
+ * a row kind, a collection with no server, declared once — the list derives
+ * its fields from it. The row also carries the task, triage and decision
+ * themselves (`LaunchListRow`), which no list shows as a field.
+ */
+export const launchListRowKind = rowKind("sidequest-autopilot.launch-list", {
+  fields: {
+    title: textField({ label: "Sidequest", primary: true }),
+    lane: enumTextField(LAUNCH_LANES, {
+      label: "Where it stands",
+      options: LAUNCH_LANE_META,
+    }),
+    rank: intField({ label: "Launch order" }),
+  },
+  carry: { fields: { id: textField() } },
+  id: "id",
+});
 
 /** A ready sidequest, as the launch list reads it. */
 export interface LaunchListTask {
@@ -45,6 +76,10 @@ export interface LaunchListTask {
 }
 
 export interface LaunchListRow {
+  /** The task's id — the row's. */
+  id: string;
+  /** The task's title: the kind's primary field. */
+  title: string;
   task: LaunchListTask;
   triage: SidequestTriage | null;
   decision: LaunchDecision | null;
@@ -104,6 +139,8 @@ export function launchListRows(
     const staleness =
       read === null ? null : triageStaleness(read, task, now, staleAfterDays);
     return {
+      id: task.id,
+      title: task.title,
       task,
       triage: read,
       decision,

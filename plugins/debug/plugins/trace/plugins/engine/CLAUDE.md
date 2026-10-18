@@ -276,7 +276,9 @@ expandable JSON.
     - `fields/json/config.jsonField`
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
+    - `network/live.LiveRowsCollection`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `RingEvent`
@@ -291,9 +293,9 @@ expandable JSON.
     - `traceDetailRoute`
     - `traceEvents`
     - `traceFields`
-    - `TraceListItemSchema`
     - `traceListRoute`
     - `TraceSchema`
+    - `tracesEntityRef`
     - `TraceSnapshotSchema`
     - `TraceTriggerSchema`
 - Cross-plugin:

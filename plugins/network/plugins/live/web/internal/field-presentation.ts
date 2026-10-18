@@ -59,6 +59,12 @@ export type LiveFieldOptionsRead =
 export interface LiveFieldOption extends FieldOptionMeta {
   /** The value's canonical spelling (`fields/core`'s `optionKey`; `"null"` labels the no-value). */
   readonly value: string;
+  /**
+   * The `value` of this option's parent option, making the set a forest (the
+   * place-tag tree): the nested tags operators (`has-nested`) reach an
+   * option's descendants through it. Absent → a root.
+   */
+  readonly parent?: string;
 }
 
 /** How one field presents in a list, beyond what its declaration says. */

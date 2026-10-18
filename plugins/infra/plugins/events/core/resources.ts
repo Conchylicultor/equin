@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import {
+  liveCollection,
+  liveValue,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
 import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
 import {
@@ -14,21 +19,28 @@ import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 // schema both derive from this single field record (via defineEntity on the
 // server), so a column/schema drift is unrepresentable and the loader returns
 // `db.select()` rows verbatim (and `eventEmissions` binds them by name).
-// `emittedAt` is a coerced Date on the wire.
+// `emittedAt` is a coerced Date on the wire. The labels are the emission log's
+// columns: the `eventEmissions` collection picks them.
 export const eventEmissionFields = {
   id: uuidField(),
-  eventName: textField(),
+  eventName: textField({ label: "Event", primary: true }),
   payload: jsonField<Record<string, unknown>>({
     schema: z.record(z.unknown()),
     default: {},
   }),
-  matchedCount: intField(),
+  matchedCount: intField({ label: "Matched" }),
   matchedTriggerIds: jsonField<string[]>({
     schema: z.array(z.string()),
     default: [],
   }),
-  emittedAt: dateField(),
+  emittedAt: dateField({ label: "Time" }),
 } satisfies FieldsRecord;
+
+/** The `event_emissions` entity: the table is built from these fields (`server/internal/tables.ts`). */
+export const eventEmissionsEntityRef = entityRef(
+  "event_emissions",
+  eventEmissionFields,
+);
 
 export const EmissionRowSchema = fieldsToZodObject(eventEmissionFields);
 export type EmissionRow = z.infer<typeof EmissionRowSchema>;
@@ -79,12 +91,9 @@ export const EMISSION_MATCHES = ["matched", "unmatched"] as const;
 export const EmissionMatchSchema = z.enum(EMISSION_MATCHES);
 export type EmissionMatch = z.infer<typeof EmissionMatchSchema>;
 
-// The emission fields a list shows, in its order (`match` filter-only), and the
-// ones its rows carry beside them.
-const EMISSION_LISTED = {
-  emittedAt: dateField({ label: "Time" }),
-  eventName: textField({ label: "Event", primary: true }),
-  matchedCount: intField({ label: "Matched" }),
+// The one field the emission log computes: whether the emission reached any
+// trigger. Bound by `serveCollection`'s `columns` (`server/internal/resources.ts`).
+const EMISSION_OWN_FIELDS = {
   match: enumTextField(EMISSION_MATCHES, {
     label: "Match",
     options: {
@@ -93,18 +102,6 @@ const EMISSION_LISTED = {
     },
   }),
 };
-const EMISSION_CARRIED = {
-  id: eventEmissionFields.id,
-  payload: eventEmissionFields.payload,
-  matchedTriggerIds: eventEmissionFields.matchedTriggerIds,
-};
-
-/** A row of the {@link eventEmissions} collection: the emission, plus its derived `match`. */
-export const EmissionListRowSchema = fieldsToZodObject({
-  ...EMISSION_CARRIED,
-  ...EMISSION_LISTED,
-});
-export type EmissionListRow = z.infer<typeof EmissionListRowSchema>;
 
 /**
  * The emit() log — Debug → Queue's Events tab — as a live collection: a bounded
@@ -117,13 +114,19 @@ export type EmissionListRow = z.infer<typeof EmissionListRowSchema>;
  * subscribed windows through the change feed.
  */
 export const eventEmissions = liveCollection("event-emissions", {
-  fields: EMISSION_LISTED,
-  carry: { fields: EMISSION_CARRIED },
+  from: eventEmissionsEntityRef,
+  pick: ["emittedAt", "eventName", "matchedCount"],
+  fields: EMISSION_OWN_FIELDS,
+  carry: { pick: ["id", "payload", "matchedTriggerIds"] },
   id: "id",
   sortable: ["emittedAt", "eventName", "matchedCount"],
   default: { orderBy: [["emittedAt", "desc"]], limit: 200 },
   maxLimit: EMISSIONS_CAP,
 });
+
+/** A row of the {@link eventEmissions} collection: the emission, plus its derived `match`. */
+export type EmissionListRow =
+  typeof eventEmissions extends LiveRowsCollection<infer R> ? R : never;
 
 // Every trigger binding across every registered event, newest first — the
 // Debug → Queue pane's Triggers tab. A value, not a collection: the rows are a

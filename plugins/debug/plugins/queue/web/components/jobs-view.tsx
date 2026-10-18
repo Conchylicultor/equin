@@ -1,24 +1,22 @@
-import { useMemo } from "react";
 import {
   foldResource,
   matchResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
-import { HOLD_CLASSES, HOLD_SPECS } from "@plugins/infra/plugins/jobs/core";
+import { HOLD_SPECS } from "@plugins/infra/plugins/jobs/core";
 import {
   DataView,
   defineDataView,
   defineItemActions,
+  fieldOverrides,
 } from "@plugins/primitives/plugins/data-view/web";
-import type {
-  FieldDef,
-  ItemActionProps,
-} from "@plugins/primitives/plugins/data-view/web";
+import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { jobListRow } from "../../core";
 import { useQueueActions } from "../internal/actions";
 import { firstLine, formatDuration } from "../internal/format";
 import {
@@ -26,11 +24,7 @@ import {
   type JobListRow,
   type JobRowsData,
 } from "../internal/job-rows";
-import {
-  PROBLEM_OPTIONS,
-  STATUS_META,
-  STATUS_OPTIONS,
-} from "../internal/status";
+import { STATUS_META } from "../internal/status";
 import {
   DurationText,
   HoldBadge,
@@ -101,11 +95,11 @@ export function JobsView({
     error: () => NO_ROWS,
     ready: (d) => d.rows,
   });
-  const fields = useMemo(() => buildFields(rows), [rows]);
   return (
     <DataView<JobListRow>
       storageKey={JOBS_VIEW}
-      fields={fields}
+      collection={jobListRow}
+      overrides={overrides}
       views={["table", "list"]}
       defaultView="table"
       rows={rows}
@@ -164,158 +158,81 @@ function whenPrefix(r: JobListRow): string {
   return r.status === "running" ? "Started" : "Run at";
 }
 
-// The job-name options are read off the rows (a closed set per render): the
-// queue's own registry is server-side.
-function buildFields(rows: readonly JobListRow[]): FieldDef<JobListRow>[] {
-  const jobNames = [...new Set(rows.map((r) => r.jobName))].sort();
-  return [
-    {
-      id: "status",
-      label: "Status",
-      type: "enum",
-      value: (r) => r.status,
-      options: STATUS_OPTIONS,
-      cell: (r) => (
-        <Inline gap="xs">
-          <StatusLabel status={r.status} />
-          {r.problem !== null && <ProblemBadge problem={r.problem} />}
-        </Inline>
-      ),
-      sortable: true,
-      filterable: true,
-      width: "max-content",
-    },
-    {
-      // Filter-only: the problem badges already show in the status cell.
-      id: "problem",
-      label: "Problem",
-      type: "enum",
-      value: (r) => r.problem,
-      options: PROBLEM_OPTIONS,
-      sortable: false,
-      filterable: true,
-      visible: false,
-    },
-    {
-      id: "jobName",
-      label: "Job",
-      type: "enum",
-      value: (r) => r.jobName,
-      options: jobNames.map((name) => ({ value: name, label: name })),
-      cell: (r) => <JobBadge name={r.jobName} />,
-      primary: true,
-      sortable: true,
-      filterable: true,
-      width: "minmax(8rem,16rem)",
-    },
-    {
-      id: "hold",
-      label: "Hold",
-      type: "enum",
-      value: (r) => r.hold,
-      options: HOLD_CLASSES.map((hold) => ({
-        value: hold,
-        label: HOLD_SPECS[hold].label,
-      })),
-      cell: (r) => (r.hold === null ? null : <HoldBadge hold={r.hold} />),
-      sortable: true,
-      filterable: true,
-      width: "max-content",
-    },
-    {
-      id: "attempt",
-      label: "Try",
-      type: "int",
-      value: (r) => r.attempt,
-      cell: (r) => (
+// How the derived fields present here (the `jobListRow` kind declares their
+// labels and types, the presentation their options). The row is annotated, not
+// inferred: a Jobs row carries more than the kind's declared fields.
+const overrides = fieldOverrides(jobListRow, {
+  status: {
+    cell: (r: JobListRow) => (
+      <Inline gap="xs">
+        <StatusLabel status={r.status} />
+        {r.problem !== null && <ProblemBadge problem={r.problem} />}
+      </Inline>
+    ),
+    width: "max-content",
+  },
+  // Filter-only: the problem badges already show in the status cell.
+  problem: { visible: false },
+  jobName: {
+    cell: (r: JobListRow) => <JobBadge name={r.jobName} />,
+    width: "minmax(8rem,16rem)",
+  },
+  hold: {
+    cell: (r: JobListRow) =>
+      r.hold === null ? null : <HoldBadge hold={r.hold} />,
+    width: "max-content",
+  },
+  attempt: {
+    cell: (r: JobListRow) => (
+      <Text tone="muted" className="tabular-nums">
+        {attemptText(r)}
+      </Text>
+    ),
+    align: "end",
+    width: "3rem",
+  },
+  when: {
+    cell: (r: JobListRow) => (
+      <WhenText
+        date={r.when}
+        prefix={whenPrefix(r)}
+        due={r.kind === "live" && r.status === "pending"}
+      />
+    ),
+    align: "end",
+    width: "5.5rem",
+  },
+  waitMs: {
+    cell: (r: JobListRow) =>
+      r.waitMs === null ? null : (
         <Text tone="muted" className="tabular-nums">
-          {attemptText(r)}
+          {formatDuration(r.waitMs)}
         </Text>
       ),
-      sortable: true,
-      filterable: true,
-      align: "end",
-      width: "3rem",
-    },
-    {
-      id: "when",
-      label: "When",
-      type: "date",
-      value: (r) => r.when,
-      cell: (r) => (
-        <WhenText
-          date={r.when}
-          prefix={whenPrefix(r)}
-          due={r.kind === "live" && r.status === "pending"}
+    align: "end",
+    width: "5.5rem",
+  },
+  durationMs: {
+    cell: (r: JobListRow) =>
+      r.runningSince !== null ? (
+        <RunningDuration
+          since={r.runningSince}
+          overCeilingAt={r.hold === null ? null : HOLD_SPECS[r.hold].ceilingMs}
         />
+      ) : r.durationMs === null ? null : (
+        <DurationText ms={r.durationMs} hold={r.hold} />
       ),
-      sortable: true,
-      filterable: true,
-      align: "end",
-      width: "5.5rem",
-    },
-    {
-      id: "waitMs",
-      label: "Waited",
-      type: "int",
-      value: (r) => r.waitMs,
-      cell: (r) =>
-        r.waitMs === null ? null : (
-          <Text tone="muted" className="tabular-nums">
-            {formatDuration(r.waitMs)}
-          </Text>
-        ),
-      sortable: true,
-      filterable: true,
-      align: "end",
-      width: "5.5rem",
-    },
-    {
-      id: "durationMs",
-      label: "Duration",
-      type: "int",
-      value: (r) => r.durationMs,
-      cell: (r) =>
-        r.runningSince !== null ? (
-          <RunningDuration
-            since={r.runningSince}
-            overCeilingAt={
-              r.hold === null ? null : HOLD_SPECS[r.hold].ceilingMs
-            }
-          />
-        ) : r.durationMs === null ? null : (
-          <DurationText ms={r.durationMs} hold={r.hold} />
-        ),
-      sortable: true,
-      filterable: true,
-      align: "end",
-      width: "5.5rem",
-    },
-    {
-      id: "error",
-      label: "Error",
-      type: "text",
-      value: (r) => r.error,
-      cell: (r) =>
-        r.error === null ? null : (
-          <Text variant="code" tone="destructive" title={r.error}>
-            {firstLine(r.error)}
-          </Text>
-        ),
-      sortable: false,
-      filterable: true,
-      width: "minmax(0,1fr)",
-    },
-    {
-      // The default order: in-flight rows first (oldest first), then finished
-      // ones newest first. Sort-only.
-      id: "order",
-      label: "In flight first",
-      type: "int",
-      value: (r) => r.order,
-      sortable: true,
-      filterable: false,
-      visible: false,
-    },
-  ];
-}
+    align: "end",
+    width: "5.5rem",
+  },
+  error: {
+    cell: (r: JobListRow) =>
+      r.error === null ? null : (
+        <Text variant="code" tone="destructive" title={r.error}>
+          {firstLine(r.error)}
+        </Text>
+      ),
+    width: "minmax(0,1fr)",
+  },
+  order: { visible: false },
+});

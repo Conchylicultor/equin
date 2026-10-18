@@ -214,6 +214,23 @@ const TUPLES: Array<{ key: string; params: ResourceParams }> = COMPOSITIONS.map(
 
 const views = new Map<string, { view: ClientView; from: number }>();
 
+/**
+ * A row's fields compare as a set: a fresh load folds `$columns` after the
+ * server-minted `$key`, a client view applies them in frame order.
+ */
+function sortedKeys(row: unknown): unknown {
+  return row !== null && typeof row === "object" && !Array.isArray(row)
+    ? Object.fromEntries(
+        Object.entries(row).sort(([a], [b]) => (a < b ? -1 : 1)),
+      )
+    : row;
+}
+
+/** A tuple's value as compared: each row's fields as a set (`sortedKeys`). */
+function comparable(value: unknown): string {
+  return JSON.stringify(Array.isArray(value) ? value.map(sortedKeys) : value);
+}
+
 function viewOf(key: string, params: ResourceParams): ClientView {
   const entry = views.get(tupleKey(key, params))!;
   entry.view.applyAll(
@@ -406,8 +423,8 @@ describe("release.history at limit 1 — the newest run, scoped differential ora
         expected.set(i, await truth.get(t.key)!(t.params));
       }
       const same = (i: number) =>
-        JSON.stringify(viewOf(TUPLES[i]!.key, TUPLES[i]!.params).value) ===
-        JSON.stringify(expected.get(i));
+        comparable(viewOf(TUPLES[i]!.key, TUPLES[i]!.params).value) ===
+        comparable(expected.get(i));
       const converged = () => TUPLES.every((_, i) => same(i));
       await until(converged, () => {
         const off = TUPLES.findIndex((_, i) => !same(i));

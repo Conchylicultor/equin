@@ -20,12 +20,15 @@ import { parse as parseJsonc, type ParseError } from "jsonc-parser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { FilterOperatorSet } from "@plugins/primitives/plugins/data-view/web";
-import { resolveLiveFields } from "@plugins/primitives/plugins/data-view/web/testing";
+import {
+  deriveFields,
+  resolveLiveFields,
+} from "@plugins/primitives/plugins/data-view/web/testing";
 import { boolGroupings } from "@plugins/fields/plugins/bool/plugins/data-view-group/core";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
-import { notificationsRoute } from "../../core";
-import type { Notification } from "../../shared/schema";
+import { notificationIdKind, notificationsRoute } from "../../core";
+import { notifications, type Notification } from "../../shared/resources";
 
 /** An in-app link, built from a route as every `linkTo` is. */
 const IN_APP_LINK = notificationsRoute.link(debugApp, {});
@@ -67,7 +70,6 @@ import {
   DismissNotificationAction,
   NotificationsView,
   OpenNotificationAction,
-  fields,
   notificationsSource,
 } from "../components/notifications-view";
 
@@ -77,8 +79,11 @@ beforeEach(() => {
   stub.mutations = [];
 });
 
+/** The fields the DataView derives from the collection (no presentations registered). */
+const { fields } = deriveFields(notifications, true, []);
+
 const note = (over: Partial<Notification> = {}): Notification => ({
-  id: "notif-1",
+  id: notificationIdKind.key("notif-1"),
   type: "build",
   title: "Build failed",
   description: "",
@@ -89,6 +94,7 @@ const note = (over: Partial<Notification> = {}): Notification => ({
   linkTo: null,
   metadata: null,
   count: 1,
+  $columns: {},
   lastSeenAt: new Date("2026-10-13T10:00:00Z"),
   createdAt: new Date("2026-10-13T10:00:00Z"),
   ...over,
@@ -108,7 +114,7 @@ const resolveOperatorSet = (type: string): FilterOperatorSet | undefined =>
 
 const plan = () =>
   resolveLiveFields<Notification>(
-    fields,
+    fields as never,
     notificationsSource,
     resolveOperatorSet,
     "shell.notifications",
@@ -138,7 +144,7 @@ describe("the field schema over the notifications source", () => {
     for (const id of ["type", "variant"]) {
       const f = fields.find((x) => x.id === id)!;
       expect(f.options).toBeUndefined();
-      expect(f.filterable).toBe(true);
+      expect(f.filterable).not.toBe(false);
     }
   });
 });
@@ -205,7 +211,7 @@ describe("item actions", () => {
   it("Dismiss posts the row's dismiss", () => {
     render(
       <DismissNotificationAction
-        row={note({ id: "notif-7" })}
+        row={note({ id: notificationIdKind.key("notif-7") })}
         hasChildren={false}
       />,
     );

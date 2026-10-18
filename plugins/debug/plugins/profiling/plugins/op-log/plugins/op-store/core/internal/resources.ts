@@ -1,5 +1,40 @@
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { OP_ROW_CARRIED, OP_ROW_LISTED } from "./schemas";
+import { opLogOpsEntityRef } from "./schemas";
+
+// Both collections are the `op_log_ops` entity's rows, declared by FIELDS: a
+// listed field's label and type are the entity's (`OP_ROW_LISTED`), and every
+// other key rides the row (`OP_ROW_CARRIED`), in no list and never filterable.
+// No base exposures: the rows are the op-log reducer's state (`OpRow`), and
+// nothing extends the entity.
+const OP_ROW_LISTED_PICK = [
+  "kind",
+  "opSlug",
+  "requestedAt",
+  "completedAt",
+  "outcome",
+] as const;
+const OP_ROW_CARRIED_PICK = [
+  "opId",
+  "branch",
+  "conversationId",
+  "lane",
+  "mode",
+  "buildId",
+  "pid",
+  "grantedAt",
+  "interrupted",
+  "closedBy",
+  "waits",
+  "openWait",
+  "cycle",
+  "closedWaitMs",
+  "holdMs",
+  "totalMs",
+  "steps",
+  "lastSeq",
+  "sleeps",
+  "sleepStamp",
+] as const;
 
 /**
  * Every op still in flight (`closed_by IS NULL`), oldest first — the set the
@@ -20,7 +55,9 @@ import { OP_ROW_CARRIED, OP_ROW_LISTED } from "./schemas";
  * never parses these rows.
  */
 export const opsInFlight = liveCollection("op-store.in-flight.all", {
-  carry: { fields: { ...OP_ROW_CARRIED, ...OP_ROW_LISTED } },
+  from: opLogOpsEntityRef,
+  baseExposures: false,
+  carry: { pick: [...OP_ROW_LISTED_PICK, ...OP_ROW_CARRIED_PICK] },
   id: "opId",
   all: {
     orderBy: [["requestedAt", "asc"]],
@@ -36,8 +73,10 @@ export const opsInFlight = liveCollection("op-store.in-flight.all", {
  * is stable); one op is `useLiveRow(opsHistory, opId)`.
  */
 export const opsHistory = liveCollection("op-store.history", {
-  fields: OP_ROW_LISTED,
-  carry: { fields: OP_ROW_CARRIED },
+  from: opLogOpsEntityRef,
+  pick: OP_ROW_LISTED_PICK,
+  baseExposures: false,
+  carry: { pick: OP_ROW_CARRIED_PICK },
   id: "opId",
   sortable: ["requestedAt", "completedAt"],
   default: { orderBy: [["requestedAt", "desc"]], limit: 500 },

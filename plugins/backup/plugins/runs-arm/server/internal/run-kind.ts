@@ -9,12 +9,7 @@ import { _backupRuns } from "@plugins/backup/server";
 import { BackupSourceReportSchema } from "@plugins/backup/core";
 import { runsServed } from "@plugins/runs/server";
 import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";
-import {
-  BACKUP_RUN_STATUSES,
-  BACKUP_STATUS_OUTCOME,
-  backupRunArm,
-  type BackupRunStatus,
-} from "../../core";
+import { BACKUP_STATUS_OUTCOME, backupRunArm } from "../../core";
 
 /**
  * `backup_runs.status` → the shared outcome vocabulary, folded out of the map
@@ -25,17 +20,6 @@ import {
 function outcomeExpr(status: unknown): SQL {
   const branches = Object.entries(BACKUP_STATUS_OUTCOME).map(
     ([from, to]) => sql`when ${from}::text then ${to}::text`,
-  );
-  return sql`(case ${status} ${sql.join(branches, sql` `)} end)`;
-}
-
-/**
- * `backup_runs.status`, read only as one of the statuses `core/` declares:
- * the same fold as {@link outcomeExpr}, each known status mapped to itself.
- */
-function statusExpr(status: unknown): SQL {
-  const branches = BACKUP_RUN_STATUSES.map(
-    (s) => sql`when ${s}::text then ${s}::text`,
   );
   return sql`(case ${status} ${sql.join(branches, sql` `)} end)`;
 }
@@ -96,18 +80,8 @@ export const backupRunKind = runsServed.arm(backupRunArm, {
     message: null,
   }),
   extra: (j) => ({
-    // The column is plain `text`; the field is the arm's status vocabulary —
-    // so it is the same fold as `outcome` (each known status to itself), and a
-    // status nobody declared projects NULL, which the decoder refuses, rather
-    // than a string the field's type says cannot exist.
-    status: expr(statusExpr(j.base.status), {
-      decoder: parsed(
-        z.enum(BACKUP_RUN_STATUSES as [BackupRunStatus, ...BackupRunStatus[]]),
-        "runs.backup.status",
-      ),
-      sqlType: "text",
-      notNull: true,
-    }),
+    // `status` is picked from the entity and bound by name; `archiveSize`
+    // keeps its persisted id over the `archiveSizeBytes` column.
     archiveSize: j.base.archiveSizeBytes,
     sourceCount: expr(sourceCountExpr(j.base.manifest), {
       decoder: Number,

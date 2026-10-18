@@ -1,21 +1,22 @@
 import {
   type AnyPgColumn,
-  boolean,
   check,
   index,
-  pgTable,
-  text,
-  timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { parsedJson } from "@plugins/database/plugins/sql-column/server";
-import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
-import { rankText } from "@plugins/primitives/plugins/rank/core";
-// Deep relative import on purpose — see `parse-block-data.ts`: drizzle-kit loads
-// this file SYNCHRONOUSLY, and the core barrel would pull the lexical/yjs
-// bridges in with it.
-import { asBlockData, StoredBlockDataSchema } from "../../core/schemas";
+import { nullable } from "@plugins/fields/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { rankField } from "@plugins/fields/plugins/rank/plugins/config/core";
+import {
+  defineEntity,
+  defaultNow,
+} from "@plugins/infra/plugins/entities/server";
+import {
+  asBlockData,
+  pagesEntityRef,
+} from "@plugins/page/plugins/block-entity/core";
 
 // One uniform tree of blocks. A "page" is just a block of `type="page"` whose
 // payload (`{ title, icon }`) lives in `data` like every other block type —
@@ -35,56 +36,72 @@ import { asBlockData, StoredBlockDataSchema } from "../../core/schemas";
 // presentation too), a `pageId` recompute or a `docRank` re-mint (functions of
 // a placement that already counted), or the trash ledger correlation. No write site stamps it;
 // the trigger RAISEs on one that tries.
-export const _blocks = deriveUpdatedAt(
-  pgTable(
-    "page_blocks",
-    {
-      id: text("id").primaryKey(),
-      pageId: text("page_id").references((): AnyPgColumn => _blocks.id, {
-        onDelete: "cascade",
-      }),
-      parentId: text("parent_id").references((): AnyPgColumn => _blocks.id, {
-        onDelete: "cascade",
-      }),
-      type: text("type").notNull(),
-      // Branded so every write must come from `parseBlockData()` (the sole write-side
-      // `BlockData` minting site) — an unvalidated `data` is a compile error, not a
-      // convention. Reads are unaffected (`BlockData` is assignable to the `unknown`
-      // readers accept).
-      //
-      // The decoder cannot re-run the per-type parse (it is handed one value, never
-      // its row, so it cannot reach `type`); it states the half that holds for every
-      // block type — the payload is a JSON object — and re-establishes the brand by
-      // provenance. `z.record`, so no block type's keys are stripped. The `jsonb` DDL
-      // is byte-identical, default included, so this generates no migration.
-      data: parsedJson("data", StoredBlockDataSchema)
-        .notNull()
-        .default(asBlockData({})),
-      rank: rankText("rank").notNull(),
-      // The page row's place in its SIDEBAR group — the live page rows sharing
-      // its `page_id`, which span several `(parent_id, rank)` spaces, so `rank`
-      // cannot order them. WRITER-DERIVED, never authored: `withPageForest`
-      // re-mints it for every partition a structural write touched
-      // (`doc-rank.ts`), so ordering by it equals document order. NULL on
-      // content rows; never in a request body.
-      docRank: rankText("doc_rank"),
-      expanded: boolean("expanded").notNull().default(true),
-      // NULL = live. A soft delete (trash) sets `deletedAt` + `trashEntryId`
-      // instead of DELETEing the row, so the self-referential FK cascades never
-      // fire — descendants, `page_block_docs` CRDT text, ext side-tables, and
-      // version history all survive until purge. `trashEntryId` correlates the
-      // flagged subtree to its `trash_entries` ledger row for exact-restore. The
-      // two are ONE flag spelled twice — see the CHECK below.
-      deletedAt: timestamp("deleted_at", { withTimezone: true }),
-      trashEntryId: text("trash_entry_id"),
-      createdAt: timestamp("created_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
-      updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
+//
+// Built from `pagesEntityRef` (page/block-entity), whose record states every
+// column a list may read; the three below are server-only. `data` decodes
+// through the record's `StoredBlockDataSchema`: its type is the branded
+// `BlockData`, so every write must come from `parseBlockData()` (the sole
+// write-side minting site) — an unvalidated `data` is a compile error, not a
+// convention. Reads are unaffected (`BlockData` is assignable to the `unknown`
+// readers accept).
+const blocksEntity = defineEntity(
+  pagesEntityRef,
+  {
+    // The page row's place in its SIDEBAR group — the live page rows sharing
+    // its `page_id`, which span several `(parent_id, rank)` spaces, so `rank`
+    // cannot order them. WRITER-DERIVED, never authored: `withPageForest`
+    // re-mints it for every partition a structural write touched
+    // (`doc-rank.ts`), so ordering by it equals document order. NULL on
+    // content rows; never in a request body. `pagesTree` carries it as its own
+    // (non-null) wire field.
+    docRank: nullable(rankField()),
+    // NULL = live. A soft delete (trash) sets `deletedAt` + `trashEntryId`
+    // instead of DELETEing the row, so the self-referential FK cascades never
+    // fire — descendants, `page_block_docs` CRDT text, ext side-tables, and
+    // version history all survive until purge. `trashEntryId` correlates the
+    // flagged subtree to its `trash_entries` ledger row for exact-restore. The
+    // two are ONE flag spelled twice — see the CHECK below.
+    deletedAt: nullable(dateField()),
+    trashEntryId: nullable(textField()),
+  },
+  {
+    primaryKey: "id",
+    columns: {
+      pageId: {
+        references: {
+          column: (): AnyPgColumn => blocksEntity.table.id,
+          onDelete: "cascade",
+        },
+      },
+      parentId: {
+        references: {
+          column: (): AnyPgColumn => blocksEntity.table.id,
+          onDelete: "cascade",
+        },
+      },
+      data: { default: asBlockData({}) },
+      expanded: { default: true },
+      createdAt: { default: defaultNow() },
+      updatedAt: { default: defaultNow() },
     },
-    (t) => [
+    updatedAt: {
+      touchedBy: {
+        parentId: true,
+        type: true,
+        data: { exceptKeys: ["icon"] },
+        rank: true,
+        deletedAt: true,
+        // A re-mint follows a placement that already counted (or none at all, for
+        // a sibling the reconcile merely re-spaced) — it must not reorder Recent.
+        docRank: false,
+        id: false,
+        pageId: false,
+        expanded: false,
+        trashEntryId: false,
+        createdAt: false,
+      },
+    },
+    indexes: (t) => [
       index("page_blocks_page_parent_rank_idx").on(
         t.pageId,
         t.parentId,
@@ -132,22 +149,6 @@ export const _blocks = deriveUpdatedAt(
         sql`(deleted_at IS NULL) = (trash_entry_id IS NULL)`,
       ),
     ],
-  ),
-  {
-    touchedBy: {
-      parentId: true,
-      type: true,
-      data: { exceptKeys: ["icon"] },
-      rank: true,
-      deletedAt: true,
-      // A re-mint follows a placement that already counted (or none at all, for
-      // a sibling the reconcile merely re-spaced) — it must not reorder Recent.
-      docRank: false,
-      id: false,
-      pageId: false,
-      expanded: false,
-      trashEntryId: false,
-      createdAt: false,
-    },
   },
 );
+export const _blocks = blocksEntity.table;

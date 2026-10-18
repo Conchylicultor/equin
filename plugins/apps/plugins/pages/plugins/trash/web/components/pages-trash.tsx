@@ -12,15 +12,15 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   liveDataSource,
-  type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   trashEntries,
   purgeTrash,
-  type TrashEntry,
+  type TrashEntryRow,
 } from "@plugins/infra/plugins/trash/core";
 // The pages trash source id — owned by the plugin that registers the source, so
 // the server chokepoint and this dialog can never drift apart.
@@ -43,31 +43,24 @@ const trashSource = liveDataSource(trashEntries, {
   searchable: ["label"],
 }).scoped({ where: { sourceId: PAGES_TRASH_SOURCE } });
 
-// `label` is the entry's name (the page title when it was trashed; its value
-// stays the column's, an empty one only drawn as "Untitled"); `deletedAt` the
-// one sortable column, trailing as a relative time.
-const fields: FieldDef<TrashEntry>[] = [
-  {
-    id: "label",
+// How the derived fields present here. `label` is the entry's name (the page
+// title when it was trashed; its value stays the column's, an empty one only
+// drawn as "Untitled") and the list's only searched column, never offered as a
+// filter; `deletedAt` the one sortable column, trailing as a relative time. The
+// scope column is not the list's to show.
+const overrides = fieldOverrides(trashEntries, {
+  sourceId: { visible: false, filterable: false },
+  label: {
     label: "Page",
-    type: "text",
-    value: (e) => e.label,
     cell: (e) => e.label || "Untitled",
     primary: true,
-    sortable: false,
     filterable: false,
   },
-  {
-    id: "deletedAt",
-    label: "Deleted",
-    type: "date",
-    value: (e) => e.deletedAt,
+  deletedAt: {
     cell: (e) => <RelativeTime date={e.deletedAt} />,
     align: "end",
-    sortable: true,
-    filterable: false,
   },
-];
+});
 
 /**
  * Sidebar "Trash" trigger: a Row that opens a dialog listing the pages that have
@@ -80,7 +73,7 @@ const fields: FieldDef<TrashEntry>[] = [
 export function PagesTrash() {
   const [open, setOpen] = useState(false);
   // Entry pending a purge confirmation (null = no confirmation open).
-  const [confirmEntry, setConfirmEntry] = useState<TrashEntry | null>(null);
+  const [confirmEntry, setConfirmEntry] = useState<TrashEntryRow | null>(null);
   const purge = useEndpointMutation(purgeTrash);
 
   const onConfirmPurge = () => {
@@ -111,10 +104,10 @@ export function PagesTrash() {
               scroll; this box is its one scroller. */}
           <Scroll axis="y" className="max-h-96">
             <PurgeTrashEntryContext.Provider value={setConfirmEntry}>
-              <DataView<TrashEntry>
+              <DataView<TrashEntryRow>
                 storageKey={TRASH_VIEW}
                 source={trashSource}
-                fields={fields}
+                overrides={overrides}
                 views={["list"]}
                 density="compact"
                 itemActions={TrashItemActions}

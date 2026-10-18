@@ -10,9 +10,12 @@
   - Uses: `fields.Fields`
 - Core:
   - Uses:
+    - `fields.declaredDefault`
     - `fields.defineFieldIdentity`
     - `fields.defineFieldType`
+    - `fields.ExactOptions`
     - `fields.FieldDef`
+    - `fields.FieldMarks`
     - `fields.FieldMeta`
     - `fields.pickMeta`
     - `ui/icons.symbol`

@@ -17,7 +17,7 @@
 import { describe, expect, test } from "bun:test";
 import { jsonb, pgTable } from "drizzle-orm/pg-core";
 import { SqlColumnError } from "@plugins/database/plugins/sql-column/server/testing";
-import { asBlockData } from "../../core/schemas";
+import { asBlockData } from "@plugins/page/plugins/block-entity/core";
 import { _blocks } from "./tables";
 
 test("the column is a plain `jsonb`, so adopting the decoder needs no migration", () => {

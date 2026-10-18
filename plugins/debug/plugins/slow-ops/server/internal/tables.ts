@@ -4,7 +4,7 @@ import {
   defaultNow,
   defaultRandom,
 } from "@plugins/infra/plugins/entities/server";
-import { slowOpCallerFields, slowOpFields } from "../../core";
+import { slowOpCallersEntityRef, slowOpsEntityRef } from "../../core";
 
 // Durable, deduped slow-operation aggregate: the persisted analogue of the
 // runtime-profiler's in-memory `Aggregate`, gated to spans that exceeded their
@@ -15,8 +15,9 @@ import { slowOpCallerFields, slowOpFields } from "../../core";
 // in `slow_op_callers` below.
 //
 // The table + the `SlowOp` wire schema both derive from the single
-// `slowOpFields` record (core), so a column/schema drift is unrepresentable.
-const slowOps = defineEntity("slow_ops", slowOpFields, {
+// `slowOpFields` record (core, named by `slowOpsEntityRef`), so a column/schema
+// drift is unrepresentable.
+const slowOps = defineEntity(slowOpsEntityRef, {
   primaryKey: "id",
   columns: {
     id: { default: defaultRandom() },
@@ -54,7 +55,7 @@ export const _slowOps = slowOps.table;
 // columns. No foreign key: a cascade would delete around the change producer;
 // the 30-day retention sweep on `last_seen_at` removes a caller no later than
 // its op (every caller occurrence also bumps the op's `last_seen_at`).
-const slowOpCallers = defineEntity("slow_op_callers", slowOpCallerFields, {
+const slowOpCallers = defineEntity(slowOpCallersEntityRef, {
   primaryKey: "id",
   columns: {
     id: { default: defaultRandom() },

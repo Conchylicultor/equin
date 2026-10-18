@@ -5,6 +5,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   DataView,
   defineDataView,
+  fieldOverrides,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -45,22 +46,10 @@ export function EventsView(): ReactElement {
   });
   const incidents = useMemo(() => groupIncidents(rows), [rows]);
 
-  const fields = useMemo<FieldDef<TraceListItem>[]>(() => {
-    const kinds = [...new Set(rows.map((r) => r.triggerKind))].sort();
-    return [
-      {
-        id: "createdAt",
-        label: "When",
-        type: "date",
-        value: (r) => r.createdAt,
-        cell: (r) => (
-          <span className="text-muted-foreground">
-            <RelativeTime date={r.createdAt} />
-          </span>
-        ),
-        sortable: true,
-        width: "7rem",
-      },
+  // What the list computes itself, from the loaded window: the incident a
+  // trace belongs to, and how far over its budget it ran.
+  const extraFields = useMemo<FieldDef<TraceListItem>[]>(
+    () => [
       {
         id: "incident",
         label: "Incident",
@@ -78,53 +67,6 @@ export function EventsView(): ReactElement {
         width: "4rem",
       },
       {
-        id: "triggerKind",
-        label: "Trigger",
-        type: "enum",
-        value: (r) => r.triggerKind,
-        options: kinds.map((k) => ({ value: k, label: k })),
-        cell: (r) => (
-          <Badge variant={triggerVariant(r.triggerKind)} mono>
-            {r.triggerKind}
-          </Badge>
-        ),
-        sortable: true,
-        filterable: true,
-        width: "9rem",
-      },
-      {
-        id: "triggerLabel",
-        label: "Operation",
-        type: "text",
-        primary: true,
-        value: (r) => r.triggerLabel,
-        cell: (r) => (
-          <Text
-            as="span"
-            variant="caption"
-            className="truncate font-mono"
-            title={r.triggerLabel}
-          >
-            {r.triggerLabel}
-          </Text>
-        ),
-        width: "minmax(0,1fr)",
-      },
-      {
-        id: "durationMs",
-        label: "Duration",
-        type: "number",
-        value: (r) => Math.round(r.durationMs),
-        cell: (r) => (
-          <span className="font-mono tabular-nums">
-            {Math.round(r.durationMs)} ms
-          </span>
-        ),
-        align: "end",
-        sortable: true,
-        width: "6rem",
-      },
-      {
         id: "overBudget",
         label: "Over budget",
         type: "number",
@@ -139,13 +81,16 @@ export function EventsView(): ReactElement {
         sortable: true,
         width: "6rem",
       },
-    ];
-  }, [rows, incidents]);
+    ],
+    [incidents],
+  );
 
   return (
     <DataView<TraceListItem>
       rows={rows}
-      fields={fields}
+      collection={traceEvents}
+      overrides={overrides}
+      extraFields={extraFields}
       rowKey={(r) => r.id}
       storageKey={TRACE_EVENTS}
       views={["table", "list"]}
@@ -159,3 +104,46 @@ export function EventsView(): ReactElement {
     />
   );
 }
+
+// How the derived fields present here (the collection declares their labels,
+// types and filters; the Trigger options are the presentation's).
+const overrides = fieldOverrides(traceEvents, {
+  createdAt: {
+    cell: (r) => (
+      <span className="text-muted-foreground">
+        <RelativeTime date={r.createdAt} />
+      </span>
+    ),
+    width: "7rem",
+  },
+  triggerKind: {
+    cell: (r) => (
+      <Badge variant={triggerVariant(r.triggerKind)} mono>
+        {r.triggerKind}
+      </Badge>
+    ),
+    width: "9rem",
+  },
+  triggerLabel: {
+    cell: (r) => (
+      <Text
+        as="span"
+        variant="caption"
+        className="truncate font-mono"
+        title={r.triggerLabel}
+      >
+        {r.triggerLabel}
+      </Text>
+    ),
+    width: "minmax(0,1fr)",
+  },
+  durationMs: {
+    cell: (r) => (
+      <span className="font-mono tabular-nums">
+        {Math.round(r.durationMs)} ms
+      </span>
+    ),
+    align: "end",
+    width: "6rem",
+  },
+});

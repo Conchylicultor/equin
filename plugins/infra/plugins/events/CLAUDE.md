@@ -138,7 +138,9 @@ insert and the ring's inline prune reach it through the change feed. The
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
+    - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
   - Exports (types):
     - `EmissionListRow`
@@ -150,13 +152,13 @@ insert and the ring's inline prune reach it through the change feed. The
     - `TriggersPayload`
   - Exports (values):
     - `deleteTriggerEndpoint`
-    - `EmissionListRowSchema`
     - `EmissionMatchSchema`
     - `EmissionRowSchema`
     - `EMISSIONS_CAP`
     - `EmissionsPayloadSchema`
     - `eventEmissionFields`
     - `eventEmissions`
+    - `eventEmissionsEntityRef`
     - `eventTriggers`
     - `listEmissions`
     - `listTriggers`

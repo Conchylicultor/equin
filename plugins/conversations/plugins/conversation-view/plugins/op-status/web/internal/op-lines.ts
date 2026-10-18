@@ -8,6 +8,7 @@ import {
   opRowToFoldState,
   type OpRow,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
+import type { OpRowPhase } from "../../core";
 import type { SleepNow } from "@plugins/infra/plugins/host/plugins/machine-sleep/core";
 import { OP_KINDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
 import { formatElapsed } from "@plugins/primitives/plugins/relative-time/web";
@@ -92,7 +93,7 @@ export function stateLine(row: OpRow, now: number, sleepNow: SleepNow): string {
  * for (the duress valve) and says so in words. `Record<WaitKind, …>` keeps it
  * complete: a new wait kind is a type error until it is classified.
  */
-export type RowPhase = "working" | "queued" | "held";
+export type RowPhase = OpRowPhase;
 
 const WAIT_PHASE: Record<WaitKind, RowPhase> = {
   "push-mutex": "queued",

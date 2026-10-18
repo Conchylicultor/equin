@@ -340,6 +340,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
 - Core:
   - Uses:
     - `build/run-ledger.buildRunFields`
+    - `build/run-ledger.buildRunsEntityRef`
     - `fields.fieldsToZodObject`
     - `infra/endpoints.defineEndpoint`
     - `infra/namespace.MAIN_COMPOSITION_ID`

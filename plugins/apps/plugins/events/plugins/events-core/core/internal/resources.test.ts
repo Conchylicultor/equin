@@ -8,7 +8,7 @@
  */
 
 import { expect, test } from "bun:test";
-import { eventSourceRuns } from "./resources";
+import { eventSourceRuns, eventSources } from "./resources";
 
 test("the run ledger derives its field ids from the run entity", () => {
   expect(Object.keys(eventSourceRuns.fields)).toEqual([
@@ -31,4 +31,25 @@ test("the run ledger derives its field ids from the run entity", () => {
   });
   expect(eventSourceRuns.filterable.sourceId.domain).toBe("text");
   expect(eventSourceRuns.columnScope).toBe("events.source-runs");
+});
+
+test("the sources list derives its field ids from the source entity", () => {
+  expect(Object.keys(eventSources.fields)).toEqual([
+    "name",
+    "type",
+    "refresh",
+    "status",
+    "enabled",
+    "lastRunAt",
+  ]);
+  expect(eventSources.fields.name).toMatchObject({
+    label: "Name",
+    primary: true,
+  });
+  expect(eventSources.fields.refresh.options).toMatchObject({
+    weekly: { label: "Weekly" },
+  });
+  expect(eventSources.fields.status.options).toMatchObject({
+    error: { label: "Error", variant: "destructive" },
+  });
 });

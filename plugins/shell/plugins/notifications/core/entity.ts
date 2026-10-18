@@ -28,11 +28,15 @@ export const NOTIFICATION_VARIANTS = [
 export const notificationFields = {
   id: idKindField(notificationIdKind),
   type: textField({ label: "Type" }),
-  title: textField({ label: "Title" }),
+  title: textField({ label: "Title", primary: true }),
   description: textField({ label: "Description" }),
   variant: enumTextField(NOTIFICATION_VARIANTS, { label: "Variant" }),
   dismissed: boolField({ label: "Dismissed" }),
-  read: boolField({ label: "Read" }),
+  // The pane's sections read Unread first, not the bool's Yes / No.
+  read: boolField({
+    label: "Read",
+    optionMeta: { false: { label: "Unread" }, true: { label: "Read" } },
+  }),
   muted: boolField({ label: "Muted" }),
   linkTo: nullable(textField({ label: "Link" })),
   /**
@@ -57,7 +61,8 @@ export const notificationFields = {
    * the "last seen 2m ago" display and the quiet-notification TTL sweep.
    */
   lastSeenAt: dateField({ label: "Last seen" }),
-  createdAt: dateField({ label: "Created" }),
+  // The pane sorts by it, newest first, but never filters by it.
+  createdAt: dateField({ label: "Surfaced", filterable: false }),
 } satisfies FieldsRecord;
 
 /** The `notifications` entity — every notification the bell has raised. */

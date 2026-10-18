@@ -1,10 +1,12 @@
-import { liveCollection } from "@plugins/network/plugins/live/core";
 import {
-  SLOW_OP_CALLER_CARRIED,
-  SLOW_OP_CALLER_LISTED,
+  liveCollection,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
+import {
   SLOW_OP_LIST_CARRIED,
-  SLOW_OP_LIST_LISTED,
-  slowOpFields,
+  SLOW_OP_LIST_OWN,
+  slowOpCallersEntityRef,
+  slowOpsEntityRef,
 } from "./schema";
 
 /**
@@ -15,13 +17,30 @@ import {
  * a new slow occurrence reaches an open list without a per-write cascade.
  */
 export const slowOpsList = liveCollection("slow-ops.ops", {
-  fields: SLOW_OP_LIST_LISTED,
-  carry: { fields: SLOW_OP_LIST_CARRIED },
+  from: slowOpsEntityRef,
+  pick: [
+    "operationKind",
+    "operation",
+    "count",
+    "totalMs",
+    "maxMs",
+    "lastMs",
+    "lastSeenAt",
+  ],
+  fields: SLOW_OP_LIST_OWN,
+  carry: {
+    pick: ["id", "worktree", "thresholdMs", "firstSeenAt"],
+    fields: SLOW_OP_LIST_CARRIED,
+  },
   id: "id",
   sortable: ["totalMs", "count", "maxMs", "lastMs", "waitMs", "lastSeenAt"],
   default: { orderBy: [["totalMs", "desc"]], limit: 100 },
   maxLimit: 500,
 });
+
+/** One op as the ranked list reads it: the counters only, plus the derived `waitMs` and `lastTraceId`. */
+export type SlowOpListRow =
+  typeof slowOpsList extends LiveRowsCollection<infer R> ? R : never;
 
 /**
  * One op with its JSON lists (waits, variants, measures, recent samples), read
@@ -30,7 +49,26 @@ export const slowOpsList = liveCollection("slow-ops.ops", {
  * 30-day sweep removed).
  */
 export const slowOpById = liveCollection("slow-ops.op", {
-  carry: { fields: slowOpFields },
+  from: slowOpsEntityRef,
+  carry: {
+    pick: [
+      "id",
+      "worktree",
+      "operationKind",
+      "operation",
+      "count",
+      "totalMs",
+      "maxMs",
+      "lastMs",
+      "thresholdMs",
+      "waits",
+      "variants",
+      "measures",
+      "recentSamples",
+      "firstSeenAt",
+      "lastSeenAt",
+    ],
+  },
   id: "id",
 });
 
@@ -40,10 +78,24 @@ export const slowOpById = liveCollection("slow-ops.op", {
  * by total time and paged. Every caller keeps its own row: nothing is folded.
  */
 export const slowOpCallers = liveCollection("slow-ops.callers", {
-  fields: SLOW_OP_CALLER_LISTED,
-  carry: { fields: SLOW_OP_CALLER_CARRIED },
+  from: slowOpCallersEntityRef,
+  pick: [
+    "operationKind",
+    "operation",
+    "callerKind",
+    "callerLabel",
+    "count",
+    "totalMs",
+    "maxMs",
+    "lastSeenAt",
+  ],
+  carry: { pick: ["id", "worktree", "firstSeenAt"] },
   id: "id",
   sortable: ["totalMs", "count", "maxMs", "lastSeenAt"],
   default: { orderBy: [["totalMs", "desc"]], limit: 50 },
   maxLimit: 500,
 });
+
+/** One caller of a slow op, as the callers list reads it. */
+export type SlowOpCallerListRow =
+  typeof slowOpCallers extends LiveRowsCollection<infer R> ? R : never;

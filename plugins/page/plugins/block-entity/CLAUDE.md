@@ -4,12 +4,10 @@
 
 ## Plugin reference
 
-- Description: The `page_blocks` entity by reference (pagesEntityRef: its name and wire fields) and the Rank wire field. A leaf, so a browser-safe declaration a server schema file also loads — an extension shape's `exposes.parent` (starred, agent-origin, tags) — names the entity without reaching the editor's core barrel, whose Lexical / Yjs modules cannot load synchronously.
+- Description: The `page_blocks` entity by reference (pagesEntityRef: its name and stored fields, the table built from it by page/editor) and the BlockData brand its `data` column decodes to. A leaf, so a browser-safe declaration a server schema file also loads — an extension shape's `exposes.parent` (starred, agent-origin, tags) — names the entity without reaching the editor's core barrel, whose Lexical / Yjs modules cannot load synchronously.
 - Core:
   - Uses:
-    - `fields.FieldDef`
     - `fields.FieldsRecord`
-    - `fields.FieldType`
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
@@ -17,12 +15,12 @@
     - `fields/rank/config.rankField`
     - `fields/text/config.textField`
     - `infra/entities.entityRef`
-    - `primitives/rank.Rank`
-    - `primitives/rank.RankSchema`
+  - Exports (types): `BlockData`
   - Exports (values):
+    - `asBlockData`
     - `blockFields`
     - `pagesEntityRef`
-    - `rankWireField`
+    - `StoredBlockDataSchema`
 - Cross-plugin:
   - Imported by:
     - `page/editor`

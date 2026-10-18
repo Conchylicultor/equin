@@ -4,14 +4,15 @@ import {
   defaultNow,
   defaultRandom,
 } from "@plugins/infra/plugins/entities/server";
-import { savedBootTraceFields } from "../../core";
+import { bootTracesEntityRef } from "../../core";
 
 // One persisted boot-trace snapshot per row, written only on an explicit "Copy
 // permalink" click. The table + the `SavedBootTrace` wire schema both derive
-// from the single `savedBootTraceFields` record (core), so a column/schema drift
+// from the single `savedBootTraceFields` record (core, named by
+// `bootTracesEntityRef`), so a column/schema drift
 // is unrepresentable. The createdAt index serves both the list ordering (newest
 // first) and the 30-day cleanup sweep's range delete.
-const savedBootTraces = defineEntity("boot_traces", savedBootTraceFields, {
+const savedBootTraces = defineEntity(bootTracesEntityRef, {
   primaryKey: "id",
   columns: {
     id:        { default: defaultRandom() },

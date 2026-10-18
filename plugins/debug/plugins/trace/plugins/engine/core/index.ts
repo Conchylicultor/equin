@@ -5,9 +5,9 @@ export type {
   TripContext,
   RingEvent,
 } from "./types";
-export { traceFields, TraceSchema } from "./fields";
+export { traceFields, tracesEntityRef, TraceSchema } from "./fields";
 export type { Trace } from "./fields";
 export { traceListRoute, traceDetailRoute } from "./routes";
 export { traceConfig } from "./config";
-export { TraceListItemSchema, traceEvents, traceById } from "./resources";
+export { traceEvents, traceById } from "./resources";
 export type { TraceListItem } from "./resources";

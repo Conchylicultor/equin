@@ -4,7 +4,7 @@ import {
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
 import {
-  eventSourceFields,
+  eventSourcesEntityRef,
   eventsEntityRef,
   eventSourceRunsEntityRef,
   eventSourceRunEventFields,
@@ -23,7 +23,7 @@ import {
 // leading `_` so drizzle-kit's `schema*.ts` glob discovers it while the barrel
 // exposes only the handle.
 
-const eventSources = defineEntity("event_sources", eventSourceFields, {
+const eventSources = defineEntity(eventSourcesEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). Only the user's configuration counts; the run bookkeeping the

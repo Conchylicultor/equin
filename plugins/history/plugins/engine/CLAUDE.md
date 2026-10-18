@@ -87,10 +87,12 @@ through the change feed — the restore mutation invalidates nothing. The plain
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
+    - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
   - Exports (types):
     - `Version`
     - `VersionId`
+    - `VersionRow`
     - `VersionWithSnapshot`
   - Exports (values):
     - `entityVersionsEntityRef`

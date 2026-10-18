@@ -7,5 +7,6 @@ export type { TrashEntry, TrashOutcome } from "./schemas";
 export { listTrash, restoreTrash, purgeTrash } from "./endpoints";
 
 export { trashEntries } from "./resources";
+export type { TrashEntryRow } from "./resources";
 
 export { trashEntryFields, trashEntriesEntityRef } from "./entity";

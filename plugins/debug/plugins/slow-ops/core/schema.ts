@@ -16,6 +16,7 @@ import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 
 // Who issued an operation (the immediate enclosing request/loader span), before
 // any per-occurrence counts are merged in — the identity the recorder folds
@@ -87,15 +88,17 @@ export type SlowOpSample = z.infer<typeof SlowOpSampleSchema>;
 // One deduped slow-operation aggregate (the durable, restart-surviving analogue
 // of the profiler's in-memory `Aggregate` + `byParent`, gated to
 // threshold-exceeding spans). Keyed by (operationKind, operation, worktree).
+// The labels (and `filterable: false`) are the Slow Ops list's columns: the
+// `slowOpsList` collection picks them.
 export const slowOpFields = {
   id: uuidField(),
   worktree: textField(),
-  operationKind: textField(),
-  operation: textField(),
-  count: intField(),
-  totalMs: floatField(),
-  maxMs: floatField(),
-  lastMs: floatField(),
+  operationKind: textField({ label: "Kind" }),
+  operation: textField({ label: "Operation", primary: true }),
+  count: intField({ label: "Count" }),
+  totalMs: floatField({ label: "Total (ms)" }),
+  maxMs: floatField({ label: "Max (ms)", filterable: false }),
+  lastMs: floatField({ label: "Last (ms)", filterable: false }),
   thresholdMs: floatField(),
   waits: jsonField<WaitBreakdown>({ schema: WaitBreakdownSchema, default: {} }),
   variants: jsonField<VariantBreakdown[]>({
@@ -111,8 +114,11 @@ export const slowOpFields = {
     default: [],
   }),
   firstSeenAt: dateField(),
-  lastSeenAt: dateField(),
+  lastSeenAt: dateField({ label: "Last seen" }),
 } satisfies FieldsRecord;
+
+/** The `slow_ops` entity: the table is built from these fields (`server/internal/tables.ts`). */
+export const slowOpsEntityRef = entityRef("slow_ops", slowOpFields);
 
 // The full row — what the table stores, and what the detail pane reads
 // (`slow-ops.op`). Who issued the op is not on it: callers are their own paged
@@ -120,69 +126,44 @@ export const slowOpFields = {
 export const SlowOpSchema = fieldsToZodObject(slowOpFields);
 export type SlowOp = z.infer<typeof SlowOpSchema>;
 
-// One op as the ranked list reads it (`slow-ops.ops`): the counters only — no
-// JSON list, so a 100-row window is a few KB. `waitMs` (the summed `waits`)
-// and `lastTraceId` (the newest sample's trace) are derived server-side. The
-// listed fields are the ones the list filters by (labelled); the rest ride the
-// row, in no list.
-export const SLOW_OP_LIST_LISTED = {
-  operationKind: textField({ label: "Kind" }),
-  operation: textField({ label: "Operation" }),
-  count: intField({ label: "Count" }),
-  totalMs: floatField({ label: "Total" }),
-  lastSeenAt: dateField({ label: "Last seen" }),
+// What the ranked list (`slow-ops.ops`) computes beyond the op's counters — no
+// JSON list rides it, so a 100-row window is a few KB. `waitMs` (the summed
+// `waits`) is derived server-side and listed after the picked columns;
+// `lastTraceId` (the newest sample's trace) rides the row, in no list.
+export const SLOW_OP_LIST_OWN = {
+  waitMs: floatField({ label: "Wait (ms)", filterable: false }),
 };
 export const SLOW_OP_LIST_CARRIED = {
-  id: slowOpFields.id,
-  worktree: slowOpFields.worktree,
-  maxMs: slowOpFields.maxMs,
-  lastMs: slowOpFields.lastMs,
-  thresholdMs: slowOpFields.thresholdMs,
-  firstSeenAt: slowOpFields.firstSeenAt,
-  waitMs: floatField(),
   lastTraceId: nullable(textField()),
 };
-export const SlowOpListRowSchema = fieldsToZodObject({
-  ...SLOW_OP_LIST_CARRIED,
-  ...SLOW_OP_LIST_LISTED,
-});
-export type SlowOpListRow = z.infer<typeof SlowOpListRowSchema>;
 
 // Who issued a slow op, one row per (op, caller): how often and how slow. The
 // op is named by its key (operationKind, operation, worktree), not by
 // `slow_ops.id`, so the detail's callers window filters on text columns and
 // the recorder writes it without looking the op up. Additive counters only —
 // nothing is capped or folded; the detail pages them by total time.
+// The labels (and `filterable: false`) are the callers list's columns: the
+// `slowOpCallers` collection picks them. The op's own key columns are labelled
+// so the detail can scope the window to one op.
 export const slowOpCallerFields = {
   id: uuidField(),
   worktree: textField(),
-  operationKind: textField(),
-  operation: textField(),
-  callerKind: textField(),
-  callerLabel: textField(),
-  count: intField(),
-  totalMs: floatField(),
-  maxMs: floatField(),
+  operationKind: textField({ label: "Operation kind" }),
+  operation: textField({ label: "Operation" }),
+  callerKind: textField({ label: "Kind" }),
+  callerLabel: textField({ label: "Caller", primary: true }),
+  count: intField({ label: "Count", filterable: false }),
+  totalMs: floatField({ label: "Total (ms)", filterable: false }),
+  maxMs: floatField({ label: "Max (ms)", filterable: false }),
   firstSeenAt: dateField(),
-  lastSeenAt: dateField(),
+  lastSeenAt: dateField({ label: "Last seen", filterable: false }),
 } satisfies FieldsRecord;
 
-// The callers window filters by op and caller (labelled); the rest ride the row.
-export const SLOW_OP_CALLER_LISTED = {
-  operationKind: textField({ label: "Kind" }),
-  operation: textField({ label: "Operation" }),
-  callerKind: textField({ label: "Caller kind" }),
-  callerLabel: textField({ label: "Caller" }),
-};
-export const SLOW_OP_CALLER_CARRIED = {
-  id: slowOpCallerFields.id,
-  worktree: slowOpCallerFields.worktree,
-  count: slowOpCallerFields.count,
-  totalMs: slowOpCallerFields.totalMs,
-  maxMs: slowOpCallerFields.maxMs,
-  firstSeenAt: slowOpCallerFields.firstSeenAt,
-  lastSeenAt: slowOpCallerFields.lastSeenAt,
-};
+/** The `slow_op_callers` entity: the table is built from these fields (`server/internal/tables.ts`). */
+export const slowOpCallersEntityRef = entityRef(
+  "slow_op_callers",
+  slowOpCallerFields,
+);
 
 export const SlowOpCallerSchema = fieldsToZodObject(slowOpCallerFields);
 export type SlowOpCaller = z.infer<typeof SlowOpCallerSchema>;

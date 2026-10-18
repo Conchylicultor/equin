@@ -182,9 +182,11 @@ bun test plugins/infra/plugins/trash
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
+    - `network/live.LiveRowsCollection`
   - Exports (types):
     - `TrashEntry`
     - `TrashEntryId`
+    - `TrashEntryRow`
     - `TrashOutcome`
   - Exports (values):
     - `listTrash`

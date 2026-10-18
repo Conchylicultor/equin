@@ -1,5 +1,3 @@
-export {
-  blockFields,
-  pagesEntityRef,
-  rankWireField,
-} from "./internal/block-entity";
+export { blockFields, pagesEntityRef } from "./internal/block-entity";
+export { asBlockData, StoredBlockDataSchema } from "./internal/block-data";
+export type { BlockData } from "./internal/block-data";

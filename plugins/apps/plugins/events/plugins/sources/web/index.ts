@@ -6,6 +6,7 @@ import { EventSourceActions, EventSourceDetail } from "./slots";
 import { SourceDeleteAction } from "./components/source-delete-action";
 import { SourceOpenAction } from "./components/source-open-action";
 import { SourceToggleAction } from "./components/source-toggle-action";
+import { sourcePresentation } from "./internal/presentation";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export {
@@ -33,9 +34,7 @@ export {
 export type { ConfigValues } from "./internal/config-values";
 export {
   CADENCE_LABEL,
-  CADENCE_OPTIONS,
   SOURCE_STATUS_LABEL,
-  SOURCE_STATUS_OPTIONS,
   SOURCE_STATUS_VARIANT,
   EXTRACTION_STATUS_LABEL,
   EXTRACTION_STATUS_OPTIONS,
@@ -55,6 +54,7 @@ export default {
   contributions: [
     Pane.Register({ pane: eventSourcesPane }),
     Pane.Register({ pane: eventSourceDetailPane }),
+    sourcePresentation,
     Events.Sidebar({
       id: "sources",
       title: "Sources",

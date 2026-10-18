@@ -4,26 +4,47 @@ import {
   liveValue,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-import { eventSourceRunsEntityRef } from "./entity-refs";
-import { eventSourceFields } from "./fields";
+import { eventSourceRunsEntityRef, eventSourcesEntityRef } from "./entity-refs";
 import { RunEventSchema } from "./schema";
 
 /**
  * The configured sources, as the WHOLE ordered set (`all`, newest first) plus
  * its `:rows` point sibling for by-id reads. Every reader needs every source:
- * the Sources list filters, sorts and groups them client-side (its derived
- * fields have no column), and the events list's Source field offers each as
+ * the Sources list filters, sorts and groups them client-side (its state and
+ * extraction have no column), and the events list's Source field offers each as
  * an option — so a window would silently drop the oldest past its edge. The
  * set is user-curated (a person adds each source by hand).
  *
  * Read whole with `useLive(eventSources)`; one row by id is `useLiveRow`.
+ *
+ * Declared by FIELDS: the rows ARE `event_sources` rows (`from`), the fields
+ * the Sources list shows `pick`ed in list order — their labels, options and
+ * filter domains the entity's. The list adds the two it derives from the run
+ * bookkeeping (its state and extraction verdicts); the rest of the row is
+ * carried.
  *
  * The key is `events.sources.all`, not the old window's `events.sources`: no
  * bundle ever declared this key with another contract, so a tab on an older
  * one gets `unknown-key` (a `skew` verdict) and never parses these rows.
  */
 export const eventSources = liveCollection("events.sources.all", {
-  carry: { fields: eventSourceFields },
+  from: eventSourcesEntityRef,
+  pick: ["name", "type", "refresh", "status", "enabled", "lastRunAt"],
+  carry: {
+    pick: [
+      "id",
+      "config",
+      "lastFingerprint",
+      "nextRunAt",
+      "lastError",
+      "lastErrorCode",
+      "lastFlags",
+      "lastOutcome",
+      "lastEventCount",
+      "createdAt",
+      "updatedAt",
+    ],
+  },
   id: "id",
   all: {
     orderBy: [["createdAt", "desc"]],

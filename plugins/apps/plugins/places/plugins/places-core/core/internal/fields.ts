@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { idKindField } from "@plugins/ids/core";
-import { nullable, type FieldsRecord } from "@plugins/fields/core";
+import {
+  nullable,
+  type FieldOptionMeta,
+  type FieldsRecord,
+} from "@plugins/fields/core";
 import {
   enumTextField,
   parsedTextField,
@@ -9,8 +13,12 @@ import {
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { tagsField } from "@plugins/fields/plugins/tags/plugins/config/core";
 import { locationField } from "@plugins/fields/plugins/location/core";
-import { BUSINESS_STATUSES } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
+import {
+  BUSINESS_STATUSES,
+  type BusinessStatus,
+} from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import {
   parseSavedSymbolName,
   SavedSymbolNameSchema,
@@ -24,7 +32,9 @@ import { CHILD_COLOR_MODES, TAG_ROLES } from "./tag-tree";
 // order; DDL (defaults, unique indexes) lives in the `defineEntity` meta.
 
 // `jsonField<string[]>`, not `stringListField`: the string-list type has no
-// storage contribution (the `mail_threads.labelIds` / `events.tags` idiom).
+// storage contribution (the `mail_threads.labelIds` idiom). `tags` is the
+// exception: a `tagsField` is the same `jsonb` string array, and its type is
+// what the places list filters it by (has any / all / none of, nested).
 const stringList = () =>
   jsonField<string[]>({ schema: z.array(z.string()), default: [] });
 
@@ -36,6 +46,15 @@ const savedIcon = () =>
       default: parseSavedSymbolName("location-on"),
     }),
   );
+
+/** Google's business status, as the status field's options (null is "None"). */
+const BUSINESS_STATUS_META: {
+  readonly [S in BusinessStatus]: FieldOptionMeta;
+} = {
+  OPERATIONAL: { label: "Open", variant: "success" },
+  CLOSED_TEMPORARILY: { label: "Temporarily closed", variant: "warning" },
+  CLOSED_PERMANENTLY: { label: "Permanently closed", variant: "destructive" },
+};
 
 /**
  * One saved place: a Google place snapshot (name, address, location, types)
@@ -68,8 +87,8 @@ export const placeFields = {
    */
   title: nullable(textField()),
   /** Google's formatted address; for a custom place, whatever it was saved with ("" when none). */
-  address: textField(),
-  location: locationField(),
+  address: textField({ label: "Address" }),
+  location: locationField({ label: "Location" }),
   /** Google's machine type (`cafe`, `park`, …); null when Google gives none. */
   primaryType: nullable(textField()),
   /** Google's full type list, most specific first — what auto-tagging reads. */
@@ -79,7 +98,12 @@ export const placeFields = {
    * Whether Google says the place is still in business (`CLOSED_PERMANENTLY`
    * greys its pin); null when Google gives none. Refreshed monthly.
    */
-  businessStatus: nullable(enumTextField(BUSINESS_STATUSES)),
+  businessStatus: nullable(
+    enumTextField(BUSINESS_STATUSES, {
+      label: "Google status",
+      options: BUSINESS_STATUS_META,
+    }),
+  ),
   /**
    * Since when Google no longer finds `googlePlaceId` (a refresh answered
    * NOT_FOUND: the id is obsolete — the place closed, moved, or Google re-keyed
@@ -90,9 +114,9 @@ export const placeFields = {
   googleLostAt: nullable(dateField()),
   /** One Material Symbols name, picked by Haiku from the place; null until then. */
   icon: savedIcon(),
-  note: textField(),
+  note: textField({ label: "Note" }),
   /** Tag ids, in the order they were added (Been / Want to go among them). */
-  tags: stringList(),
+  tags: tagsField({ label: "Tags" }),
   /**
    * The subset of `tags` set automatically from the place's Google types (the
    * card's AUTO badge). Removing a tag removes it here too, so `autoTags ⊆ tags`.
@@ -100,7 +124,7 @@ export const placeFields = {
   autoTags: stringList(),
   /** When the Google snapshot was last fetched. */
   fetchedAt: dateField(),
-  createdAt: dateField(),
+  createdAt: dateField({ label: "Saved" }),
   updatedAt: dateField(),
 } satisfies FieldsRecord;
 
@@ -110,7 +134,7 @@ export const placeFields = {
  */
 export const placeTagFields = {
   id: idKindField(placeTagIdKind),
-  name: textField(),
+  name: textField({ label: "Name", primary: true }),
   /** The parent tag; null at the root. Never a cycle (the PATCH rejects one). */
   parentId: nullable(textField()),
   /** Hex colour; null inherits the nearest ancestor's (`tagColor`). */
@@ -122,7 +146,7 @@ export const placeTagFields = {
   childColors: nullable(enumTextField(CHILD_COLOR_MODES)),
   icon: savedIcon(),
   /** Google place types that auto-set this tag on a newly saved place. */
-  googleTypes: stringList(),
+  googleTypes: tagsField({ label: "Auto-set from Google types" }),
   /** Order among siblings, ascending. */
   rank: intField(),
   /**

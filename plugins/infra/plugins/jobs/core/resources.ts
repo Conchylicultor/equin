@@ -9,7 +9,11 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import {
+  liveCollection,
+  liveValue,
+  type LiveRowsCollection,
+} from "@plugins/network/plugins/live/core";
 import { HoldClassSchema } from "./hold";
 
 export const JobStateSchema = z.enum([
@@ -96,19 +100,17 @@ export const jobsList = liveValue("jobs-list", {
 // The fields of an archived `dead_jobs` row, field for column: the `deadJobs`
 // collection binds each to its column by name. The two timestamps are coerced
 // Dates — a `timestamp` column reads back as a `Date` through drizzle's query
-// builder, and crosses the wire as an ISO string. The listed ones are what the
-// Dead tab shows (in its order); the carried ones ride on the row.
-const DEAD_JOB_LISTED = {
+// builder, and crosses the wire as an ISO string. The labelled ones are what
+// the Dead tab shows (in its order); the rest ride on the row.
+const DEAD_JOB_FIELDS = {
+  id: textField(),
+  input: nullable(jsonField({ schema: z.unknown(), default: null })),
+  maxAttempts: intField(),
   jobName: textField({ label: "Job", primary: true }),
   attempts: intField({ label: "Attempts" }),
   diedAt: nullable(dateField({ label: "Died" })),
   lastError: nullable(textField({ label: "Last error" })),
   archivedAt: dateField({ label: "Archived" }),
-};
-const DEAD_JOB_CARRIED = {
-  id: textField(),
-  input: nullable(jsonField({ schema: z.unknown(), default: null })),
-  maxAttempts: intField(),
 };
 
 /**
@@ -116,14 +118,8 @@ const DEAD_JOB_CARRIED = {
  * gave up on (a copy of its `_private_jobs` row; `id` is graphile's job id).
  * The table is built from these fields (`server/internal/tables.ts`).
  */
-export const deadJobsEntityRef = entityRef("dead_jobs", {
-  ...DEAD_JOB_CARRIED,
-  ...DEAD_JOB_LISTED,
-});
-export const DeadJobRowSchema = fieldsToZodObject({
-  ...DEAD_JOB_CARRIED,
-  ...DEAD_JOB_LISTED,
-});
+export const deadJobsEntityRef = entityRef("dead_jobs", DEAD_JOB_FIELDS);
+export const DeadJobRowSchema = fieldsToZodObject(DEAD_JOB_FIELDS);
 export type DeadJobRow = z.infer<typeof DeadJobRowSchema>;
 
 // The `GET /api/jobs/dead` endpoint's body. The live collection below carries
@@ -155,13 +151,18 @@ export const DEAD_JOBS_ARCHIVE_CAP = 2000;
  * dead-job GC archives or purges.
  */
 export const deadJobs = liveCollection("dead-jobs", {
-  fields: DEAD_JOB_LISTED,
-  carry: { fields: DEAD_JOB_CARRIED },
+  from: deadJobsEntityRef,
+  pick: ["jobName", "attempts", "diedAt", "lastError", "archivedAt"],
+  carry: { pick: ["id", "input", "maxAttempts"] },
   id: "id",
   sortable: ["archivedAt", "diedAt", "jobName", "attempts"],
   default: { orderBy: [["archivedAt", "desc"]], limit: 200 },
   maxLimit: DEAD_JOBS_ARCHIVE_CAP,
 });
+
+/** A row of the {@link deadJobs} collection: the archived job, plus the fields an extension exposes on the entity. */
+export type DeadJobListRow =
+  typeof deadJobs extends LiveRowsCollection<infer R> ? R : never;
 
 // ─── Run history (see server/internal/run-stats.ts) ────────────────────────
 
@@ -169,46 +170,22 @@ export const deadJobs = liveCollection("dead-jobs", {
 export const JobRunOutcomeSchema = z.enum(["succeeded", "failed", "suspended"]);
 export type JobRunOutcome = z.infer<typeof JobRunOutcomeSchema>;
 
-/**
- * One recorded run of a job: a row of `job_runs`, field for column (the
- * `jobRuns` collection binds each by name), plus the derived `waitMs`.
- *
- * `id` is `<jobName>:<seq>` — `seq` the job's run number. `jobId`, `hold`,
- * `maxAttempts`, `queuedAt` and `input` are NULL on a run recorded before the
- * history kept them. `error` is the error's message (up to 8000 chars), set
- * exactly when `outcome` is `failed`.
- */
-const JOB_RUN_FIELDS = {
-  id: textField(),
-  jobName: textField(),
-  seq: floatField(),
-  startedAt: dateField(),
-  finishedAt: dateField(),
-  outcome: parsedTextField(JobRunOutcomeSchema, { default: "succeeded" }),
-  error: nullable(textField()),
-  durationMs: floatField(),
-  /** Which attempt this run was (1-based; graphile's `attempts` after the run started). */
-  attempt: floatField(),
-  maxAttempts: nullable(floatField()),
-  /** graphile's job id — the queue row this run executed. */
-  jobId: nullable(textField()),
-  hold: nullable(parsedTextField(HoldClassSchema, { default: "instant" })),
-  /** When the row became runnable (graphile's `run_at`). */
-  queuedAt: nullable(dateField()),
-  input: jsonField({ schema: z.unknown(), default: null }),
-  /**
-   * How long the run waited for a worker slot: `startedAt − queuedAt` in ms,
-   * floored at 0 (the two come from different clocks). Not a stored column —
-   * the served collection computes it in SQL. NULL when `queuedAt` is.
-   */
-  waitMs: nullable(floatField()),
-};
-export const JobRunRowSchema = fieldsToZodObject(JOB_RUN_FIELDS);
+const JOB_RUN_OUTCOME = parsedTextField(JobRunOutcomeSchema, {
+  default: "succeeded",
+});
+const JOB_RUN_HOLD = nullable(
+  parsedTextField(HoldClassSchema, { default: "instant" }),
+);
 
 /**
  * The `job_runs` entity — the per-job ring of recent runs, column for column
  * (`server/internal/tables.ts` builds the table from it). `slot` is the ring
  * slot a run landed in; `id` is generated from `job_name` and `seq`.
+ *
+ * `id` is `<jobName>:<seq>` — `seq` the job's run number. `jobId`, `hold`,
+ * `maxAttempts`, `queuedAt` and `input` are NULL on a run recorded before the
+ * history kept them. `error` is the error's message (up to 8000 chars), set
+ * exactly when `outcome` is `failed`.
  */
 export const jobRunsEntityRef = entityRef("job_runs", {
   id: textField(),
@@ -217,17 +194,32 @@ export const jobRunsEntityRef = entityRef("job_runs", {
   seq: intField({ label: "Run" }),
   startedAt: dateField({ label: "Started" }),
   finishedAt: dateField({ label: "Finished" }),
-  outcome: JOB_RUN_FIELDS.outcome,
+  outcome: JOB_RUN_OUTCOME,
   error: nullable(textField({ label: "Error" })),
   durationMs: intField({ label: "Duration" }),
   attempt: intField({ label: "Attempt" }),
   jobId: nullable(textField()),
-  hold: JOB_RUN_FIELDS.hold,
+  hold: JOB_RUN_HOLD,
   maxAttempts: nullable(intField({ label: "Max attempts" })),
   queuedAt: nullable(dateField({ label: "Queued" })),
   input: nullable(jsonField({ schema: z.unknown(), default: null })),
 });
-export type JobRunRow = z.infer<typeof JobRunRowSchema>;
+
+// The run fields the collection declares itself: the counters its wire reads as
+// floats where the entity stores integers, and `waitMs`, which is not stored.
+const JOB_RUN_OWN = {
+  seq: floatField(),
+  durationMs: floatField(),
+  /** Which attempt this run was (1-based; graphile's `attempts` after the run started). */
+  attempt: floatField(),
+  maxAttempts: nullable(floatField()),
+  /**
+   * How long the run waited for a worker slot: `startedAt − queuedAt` in ms,
+   * floored at 0 (the two come from different clocks). Not a stored column —
+   * the served collection computes it in SQL. NULL when `queuedAt` is.
+   */
+  waitMs: nullable(floatField()),
+};
 
 /**
  * Debug → Queue's run history: EVERY recorded run, as the whole ordered set
@@ -245,7 +237,22 @@ export type JobRunRow = z.infer<typeof JobRunRowSchema>;
  * `unknown-key` (a `skew` verdict) and never parses these rows.
  */
 export const jobRuns = liveCollection("job-runs.all", {
-  carry: { fields: JOB_RUN_FIELDS },
+  from: jobRunsEntityRef,
+  carry: {
+    pick: [
+      "id",
+      "jobName",
+      "startedAt",
+      "finishedAt",
+      "outcome",
+      "error",
+      "jobId",
+      "hold",
+      "queuedAt",
+      "input",
+    ],
+    fields: JOB_RUN_OWN,
+  },
   id: "id",
   all: {
     orderBy: [["finishedAt", "desc"]],
@@ -255,3 +262,7 @@ export const jobRuns = liveCollection("job-runs.all", {
     },
   },
 });
+
+/** One recorded run of a job: a row of `job_runs`, plus the derived `waitMs`. */
+export type JobRunRow =
+  typeof jobRuns extends LiveRowsCollection<infer R> ? R : never;

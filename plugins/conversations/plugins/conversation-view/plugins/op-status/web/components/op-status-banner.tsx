@@ -19,6 +19,7 @@ import {
   DataView,
   defineDataView,
   defineItemActions,
+  fieldOverrides,
   type FieldDef,
   type ItemActionProps,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -44,6 +45,8 @@ import {
 } from "@plugins/primitives/plugins/relative-time/web";
 import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { FieldPresentation } from "@plugins/network/plugins/live/web";
+import { opQueueRow, type OpRowPhase } from "../../core";
 import {
   buildSections,
   opsOfSlug,
@@ -67,6 +70,17 @@ const QUEUE_VIEW = defineDataView("conversations.op-status.queue");
 /** A row of the expanded list, tagged with the section (op kind) it sits in. */
 export interface QueueTableRow extends QueueRow {
   section: OpKind;
+  // The row kind's fields (`opQueueRow`): the values the list shows of the op,
+  // assembled with the clocks and the conversation titles as of this render.
+  opId: string;
+  state: string;
+  phase: OpRowPhase;
+  pos: number | null;
+  title: string;
+  held: string | null;
+  waited: number;
+  worked: number;
+  asleep: number;
 }
 
 /** Per-consumer trailing-action slot for the expanded list's rows. */
@@ -107,12 +121,6 @@ function PhaseIcon({ phase }: { phase: RowPhase }) {
   );
 }
 
-const PHASE_LABEL: Record<RowPhase, string> = {
-  working: "Working",
-  queued: "Queued",
-  held: "Held",
-};
-
 const TIME_CELL = "font-mono tabular-nums";
 
 /** A waited / worked / asleep cell: a faint dash under a second, dimmed when `dim`. */
@@ -137,43 +145,41 @@ interface Clocks {
   sleepNow: SleepNow;
 }
 
+/** What a cell of the list reads of its row. */
+type CellRow = Pick<
+  QueueTableRow,
+  "state" | "waited" | "worked" | "asleep" | "isSelf" | "slug" | "title"
+>;
+
 // "worked" never counts a nap; the asleep part shows only when there was one.
-function RowTooltip({ item, clocks }: { item: QueueRow; clocks: Clocks }) {
-  const times = timesOf(item.row, clocks.now, clocks.sleepNow);
+function RowTooltip({ item }: { item: CellRow }) {
   return (
     <Stack gap="2xs">
-      <span>{stateLine(item.row, clocks.now, clocks.sleepNow)}</span>
+      <span>{item.state}</span>
       <span className="text-muted-foreground">
-        waited {formatElapsed(times.waitingMs)} · worked{" "}
-        {formatElapsed(times.workingMs)}
-        {times.asleepMs > 0 && ` · asleep ${formatElapsed(times.asleepMs)}`}
+        waited {formatElapsed(item.waited)} · worked{" "}
+        {formatElapsed(item.worked)}
+        {item.asleep > 0 && ` · asleep ${formatElapsed(item.asleep)}`}
       </span>
     </Stack>
   );
 }
 
 /** The title cell: the conversation's title (else its slug), tagged on the self row. */
-function TitleCell({
-  item,
-  title,
-  clocks,
-}: {
-  item: QueueRow;
-  title: string | undefined;
-  clocks: Clocks;
-}) {
+function TitleCell({ item }: { item: CellRow }) {
   return (
-    <WithTooltip
-      content={<RowTooltip item={item} clocks={clocks} />}
-      side="left"
-    >
+    <WithTooltip content={<RowTooltip item={item} />} side="left">
       <span
         className={cn(
           "block truncate",
           item.isSelf ? "font-medium text-foreground" : "text-muted-foreground",
         )}
       >
-        {title ?? <span className="font-mono">{item.slug}</span>}
+        {item.title === item.slug ? (
+          <span className="font-mono">{item.slug}</span>
+        ) : (
+          item.title
+        )}
         {item.isSelf && (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating cell; not a sibling gap the parent can own
           <span className="ml-1.5 font-normal text-primary-text">
@@ -305,20 +311,90 @@ function OpStatusCard({ options, body }: HostedToolbarParts) {
 const CARD_TOOLBAR: HostedToolbar = { kind: "hosted", frame: OpStatusCard };
 
 /**
- * The expanded list's schema: one table row per in-flight op, grouped by
+ * How the list's fields present (the presentation below, registered once for
+ * every list of the kind): one table row per in-flight op, grouped by
  * section (op kind). Only the two clocks are labelled — once, on the first
  * section header (`columnHeader: "first-group"`); the glyph, position, title
  * and held columns read from their cells. The asleep clock is hidden by
  * default (a nap is rare and the row tooltip already names it) and revealed
  * from the list's Properties.
  */
-function queueFields(
+export const opQueueRowPresentation = FieldPresentation.Register({
+  owner: opQueueRow,
+  fields: {
+    phase: {
+      header: false,
+      // `auto`, not a fixed size: the leading track of a subgrid row also
+      // carries the row's inline padding (`rail-follow`), which a fixed track
+      // would subtract from the glyph — an auto track grows to fit both.
+      width: "auto",
+      cell: (phase) => <PhaseIcon phase={phase} />,
+    },
+    pos: {
+      header: false,
+      width: "1rem",
+      align: "end",
+      cell: (pos) => (
+        <span className="font-mono tabular-nums text-muted-foreground">
+          {pos}
+        </span>
+      ),
+    },
+    title: {
+      header: false,
+      width: "minmax(0,1fr)",
+      cell: (_title, row) => <TitleCell item={row} />,
+    },
+    held: {
+      header: false,
+      width: "auto",
+      cell: (held) =>
+        held === null ? null : (
+          <span className="truncate text-warning">{held}</span>
+        ),
+    },
+    waited: {
+      // Content-sized: one grid, so every section's clock lines up with the
+      // widest cell or the label (+ its sort icon) on the first header.
+      width: "auto",
+      align: "end",
+      cell: (waited) => <TimeCell ms={waited} dim />,
+    },
+    worked: {
+      width: "auto",
+      align: "end",
+      cell: (worked, row) => (
+        <TimeCell ms={worked} dim={row.phase === "queued"} />
+      ),
+    },
+    asleep: {
+      // Hidden until a user turns it on from the list's Properties.
+      visible: false,
+      width: "auto",
+      align: "end",
+      cell: (asleep) => <TimeCell ms={asleep} dim />,
+    },
+  },
+});
+
+// What is not presentation: the phase is offered as a filter, and the clocks'
+// column headers are the lowercase words the card reads in, not their
+// Properties labels (a presentation can only hide a header, never name one).
+const queueOverrides = fieldOverrides(opQueueRow, {
+  phase: { filterable: true },
+  waited: { header: "waited" },
+  worked: { header: "worked" },
+  asleep: { header: "asleep" },
+});
+
+/**
+ * The section a row sits in, the one field the list computes itself: its
+ * options are the sections in flight, in display order (the self section
+ * first), a fact about the data rather than the kind.
+ */
+function sectionFields(
   sectionOptions: { value: OpKind; label: string }[],
-  titleBySlug: Readonly<Record<string, string>>,
-  clocks: Clocks,
 ): FieldDef<QueueTableRow>[] {
-  const times = (r: QueueTableRow) =>
-    timesOf(r.row, clocks.now, clocks.sleepNow);
   return [
     {
       id: "section",
@@ -328,104 +404,6 @@ function queueFields(
       options: sectionOptions,
       groupable: true,
       visible: false,
-    },
-    {
-      id: "phase",
-      label: "Phase",
-      header: false,
-      type: "enum",
-      value: (r) => phaseOf(r.row),
-      options: (["working", "held", "queued"] as const).map((value) => ({
-        value,
-        label: PHASE_LABEL[value],
-      })),
-      filterable: true,
-      // `auto`, not a fixed size: the leading track of a subgrid row also
-      // carries the row's inline padding (`rail-follow`), which a fixed track
-      // would subtract from the glyph — an auto track grows to fit both.
-      width: "auto",
-      cell: (r) => <PhaseIcon phase={phaseOf(r.row)} />,
-    },
-    {
-      id: "pos",
-      label: "Queue position",
-      header: false,
-      type: "number",
-      value: (r) => r.queuePos,
-      width: "1rem",
-      align: "end",
-      cell: (r) => (
-        <span className="font-mono tabular-nums text-muted-foreground">
-          {r.queuePos}
-        </span>
-      ),
-    },
-    {
-      id: "title",
-      label: "Conversation",
-      header: false,
-      type: "text",
-      primary: true,
-      value: (r) => titleBySlug[r.slug] ?? r.slug,
-      width: "minmax(0,1fr)",
-      cell: (r) => (
-        <TitleCell item={r} title={titleBySlug[r.slug]} clocks={clocks} />
-      ),
-    },
-    {
-      id: "held",
-      label: "Held",
-      header: false,
-      type: "text",
-      value: (r) =>
-        phaseOf(r.row) === "held" && r.row.openWait
-          ? WAIT_KINDS[r.row.openWait.kind].sentence(null)
-          : null,
-      width: "auto",
-      cell: (r) =>
-        phaseOf(r.row) === "held" && r.row.openWait ? (
-          <span className="truncate text-warning">
-            {WAIT_KINDS[r.row.openWait.kind].sentence(null)}
-          </span>
-        ) : null,
-    },
-    {
-      id: "waited",
-      label: "Waited",
-      header: "waited",
-      type: "number",
-      value: (r) => times(r).waitingMs,
-      // Content-sized: one grid, so every section's clock lines up with the
-      // widest cell or the label (+ its sort icon) on the first header.
-      width: "auto",
-      align: "end",
-      cell: (r) => <TimeCell ms={times(r).waitingMs} dim />,
-    },
-    {
-      id: "worked",
-      label: "Worked",
-      header: "worked",
-      type: "number",
-      value: (r) => times(r).workingMs,
-      // Content-sized: one grid, so every section's clock lines up with the
-      // widest cell or the label (+ its sort icon) on the first header.
-      width: "auto",
-      align: "end",
-      cell: (r) => (
-        <TimeCell ms={times(r).workingMs} dim={phaseOf(r.row) === "queued"} />
-      ),
-    },
-    {
-      id: "asleep",
-      label: "Asleep",
-      header: "asleep",
-      type: "number",
-      value: (r) => times(r).asleepMs,
-      // Hidden until a user turns it on from the list's Properties.
-      visible: false,
-      width: "auto",
-      align: "end",
-      cell: (r) => <TimeCell ms={times(r).asleepMs} dim />,
     },
   ];
 }
@@ -478,18 +456,37 @@ export function OpStatusBanner({
     const sections = data ? buildSections(data, selfSlug) : [];
     return {
       rows: sections.flatMap((s) =>
-        s.rows.map((r): QueueTableRow => ({ ...r, section: s.kind })),
+        s.rows.map((r): QueueTableRow => {
+          const phase = phaseOf(r.row);
+          const times = timesOf(r.row, clocks.now, clocks.sleepNow);
+          return {
+            ...r,
+            section: s.kind,
+            opId: r.row.opId,
+            state: stateLine(r.row, clocks.now, clocks.sleepNow),
+            phase,
+            pos: r.queuePos,
+            title: titleBySlug[r.slug] ?? r.slug,
+            held:
+              phase === "held" && r.row.openWait
+                ? WAIT_KINDS[r.row.openWait.kind].sentence(null)
+                : null,
+            waited: times.waitingMs,
+            worked: times.workingMs,
+            asleep: times.asleepMs,
+          };
+        }),
       ),
       sectionOptions: sections.map((s) => ({
         value: s.kind,
         label: s.kind === "push" ? "Push queue" : OP_KINDS[s.kind].label,
       })),
     };
-  }, [data, selfSlug]);
+  }, [data, selfSlug, titleBySlug, clocks]);
 
-  const fields = useMemo(
-    () => queueFields(sectionOptions, titleBySlug, clocks),
-    [sectionOptions, titleBySlug, clocks],
+  const extraFields = useMemo(
+    () => sectionFields(sectionOptions),
+    [sectionOptions],
   );
 
   if (result.status === "loading") return null;
@@ -512,7 +509,9 @@ export function OpStatusBanner({
       <BannerChromeContext.Provider value={chrome}>
         <DataView<QueueTableRow>
           rows={rows}
-          fields={fields}
+          collection={opQueueRow}
+          overrides={queueOverrides}
+          extraFields={extraFields}
           rowKey={(r) => r.row.opId}
           views={["table"]}
           storageKey={QUEUE_VIEW}
