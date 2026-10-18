@@ -15,7 +15,7 @@ import { toggleLoop } from "../loop-actions";
  * (`shown`) so they stay inert on the library — even while a song plays there
  * in the background.
  *
- *  - `L` — toggle the loop (create the default region + seek, or flip enabled).
+ *  - `L` — toggle the loop (create the whole-song region, or flip enabled).
  *  - `[` — set the loop start (A) at the playhead, enabling the loop.
  *  - `]` — set the loop end (B) at the playhead, enabling the loop.
  *
@@ -25,7 +25,7 @@ import { toggleLoop } from "../loop-actions";
  */
 export function LoopShortcuts() {
   const { shown } = usePlayerView();
-  const { loop, setLoop, seekTo, score } = useSession();
+  const { loop, setLoop, score } = useSession();
   const cursor = useCursorApi();
 
   const descriptors = useMemo(
@@ -38,14 +38,7 @@ export function LoopShortcuts() {
               keys: "l",
               label: "Toggle loop",
               group: "Sonata",
-              handler: () =>
-                toggleLoop({
-                  loop,
-                  setLoop,
-                  seekTo,
-                  score,
-                  beat: cursor.getBeat(),
-                }),
+              handler: () => toggleLoop({ loop, setLoop, score }),
             },
             {
               id: "sonata.loop-start",
@@ -77,7 +70,7 @@ export function LoopShortcuts() {
                 }),
             },
           ],
-    [shown, loop, setLoop, seekTo, score, cursor],
+    [shown, loop, setLoop, score, cursor],
   );
 
   useSurfaceShortcuts(descriptors);

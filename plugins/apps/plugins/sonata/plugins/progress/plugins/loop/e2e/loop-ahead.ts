@@ -51,15 +51,9 @@ await withBrowser(async (h) => {
   await page.getByRole("button", { name: "Loop", exact: true }).click();
   const rollStart = page.locator('[aria-label="Loop start (A)"]');
   await rollStart.first().waitFor();
-  const aCount = await rollStart.count();
-  r.ok(
-    "the roll repeats the loop band past B",
-    aCount > 1,
-    `${aCount} A boundaries drawn`,
-  );
-  // Walk the playhead to the loop's last bar: the default loop (no section
-  // under the playhead) is 4 bars from the playhead's bar, so three bar steps
-  // land in its last bar. The roll then shows B, the rest and the loop again.
+  // Narrow the loop so B is in reach (the default loop is the whole song):
+  // three bar steps ahead set B with `]`, one step back lands in the loop's
+  // last bar. The roll then shows B, the rest and the loop again.
   await page
     .locator("canvas")
     .first()
@@ -68,7 +62,15 @@ await withBrowser(async (h) => {
     await page.keyboard.press("ArrowRight");
     await page.waitForTimeout(120);
   }
+  await page.keyboard.press("]");
+  await page.keyboard.press("ArrowLeft");
   await page.waitForTimeout(400);
+  const aCount = await rollStart.count();
+  r.ok(
+    "the roll repeats the loop band past B",
+    aCount > 1,
+    `${aCount} A boundaries drawn`,
+  );
   await snap(page, OUT, "2-near-b");
 
   // ── Play through B into the rest ────────────────────────────────────────

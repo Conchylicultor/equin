@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import {
-  useCursorApi,
-  useSession,
-} from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
@@ -25,8 +22,7 @@ const OPTION_KEYS = ["showAhead", "restBeforeRepeat"] as const;
  *
  *  - The main segment toggles the A–B practice loop in one click: with a
  *    region set it flips `enabled` (active = filled `default` variant); with
- *    none it creates the default region at the playhead and seeks to its start
- *    (see `toggleLoop`). `L` does the same.
+ *    none it loops the whole song (see `toggleLoop`). `L` does the same.
  *  - The chevron opens the loop's repeat options — "Show loop ahead" and "Rest
  *    before repeat", the user's `loopConfig` preferences, rendered by the
  *    shared config `FieldRenderer` (the same switch rows as the View popover).
@@ -37,8 +33,7 @@ const OPTION_KEYS = ["showAhead", "restBeforeRepeat"] as const;
  * preferences, not part of a loop).
  */
 export function LoopToggle() {
-  const { loop, setLoop, seekTo, score } = useSession();
-  const cursor = useCursorApi();
+  const { loop, setLoop, score } = useSession();
   const hasScore = scoreEndBeat(score) > 0;
   const [open, setOpen] = useState(false);
   const values = useConfig(loopConfig);
@@ -54,9 +49,7 @@ export function LoopToggle() {
         shortcut="l"
         variant={variant}
         disabled={!hasScore}
-        onClick={() =>
-          toggleLoop({ loop, setLoop, seekTo, score, beat: cursor.getBeat() })
-        }
+        onClick={() => toggleLoop({ loop, setLoop, score })}
       />
       <ControlPanelPopover
         open={open}
