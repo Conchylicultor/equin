@@ -140,7 +140,7 @@ measured overhead on a real worktree workload is still an open task.
     - `infra/paths.worktreesDir`
     - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
-    - `primitives/log-channels.readChannelJsonAsync`
+    - `primitives/log-channels/log-files.readChannelJsonAsync`
   - Exports (types):
     - `HealthSample`
     - `HealthSampleObserver`
@@ -181,7 +181,9 @@ measured overhead on a real worktree workload is still an open task.
     - `debug/latency-ledger`
     - `debug/timeline`
 - Exemptions:
-  - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/process-sampler.ts`, `server/internal/host-sampler.ts` (sanctioned)
+  - Exempts itself from:
+    - `timer/no-unlisted-timer` — `server/internal/process-sampler.ts`, `server/internal/host-sampler.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `server/internal/health-series.ts`, `server/internal/host-sampler.ts`, `server/internal/process-sampler.ts` (debt)
 - Shared:
   - Exports (values): `healthMonitorSeries`
 

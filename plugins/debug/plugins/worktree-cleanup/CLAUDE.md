@@ -126,6 +126,7 @@ the panel until it is given something to say.
   - Exempts itself from:
     - `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)
     - `live/no-endpoint-read` — `web/components/worktree-cleanup-panel.tsx` (debt)
+    - `boundaries/no-platform-api` — `server/internal/dirs.ts`, `server/internal/reap-policy.ts`, `server/internal/reap.ts` (debt)
 - Shared:
   - Exports (types): `BulkDeleteWorktreesBody`
   - Exports (values):

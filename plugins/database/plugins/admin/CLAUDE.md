@@ -230,15 +230,17 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `listDatabases`
     - `openShortLivedClient`
 - Cross-plugin:
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×7
-    - `infra` ×6
     - `database` ×5
+    - `infra` ×4
     - `apps` ×2
     - `backup/sources/databases`
     - `build/serve-composition`
     - `reports`
     - `shell/notifications`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/backup.ts`, `server/internal/fork.ts`, `server/internal/pool.ts`, `server/internal/temp-name.ts` (debt)
 - Test helpers:
   - Server: `@plugins/database/plugins/admin/server/testing`
     - `assertExclusionsClosed` — Check a plugin's `ExcludeFromBackup` / `ExcludeFromFork` declarations against its own drizzle tables, without a database: no kept table may have a foreign key to a table whose rows are left out (pg_restore would fail re-adding it).

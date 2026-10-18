@@ -1,23 +1,14 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { TaskSpec } from "graphile-worker";
-import type { PoolClient } from "pg";
 import { z } from "zod";
-import { queryOne } from "@plugins/database/plugins/sql-rows/core";
 import {
   registeringPlugin,
   type Registration,
 } from "@plugins/framework/plugins/server-core/core";
-import {
-  ceilingMsFor,
-  priorityFor,
-  taskFor,
-  type HoldClass,
-} from "../../core/hold";
+import { ceilingMsFor, type HoldClass } from "../../core/hold";
 import { DEFAULT_MAX_ATTEMPTS } from "./constants";
-import { withQueueSchemaAssert } from "./queue-schema";
+import { JobQueue, type JobRowOpts, type QueuedJob } from "./queue";
 import { singletonJobKey } from "./run-identity";
 import type { WaitForOptions } from "./step-ctx";
-import { getWorkerUtils } from "./worker";
 
 export { DEFAULT_MAX_ATTEMPTS } from "./constants";
 
@@ -182,7 +173,7 @@ export interface RegisteredJob {
    * startup to build graphile-worker cron items. */
   schedule?: ScheduleSpec;
   /** Serialization lane, if the job declared one (see {@link SerialSpec}).
-   * Read through {@link queueNameFor} by every enqueue path, so the queue name
+   * Read by the host queue on every insertion (`JobQueue`), so the queue name
    * is a property of the registered job rather than of any call site. */
   serial?: SerialSpec;
   /**
@@ -501,95 +492,6 @@ export interface JobTaskPayload {
   _cron?: { ts: string; backfilled?: boolean };
 }
 
-// --- The one derivation of a graphile queue name ------------------------------
-//
-// A serialized job that is enqueued WITHOUT its queue name escapes its own
-// serialization — the row lands with `job_queue_id IS NULL`, graphile fetches it
-// regardless of who else is running, and the guarantee silently evaporates for
-// that one path. There are five places a job row is inserted (this file's
-// two enqueue paths, `resume-job.ts`'s target re-enqueue, `worker.ts`'s
-// `scheduleResume`, and `worker.ts`'s cron items), so "remember to pass the
-// queue name" is five chances to be wrong and no way to notice.
-//
-// Hence: the queue name is derived from the REGISTERED JOB and is never a caller
-// argument. `queueNameFor` is the single derivation; `graphileSpecFor` is the
-// single assembly of a graphile insertion around it, and the raw-SQL enqueue
-// path reads its columns off that same spec rather than composing its own. The
-// `jobs:no-raw-addjob` check (`../../check/index.ts`) bans `utils.addJob(` and
-// `graphile_worker.add_job` everywhere but this file, so a sixth insertion site
-// cannot be written without going through here.
-//
-// The job's TASK IDENTIFIER and PRIORITY join the queue name under exactly the
-// same argument, and for exactly the same reason. Which graphile task a row sits
-// on is what decides which runners can ever fetch it (`worker.ts`'s ladder), and
-// the priority is what makes a runner prefer the longest class it may serve. A
-// row inserted on the wrong task is not slow — it is unreachable by the runners
-// that were supposed to reserve capacity for it, or reachable by ones that were
-// not. Both are properties of the REGISTERED JOB (its `hold`), never caller
-// arguments, so they flow through this one assembly with the queue name.
-
-/** `sg:` namespaces our queue names inside graphile's global queue-name space,
- * so they are recognizable in `_private_job_queues` and cannot collide with a
- * name some future library picks. */
-const QUEUE_PREFIX = "sg:";
-
-/**
- * The graphile `queue_name` for a registered job, or `undefined` when the job
- * declared no {@link SerialSpec} (the overwhelming majority — an unnamed queue
- * is the fast, unserialized path).
- *
- * `serial: true` → `sg:<jobName>`, serialized against itself only.
- * `serial: { with: "chromium" }` → `sg:lane:chromium`, shared by every job name
- * naming that lane, so N job names serialize against ONE resource.
- */
-export function queueNameFor(job: {
-  name: string;
-  serial?: SerialSpec;
-}): string | undefined {
-  if (!job.serial) return undefined;
-  if (job.serial === true) return `${QUEUE_PREFIX}${job.name}`;
-  return `${QUEUE_PREFIX}lane:${job.serial.with}`;
-}
-
-/** Everything one insertion of a job row is made of: the graphile task the row
- * sits on, and the `TaskSpec` carrying the rest of its columns. The two travel
- * together because both are derived from the job, and an insertion that took the
- * spec but re-typed the identifier would be exactly the drift this file exists
- * to prevent. */
-export interface GraphileInsertion {
-  /** The graphile task identifier — the job's hold-class task (`taskFor`). */
-  readonly task: string;
-  readonly spec: TaskSpec;
-}
-
-/**
- * Build the graphile insertion for one row of `job`. Everything a caller
- * legitimately varies per enqueue (`jobKey`, `runAt`, `maxAttempts`) is an
- * argument; the task identifier, the priority and the queue name deliberately
- * are NOT — they come from the job.
- */
-export function graphileSpecFor(
-  job: { name: string; hold: HoldClass; serial?: SerialSpec },
-  opts: GraphileInsertOpts,
-): GraphileInsertion {
-  return {
-    task: taskFor(job.hold),
-    spec: {
-      queueName: queueNameFor(job),
-      priority: priorityFor(job.hold),
-      jobKey: opts.jobKey ?? undefined,
-      runAt: opts.runAt ?? undefined,
-      maxAttempts: opts.maxAttempts,
-    },
-  };
-}
-
-export interface GraphileInsertOpts {
-  jobKey?: string | null;
-  runAt?: Date | null;
-  maxAttempts?: number;
-}
-
 /**
  * Insert one job row for an already-resolved {@link RegisteredJob}, bypassing
  * `enqueue`'s input parse and its per-job-name job-key namespacing.
@@ -600,21 +502,17 @@ export interface GraphileInsertOpts {
  * is taken literally rather than prefixed. General plugin code must call
  * `job.enqueue(...)` instead.
  *
- * It lives here, next to `graphileSpecFor`, so that `utils.addJob` has exactly
- * ONE call site in the repo. The two internal callers (`worker.ts`'s
- * `scheduleResume`, `resume-job.ts`'s target re-enqueue) need the bypasses but
- * must not be free to omit the queue name; routing them through here means they
- * cannot. `jobs:no-raw-addjob` enforces the exclusivity.
+ * The row's routing — its queue name, task and priority — is derived from the
+ * registered job by the host's queue (`JobQueue`), never passed in, so the two
+ * internal callers (`jobs.resume`'s target re-enqueue, a suspend's scheduled
+ * resume) cannot omit it.
  */
-export async function UNSAFE_insertJobRow(
-  job: { name: string; hold: HoldClass; serial?: SerialSpec },
+export function UNSAFE_insertJobRow(
+  job: QueuedJob,
   payload: JobTaskPayload,
-  opts: GraphileInsertOpts,
+  opts: Omit<JobRowOpts, "tx">,
 ): Promise<{ jobId: string }> {
-  const utils = await getWorkerUtils();
-  const insertion = graphileSpecFor(job, opts);
-  const added = await utils.addJob(insertion.task, payload, insertion.spec);
-  return { jobId: String(added.id) };
+  return JobQueue.get().enqueue(job, payload, opts);
 }
 
 export function defineJob<
@@ -668,83 +566,16 @@ export function defineJob<
       input: parsed,
       event: opts?._event,
     };
-    // Both branches below insert the SAME row through two different transports,
-    // so both derive their graphile COLUMNS from one spec. Deriving them twice
-    // is how the shared-tx path would quietly lose the queue name.
-    //
-    // What the two transports do NOT share is their PRECONDITION, and reading
-    // the sentence above as "these branches can't disagree" is how that went
-    // unnoticed for as long as it did. The no-`tx` branch reaches
-    // `getWorkerUtils()`, whose `makeWorkerUtils` installs the queue schema as a
-    // side effect, so it heals a database that has none. The `tx` branch writes
-    // on the CALLER's own connection — it never touches a graphile helper and
-    // has no business running 25 migrations inside somebody else's open
-    // transaction — so it can only assert. It does, below, and loudly: on a
-    // freshly-forked worktree database whose backend has never booted (the
-    // schema is excluded from the fork by design — see `queue-schema.ts`), this
-    // path used to surface as a bare `3F000` from inside `pg` that named
-    // nothing in this repo, and was mis-diagnosed as a test-fixture gap.
-    // Installation belongs to whoever provisions or boots the database: the
-    // plugin's `onReadyBlocking` for a backend, `installQueueSchema()` for a
-    // throwaway test database.
-    const graphileOpts: GraphileInsertOpts = {
+    // The row's routing (task, priority, serialization queue) is the queue's
+    // to derive from `spec` — never this call's — and a `tx` enqueue lands on
+    // the caller's transaction: rollback drops the job with the caller's
+    // writes (see `JobQueueImpl.enqueue`).
+    return JobQueue.get().enqueue(spec, payload, {
       jobKey: graphileJobKey,
       runAt: opts?.runAt,
       maxAttempts,
-    };
-
-    if (opts?.tx) {
-      const insertion = graphileSpecFor(spec, graphileOpts);
-      // Shared-tx path: write into graphile_worker.jobs on the caller's
-      // transaction client by calling Graphile's documented public SQL
-      // function. Rollback drops the row alongside the caller's writes.
-      // The reach-in to `_.session.client` is the only facade-piercing in
-      // the system; isolated here so a future drizzle bump has exactly
-      // one line to fix.
-      // biome-ignore lint/suspicious/noExplicitAny: drizzle's session.client is private in d.ts but stable at runtime.
-      const client = (opts.tx as any)._.session.client as PoolClient;
-      // `add_job` returns exactly one row, always. `queryOne` states that, so a
-      // zero-row result is a loud failure rather than an `undefined` the next
-      // line has to remember to check.
-      const row = await withQueueSchemaAssert(() =>
-        queryOne(client, {
-          // The returned `id` is `bigint`; `::text` is why this is a string.
-          row: z.object({ id: z.string() }),
-          sql: `SELECT (graphile_worker.add_job(
-             identifier   := $1,
-             payload      := $2::json,
-             run_at       := $3,
-             max_attempts := $4,
-             job_key      := $5,
-             queue_name   := $6,
-             priority     := $7
-           )).id::text AS id`,
-          params: [
-            // The hold class's task, from the same spec the `addJob` path uses —
-            // never a constant. A row inserted here on the legacy task would be
-            // fetchable only by the wide runner, silently forfeiting the
-            // reservation for every job enqueued inside a transaction.
-            insertion.task,
-            JSON.stringify(payload),
-            insertion.spec.runAt ?? null,
-            insertion.spec.maxAttempts ?? null,
-            insertion.spec.jobKey ?? null,
-            // NULL ⇒ unnamed queue, which is what graphile's own default is and
-            // what every non-`serial` job gets. `add_job` takes queue_name as a
-            // named argument (sql/000016.sql:8), so passing NULL explicitly is
-            // identical to omitting it.
-            insertion.spec.queueName ?? null,
-            // `priority` is likewise a named argument of `add_job`
-            // (sql/000018.sql:4, `priority integer DEFAULT NULL`), coalesced to 0
-            // when NULL. Always present here, since it is derived from the class.
-            insertion.spec.priority ?? null,
-          ],
-        }),
-      );
-      return { jobId: row.id };
-    }
-
-    return UNSAFE_insertJobRow(spec, payload, graphileOpts);
+      tx: opts?.tx,
+    });
   }
 
   const factory: JobFactory<N, S, E> = {

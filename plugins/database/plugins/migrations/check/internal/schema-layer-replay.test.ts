@@ -20,6 +20,10 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { applySchemaLayer } from "@plugins/database/plugins/migrations/server";
+import {
+  listMigrationFiles,
+  MIGRATIONS_DIR,
+} from "@plugins/database/plugins/migrations/machine";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { declaredSchemaInputs } from "./declared-schema-inputs";
@@ -39,7 +43,14 @@ test("the whole data/ directory plus the real derived layer applies from scratch
   if (!declared.ok) throw new Error(declared.message);
   const { inputs } = declared;
 
-  const result = await applySchemaLayer(t.db, inputs, { commit: true });
+  const result = await applySchemaLayer(
+    t.db,
+    listMigrationFiles(MIGRATIONS_DIR),
+    inputs,
+    {
+      commit: true,
+    },
+  );
   expect(result.pending).toBeGreaterThan(0);
 
   const views = await executeRows(t.db, {
@@ -57,7 +68,11 @@ test("the whole data/ directory plus the real derived layer applies from scratch
 
   // A second boot over the result finds nothing to do: no migration, no
   // rollup definition, and a reconcile that heals nothing.
-  expect(await applySchemaLayer(t.db, inputs, { commit: true })).toEqual({
+  expect(
+    await applySchemaLayer(t.db, listMigrationFiles(MIGRATIONS_DIR), inputs, {
+      commit: true,
+    }),
+  ).toEqual({
     pending: 0,
     rollups: inputs.derivedTables
       .map((r) => ({

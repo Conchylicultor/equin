@@ -1,4 +1,3 @@
-import { AsyncLocalStorage } from "node:async_hooks";
 import { db } from "@plugins/database/server";
 import type { TaskStatus } from "./schema";
 import { flushStatusBatch } from "./status-emit";
@@ -13,8 +12,16 @@ export interface StatusBatch {
   before: Map<string, TaskStatus | null>; // earliest entry-status per task
 }
 
-const store = new AsyncLocalStorage<StatusBatch>();
-export const currentStatusBatch = () => store.getStore();
+// The open batch of each executor, keyed by the transaction handle itself — the
+// `exec` every `withTaskStatusChange` already receives — so a write finds its
+// batch on the connection it writes on, with no ambient context. (The batch used
+// to ride an AsyncLocalStorage, a Node-only primitive this portable module may
+// not import; see `withTaskStatusChange` for the one assertion that went with it.)
+const batches = new WeakMap<DbExecutor, StatusBatch>();
+
+/** The status batch open on `exec`, if any. */
+export const statusBatchOn = (exec: DbExecutor): StatusBatch | undefined =>
+  batches.get(exec);
 
 // Join an EXISTING transaction as a status batch: every `withTaskStatusChange`
 // inside records its closure's entry statuses and suppresses its own emit, and
@@ -24,12 +31,31 @@ export const currentStatusBatch = () => store.getStore();
 // transaction gets a REAL batch on its own connection rather than a second,
 // nested one — which is also what lets a test drive a batch inside the
 // transaction it will deliberately roll back.
+//
+// `tx` must be a transaction handle, never `db` itself: a batch keyed on the
+// pool would capture every concurrent request's writes.
 export async function runStatusBatchOn<T>(
   tx: DbExecutor,
   fn: (tx: DbExecutor) => Promise<T>,
 ): Promise<T> {
+  if (tx === db) {
+    throw new Error(
+      "[tasks-core] runStatusBatchOn: a status batch joins a TRANSACTION — pass its `tx`, not `db` (or use withTaskStatusBatch, which opens one).",
+    );
+  }
+  if (batches.has(tx)) {
+    throw new Error(
+      "[tasks-core] runStatusBatchOn: a status batch is already open on this transaction.",
+    );
+  }
   const batch: StatusBatch = { tx, before: new Map() };
-  const result = await store.run(batch, () => fn(tx));
+  batches.set(tx, batch);
+  let result: T;
+  try {
+    result = await fn(tx);
+  } finally {
+    batches.delete(tx);
+  }
   await flushStatusBatch(batch); // reads net status on tx, emits with { tx }
   return result;
 }

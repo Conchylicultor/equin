@@ -126,7 +126,7 @@ code is gated immediately, and a genuine one-off escapes per-site via
   - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
   - **`inline`** — Inline-level flow layout primitive: <Inline gap> lays out a baseline-aligned inline-flex row for chips/icons that sit inline in a text run. The inline-level sibling of Stack, delegating to Stack.
   - **`layer`** — Full-bleed layer layout primitive: <Layer> / layerClasses() is a standalone absolute inset-0 child of a positioned parent. The element-shaped sibling of Overlay's behind/above props.
-  - **`layout-harness`** — Layout-primitive geometry harness, web half: the bare measurer page and the bun:test geometry suite that measure every geometry-gated exhibit across its width sweep.
+  - **`layout-harness`** [exempt] — Layout-primitive geometry harness, web half: the bare measurer page and the bun:test geometry suite that measure every geometry-gated exhibit across its width sweep.
     - Plugins:
       - **`geometry`** — Geometry vocabulary of the layout harness, as a types-only leaf: FixtureDims, GeometryInvariant, FixtureMutation, HOST_MARKER_ATTR and GeometrySpec (what an exhibit declares to be geometry-gated).…
   - **`line`** — Single-line container primitive: <Line> pairs the structural single-line invariant (region-line) with the ambient SingleLineProvider so children never wrap and <Text> leaves truncate. The bare…

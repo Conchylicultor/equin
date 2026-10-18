@@ -86,6 +86,8 @@ re-exports what server consumers use (same-plugin re-export), and
     - `conversations/runtime-tmux`
     - `infra/host/host-admission`
     - `infra/spawn`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/background.ts`, `core/internal/darwin-background.ts`, `server/internal/spawn-priority.ts` (debt)
 - Server:
   - Exports (types): `DarwinBackground`
   - Exports (values):

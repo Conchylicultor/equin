@@ -106,6 +106,8 @@ Orthogonal to the runtime (tmux | api): a runtime sees only the cwd and the
     - `debug/scratch-hello`
     - `review/plugin-changes`
     - `tasks/tasks-core`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/registry.ts` (debt)
 - Test helpers:
   - Server: `@plugins/conversations/plugins/workspace/server/testing`
     - `installWorkspaceImpl` — Sets `impl` as its kind's workspace, replacing any registered one — for a test, which runs without the plugin register phase and may share the module with other suites.

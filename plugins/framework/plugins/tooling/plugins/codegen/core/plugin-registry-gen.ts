@@ -17,6 +17,7 @@ import { buildBarrelFreeTree } from "./barrel-free-tree";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import {
   isTestCodePath,
+  machineNode,
   PLUGIN_FOLDERS,
   type PluginFolder,
   type PluginId,
@@ -464,10 +465,42 @@ async function computeDirScan(
 ): Promise<DirEntryScan> {
   const repo = await ctx.repo();
   const allEntries = await collectEntries(ctx.tree, repo, dir);
+  const companion = COMPANION_DIRS[dir];
   return {
     allEntries,
-    rawDeps: await buildDepsForDir(repo, allEntries, dir),
+    rawDeps: await buildDepsForDir(
+      repo,
+      allEntries,
+      dir,
+      companion === undefined
+        ? null
+        : (await scanDir(ctx, companion)).allEntries,
+    ),
   };
+}
+
+// ── Companion dirs: a plugin's machine half ────────────────────────
+//
+// A plugin's `machine/` barrel boots in the SAME plugin graph as every
+// `server/` barrel — a desktop backend passes `[...serverEntries,
+// ...machineEntries]` to one `bootPluginGraph` — as a node of its own,
+// `<pluginPath>#machine` (`machineNode`, plugin-id/core). So the machine
+// registry is spelled in node terms: each entry's id is `<id>#machine`, and its
+// `dependsOn` names a machine node `x#machine` for an `@plugins/x/machine`
+// import, the server node `x` for any other import of plugin `x`, and — always
+// — its own plugin's server node, so a machine half's hooks run after its
+// server half's.
+//
+// The map says which dir's graph a companion dir's entries join.
+const COMPANION_DIRS: Readonly<Partial<Record<string, string>>> = {
+  machine: "server",
+};
+
+/** The graph node a `<dir>` entry of `pluginPath` boots as. */
+function nodeKeyFor(dir: string, pluginPath: string): string {
+  return COMPANION_DIRS[dir] === undefined
+    ? pluginPath
+    : machineNode(pluginPath);
 }
 
 /**
@@ -594,12 +627,19 @@ async function buildDepsForDir(
   repo: RepoFiles,
   entries: CollectedRawEntry[],
   dir: string,
+  // The companion graph's entries (`COMPANION_DIRS`) — the server entries a
+  // machine entry may depend on — or null for a dir that is its own graph.
+  companionEntries: CollectedRawEntry[] | null,
 ): Promise<Map<string, string[]>> {
+  const pluginPrefix = (e: CollectedRawEntry) =>
+    e.importPath.slice(0, e.importPath.lastIndexOf("/"));
   const prefixToPluginPath = new Map<string, string>();
-  for (const e of entries) {
-    const prefix = e.importPath.slice(0, e.importPath.lastIndexOf("/"));
-    prefixToPluginPath.set(prefix, e.pluginPath);
-  }
+  for (const e of entries)
+    prefixToPluginPath.set(pluginPrefix(e), e.pluginPath);
+  const companionPaths = new Map<string, string>();
+  for (const e of companionEntries ?? [])
+    companionPaths.set(pluginPrefix(e), e.pluginPath);
+  const companionPathSet = new Set(companionPaths.values());
 
   const tick = timeSlicer();
   const gate = createSemaphore(PLUGIN_SCAN_WIDTH);
@@ -608,17 +648,44 @@ async function buildDepsForDir(
     entries.map((e) =>
       gate.run(async () => {
         const deps = new Set<string>();
-        for (const mod of await collectImportSpecifiers(
-          repo,
-          e.pluginPath,
-          dir,
-          tick,
-        )) {
-          if (!mod.startsWith("@plugins/")) continue;
-          const lastSlash = mod.lastIndexOf("/");
-          if (lastSlash <= 0) continue;
-          const depPath = prefixToPluginPath.get(mod.slice(0, lastSlash));
-          if (depPath && depPath !== e.pluginPath) deps.add(depPath);
+        if (companionEntries === null) {
+          for (const mod of await collectImportSpecifiers(
+            repo,
+            e.pluginPath,
+            dir,
+            tick,
+          )) {
+            if (!mod.startsWith("@plugins/")) continue;
+            const lastSlash = mod.lastIndexOf("/");
+            if (lastSlash <= 0) continue;
+            const depPath = prefixToPluginPath.get(mod.slice(0, lastSlash));
+            if (depPath && depPath !== e.pluginPath) deps.add(depPath);
+          }
+        } else {
+          // A machine half always runs after its own server half.
+          if (companionPathSet.has(e.pluginPath)) deps.add(e.pluginPath);
+          for (const mod of await collectImportSpecifiers(
+            repo,
+            e.pluginPath,
+            dir,
+            tick,
+          )) {
+            if (!mod.startsWith("@plugins/")) continue;
+            const lastSlash = mod.lastIndexOf("/");
+            if (lastSlash <= 0) continue;
+            const prefix = mod.slice(0, lastSlash);
+            const machinePath =
+              mod.slice(lastSlash + 1) === dir
+                ? prefixToPluginPath.get(prefix)
+                : undefined;
+            if (machinePath !== undefined) {
+              if (machinePath !== e.pluginPath)
+                deps.add(nodeKeyFor(dir, machinePath));
+              continue;
+            }
+            const serverPath = companionPaths.get(prefix);
+            if (serverPath !== undefined) deps.add(serverPath);
+          }
         }
         if (deps.size > 0) result.set(e.pluginPath, [...deps].sort());
       }),
@@ -647,7 +714,17 @@ export async function collectEntriesWithDeps(
 ): Promise<{ entries: CollectedRawEntry[]; deps: Map<string, string[]> }> {
   const { allEntries, rawDeps } = await scanDir(ctx, dir);
   const entries = allEntries.filter((e) => bundle.has(e.id));
-  const survivingPaths = new Set(entries.map((e) => e.pluginPath));
+  // Surviving graph NODES: this dir's own, plus — for a companion dir — the
+  // surviving entries of the graph it joins.
+  const survivingPaths = new Set(
+    entries.map((e) => nodeKeyFor(dir, e.pluginPath)),
+  );
+  const companion = COMPANION_DIRS[dir];
+  if (companion !== undefined) {
+    for (const e of (await scanDir(ctx, companion)).allEntries) {
+      if (bundle.has(e.id)) survivingPaths.add(e.pluginPath);
+    }
+  }
   const deps = new Map<string, string[]>();
   for (const e of entries) {
     const entryDeps = (rawDeps.get(e.pluginPath) ?? []).filter((d) =>
@@ -761,8 +838,9 @@ function renderRegistry(
       entryDeps.length > 0
         ? `[${entryDeps.map((d) => JSON.stringify(d)).join(", ")}]`
         : "[]";
+    const id = COMPANION_DIRS[dir] === undefined ? e.id : machineNode(e.id);
     lines.push(
-      `  { pluginPath: ${JSON.stringify(e.pluginPath)}, id: ${JSON.stringify(e.id)}, loader: () => import(${JSON.stringify(e.importPath)}), dependsOn: ${depsLiteral} },`,
+      `  { pluginPath: ${JSON.stringify(e.pluginPath)}, id: ${JSON.stringify(id)}, loader: () => import(${JSON.stringify(e.importPath)}), dependsOn: ${depsLiteral} },`,
     );
   }
   lines.push("];");
@@ -843,8 +921,8 @@ export async function generatePluginRegistry(opts: {
 // path writes it, selects it, or reaps it, so a stray file of that name is inert.
 
 // The registries that need a composition-filtered (closure-restricted) sibling.
-// `web`/`server` are the runtime registries the app actually loads at the import
-// seam. `prewarm` is release-build-time-only — consumed by the asset-mirror
+// `web`/`server`/`machine` are the runtime registries the app actually loads at
+// the import seam. `prewarm` is release-build-time-only — consumed by the asset-mirror
 // release runner to bake each closure mirror's files into the bundle, never
 // loaded by the served app — but it needs the same closure filtering so a
 // release only pre-warms mirrors in the composition's closure. `deps` holds the
@@ -862,7 +940,13 @@ export async function generatePluginRegistry(opts: {
 // a future reclaim sweep would list prewarm files like any other. (Nothing
 // sweeps today — the compose-serve deactivation stage that used to was deleted
 // with the serve fan-out; Phase 5 owns the replacement.)
-const COMPOSITION_RUNTIME_DIRS = new Set(["web", "server", "prewarm", "deps"]);
+const COMPOSITION_RUNTIME_DIRS = new Set([
+  "web",
+  "server",
+  "machine",
+  "prewarm",
+  "deps",
+]);
 
 export function collectedDirNamedCompositionRegistryPath(
   def: DiscoveredCollectedDir,

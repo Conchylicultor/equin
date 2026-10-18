@@ -3,21 +3,21 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "timer/no-unlisted-timer",
-    paths: ["server/internal/stuck-lock-sweeper.ts"],
+    paths: ["machine/internal/stuck-lock-sweeper.ts"],
     kind: "sanctioned",
     reason:
       "The job queue's own recovery: a queued sweeper could not run while the wedged worker it exists to free holds the queue.",
   },
   {
     rule: "jobs:no-raw-addjob",
-    paths: ["server/internal/registry.ts", "check/index.ts"],
+    paths: ["machine/internal/graphile-queue.ts", "check/index.ts"],
     kind: "sanctioned",
     reason:
-      "The one file that inserts a jobs.run row (everything else goes through `job.enqueue`), and this check, which names every banned token to describe it.",
+      "The one file that inserts a jobs.run row (the desktop queue's `JobQueue.enqueue`; everything else goes through `job.enqueue`), and this check, which names every banned token to describe it.",
   },
   {
     rule: "jobs:no-raw-addjob",
-    paths: ["server/internal/enqueue-deadline.test.ts"],
+    paths: ["machine/internal/enqueue-deadline.test.ts"],
     kind: "sanctioned",
     reason:
       "Not an enqueue path: proves graphile's insert, through a `jobs-enqueue` pool whose connection stops answering, rejects with the connection deadline. `job.enqueue` cannot drive that, and the bytes are dropped on a throwaway database so no row lands.",
@@ -38,10 +38,14 @@ export default [
       "Phase-1 baseline of the unified prefixed ids: this table's `id` primary key names no id kind yet. Declare the kind (`defineIdKind`) and key the table with `idColumn` / `idKindField` (or `externalIdColumn` for an id minted elsewhere) in its migration phase, then delete this entry.",
   },
   {
-    rule: "no-db-backed-notify",
-    paths: ["server/internal/resources.ts"],
-    kind: "sanctioned",
+    rule: "boundaries/no-platform-api",
+    paths: [
+      "server/internal/queue-schema.ts",
+      "server/internal/superseded-trigger.ts",
+    ],
+    kind: "debt",
+    task: "task-1792338443-riwqev",
     reason:
-      "`jobs-list` reads graphile-worker's own tables (`graphile_worker.*`), a schema the DB change feed deliberately leaves out (only `public` gets triggers), so the feed can never invalidate it; the queue-activity signal (`onQueueActivity`) notifies it instead.",
+      "graphile's schema install stays in server/ (reached only from server/testing and the machine queue, never from the server barrel) because DB test suites in other plugins' server/ folders install it on throwaway databases, and test code follows its folder's row; move it once those suites can reach a machine testing barrel.",
   },
 ] satisfies Exemptions;

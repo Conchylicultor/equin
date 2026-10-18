@@ -396,7 +396,7 @@ function fakeNode(pluginsRoot: string, path: string): PluginNode {
     loadBearing: false,
     collapsed: false,
     compositionRoot: false,
-    runtimes: { web: true, server: false, central: false },
+    runtimes: { web: true, server: false, machine: false, central: false },
     children: [],
     facets: {},
   };
@@ -541,4 +541,87 @@ test("a bundle missing one id differs by exactly that entry, and prunes the dep 
     s.split("\n").filter((l) => l.startsWith("  { pluginPath:"));
   expect(lines(full)).toHaveLength(3);
   expect(lines(withoutAlpha)).toHaveLength(2);
+});
+
+// ── The machine registry: a companion of the server graph ──────────────────
+//
+// A machine entry boots in the server graph as its own node: its id is
+// `<id>#machine`, its `dependsOn` names `x#machine` for a machine-barrel import,
+// the server node `x` for any other import of `x`, and its own server node
+// implicitly. A dep on a plugin the bundle drops is pruned like any other.
+
+function machineFixture(): {
+  ctx: RegistryGenContext;
+  def: DiscoveredCollectedDir;
+} {
+  const fixtureRoot = "/fixture";
+  const pluginsRoot = join(fixtureRoot, "plugins");
+  const repo = memRepo(fixtureRoot, {
+    [pj("alpha/server/index.ts")]: "export default {};\n",
+    [pj("alpha/machine/index.ts")]: "export default {};\n",
+    [pj("beta/server/index.ts")]: "export default {};\n",
+    [pj("beta/machine/index.ts")]:
+      'import "@plugins/alpha/machine";\nimport "@plugins/gamma/core";\nexport default {};\n',
+    [pj("gamma/server/index.ts")]: "export default {};\n",
+    // A machine half with no server half of its own.
+    [pj("delta/machine/index.ts")]:
+      'import "@plugins/alpha/server";\nexport default {};\n',
+  });
+  const nodes = ["alpha", "beta", "gamma", "delta"].map((p) =>
+    fakeNode(pluginsRoot, p),
+  );
+  const tree = {
+    pluginsRoot,
+    byDir: new Map(nodes.map((n) => [n.dir, n])),
+    byPath: new Map(nodes.map((n) => [n.path, n])),
+    roots: nodes,
+    facets: [],
+  };
+  const ctx: RegistryGenContext = {
+    root: fixtureRoot,
+    tree,
+    graph: classifyEdges(tree),
+    mainBundle: new Set(nodes.map((n) => n.id)),
+    main: { id: "singularity", home: null },
+    repo: () => Promise.resolve(repo),
+    dirScans: new Map(),
+  };
+  return {
+    ctx,
+    def: {
+      dir: "machine",
+      membership: "composition",
+      _brand: "CollectedDirDef",
+      ownerDir: pluginsRoot,
+    },
+  };
+}
+
+test("machine entries are machine nodes depending on server and machine nodes", async () => {
+  const { ctx, def } = machineFixture();
+  const rendered = await renderCollectedDirRegistry({
+    ctx,
+    def,
+    bundle: ctx.mainBundle,
+    composition: ctx.main,
+  });
+  expect(rendered).toContain("export const machineEntries");
+  expect(rendered).toMatch(/id: "alpha#machine".*dependsOn: \["alpha"\]/);
+  expect(rendered).toMatch(
+    /id: "beta#machine".*dependsOn: \["alpha#machine", "beta", "gamma"\]/,
+  );
+  expect(rendered).toMatch(/id: "delta#machine".*dependsOn: \["alpha"\]/);
+});
+
+test("a machine dep on a plugin outside the bundle is pruned", async () => {
+  const { ctx, def } = machineFixture();
+  const rendered = await renderCollectedDirRegistry({
+    ctx,
+    def,
+    bundle: new Set([...ctx.mainBundle].filter((id) => id !== "gamma")),
+    composition: ctx.main,
+  });
+  expect(rendered).toMatch(
+    /id: "beta#machine".*dependsOn: \["alpha#machine", "beta"\]/,
+  );
 });

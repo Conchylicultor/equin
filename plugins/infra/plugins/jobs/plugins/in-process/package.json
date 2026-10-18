@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-infra-jobs-in-process",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The in-process job queue: provides the JobQueue host service in memory for a host without the desktop's graphile queue (the browser composition, the portable boot test). Never booted by the desktop."
+}

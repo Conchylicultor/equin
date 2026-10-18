@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-tasks-tasks-core-seeded-push-ledger",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The push ledger of a host without git: the PushLedger host service as nothing to do, the seeded `pushes` rows being the ledger (the browser composition, the portable boot test). Never booted by the desktop."
+}

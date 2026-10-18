@@ -1,4 +1,8 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useFetchEndpoint,
+  useMachineAvailability,
+} from "@plugins/infra/plugins/endpoints/web";
+import type { MachineResult } from "@plugins/infra/plugins/endpoints/core";
 import {
   useOpenPane,
   type PaneOpenMode,
@@ -41,6 +45,10 @@ export interface UseTaskLaunchOptions {
  * those options and starts it now (`POST /api/tasks/launch`), then opens the
  * conversation it started when the host asked for that. `started: false` comes
  * back as an outcome, not a failure: the user picked Off on the run pill.
+ *
+ * Launching needs the computer (`launchTask` is `needsMachine`): `availability`
+ * says whether this subtree can, for the host to disable its control with the
+ * message before a click, and `launch` answers the `MachineResult`.
  */
 export function useTaskLaunch({
   openAfterLaunch = false,
@@ -53,6 +61,8 @@ export function useTaskLaunch({
     (o) => !owned.has(o.id),
   );
   const openPane = useOpenPane();
+  const fetchEndpoint = useFetchEndpoint();
+  const availability = useMachineAvailability(launchTask);
 
   const resolveOptions = (picked: LaunchOptionValues): LaunchOptionValues => ({
     ...defaults,
@@ -63,7 +73,7 @@ export function useTaskLaunch({
     prompt: string,
     picked: LaunchOptionValues,
     task: TaskLaunchTarget,
-  ): Promise<LaunchTaskResponse> => {
+  ): Promise<MachineResult<LaunchTaskResponse>> => {
     const result = await fetchEndpoint(
       launchTask,
       {},
@@ -75,14 +85,14 @@ export function useTaskLaunch({
         },
       },
     );
-    if (result.started && openAfterLaunch)
+    if (result.kind === "ok" && result.value.started && openAfterLaunch)
       openPane(
         conversationPane,
-        { convId: result.conversation.id },
+        { convId: result.value.conversation.id },
         { mode: openMode },
       );
     return result;
   };
 
-  return { resolveOptions, launch };
+  return { resolveOptions, launch, availability };
 }

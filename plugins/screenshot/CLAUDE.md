@@ -58,7 +58,9 @@
     - `ui/tokens/type-scale --line-height-3xs`
   - Imported by: `screenshot/draw-on-app`
 - Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/components/screenshot-view.tsx` (debt)
+  - Exempts itself from:
+    - `live/no-endpoint-read` — `web/components/screenshot-view.tsx` (debt)
+    - `boundaries/no-platform-api` — `server/internal/handle-save-file.ts` (debt)
 - Shared:
   - Exports (values):
     - `createScreenshot`

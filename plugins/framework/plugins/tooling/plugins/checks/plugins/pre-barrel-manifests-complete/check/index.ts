@@ -14,7 +14,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 
-const RUNTIMES = ["web", "server", "central"] as const;
+const RUNTIMES = ["web", "server", "machine", "central"] as const;
 
 /**
  * The set of `*.generated.ts` files a barrel is ALLOWED to reach at module-load:
@@ -27,7 +27,7 @@ const RUNTIMES = ["web", "server", "central"] as const;
  *     the manifest phase.
  *
  * Composition-filtered registries need no entry: they are reached only through
- * the `@composition-{web,server}-registry` bundler alias or a variable dynamic
+ * the `@composition-{web,server,machine}-registry` bundler alias or a variable dynamic
  * specifier, neither of which this check's static DFS follows.
  */
 async function buildAllowSet(repo: RepoFiles): Promise<Set<string>> {

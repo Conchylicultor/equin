@@ -1,8 +1,12 @@
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
+  PLUGINS_DIR,
   REPO_ROOT,
   checkoutNamespace,
 } from "@plugins/infra/plugins/paths/core";
+import type { ServerContribution } from "@plugins/framework/plugins/server-core/core";
 
 // `bun test` preload (registered in the root bunfig.toml `[test]` section).
 //
@@ -27,3 +31,32 @@ import {
 // the whole preload is awaited before the first test file is imported — which
 // is the property that matters: no suite can observe an undeclared namespace.
 declareRuntimeNamespace(await checkoutNamespace(REPO_ROOT));
+
+// A test process is also a HOST that never boots its plugin graph: suites call
+// code that reads host services (`db` reads the database driver, `job.enqueue`
+// the job queue) with no `collectContributions` behind them. A `bun test` runs
+// on the desktop, so its providers are the desktop's — the host-service
+// providers among the app's machine halves (`machine.generated.ts`, the
+// committed `singularity` composition). A suite that boots a graph of its own
+// (the PGlite boot test) collects its own providers, which then answer instead.
+//
+// Only the machine halves that PROVIDE a host service are loaded (their barrel
+// spells `<Service>.provide(`), one at a time in registry order: loading every
+// machine half would evaluate most of the app's server graph in every test
+// process, registering resources (and jobs, channels) no suite asked for — and
+// a suite booting a slice of the graph would then find them undeclared. A
+// provider this misses fails loudly at its first `get()` ("no provider").
+const { machineEntries } =
+  await import("../plugins/framework/plugins/server-core/core/machine.generated");
+const { provideHostServicesUnbooted } =
+  await import("@plugins/framework/plugins/server-core/core/testing");
+const providers: ServerContribution[] = [];
+for (const entry of machineEntries) {
+  const barrel = join(PLUGINS_DIR, entry.pluginPath, "machine", "index.ts");
+  if (!/\.provide\(/.test(readFileSync(barrel, "utf8"))) continue;
+  const mod = (await entry.loader()) as {
+    default: { contributions?: readonly ServerContribution[] };
+  };
+  providers.push(...(mod.default.contributions ?? []));
+}
+provideHostServicesUnbooted(providers);

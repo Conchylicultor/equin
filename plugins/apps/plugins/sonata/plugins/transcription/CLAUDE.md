@@ -127,6 +127,8 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
   - Exports (values): `transcriptionDep`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/launch.ts`, `server/internal/profile-input.ts`, `server/internal/profile.ts`, `server/internal/submit.ts`, `server/internal/workspace-file.ts` (debt)
 - Core:
   - Exports (types): `TranscriptionStatus`
   - Exports (values): `TRANSCRIPTION_STATUSES`

@@ -19,4 +19,8 @@ export {
   TESTS_DIR,
   isTestCodePath,
   VERIFYING_FOLDERS,
+  MACHINE_NODE_SUFFIX,
+  machineNode,
+  isMachineNode,
+  pluginOfNode,
 } from "./plugin-id";

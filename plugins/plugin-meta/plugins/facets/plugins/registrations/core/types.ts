@@ -4,7 +4,7 @@ import type { DocMeta } from "@plugins/framework/plugins/web-sdk/core";
 export interface DocMetaRegistration {
   kind: string;
   factory?: string;
-  runtime: "server" | "central";
+  runtime: "server" | "machine" | "central";
   doc: DocMeta;
 }
 

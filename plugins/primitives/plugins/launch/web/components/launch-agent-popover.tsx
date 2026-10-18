@@ -147,7 +147,7 @@ export function LaunchAgentForm({
   const { text, picked } = draft;
   // Only what the user changed; the rest reads through to the registry's
   // defaults, so an option registered after mount is still sent with its seed.
-  const { resolveOptions, launch } = useTaskLaunch({
+  const { resolveOptions, launch, availability } = useTaskLaunch({
     openAfterLaunch,
     openMode,
     ownedOptions,
@@ -166,6 +166,9 @@ export function LaunchAgentForm({
   // Claude Code missing or signed out: say so, with the fix, where the Launch
   // button is — rather than filing a launch that cannot run.
   const claudeBlock = useClaudeCodeLaunchBlock();
+  // No computer behind this subtree (an in-browser server): launching cannot
+  // be asked at all, so the form says why instead of offering it.
+  const unavailable = availability.available ? null : availability.message;
 
   // One launch at a time, whichever of ⌘Enter or the button asked for it: the
   // ref closes the gap before the re-render, the state drives the button's
@@ -174,6 +177,7 @@ export function LaunchAgentForm({
   const [submitting, setSubmitting] = useState(false);
   const blocked =
     disabled ||
+    unavailable !== null ||
     claudeBlock !== null ||
     (textRequired && text.trim().length === 0);
   const trySubmit = async () => {
@@ -197,8 +201,11 @@ export function LaunchAgentForm({
         ? { id: req.taskId }
         : { title, categoryId: req.categoryId, subject: req.subject },
     );
+    // Unreachable: Launch is disabled while launching is unavailable, and a
+    // subtree's transport is fixed.
+    if (result.kind === "unavailable") throw new Error(result.message);
     clearDraft();
-    onSubmitted?.(result);
+    onSubmitted?.(result.value);
   };
 
   return (
@@ -252,7 +259,11 @@ export function LaunchAgentForm({
           }
         />
       ))}
-      {claudeBlock !== null ? (
+      {unavailable !== null ? (
+        <Text as="div" variant="caption" tone="muted">
+          {unavailable}
+        </Text>
+      ) : claudeBlock !== null ? (
         <Text as="div" variant="caption" tone="destructive">
           {claudeBlock}
         </Text>

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
 import {
@@ -33,7 +33,7 @@ function q(name: string): string {
 }
 
 function sha(text: string): string {
-  return createHash("sha256").update(text).digest("hex");
+  return sha256Hex(text);
 }
 
 // Installs the rollup layer and reconciles every rollup against its sources.

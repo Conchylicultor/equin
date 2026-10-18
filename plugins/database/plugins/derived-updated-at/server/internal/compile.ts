@@ -1,5 +1,4 @@
-import { createHash } from "node:crypto";
-import { escapeLiteral } from "pg";
+import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 import type { DerivedUpdatedAtSpec, TouchRule } from "./types";
 
 // ── Derived `updatedAt`: the compiler and the registry ─────────────────────
@@ -50,6 +49,27 @@ const BODY_TAG = "$derive_updated_at$";
 
 export function quoteIdent(name: string): string {
   return `"${name.replace(/"/g, '""')}"`;
+}
+
+/**
+ * A string as a SQL literal — `pg`'s `escapeLiteral`, character for character
+ * (`compile.test.ts` holds it to that), in plain JS so this compiler runs on
+ * every host: quotes doubled, and a value holding a backslash spelled as an
+ * `E'…'` escape string with its backslashes doubled. The trigger signatures
+ * stored in the DB are built from its output, so it must not drift from pg's.
+ */
+export function escapeLiteral(value: string): string {
+  let hasBackslash = false;
+  let escaped = "'";
+  for (const c of value) {
+    if (c === "'") escaped += "''";
+    else if (c === "\\") {
+      escaped += "\\\\";
+      hasBackslash = true;
+    } else escaped += c;
+  }
+  escaped += "'";
+  return hasBackslash ? ` E${escaped}` : escaped;
 }
 
 // A transition value, as a SQL literal Postgres coerces to the column's type
@@ -215,8 +235,6 @@ export function compileDerivedUpdatedAt(
   const triggerDdl =
     `CREATE OR REPLACE TRIGGER ${fn} BEFORE UPDATE ON ${quoteIdent(table)} ` +
     `FOR EACH ROW EXECUTE FUNCTION ${fn}()`;
-  const signature = createHash("sha256")
-    .update(`${functionDdl}\n--\n${triggerDdl}`)
-    .digest("hex");
+  const signature = sha256Hex(`${functionDdl}\n--\n${triggerDdl}`);
   return { table, triggerName, functionDdl, triggerDdl, signature };
 }

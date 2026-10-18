@@ -26,4 +26,22 @@ export default [
     reason:
       "The paths plugin owns the root: the single derivation (resolveDataRoot), the registry that joins kind and name onto it, and this check's own patterns.",
   },
+  {
+    rule: "boundaries/no-platform-api",
+    paths: [
+      "core/internal/checkout-deploys.ts",
+      "core/internal/checkout-owner.ts",
+      "core/internal/checkout-ref.ts",
+      "core/internal/data-dir.ts",
+      "core/internal/data-dirs-manifest.ts",
+      "core/internal/paths.ts",
+      "core/internal/prune-artifacts.ts",
+      "core/internal/toolchain-pin.ts",
+      "core/internal/worktree-dirs.ts",
+      "server/internal/bins.ts",
+    ],
+    kind: "debt",
+    task: "task-1792338443-riwqev",
+    reason: "not yet split into server/ + machine/",
+  },
 ] satisfies Exemptions;

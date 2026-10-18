@@ -24,22 +24,16 @@ the catalog.
 ## Plugin reference
 
 - Description: Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from graphile's own parse and installed matcher), scope, latest run and recent runs from the jobs run history, retention sweeps grouped as Cleanup and queue plumbing marked internal — and Run now for scheduled jobs; pushes the catalog when a run starts or finishes.
-- Server:
+- Machine:
   - Uses:
-    - `infra/background/catalog.defineBackgroundKind`
-    - `infra/jobs._jobRuns`
-    - `infra/jobs._jobRunStats`
     - `infra/jobs.cronRanges`
     - `infra/jobs.JobRunRecord`
     - `infra/jobs.JobRunStats`
-    - `infra/jobs.listRegisteredJobs`
     - `infra/jobs.nextScheduledRun`
     - `infra/jobs.onJobRunsChanged`
     - `infra/jobs.onJobSchedulesChanged`
     - `infra/jobs.readJobRunStats`
     - `infra/jobs.readRecentJobRuns`
-    - `infra/jobs.RegisteredJob`
-    - `infra/jobs.resolveJobCron`
     - `infra/jobs.runningJobStarts`
   - Register: `defineBackgroundKind('job')`
 

@@ -28,9 +28,26 @@ one that catches everybody once:
 through a raw `pg` client it is a `Date`; through a drizzle column it is a `Date`.
 Nothing in the SQL shows which.
 
+## `db` over the host's driver: `DatabaseDriver`
+
+`db` (`server/internal/driver.ts`) is a forwarding Proxy over the booted host's
+**`DatabaseDriver`** host service (`{ db(), ready(), bootDdl(fn) }`): the boot
+barrier calls `ready()` then runs the schema layer under `bootDdl`, over the
+migration texts of the host's `MigrationSource` (`database/migrations`). The
+read-set capture (`server/internal/read-set-capture.ts`) and `afterCommit(exec,
+fn)` — work that must not run before a top-level `db.transaction` commits, the
+Proxy tracking each one it opens — are portable. The desktop's driver is
+`database#machine`: everything below (the lazy `pg.Pool`, the lane gates, the
+deadlock retry, the query deadline) lives in `machine/internal/pg-driver.ts`. A
+host without the cluster boots `plugins/pglite`. Under `bun test` the preload
+provides the desktop's driver (see `test/bun-preload.ts`).
+
+`database/core`'s `readDatabaseConfig` (`readFileSync`) stays in `core/` (debt):
+CLIs, checks and e2e scripts read it there.
+
 ## Runtime query profiling
 
-`pool.query` is wrapped (in `server/internal/client.ts`) to record per-query
+`pool.query` is wrapped (in `machine/internal/pg-driver.ts`) to record per-query
 timing into the runtime-profiler recorder (`db` spans). The promise form is
 reimplemented to split the two phases node-postgres collapses into one — it
 emits a separate **`[acquire]`** span for connection checkout (pool queue-wait +
@@ -86,7 +103,7 @@ deadlock retry never re-runs it), the connection is **abandoned, never closed**
 `release()` / `end()` do nothing, and the event goes to `queryDeadlineSink`
 (reported by `database/query-deadline`).
 
-What the app pool (`server/internal/client.ts`) adds on top:
+What the app pool (`machine/internal/pg-driver.ts`) adds on top:
 
 - **The pool is `createDbPool({ name: "app" })`.** `installQueryWrapper` keeps
   only what the app pool has: lane gates, the deadlock retry, `[acquire]` spans
@@ -201,7 +218,7 @@ forensic companion `research/2026-07-09-global-interactive-lane-under-load.md`; 
 Importing `@plugins/database/server` has **no side effects** and never asks for
 this process's runtime namespace. The pg pool is built by a lazy `pool()` singleton on the
 first real query/connection; `db` is a thin forwarding Proxy over a
-lazily-constructed real drizzle instance (`server/internal/client.ts`). A missing
+lazily-constructed real drizzle instance (`machine/internal/pg-driver.ts`, behind `server/internal/driver.ts`'s Proxy). A missing
 worktree stays **loud** — the first `db.<method>()` (or `awaitDbReady`/`warmPool`)
 throws out of `runtimeNamespace()` — but the throw no longer fires
 at module eval. This is what lets any `bun:test` transitively import a server
@@ -240,25 +257,26 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
 
 ## Plugin reference
 
-- Description: Core database infrastructure. Connection pooling and DB readiness.
+- Description: Core database infrastructure: the app's `db` over the host's DatabaseDriver, DB readiness and the boot schema layer.
 - Load-bearing: yes
 - Server:
+  - Contributes: `host-service:database.driver` "database.driver"
   - Uses:
-    - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
-    - `database/connection.createDbPool`
-    - `database/connection.onClientLost`
-    - `database/connection.queryText`
-    - `database/connection.withQueryDeadline`
     - `database/derived-tables.DerivedTable`
     - `database/derived-tables.publishReconciledRollups`
     - `database/derived-updated-at.registeredDerivedUpdatedAt`
     - `database/derived-views.View`
     - `database/migrations.applySchemaLayer`
+    - `database/migrations.MigrationSource`
     - `primitives/log-channels.defineLogSink`
-  - Exports (types): `DbExecutor`
+  - Exports (types):
+    - `DatabaseDriverImpl`
+    - `Db`
+    - `DbExecutor`
   - Exports (values):
-    - `awaitDbReady`
+    - `afterCommit`
     - `currentTxId`
+    - `DatabaseDriver`
     - `db`
     - `dbLog`
     - `isTransientDbError`
@@ -266,16 +284,16 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `quotedRelationsIn`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 117 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 119 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×32
     - `page` ×15
     - `conversations` ×13
-    - `infra` ×12
+    - `infra` ×13
     - `tasks` ×10
     - `active-data` ×8
     - `debug` ×6
+    - `database` ×4
     - `primitives` ×4
-    - `database` ×3
     - `build` ×2
     - `stats` ×2
     - `apps-core/app-usage`
@@ -288,6 +306,8 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `search/engine`
     - `shell/notifications`
     - `ui/theme-engine/saved-themes`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
 - Core:
   - Exports (types):
     - `DatabaseConfig`
@@ -311,6 +331,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
   - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a…
   - **`migrations`** — DDL lifecycle: migration runner and SQL files.
   - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
+  - **`pglite`** (excluded) — The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM, in memory, for a host without the computer's Postgres cluster (the browser composition, the…
   - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
   - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database call on any pool got no reply in the last 10 minutes, naming the latest's pool and caller, read from the…
   - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal…

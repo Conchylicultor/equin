@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-log-channels-log-files",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The desktop's log-channel files: where each worktree's <channel>.jsonl lives (logsDir / logsDirFor), the bounded read path (readChannelEntries / readChannelJson), and the client-log family bound. Desktop-only: it reads the filesystem."
+}

@@ -9,6 +9,8 @@
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/health`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/session.ts`, `server/internal/upload.ts` (debt)
 - Server:
   - Exports (types):
     - `SshFailure`

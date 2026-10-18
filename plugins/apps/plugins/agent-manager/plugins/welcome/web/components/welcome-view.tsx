@@ -126,32 +126,44 @@ function HomePrompt() {
     "agent-manager-home:prompt",
     { text: "", picked: {} },
   );
-  const { resolveOptions, launch } = useTaskLaunch({
+  const { resolveOptions, launch, availability } = useTaskLaunch({
     openAfterLaunch: true,
     openMode: "root",
   });
   const options = resolveOptions(draft.picked);
   const setPicked = (picked: LaunchOptionValues) =>
     setDraft((d) => ({ ...d, picked }));
-  // Claude Code missing or signed out: the send button says why, rather than
-  // filing a launch that cannot run.
+  // No computer behind this subtree (an in-browser server), or Claude Code
+  // missing or signed out: the send button says why, rather than filing a
+  // launch that cannot run.
   const claudeBlock = useClaudeCodeLaunchBlock();
+  const blockReason = availability.available
+    ? claudeBlock
+    : availability.message;
   const prompt = draft.text.trim();
-  const canSend = prompt !== "" && claudeBlock === null;
+  const canSend = prompt !== "" && blockReason === null;
 
   const send = async () => {
     if (!canSend) return;
     // A placeholder the title model upgrades (the server files it titleAuto):
     // the prompt's first line, so the task reads sensibly until then.
     const title = prompt.split("\n")[0]!.slice(0, TITLE_CHARS);
-    await launch(prompt, draft.picked, {
+    const result = await launch(prompt, draft.picked, {
       title,
       categoryId: CONVERSATIONS_CATEGORY_ID,
     });
+    // Unreachable: the send button is disabled while launching is
+    // unavailable, and a subtree's transport is fixed.
+    if (result.kind === "unavailable") throw new Error(result.message);
     clearDraft();
   };
 
+  // A disabled button shows no tooltip, so a host without the computer says
+  // why under the field — it is the page's one action.
+  const unavailable = availability.available ? null : availability.message;
+
   return (
+    <>
     <ComposerField
       value={draft.text}
       onChange={(text) => setDraft((d) => ({ ...d, text }))}
@@ -186,7 +198,7 @@ function HomePrompt() {
             <IconButton
               icon={sendIcon}
               label="Start agent"
-              tooltip={claudeBlock ?? undefined}
+                tooltip={blockReason ?? undefined}
               shortcut="enter"
               variant="default"
               className="rounded-full"
@@ -197,6 +209,12 @@ function HomePrompt() {
         </>
       }
     />
+      {unavailable !== null ? (
+        <Text as="div" variant="caption" tone="muted" className="px-2xs">
+          {unavailable}
+        </Text>
+      ) : null}
+    </>
   );
 }
 

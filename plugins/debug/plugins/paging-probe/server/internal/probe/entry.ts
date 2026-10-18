@@ -29,7 +29,7 @@ import {
 
 // ---------------------------------------------------------------------------
 // proc_pid_rusage FFI — a DELIBERATE COPY of
-// plugins/framework/plugins/server-core/core/phys-footprint.ts, reading BOTH
+// plugins/framework/plugins/server-core/bin/phys-footprint.ts, reading BOTH
 // ri_phys_footprint (offset 72) and ri_resident_size (offset 64) from the same
 // RUSAGE_INFO_V0 buffer in one syscall. phys_footprint counts compressed private
 // pages; resident is what is physically in RAM right now — the difference is the

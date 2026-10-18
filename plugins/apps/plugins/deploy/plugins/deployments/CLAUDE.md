@@ -555,7 +555,9 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
 - Exemptions:
-  - Exempts itself from: `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)
+  - Exempts itself from:
+    - `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `server/internal/transcript.ts` (debt)
 - Sub-plugins:
   - **`runs-arm`** — The deploy arm's presence on the merged run surface: its rows' link into the deployment detail pane on the server the run went to, and the cells of its eight own fields (verb, failed phase, server /…
 

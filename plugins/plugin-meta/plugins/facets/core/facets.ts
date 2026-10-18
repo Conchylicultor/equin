@@ -37,7 +37,7 @@ export interface ExtractContext {
   imported?: {
     modules: {
       mod: Record<string, unknown>;
-      runtime: "web" | "server" | "central";
+      runtime: "web" | "server" | "machine" | "central";
     }[];
     naming: SlotNaming;
   };

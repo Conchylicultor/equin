@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-database-pglite",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM (in memory, or under a dataDir), for a host without the computer's Postgres cluster — the browser composition and the portable boot test. Never booted by the desktop.",
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8"
+  }
+}

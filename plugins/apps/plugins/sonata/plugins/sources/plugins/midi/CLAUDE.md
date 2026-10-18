@@ -99,6 +99,8 @@ MIDI for playback is the `getSongMidi` endpoint.
   - Imported by:
     - `apps/sonata/sources/midi/file-preview`
     - `apps/sonata/sources/midi/folders`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import.ts` (debt)
 - Sub-plugins:
   - **`file-preview`** — Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi host files) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes…
   - **`folders`** — Watched-folder UI for the MIDI source: registers the midi-folders config (settings pane renders it for free) and presents the File field (the MIDI exposure's `sourceMissing`) that flags — and lets…

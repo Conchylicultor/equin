@@ -87,6 +87,8 @@ const audio = await fetchYouTubeAudio(videoId, exec, { log });
   - Imported by:
     - `apps/sonata/sources/ultimate-guitar/alignment`
     - `infra/audio-analysis`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cache.ts`, `server/internal/fetch.ts`, `server/internal/sweep.ts` (debt)
 - Test helpers:
   - Server: `@plugins/integrations/plugins/youtube/plugins/audio-fetch/server/testing`
     - `YouTubeAccessError` — This machine cannot get audio from YouTube right now, whatever the video: a bot check or rate limit on its IP (`blocked`), or YouTube cannot be reached (`network`).

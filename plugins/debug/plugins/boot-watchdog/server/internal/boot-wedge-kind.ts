@@ -1,6 +1,6 @@
 import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
-import { logsDirFor } from "@plugins/primitives/plugins/log-channels/server";
+import { logsDirFor } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import { BootWedgePayloadSchema, type BootWedgePayload } from "../../core";
 
 // Re-alert the bell at most once per ~15 min while a boot stays wedged. A boot

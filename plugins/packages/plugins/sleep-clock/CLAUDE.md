@@ -49,6 +49,8 @@ That is "cannot tell", never "did not sleep" — a caller decides what to do wit
 - Description: How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sleep-clock.ts` (debt)
 - Core:
   - Exports (types):
     - `SleepClockReading`

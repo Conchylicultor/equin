@@ -6,7 +6,7 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 
 /**
- * At most three pills — one line, so they ride the section header as `summary`
+ * At most four pills — one line, so they ride the section header as `summary`
  * rather than sitting behind a chevron.
  */
 export function RuntimesSummary({ node }: { node: PluginNode }) {
@@ -14,15 +14,16 @@ export function RuntimesSummary({ node }: { node: PluginNode }) {
     <Inline gap="xs">
       {node.runtimes.web && <RuntimePill kind="web" />}
       {node.runtimes.server && <RuntimePill kind="server" />}
+      {node.runtimes.machine && <RuntimePill kind="machine" />}
       {node.runtimes.central && <RuntimePill kind="central" />}
     </Inline>
   );
 }
 
-function RuntimePill({ kind }: { kind: "web" | "server" | "central" }) {
-  return (
-    <Badge colorClass={RUNTIME_COLORS[kind]}>
-      {kind}
-    </Badge>
-  );
+function RuntimePill({
+  kind,
+}: {
+  kind: "web" | "server" | "machine" | "central";
+}) {
+  return <Badge colorClass={RUNTIME_COLORS[kind]}>{kind}</Badge>;
 }

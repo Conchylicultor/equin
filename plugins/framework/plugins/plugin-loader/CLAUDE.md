@@ -6,7 +6,9 @@
 
 - Description: Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
 - Cross-plugin:
-  - Imported by: `framework/web-sdk`
+  - Imported by:
+    - `framework/server-core`
+    - `framework/web-sdk`
 - Core:
   - Exports (values):
     - `computeLoadWaves`

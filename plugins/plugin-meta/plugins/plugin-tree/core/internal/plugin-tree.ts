@@ -37,7 +37,7 @@ async function readIfExistsAsync(path: string): Promise<string | null> {
 
 // ── Public types ────────────────────────────────────────────────────
 
-export type Runtime = "web" | "server" | "central";
+export type Runtime = "web" | "server" | "machine" | "central";
 
 export interface PluginNode {
   dir: string;
@@ -200,9 +200,11 @@ async function collectCoreFields(
   dir: string,
   pluginsRoot: string,
 ): Promise<CollectedPlugin> {
-  const [webIndex, serverIndex, centralIndex, pkgSrc] = await Promise.all([
+  const [webIndex, serverIndex, machineIndex, centralIndex, pkgSrc] =
+    await Promise.all([
     readIfExistsAsync(join(dir, "web", "index.ts")),
     readIfExistsAsync(join(dir, "server", "index.ts")),
+      readIfExistsAsync(join(dir, "machine", "index.ts")),
     readIfExistsAsync(join(dir, "central", "index.ts")),
     readIfExistsAsync(join(dir, "package.json")),
   ]);
@@ -216,18 +218,23 @@ async function collectCoreFields(
   const serverMeta: BarrelMeta | null = serverIndex
     ? parsePluginBarrel(serverIndex, join(dir, "server", "index.ts"))
     : null;
+  const machineMeta: BarrelMeta | null = machineIndex
+    ? parsePluginBarrel(machineIndex, join(dir, "machine", "index.ts"))
+    : null;
   const centralMeta: BarrelMeta | null = centralIndex
     ? parsePluginBarrel(centralIndex, join(dir, "central", "index.ts"))
     : null;
 
   const webDesc = webMeta?.description;
   const serverDesc = serverMeta?.description;
+  const machineDesc = machineMeta?.description;
   const centralDesc = centralMeta?.description;
   const descriptions: Partial<Record<Runtime, string>> = {};
   if (webDesc) descriptions.web = webDesc;
   if (serverDesc) descriptions.server = serverDesc;
+  if (machineDesc) descriptions.machine = machineDesc;
   if (centralDesc) descriptions.central = centralDesc;
-  let description = webDesc ?? serverDesc ?? centralDesc;
+  let description = webDesc ?? serverDesc ?? machineDesc ?? centralDesc;
   if (!description && pkgSrc) {
     try {
       const pkg = JSON.parse(pkgSrc);
@@ -240,11 +247,13 @@ async function collectCoreFields(
   const loadBearing =
     (webMeta?.loadBearing ?? false) ||
     (serverMeta?.loadBearing ?? false) ||
+    (machineMeta?.loadBearing ?? false) ||
     (centralMeta?.loadBearing ?? false);
 
   let collapsed =
     (webMeta?.collapsed ?? false) ||
     (serverMeta?.collapsed ?? false) ||
+    (machineMeta?.collapsed ?? false) ||
     (centralMeta?.collapsed ?? false);
   // package.json collapsed and compositionRoot markers.
   let compositionRoot = false;
@@ -281,6 +290,7 @@ async function collectCoreFields(
       runtimes: {
         web: !!webIndex,
         server: !!serverIndex,
+        machine: !!machineIndex,
         central: !!centralIndex,
       },
       children: [],
@@ -350,13 +360,16 @@ export async function buildPluginTree(
 
   const tree: PluginTree = { pluginsRoot, byDir, byPath, roots, facets: [] };
 
-  // Step 4a: barrel import (web → server → central) — gated on `facets` (and, as
+  // Step 4a: barrel import (web → server → machine → central) — gated on `facets` (and, as
   // before, skippable within a facet build via `skipBarrelImport`). Only the 2
   // runtime facets (contributions runtime part, registrations) need imported
   // modules. The other 7 facets parse files from disk and populate without barrels.
   const importedModules = new Map<
     string,
-    { mod: Record<string, unknown>; runtime: "web" | "server" | "central" }[]
+    {
+      mod: Record<string, unknown>;
+      runtime: "web" | "server" | "machine" | "central";
+    }[]
   >();
   if (opts?.facets && !opts?.skipBarrelImport) {
     registerBarrelStubs(join(pluginsRoot, ".."));
@@ -374,7 +387,7 @@ export async function buildPluginTree(
       }
     }
 
-    for (const runtime of ["web", "server", "central"] as const) {
+    for (const runtime of ["web", "server", "machine", "central"] as const) {
       for (const node of byDir.values()) {
         const barrelPath = join(node.dir, runtime, "index.ts");
         if (!existsSync(barrelPath)) continue;

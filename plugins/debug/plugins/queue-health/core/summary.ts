@@ -89,4 +89,6 @@ export type QueueHealthSummary = z.infer<typeof QueueHealthSummarySchema>;
 export const queueHealthSummaryEndpoint = defineEndpoint({
   route: "GET /api/debug/queue-health/summary",
   response: QueueHealthSummarySchema,
+  // It reads the desktop's graphile queue (infra/jobs#machine).
+  needsMachine: { feature: "Queue health" },
 });

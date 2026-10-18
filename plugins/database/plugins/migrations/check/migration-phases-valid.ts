@@ -10,10 +10,8 @@ import {
 } from "@plugins/database/plugins/migrations/core";
 // The runner's own planner validates the claims, so this check cannot drift
 // from what boot would refuse.
-import {
-  listMigrationFiles,
-  planSchemaSteps,
-} from "@plugins/database/plugins/migrations/server";
+import { planSchemaSteps } from "@plugins/database/plugins/migrations/server";
+import { listMigrationFiles } from "@plugins/database/plugins/migrations/machine";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Inlined minimal Check shape (mirrors the sibling checks in this folder) to

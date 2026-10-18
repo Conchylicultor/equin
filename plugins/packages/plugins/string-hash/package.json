@@ -2,5 +2,8 @@
   "name": "@singularity/plugin-packages-string-hash",
   "private": true,
   "version": "0.0.1",
-  "description": "Portable, non-cryptographic string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex) and hash64 (a 64-bit bigint)."
+  "description": "Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host \u2014 the Bun server, central and a browser page \u2014 computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint) and sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest).",
+  "dependencies": {
+    "@noble/hashes": "^1.8.0"
+  }
 }

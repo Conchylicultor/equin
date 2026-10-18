@@ -77,7 +77,7 @@ into a report: the `boot` channel is only its evidence and declares no reader.
     - `debug/boot-events.readBootEvents`
     - `infra/jobs.defineJob`
     - `infra/paths.listWorktreeDirs`
-    - `primitives/log-channels.logsDirFor`
+    - `primitives/log-channels/log-files.logsDirFor`
     - `reports.recordReport`
     - `reports.ReportKind`
   - Register: `defineJob('debug.boot-watchdog-monitor')`

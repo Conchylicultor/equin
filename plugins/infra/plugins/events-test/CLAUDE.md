@@ -58,8 +58,6 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
 - Server:
   - Uses:
     - `database.db`
-    - `database/admin.connectionString`
-    - `database/connection.createDbClient`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/events.defineTriggerEvent`
@@ -70,11 +68,8 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `infra/jobs.defineJob`
     - `infra/jobs.LEGACY_JOB_TASK`
     - `infra/jobs.NonRetryableError`
-    - `infra/jobs.queryRecentDeadJobs`
-    - `infra/jobs.queryRunningJobs`
     - `infra/jobs.reachableSlots`
     - `infra/jobs.singletonJobKey`
-    - `infra/jobs.UNSAFE_sweepStuckLocks`
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/infra/plugins/events-test/server/internal/tables.ts`
@@ -82,7 +77,6 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `defineJob('events_test.log')`
     - `defineJob('events_test.serial')`
     - `defineJob('events_test.cron-dedup')`
-    - `defineJob('events_test.superseded')`
     - `defineJob('events_test.saturate-sleeper')`
     - `defineJob('events_test.dead-letter')`
     - `defineSupervisedJob('events-test.detached-sleep')`
@@ -97,13 +91,21 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `POST /api/events-test/delete-targeting`
     - `GET /api/events-test/triggers`
     - `GET /api/events-test/wait-idle`
-    - `POST /api/events-test/crash-recovery`
     - `POST /api/events-test/serial-queue`
-    - `POST /api/events-test/queue-lock-no-steal`
     - `POST /api/events-test/cron-dedup`
-    - `POST /api/events-test/superseded`
     - `POST /api/events-test/queue-saturate`
     - `POST /api/events-test/detached-sleep`
+- Machine:
+  - Uses:
+    - `infra/endpoints.machineHandler`
+    - `infra/jobs.queryRecentDeadJobs`
+    - `infra/jobs.queryRunningJobs`
+    - `infra/jobs.UNSAFE_sweepStuckLocks`
+  - Register: `defineJob('events_test.superseded')`
+  - Routes:
+    - `POST /api/events-test/crash-recovery`
+    - `POST /api/events-test/queue-lock-no-steal`
+    - `POST /api/events-test/superseded`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
@@ -131,6 +133,7 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `endpoints:no-raw-json-handlers` — `server/internal` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `live/no-endpoint-read` — `web/components/events-test-view.tsx` (debt)
+    - `boundaries/no-platform-api` — `server/internal/serial-queue.ts` (debt)
 - Shared:
   - Exports (types):
     - `DeleteTargetingBody`

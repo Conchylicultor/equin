@@ -20,7 +20,9 @@
     - `page/bookmark`
     - `stats/cost`
 - Exemptions:
-  - Exempts itself from: `namespace:no-hand-built-url` — `server/internal/ssrf.ts` (sanctioned)
+  - Exempts itself from:
+    - `namespace:no-hand-built-url` — `server/internal/ssrf.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `server/internal/ssrf.ts` (debt)
 - Server:
   - Exports (types):
     - `PinnedDial`

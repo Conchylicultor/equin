@@ -1,6 +1,6 @@
 // Which boot mode THIS process is in — `serve` (the gateway-spawned, long-lived
 // backend) or `exec` (a short-lived child that runs one registered piece of
-// work and exits). See `../shared/boot-stages.ts` for the split.
+// work and exits). See `./boot-stages.ts` for the split.
 //
 // Both modes run the same `register` and `onReadyBlocking` phases, so a plugin
 // whose hook in one of those phases makes a claim about the SERVING backend
@@ -40,7 +40,7 @@ export function getBootMode(): BootMode {
 // sequence alone, so it stays off the core barrel (only the getter is exported).
 //
 // The register phase is sequential (`runRegisterPhase` in
-// `../shared/boot-stages.ts` awaits each token before the next), so "the plugin
+// `./boot-stages.ts` awaits each token before the next), so "the plugin
 // being registered" is a single well-defined value for the whole of a
 // `Registration.register()` call — including an async one that awaits inner
 // tokens (a wrapper registering the job it wraps). A registry records it so it

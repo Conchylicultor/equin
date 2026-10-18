@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-infra-attachments-memory-blobs",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Attachment bytes in memory: the AttachmentBlobs host service for a host without a filesystem (the browser composition, the portable boot test). Never booted by the desktop."
+}

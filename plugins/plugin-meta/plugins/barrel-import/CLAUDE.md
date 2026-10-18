@@ -67,7 +67,9 @@ mark the check-thread watch could only call that time `native (anonymous)`.
     - `framework/tooling/codegen`
     - `plugin-meta/plugin-tree`
 - Exemptions:
-  - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `core/internal/auto-stubs.generated.ts` (sanctioned)
+  - Exempts itself from:
+    - `sortable-list/no-raw-dnd-kit` — `core/internal/auto-stubs.generated.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `core/internal/stubs.ts` (debt)
 - Test helpers:
   - Core: `@plugins/plugin-meta/plugins/barrel-import/core/testing`
     - `reactExportsSeen`

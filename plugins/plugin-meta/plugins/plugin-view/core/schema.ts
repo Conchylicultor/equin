@@ -18,6 +18,7 @@ const pluginNodeSchema: ZodParser<PluginNode> = z.lazy(() =>
     runtimes: z.object({
       web: z.boolean(),
       server: z.boolean(),
+      machine: z.boolean(),
       central: z.boolean(),
     }),
     children: z.array(pluginNodeSchema),

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
 import { getViewConfig } from "drizzle-orm/pg-core";
@@ -63,9 +63,9 @@ export async function rebuildDerivedViews(
     name: v.name,
     ddl: compileCreateView(v),
   }));
-  const signature = createHash("sha256")
-    .update(compiled.map((c) => `${c.name}\n${c.ddl}`).join("\n--\n"))
-    .digest("hex");
+  const signature = sha256Hex(
+    compiled.map((c) => `${c.name}\n${c.ddl}`).join("\n--\n"),
+  );
 
   await db.transaction(async (tx) => {
     // Bookkeeping for the derived-view layer's content signature. Created

@@ -43,6 +43,8 @@ The gateway supervisor starts PgBouncer after Postgres (service index 1 in `data
   - Imported by:
     - `database/query-deadline`
     - `infra/launcher`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
 - Server:
   - Exports (values):
     - `PGBOUNCER_LOG_FILE`

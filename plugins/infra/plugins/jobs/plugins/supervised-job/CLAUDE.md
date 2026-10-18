@@ -745,6 +745,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `spawn-safety/no-raw-bun-spawn` — `server/internal/run/supervisor.ts` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `ids:pk-declared` — `server/internal/tables-run-ended.ts` (debt)
+    - `boundaries/no-platform-api` — `core/internal/terminal.ts`, `server/internal/run/supervisor.ts`, `server/internal/run/tail.ts` (debt)
 - Test helpers:
   - Core: `@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing`
     - `execContextForTests` — An `ExecContext` for tests: origin `cli`, admission that admits at once.

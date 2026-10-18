@@ -18,7 +18,7 @@ import {
 
 const EXPLORER_VIEW = defineDataView("studio.explorer.tree");
 
-const RUNTIME_KEYS = ["web", "server", "central"] as const;
+const RUNTIME_KEYS = ["web", "server", "machine", "central"] as const;
 
 // No expand hooks. Expand/collapse is per-(surface, view-instance, row) device-
 // local render state owned by the data-view primitive, so this hierarchy closes

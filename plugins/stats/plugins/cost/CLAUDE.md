@@ -269,7 +269,9 @@ override where it survives.
     - `ui/tokens/type-scale --line-height-caption`
   - Imported by: `conversations/usage`
 - Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/components/avg-cost-per-conversation-chart.tsx`, `web/components/cost-distribution-chart.tsx`, `web/components/cost-kpis.tsx`, `web/components/cumulative-cost-chart.tsx`, `web/components/daily-cost-chart.tsx`, `web/components/model-usage-chart.tsx`, `web/components/token-mix-chart.tsx`, `web/components/top-conversations-table.tsx` (debt)
+  - Exempts itself from:
+    - `live/no-endpoint-read` — `web/components/avg-cost-per-conversation-chart.tsx`, `web/components/cost-distribution-chart.tsx`, `web/components/cost-kpis.tsx`, `web/components/cumulative-cost-chart.tsx`, `web/components/daily-cost-chart.tsx`, `web/components/model-usage-chart.tsx`, `web/components/token-mix-chart.tsx`, `web/components/top-conversations-table.tsx` (debt)
+    - `boundaries/no-platform-api` — `server/internal/archive.ts`, `server/internal/price-table.ts`, `server/internal/usage-index.ts` (debt)
 - Core:
   - Exports (types):
     - `CountedUsage`

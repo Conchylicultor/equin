@@ -419,6 +419,8 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `debug/trace/engine`
     - `infra/retention`
     - `reports`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/producer.ts`, `server/internal/triggers.ts` (debt)
 - Test helpers:
   - Server: `@plugins/database/plugins/change-feed/server/testing`
     - `assertRouteLayoutsInstalled` — A3: throw (block boot) unless every routed table's installed triggers emit what its routes read.

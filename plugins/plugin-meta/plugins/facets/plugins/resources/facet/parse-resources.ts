@@ -623,13 +623,19 @@ function repoRootOf(dir: string): string | null {
   return idx < 0 ? null : dir.slice(0, idx);
 }
 
-/** Extract the server + central resources served by the plugin rooted at `pluginDir`. */
+/** Extract the server + central resources served by the plugin rooted at `pluginDir`.
+ *  A resource served from `machine/` counts as a server resource: the desktop
+ *  backend boots `server/` and `machine/` as one plugin graph, on one runtime. */
 export function parseResources(pluginDir: string): ResourceFacetData {
-  const serverPrefix = pluginDir + sep + "server" + sep;
+  const backendPrefixes = ["server", "machine"].map(
+    (folder) => pluginDir + sep + folder + sep,
+  );
   const centralPrefix = pluginDir + sep + "central" + sep;
 
   const all = readPluginSources(pluginDir);
-  const serverSources = all.filter((f) => f.path.startsWith(serverPrefix));
+  const serverSources = all.filter((f) =>
+    backendPrefixes.some((prefix) => f.path.startsWith(prefix)),
+  );
   const centralSources = all.filter((f) => f.path.startsWith(centralPrefix));
 
   const index = buildDescriptorIndex(all, {

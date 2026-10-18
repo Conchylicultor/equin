@@ -9,7 +9,10 @@ import {
   refreshDuress,
   setDuress,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
-import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
+import {
+  channelFileSink,
+  logEnvelope,
+} from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   sentinelStatusDir,
@@ -50,7 +53,7 @@ import type { MainToWorkerFrame, WorkerToMainFrame } from "./protocol";
 //
 // Import closure is deliberately lean: the latch sub-plugin barrel (node:fs +
 // paths only), the sentinel status-file leaf (zod + node:fs + paths — the
-// per-tick vitals file), log-channels, the embedded-pg constants, sql-rows' `core` leaf
+// per-tick vitals file), log-channels' file half (log-files), the embedded-pg constants, sql-rows' `core` leaf
 // (zod + structural types, no pg/drizzle import of its own), and the pure
 // detector / gatherers. No config_v2 (thresholds arrive as frames — a worker
 // has no plugin runtime), no drizzle pool, no trace engine (main mirrors trips
@@ -81,10 +84,11 @@ let syntheticSample: ClusterSample | null = null;
 // The worker is the sole writer of the duress-episodes channel file (single
 // writer per channel file); the sentinel is main-only, so the lines land on
 // main's log dir. Lazy: created on first transition, not at module eval.
-// The worker is the sole writer of the durable duress-episodes channel. Declared
-// once at module eval (`defineLogSink` throws on a duplicate id); import-safe
-// because the file sink is built lazily on first publish.
-const episodesChannel = defineLogSink({
+// The worker is the sole writer of the durable duress-episodes channel file. A
+// worker thread has no plugin graph (no host services), so it writes the
+// channel's FILE directly — the same declared sink and envelope the desktop's
+// log persistence writes; import-safe because the path resolves on first write.
+const episodesFile = channelFileSink({
   id: DURESS_EPISODES_CHANNEL,
   description:
     "Sentinel duress trip/clear lines (one per episode transition). Each episode files the duress-episode report and renders as a timeline duress band.",
@@ -109,7 +113,13 @@ function writeEpisodeLine(
     reason,
     episodeSetAt,
   };
-  episodesChannel.publish(JSON.stringify(event));
+  episodesFile.append(
+    logEnvelope({
+      t: Date.now(),
+      stream: "stdout",
+      line: JSON.stringify(event),
+    }),
+  );
 }
 
 function endEpisode(forced: boolean, wall: number): void {

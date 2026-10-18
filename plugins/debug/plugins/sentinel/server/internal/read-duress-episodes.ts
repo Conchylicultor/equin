@@ -1,5 +1,5 @@
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
-import { readChannelJson } from "@plugins/primitives/plugins/log-channels/server";
+import { readChannelJson } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import {
   DURESS_EPISODES_CHANNEL,
   DuressEpisodeEventSchema,

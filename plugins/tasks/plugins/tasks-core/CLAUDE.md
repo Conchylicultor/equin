@@ -62,30 +62,52 @@ the `fields.storage` contributions, unregistered in the browser). So
 > incomplete (the **pull** half). No queue, no job and no boot hook sits between a
 > landed commit and the row that records it.
 
-`server/internal/push-ledger/` owns both halves. It is the same shape
-`infra/corpus-index` uses for file-derived indexes — a watcher for freshness, a
-lazy `ensureFresh` for correctness — over git instead of the filesystem:
+The ledger owns both halves. It is the same shape `infra/corpus-index` uses for
+file-derived indexes — a watcher for freshness, a lazy `ensureFresh` for
+correctness — over git instead of the filesystem. Re-deriving it needs git, so it
+is split: the pure policy stays in `server/internal/push-ledger/`, the git walk is
+the desktop's `machine/internal/push-ledger/`, and the portable code reaches it
+through the **`PushLedger` host service** (`server/internal/push-ledger/service.ts`,
+`{ ensureFresh() }`): the reads that must see a complete ledger
+(`listPushesForAttempt`, `listPushesByPushId`) and this plugin's `onReady`
+catch-up call `PushLedger.get().ensureFresh()`. The desktop provider is
+`tasks-core#machine` (the memo below, plus the ref reaction in its `register`);
+a host without git provides `plugins/seeded-push-ledger` — nothing to do, the
+seeded rows ARE the ledger.
 
-- `read-main.ts` — the `git log` over `main`'s trailer-bearing commits. DB-free,
+- `read-main.ts` (machine) — the `git log` over `main`'s trailer-bearing commits. DB-free,
   so `read-main.test.ts` exercises it against throwaway repos.
 - `walk-bound.ts` — how far back a walk reaches, as pure policy: the earlier of
   the ledger's high-water mark minus a day (catch-up) and 30 days ago (the window
   in which a deferred commit is re-offered).
 - `plan.ts` — the pure attribution: which commits this database can attach to an
   attempt and does not already hold, oldest first, plus the ones it had to defer.
-- `reconcile.ts` — the DB-fed orchestration, bounded by a COVERAGE frontier
+- `reconcile.ts` (machine) — the DB-fed orchestration, bounded by a COVERAGE frontier
   (`min(max(pushes.created_at) - 24h, now - 30d)`), so a steady-state run walks a
   month of commits and inserts nothing.
 - `attribution.ts` — the in-process generation counter bumped by the one
   conversation-insert funnel, so the freshness signature can see the ledger's
   second input.
-- `freshness.ts` — `ensurePushLedgerFresh()`, one `createSignedMemo` signed on
+- `freshness.ts` (machine) — `ensurePushLedgerFresh()`, one `createSignedMemo` signed on
   `main`'s tip AND the attribution generation. A signature hit costs a string
   compare; a failed reconcile leaves the signature unadvanced so the next call
   retries.
 - `raw-reads.ts` — the ungated reads the reconcile itself needs, kept in their own
   file so re-entering the gate from inside a reconcile has no spelling.
-- `reaction.ts` — the push half, a `defineRefReaction` on `refs/heads/main`.
+- `reaction.ts` (machine) — the push half, a `defineRefReaction` on `refs/heads/main`.
+
+## Status batches ride the transaction
+
+`withTaskStatusBatch` / `runStatusBatchOn(tx, fn)` open a status batch keyed by
+the transaction handle itself (`status-batch.ts`, a `WeakMap<DbExecutor,
+StatusBatch>`), and `withTaskStatusChange(ids, exec, write)` finds it on the
+`exec` it already receives — no ambient context (the batch used to ride an
+`AsyncLocalStorage`, a Node-only primitive the portable server may not import).
+What that gave up is documented in `status-scope.ts`: a write on ANOTHER
+executor while a batch is open used to throw (rung 4); it now finds no batch and
+emits for itself. The ambient half of that assertion comes back with the
+portable AsyncContext primitive. A batch must join a transaction, never `db`
+itself (it would capture every concurrent request's writes) — that throws.
 
 ### A deferral is not a skip
 
@@ -270,11 +292,12 @@ serves them.
     - `useTaskAttempts`
     - `useTaskConversations`
 - Server:
-  - Contributes: 27 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 28 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `resource.declare` ×18
     - `derived-view` ×4
     - `ids.kind` ×3
     - `derived-table` ×2
+    - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
   - Uses:
     - `database.db`
     - `database/derived-tables.DerivedTable`
@@ -286,13 +309,7 @@ serves them.
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `infra/events.defineTriggerEvent`
-    - `infra/git/git-read-cache.createSignedMemo`
-    - `infra/git/git-watcher.defineRefReaction`
-    - `infra/git/git-watcher.lastKnownMainSha`
-    - `infra/host/host-read-pool.withHeavyReadSlot`
-    - `infra/worktree.ensureMainWorktreeRoot`
     - `network/live.serveCollection`
-    - `primitives/commit-list.runGit`
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.RankExecutor`
     - `primitives/rank.withRank`
@@ -321,6 +338,7 @@ serves them.
     - `OrphanedAttempt`
     - `Push`
     - `PushLandedPayload`
+    - `PushLedgerImpl`
     - `Task`
     - `TaskListItem`
     - `TaskStatus`
@@ -354,7 +372,6 @@ serves them.
     - `deleteConversationRow`
     - `dropTaskIfNoActiveSibling`
     - `dropTaskTree`
-    - `ensurePushLedgerFresh`
     - `findNextRankInFolder`
     - `getAttempt`
     - `getAttemptRow`
@@ -388,6 +405,7 @@ serves them.
     - `orphanedAttemptSink`
     - `pushes`
     - `pushLanded`
+    - `PushLedger`
     - `PushSchema`
     - `RECENT_GONE_LIMIT`
     - `recordScratchDelivery`
@@ -413,7 +431,6 @@ serves them.
     - `defineTriggerEvent('tasks.statusChanged')`
     - `defineTriggerEvent('tasks.titleChanged')`
     - `defineTriggerEvent('conversation.statusChanged')`
-    - `defineRefReaction('tasks.push-ledger (refs/heads/main)')`
   - Resources:
     - `attempt-workspaces:rows` (keyed, point)
     - `attempts` (keyed)
@@ -509,9 +526,9 @@ serves them.
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×29
-    - `tasks` ×16
-    - `debug` ×6
+    - `tasks` ×17
     - `active-data` ×5
+    - `debug` ×5
     - `page` ×3
     - `apps` ×2
     - `infra` ×2
@@ -547,6 +564,8 @@ serves them.
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
+- Machine:
+  - Register: `defineRefReaction('tasks.push-ledger (refs/heads/main)')`
 - Test helpers:
   - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
     - `canonical` — JSON with sorted keys, so a row compares by content whatever its key order.
@@ -558,5 +577,7 @@ serves them.
     - `treeSteps` — The scripted tree writes, in order: every kind of write the app makes to the tree — an insert, a rename, a status flip, an edge added and removed, a drag reorder, an attempt, a conversation and a push landing, a poller write, an attempt moved between tasks, cascade deletes of an attempt and a task, a drop.
     - `withSteps` — The script with a suite's own steps spliced in: each `after[label]` runs right after the step of that label (an unknown label throws, so a renamed step cannot silently drop a suite's case).
     - Types: `TreeLoad`, `TreeOracle`, `TreeOracleOptions`, `TreeStep`, `TreeStepCost`
+- Sub-plugins:
+  - **`seeded-push-ledger`** (excluded) — The push ledger of a host without git: provides the PushLedger host service as nothing to do — there is no main history to project, so the `pushes` rows the database was seeded with ARE the ledger…
 
 <!-- AUTOGENERATED:END -->

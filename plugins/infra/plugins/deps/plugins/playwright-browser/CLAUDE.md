@@ -56,6 +56,8 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
 - Description: The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
 - Cross-plugin:
   - Imported by: `infra/safe-fetch/browser-fetch`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/executables.ts` (debt)
 - Core:
   - Exports (types):
     - `BrowserExecutables`

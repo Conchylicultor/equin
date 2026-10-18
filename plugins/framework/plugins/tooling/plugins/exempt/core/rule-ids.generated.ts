@@ -10,6 +10,8 @@ export type ExemptableRuleId =
   | "apps-core/no-raw-history-nav"
   | "aria-safety/no-orphan-composite-role"
   | "bar/no-adhoc-bar"
+  | "boundaries/no-platform-api"
+  | "boundaries:portable-closure"
   | "bun-safety/no-declare-identifier"
   | "button-safety/no-async-raw-button"
   | "button-safety/no-redundant-cursor-pointer"

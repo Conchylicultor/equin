@@ -55,10 +55,18 @@ export const packageNameFor = (fsPath: string): string =>
  *  of its own so every HOST process — a backend, a CLI op, a check, an e2e
  *  script, the gateway's `start` — can reach a declaration and the engine
  *  without booting a backend, while `web` and `core` cannot: the engine reads
- *  `paths/core` (`homedir()` at module eval). */
+ *  `paths/core` (`homedir()` at module eval).
+ *
+ *  `machine` holds the desktop-only half of a plugin's backend: the code that
+ *  needs the computer (fs, git, spawn, the pg pool, graphile). `server/` stays
+ *  portable — it may not import a platform API (`boundaries/no-platform-api`)
+ *  nor a `machine` barrel — so the same server code can boot on another host
+ *  (the browser). A desktop backend boots both halves as one plugin graph
+ *  (`machineEntries`, nodes keyed `<plugin>#machine`). */
 export const RUNTIME_FOLDERS = [
   "web",
   "server",
+  "machine",
   "central",
   "core",
   "shared",
@@ -116,6 +124,9 @@ export type PluginFolder = RuntimeFolder | LeafFolder;
 const RUNTIME_FOLDER_DOCUMENTED: Record<RuntimeFolder, boolean> = {
   web: true,
   server: true,
+  // Documented like `server`: a machine barrel is the desktop backend's API
+  // (endpoints, registrations, host-service providers) other machine code uses.
+  machine: true,
   central: true,
   core: true,
   shared: true,
@@ -182,6 +193,9 @@ export const UNDOCUMENTED_RUNTIME_FOLDERS: ReadonlySet<string> = new Set(
 const RUNTIME_FOLDER_SHIPPED: Record<RuntimeFolder, boolean> = {
   web: true,
   server: true,
+  // The desktop backend boots it (`machineEntries`), so it ships in the
+  // desktop release.
+  machine: true,
   central: true,
   core: true,
   shared: true,
@@ -198,6 +212,35 @@ const RUNTIME_FOLDER_SHIPPED: Record<RuntimeFolder, boolean> = {
  *  edge classifier walks instead of every runtime's `apiUses`. */
 export const SHIPPED_RUNTIME_FOLDERS: readonly RuntimeFolder[] =
   RUNTIME_FOLDERS.filter((rt) => RUNTIME_FOLDER_SHIPPED[rt]);
+
+/** A plugin's `machine/` half is its own node in a desktop backend's plugin
+ *  graph, beside the plugin's `server/` node: keyed `<pluginPath>#machine`, with
+ *  the id `<plugin id>#machine` (so the two halves never collide in the
+ *  loader's by-path map, the duplicate-id guard or a phase's `dependsOn`). The
+ *  machine registry (`server-core/core/machine.generated.ts`) spells its
+ *  entries' ids and `dependsOn` this way, and the boot loader reads them back
+ *  with `isMachineNode`. */
+export const MACHINE_NODE_SUFFIX = "#machine";
+
+/** The machine node of a plugin path or plugin id. */
+export const machineNode = (pathOrId: string): string =>
+  `${pathOrId}${MACHINE_NODE_SUFFIX}`;
+
+/** Whether a registry id or node key names a plugin's machine half. */
+export const isMachineNode = (idOrKey: string): boolean =>
+  idOrKey.endsWith(MACHINE_NODE_SUFFIX);
+
+/**
+ * The PLUGIN a graph node belongs to: a machine node's own plugin id (or path),
+ * any other node unchanged. A node key is a loader concern; everything keyed
+ * by plugin identity — what a contribution or a registration names as its
+ * plugin (a config's store path, a job's "declared in") — reads this, so a
+ * plugin's two halves are one plugin to the rest of the app.
+ */
+export const pluginOfNode = (idOrKey: string): string =>
+  isMachineNode(idOrKey)
+    ? idOrKey.slice(0, -MACHINE_NODE_SUFFIX.length)
+    : idOrKey;
 
 /** The directory a runtime folder publishes its test helpers from:
  *  `<runtime>/testing/index.ts`, imported as `@plugins/<p>/<runtime>/testing`.

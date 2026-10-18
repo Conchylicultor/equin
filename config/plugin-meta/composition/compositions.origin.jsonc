@@ -1,4 +1,4 @@
-// @hash 0669cd8d5770
+// @hash 0963446ee0ec
 {
   "manifests": [
     {
@@ -19,7 +19,12 @@
       "name": "base-exclusions",
       "category": "pack",
       "entryPoints": [
-        "!review.plugin-changes.**"
+        "!review.plugin-changes.**",
+        "!database.pglite.**",
+        "!infra.jobs.in-process.**",
+        "!infra.attachments.memory-blobs.**",
+        "!primitives.log-channels.memory-persistence.**",
+        "!tasks.tasks-core.seeded-push-ledger.**"
       ],
       "selectedContributors": [],
       "extends": [],

@@ -1374,7 +1374,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/trainer`
               - `apps/chord/vocabulary`
           - Exemptions:
-            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
+            - Exempts itself from:
+              - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+              - `boundaries/no-platform-api` — `server/internal/backup-source.ts`, `server/internal/load-job.ts`, `server/internal/snapshot.ts` (debt)
         - **`trainer`** — The Chord trainer screen, the app's index pane (/chord): a real song's loop in an embedded YouTube player, an answer strip with one box per chord on the beat grid, one button per practised chord (keys 1–7), the check with its score, replays of the song over a box and of chords on Sonata's piano, the saved round, the player's playback reports, and the progress panel (today, all time, your chords).
           - Web:
             - Slots: `chord-trainer.actions`
@@ -1795,7 +1797,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/shell`
                 - Endpoint callers: `host-only`
               - Exemptions:
-                - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
+                - Exempts itself from:
+                  - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+                  - `boundaries/no-platform-api` — `server/internal/collect.ts`, `server/internal/request-context.ts` (debt)
               - Test helpers:
                 - Core: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing`
                   - `ZERO_METRICS`
@@ -1890,6 +1894,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Register: `defineJob('ip-country.refresh')`
               - Cross-plugin:
                 - Imported by: `apps/deploy/analytics/collect`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/lookup.ts`, `server/internal/refresh.ts` (debt)
               - Core:
                 - Exports (values): `IP_COUNTRY_SOURCE`
               - Test helpers:
@@ -2133,7 +2139,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
           - Exemptions:
-            - Exempts itself from: `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)
+            - Exempts itself from:
+              - `paths:no-hardcoded-paths` — `core/derive.ts` (sanctioned)
+              - `boundaries/no-platform-api` — `server/internal/transcript.ts` (debt)
           - Plugins:
             - **`runs-arm`** — The deploy arm's presence on the merged run surface: its rows' link into the deployment detail pane on the server the run went to, and the cells of its eight own fields (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) — real filterable and sortable SQL dimensions, declared by the arm. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
               - Web:
@@ -2460,6 +2468,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/health`
               - `apps/deploy/ssh-setup`
             - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ssh-keygen.ts`, `server/internal/ssh-public-key.ts` (debt)
           - Shared:
             - Exports (types):
               - `CreateServerBody`
@@ -2819,7 +2829,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/windows`
             - Endpoint callers: `windows`
           - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/components/wallpaper-search-panel.tsx` (debt)
+            - Exempts itself from:
+              - `live/no-endpoint-read` — `web/components/wallpaper-search-panel.tsx` (debt)
+              - `boundaries/no-platform-api` — `server/internal/handle-image.ts`, `server/internal/store.ts` (debt)
           - Plugins:
             - **`builtin`** — Built-in wallpaper source: contributes the Built-in tab to the desktop wallpaper picker, a grid of the bundled wallpapers (and the theme-following gradient); picking one writes its id to the wallpaper config with no server upload.
               - Web:
@@ -3318,6 +3330,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('events.refresh-tick')`
               - `defineJob('retention.events')`
               - `defineJob('retention.event_source_runs')`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cache-key.ts`, `server/internal/external-id.ts` (debt)
         - **`shell`** — App shell for Events. Registers the /events app entry, defines the Events.Sidebar slot, and renders the landing pane.
           - Web:
             - Slots:
@@ -3473,6 +3487,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `coworkmeetSessionUrl`
                   - `coworkmeetSourceConfigFields`
                   - `facetLabelOf`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/probe.ts` (debt)
             - **`dmda`** — Des Mots et Des Arts source type in the Events `+` menu: contributes the `dmda` type with its generic category picker. Des Mots et Des Arts event source type: probe reads the site's own paginated JSON listing (SSRF-guarded) and fingerprints its identity fields; extract maps the rows to events with no model call, resolving the year the site omits from the weekday it publishes.
               - Web:
                 - Contributes: `EventSources.Type` "Des Mots et Des Arts"
@@ -3493,6 +3509,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DMDA_SOURCE_TYPE_ID`
                   - `dmdaKindPath`
                   - `dmdaSourceConfigFields`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/probe.ts` (debt)
             - **`manual`** — Manual event source type: contributes the hand-entry option to the Events `+` source menu. Zero-config — the user is the extractor, so there is nothing to point it at. Hand-entry event source type: probe reports a constant fingerprint (nothing upstream can change) and extract vouches for the source's own live rows, so a refresh can never bury events the user typed.
               - Web:
                 - Contributes: `EventSources.Type` "Manual"
@@ -3549,6 +3567,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SALSANUEVA_TYPES`
                   - `salsanuevaPlanningUrl`
                   - `salsanuevaSourceConfigFields`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/probe.ts`, `server/internal/series.ts` (debt)
             - **`source-detail`** — Umbrella for the source side-pane's sections — one sub-plugin per region of a configured source (settings, schedule, status, runs).
               - Plugins:
                 - **`runs`** — Runs section of the Events source side-pane: the run ledger as a DataView (outcome, event counts, duration, error), including the cheap `unchanged` runs — the record that makes 'why did nothing happen' answerable. A row drills into the run's own pane, whose regions are contributions.
@@ -3732,6 +3752,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `urlSourceConfigFields`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/shape --spacing`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/page-text.ts` (debt)
     - **`file-explorer`** — File explorer app.
       - Plugins:
         - **`attachment-preview`** — An attachment previewed as a side pane through the Files preview (every file-viewer tab, Open with default app, size and age): the attachment/:id pane, homed in Files and opened beside any surface, and the file chip's opener, so clicking an attached file in a prompt opens it there.
@@ -3931,6 +3953,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `live/no-endpoint-read` — `web/internal/use-git.ts` (debt)
               - `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
+              - `boundaries/no-platform-api` — `server/internal/checkout.ts`, `server/internal/status.ts` (debt)
         - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the user's pinned favorites, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Host paths dragged onto Favorites (HOST_PATHS_MIME) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. Where the file explorer's Singularity place leads: serves the file-explorer.main-checkout value, the main checkout's path; registers the pinned-favorites config.
           - Web:
             - Slots: `row-actions`
@@ -4720,6 +4743,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-label`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reindex-page.ts` (debt)
         - **`copy-id`** — Copy block ID button next to the title in the page-detail header: copies the open page's block id (the id agents' page tools take) to the clipboard.
           - Web:
             - Contributes: `pageDetailPane.Actions` "copy-id" → `CopyIdAction`
@@ -5231,6 +5256,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placeThumbnailUrl`
           - Cross-plugin:
             - Imported by: `apps/places/places-map`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/thumbnail.ts` (debt)
         - **`places-core`** — Contract layer for the Places app, web half: the live places and tag-tree hooks, the Google Places search read, and the place and tag mutations. Contract layer for the Places app: the places / place_tags entities, the starter tag tree seeded on an empty install, the live places and tags collections, Google Places search and save (auto-tagged from the place's Google types, tagged Want to go), custom places (a named pin with no Google place behind it), the user's own title over Google's name, place and tag CRUD (a deleted tag's children and places move to its parent), the Haiku job that picks each place's Material Symbols icon, and the monthly job that re-fetches each place's Google details (whether it is still open).
           - Web:
             - Contributes:
@@ -5894,6 +5921,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/canvas`
               - `apps/prototypes/checkpoints`
               - `apps/prototypes/thumbnails`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/status.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts` (debt)
         - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, grouped (Pinned / In progress / Done) and filterable by a pin and a Done checkbox on every card (and in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
           - Web:
             - Slots:
@@ -6045,6 +6074,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
             - Imported by: `apps/prototypes/gallery`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cache.ts`, `server/internal/hash-dir.ts`, `server/internal/render.ts` (debt)
     - **`settings`** — Settings app.
       - Plugins:
         - **`accounts`** — Account settings surface: registers the accounts and provider panes and the Settings sidebar entry.
@@ -8184,6 +8215,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/sonata/sources/midi/file-preview`
                   - `apps/sonata/sources/midi/folders`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import.ts` (debt)
               - Plugins:
                 - **`file-preview`** — Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi host files) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
                   - Web:
@@ -8247,6 +8280,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `defineJob('sonata.midi.import')`
                       - `defineWarmup('sonata.midi-folders.reconcile')`
                       - `defineFileWatcher('sonata-midi-folders.folders')`
+                  - Exemptions:
+                    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import-job.ts`, `server/internal/reconcile.ts` (debt)
             - **`musicxml`** — MusicXML file input source for Sonata: compile() parses a score-partwise document into a Score (parts and staves as tracks, ties merged, repeats unrolled, chord symbols, tempo, swing). Persists per-song MusicXML as an attachment and contributes the library Import affordance and hydration. Owns the sonata_songs_ext_musicxml side-table: per-song MusicXML attachment + content hash. Creates MusicXML-backed songs from an uploaded document (content-hash dedup) and fills an existing MusicXML song with a document (importMusicXmlForSong, for the transcription flow).
               - Web:
                 - Contributes:
@@ -8290,6 +8325,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-lg`
                   - `ui/tokens/shape --spacing`
                 - Imported by: `apps/sonata/transcription`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import.ts` (debt)
             - **`ultimate-guitar`** — Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section. Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), announcing sonata.ug.tabSaved when a song's sheet content changes.
               - Web:
                 - Contributes:
@@ -8352,7 +8389,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-weight-semibold`
                 - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
               - Exemptions:
-                - Exempts itself from: `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
+                - Exempts itself from:
+                  - `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
+                  - `boundaries/no-platform-api` — `server/internal/ug-client.ts` (debt)
               - Core:
                 - Exports (types):
                   - `UgFetchErrorKind`
@@ -8728,6 +8767,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `transcriptionDep`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/launch.ts`, `server/internal/profile-input.ts`, `server/internal/profile.ts`, `server/internal/submit.ts`, `server/internal/workspace-file.ts` (debt)
           - Core:
             - Exports (types): `TranscriptionStatus`
             - Exports (values): `TRANSCRIPTION_STATUSES`
@@ -10723,6 +10764,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports (values): `setAppleCertificateEndpoint`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/certificate-endpoint.ts` (debt)
       - Shared:
         - Exports (values): `appleSigningConfig`
       - Plugins:
@@ -10996,7 +11039,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `backup/targets/google-drive`
       - `backup/targets/local`
   - Exemptions:
-    - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
+    - Exempts itself from:
+      - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+      - `boundaries/no-platform-api` — `server/internal/assemble-archive.ts`, `server/internal/reconcile-backups.ts` (debt)
   - Shared:
     - Exports (values): `runBackup`
   - Plugins:
@@ -11066,6 +11111,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-attachments.ts` (debt)
         - **`claude-settings`** — Config UI for the Claude settings backup source. Backs up Claude CLI settings and history into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -11079,6 +11126,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
               - `infra/paths.CLAUDE_DIR`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-claude-settings.ts` (debt)
         - **`config`** — Config UI for the config backup source. Backs up Singularity config files into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -11091,6 +11140,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-config.ts` (debt)
         - **`cost-history`** — Config UI for the cost-history backup source. Backs up the permanent cost-history archive (year-sharded session records and the merged price table) into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -11103,6 +11154,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-cost-history.ts` (debt)
         - **`databases`** — Config UI for the databases backup source. Backs up worktree databases into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -11122,6 +11175,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/admin.listDatabases`
               - `infra/worktree.hasCompositionMarker`
               - `infra/worktree.isCanonicalWorktreeName`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-databases.ts` (debt)
         - **`project-memory`** — Config UI for the project memory backup source. Backs up Claude Code project memory files into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -11135,6 +11190,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
               - `infra/paths.CLAUDE_PROJECTS_DIR`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-project-memory.ts` (debt)
         - **`prototypes`** — Config UI for the prototypes backup source. Backs up the throwaway UI prototypes into the backup archive — they live outside git on purpose, so this is what makes them recoverable.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -11147,6 +11204,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-prototypes.ts` (debt)
         - **`secrets`** — Config UI for the secrets backup source. Backs up encrypted secrets into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -11159,6 +11218,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-secrets.ts` (debt)
         - **`singularity-platform`** — Config UI for the Singularity platform backup source. Backs up Singularity platform files (auth, database config) into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -11171,6 +11232,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-singularity-platform.ts` (debt)
         - **`transcripts`** — Config UI for the transcripts backup source. Backs up retained-conversation transcripts (active, plus every conversation of a held task) into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -11185,6 +11248,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.getConfig`
               - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
               - `tasks/tasks-core.listRetainedConversations`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-transcripts.ts` (debt)
     - **`targets`** — Umbrella for pluggable backup targets, each a self-gating sub-plugin contributing a BackupTarget.
       - Plugins:
         - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
@@ -11205,6 +11270,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup.BackupTarget`
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-target.ts`, `server/internal/upload.ts` (debt)
         - **`local`** — Config UI for local backup target. Stores backup archives on the local filesystem.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -11218,6 +11285,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
               - `infra/paths.BACKUPS_DIR`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-local-target.ts` (debt)
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Web:
@@ -11361,6 +11430,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `build/build-profiling`
       - `build/runs-arm`
       - `debug/reports`
+  - Exemptions:
+    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-terminal.ts` (debt)
   - Shared:
     - Exports (types): `BuildRun`
     - Exports (values):
@@ -11492,7 +11563,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
       - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/build-log-section.tsx` (debt)
+        - Exempts itself from:
+          - `live/no-endpoint-read` — `web/components/build-log-section.tsx` (debt)
+          - `boundaries/no-platform-api` — `server/internal/handle-build-run-logs.ts` (debt)
       - Shared:
         - Exports (types):
           - `BuildLogsResponse`
@@ -11529,7 +11602,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/categorical --categorical-7`
           - `ui/tokens/categorical --categorical-8`
       - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/build-profiling-section.tsx` (debt)
+        - Exempts itself from:
+          - `live/no-endpoint-read` — `web/components/build-profiling-section.tsx` (debt)
+          - `boundaries/no-platform-api` — `server/internal/handle-build-run-profiling.ts` (debt)
       - Shared:
         - Exports (values): `getBuildRunProfile`
     - **`build-status`** — Single source of truth for build-run status display metadata — label, badge variant, and dot color per BuildStatus.
@@ -11713,6 +11788,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/build-commits`
           - `build/runs-arm`
           - `framework/cli/build`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `shared/stale-holder.ts` (debt)
       - Cli:
         - Exports (types): `BuildRunRecorder`
         - Exports (values): `createBuildRunRecorder`
@@ -11804,7 +11881,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/studio/compositions/draft-actions`
           - `apps/studio/compositions/release`
       - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-serve-status.ts` (debt)
+        - Exempts itself from:
+          - `live/no-endpoint-read` — `web/internal/use-serve-status.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
     - **`server-build-id`** — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
         - Uses: `infra/paths.webDistDir`
@@ -11816,6 +11895,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/deployment`
           - `reports`
           - `reports/crash`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/get-server-commit.ts`, `server/internal/get-server-graph-hash.ts` (debt)
 
 - **`code-explorer`** — Worktree-scoped file reads: raw/diff/image content and directory listings by attempt id or the reserved `main` sentinel.
   - Server:
@@ -11852,6 +11933,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Imported by:
       - `code-explorer/file-resolve`
       - `review/plugin-changes`
+  - Exemptions:
+    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/checkout-root.ts`, `server/internal/commit-values.ts`, `server/internal/contained-path.ts`, `server/internal/get-file-content.ts`, `server/internal/get-file-diff.ts`, `server/internal/image-handler.ts`, `server/internal/list-dir-handler.ts`, `server/internal/resolve-worktree-path.ts` (debt)
   - Plugins:
     - **`code-api`** — Typed contracts for the /api/code/* endpoints (tree, file, diff, image, push, commit). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle.
       - Core:
@@ -11958,7 +12041,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-medium`
         - Imported by: `conversations/conversation-view/code/file-pane`
       - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-resolved-file.ts` (debt)
+        - Exempts itself from:
+          - `live/no-endpoint-read` — `web/internal/use-resolved-file.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/resolve-handler.ts` (debt)
       - Shared:
         - Exports (values): `resolveFile`
 
@@ -12156,6 +12241,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reports`
       - `review/code-review`
       - `shell/global-action-bar`
+  - Exemptions:
+    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/config-watcher.ts`, `server/internal/fork.ts`, `server/internal/jsonc-proxy.ts`, `server/internal/orphan-audit.ts`, `server/internal/registry.ts`, `server/internal/resource.ts`, `server/internal/scope-fork.ts`, `server/internal/scope-paths.ts`, `server/internal/scope-snapshot.ts` (debt)
   - Test helpers:
     - Web: `@plugins/config_v2/web/testing`
       - `useConfigDemoBackend` — Config inside a demo scope (`Demo.Resource`): the server's tier cascade over two browser layers, so a demo surface reads exactly what a fresh user of the committed repo would — and can change it.
@@ -12274,6 +12361,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/tooling/codegen`
           - `plugin-meta/relocate`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/config-ledger.ts` (debt)
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values, and the Config task category the conflict-resolution agent files under.
       - Web:
         - Slots:
@@ -12587,7 +12676,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `compaction-context`
       - `transcript-api`
   - Exemptions:
-    - Exempts itself from: `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
+    - Exempts itself from:
+      - `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
+      - `boundaries/no-platform-api` — `server/internal/lifecycle.ts`, `server/internal/locate-cut.ts`, `server/internal/status-reconciler.ts` (debt)
   - Plugins:
     - **`agents`** — Named agent definitions that launch conversations.
       - Web:
@@ -12906,6 +12997,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/runtime-tmux`
           - `page/annotations/agent-access`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/hook-entry.ts` (debt)
     - **`conversation-category`** — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Paints the sidebar avatar from the category chosen for it.
       - Web:
         - Contributes:
@@ -13358,6 +13451,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-semibold`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/allow-files-resource.ts` (debt)
           - Shared:
             - Exports (types): `AllowFiles`
             - Exports (values): `allowFiles`
@@ -13553,6 +13648,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review/code-review`
               - `review/plugin-changes`
               - `review/plugin-changes/file-changes`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/compute-edited-files.ts`, `server/internal/edited-files-signature.ts` (debt)
           - Plugins:
             - **`file-pane`** — Hosts the file-peek pane: a checkout file opened from a conversation (chat file links, review, commits), shown through primitives/file-viewer with the conversation's edited-file status as context.
               - Web:
@@ -14562,6 +14659,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
                   - `conversations/conversation-view/running-agents`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/output-path.ts`, `server/internal/output-resource.ts`, `server/internal/tail-read.ts` (debt)
             - **`code-listing`** — Renders `cat -n` tool output (`CatNListing`) as a syntax-highlighted, line-numbered listing: parses the gutter off and hands the code to syntax-highlight's `CodeListing`.
               - Web:
                 - Uses: `primitives/syntax-highlight.CodeListing`
@@ -15002,6 +15101,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
                   - `conversations/conversation-view/running-agents`
                   - `conversations/usage`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/discovery.ts` (debt)
             - **`summary`** — Renders summary separator events in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "summary" → `SummaryRow`
@@ -16275,6 +16376,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
             - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/backup-sweep-job.ts` (debt)
         - **`running-agents`** — The sub-agents working for this conversation, in a card above the prompt box: a summary line (how many are working, how long the longest has been going) that folds the list, and one row per agent — what it was asked to do, what it is, what it last did and how many tokens it has produced. A finished agent lingers a few seconds showing 'done m:ss'; the card is not there at all when nothing is running. The transcript's stats strip carries an agents reading (how many agents, and the output tokens the conversation and they produced in all) that toggles the card to list every agent, finished or not
           - Web:
             - Contributes:
@@ -17002,6 +17105,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli`
               - `tasks`
               - `tasks/auto-start/launch-option`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/catalog-file.ts`, `server/internal/cli-models.ts` (debt)
     - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
       - Web:
         - Uses:
@@ -17141,6 +17246,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `releaseRelayQuestion`
       - Cross-plugin:
         - Imported by: `conversations/runtime-tmux`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/relay-hook.ts` (debt)
     - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
       - Web:
         - Slots: `recoveryPane.Actions`
@@ -17225,7 +17332,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `debug/session-divergence`
       - Exemptions:
-        - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `server/internal/tmux-runtime.ts` (sanctioned)
+        - Exempts itself from:
+          - `spawn-safety/no-raw-bun-spawn` — `server/internal/tmux-runtime.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `server/internal/agent-session-env.ts`, `server/internal/claude-session.ts`, `server/internal/prune-signals-job.ts`, `server/internal/signals.ts`, `server/internal/tmux-runtime.ts` (debt)
     - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
       - Web:
         - Contributes: `IdKinds.Kind` "sess"
@@ -17364,6 +17473,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-3xs`
           - `ui/tokens/type-scale --line-height-body`
           - `ui/tokens/type-scale --line-height-caption`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-generate.ts` (debt)
       - Shared:
         - Exports (values): `generateConversationSummary`
     - **`terminal-menu`** — The shape of an interactive numbered menu a conversation's terminal has open (title, options, highlighted option, footer): the value the runtime reads off the screen, the conversation row carries as waitingMenu, and the web's menu card answers.
@@ -17398,6 +17509,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/log-channels.Log`
           - `tasks/tasks-core.listRetainedConversations`
         - Register: `defineJob('conversations.transcript-touch')`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/touch-job.ts` (debt)
     - **`transcript-watcher`** — Foreign-session report renderer: a one-line Debug, Reports summary for the conversation-foreign-session kind — which conversation holds a session id that belongs to another, and how it was seen. Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
       - Web:
         - Contributes: `Reports.KindView` → `ForeignSessionSummary`
@@ -17455,6 +17568,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/transcript-retention`
           - `conversations/usage`
           - `debug/session-divergence`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
       - Core:
         - Exports (types):
           - `ForeignSessionPayload`
@@ -17583,7 +17698,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/runtime-tmux`
           - `tasks/task-title`
       - Exemptions:
-        - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
+        - Exempts itself from:
+          - `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/mailbox.ts` (debt)
     - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — counted incrementally from the transcripts (the anchored session chain plus every sub-agent), stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose).
       - Web:
         - Contributes: `FieldPresentation.Register` "exposure:conversations_ext_usage"
@@ -17619,6 +17736,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineWarmup('conversations.usage.backfill')`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/scan.ts` (debt)
     - **`workspace`** — Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to, the workspace.catalog live value (every workspace a task can name), and the conversation → workspace lookup.
       - Server:
         - Contributes: `resource.declare` "workspace.catalog"
@@ -17673,6 +17792,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/scratch-hello`
           - `review/plugin-changes`
           - `tasks/tasks-core`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/registry.ts` (debt)
       - Test helpers:
         - Server: `@plugins/conversations/plugins/workspace/server/testing`
           - `installWorkspaceImpl` — Sets `impl` as its kind's workspace, replacing any registered one — for a test, which runs without the plugin register phase and may share the module with other suites.
@@ -17763,6 +17884,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ensureDirTrusted`
               - `isDirTrusted`
               - `withDirTrusted`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/claude-trust.ts`, `server/internal/reap-job.ts`, `server/internal/scratch-workspace.ts` (debt)
         - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out in the spawn job, resumable while the checkout exists.
           - Server:
             - Uses:
@@ -17774,28 +17897,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/worktree.gitWorktreesDir`
               - `infra/worktree.setupWorktree`
               - `infra/worktree/spare-pool.spareRefillJob`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/worktree-workspace.ts` (debt)
           - Test helpers:
             - Server: `@plugins/conversations/plugins/workspace/plugins/worktree/server/testing`
               - `worktreeWorkspace`
 
-- **`database`** — Core database infrastructure. Connection pooling and DB readiness.
+- **`database`** — Core database infrastructure: the app's `db` over the host's DatabaseDriver, DB readiness and the boot schema layer.
   - Server:
+    - Contributes: `host-service:database.driver` "database.driver"
     - Uses:
-      - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
-      - `database/connection.createDbPool`
-      - `database/connection.onClientLost`
-      - `database/connection.queryText`
-      - `database/connection.withQueryDeadline`
       - `database/derived-tables.DerivedTable`
       - `database/derived-tables.publishReconciledRollups`
       - `database/derived-updated-at.registeredDerivedUpdatedAt`
       - `database/derived-views.View`
       - `database/migrations.applySchemaLayer`
+      - `database/migrations.MigrationSource`
       - `primitives/log-channels.defineLogSink`
-    - Exports (types): `DbExecutor`
+    - Exports (types):
+      - `DatabaseDriverImpl`
+      - `Db`
+      - `DbExecutor`
     - Exports (values):
-      - `awaitDbReady`
+      - `afterCommit`
       - `currentTxId`
+      - `DatabaseDriver`
       - `db`
       - `dbLog`
       - `isTransientDbError`
@@ -17803,16 +17929,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `quotedRelationsIn`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/shape --spacing`
-    - Imported by: 117 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 119 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×32
       - `page` ×15
       - `conversations` ×13
-      - `infra` ×12
+      - `infra` ×13
       - `tasks` ×10
       - `active-data` ×8
       - `debug` ×6
+      - `database` ×4
       - `primitives` ×4
-      - `database` ×3
       - `build` ×2
       - `stats` ×2
       - `apps-core/app-usage`
@@ -17825,6 +17951,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `search/engine`
       - `shell/notifications`
       - `ui/theme-engine/saved-themes`
+  - Exemptions:
+    - Exempts itself from: `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
   - Core:
     - Exports (types):
       - `DatabaseConfig`
@@ -17879,15 +18007,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listDatabases`
           - `openShortLivedClient`
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
+        - Imported by: 22 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
           - `debug` ×7
-          - `infra` ×6
           - `database` ×5
+          - `infra` ×4
           - `apps` ×2
           - `backup/sources/databases`
           - `build/serve-composition`
           - `reports`
           - `shell/notifications`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/backup.ts`, `server/internal/fork.ts`, `server/internal/pool.ts`, `server/internal/temp-name.ts` (debt)
       - Test helpers:
         - Server: `@plugins/database/plugins/admin/server/testing`
           - `assertExclusionsClosed` — Check a plugin's `ExcludeFromBackup` / `ExcludeFromFork` declarations against its own drizzle tables, without a database: no kept table may have a foreign key to a table whose rows are left out (pg_restore would fail re-adding it).
@@ -17943,6 +18073,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/trace/engine`
           - `infra/retention`
           - `reports`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/producer.ts`, `server/internal/triggers.ts` (debt)
       - Test helpers:
         - Server: `@plugins/database/plugins/change-feed/server/testing`
           - `assertRouteLayoutsInstalled` — A3: throw (block boot) unless every routed table's installed triggers emit what its routes read.
@@ -17962,6 +18094,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`client-tools`** — Postgres client tools (pg_dump, pg_restore) built from the same release as the embedded server: pgClientBin resolves the vendored binary, never the PATH.
       - Cross-plugin:
         - Imported by: `database/admin`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/bin.ts` (debt)
       - Server:
         - Exports (types): `PgClientTool`
         - Exports (values):
@@ -17970,14 +18104,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`connection`** — Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is abandoned — detached, held, never closed, since its fd may already be someone else's — and announced on queryDeadlineSink.
       - Cross-plugin:
         - Imported by:
-          - `database`
           - `database/admin`
           - `database/change-feed`
           - `database/query-deadline`
-          - `infra/events-test`
           - `infra/jobs`
       - Exemptions:
-        - Exempts itself from: `db-connection/no-raw-pg-connection` — `.` (sanctioned)
+        - Exempts itself from:
+          - `db-connection/no-raw-pg-connection` — `.` (sanctioned)
+          - `boundaries/no-platform-api` — `server/internal/client.ts`, `server/internal/deadline.ts` (debt)
         - Exempted by: `database/connection` (0 debt)
       - Server:
         - Exports (types):
@@ -18157,6 +18291,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/query-deadline`
           - `debug/sentinel`
           - `infra/launcher`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
       - Server:
         - Exports (values):
           - `PG_DATA_DIR`
@@ -18238,6 +18374,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/boot-snapshot`
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
+        - Contributes: `host-service:database.migration-source` "database.migration-source"
         - Uses:
           - `database/derived-tables.rebuildDerivedTables`
           - `database/derived-updated-at.DerivedUpdatedAtSpec`
@@ -18248,6 +18385,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/log-channels.defineLogSink`
         - Exports (types):
           - `Migration`
+          - `MigrationSourceImpl`
           - `SchemaLayerInputs`
           - `SchemaLayerResult`
           - `SchemaPlan`
@@ -18255,7 +18393,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `applySchemaLayer`
           - `dryRunPendingMigrations`
-          - `listMigrationFiles`
+          - `isMigrationFileName`
+          - `migrationsFrom`
+          - `MigrationSource`
           - `migrationsReady`
           - `planSchemaSteps`
       - Core:
@@ -18318,18 +18458,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `database`
       - Exemptions:
-        - Exempts itself from: `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
+        - Exempts itself from:
+          - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/snapshot-dag.ts` (debt)
         - Exempted by: `database/migrations` (0 debt)
+      - Machine:
+        - Exports (values):
+          - `listMigrationFiles`
+          - `MIGRATIONS_DIR`
       - Structure:
         - Non-standard folders: `data/`
       - Test helpers:
         - Server: `@plugins/database/plugins/migrations/server/testing`
-          - `runMigrations`
+          - `runMigrations` — Every migration this host's `MigrationSource` lists, applied to `db` in one transaction, with no derived layer — for a throwaway test database.
     - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
       - Cross-plugin:
         - Imported by:
           - `database/query-deadline`
           - `infra/launcher`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
       - Server:
         - Exports (values):
           - `PGBOUNCER_LOG_FILE`
@@ -18345,6 +18493,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PGBOUNCER_SOCKET_DIR`
           - `PGBOUNCER_USERLIST_FILE`
           - `pgbouncerPidFileUnder`
+    - **`pglite`** (excluded) — The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM, in memory, for a host without the computer's Postgres cluster (the browser composition, the portable boot test). Never booted by the desktop, which provides its own driver.
+      - Server:
+        - Contributes: `host-service:database.driver` "database.driver"
+        - Uses: `database.DatabaseDriver`
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
       - Server:
         - Uses:
@@ -18353,6 +18505,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/mcp.Mcp`
           - `tasks/tasks-core.getConversation`
         - Register: `mcpTool('query_db')`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/mcp-tools.ts` (debt)
     - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database call on any pool got no reply in the last 10 minutes, naming the latest's pool and caller, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries (pool, phase, query, caller) for the db-query-deadline and db-abandon-cap kinds. Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per pool, phase and query label) when a call on any backend connection — opening it or a query on it — got no answer before its deadline and its connection was abandoned, db-abandon-cap (error, one rolling row) when the abandoned connections exceed the cap — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
       - Web:
         - Contributes:
@@ -18591,7 +18745,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Uses:
           - `primitives/log-channels.defineLogSink`
-          - `primitives/log-channels.readChannelJson`
+          - `primitives/log-channels/log-files.readChannelJson`
         - DB schema: `plugins/debug/plugins/boot-events/server/internal/schema.ts`
         - Exports (types):
           - `BootEvent`
@@ -18753,7 +18907,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/boot-events.readBootEvents`
           - `infra/jobs.defineJob`
           - `infra/paths.listWorktreeDirs`
-          - `primitives/log-channels.logsDirFor`
+          - `primitives/log-channels/log-files.logsDirFor`
           - `reports.recordReport`
           - `reports.ReportKind`
         - Register: `defineJob('debug.boot-watchdog-monitor')`
@@ -18836,6 +18990,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `queue-health`
           - `runtime`
           - `sentinel`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/broadcasts-file.ts`, `server/internal/entries-served.ts`, `server/internal/handle-write.ts` (debt)
       - Shared:
         - Exports (types): `WriteBroadcastsBody`
         - Exports (values):
@@ -19040,7 +19196,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/paths.worktreesDir`
           - `network/live.serveValue`
           - `primitives/log-channels.defineLogSink`
-          - `primitives/log-channels.readChannelJsonAsync`
+          - `primitives/log-channels/log-files.readChannelJsonAsync`
         - Exports (types):
           - `HealthSample`
           - `HealthSampleObserver`
@@ -19081,7 +19237,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/latency-ledger`
           - `debug/timeline`
       - Exemptions:
-        - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/process-sampler.ts`, `server/internal/host-sampler.ts` (sanctioned)
+        - Exempts itself from:
+          - `timer/no-unlisted-timer` — `server/internal/process-sampler.ts`, `server/internal/host-sampler.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `server/internal/health-series.ts`, `server/internal/host-sampler.ts`, `server/internal/process-sampler.ts` (debt)
       - Shared:
         - Exports (values): `healthMonitorSeries`
     - **`heap-snapshot`** — Heap inspector debug pane: a cheap bun:jsc object-type breakdown plus an on-demand full V8 .heapsnapshot dump to disk for offline Chrome DevTools / VS Code analysis. On-demand heap inspector: a cheap bun:jsc heapStats() object-type breakdown (the heap.stats snapshot value, re-measured on Refresh) plus a heavy full V8 .heapsnapshot dump to disk for offline Chrome DevTools / VS Code analysis (POST). Surfaced as the Debug → Heap pane.
@@ -19119,6 +19277,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `POST /api/debug/heap-snapshot`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-capture-snapshot.ts`, `server/internal/heap-stats.ts` (debt)
     - **`latency-ledger`** — The browser half of the latency ledger: times every page load and in-app navigation until every list on screen has its data, and the delay of every update pushed into the tab, and posts them as per-minute histograms at most once a minute. The server half of the latency ledger: counts every delivery to a tab, every 10 s thread-lag sample and every stack sample by owning plugin into per-minute histograms, merges the browser's page-load / navigation / update-delay minutes into the same rows, and answers p50 / p95 for any window split into calm and under-pressure minutes, with the track's exit criteria as pass / fail.
       - Web:
         - Contributes: `Core.Root` → `LatencyCollector`
@@ -19364,9 +19524,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/file-watcher.acquireDirWatch`
           - `network/live.serveValue`
-          - `primitives/log-channels.clientLogFamily`
-          - `primitives/log-channels.logsDir`
-          - `primitives/log-channels.logsDirFor`
+          - `primitives/log-channels/log-files.clientLogFamily`
+          - `primitives/log-channels/log-files.logsDir`
+          - `primitives/log-channels/log-files.logsDirFor`
         - Resources:
           - `debug.logs.catalog` (push, notified)
           - `debug.logs.lines` (keyed, window, notified)
@@ -19379,6 +19539,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/served.ts`, `server/internal/sources.ts` (debt)
     - **`mcp-tools`** — Debug → MCP tools: every tool the MCP server hosts as a live DataView (searchable over name, declaring plugin and description; filterable by plugin, visibility and live description), with a detail pane per tool — declaring plugin, the name agents call it by, who it is listed for (every conversation, gated by when, or reserved for scratch profiles), the full description, its arguments and the input schema exactly as tools/list sends it — plus the server instructions sections and scope resolver above the list.
       - Web:
         - Slots:
@@ -19468,6 +19630,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-3xs`
           - `ui/tokens/type-scale --font-weight-medium`
           - `ui/tokens/type-scale --line-height-3xs`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/file-served.ts`, `server/internal/files-served.ts`, `server/internal/memory-dir.ts` (debt)
       - Shared:
         - Exports (types): `MemoryFile`
         - Exports (values):
@@ -19548,6 +19712,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `detached-work-safety/no-raw-set-interval` — `server/internal/probe/entry.ts` (sanctioned)
           - `sink-safety/no-adhoc-file-sink` — `server/internal/probe/entry.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `server/internal/probe-host.ts`, `server/internal/probe/entry.ts` (debt)
     - **`profiling`** — Gantt chart of build steps and server startup phases.
       - Web:
         - Slots:
@@ -19702,6 +19867,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Routes: `POST /api/debug/boot-bench/run`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/eld-probe.ts`, `server/internal/mcp-tools.ts`, `server/internal/snapshot-bytes.ts` (debt)
         - **`build`** — Build step profiling: the Gantt detail pane of one build run (debug-profiling-build-detail). Build step profiling data endpoint: one build run's profile, by worktree and build id.
           - Web:
             - Slots: `buildProfileDetailPane.Actions`
@@ -19740,7 +19907,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
             - Imported by: `debug/profiling/ops`
           - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/components/build-detail.tsx` (debt)
+            - Exempts itself from:
+              - `live/no-endpoint-read` — `web/components/build-detail.tsx` (debt)
+              - `boundaries/no-platform-api` — `server/internal/handle-build-detail.ts` (debt)
         - **`cold-start`** — Cold-start benchmark: stops the worktree's server, loads a page in a fresh browser and splits page request → first screen with data across the gateway, the server's boot phases and the browser's boot trace.
         - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, and the merged file reader. Its op-store child ingests it into the DB and owns the orphan reconciler.
           - Core:
@@ -19868,6 +20037,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/shape --spacing`
                 - Imported by: `stats/pushes`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ingest.ts`, `server/internal/service.ts` (debt)
         - **`ops`** — Op contention profiling for the Gantt debug pane: the Profiling section hosting the unified build/push/check/test/e2e Gantt over the live op-store history (last 24 h), the per-worktree Gantt (its ops ± 20 min of everything around them), and the op detail pane — all computed client-side from opsHistory rows.
           - Web:
             - Slots: `opDetailPane.Actions`
@@ -20001,7 +20172,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-3xs`
               - `ui/tokens/type-scale --line-height-3xs`
           - Exemptions:
-            - Exempts itself from: `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
+            - Exempts itself from:
+              - `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
+              - `boundaries/no-platform-api` — `server/internal/mcp-tools.ts` (debt)
     - **`queue`** — Debug → Queue: the jobs queue as live DataViews with side detail panes — Jobs (the live graphile queue merged with the recorded run history: status, hold class, attempts, when, slot wait, duration against the class ceiling, error; Retry / Cancel / Run now), Dead (the dead-letter archive), Events (the emit() log, matched or not) and Triggers (every event→job subscription, enable / disable / delete).
       - Web:
         - Slots:
@@ -20102,7 +20275,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-code`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-code`
-    - **`queue-health`** — Queue-health report renderers: one-line Debug → Reports summaries for the queue-wedged, queue-class-starved, queue-dead-job, queue-backlog, queue-slot-hog, and queue-slot-blocked kinds, plus the threshold config registration, and the health report's Job queue row: per-class slot bars, the jobs that explain its colour, pickup-time stats, and an Open queue action. Queue-health watchdog: a 30s interval on the backend's own event loop — deliberately NOT a scheduled job, which would queue behind the wedge it exists to detect — that samples the graphile queue and files deduped reports for a wedged queue (every slot on every runner held by the same live jobs while ready work starves), a starved hold class (one tier of the runner ladder whose head has not moved for its own window, which is how the reserved-slot ladder is verified in production), a job holding a slot to WAIT on an admission gate rather than to work (read off the runtime profiler's job spans, which carry the wait/work split a graphile row cannot), backlog/stall, per-class slot-hogging, and terminally-dead jobs, through the existing reports engine. All six kinds are duressExempt. Also exposes a per-class queue-health summary endpoint + the get_queue_health MCP tool, and the push-based queue-health.pulse resource behind the health report's Job queue row (slot-ledger occupancy, waiting/stuck/dead jobs, pickup stats and a verdict whose next threshold crossing arms one timer).
+    - **`queue-health`** — Queue-health report renderers: one-line Debug → Reports summaries for the queue-wedged, queue-class-starved, queue-dead-job, queue-backlog, queue-slot-hog, and queue-slot-blocked kinds, plus the threshold config registration, and the health report's Job queue row: per-class slot bars, the jobs that explain its colour, pickup-time stats, and an Open queue action. Queue-health settings: registers the queue-health config (watchdog thresholds) for Settings → Config. The watchdog, its report kinds, the summary endpoint, the get_queue_health MCP tool and the queue-health.pulse resource read the desktop's graphile queue and live in this plugin's machine half.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "queue-health"
@@ -20142,20 +20315,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "queue-slot-blocked"
           - `report-kind` "queue-slot-hog"
           - `report-kind` "queue-wedged"
-        - Uses: 34 symbols — full list in [`plugins/debug/plugins/queue-health/REFERENCE.md`](../plugins/debug/plugins/queue-health/REFERENCE.md)
-          - `infra/jobs` ×25
-          - `config_v2` ×2
-          - `reports` ×2
-          - `infra/background/timer.defineTimer`
-          - `infra/endpoints.implement`
-          - `infra/mcp.Mcp`
-          - `network/live.serveValue`
-          - `tasks/tasks-core.getConversation`
+        - Uses: `config_v2.ConfigV2`
+        - Resources: `queue-health.pulse` (push, notified)
+      - Machine:
+        - Uses:
+          - `infra/endpoints.implementMachine`
+          - `infra/jobs.getForfeitedSlots`
+          - `infra/jobs.getOccupiedSlots`
+          - `infra/jobs.getPickupStats`
+          - `infra/jobs.onQueueActivity`
+          - `infra/jobs.PICKUP_WINDOW_MS`
+          - `infra/jobs.queryBacklogByJobName`
+          - `infra/jobs.queryDeadJobStats`
+          - `infra/jobs.queryOldestWaiting`
+          - `infra/jobs.queryQueueBacklog`
+          - `infra/jobs.queryQueuePulse`
+          - `infra/jobs.queryRecentDeadJobs`
+          - `infra/jobs.queryRunningJobs`
+          - `infra/jobs.QueueBacklogStat`
+          - `infra/jobs.QueueClassBacklogStat`
+          - `infra/jobs.RunningJobStat`
         - Exports (values): `queueHealthTickOnce`
         - Register:
           - `mcpTool('get_queue_health')`
           - `defineTimer('queue-health.watchdog')`
-        - Resources: `queue-health.pulse` (push, notified)
         - Routes: `GET /api/debug/queue-health/summary`
       - Core:
         - Uses:
@@ -20232,7 +20415,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
       - Exemptions:
-        - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/watchdog.ts` (sanctioned)
+        - Exempts itself from: `timer/no-unlisted-timer` — `machine/internal/watchdog.ts` (sanctioned)
     - **`read-set`** — Read-set debug pane: the captured loader→table index and the read-set ceiling — every live-state resource under its change policy (routed, external, unrouted, unbound), with its full routes, relation reads and route drift. Serves resources.debug: the resource runtime's per-resource debug payload (policy, read-set, routes, relation reads, drift, subscribers, loader and notify counters, declared freshness) as one snapshot value every live-state debug pane reads.
       - Web:
         - Slots: `readSetPane.Actions`
@@ -20403,6 +20586,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/workspace.workspaceOfConversation`
           - `infra/mcp.Mcp`
         - Register: `mcpTool('scratch_hello_where')`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/profile.ts` (debt)
     - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone or the disk is nearly full, attention while it restarts, the machine is under duress or the disk is low or filling fast, read from the sentinel.status push resource), with its stats — load per core, free memory, free disk and builds at a glance, and each signal that can trip duress against its limit when expanded — read from the sentinel.vitals push resource. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
       - Web:
         - Contributes:
@@ -20438,18 +20623,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "sentinel.status"
           - `resource.declare` "sentinel.vitals"
           - `ConfigV2.Register` "sentinel"
-        - Uses: 37 symbols — full list in [`plugins/debug/plugins/sentinel/REFERENCE.md`](../plugins/debug/plugins/sentinel/REFERENCE.md)
+        - Uses: 39 symbols — full list in [`plugins/debug/plugins/sentinel/REFERENCE.md`](../plugins/debug/plugins/sentinel/REFERENCE.md)
           - `infra/host/duress/latch` ×8
           - `debug/sentinel/status-file` ×7
           - `infra/spawn/daemon` ×5
+          - `primitives/log-channels/log-files` ×4
           - `config_v2` ×3
           - `database/embedded` ×3
-          - `primitives/log-channels` ×3
           - `debug/trace/engine` ×2
           - `infra/file-watcher` ×2
           - `reports` ×2
           - `infra/paths.isHostSingleton`
           - `network/live.serveValue`
+          - `primitives/log-channels.defineLogSink`
         - Exports (values): `readDuressEpisodes`
         - Register:
           - `defineFileWatcher('sentinel.status')`
@@ -20503,12 +20689,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by: `debug/timeline`
       - Exemptions:
-        - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)
+        - Exempts itself from:
+          - `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `server/internal/status-resource.ts`, `server/internal/worker-host.ts`, `server/internal/worker/pg.ts`, `server/internal/worker/sample.ts` (debt)
       - Plugins:
         - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status files (one per watcher host, the newest claim reported): their schemas, the writer main's watcher host uses, the per-tick vitals file the watcher's worker writes (the latest reading, limits and trip state), the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `debug/sentinel`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/json-file.ts`, `server/internal/status-file.ts`, `server/internal/vitals-file.ts` (debt)
           - Server:
             - Exports (types): `SentinelVitalsRead`
             - Exports (values):
@@ -20588,6 +20778,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `sessionDivergenceConfig`
           - `SessionDivergencePayloadSchema`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/detect.ts` (debt)
     - **`slow-ops`** — Records slow client operations (page load, element appearance, and every client latency signal — a live update applied, an optimistic write confirmed — split into its phases) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates and their callers (one row per op × caller), both written through change producers, plus the slow-op report kind and the live collections the pane reads (slow-ops.ops list, slow-ops.op detail, slow-ops.callers). Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
       - Web:
         - Contributes:
@@ -20629,7 +20821,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2` ×2
           - `infra/host/contention` ×2
           - `infra/host/duress` ×2
-          - `primitives/log-channels` ×2
           - `reports` ×2
           - `database/admin.ExcludeFromFork`
           - `database/change-feed.defineChangeProducer`
@@ -20638,6 +20829,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.implement`
           - `infra/retention.defineRetention`
           - `network/live.serveCollection`
+          - `primitives/log-channels/log-files.readChannelJsonAsync`
+          - `primitives/log-channels.defineLogSink`
         - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
         - Exports (types): `RecordSlowOpInput`
         - Exports (values):
@@ -20910,7 +21103,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/mcp.Mcp`
           - `infra/ndjson-stream.ndjsonResponse`
           - `infra/paths.listWorktreeDirs`
-          - `primitives/log-channels.readChannelJson`
+          - `primitives/log-channels/log-files.readChannelJson`
         - Register: `mcpTool('get_timeline')`
         - Routes: `GET /api/debug/timeline`
       - Cross-plugin:
@@ -20933,7 +21126,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-medium`
       - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-timeline-stream.ts` (debt)
+        - Exempts itself from:
+          - `live/no-endpoint-read` — `web/internal/use-timeline-stream.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/mcp-tool.ts`, `server/internal/sources/health.ts` (debt)
       - Core:
         - Exports (types):
           - `TimelineEvent`
@@ -21157,7 +21352,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/trace/spans`
               - `debug/trace/stall`
           - Exemptions:
-            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
+            - Exempts itself from:
+              - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+              - `boundaries/no-platform-api` — `server/internal/capture.ts` (debt)
         - **`gates`** — Gates trace lane: a point-in-time gate-occupancy strip (active/max + queued per concurrency layer, saturated gates highlighted) at the trip instant. Built-in trace event class 'gates': per-concurrency-gate occupancy (active / queued / max per layer) captured synchronously at the trip instant.
           - Web:
             - Contributes: `Trace.Lane` → `GatesLane`
@@ -21381,6 +21578,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `endpoints:no-raw-json-handlers` — `server/internal/handle-delete.ts` (sanctioned)
           - `live/no-endpoint-read` — `web/components/worktree-cleanup-panel.tsx` (debt)
+          - `boundaries/no-platform-api` — `server/internal/dirs.ts`, `server/internal/reap-policy.ts`, `server/internal/reap.ts` (debt)
       - Shared:
         - Exports (types): `BulkDeleteWorktreesBody`
         - Exports (values):
@@ -23317,6 +23515,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `framework/tooling/import-closure`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/claudemd-conflicts.ts`, `core/internal/git-dir.ts`, `core/internal/merge-markers.ts`, `core/internal/registry-entry.ts` (debt)
       - Plugins:
         - **`await`** — `./singularity await` — block until this checkout's running op writes its verdict, and print it. Starts nothing; the wake-up becomes a tool result instead of a notification that may never arrive.
           - Cli:
@@ -23520,7 +23720,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/run`
               - `framework/cli/test`
           - Exemptions:
-            - Exempts itself from: `watcher-safety/no-raw-fs-watch` — `cli/admission-valve.ts` (sanctioned)
+            - Exempts itself from:
+              - `watcher-safety/no-raw-fs-watch` — `cli/admission-valve.ts` (sanctioned)
+              - `boundaries/no-platform-api` — `core/internal/build-receipt.ts` (debt)
         - **`push`** — `./singularity push` — the one path work reaches main: commit, rebase onto main, re-normalize generated artifacts, run the tree-scoped checks, fast-forward and push, all under the host-wide push mutex.
           - Cli:
             - Uses:
@@ -23543,6 +23745,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs/supervised-job.cliExecContext`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `shared/entrypoints.ts` (debt)
         - **`run`** — `./singularity run <script.ts> [args…]` — run a repo script against THIS worktree's own dependencies; the correct spelling of `bun <file>`, which silently resolves another checkout's installed tree.
           - Cli:
             - Uses: `framework/cli/op-runtime.withDirectOp`
@@ -23578,6 +23782,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `framework/cli/op-runtime.DirectOpFlight`
               - `framework/cli/op-runtime.withDirectOp`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/test-status.ts` (debt)
         - **`upstream`** — `./singularity upstream status|merge` — what the repo this checkout was cloned from has that local main does not, and the one sanctioned merge that brings it into a worktree branch.
     - **`hook-value`** — A React hook carried as a value: the Hook<F> brand, and the two lint rules that keep every binding holding one named use* (the React Compiler recognises hooks by name only and memoizes any other call).
       - Core:
@@ -23594,6 +23800,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
+          - `framework/server-core`
           - `framework/tooling/boundaries`
           - `framework/tooling/codegen`
           - `framework/tooling/web-artifacts`
@@ -23616,11 +23823,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `asFsPath`
           - `asPath`
           - `asPluginId`
+          - `isMachineNode`
           - `isTestCodePath`
           - `LEAF_FOLDERS`
+          - `MACHINE_NODE_SUFFIX`
+          - `machineNode`
           - `packageNameFor`
           - `PLUGIN_FOLDERS`
           - `pluginIdSegments`
+          - `pluginOfNode`
           - `RUNTIME_FOLDERS`
           - `SHIPPED_RUNTIME_FOLDERS`
           - `TESTING_FOLDER`
@@ -23629,7 +23840,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `VERIFYING_FOLDERS`
     - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
       - Cross-plugin:
-        - Imported by: `framework/web-sdk`
+        - Imported by:
+          - `framework/server-core`
+          - `framework/web-sdk`
       - Core:
         - Exports (values):
           - `computeLoadWaves`
@@ -23740,19 +23953,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`server-core`**
       - Core:
         - Uses:
+          - `framework/plugin-id.asPluginId`
+          - `framework/plugin-id.isMachineNode`
+          - `framework/plugin-id.machineNode`
+          - `framework/plugin-id.pluginOfNode`
+          - `framework/plugin-loader.computeLoadWaves`
+          - `framework/plugin-loader.topoSortPlugins`
           - `framework/resource-runtime.createResourceRuntime`
           - `framework/tooling/collected-dir.defineCollectedDir`
+          - `packages/string-hash.hash64`
         - Exports (types):
           - `BootMode`
           - `ChangeSource`
           - `DependsOnEntry`
           - `ExternalResource`
+          - `HostService`
           - `HttpHandler`
           - `KeyedServerResourceOptions`
           - `LiveStateSnapshotHooks`
           - `LoadedServerPlugin`
           - `LoaderAggregateView`
+          - `MachineHttpHandler`
+          - `MachinePluginDefinition`
           - `MemoryCheckpoint`
+          - `MemoryProbe`
           - `PersistedBase`
           - `PersistedValueCheck`
           - `PersistMeta`
@@ -23788,15 +24012,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `collectContributions`
           - `defineDeferredResource`
           - `defineExternalResource`
+          - `defineHostService`
           - `defineResource`
           - `defineServerContribution`
           - `dropPendingPersists`
           - `getBootMode`
           - `getProfilingData`
           - `handleResourceHttp`
+          - `installMemoryProbe`
+          - `installSnapHash`
           - `isServerReady`
           - `keptSnapshotValue`
           - `loadResourceByKey`
+          - `machineCollectedDir`
           - `markServerReady`
           - `measureSubscribeCycle`
           - `notificationsWsHandler`
@@ -23850,9 +24078,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `runExec`
       - Test helpers:
         - Core: `@plugins/framework/plugins/server-core/core/testing`
+          - `bootPluginGraph` — Load the plugin graph, run `register`, collect contributions, run the `onReadyBlocking` barrier.
+          - `clearCollectedContributions` — Forget what was collected — back to the pre-boot state.
+          - `clearHostServices` — Forget every declared service — test support (`core/testing`), so a suite's services do not leak into the next suite's boot asserts in one bun process.
           - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
           - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
+          - `provideHostServicesUnbooted` — Name the host's providers for a process that runs graph code WITHOUT booting the graph — test support (`core/testing`), for the `bun test` preload, which hands it the contributions of the desktop host's machine halves.
           - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
+          - `serverEntries`
+          - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states.
     - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
@@ -23913,6 +24147,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
           - `plugin-meta/plugin-tree`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/repo-files.ts` (debt)
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
@@ -23946,6 +24182,179 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `plugin-meta/plugin-refs`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/check.ts`, `core/resolve.ts` (debt)
+            - Exempted by:
+              - `apps/chord/song-index` (3 debt)
+              - `apps/deploy/analytics/collect` (2 debt)
+              - `apps/deploy/analytics/ip-country` (2 debt)
+              - `apps/deploy/deployments` (1 debt)
+              - `apps/deploy/servers` (2 debt)
+              - `apps/desktop/wallpaper` (2 debt)
+              - `apps/events/refresh` (2 debt)
+              - `apps/events/sources/coworkmeet` (1 debt)
+              - `apps/events/sources/dmda` (1 debt)
+              - `apps/events/sources/salsanueva` (2 debt)
+              - `apps/events/sources/url-extract` (1 debt)
+              - `apps/file-explorer/git` (2 debt)
+              - `apps/pages/content-search` (1 debt)
+              - `apps/places/place-details` (1 debt)
+              - `apps/prototypes/files` (13 debt)
+              - `apps/prototypes/thumbnails` (3 debt)
+              - `apps/sonata/sources/midi` (1 debt)
+              - `apps/sonata/sources/midi/folders` (2 debt)
+              - `apps/sonata/sources/musicxml` (1 debt)
+              - `apps/sonata/sources/ultimate-guitar` (1 debt)
+              - `apps/sonata/transcription` (5 debt)
+              - `auth/apple-signing` (1 debt)
+              - `backup` (2 debt)
+              - `backup/sources/attachments` (1 debt)
+              - `backup/sources/claude-settings` (1 debt)
+              - `backup/sources/config` (1 debt)
+              - `backup/sources/cost-history` (1 debt)
+              - `backup/sources/databases` (1 debt)
+              - `backup/sources/project-memory` (1 debt)
+              - `backup/sources/prototypes` (1 debt)
+              - `backup/sources/secrets` (1 debt)
+              - `backup/sources/singularity-platform` (1 debt)
+              - `backup/sources/transcripts` (1 debt)
+              - `backup/targets/google-drive` (2 debt)
+              - `backup/targets/local` (1 debt)
+              - `build` (1 debt)
+              - `build/build-logs` (1 debt)
+              - `build/build-profiling` (1 debt)
+              - `build/run-ledger` (1 debt)
+              - `build/serve-composition` (1 debt)
+              - `build/server-build-id` (2 debt)
+              - `code-explorer` (8 debt)
+              - `code-explorer/file-resolve` (1 debt)
+              - `config_v2` (9 debt)
+              - `config_v2/ledger` (1 debt)
+              - `conversations` (3 debt)
+              - `conversations/compaction-context` (1 debt)
+              - `conversations/conversation-view/allow-monitor` (1 debt)
+              - `conversations/conversation-view/code` (2 debt)
+              - `conversations/conversation-view/jsonl-viewer/background-shells` (3 debt)
+              - `conversations/conversation-view/jsonl-viewer/subagents` (1 debt)
+              - `conversations/conversation-view/rewind` (1 debt)
+              - `conversations/model-provider/catalog` (2 debt)
+              - `conversations/question-relay` (1 debt)
+              - `conversations/runtime-tmux` (5 debt)
+              - `conversations/summary` (1 debt)
+              - `conversations/transcript-retention` (1 debt)
+              - `conversations/transcript-watcher` (4 debt)
+              - `conversations/turn-ledger` (1 debt)
+              - `conversations/usage` (1 debt)
+              - `conversations/workspace` (1 debt)
+              - `conversations/workspace/scratch` (3 debt)
+              - `conversations/workspace/worktree` (1 debt)
+              - `database` (1 debt)
+              - `database/admin` (4 debt)
+              - `database/change-feed` (2 debt)
+              - `database/client-tools` (1 debt)
+              - `database/connection` (2 debt)
+              - `database/embedded` (1 debt)
+              - `database/migrations` (4 debt)
+              - `database/pgbouncer` (1 debt)
+              - `database/query` (1 debt)
+              - `debug/broadcasts` (3 debt)
+              - `debug/health-monitor` (3 debt)
+              - `debug/heap-snapshot` (2 debt)
+              - `debug/logs` (2 debt)
+              - `debug/memory` (3 debt)
+              - `debug/paging-probe` (2 debt)
+              - `debug/profiling/boot-bench` (3 debt)
+              - `debug/profiling/build` (1 debt)
+              - `debug/profiling/op-log/op-store` (2 debt)
+              - `debug/profiling/runtime` (1 debt)
+              - `debug/scratch-hello` (1 debt)
+              - `debug/sentinel` (4 debt)
+              - `debug/sentinel/status-file` (3 debt)
+              - `debug/session-divergence` (1 debt)
+              - `debug/timeline` (2 debt)
+              - `debug/trace/engine` (1 debt)
+              - `debug/worktree-cleanup` (3 debt)
+              - `framework/cli` (4 debt)
+              - `framework/cli/op-runtime` (1 debt)
+              - `framework/cli/release` (1 debt)
+              - `framework/cli/test` (1 debt)
+              - `framework/tooling` (1 debt)
+              - `framework/tooling/boundaries` (2 debt)
+              - `framework/tooling/checks` (13 debt)
+              - `framework/tooling/checks/type-check` (3 debt)
+              - `framework/tooling/codegen` (27 debt)
+              - `framework/tooling/format` (5 debt)
+              - `framework/tooling/guards` (10 debt)
+              - `framework/tooling/import-closure` (1 debt)
+              - `framework/tooling/lint` (2 debt)
+              - `framework/tooling/web-artifacts` (13 debt)
+              - `framework/web-core` (1 debt)
+              - `infra/asset-mirror` (3 debt)
+              - `infra/audio-analysis` (4 debt)
+              - `infra/corpus-index` (1 debt)
+              - `infra/deps/mise` (2 debt)
+              - `infra/deps/npm` (2 debt)
+              - `infra/deps/playwright-browser` (1 debt)
+              - `infra/deps/python/uv-updater` (1 debt)
+              - `infra/events-test` (1 debt)
+              - `infra/file-sink` (3 debt)
+              - `infra/file-watcher` (2 debt)
+              - `infra/file-watcher/background-arm` (1 debt)
+              - `infra/git/checkout-watch` (1 debt)
+              - `infra/git/remotes` (2 debt)
+              - `infra/host-account` (1 debt)
+              - `infra/host-fs` (14 debt)
+              - `infra/host-fs/image` (3 debt)
+              - `infra/host-fs/zip` (1 debt)
+              - `infra/host/contention` (1 debt)
+              - `infra/host/duress/latch` (1 debt)
+              - `infra/host/host-admission` (2 debt)
+              - `infra/host/host-read-pool` (1 debt)
+              - `infra/jobs` (2 debt)
+              - `infra/jobs/supervised-job` (3 debt)
+              - `infra/launcher` (4 debt)
+              - `infra/mcp/browser` (2 debt)
+              - `infra/paths` (10 debt)
+              - `infra/request-origin/agent-write-ledger` (1 debt)
+              - `infra/runtime-profiler` (1 debt)
+              - `infra/safe-fetch` (1 debt)
+              - `infra/spawn` (3 debt)
+              - `infra/spawn/daemon` (1 debt)
+              - `infra/ssh` (2 debt)
+              - `infra/stack-sampler` (1 debt)
+              - `infra/worktree` (6 debt)
+              - `infra/worktree/reclaim` (2 debt)
+              - `integrations/google-maps` (2 debt)
+              - `integrations/youtube/audio-fetch` (3 debt)
+              - `packages/flock` (3 debt)
+              - `packages/host-semaphore` (1 debt)
+              - `packages/signal-origin` (2 debt)
+              - `packages/single-flight` (1 debt)
+              - `packages/sleep-clock` (1 debt)
+              - `packages/spawn-priority` (3 debt)
+              - `page/annotations/instructions` (1 debt)
+              - `plugin-meta/barrel-import` (1 debt)
+              - `plugin-meta/parse-utils` (1 debt)
+              - `plugin-meta/plugin-refs` (1 debt)
+              - `plugin-meta/plugin-tree` (3 debt)
+              - `plugin-meta/relocate` (2 debt)
+              - `plugin-meta/token-usage` (1 debt)
+              - `primitives/commit-list` (1 debt)
+              - `primitives/css/layout-harness` (2 debt)
+              - `primitives/icon-picker` (1 debt)
+              - `primitives/log-channels/log-files` (3 debt)
+              - `primitives/terminal` (1 debt)
+              - `release` (4 debt)
+              - `release/bundles` (5 debt)
+              - `release/source-checkout` (1 debt)
+              - `reports` (1 debt)
+              - `reports/outbox` (2 debt)
+              - `review/plugin-changes` (3 debt)
+              - `screenshot` (1 debt)
+              - `stats/cost` (3 debt)
+              - `toolchain` (1 debt)
+              - `ui/icons` (1 debt)
+              - `ui/icons/sprites` (2 debt)
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
             - Uses: 44 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
@@ -24023,7 +24432,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shape --spacing`
           - Exemptions:
-            - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
+            - Exempts itself from:
+              - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
+              - `boundaries/no-platform-api` — `core/buildinfo.ts`, `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/warm-base.ts` (debt)
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
               - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.
@@ -24065,7 +24476,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/studio/contributions/tables/indexes` (0 debt)
                   - `apps/studio/contributions/tables/row-count` (0 debt)
                   - `apps/studio/contributions/tables/sample-rows` (0 debt)
-                  - `infra/jobs` (0 debt)
             - **`no-disabled-flag`**
             - **`no-gitlinks`**
             - **`no-hand-built-link-to`**
@@ -24130,11 +24540,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses tokens:
                   - `ui/tokens/shadow --shadow`
                   - `ui/tokens/shape --spacing`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/type-fingerprint.ts`, `shared/worker.ts` (debt)
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 90 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 91 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `config_v2` ×14
-              - `framework/plugin-id` ×12
+              - `framework/plugin-id` ×13
               - `plugin-meta/parse-utils` ×12
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/closure` ×5
@@ -24302,6 +24714,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --pad-row-y`
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/app-css-utilities.ts`, `core/authored-override-seed.ts`, `core/barrel-free-tree.ts`, `core/barrel-stubs-gen.ts`, `core/config-git-layer-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/enriched-tree.ts`, `core/exempt-rule-ids-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/reorderable-slots-gen.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
@@ -24423,7 +24837,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `framework/tooling/codegen`
           - Exemptions:
-            - Exempts itself from: `format-safety/no-adhoc-prettier` — `.` (sanctioned)
+            - Exempts itself from:
+              - `format-safety/no-adhoc-prettier` — `.` (sanctioned)
+              - `boundaries/no-platform-api` — `core/internal/changed-files.ts`, `core/internal/format-sources.ts`, `core/internal/format-thread.ts`, `core/internal/format-worker.ts`, `core/internal/prettier.ts` (debt)
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
             - Uses:
@@ -24478,6 +24894,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts` (sanctioned)
               - `python/no-system-python` — `core` (sanctioned)
+              - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/runner.ts`, `core/stop-guard.ts` (debt)
         - **`import-closure`** — Static import-closure measurement (importClosure): the exact repo modules an entrypoint loads, the tree-shaken live subset, the npm specifiers it reaches, and the import chain to any one module — measured with Bun.build so it cannot drift from what actually loads.
           - Core:
             - Uses: `framework/cli.defineCliCommand`
@@ -24490,6 +24907,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `loadTypescript`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/import-closure.ts` (debt)
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
             - Uses:
@@ -24537,6 +24956,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `framework/tooling/codegen`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/declared-utilities.ts`, `core/plugin-dirs.ts` (debt)
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
               - `lintToolkit`
@@ -24752,7 +25173,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/build`
               - `framework/tooling/codegen`
           - Exemptions:
-            - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
+            - Exempts itself from:
+              - `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
+              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
           - Cli:
             - Exports (types): `CarryForwardResult`
             - Exports (values): `carryForwardServedEntries`
@@ -24785,7 +25208,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by: `framework/tooling/web-artifacts`
       - Exemptions:
-        - Exempts itself from: `plugin-boundaries` — `web/__tests__/plugin-render.test.tsx` (sanctioned)
+        - Exempts itself from:
+          - `plugin-boundaries` — `web/__tests__/plugin-render.test.tsx` (sanctioned)
+          - `boundaries/no-platform-api` — `core/vite-contributions.ts` (debt)
       - Core:
         - Exports (types):
           - `BabelPluginItem`
@@ -25129,17 +25554,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/audio/soundfont`
           - `infra/launcher`
           - `ui/icons/emoji`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/fetch-to-disk.ts`, `server/internal/run-prewarm.ts`, `server/internal/seed-cache.ts` (debt)
       - Server:
         - Exports (types): `AssetMirrorSpec`
         - Exports (values):
           - `defineAssetMirror`
           - `runAssetMirrorPrewarm`
           - `seedAssetMirrorCache`
-    - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.
+    - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments: rows plus bytes in the host's blob store (AttachmentBlobs — on the desktop UUID-named files under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.
       - Server:
         - Contributes:
           - `resource.declare` "attachments.by-owner"
           - `resource.declare` "attachments.file"
+          - `host-service:attachments.blobs` "attachments.blobs"
         - Uses:
           - `database.db`
           - `infra/endpoints.HttpError`
@@ -25150,9 +25578,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - DB schema:
           - `plugins/infra/plugins/attachments/server/internal/define-link.ts`
           - `plugins/infra/plugins/attachments/server/internal/tables.ts`
-        - Exports (types): `AttachmentLink`
+        - Exports (types):
+          - `AttachmentBlobsImpl`
+          - `AttachmentLink`
         - Exports (values):
           - `_attachments`
+          - `AttachmentBlobs`
           - `Attachments`
           - `createAttachment`
           - `deleteAttachment`
@@ -25196,6 +25627,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/transcription`
           - `conversations`
           - `conversations/agents`
+          - `infra/attachments/memory-blobs`
           - `page/attachment-block`
           - `page/audio`
           - `page/bookmark`
@@ -25211,6 +25643,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `paths:no-hardcoded-paths` — `server/index.ts` (sanctioned)
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+      - Plugins:
+        - **`memory-blobs`** (excluded) — Attachment bytes in memory: provides the AttachmentBlobs host service for a host without a filesystem (the browser composition, the portable boot test), the bytes lost with the process. Never booted by the desktop.
+          - Server:
+            - Contributes: `host-service:attachments.blobs` "attachments.blobs"
+            - Uses: `infra/attachments.AttachmentBlobs`
     - **`audio-analysis`** — The audio-analysis settings registration (beat tracker device and model, chroma variant), so they appear in Settings → Config. Audio analysis of YouTube videos on the on-demand `audio-python` dependency: ensureBeatFeatures(videoId, exec) fetches the audio, runs Beat This! (beats, downbeats, no DBN) and a librosa CQT chroma out of process under one background unit of host admission, and caches the validated features host-wide per video, analysis version and settings (beat model, chroma variant — user config, with the fast ones as defaults; the device is config too) under a per-entry host flock; readBeatFeatures answers absent / running / ready / failed from the files, and requestBeatFeatures (GET/POST /api/audio-analysis/beat-features/:videoId) enqueues the audio-analysis.beat-features supervised job.
       - Web:
         - Contributes: `ConfigV2.WebRegister` "config"
@@ -25274,6 +25711,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ensure.ts`, `server/internal/job.ts`, `server/internal/state.ts`, `server/internal/store.ts` (debt)
     - **`background`** — Umbrella for what the app runs on its own: the catalog every background mechanism reports into, and the page that lists it.
       - Plugins:
         - **`catalog`** — Background activity catalog, browser half: the live read of one entry across both halves of the catalog, the countdown to its next run, and the catalog list (a DataView grouped by kind, with status, trigger in words, next and last run) and entry detail (scope, declaring plugin, recent runs with a row-action slot the mounting app fills, Run now) components — mounted as panes by Debug → Background activity. Background activity catalog: defineBackgroundKind registers a provider (a mechanism that runs things on its own: jobs, warm-ups, timers) that lists its entries with trigger, scope and latest run, its recent runs and an optional Run now; the catalog merges every provider into the pushed background.catalog value (throttled), serves background.recent-runs per entry and POST /api/background/run-now, fills event-triggered entries' event names from contributed BackgroundTriggerSource annotations, and names no provider. Background activity catalog, central half: defineBackgroundKind registers a provider for what the machine-wide central runtime runs on its own, merged into the pushed background.central-catalog value (every entry scope central) with background.central-recent-runs per entry.
@@ -25375,7 +25814,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/background/timer`
               - `infra/events`
               - `infra/file-watcher/background-arm`
-              - `infra/jobs/background-arm`
               - `infra/spawn/daemon/background-arm`
               - `infra/warmup/background-arm`
               - `tasks/automations`
@@ -25400,9 +25838,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `auth`
               - `debug/health-monitor`
-              - `debug/queue-health`
               - `debug/stuck-spans`
-              - `infra/jobs`
           - Exemptions:
             - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `shared/timer.ts` (sanctioned)
             - Exempted by:
@@ -25645,6 +26081,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/sonata/sources/midi/folders`
           - `stats/cost`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/corpus-index.ts` (debt)
     - **`deps`** — Settings → Dependencies: a DataView over every declared optional dependency (state, size, identity, last used, the install's latest log line) with Install / Remove row actions, pushed live from deps.states. The server half of on-demand dependencies: requestDep enqueues the deps.install supervised job (ensureDep in a detached child) from a request, the pushed deps.states live value says absent / installing / ready / failed for every declared dependency, the install/remove endpoints back Settings → Dependencies. The daily deps.sweep is its sweep sub-plugin.
       - Web:
         - Slots:
@@ -25826,6 +26264,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `miseUpdater`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/mise-updater.ts`, `core/internal/mise.ts` (debt)
         - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring reviewed holds — contributed to the infra/deps updater registry.
           - Server:
             - Contributes: `updater` "npm"
@@ -25856,9 +26296,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `upstreamRows`
               - `workspaceManifests`
               - `wrappersUndeclared`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/workspace.ts`, `server/internal/npm-updater.ts` (debt)
         - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that version (resolved through this plugin's module graph) plus the platform — installed by the workspace's own playwright CLI with PLAYWRIGHT_BROWSERS_PATH = the install's env/, which then records the headed and headless-shell executables as Playwright reports them in env/executables.json (what isIntact checks); launchChromium(ready, opts) launches the recorded binary for the mode.
           - Cross-plugin:
             - Imported by: `infra/safe-fetch/browser-fetch`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/executables.ts` (debt)
           - Core:
             - Exports (types):
               - `BrowserExecutables`
@@ -25901,6 +26345,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Contributes: `updater` "uv"
                 - Uses: `infra/deps/updates.UpdaterDeclare`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/uv-updater.ts` (debt)
               - Core:
                 - Exports (values):
                   - `UV_HOLDS`
@@ -25985,6 +26431,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useEndpoint`
           - `useEndpointMutation`
           - `useFetchEndpoint`
+          - `useMachineAvailability`
       - Core:
         - Uses:
           - `infra/runtime-profiler.chargeWait`
@@ -25995,6 +26442,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Codec`
           - `EndpointDef`
           - `ExtractParams`
+          - `MachineAvailability`
+          - `MachineEndpointDef`
+          - `MachineFeature`
+          - `MachineResult`
+          - `MachineUnavailable`
         - Exports (values):
           - `blob`
           - `dateString`
@@ -26009,6 +26461,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isUnsupportedEndpointBody`
           - `isUnsupportedEndpointRefusal`
           - `multipart`
+          - `unavailableMessage`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
         - Imported by: 204 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
@@ -26059,6 +26512,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `HttpError`
           - `implement`
+      - Machine:
+        - Exports (values):
+          - `implementMachine`
+          - `machineHandler`
     - **`entities`** — Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.
       - Server:
         - Uses:
@@ -26309,8 +26766,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Uses:
           - `database.db`
-          - `database/admin.connectionString`
-          - `database/connection.createDbClient`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/events.defineTriggerEvent`
@@ -26321,11 +26776,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/jobs.defineJob`
           - `infra/jobs.LEGACY_JOB_TASK`
           - `infra/jobs.NonRetryableError`
-          - `infra/jobs.queryRecentDeadJobs`
-          - `infra/jobs.queryRunningJobs`
           - `infra/jobs.reachableSlots`
           - `infra/jobs.singletonJobKey`
-          - `infra/jobs.UNSAFE_sweepStuckLocks`
           - `infra/jobs/supervised-job.defineSupervisedJob`
           - `primitives/log-channels.defineLogSink`
         - DB schema: `plugins/infra/plugins/events-test/server/internal/tables.ts`
@@ -26333,7 +26785,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('events_test.log')`
           - `defineJob('events_test.serial')`
           - `defineJob('events_test.cron-dedup')`
-          - `defineJob('events_test.superseded')`
           - `defineJob('events_test.saturate-sleeper')`
           - `defineJob('events_test.dead-letter')`
           - `defineSupervisedJob('events-test.detached-sleep')`
@@ -26348,13 +26799,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/events-test/delete-targeting`
           - `GET /api/events-test/triggers`
           - `GET /api/events-test/wait-idle`
-          - `POST /api/events-test/crash-recovery`
           - `POST /api/events-test/serial-queue`
-          - `POST /api/events-test/queue-lock-no-steal`
           - `POST /api/events-test/cron-dedup`
-          - `POST /api/events-test/superseded`
           - `POST /api/events-test/queue-saturate`
           - `POST /api/events-test/detached-sleep`
+      - Machine:
+        - Uses:
+          - `infra/endpoints.machineHandler`
+          - `infra/jobs.queryRecentDeadJobs`
+          - `infra/jobs.queryRunningJobs`
+          - `infra/jobs.UNSAFE_sweepStuckLocks`
+        - Register: `defineJob('events_test.superseded')`
+        - Routes:
+          - `POST /api/events-test/crash-recovery`
+          - `POST /api/events-test/queue-lock-no-steal`
+          - `POST /api/events-test/superseded`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --border`
@@ -26382,6 +26841,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `endpoints:no-raw-json-handlers` — `server/internal` (sanctioned)
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `live/no-endpoint-read` — `web/components/events-test-view.tsx` (debt)
+          - `boundaries/no-platform-api` — `server/internal/serial-queue.ts` (debt)
       - Shared:
         - Exports (types):
           - `DeleteTargetingBody`
@@ -26420,7 +26880,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/checks`
           - `packages/signal-origin/sink`
       - Exemptions:
-        - Exempts itself from: `sink-safety/no-adhoc-file-sink` — `.` (sanctioned)
+        - Exempts itself from:
+          - `sink-safety/no-adhoc-file-sink` — `.` (sanctioned)
+          - `boundaries/no-platform-api` — `core/internal/file-sink.ts`, `core/internal/history.ts`, `core/internal/read.ts` (debt)
       - Core:
         - Exports (types):
           - `FileSink`
@@ -26462,6 +26924,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `detached-work-safety/no-raw-set-interval` — `shared/engine.ts` (sanctioned)
           - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
+          - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts` (debt)
       - Server:
         - Exports (types):
           - `DirWatchRelease`
@@ -26507,6 +26970,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-watcher.WatcherBackend`
               - `infra/file-watcher.WRITES_WHILE_OPEN_MAX_ENTRIES`
             - Register: `defineBackgroundKind('file-watcher')`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/provider.ts` (debt)
     - **`git`** — Umbrella for the two plugins that answer 'has git state moved, and must I read it again?': the ref watcher that reports every advance, and the signature-keyed memo that skips a gated recompute when a cheap probe says nothing changed.
       - Plugins:
         - **`checkout-watch`** — The checkout watch hub: acquireCheckoutWatch(root, { refs, onChange }) hears every change that can move a git checkout's state — its working tree and its git dir (HEAD, index, and the refs the reader names beside its own branch; a linked worktree's git dir and the common refs live outside it) — each change tagged worktree or git, refcounted per checkout over the shared directory-watch hub, each reader's reaction coalesced (one running plus one pending).
@@ -26527,6 +26992,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/file-explorer/git`
               - `conversations/conversation-view/code`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/checkout-watch.ts` (debt)
         - **`git-read-cache`** — Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call; createSignedMemo binds them at construction so a resource's revalidate and loader cannot drift.
           - Cross-plugin:
             - Imported by:
@@ -26540,7 +27007,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `release`
               - `review/plugin-changes`
               - `tasks/attempt-work`
-              - `tasks/tasks-core`
           - Server:
             - Exports (types):
               - `GitStateMemo`
@@ -26589,7 +27055,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `release`
               - `review/plugin-changes`
               - `tasks/attempt-work`
-              - `tasks/tasks-core`
           - Exemptions:
             - Exempts itself from: `ids:pk-declared` — `server/internal/tables-ref-advanced.ts` (debt)
         - **`remotes`** — May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, the upstream resolution built from the same facts, and who signs the commits push makes (a local placeholder where they cannot leave the machine, a real identity required where they will be public).
@@ -26621,6 +27086,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sameRepoUrl`
           - Cross-plugin:
             - Imported by: `upstream`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/commit-identity.ts`, `core/internal/publish-target.ts` (debt)
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers; reports the server and central socket connection as the health report's Connection row. Liveness endpoint used by clients to detect server restarts.
       - Web:
         - Contributes:
@@ -26669,6 +27136,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `debug/slow-ops`
               - `debug/trace/contention`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/snapshot.ts` (debt)
           - Core:
             - Exports (types):
               - `ContentionSnapshot`
@@ -26713,7 +27182,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `debug/latency-ledger`
                   - `debug/sentinel`
                   - `infra/host/duress`
-                  - `primitives/log-channels`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/latch.ts` (debt)
               - Server:
                 - Exports (types): `DuressLatch`
                 - Exports (values):
@@ -26768,7 +27238,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/safe-fetch/browser-fetch`
               - `infra/worktree`
           - Exemptions:
-            - Exempts itself from: `host-pools-declared` — `server` (sanctioned)
+            - Exempts itself from:
+              - `host-pools-declared` — `server` (sanctioned)
+              - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts` (debt)
           - Core:
             - Exports (types):
               - `CpuBudget`
@@ -26809,7 +27281,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-tree`
               - `review/plugin-changes`
               - `tasks/attempt-work`
-              - `tasks/tasks-core`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/pool.ts` (debt)
         - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. Serves the machine.sleep live value (this box's sleep clock: boot, cumulative asleepMs, last wake) and publishSleepReading(), which re-reads the clock and pushes only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own.
           - Web:
             - Contributes: `Demo.Resource` "machine-sleep"
@@ -26861,6 +27334,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hostHome`
       - Cross-plugin:
         - Imported by: `apps/pages/shell`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/read-account.ts` (debt)
     - **`host-fs`** — The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it: replace / keep-both / skip), all three refused unless the Origin is the app's own *.localhost.
       - Server:
         - Uses:
@@ -26945,6 +27420,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/image`
           - `infra/host-fs/zip`
           - `primitives/file-viewer`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/archive/locate.ts`, `server/internal/archive/tree.ts`, `server/internal/complete.ts`, `server/internal/entry.ts`, `server/internal/extract.ts`, `server/internal/list.ts`, `server/internal/open-file.ts`, `server/internal/open.ts`, `server/internal/path.ts`, `server/internal/peek.ts`, `server/internal/raw.ts`, `server/internal/stat.ts`, `server/internal/text.ts`, `server/internal/volume.ts` (debt)
       - Plugins:
         - **`image`** — Images on the host filesystem: GET resized (a copy with a long edge from a closed set, EXIF-rotated, never enlarged — JPEG, or WebP with transparency — made with sharp, cached host-wide and served immutable for the file version the URL names; 415 when undecodable) and GET sizes (the upright pixel size of every resizable image in a folder, from the headers only). The daily host-fs-image.sweep keeps the cache within 30 days unused and 1 GB.
           - Server:
@@ -26980,6 +27457,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RESIZED_EDGES`
               - `resizedVersion`
               - `snapEdge`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/resize.ts`, `server/internal/sizes.ts`, `server/internal/sweep.ts` (debt)
         - **`zip`** — Zip as a host-fs archive format: a native reader of the zip central directory (zip64, UTF-8 / CP437 / Info-ZIP Unicode names, extended timestamps) registered through defineArchiveFormat, so a .zip browses like a folder — members stored or deflated, encrypted and other methods typed as unreadable.
           - Server:
             - Uses:
@@ -26988,6 +27467,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs.defineArchiveFormat`
               - `infra/host-fs.MemberBytes`
             - Register: `defineArchiveFormat('zip')`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/zip-format.ts` (debt)
     - **`html-decode`** — Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.
       - Cross-plugin:
         - Imported by: `apps/prototypes/files`
@@ -26996,7 +27477,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `decodeHtmlText`
           - `readHtmlAttr`
-    - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
+    - **`jobs`** — Durable background jobs primitive: plugins declare jobs via defineJob and enqueue via job.enqueue, onto the host's job queue (JobQueue — graphile-worker on the desktop).
       - Server:
         - Contributes:
           - `resource.declare` "dead-jobs"
@@ -27005,58 +27486,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "job-runs.all"
           - `resource.declare` "job-runs.all:rows"
           - `resource.declare` "jobs-list"
+          - `host-service:jobs.queue` "jobs.queue"
           - `fork-schema-data-exclusion` "graphile_worker"
         - Uses:
           - `database.db`
-          - `database/admin.connectionString`
-          - `database/admin.ExcludeSchemaDataFromFork`
           - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
           - `database/connection.createDbPool`
           - `database/connection.withQueryDeadline`
           - `database/sql-column.parsedJson`
           - `database/sql-column.parsedText`
           - `database/sql-projection.parsed`
-          - `infra/background/timer.defineTimer`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
           - `network/live.serveCollection`
           - `network/live.serveValue`
-          - `primitives/log-channels.Log`
         - DB schema:
           - `plugins/infra/plugins/jobs/server/internal/queue-schema.ts`
           - `plugins/infra/plugins/jobs/server/internal/tables.ts`
         - Exports (types):
-          - `BacklogJobStat`
-          - `CronRanges`
-          - `DeadJobGroupStat`
-          - `DeadJobStat`
           - `DefineJobSpec`
           - `DurableHooks`
           - `EnqueueOpts`
           - `EnqueueTx`
-          - `ForfeitedSlot`
           - `HoldClass`
           - `HoldClassSpec`
           - `JobCtx`
           - `JobDeadlineEvent`
           - `JobFactory`
-          - `JobRunOutcome`
-          - `JobRunRecord`
-          - `JobRunStats`
+          - `JobQueueImpl`
+          - `JobRowOpts`
+          - `JobRowOutcome`
           - `JobSlotFloorReport`
-          - `OccupiedSlot`
-          - `PickupStats`
-          - `QueueBacklogStat`
-          - `QueueClassBacklogStat`
-          - `QueueClassPulse`
+          - `JobTaskPayload`
+          - `QueuedJob`
           - `RegisteredJob`
           - `RunnerSpec`
-          - `RunningJobStat`
           - `ScheduleSpec`
           - `SerialSpec`
-          - `WaitingJobStat`
         - Exports (values):
           - `_deadJobs`
           - `_jobRuns`
@@ -27064,17 +27532,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `abortDurableRun`
           - `ALL_JOB_TASKS`
           - `ceilingMsFor`
-          - `cronRanges`
-          - `DEAD_ERROR_PREVIEW_CHARS`
           - `deadlineMsFor`
           - `DEFAULT_MAX_ATTEMPTS`
           - `defineJob`
           - `getAllRegisteredJobNames`
-          - `getForfeitedSlots`
           - `getJobHold`
           - `getJobSlowThresholdMs`
-          - `getOccupiedSlots`
-          - `getPickupStats`
           - `HOLD_CLASSES`
           - `HOLD_SPECS`
           - `HoldClassSchema`
@@ -27085,43 +27548,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `JOB_SLOT_FLOOR_KIND`
           - `JobDeadlineExceededError`
           - `jobDeadlineSink`
+          - `JobQueue`
           - `LEGACY_JOB_TASK`
           - `listRegisteredJobs`
-          - `nextScheduledRun`
           - `NonRetryableError`
-          - `onJobRunsChanged`
-          - `onJobSchedulesChanged`
-          - `onQueueActivity`
-          - `PICKUP_WINDOW_MS`
           - `pickupTargetMsFor`
           - `priorityFor`
-          - `queryBacklogByJobName`
-          - `queryDeadJobStats`
-          - `queryOldestWaiting`
-          - `queryQueueBacklog`
-          - `queryQueuePulse`
-          - `queryRecentDeadJobs`
-          - `queryRunningJobs`
-          - `QueueSchemaMissingError`
           - `reachableSlots`
-          - `readJobRunStats`
-          - `readRecentJobRuns`
-          - `RECENT_RUNS_RING`
           - `refreshJobSchedules`
           - `resolveJobCron`
           - `RUNNERS`
-          - `runningJobStarts`
           - `singletonJobKey`
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
           - `UNSAFE_getRegisteredJob`
           - `UNSAFE_installDurableHooks`
-          - `UNSAFE_sweepStuckLocks`
-          - `usableSlots`
-        - Register:
-          - `defineJob('jobs.resume')`
-          - `defineJob('jobs.dead-gc')`
-          - `defineTimer('jobs.stuck-lock-sweep')`
+          - `UNSAFE_runJobRow`
+        - Register: `defineJob('jobs.resume')`
         - Resources:
           - `dead-jobs` (keyed, window)
           - `dead-jobs:groups` (push)
@@ -27150,6 +27593,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.LiveRowsCollection`
           - `network/live.liveValue`
         - Exports (types):
+          - `Crontab`
           - `DeadJobListRow`
           - `DeadJobRow`
           - `DeadJobsPayload`
@@ -27181,6 +27625,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LEGACY_JOB_TASK`
           - `listDeadJobs`
           - `listJobs`
+          - `nextCronFiring`
+          - `parseCrontab`
           - `pickupTargetMsFor`
           - `priorityFor`
           - `reachableSlots`
@@ -27189,10 +27635,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 70 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Uses tokens: `ui/tokens/shape --spacing`
+        - Imported by: 71 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×19
           - `conversations` ×14
-          - `infra` ×12
+          - `infra` ×13
           - `debug` ×9
           - `tasks` ×4
           - `database` ×3
@@ -27205,33 +27652,69 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `upstream`
       - Exemptions:
         - Exempts itself from:
-          - `timer/no-unlisted-timer` — `server/internal/stuck-lock-sweeper.ts` (sanctioned)
-          - `jobs:no-raw-addjob` — `server/internal/registry.ts`, `check/index.ts` (sanctioned)
-          - `jobs:no-raw-addjob` — `server/internal/enqueue-deadline.test.ts` (sanctioned)
+          - `timer/no-unlisted-timer` — `machine/internal/stuck-lock-sweeper.ts` (sanctioned)
+          - `jobs:no-raw-addjob` — `machine/internal/graphile-queue.ts`, `check/index.ts` (sanctioned)
+          - `jobs:no-raw-addjob` — `machine/internal/enqueue-deadline.test.ts` (sanctioned)
           - `jobs:no-raw-addjob:task-literal` — `core/hold.ts`, `check/index.ts` (sanctioned)
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
-          - `no-db-backed-notify` — `server/internal/resources.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `server/internal/queue-schema.ts`, `server/internal/superseded-trigger.ts` (debt)
+      - Machine:
+        - Exports (types):
+          - `BacklogJobStat`
+          - `CronRanges`
+          - `DeadJobGroupStat`
+          - `DeadJobStat`
+          - `ForfeitedSlot`
+          - `JobRunOutcome`
+          - `JobRunRecord`
+          - `JobRunStats`
+          - `OccupiedSlot`
+          - `PickupStats`
+          - `QueueBacklogStat`
+          - `QueueClassBacklogStat`
+          - `QueueClassPulse`
+          - `RunningJobStat`
+          - `WaitingJobStat`
+        - Exports (values):
+          - `cronRanges`
+          - `DEAD_ERROR_PREVIEW_CHARS`
+          - `getForfeitedSlots`
+          - `getOccupiedSlots`
+          - `getPickupStats`
+          - `nextScheduledRun`
+          - `onJobRunsChanged`
+          - `onJobSchedulesChanged`
+          - `onQueueActivity`
+          - `PICKUP_WINDOW_MS`
+          - `queryBacklogByJobName`
+          - `queryDeadJobStats`
+          - `queryOldestWaiting`
+          - `queryQueueBacklog`
+          - `queryQueuePulse`
+          - `queryRecentDeadJobs`
+          - `queryRunningJobs`
+          - `readJobRunStats`
+          - `readRecentJobRuns`
+          - `runningJobStarts`
+          - `UNSAFE_sweepStuckLocks`
+        - Register:
+          - `defineJob('jobs.dead-gc')`
+          - `defineTimer('jobs.stuck-lock-sweep')`
       - Test helpers:
         - Server: `@plugins/infra/plugins/jobs/server/testing`
           - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
       - Plugins:
         - **`background-arm`** — Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from graphile's own parse and installed matcher), scope, latest run and recent runs from the jobs run history, retention sweeps grouped as Cleanup and queue plumbing marked internal — and Run now for scheduled jobs; pushes the catalog when a run starts or finishes.
-          - Server:
+          - Machine:
             - Uses:
-              - `infra/background/catalog.defineBackgroundKind`
-              - `infra/jobs._jobRuns`
-              - `infra/jobs._jobRunStats`
               - `infra/jobs.cronRanges`
               - `infra/jobs.JobRunRecord`
               - `infra/jobs.JobRunStats`
-              - `infra/jobs.listRegisteredJobs`
               - `infra/jobs.nextScheduledRun`
               - `infra/jobs.onJobRunsChanged`
               - `infra/jobs.onJobSchedulesChanged`
               - `infra/jobs.readJobRunStats`
               - `infra/jobs.readRecentJobRuns`
-              - `infra/jobs.RegisteredJob`
-              - `infra/jobs.resolveJobCron`
               - `infra/jobs.runningJobStarts`
             - Register: `defineBackgroundKind('job')`
         - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock deadline and has ctx.signal aborted, job-zombie (error) when it is still holding its slot a grace period later, and job-slot-floor (error) when the written-off slots add up to a runner that can no longer do its job.
@@ -27259,6 +27742,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `JobDeadlinePayloadSchema`
               - `JobSlotFloorPayloadSchema`
+        - **`in-process`** (excluded) — The in-process job queue: provides the JobQueue host service in memory — a row runs in this process when it is due (a transaction's enqueue only once it commits), scheduled jobs fire on a one-shot timer to their next due minute, nothing survives a reload. For a host without the desktop's graphile queue; never booted by the desktop.
+          - Server:
+            - Contributes: `host-service:jobs.queue` "jobs.queue"
+            - Uses:
+              - `database.afterCommit`
+              - `infra/jobs.JobQueue`
+              - `infra/jobs.JobQueueImpl`
+              - `infra/jobs.JobRowOpts`
+              - `infra/jobs.JobTaskPayload`
+              - `infra/jobs.listRegisteredJobs`
+              - `infra/jobs.QueuedJob`
+              - `infra/jobs.resolveJobCron`
+              - `infra/jobs.singletonJobKey`
+              - `infra/jobs.UNSAFE_runJobRow`
         - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
           - Server:
             - Contributes: `fork-data-exclusion` "supervised_job_runs"
@@ -27345,6 +27842,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `spawn-safety/no-raw-bun-spawn` — `server/internal/run/supervisor.ts` (sanctioned)
               - `ids:pk-declared` — `server/internal/tables.ts` (debt)
               - `ids:pk-declared` — `server/internal/tables-run-ended.ts` (debt)
+              - `boundaries/no-platform-api` — `core/internal/terminal.ts`, `server/internal/run/supervisor.ts`, `server/internal/run/tail.ts` (debt)
           - Test helpers:
             - Core: `@plugins/infra/plugins/jobs/plugins/supervised-job/core/testing`
               - `execContextForTests` — An `ExecContext` for tests: origin `cli`, admission that admits at once.
@@ -27413,6 +27911,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `paths:data-root-not-joined` — `bin/launch.ts` (sanctioned)
           - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
           - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts`, `server/internal/launchd-service.ts`, `server/internal/systemd-service.ts` (debt)
       - Core:
         - Exports (values):
           - `isRuntimeEnvName`
@@ -27463,7 +27962,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/query`
           - `debug/profiling/boot-bench`
           - `debug/profiling/runtime`
-          - `debug/queue-health`
           - `debug/scratch-hello`
           - `debug/timeline`
           - `infra/mcp/browser`
@@ -27545,6 +28043,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MAX_TABS`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/host-client.ts`, `shared/code-id.ts` (debt)
     - **`namespace`** — Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
@@ -27689,6 +28189,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `paths:no-hardcoded-paths` — `check/index.ts`, `core/internal/paths.ts`, `server/internal/bins.ts` (sanctioned)
           - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
           - `paths:data-root-not-joined` — `.` (sanctioned)
+          - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts`, `server/internal/bins.ts` (debt)
       - Server:
         - Exports (types):
           - `AppIdentity`
@@ -27921,6 +28422,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/prototypes/files`
               - `config_v2`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ledger.ts` (debt)
     - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
       - Server:
         - Uses:
@@ -27992,6 +28495,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `debug/slow-ops`
           - `infra/endpoints`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
       - Core:
         - Exports (types):
           - `Aggregate`
@@ -28056,7 +28561,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/bookmark`
           - `stats/cost`
       - Exemptions:
-        - Exempts itself from: `namespace:no-hand-built-url` — `server/internal/ssrf.ts` (sanctioned)
+        - Exempts itself from:
+          - `namespace:no-hand-built-url` — `server/internal/ssrf.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `server/internal/ssrf.ts` (debt)
       - Server:
         - Exports (types):
           - `PinnedDial`
@@ -28197,7 +28704,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports/outbox`
           - `upstream`
       - Exemptions:
-        - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)
+        - Exempts itself from:
+          - `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)
+          - `boundaries/no-platform-api` — `core/internal/git-roots.ts`, `core/internal/spawn-captured.ts`, `core/internal/spawn-passthrough.ts` (debt)
         - Exempted by:
           - `conversations/runtime-tmux` (0 debt)
           - `framework/cli/migrations` (0 debt)
@@ -28217,7 +28726,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/spawn/daemon/background-arm`
               - `release`
           - Exemptions:
-            - Exempts itself from: `daemon/no-raw-worker` — `.` (sanctioned)
+            - Exempts itself from:
+              - `daemon/no-raw-worker` — `.` (sanctioned)
+              - `boundaries/no-platform-api` — `server/internal/registry.ts` (debt)
             - Exempted by: `infra/spawn/daemon` (0 debt)
           - Server:
             - Exports (types):
@@ -28265,6 +28776,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/analytics/dashboard`
           - `apps/deploy/health`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/session.ts`, `server/internal/upload.ts` (debt)
       - Server:
         - Exports (types):
           - `SshFailure`
@@ -28283,6 +28796,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/tooling/checks`
           - `plugin-meta/barrel-import`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sampler.ts` (debt)
       - Core:
         - Exports (types):
           - `StackFrame`
@@ -28460,10 +28975,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreePathFor`
           - `writeWorktreeSpec`
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
+        - Imported by: 23 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
           - `debug` ×5
           - `infra` ×5
-          - `tasks` ×4
+          - `tasks` ×3
           - `build` ×2
           - `conversations` ×2
           - `stats` ×2
@@ -28471,6 +28986,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `code-explorer`
           - `plugin-meta/plugin-health`
           - `release/source-checkout`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
       - Core:
         - Exports (types):
           - `OpKind`
@@ -28506,6 +29023,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `build/serve-composition`
               - `debug/worktree-cleanup`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/owned-namespaces.ts`, `server/internal/reclaim-namespace.ts` (debt)
         - **`spare-pool`** — Spare worktree pool: the worktree.spare-refill job (enqueued after every launch's checkout, at main's boot, and daily) keeps one locked, detached checkout of main ready under .claude/worktrees/spare-*, so setupWorktree claims it with a rename and a branch switch instead of a cold git worktree add.
           - Server:
             - Uses:
@@ -28667,6 +29186,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/places/places-map`
           - `map/google`
           - `page/place/google`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/browser-config-resource.ts`, `server/internal/browser-config-store.ts` (debt)
       - Plugins:
         - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete, places:searchText, place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
           - Cross-plugin:
@@ -28880,6 +29401,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/sonata/sources/ultimate-guitar/alignment`
               - `infra/audio-analysis`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cache.ts`, `server/internal/fetch.ts`, `server/internal/sweep.ts` (debt)
           - Test helpers:
             - Server: `@plugins/integrations/plugins/youtube/plugins/audio-fetch/server/testing`
               - `YouTubeAccessError` — This machine cannot get audio from YouTube right now, whatever the video: a bot check or rate limit on its IP (`blocked`), or YouTube cannot be reached (`network`).
@@ -29279,6 +29802,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state.useResource`
           - `primitives/live-state.useResources`
           - `primitives/log-channels.clientLog`
+          - `primitives/networking.useTransport`
           - `primitives/slot-render.renderIsolated`
         - Exports (types):
           - `ClientFieldReaders`
@@ -29454,6 +29978,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveKeyDirection`
           - `LiveKeyRange`
           - `LiveLookupCollection`
+          - `LiveMachineDecl`
           - `LiveNoWindowCollection`
           - `LiveOrderBy`
           - `LivePageBounds`
@@ -29466,6 +29991,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LivePagedValueSpec`
           - `LiveParamValueSpec`
           - `LivePlainValue`
+          - `LivePortableDecl`
           - `LivePreload`
           - `LivePreloadedParamValue`
           - `LivePreloadedParamValueSpec`
@@ -29612,6 +30138,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons/sprites` (1 debt)
           - `ui/theme-engine/saved-themes` (2 debt)
           - `ui/tweakcn/community-browser` (1 debt)
+      - Machine:
+        - Exports (values):
+          - `serveCollection`
+          - `serveValue`
       - Central:
         - Exports (types):
           - `CentralServedPagedValue`
@@ -29726,7 +30256,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/host-semaphore`
           - `packages/single-flight`
       - Exemptions:
-        - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `core/internal/wait.ts` (sanctioned)
+        - Exempts itself from:
+          - `spawn-safety/no-raw-bun-spawn` — `core/internal/wait.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `core/internal/flock.ts`, `core/internal/lifeline.ts`, `core/internal/wait.ts` (debt)
       - Server:
         - Exports (types):
           - `HeldFlock`
@@ -29761,6 +30293,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `createHostSemaphore`
       - Cross-plugin:
         - Imported by: `infra/host/host-admission`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/host-semaphore.ts` (debt)
     - **`inflight`** — In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
@@ -29869,6 +30403,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `signalOriginShim`
       - Cross-plugin:
         - Imported by: `build/build-termination`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/signal-origin.fixture.ts`, `server/internal/signal-origin.ts` (debt)
       - Server:
         - Exports (types): `SignalOriginArmResult`
         - Exports (values):
@@ -29912,9 +30448,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tryLead`
       - Cross-plugin:
         - Imported by: `framework/tooling/checks`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/single-flight.ts` (debt)
     - **`sleep-clock`** — How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sleep-clock.ts` (debt)
       - Core:
         - Exports (types):
           - `SleepClockReading`
@@ -29937,6 +30477,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/runtime-tmux`
           - `infra/host/host-admission`
           - `infra/spawn`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/background.ts`, `core/internal/darwin-background.ts`, `server/internal/spawn-priority.ts` (debt)
       - Server:
         - Exports (types): `DarwinBackground`
         - Exports (values):
@@ -29956,10 +30498,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnAtTier`
           - `spawnInForeground`
           - `withForegroundPriority`
-    - **`string-hash`** — Portable, non-cryptographic string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex) and hash64 (a 64-bit bigint).
+    - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint) and sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest).
       - Cross-plugin:
         - Imported by:
           - `framework/resource-runtime`
+          - `framework/server-core`
           - `map`
           - `packages/resource-protocol`
           - `plugin-meta/token-usage`
@@ -29968,6 +30511,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hash53`
           - `hash64`
           - `hashHex`
+          - `sha256Hex`
     - **`wall-clock`** — Wall clock ↔ UTC instant for an IANA zone, without a timezone database: a wall time's candidate instants are enumerated from the offsets either side of it and each verified against Intl, so a clock change resolves the same way in every zone rather than by the sign of its offset. Also reads a clock face back out of an instant, and answers when the local day began.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
@@ -30202,6 +30746,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
             - Imported by: `page/annotations/agent-access`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/delivery.ts` (debt)
           - Plugins:
             - **`instructions-page`** — Instructions pages in the page editor: a sub-page whose data marks it `instructions: true` is tinted with the instructions card's wash wherever it is referenced (its row in the parent page, the Pages sidebar), carries a Global chip when it reaches every conversation, and can be made from the caret's line with `/instructions page`. Declares no block type — the page is an ordinary `page` row.
               - Web:
@@ -32725,7 +33271,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/codegen`
           - `plugin-meta/plugin-tree`
       - Exemptions:
-        - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `core/internal/auto-stubs.generated.ts` (sanctioned)
+        - Exempts itself from:
+          - `sortable-list/no-raw-dnd-kit` — `core/internal/auto-stubs.generated.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `core/internal/stubs.ts` (debt)
       - Test helpers:
         - Core: `@plugins/plugin-meta/plugins/barrel-import/core/testing`
           - `reactExportsSeen`
@@ -33637,7 +34185,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-refs`
           - `plugin-meta/plugin-tree`
       - Exemptions:
-        - Exempts itself from: `import-scan-safety/no-adhoc-import-scan` — `core/find-imports.ts` (sanctioned)
+        - Exempts itself from:
+          - `import-scan-safety/no-adhoc-import-scan` — `core/find-imports.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `core/helpers.ts` (debt)
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
         - Contributes:
@@ -33780,6 +34330,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `plugin-meta/relocate`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/resolve.ts` (debt)
       - Test helpers:
         - Core: `@plugins/plugin-meta/plugins/plugin-refs/core/testing`
           - `scanCssRefs` — Relative paths in one CSS source: `@source "rel"` (and `@source not "rel"`) and `@import "rel"`.
@@ -33839,6 +34391,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/codegen`
           - `plugin-meta/composition`
           - `plugin-meta/plugin-view`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/fs-snapshot.ts`, `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Web:
         - Slots:
@@ -34072,6 +34626,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readPluginMoves`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/apply-moves.ts`, `core/internal/ledger.ts` (debt)
     - **`token-usage`** — Which theme tokens a plugin's source uses, and which plugin owns each one: the static defineTokenGroup reader (owner + CSS vars) and the token-usage scanner (literal var(--x) plus Tailwind classes resolved by Tailwind's own design system over app.css). Feeds the cross-refs facet's tokenUses, which the closure engine turns into hard edges.
       - Core:
         - Uses:
@@ -34093,6 +34649,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/shape --radius-card`
           - `ui/tokens/shape --spacing`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/token-usage.ts` (debt)
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
@@ -34639,7 +35197,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes`
           - `tasks/attempt-work`
           - `tasks/sidequest-autopilot`
-          - `tasks/tasks-core`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-git.ts` (debt)
       - Core:
         - Exports (types):
           - `CommitRow`
@@ -35199,6 +35758,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --chrome-pad-x`
               - `ui/tokens/density --space-lg`
               - `ui/tokens/shape --spacing`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
           - Core:
             - Exports (types):
               - `MeasuredBox`
@@ -38073,6 +38634,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/icon/config`
           - `page/callout`
           - `primitives/avatar`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `shared/symbols-metadata.ts` (debt)
     - **`inline-text`** — Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.
       - Web:
         - Slots: `InlineTextWalkerSlot`
@@ -38137,14 +38700,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useLatestRef`
     - **`launch`** — The standard launch-an-agent popover, and the split [model | launch] control under it.
       - Web:
-        - Uses: 33 symbols — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
+        - Uses: 35 symbols — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
           - `primitives/css/ui-kit` ×9
           - `tasks/launch-options` ×5
           - `conversations/model-provider` ×4
+          - `infra/endpoints` ×3
           - `primitives/pane` ×2
           - `conversations/conversation-view.conversationPane`
           - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
-          - `infra/endpoints.fetchEndpoint`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
           - `primitives/css/spacing.Stack`
@@ -38541,6 +39104,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications`
           - `stats/commits`
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/emit + /ws/logs routes; debug/logs is the viewer.
+      - Server:
+        - Contributes: `host-service:log-channels.persistence` "log-channels.persistence"
+        - Uses: `infra/endpoints.implement`
+        - Exports (types):
+          - `DurableLogChannel`
+          - `LogChannel`
+          - `LogPersistenceImpl`
+          - `LogSink`
+          - `LogStream`
+        - Exports (values):
+          - `declaredDurableChannels`
+          - `defineLogSink`
+          - `Log`
+          - `LogPersistence`
+        - Routes:
+          - `POST /api/logs/emit`
+          - `/ws/logs (WS)`
       - Web:
         - Uses:
           - `infra/endpoints.fetchEndpoint`
@@ -38566,27 +39146,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `clientLog`
           - `LiveLogChannel`
-      - Server:
-        - Uses:
-          - `infra/endpoints.implement`
-          - `infra/host/duress/latch.isUnderDuress`
-          - `infra/paths.worktreeDataDir`
-        - Exports (types):
-          - `LogChannel`
-          - `LogStream`
-        - Exports (values):
-          - `clientLogFamily`
-          - `defineLogSink`
-          - `listChannels`
-          - `Log`
-          - `logsDir`
-          - `logsDirFor`
-          - `readChannelEntries`
-          - `readChannelJson`
-          - `readChannelJsonAsync`
-        - Routes:
-          - `POST /api/logs/emit`
-          - `/ws/logs (WS)`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports (types):
@@ -38614,23 +39173,56 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
-          - `debug` ×12
+        - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×11
-          - `infra` ×8
+          - `debug` ×9
           - `database` ×7
+          - `infra` ×7
           - `conversations` ×4
           - `build` ×2
+          - `primitives` ×2
           - `tasks` ×2
           - `backup`
           - `integrations/youtube/audio-fetch`
           - `network/live`
           - `page/annotations/agent-access`
-          - `primitives/live-state`
           - `release`
           - `reports/render-loop`
           - `stats/cost`
           - `upstream`
+        - Endpoint callers: `log-files`
+      - Machine:
+        - Register: `log-file-sinks`
+      - Plugins:
+        - **`log-files`** — The desktop's log-channel files: where each worktree's <channel>.jsonl lives (logsDir / logsDirFor), the bounded read path (readChannelEntries / readChannelJson), and the client-log family bound. Desktop-only: it reads the filesystem.
+          - Server:
+            - Uses: `infra/paths.worktreeDataDir`
+            - Exports (types): `LogStream`
+            - Exports (values):
+              - `channelFileSink`
+              - `clientLogFamily`
+              - `listChannels`
+              - `logEnvelope`
+              - `logsDir`
+              - `logsDirFor`
+              - `readChannelEntries`
+              - `readChannelJson`
+              - `readChannelJsonAsync`
+          - Cross-plugin:
+            - Imported by:
+              - `debug/boot-events`
+              - `debug/boot-watchdog`
+              - `debug/health-monitor`
+              - `debug/logs`
+              - `debug/sentinel`
+              - `debug/slow-ops`
+              - `debug/timeline`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/channel-file.ts`, `server/internal/client-log-family.ts`, `server/internal/persist.ts` (debt)
+        - **`memory-persistence`** (excluded) — Log persistence for a host without a disk: provides the LogPersistence host service with the in-memory ring only (the browser composition, the portable boot test) — a durable channel's lines live as long as the process. Never booted by the desktop.
+          - Server:
+            - Contributes: `host-service:log-channels.persistence` "log-channels.persistence"
+            - Uses: `primitives/log-channels.LogPersistence`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot`
@@ -40788,6 +41380,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/density --space-sm`
         - Imported by: `conversations/conversation-view/terminal-pane`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/pty-manager.ts` (debt)
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Web:
         - Slots: `TextEditorSlots.Plugin`
@@ -41703,6 +42297,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `apps/deploy/deployments`
       - `auth/apple-signing`
       - `release/runs-arm`
+  - Exemptions:
+    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/preview-manager.ts`, `server/internal/run-logs-resource.ts`, `server/internal/run-state.ts`, `server/internal/transcript.ts` (debt)
   - Plugins:
     - **`bundles`** — The on-disk release-bundle registry: run-dir layout, the `latest-<platform>` pointer, resolveBundle()'s discriminated verdict, git provenance + staleness, and run-dir retention. Strictly DB-free so a CLI process can import it.
       - Server:
@@ -41745,6 +42341,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/deployments`
           - `release`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/claim-pointer.ts`, `server/internal/out-dir.ts`, `server/internal/pointer.ts`, `server/internal/prune.ts`, `server/internal/resolve-bundle.ts` (debt)
     - **`runs-arm`** — The release arm's presence on the merged run surface: its rows' link into the Studio release run-detail pane, plus the composition / target / platform / provenance columns only a release row has. The release arm of the merged run space: binds `release_runs` into the runs union, mapping its own three-way status onto the shared outcome axis through a typed-total record, and contributing the composition / target / platform / provenance columns only a release row has — `release.kind` namespaced so the ledger's own kind column cannot shadow the run-kind discriminator.
       - Web:
         - Contributes:
@@ -41787,6 +42385,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isReleaseCheckout`
           - `releaseCargoTargetDir`
           - `sweepLeakedReleaseCheckouts`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/source-checkout.ts` (debt)
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout everywhere slots render; editing a layout (drag, hide, insert) is the opt-in ReorderSlots.AreaEditor, mounted beside an area's items only while edit mode is on. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
@@ -42216,7 +42816,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/reports-investigation`
       - `upstream`
   - Exemptions:
-    - Exempts itself from: `sink-safety/no-adhoc-file-sink` — `server/internal/buffer.ts` (sanctioned)
+    - Exempts itself from:
+      - `sink-safety/no-adhoc-file-sink` — `server/internal/buffer.ts` (sanctioned)
+      - `boundaries/no-platform-api` — `server/internal/buffer.ts` (debt)
   - Plugins:
     - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside another bar, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, nested-bar = a measuring bar was written inside another bar's occupant so both claim the same row's slack, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading, empty-rung = a widget declared a smaller form and rendered nothing as it), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode + the offending occupant's id, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
       - Web:
@@ -42465,6 +43067,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `framework/tooling/checks`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/file-report.ts`, `server/internal/drain.ts` (debt)
     - **`page-doc-rank-drift`** — Page doc-rank drift report kind: files the page editor's docRankDriftSink — a boot reconcile that had to re-mint `page_blocks.doc_rank` the structural-write chokepoint should already have kept in document order (a writer bypassed the doc-order marks, or an old backend wrote during a hot-swap) — deduped on the kind alone, with an investigation task naming the bypass to find.
       - Server:
         - Contributes: `report-kind` "page-doc-rank-drift"
@@ -42842,7 +43446,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes/api-changes`
           - `review/plugin-changes/file-changes`
       - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/use-plugin-changes.ts` (debt)
+        - Exempts itself from:
+          - `live/no-endpoint-read` — `web/use-plugin-changes.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/handle-plugin-changes.ts`, `server/internal/main-plugins-dir.ts`, `server/internal/plugin-changes-resource.ts` (debt)
       - Plugins:
         - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
           - Web:
@@ -43066,7 +43672,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/type-scale --line-height-3xs`
     - Imported by: `screenshot/draw-on-app`
   - Exemptions:
-    - Exempts itself from: `live/no-endpoint-read` — `web/components/screenshot-view.tsx` (debt)
+    - Exempts itself from:
+      - `live/no-endpoint-read` — `web/components/screenshot-view.tsx` (debt)
+      - `boundaries/no-platform-api` — `server/internal/handle-save-file.ts` (debt)
   - Shared:
     - Exports (values):
       - `createScreenshot`
@@ -43754,7 +44362,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-caption`
         - Imported by: `conversations/usage`
       - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/avg-cost-per-conversation-chart.tsx`, `web/components/cost-distribution-chart.tsx`, `web/components/cost-kpis.tsx`, `web/components/cumulative-cost-chart.tsx`, `web/components/daily-cost-chart.tsx`, `web/components/model-usage-chart.tsx`, `web/components/token-mix-chart.tsx`, `web/components/top-conversations-table.tsx` (debt)
+        - Exempts itself from:
+          - `live/no-endpoint-read` — `web/components/avg-cost-per-conversation-chart.tsx`, `web/components/cost-distribution-chart.tsx`, `web/components/cost-kpis.tsx`, `web/components/cumulative-cost-chart.tsx`, `web/components/daily-cost-chart.tsx`, `web/components/model-usage-chart.tsx`, `web/components/token-mix-chart.tsx`, `web/components/top-conversations-table.tsx` (debt)
+          - `boundaries/no-platform-api` — `server/internal/archive.ts`, `server/internal/price-table.ts`, `server/internal/usage-index.ts` (debt)
       - Core:
         - Exports (types):
           - `CountedUsage`
@@ -43900,11 +44510,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`tasks`** — Nested tasks with attempts linking to conversations.
   - Server:
     - Contributes: `resource.declare` "tasks.repo-info"
-    - Uses: 45 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+    - Uses: 40 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
       - `tasks/tasks-core` ×16
-      - `tasks/task-subject` ×3
-      - `conversations` ×2
-      - `infra/claude-cli/availability` ×2
       - `infra/endpoints` ×2
       - `primitives/rank` ×2
       - `tasks/auto-start` ×2
@@ -43912,8 +44519,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/task-title` ×2
       - `tasks/task-track` ×2
       - `conversations/model-provider/catalog.getModelCatalog`
+      - `conversations.maybeLaunchTaskJob`
       - `database.db`
       - `infra/attachments.getAttachment`
+      - `infra/claude-cli/availability.onClaudeCodeReady`
       - `infra/mcp.Mcp`
       - `infra/paths.GIT`
       - `infra/warmup.defineWarmup`
@@ -43930,7 +44539,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `GET /api/tasks`
       - `POST /api/tasks`
       - `POST /api/tasks/chain`
-      - `POST /api/tasks/launch`
       - `POST /api/tasks/insert-between`
       - `GET /api/tasks/:id`
       - `PATCH /api/tasks/:id`
@@ -43955,6 +44563,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useActiveDependentCount`
       - `useTask`
       - `useTasksById`
+  - Machine:
+    - Uses: `infra/endpoints.implementMachine`
+    - Routes: `POST /api/tasks/launch`
   - Core:
     - Uses:
       - `conversations/model-provider.ModelChoiceSchema`
@@ -45501,11 +46112,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskAttempts`
           - `useTaskConversations`
       - Server:
-        - Contributes: 27 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Contributes: 28 contributions — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `resource.declare` ×18
           - `derived-view` ×4
           - `ids.kind` ×3
           - `derived-table` ×2
+          - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
         - Uses:
           - `database.db`
           - `database/derived-tables.DerivedTable`
@@ -45517,13 +46129,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
           - `infra/events.defineTriggerEvent`
-          - `infra/git/git-read-cache.createSignedMemo`
-          - `infra/git/git-watcher.defineRefReaction`
-          - `infra/git/git-watcher.lastKnownMainSha`
-          - `infra/host/host-read-pool.withHeavyReadSlot`
-          - `infra/worktree.ensureMainWorktreeRoot`
           - `network/live.serveCollection`
-          - `primitives/commit-list.runGit`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.RankExecutor`
           - `primitives/rank.withRank`
@@ -45552,6 +46158,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OrphanedAttempt`
           - `Push`
           - `PushLandedPayload`
+          - `PushLedgerImpl`
           - `Task`
           - `TaskListItem`
           - `TaskStatus`
@@ -45585,7 +46192,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteConversationRow`
           - `dropTaskIfNoActiveSibling`
           - `dropTaskTree`
-          - `ensurePushLedgerFresh`
           - `findNextRankInFolder`
           - `getAttempt`
           - `getAttemptRow`
@@ -45619,6 +46225,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `orphanedAttemptSink`
           - `pushes`
           - `pushLanded`
+          - `PushLedger`
           - `PushSchema`
           - `RECENT_GONE_LIMIT`
           - `recordScratchDelivery`
@@ -45644,7 +46251,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTriggerEvent('tasks.statusChanged')`
           - `defineTriggerEvent('tasks.titleChanged')`
           - `defineTriggerEvent('conversation.statusChanged')`
-          - `defineRefReaction('tasks.push-ledger (refs/heads/main)')`
         - Resources:
           - `attempt-workspaces:rows` (keyed, point)
           - `attempts` (keyed)
@@ -45740,9 +46346,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: 70 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×29
-          - `tasks` ×16
-          - `debug` ×6
+          - `tasks` ×17
           - `active-data` ×5
+          - `debug` ×5
           - `page` ×3
           - `apps` ×2
           - `infra` ×2
@@ -45778,6 +46384,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
+      - Machine:
+        - Register: `defineRefReaction('tasks.push-ledger (refs/heads/main)')`
       - Test helpers:
         - Server: `@plugins/tasks/plugins/tasks-core/server/testing`
           - `canonical` — JSON with sorted keys, so a row compares by content whatever its key order.
@@ -45789,6 +46397,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `treeSteps` — The scripted tree writes, in order: every kind of write the app makes to the tree — an insert, a rename, a status flip, an edge added and removed, a drag reorder, an attempt, a conversation and a push landing, a poller write, an attempt moved between tasks, cascade deletes of an attempt and a task, a drop.
           - `withSteps` — The script with a suite's own steps spliced in: each `after[label]` runs right after the step of that label (an unknown label throws, so a renamed step cannot silently drop a suite's case).
           - Types: `TreeLoad`, `TreeOracle`, `TreeOracleOptions`, `TreeStep`, `TreeStepCost`
+      - Plugins:
+        - **`seeded-push-ledger`** (excluded) — The push ledger of a host without git: provides the PushLedger host service as nothing to do — there is no main history to project, so the `pushes` rows the database was seeded with ARE the ledger (the browser composition, the portable boot test). Never booted by the desktop.
+          - Server:
+            - Contributes: `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
+            - Uses: `tasks/tasks-core.PushLedger`
     - **`worktree-identity`** — Which checkout and task this page is served from, as the health report's first (informational) row: the linked task's title or the namespace, the kind of place it names, a copy button, and Open task.
       - Web:
         - Contributes: `HealthReport.Row` "worktree"
@@ -45833,6 +46446,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Cross-plugin:
     - Uses tokens: `ui/tokens/shape --spacing`
     - Imported by: `infra/deps/mise`
+  - Exemptions:
+    - Exempts itself from: `boundaries/no-platform-api` — `core/internal/mise-bin.ts` (debt)
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:
@@ -45940,7 +46555,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports/launch-fix`
           - `screenshot`
       - Exemptions:
-        - Exempts itself from: `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
+        - Exempts itself from:
+          - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `shared/symbol-names.ts` (debt)
         - Exempted by: `ui/icons` (0 debt)
       - Server:
         - Exports (types):
@@ -46139,7 +46756,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/callout`
               - `primitives/data-view`
           - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/internal/sprite-host.tsx` (debt)
+            - Exempts itself from:
+              - `live/no-endpoint-read` — `web/internal/sprite-host.tsx` (debt)
+              - `boundaries/no-platform-api` — `server/internal/runtime-symbols.ts`, `server/internal/sprites.ts` (debt)
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
         - Slots: `SegmentedProgressBarSlots.Variant`
@@ -47340,7 +47959,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 670 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 671 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×143
               - `primitives` ×124
               - `conversations` ×99
@@ -47348,7 +47967,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×40
               - `ui` ×35
               - `framework` ×21
-              - `infra` ×20
+              - `infra` ×21
               - `tasks` ×19
               - `plugin-meta` ×17
               - `fields` ×16

@@ -76,7 +76,9 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
     - `packages/host-semaphore`
     - `packages/single-flight`
 - Exemptions:
-  - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `core/internal/wait.ts` (sanctioned)
+  - Exempts itself from:
+    - `spawn-safety/no-raw-bun-spawn` — `core/internal/wait.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `core/internal/flock.ts`, `core/internal/lifeline.ts`, `core/internal/wait.ts` (debt)
 - Server:
   - Exports (types):
     - `HeldFlock`

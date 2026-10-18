@@ -22,4 +22,16 @@ export default [
     reason:
       "The gateway's launch, run by the CLI (`./singularity start`), serve-app and the release launcher — never by a backend. The gateway outlives the call by design (it is the parent of every backend), and its stdio is a caller-owned log fd. Not a daemon: no backend starts it, so there is no catalog to list it in from here — each backend `attach`es it instead (launcher/server/internal/gateway-daemon.ts).",
   },
+  {
+    rule: "boundaries/no-platform-api",
+    paths: [
+      "server/internal/boot.ts",
+      "server/internal/config-propagate.ts",
+      "server/internal/launchd-service.ts",
+      "server/internal/systemd-service.ts",
+    ],
+    kind: "debt",
+    task: "task-1792338443-riwqev",
+    reason: "not yet split into server/ + machine/",
+  },
 ] satisfies Exemptions;

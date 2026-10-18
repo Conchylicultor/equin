@@ -3,19 +3,17 @@ import { handleEmit } from "./internal/handle-emit";
 import { wsHandler } from "./internal/ws-handler";
 import { emitLogs } from "../core/endpoints";
 
-export { Log, defineLogSink } from "./internal/log";
+export { Log, declaredDurableChannels, defineLogSink } from "./internal/log";
 export type { LogChannel, LogStream } from "./internal/log";
-export { clientLogFamily } from "./internal/client-ingress";
-export {
-  listChannels,
-  logsDir,
-  logsDirFor,
-  readChannelEntries,
-  readChannelJson,
-  readChannelJsonAsync,
-} from "./internal/persist";
+export { LogPersistence } from "./internal/persistence";
+export type {
+  DurableLogChannel,
+  LogPersistenceImpl,
+  LogSink,
+} from "./internal/persistence";
 
 export default {
+  portable: true,
   httpRoutes: {
     [emitLogs.route]: handleEmit,
   },

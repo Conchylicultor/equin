@@ -114,5 +114,7 @@ export function browserServerTransport(server: BrowserServer): Transport {
       );
     },
     assetUrl: (path) => `${prefix}${path}`,
+    // A server in the page: the computer is not behind it.
+    machine: false,
   };
 }

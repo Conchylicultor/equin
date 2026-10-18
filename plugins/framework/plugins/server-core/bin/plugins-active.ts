@@ -29,13 +29,19 @@ import { readSpecComposition } from "./spec-composition";
 // variable (never a string literal pointing at a maybe-absent file) — tsc must
 // not try to resolve the gitignored modules. Bun runs this unbundled, so the
 // guarded dynamic import loads only the branch taken.
+//
+// Both halves of the backend — every plugin's `server/` and every plugin's
+// `machine/` — come from the same composition, so they always describe one app.
+// This module answers both aliases (`@composition-server-registry` and
+// `@composition-machine-registry`) in dev; a release repoints each to its own
+// filtered file.
 const namespace = runtimeNamespace();
-const spec = selectRegistry(
-  join(import.meta.dir, "../core"),
-  namespace,
-  readSpecComposition(worktreesDir(), namespace),
-);
+const coreDir = join(import.meta.dir, "../core");
+const composition = readSpecComposition(worktreesDir(), namespace);
 
 export const { serverEntries } = (await import(
-  spec
+  selectRegistry(coreDir, namespace, composition, "server")
 )) as typeof import("../core/server.generated");
+export const { machineEntries } = (await import(
+  selectRegistry(coreDir, namespace, composition, "machine")
+)) as typeof import("../core/machine.generated");

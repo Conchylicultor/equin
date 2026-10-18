@@ -15,4 +15,15 @@ export default [
     reason:
       "A request/response server read (a GET fetchEndpoint or NDJSON stream an effect, a hook or a function they call runs) not yet moved onto a liveValue or liveCollection read with useLive.",
   },
+  {
+    rule: "boundaries/no-platform-api",
+    paths: [
+      "server/internal/dirs.ts",
+      "server/internal/reap-policy.ts",
+      "server/internal/reap.ts",
+    ],
+    kind: "debt",
+    task: "task-1792338443-riwqev",
+    reason: "not yet split into server/ + machine/",
+  },
 ] satisfies Exemptions;

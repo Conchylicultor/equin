@@ -1,7 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { handleCrashRecovery } from "./internal/crash-recovery";
 import { cronDedupProbe, handleCronDedup } from "./internal/cron-dedup";
-import { handleQueueLockNoSteal } from "./internal/queue-lock-no-steal";
 import {
   abortSaturationSleepers,
   deadLetterProbe,
@@ -10,7 +8,6 @@ import {
 } from "./internal/queue-saturate";
 import { handleSerialQueue } from "./internal/serial-queue";
 import { serialProbe } from "./internal/serial-job";
-import { handleSuperseded, supersededProbe } from "./internal/superseded";
 import {
   handleDeleteTargeting,
   handleDeleteTrigger,
@@ -35,11 +32,8 @@ import {
   deleteEventsTestTargeting,
   listEventsTestTriggers,
   waitEventsTestIdle,
-  crashRecoveryEventsTest,
   serialQueueEventsTest,
-  queueLockNoStealEventsTest,
   cronDedupEventsTest,
-  supersededEventsTest,
   queueSaturateEventsTest,
   detachedSleepEventsTest,
 } from "../shared/endpoints";
@@ -56,11 +50,8 @@ export default {
     [deleteEventsTestTargeting.route]: handleDeleteTargeting,
     [listEventsTestTriggers.route]: handleListTriggers,
     [waitEventsTestIdle.route]: handleWaitIdle,
-    [crashRecoveryEventsTest.route]: handleCrashRecovery,
     [serialQueueEventsTest.route]: handleSerialQueue,
-    [queueLockNoStealEventsTest.route]: handleQueueLockNoSteal,
     [cronDedupEventsTest.route]: handleCronDedup,
-    [supersededEventsTest.route]: handleSuperseded,
     [queueSaturateEventsTest.route]: handleQueueSaturate,
     [detachedSleepEventsTest.route]: handleDetachedSleep,
   },
@@ -68,7 +59,6 @@ export default {
     logPing,
     serialProbe,
     cronDedupProbe,
-    supersededProbe,
     saturateSleeper,
     deadLetterProbe,
     detachedSleep,

@@ -8,6 +8,7 @@
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
+    - `framework/server-core`
     - `framework/tooling/boundaries`
     - `framework/tooling/codegen`
     - `framework/tooling/web-artifacts`
@@ -30,11 +31,15 @@
     - `asFsPath`
     - `asPath`
     - `asPluginId`
+    - `isMachineNode`
     - `isTestCodePath`
     - `LEAF_FOLDERS`
+    - `MACHINE_NODE_SUFFIX`
+    - `machineNode`
     - `packageNameFor`
     - `PLUGIN_FOLDERS`
     - `pluginIdSegments`
+    - `pluginOfNode`
     - `RUNTIME_FOLDERS`
     - `SHIPPED_RUNTIME_FOLDERS`
     - `TESTING_FOLDER`

@@ -7,7 +7,7 @@ import type {
   CheckContext,
 } from "@plugins/framework/plugins/tooling/core";
 
-const RUNTIMES = ["web", "server", "central"] as const;
+const RUNTIMES = ["web", "server", "machine", "central"] as const;
 
 const INLINE_DEFAULT_RE = /(^|\n)\s*export\s+default\s+\{/;
 const REEXPORT_DEFAULT_RE =
@@ -18,7 +18,7 @@ const ANY_DEFAULT_RE =
 const check: Check = {
   id: "no-reexport-default",
   description:
-    "Every plugin barrel (web|server|central)/index.ts must use inline `export default { ... } satisfies *PluginDefinition` — no re-exports, no missing defaults",
+    "Every plugin barrel (web|server|machine|central)/index.ts must use inline `export default { ... } satisfies *PluginDefinition` — no re-exports, no missing defaults",
   async run(ctx: CheckContext) {
     const root = await getWorktreeRoot();
     const pluginsRoot = join(root, "plugins");

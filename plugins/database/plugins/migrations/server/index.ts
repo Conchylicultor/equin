@@ -4,7 +4,8 @@ export {
   applySchemaLayer,
   migrationsReady,
   dryRunPendingMigrations,
-  listMigrationFiles,
+  isMigrationFileName,
+  migrationsFrom,
   planSchemaSteps,
 } from "./internal/runner";
 export type {
@@ -14,7 +15,10 @@ export type {
   SchemaPlan,
   SchemaStep,
 } from "./internal/runner";
+export { MigrationSource } from "./internal/source";
+export type { MigrationSourceImpl } from "./internal/source";
 
 export default {
   description: "DDL lifecycle: migration runner and SQL files.",
+  portable: true,
 } satisfies ServerPluginDefinition;

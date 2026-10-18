@@ -11,4 +11,15 @@ export default [
     reason:
       "Samplers of this process / the host every 10 s: the instrument for a wedged backend, below cron's 1-minute floor.",
   },
+  {
+    rule: "boundaries/no-platform-api",
+    paths: [
+      "server/internal/health-series.ts",
+      "server/internal/host-sampler.ts",
+      "server/internal/process-sampler.ts",
+    ],
+    kind: "debt",
+    task: "task-1792338443-riwqev",
+    reason: "not yet split into server/ + machine/",
+  },
 ] satisfies Exemptions;

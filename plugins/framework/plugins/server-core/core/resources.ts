@@ -1,3 +1,4 @@
+import { hash64 } from "@plugins/packages/plugins/string-hash/core";
 import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
 import type {
   Resource as RtResource,
@@ -277,11 +278,24 @@ export function onResourceDelivery(cb: ResourceDeliveryObserver): () => void {
 // which caps loader-kind queries and reserves capacity for interactive work. An
 // in-memory loader that issues no query therefore never waits. See
 // research/2026-06-19-global-live-state-unified-read-path-v2.md (Task 2).
+// The keyed-delta snapshot hash, as the HOST installs it: the Bun hosts put
+// native wyhash on this hot path (`bin/host-probes.ts`), and this module runs on
+// every host, so it never names `Bun` itself. Until one is installed — a host
+// that has no native hash, a test that boots no `bin/` — the runtime's portable
+// plain-JS `hash64`. Installed before boot, so every snapshot of one process is
+// hashed by one function.
+let hostSnapHash: ((json: string) => bigint) | null = null;
+
+/** Install this host's keyed-snapshot hash. Once per process, before boot. */
+export function installSnapHash(fn: (json: string) => bigint): void {
+  if (hostSnapHash !== null) {
+    throw new Error("[resources] a snapshot hash is already installed.");
+  }
+  hostSnapHash = fn;
+}
+
 const runtime = createResourceRuntime({
-  // Native wyhash on the keyed-delta hot path (the runtime's portable default
-  // is plain-JS `hash64`); the length fold kills every different-length
-  // collision.
-  snapHash: (json) => Bun.hash.wyhash(json) ^ BigInt(json.length),
+  snapHash: (json) => (hostSnapHash ?? hash64)(json),
   // The label stays the resource key (one slow-op row per resource, and the key
   // the loader→tables read-set index is built on); WHICH params ran rides as the
   // span's variant, and a scoped refill carries how many ids it read.
@@ -497,7 +511,7 @@ export const {
 // ── Boot: bind the deferred resources ──────────────────────────────────────
 // A deferred resource (`defineDeferredResource`) compiles its server half from
 // the plugin graph's contributions, so it binds right after they are collected
-// (`../shared/boot-stages.ts`) — before the preload assert below reads the
+// (`./boot-stages.ts`) — before the preload assert below reads the
 // registry, and before the ready barrier rebuilds triggers from the route
 // layout. Checks over what the binds consumed (`onDeferredResourcesBound`) run
 // right after, still inside the boot sequence, so a mis-contributed graph
@@ -527,7 +541,7 @@ export function bindDeferredResources(): void {
 // `liveValue` / `liveCollection` served without `...served.declare` in
 // `contributions`) still serves, and silently loses boot hydration and L2
 // persistence — nothing else notices. The shared boot sequence
-// (`../shared/boot-stages.ts`) runs this right after `collectContributions`,
+// (`./boot-stages.ts`) runs this right after `collectContributions`,
 // once every server module has registered its resources, in both boot modes.
 
 /**

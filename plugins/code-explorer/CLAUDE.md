@@ -48,6 +48,8 @@ commit-diff pane in `commit-detail`, fuzzy path resolution in `file-resolve`.
   - Imported by:
     - `code-explorer/file-resolve`
     - `review/plugin-changes`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/checkout-root.ts`, `server/internal/commit-values.ts`, `server/internal/contained-path.ts`, `server/internal/get-file-content.ts`, `server/internal/get-file-diff.ts`, `server/internal/image-handler.ts`, `server/internal/list-dir-handler.ts`, `server/internal/resolve-worktree-path.ts` (debt)
 - Sub-plugins:
   - **`code-api`** — Typed contracts for the /api/code/* endpoints (tree, file, diff, image, push, commit). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation…
   - **`commit-detail`** — The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also…

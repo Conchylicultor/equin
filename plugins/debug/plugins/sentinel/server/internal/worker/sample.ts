@@ -13,7 +13,7 @@ import {
   HostSampleSchema,
   type HealthSample,
 } from "@plugins/debug/plugins/health-monitor/core";
-import { readChannelEntries } from "@plugins/primitives/plugins/log-channels/server";
+import { readChannelEntries } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { ClusterSample } from "../../../core";
 import {

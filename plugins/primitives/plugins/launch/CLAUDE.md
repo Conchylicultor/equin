@@ -57,14 +57,14 @@ started" notification confirms it), so its props are the form's minus
 
 - Description: The standard launch-an-agent popover, and the split [model | launch] control under it.
 - Web:
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `tasks/launch-options` ×5
     - `conversations/model-provider` ×4
+    - `infra/endpoints` ×3
     - `primitives/pane` ×2
     - `conversations/conversation-view.conversationPane`
     - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
-    - `infra/endpoints.fetchEndpoint`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`

@@ -155,12 +155,18 @@ const check: Check = {
 
     // R3: barrel purity + existence for every runtime folder
     // web/server/core must have index.ts when the directory contains TS files.
-    // central is optional (not all plugins target the central runtime).
+    // central and machine are optional (not all plugins target those runtimes).
     // shared/ is excluded — it uses relative imports, not barrels.
     for (const p of plugins) {
       if (p.compositionRoot) continue;
       const pluginRel = `plugins/${p.relPath}`;
-      for (const runtime of ["web", "server", "central", "core"] as const) {
+      for (const runtime of [
+        "web",
+        "server",
+        "machine",
+        "central",
+        "core",
+      ] as const) {
         // A runtime dir "exists" iff the run's git-derived file set holds at
         // least one file under it — never `existsSync`, which also sees a
         // gitignored directory the read-set recorded above cannot cover. See
@@ -170,6 +176,7 @@ const check: Check = {
         if (!repoFiles.has(barrelRel)) {
           if (
             runtime !== "central" &&
+            runtime !== "machine" &&
             repo.containsTsFiles(`${pluginRel}/${runtime}`)
           ) {
             violations.push({
@@ -415,7 +422,8 @@ const check: Check = {
       return {
         from: parts[0]!,
         to: parts[1]!,
-        runtime: parts[2] as "web" | "server" | "central" | "shared",
+        runtime: parts[2] as
+          "web" | "server" | "machine" | "central" | "shared",
       };
     });
     // Core/shared code is reachable from every runtime.
@@ -424,8 +432,12 @@ const check: Check = {
     const webEdges = edgeList.filter(
       (e) => e.runtime === "web" || crossRuntime(e),
     );
+    // A desktop backend boots `server` and `machine` as ONE plugin graph, so
+    // their edges are one cycle graph: server → machine is a boundary error,
+    // but machine → server is legal and closes a cycle with server → server.
     const serverEdges = edgeList.filter(
-      (e) => e.runtime === "server" || crossRuntime(e),
+      (e) =>
+        e.runtime === "server" || e.runtime === "machine" || crossRuntime(e),
     );
     const centralEdges = edgeList.filter(
       (e) => e.runtime === "central" || crossRuntime(e),

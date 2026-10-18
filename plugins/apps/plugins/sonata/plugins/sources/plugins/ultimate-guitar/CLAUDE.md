@@ -294,7 +294,9 @@ surfacing as crash tasks, not just toasts.
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
 - Exemptions:
-  - Exempts itself from: `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
+  - Exempts itself from:
+    - `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/ug-client.ts` (debt)
 - Core:
   - Exports (types):
     - `UgFetchErrorKind`

@@ -27,6 +27,8 @@ This plugin ships:
 - Description: Postgres client tools (pg_dump, pg_restore) built from the same release as the embedded server: pgClientBin resolves the vendored binary, never the PATH.
 - Cross-plugin:
   - Imported by: `database/admin`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/bin.ts` (debt)
 - Server:
   - Exports (types): `PgClientTool`
   - Exports (values):

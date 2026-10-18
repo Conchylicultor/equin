@@ -2,8 +2,10 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { type Codec, isCodec, json } from "./codec";
 import type { ExtractParams } from "./route-params";
 import { extractMethod, extractPath } from "./route-params";
+import type { MachineFeature } from "./needs-machine";
 
-export interface EndpointDef<
+/** What every endpoint contract carries, portable or desktop-only. */
+interface EndpointContract<
   Route extends string,
   TParams,
   TBody,
@@ -42,6 +44,38 @@ export interface EndpointDef<
   readonly __params?: TParams;
 }
 
+/**
+ * A portable endpoint: served by every host's `server/` (`implement`). Its
+ * `needsMachine` is absent, so a desktop-only {@link MachineEndpointDef} is not
+ * one — not even through a variable typed `EndpointDef`, which would let a
+ * caller read its answer without the unavailable arm.
+ */
+export interface EndpointDef<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+> extends EndpointContract<Route, TParams, TBody, TResponse, TQuery> {
+  readonly needsMachine?: undefined;
+}
+
+/**
+ * A desktop-only endpoint (`defineEndpoint({ …, needsMachine: { feature } })`):
+ * served only by a plugin's `machine/` half (`implementMachine` from
+ * `endpoints/machine`), and answered `unavailable` by every client whose
+ * transport has no computer behind it (`fetchEndpoint` → `MachineResult`).
+ */
+export interface MachineEndpointDef<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+> extends EndpointContract<Route, TParams, TBody, TResponse, TQuery> {
+  readonly needsMachine: MachineFeature;
+}
+
 /** A body/response spec accepts a bare Zod schema (JSON) or an explicit codec. */
 type Spec<T> = ZodParser<T> | Codec<T>;
 
@@ -54,12 +88,8 @@ type Spec<T> = ZodParser<T> | Codec<T>;
 type SpecType<S> =
   S extends Codec<infer U> ? U : S extends ZodParser<infer U> ? U : void;
 
-export function defineEndpoint<
-  const Route extends string,
-  B extends Spec<unknown> = Spec<void>,
-  R extends Spec<unknown> = Spec<void>,
-  TQuery = void,
->(opts: {
+/** What `defineEndpoint` takes, whichever host serves it. */
+interface EndpointOptions<Route extends string, B, R, TQuery> {
   route: Route;
   body?: B;
   response?: R;
@@ -67,7 +97,53 @@ export function defineEndpoint<
   concurrency?: number;
   dedupe?: boolean;
   slowThresholdMs?: number;
-}): EndpointDef<Route, ExtractParams<Route>, SpecType<B>, SpecType<R>, TQuery> {
+}
+
+/**
+ * Declare an endpoint. With `needsMachine: { feature }` it is desktop-only — a
+ * {@link MachineEndpointDef}, whose every client handles the "not available"
+ * answer (tsc); without it, a portable {@link EndpointDef}.
+ */
+export function defineEndpoint<
+  const Route extends string,
+  B extends Spec<unknown> = Spec<void>,
+  R extends Spec<unknown> = Spec<void>,
+  TQuery = void,
+>(
+  opts: EndpointOptions<Route, B, R, TQuery> & { needsMachine: MachineFeature },
+): MachineEndpointDef<
+  Route,
+  ExtractParams<Route>,
+  SpecType<B>,
+  SpecType<R>,
+  TQuery
+>;
+export function defineEndpoint<
+  const Route extends string,
+  B extends Spec<unknown> = Spec<void>,
+  R extends Spec<unknown> = Spec<void>,
+  TQuery = void,
+>(
+  opts: EndpointOptions<Route, B, R, TQuery> & { needsMachine?: undefined },
+): EndpointDef<Route, ExtractParams<Route>, SpecType<B>, SpecType<R>, TQuery>;
+export function defineEndpoint<
+  const Route extends string,
+  B extends Spec<unknown> = Spec<void>,
+  R extends Spec<unknown> = Spec<void>,
+  TQuery = void,
+>(
+  opts: EndpointOptions<Route, B, R, TQuery> & {
+    needsMachine?: MachineFeature;
+  },
+):
+  | EndpointDef<Route, ExtractParams<Route>, SpecType<B>, SpecType<R>, TQuery>
+  | MachineEndpointDef<
+      Route,
+      ExtractParams<Route>,
+      SpecType<B>,
+      SpecType<R>,
+      TQuery
+    > {
   const bodyCodec = opts.body
     ? isCodec(opts.body)
       ? opts.body
@@ -88,5 +164,8 @@ export function defineEndpoint<
     concurrency: opts.concurrency,
     dedupe: opts.dedupe,
     slowThresholdMs: opts.slowThresholdMs,
+    ...(opts.needsMachine !== undefined
+      ? { needsMachine: opts.needsMachine }
+      : {}),
   };
 }

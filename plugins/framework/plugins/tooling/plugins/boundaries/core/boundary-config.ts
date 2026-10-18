@@ -26,6 +26,15 @@ export default defineBoundaries({
     // host-only `core/` files listed under `runtimeExceptions` below.
     web: ["web", "core", "shared"],
     server: ["server", "core", "shared", "data-dirs", "deps"],
+    // machine/ — the desktop-only half of a plugin's backend (fs, git, spawn,
+    // the pg pool, graphile). It may reach everything `server` may, plus other
+    // machine barrels. NO other row lists `machine` but `cli` and `check` (a
+    // CLI verb and a check are host processes too — a check reads the same
+    // desktop facts a machine half serves, e.g. the migration files on disk):
+    // a `server/` file importing a machine barrel is a
+    // boundary error, so portable server code cannot quietly grow a
+    // desktop-only dependency — the split spreads by itself.
+    machine: ["machine", "server", "core", "shared", "data-dirs", "deps"],
     central: ["central", "core", "shared", "data-dirs", "deps"],
     core: ["core"],
     shared: ["shared", "core", "data-dirs"],
@@ -90,7 +99,7 @@ export default defineBoundaries({
     // `cli:command-declarations-light` — which measures each `cli/index.ts`'s
     // STATIC closure only. An implementation sitting next to the declaration is
     // free to reach `server`; the declaration reaching it is the error.
-    cli: ["cli", "core", "shared", "data-dirs", "server", "deps"],
+    cli: ["cli", "core", "shared", "data-dirs", "server", "machine", "deps"],
     // deps/ — on-demand dependency declarations (`defineDep`) and, in
     // `infra/deps`, the install engine. Host-only: the engine reads
     // `paths/core` (`homedir()` at module eval) and declares its cache through
@@ -106,7 +115,7 @@ export default defineBoundaries({
     // imported. `shared` in a row is the plugin's own; plugin-boundaries R10
     // forbids reaching another plugin's. `web` is in no host-process row.
     lint: ["core"],
-    check: ["core", "shared", "data-dirs", "server", "deps"],
+    check: ["core", "shared", "data-dirs", "server", "machine", "deps"],
     facet: ["core"],
     bin: ["core", "shared", "data-dirs", "server", "central", "cli", "deps"],
     scripts: ["core", "shared", "data-dirs", "server", "deps"],
@@ -122,6 +131,40 @@ export default defineBoundaries({
     // An exemption manifest (`tooling/exempt`): plain data that names its own
     // plugin's files, typed by the exempt primitive's `core`.
     exempt: ["core"],
+  },
+
+  // Which folders may import a platform API (a Node builtin, `bun`, `pg`,
+  // graphile, a native watcher — the matcher is `./platform-apis`), enforced
+  // by the `boundaries/no-platform-api` lint rule. Exhaustive over
+  // `PluginFolder`, so a new folder kind is a tsc error until it answers.
+  //
+  // Forbidden where the code must run on every host: `server` (portable app
+  // logic — tables, queries, handlers; the desktop-only half is `machine`),
+  // `core` and `shared` (reachable from `server` and `web`) and `web`. Every
+  // other folder runs only on a host process (a backend's `machine`, central,
+  // a CLI verb, a check, a script) or holds no code that loads.
+  platformApis: {
+    web: "forbidden",
+    server: "forbidden",
+    core: "forbidden",
+    shared: "forbidden",
+    machine: "allowed",
+    central: "allowed",
+    e2e: "allowed",
+    provision: "allowed",
+    "data-dirs": "allowed",
+    cli: "allowed",
+    deps: "allowed",
+    check: "allowed",
+    lint: "allowed",
+    facet: "allowed",
+    bin: "allowed",
+    scripts: "allowed",
+    exhibits: "allowed",
+    vite: "allowed",
+    prewarm: "allowed",
+    python: "allowed",
+    exempt: "allowed",
   },
 
   runtimeExceptions: [
@@ -162,6 +205,7 @@ export default defineBoundaries({
     "plugins/framework/plugins/web-sdk/core/web.generated.ts",
     "plugins/framework/plugins/web-core/web/App.tsx",
     "plugins/framework/plugins/server-core/core/server.generated.ts",
+    "plugins/framework/plugins/server-core/core/machine.generated.ts",
     "plugins/framework/plugins/server-core/bin/index.ts",
     "plugins/framework/plugins/central-core/core/central.generated.ts",
     "plugins/framework/plugins/central-core/bin/index.ts",

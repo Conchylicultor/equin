@@ -151,7 +151,9 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: `framework/tooling/web-artifacts`
 - Exemptions:
-  - Exempts itself from: `plugin-boundaries` — `web/__tests__/plugin-render.test.tsx` (sanctioned)
+  - Exempts itself from:
+    - `plugin-boundaries` — `web/__tests__/plugin-render.test.tsx` (sanctioned)
+    - `boundaries/no-platform-api` — `core/vite-contributions.ts` (debt)
 - Core:
   - Exports (types):
     - `BabelPluginItem`

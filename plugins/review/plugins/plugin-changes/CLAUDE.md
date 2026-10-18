@@ -126,7 +126,9 @@ A push's review is not live: it reads `GET /api/review/plugin-changes` once.
     - `review/plugin-changes/api-changes`
     - `review/plugin-changes/file-changes`
 - Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/use-plugin-changes.ts` (debt)
+  - Exempts itself from:
+    - `live/no-endpoint-read` — `web/use-plugin-changes.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/handle-plugin-changes.ts`, `server/internal/main-plugins-dir.ts`, `server/internal/plugin-changes-resource.ts` (debt)
 - Sub-plugins:
   - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
   - **`file-changes`** (excluded) — File-level diff section for per-plugin review cards.

@@ -152,10 +152,13 @@ export const createTaskChain = defineEndpoint({
   response: TaskChainSubmitResponseSchema,
 });
 
+// Desktop-only: a launch spawns Claude Code in a checkout of this repo, so it
+// is served by `tasks/machine` and every client handles "not available".
 export const launchTask = defineEndpoint({
   route: "POST /api/tasks/launch",
   body: LaunchTaskBodySchema,
   response: LaunchTaskResponseSchema,
+  needsMachine: { feature: "Launching an agent" },
 });
 
 export const insertTaskBetween = defineEndpoint({

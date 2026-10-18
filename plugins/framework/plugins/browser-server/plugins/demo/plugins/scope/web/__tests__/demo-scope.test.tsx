@@ -507,5 +507,6 @@ function pageBackend(): Transport {
         }),
       ),
     assetUrl: (path) => `test-page:${path}`,
+    machine: true,
   };
 }

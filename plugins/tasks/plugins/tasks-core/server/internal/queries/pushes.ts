@@ -1,7 +1,7 @@
 import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { pushes } from "../tables";
-import { ensurePushLedgerFresh } from "../push-ledger/freshness";
+import { PushLedger } from "../push-ledger/service";
 import type { Push } from "../schema";
 
 /**
@@ -9,7 +9,7 @@ import type { Push } from "../schema";
  * to see a ledger that covers `main` before it reads.
  *
  * `pushes` is a projection of `main`'s trailer-bearing history, not the output of
- * a background job (see ../push-ledger/). Putting the guarantee inside the reader
+ * a background job (see ../push-ledger/ and the host's `PushLedger`). Putting the guarantee inside the reader
  * is what keeps it from being a rule every future consumer has to remember: there
  * is no accessor on the barrel that can hand back a ledger that has not caught
  * up. The ungated reads the projection itself needs live in
@@ -22,7 +22,7 @@ import type { Push } from "../schema";
  */
 
 export async function listPushesForAttempt(attemptId: string): Promise<Push[]> {
-  await ensurePushLedgerFresh();
+  await PushLedger.get().ensureFresh();
   return db
     .select()
     .from(pushes)
@@ -31,7 +31,7 @@ export async function listPushesForAttempt(attemptId: string): Promise<Push[]> {
 }
 
 export async function listPushesByPushId(pushId: string): Promise<Push[]> {
-  await ensurePushLedgerFresh();
+  await PushLedger.get().ensureFresh();
   return db
     .select()
     .from(pushes)

@@ -55,7 +55,7 @@ edge, pulsing) when it is the latest attempt. Mirrors health-monitor's
 - Server:
   - Uses:
     - `primitives/log-channels.defineLogSink`
-    - `primitives/log-channels.readChannelJson`
+    - `primitives/log-channels/log-files.readChannelJson`
   - DB schema: `plugins/debug/plugins/boot-events/server/internal/schema.ts`
   - Exports (types):
     - `BootEvent`

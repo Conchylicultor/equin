@@ -5,16 +5,15 @@ import {
   retryJob,
   cancelJob,
 } from "../../core/endpoints";
-import { getWorkerUtils } from "./worker";
-import { loadJobsList, loadDeadJobsList } from "./resources";
-import { emitQueueActivity } from "./slot-ledger";
+import { JobQueue } from "./queue";
+import { loadDeadJobsList } from "./resources";
 
 export const handleListJobs = implement(listJobs, async ({ req }) => {
   const url = new URL(req.url);
   const state = url.searchParams.get("state");
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 200), 1000);
 
-  const payload = await loadJobsList(limit);
+  const payload = await JobQueue.get().list(limit);
   if (state && state !== "all") {
     return {
       rows: payload.rows.filter((j) => j.state === state),
@@ -32,19 +31,10 @@ export const handleListDeadJobs = implement(listDeadJobs, async ({ req }) => {
 
 export const handleRetryJob = implement(retryJob, async ({ params }) => {
   if (!params.id) throw new HttpError(400, "id required");
-  const utils = await getWorkerUtils();
-  await utils.rescheduleJobs([params.id], { attempts: 0, runAt: new Date() });
-  // graphile_worker is outside the public-schema change-feed, and a reschedule
-  // sends no `jobs:insert` → announce it (jobs-list and every other queue
-  // reader listen on this one signal).
-  emitQueueActivity();
+  await JobQueue.get().retry(params.id);
 });
 
 export const handleCancelJob = implement(cancelJob, async ({ params }) => {
   if (!params.id) throw new HttpError(400, "id required");
-  const utils = await getWorkerUtils();
-  await utils.completeJobs([params.id]);
-  // graphile_worker is outside the public-schema change-feed, and a delete
-  // sends no notification → announce it.
-  emitQueueActivity();
+  await JobQueue.get().cancel(params.id);
 });

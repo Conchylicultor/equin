@@ -4,7 +4,7 @@ import {
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
-import type { EndpointDef } from "./define-endpoint";
+import type { EndpointDef, MachineEndpointDef } from "./define-endpoint";
 import { registerRouteSlowThreshold } from "./slow-threshold";
 import { HttpError } from "./http-error";
 
@@ -31,6 +31,19 @@ type JsonCompat<T> = T extends string
         ? { [K in keyof T]: JsonCompat<T[K]> }
         : T;
 
+/** What an endpoint's handler is given, and may answer. */
+export type EndpointHandler<TParams, TBody, TResponse, TQuery> = (ctx: {
+  params: TParams;
+  body: TBody;
+  query: TQuery;
+  req: Request;
+}) => Promise<JsonCompat<TResponse>> | JsonCompat<TResponse>;
+
+/**
+ * The server handler for a portable endpoint. A desktop-only one
+ * (`needsMachine`) is a tsc error here: it is implemented by `implementMachine`
+ * (`endpoints/machine`), whose handler only a plugin's `machine/` half serves.
+ */
 export function implement<
   Route extends string,
   TParams,
@@ -38,13 +51,28 @@ export function implement<
   TResponse,
   TQuery,
 >(
-  _endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery>,
-  handler: (ctx: {
-    params: TParams;
-    body: TBody;
-    query: TQuery;
-    req: Request;
-  }) => Promise<JsonCompat<TResponse>> | JsonCompat<TResponse>,
+  endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  handler: EndpointHandler<TParams, TBody, TResponse, TQuery>,
+): HttpHandler {
+  return endpointHandler(endpoint, handler);
+}
+
+/**
+ * `implement`'s body, for either kind of endpoint: the one place a request is
+ * decoded, gated and answered — `implementMachine` brands its result, nothing
+ * else differs.
+ */
+export function endpointHandler<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+>(
+  _endpoint:
+    | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
+    | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  handler: EndpointHandler<TParams, TBody, TResponse, TQuery>,
 ): HttpHandler {
   // Per-route gates, built once at registration. `concurrency` caps how many
   // handler bodies run at once (e.g. routes that spawn git/tar subprocesses, so

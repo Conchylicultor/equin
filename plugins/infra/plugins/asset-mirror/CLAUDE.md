@@ -113,6 +113,8 @@ without booting the server.
     - `apps/sonata/audio/soundfont`
     - `infra/launcher`
     - `ui/icons/emoji`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/fetch-to-disk.ts`, `server/internal/run-prewarm.ts`, `server/internal/seed-cache.ts` (debt)
 - Server:
   - Exports (types): `AssetMirrorSpec`
   - Exports (values):

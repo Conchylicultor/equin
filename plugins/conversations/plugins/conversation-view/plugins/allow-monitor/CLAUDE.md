@@ -39,6 +39,8 @@ The value is the `allowFiles` live value (`allow-files`, params `{ id }` — the
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/allow-files-resource.ts` (debt)
 - Shared:
   - Exports (types): `AllowFiles`
   - Exports (values): `allowFiles`

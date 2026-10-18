@@ -62,6 +62,39 @@ An `EndpointError` maps to `not-found` on a 404 and `loader-failed` otherwise, w
 
 To make a GET available on the **first render** (no loading flash), seed it from a `Core.Boot` task with `hydrateEndpoint(endpoint, params, opts, data)` — exported from `@plugins/primitives/plugins/live-state/web` (live-state owns the app's default QueryClient and sits downstream of endpoints, so the import can only point that way). It writes the exact query key `useEndpoint` reads via the shared `endpointQueryKey` helper this plugin exports, so the two cannot drift. Canonical use: tweakcn's preset list (`plugins/ui/plugins/tweakcn/web/boot.ts`).
 
+## Desktop-only endpoints — `needsMachine`
+
+An endpoint whose handler needs the computer (it spawns, reads a checkout, talks to the host) is declared so, and every host without the computer — an in-browser server, the demo — answers it "not available" without a request. Design: `research/2026-10-18-global-portable-server-machine-split.md` §1c.
+
+```typescript
+// core/ — the feature names the sentence the client shows
+export const launchTask = defineEndpoint({
+  route: "POST /api/tasks/launch", body: …, response: …,
+  needsMachine: { feature: "Launching an agent" },
+});   // → MachineEndpointDef
+
+// machine/internal/handle-launch-task.ts — never server/
+import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
+export const handleLaunchTask = implementMachine(launchTask, async ({ body }) => …);
+// machine/index.ts: { httpRoutes: { [launchTask.route]: handleLaunchTask } } satisfies MachinePluginDefinition
+
+// web/ — the answer is a result; gate the control before the click
+const availability = useMachineAvailability(launchTask);   // { available: true } | { available: false; message }
+const res = await fetchEndpoint(launchTask, {}, { body, transport });
+if (res.kind === "unavailable") …res.message; else …res.value;
+const m = useEndpointMutation(launchTask);                  // { kind: "unavailable"; message } | { kind: "available" } & UseMutationResult
+```
+
+- **The chain, each link tsc's** (`MachineHttpHandler` / `PortableHttpHandler` in `server-core/core`):
+  1. A handler that spawns cannot live in `server/` (the `boundaries/no-platform-api` lint).
+  2. `implement` takes only a portable `EndpointDef` (whose `needsMachine` is `undefined`); `implementMachine` — exported only from the `machine` barrel — only a `MachineEndpointDef`, and brands its handler `MachineHttpHandler`.
+  3. A `machine/` barrel's `httpRoutes` (`MachinePluginDefinition`) take only `MachineHttpHandler`s, and a `server/` barrel's (`ServerPluginDefinition`) refuse them — so a portable endpoint is never served by machine code alone (a silent 404 on every other host), and a machine one never by `server/`.
+  4. Every client call site handles the unavailable arm: `fetchEndpoint` answers `MachineResult<T>` (`{ kind: "ok"; value } | { kind: "unavailable"; message }`), `useEndpoint` reads one, and `useEndpointMutation` is unavailable at the HOOK level, so `mutate` is unreachable without narrowing. Portable endpoints are unchanged.
+- **Decided by the transport.** `Transport.machine` (`primitives/networking`) is required: `originTransport` is `true`, `browserServerTransport` `false`. A subtree's transport is fixed, so the arm is stable across renders. Under `machine: false` nothing is sent.
+- **One sentence** — `unavailableMessage(feature)` (core): "Launching an agent isn't available in this version of the app — it needs Singularity running on your computer."
+- **`useMachineAvailability(declaration)`** takes any `{ needsMachine }` declaration — an endpoint or a live read (`network/live`) — for a control that renders disabled with the message (Welcome's send button, the launch form).
+- **Residual gap:** an `await fetchEndpoint(machineDef, …)` whose value is never read ignores the arm silently. Prefer the hook form, or read the result.
+
 ## Non-JSON payloads (codecs)
 
 A bare Zod schema in `body:`/`response:` means **JSON** — that's the default and covers ~all endpoints. Binary and multipart payloads opt into the *same* `body:`/`response:` slot via a **codec** exported from `@plugins/infra/plugins/endpoints/core`:
@@ -197,6 +230,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `useEndpoint`
     - `useEndpointMutation`
     - `useFetchEndpoint`
+    - `useMachineAvailability`
 - Core:
   - Uses:
     - `infra/runtime-profiler.chargeWait`
@@ -207,6 +241,11 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `Codec`
     - `EndpointDef`
     - `ExtractParams`
+    - `MachineAvailability`
+    - `MachineEndpointDef`
+    - `MachineFeature`
+    - `MachineResult`
+    - `MachineUnavailable`
   - Exports (values):
     - `blob`
     - `dateString`
@@ -221,6 +260,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `isUnsupportedEndpointBody`
     - `isUnsupportedEndpointRefusal`
     - `multipart`
+    - `unavailableMessage`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
   - Imported by: 204 plugins — full list in [REFERENCE.md](./REFERENCE.md)
@@ -271,5 +311,9 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
   - Exports (values):
     - `HttpError`
     - `implement`
+- Machine:
+  - Exports (values):
+    - `implementMachine`
+    - `machineHandler`
 
 <!-- AUTOGENERATED:END -->

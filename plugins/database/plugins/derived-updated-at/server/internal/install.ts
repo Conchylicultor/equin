@@ -1,9 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { escapeLiteral } from "pg";
 import { z } from "zod";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
-import { quoteIdent } from "./compile";
+import { escapeLiteral, quoteIdent } from "./compile";
 import type { DerivedUpdatedAtSpec } from "./types";
 
 // ── Installing the derived-`updatedAt` triggers ─────────────────────────────

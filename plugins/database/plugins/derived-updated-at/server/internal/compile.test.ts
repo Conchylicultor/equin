@@ -1,5 +1,6 @@
 import { test, expect } from "bun:test";
-import { compileDerivedUpdatedAt } from "./compile";
+import { escapeLiteral as pgEscapeLiteral } from "pg";
+import { compileDerivedUpdatedAt, escapeLiteral } from "./compile";
 
 // The compiler's output, per rule kind. What Postgres DOES with it is pinned by
 // the real-DB suite in infra/entities (install-derived-updated-at.test.ts).
@@ -135,4 +136,20 @@ test("rejects unsupported rules loudly", () => {
       columns: [],
     }),
   ).toThrow(/63-byte/);
+});
+
+// ── escapeLiteral ───────────────────────────────────────────────────────────
+
+test("escapeLiteral is pg's escapeLiteral, character for character", () => {
+  for (const v of [
+    "",
+    "plain",
+    "it's",
+    "back\\slash",
+    "both ' and \\",
+    '"quoted"()',
+    "unicode ✓ 🎵",
+  ]) {
+    expect(escapeLiteral(v)).toBe(pgEscapeLiteral(v));
+  }
 });

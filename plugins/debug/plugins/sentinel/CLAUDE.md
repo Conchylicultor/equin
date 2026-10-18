@@ -329,18 +329,19 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `resource.declare` "sentinel.status"
     - `resource.declare` "sentinel.vitals"
     - `ConfigV2.Register` "sentinel"
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/host/duress/latch` ×8
     - `debug/sentinel/status-file` ×7
     - `infra/spawn/daemon` ×5
+    - `primitives/log-channels/log-files` ×4
     - `config_v2` ×3
     - `database/embedded` ×3
-    - `primitives/log-channels` ×3
     - `debug/trace/engine` ×2
     - `infra/file-watcher` ×2
     - `reports` ×2
     - `infra/paths.isHostSingleton`
     - `network/live.serveValue`
+    - `primitives/log-channels.defineLogSink`
   - Exports (values): `readDuressEpisodes`
   - Register:
     - `defineFileWatcher('sentinel.status')`
@@ -394,7 +395,9 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: `debug/timeline`
 - Exemptions:
-  - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)
+  - Exempts itself from:
+    - `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `server/internal/status-resource.ts`, `server/internal/worker-host.ts`, `server/internal/worker/pg.ts`, `server/internal/worker/sample.ts` (debt)
 - Sub-plugins:
   - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status files (one per watcher host, the newest claim reported): their schemas, the writer main's watcher host uses, the per-tick vitals file…
 

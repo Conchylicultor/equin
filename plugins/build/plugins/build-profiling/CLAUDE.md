@@ -33,7 +33,9 @@
     - `ui/tokens/categorical --categorical-7`
     - `ui/tokens/categorical --categorical-8`
 - Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/components/build-profiling-section.tsx` (debt)
+  - Exempts itself from:
+    - `live/no-endpoint-read` — `web/components/build-profiling-section.tsx` (debt)
+    - `boundaries/no-platform-api` — `server/internal/handle-build-run-profiling.ts` (debt)
 - Shared:
   - Exports (values): `getBuildRunProfile`
 

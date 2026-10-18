@@ -79,9 +79,7 @@ implementation site.
   - Imported by:
     - `auth`
     - `debug/health-monitor`
-    - `debug/queue-health`
     - `debug/stuck-spans`
-    - `infra/jobs`
 - Exemptions:
   - Exempts itself from: `detached-work-safety/no-raw-set-interval` — `shared/timer.ts` (sanctioned)
   - Exempted by:

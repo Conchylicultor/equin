@@ -41,7 +41,9 @@ A path that names an existing file answers `exact` with where its bytes live: `g
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by: `conversations/conversation-view/code/file-pane`
 - Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-resolved-file.ts` (debt)
+  - Exempts itself from:
+    - `live/no-endpoint-read` — `web/internal/use-resolved-file.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/resolve-handler.ts` (debt)
 - Shared:
   - Exports (values): `resolveFile`
 

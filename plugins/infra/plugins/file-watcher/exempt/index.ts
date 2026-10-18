@@ -15,4 +15,11 @@ export default [
     reason:
       "The single sanctioned chokepoint for loading @parcel/watcher: the file-watcher engine (`shared/engine.ts`) and its siblings own the native-addon loader.",
   },
+  {
+    rule: "boundaries/no-platform-api",
+    paths: ["server/internal/dir-hub.ts", "shared/engine.ts"],
+    kind: "debt",
+    task: "task-1792338443-riwqev",
+    reason: "not yet split into server/ + machine/",
+  },
 ] satisfies Exemptions;

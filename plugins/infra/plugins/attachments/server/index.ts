@@ -6,7 +6,7 @@ import { handleHold } from "./internal/handle-hold";
 import { attachmentsByOwnerServed } from "./internal/by-owner";
 import { attachmentFileServed } from "./internal/file";
 import { orphanSweepJob } from "./internal/orphan-sweep";
-import { ensureAttachmentsRoot } from "./internal/paths";
+import { AttachmentBlobs } from "./internal/blobs";
 import {
   uploadAttachment,
   getAttachmentFile,
@@ -21,12 +21,15 @@ export {
   getAttachment,
 } from "./internal/operations";
 export { Attachments } from "./internal/attachments";
+export { AttachmentBlobs } from "./internal/blobs";
+export type { AttachmentBlobsImpl } from "./internal/blobs";
 export type { AttachmentLink } from "./internal/define-link";
 
 export default {
   description:
-    "Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.",
+    "Attachments: rows plus bytes in the host's blob store (AttachmentBlobs — on the desktop UUID-named files under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL. holdAttachments keeps an attachment an unsent draft references alive for the draft's lifetime.",
   loadBearing: true,
+  portable: true,
   contributions: [
     ...attachmentsByOwnerServed.declare,
     ...attachmentFileServed.declare,
@@ -40,6 +43,6 @@ export default {
   // orphanSweepJob declares `schedule` — the jobs worker runs it hourly.
   register: [orphanSweepJob],
   onReady: async () => {
-    await ensureAttachmentsRoot();
+    await AttachmentBlobs.get().ensureRoot();
   },
 } satisfies ServerPluginDefinition;

@@ -46,6 +46,10 @@ export type {
 export type { DomainOfValue, FieldsFilterable } from "./internal/field-domain";
 export type { LiveExposedColumns } from "./internal/exposed-columns";
 export { liveValue } from "./internal/live-value";
+export type {
+  LiveMachineDecl,
+  LivePortableDecl,
+} from "./internal/needs-machine";
 export { LIVE_QUERY_MAX_BYTES } from "./internal/query-value";
 export type {
   LiveKeyCut,

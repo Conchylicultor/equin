@@ -96,7 +96,9 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `infra/spawn/daemon/background-arm`
     - `release`
 - Exemptions:
-  - Exempts itself from: `daemon/no-raw-worker` — `.` (sanctioned)
+  - Exempts itself from:
+    - `daemon/no-raw-worker` — `.` (sanctioned)
+    - `boundaries/no-platform-api` — `server/internal/registry.ts` (debt)
   - Exempted by: `infra/spawn/daemon` (0 debt)
 - Server:
   - Exports (types):

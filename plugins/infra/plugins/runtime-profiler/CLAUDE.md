@@ -317,6 +317,8 @@ remaining allocations are one flat band array per completed entry span, and what
   - Imported by:
     - `debug/slow-ops`
     - `infra/endpoints`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
 - Core:
   - Exports (types):
     - `Aggregate`

@@ -58,7 +58,9 @@
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
 - Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/components/build-log-section.tsx` (debt)
+  - Exempts itself from:
+    - `live/no-endpoint-read` — `web/components/build-log-section.tsx` (debt)
+    - `boundaries/no-platform-api` — `server/internal/handle-build-run-logs.ts` (debt)
 - Shared:
   - Exports (types):
     - `BuildLogsResponse`

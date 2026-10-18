@@ -173,6 +173,8 @@ its disable does not cover. Parameters and imports have no in-file value.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `framework/tooling/codegen`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `core/declared-utilities.ts`, `core/plugin-dirs.ts` (debt)
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/lint/core/testing`
     - `lintToolkit`

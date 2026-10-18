@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import {
@@ -7,8 +7,12 @@ import {
   UNSAFE_insertJobRow,
   type JobTaskPayload,
 } from "./registry";
-import { RESUME_KEYS, ResumeInputSchema } from "./resume-contract";
-import { emitQueueActivity } from "./slot-ledger";
+import {
+  RESUME_KEYS,
+  ResumeInputSchema,
+  type ResumeInput,
+} from "./resume-contract";
+import { JobQueue } from "./queue";
 import { _jobWaits } from "./tables";
 
 // Builtin — registered once at jobs plugin boot. Targeted by every
@@ -122,17 +126,53 @@ export const jobsResumeJob = defineJob({
       { jobKey: workflowRunId, maxAttempts: target.maxAttempts },
     );
 
-    // Event-path: cancel the scheduled timeout racer. We only know the
-    // jobKey, not the id, so SQL it directly. `graphile_worker._private_jobs`
-    // stores the jobKey in column `key`.
+    // Event-path: cancel the scheduled timeout racer. We only know its
+    // jobKey, not its id.
     if (!isTimeout) {
-      const timeoutKey = `jobs.resume.timeout:${workflowRunId}:${waitName}`;
-      await db.execute(
-        sql`DELETE FROM graphile_worker._private_jobs WHERE key = ${timeoutKey} AND locked_at IS NULL`,
-      );
-      // The re-enqueue above announced itself (`jobs:insert`); this delete
-      // sends nothing, and graphile_worker is outside the change-feed.
-      emitQueueActivity();
+      await JobQueue.get().cancelUnstarted({
+        key: `jobs.resume.timeout:${workflowRunId}:${waitName}`,
+      });
     }
   },
 });
+
+/**
+ * Schedule a `jobs.resume` row for a suspended workflow — the `scheduleResume`
+ * every queue's dispatch hands `makeDurableCtx`, so a `ctx.waitFor` timeout or
+ * a `ctx.sleep` wakes the run on whichever queue this host runs.
+ *
+ * Bypasses `defineJob.enqueue`'s per-job-name namespacing: the timeout `jobKey`
+ * is a fully-formed identity owned by this scheduler, and the cancel in
+ * `jobsResumeJob` / `abortDurableRun` matches on the bare form. Going through
+ * `jobsResumeJob.enqueue` would prefix it with `jobs.resume:` and the cancel
+ * would miss. The dispatch re-parses `input` against `inputSchema`, so skipping
+ * the public parse loses no schema-drift detection.
+ *
+ * The jobKey is ours; the QUEUE NAME is not. `UNSAFE_insertJobRow` gives both
+ * bypasses (verbatim payload, literal jobKey) while the queue derives the row's
+ * routing from the registered `jobs.resume`.
+ */
+export async function scheduleResume(
+  resumePayload: ResumeInput,
+  opts: { jobKey: string; runAt?: Date },
+): Promise<void> {
+  const resumeJob = UNSAFE_getRegisteredJob("jobs.resume");
+  if (!resumeJob) {
+    throw new Error(
+      "[jobs] jobs.resume not registered — jobs/server/index.ts must register jobsResumeJob",
+    );
+  }
+  await UNSAFE_insertJobRow(
+    resumeJob,
+    {
+      jobName: "jobs.resume",
+      workflowRunId: opts.jobKey,
+      input: resumePayload,
+    } satisfies JobTaskPayload,
+    {
+      jobKey: opts.jobKey,
+      runAt: opts.runAt,
+      maxAttempts: resumeJob.maxAttempts,
+    },
+  );
+}

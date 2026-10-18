@@ -335,6 +335,7 @@ run everywhere.
     - `paths:no-hardcoded-paths` — `check/index.ts`, `core/internal/paths.ts`, `server/internal/bins.ts` (sanctioned)
     - `paths:no-inlined-worktree-artifacts` — `.` (sanctioned)
     - `paths:data-root-not-joined` — `.` (sanctioned)
+    - `boundaries/no-platform-api` — `core/internal/checkout-deploys.ts`, `core/internal/checkout-owner.ts`, `core/internal/checkout-ref.ts`, `core/internal/data-dir.ts`, `core/internal/data-dirs-manifest.ts`, `core/internal/paths.ts`, `core/internal/prune-artifacts.ts`, `core/internal/toolchain-pin.ts`, `core/internal/worktree-dirs.ts`, `server/internal/bins.ts` (debt)
 - Server:
   - Exports (types):
     - `AppIdentity`

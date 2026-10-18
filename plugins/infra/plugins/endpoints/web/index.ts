@@ -10,6 +10,7 @@ export {
 export { useEndpoint } from "./internal/use-endpoint";
 export { endpointQueryKey } from "./internal/query-key";
 export { useEndpointMutation } from "./internal/use-endpoint-mutation";
+export { useMachineAvailability } from "./internal/use-machine-availability";
 export { endpointErrorSink } from "./internal/error-reporter";
 export type { EndpointErrorInfo } from "./internal/error-reporter";
 

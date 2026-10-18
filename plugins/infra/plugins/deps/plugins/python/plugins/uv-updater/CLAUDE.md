@@ -21,6 +21,8 @@ files tasks. An app that runs Python but must stay free of the agent runtime
 - Server:
   - Contributes: `updater` "uv"
   - Uses: `infra/deps/updates.UpdaterDeclare`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/uv-updater.ts` (debt)
 - Core:
   - Exports (values):
     - `UV_HOLDS`

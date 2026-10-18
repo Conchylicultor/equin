@@ -1,8 +1,20 @@
-import { createHash } from "node:crypto";
+import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 import { escapeLiteral, type PoolClient } from "pg";
 import { z } from "zod";
 import { queryRows } from "@plugins/database/plugins/sql-rows/core";
-import { SUPERSEDED_FLAG } from "./introspection";
+
+// The one spelling of the flag our trigger writes into graphile's own `flags`
+// column when graphile RETIRES a row that is still locked — the moment a newer
+// copy of the same job key is queued (`add_jobs`) or the key is removed
+// (`remove_job`) while this row is mid-run. The trigger below writes it and the
+// queue introspection (`machine/internal/introspection.ts`) reads it, both
+// through this constant, so the writer and every reader cannot disagree about
+// the name.
+//
+// graphile reads `flags` only when `forbiddenFlags` is configured, and this repo
+// configures none; a retired row also has `attempts = max_attempts`, so it is
+// never fetched again anyway. See jobs/CLAUDE.md, "Superseded rows".
+export const SUPERSEDED_FLAG = "singularity.superseded";
 
 // ── Marking a row superseded at the one moment it can be told apart ───────────
 //
@@ -68,9 +80,7 @@ const TRIGGER_DDL = `CREATE OR REPLACE TRIGGER ${TRIGGER_NAME}
 // to avoid, forever. The comment lives ON the trigger, so a trigger dropped out of
 // band takes its signature with it and is reinstalled. Same idea as the
 // change-feed's trigger-layer signature.
-const SIGNATURE = createHash("sha256")
-  .update(`${FUNCTION_DDL}\n--\n${TRIGGER_DDL}`)
-  .digest("hex");
+const SIGNATURE = sha256Hex(`${FUNCTION_DDL}\n--\n${TRIGGER_DDL}`);
 
 const InstalledRowSchema = z.object({
   signature: z.string().nullable(),

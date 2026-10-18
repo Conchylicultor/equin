@@ -1683,6 +1683,55 @@ useLive(metricQuery, query);     // ResourceResult<T>; null reads nothing
 - A changed question is a new tuple: the read shows loading. An
   `invalidate` (on-demand) refetch keeps the previous answer on screen.
 
+## Desktop-only reads — `needsMachine`
+
+A read only the desktop app's own server can answer (it reads the computer: a
+checkout, a process, the host) is declared so — an OPTION on the declaration
+that `useLive` reads (the design rule above), never a new hook. Design:
+`research/2026-10-18-global-portable-server-machine-split.md` §1d.
+
+```ts
+// core/
+export const checkoutStatus = liveValue("x.checkout-status", {
+  schema: StatusSchema,
+  needsMachine: { feature: "Reading the checkout" },   // also on liveCollection
+});
+// machine/ — never server/
+import { serveValue } from "@plugins/network/plugins/live/machine";
+export const checkoutStatusServed = serveValue(checkoutStatus, { source: "external", … });
+// web/
+const r = useLive(checkoutStatus);   // ResourceResult<T> | { status: "unavailable"; message }
+```
+
+- **Declare.** `needsMachine: { feature }` on every `liveValue` form and on a
+  window, lookup-only or `all` `liveCollection` (not a union: its arms are
+  served by their own plugins — a throw for an untyped caller). The
+  declaration's type carries it per def, as `origin` does: `LiveMachineDecl`
+  (`needsMachine: MachineFeature`) or `LivePortableDecl` (`needsMachine?:
+  undefined`); a paged value's meta sibling inherits it.
+- **Serve.** `live/server`'s `serveValue` / `serveCollection` take only a
+  portable declaration; `live/machine`'s — the SAME overload set
+  (`ServeValueOverloads<H>` / `ServeCollectionOverloads<H>`, `H` intersected
+  into each overload's declaration) and the same body (`serveAnyValue` /
+  `serveAnyCollection`, over the untouched core `serveValueOn` /
+  `serveCollectionOn`) — only a machine one. Each is a tsc error on the
+  other's declaration. A central value is served by `live/central` as before.
+- **Read.** `useLive` / `useLiveRow` wrap every overload's result as
+  `WithMachine<NM, R>` — `R | LiveUnavailable` exactly when the declaration
+  needs the computer, `R` otherwise (portable consumers are untouched). Under
+  a transport with no computer behind it (`Transport.machine` false — the
+  demo's browser server) the read is `{ status: "unavailable", message }`
+  from the first render (`unavailableMessage(feature)`, endpoints core) and
+  NOTHING is read: `useLive` holds it as its own read kind (`"unavailable"`,
+  the kind latch — the transport and the declaration are both fixed for a
+  call site), and `useLiveRow` reads with the substrate's skip (`null`
+  params). A reader gating a control on it before reading uses endpoints'
+  `useMachineAvailability(declaration)`.
+- Pinned by `web/__tests__/use-live-machine.test.tsx` (the unavailable arm
+  under `machine: false`, no subscription; the ordinary read under the
+  page's server; the types) and `machine/internal/serve.test.ts` (each
+  barrel refuses the other's declaration; a machine value serves).
+
 ## Old spellings — lint `no-legacy-resource-spelling`
 
 Contributed by `lint/` (repo-wide), beside `live/no-sentinel-param` (a `""`
@@ -1819,6 +1868,7 @@ never add one.
     - `primitives/live-state.useResource`
     - `primitives/live-state.useResources`
     - `primitives/log-channels.clientLog`
+    - `primitives/networking.useTransport`
     - `primitives/slot-render.renderIsolated`
   - Exports (types):
     - `ClientFieldReaders`
@@ -1994,6 +2044,7 @@ never add one.
     - `LiveKeyDirection`
     - `LiveKeyRange`
     - `LiveLookupCollection`
+    - `LiveMachineDecl`
     - `LiveNoWindowCollection`
     - `LiveOrderBy`
     - `LivePageBounds`
@@ -2006,6 +2057,7 @@ never add one.
     - `LivePagedValueSpec`
     - `LiveParamValueSpec`
     - `LivePlainValue`
+    - `LivePortableDecl`
     - `LivePreload`
     - `LivePreloadedParamValue`
     - `LivePreloadedParamValueSpec`
@@ -2152,6 +2204,10 @@ never add one.
     - `ui/icons/sprites` (1 debt)
     - `ui/theme-engine/saved-themes` (2 debt)
     - `ui/tweakcn/community-browser` (1 debt)
+- Machine:
+  - Exports (values):
+    - `serveCollection`
+    - `serveValue`
 - Central:
   - Exports (types):
     - `CentralServedPagedValue`

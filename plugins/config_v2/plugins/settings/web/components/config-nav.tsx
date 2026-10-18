@@ -112,7 +112,12 @@ export function ConfigNav() {
           id: reg.pluginId,
           loadBearing: false,
           collapsed: false,
-          runtimes: { web: true, server: false, central: false },
+          runtimes: {
+            web: true,
+            server: false,
+            machine: false,
+            central: false,
+          },
           children: [],
           facets: {},
         };

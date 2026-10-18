@@ -1,4 +1,4 @@
-export { serverCollectedDir } from "./collected-dir";
+export { machineCollectedDir, serverCollectedDir } from "./collected-dir";
 export {
   collectContributions,
   defineServerContribution,
@@ -7,6 +7,8 @@ export type {
   ServerContribution,
   ServerContributionToken,
 } from "./contributions";
+export { defineHostService } from "./host-service";
+export type { HostService } from "./host-service";
 export {
   reportServerError,
   reportServerFatalSync,
@@ -23,10 +25,12 @@ export type {
   LoaderAggregateView,
 } from "./profiler-hooks";
 export {
+  installMemoryProbe,
   physFootprintBytes,
   procMemory,
+  type MemoryProbe,
   type ProcMemory,
-} from "./phys-footprint";
+} from "./memory-probe";
 export {
   getProfilingData,
   profilerStart,
@@ -46,6 +50,7 @@ export {
   defineExternalResource,
   onDeferredResourcesBound,
   handleResourceHttp,
+  installSnapHash,
   loadResourceByKey,
   measureSubscribeCycle,
   notificationsWsHandler,
@@ -96,6 +101,8 @@ export type {
 } from "./resources";
 export type {
   HttpHandler,
+  MachineHttpHandler,
+  MachinePluginDefinition,
   Registration,
   ResourceLike,
   ServerPluginDefinition,

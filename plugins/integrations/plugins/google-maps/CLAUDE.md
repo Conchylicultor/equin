@@ -244,6 +244,8 @@ over:
     - `apps/places/places-map`
     - `map/google`
     - `page/place/google`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/browser-config-resource.ts`, `server/internal/browser-config-store.ts` (debt)
 - Sub-plugins:
   - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete, places:searchText, place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place…
 

@@ -20,6 +20,12 @@ import {
   type LiveQuerySchema,
 } from "./query-value";
 import { LIVE_ROW_KEY, type LiveCutKey } from "./row-key";
+import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
+import {
+  machineFields,
+  type LiveMachineBrand,
+  type LiveMachineSpec,
+} from "./needs-machine";
 
 // `liveValue` — the declaration half of a live VALUE: one payload per params
 // tuple, pushed whole whenever it changes — or, with `load: "on-demand"`,
@@ -444,6 +450,11 @@ export interface LivePagedValueSpec<
   load?: never;
   /** `"central"`: served by the central runtime (see {@link LiveValueOrigin}). */
   origin?: O;
+  /**
+   * None yet: a paged value's pages are keyed windows read through the page
+   * planner, which has no unavailable arm (tsc, and a throw).
+   */
+  needsMachine?: never;
 }
 
 /**
@@ -703,38 +714,49 @@ export function liveValue<
   const N extends readonly [string, ...string[]],
   M extends number | undefined = undefined,
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
-  spec: LiveBytesParamValueSpec<N, M> & LiveRefusalsSpec<C>,
+  spec: LiveBytesParamValueSpec<N, M> &
+    LiveRefusalsSpec<C> &
+    LiveMachineSpec<NM>,
 ): LiveValue<ArrayBuffer, LiveValueParams<N>> &
   LiveBytesBrand &
   LiveSnapshotBrand<"push"> &
-  LiveRefusalsBrand<C | LiveTooLarge<M>>;
+  LiveRefusalsBrand<C | LiveTooLarge<M>> &
+  LiveMachineBrand<NM>;
 export function liveValue<
   const R extends LiveValueParamParsers,
   M extends number | undefined = undefined,
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
   spec: LiveBytesTypedParamValueSpec<R, M> &
     LiteralParamNames<R> &
-    LiveRefusalsSpec<C>,
+    LiveRefusalsSpec<C> &
+    LiveMachineSpec<NM>,
 ): LiveValue<ArrayBuffer, LiveTypedValueParams<R>> &
   LiveBytesBrand &
   LiveSnapshotBrand<"push"> &
-  LiveRefusalsBrand<C | LiveTooLarge<M>>;
+  LiveRefusalsBrand<C | LiveTooLarge<M>> &
+  LiveMachineBrand<NM>;
 export function liveValue<
   Q,
   QIn,
   M extends number | undefined = undefined,
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
-  spec: LiveBytesQueryValueSpec<Q, QIn, M> & LiveRefusalsSpec<C>,
+  spec: LiveBytesQueryValueSpec<Q, QIn, M> &
+    LiveRefusalsSpec<C> &
+    LiveMachineSpec<NM>,
 ): LiveQueryValue<ArrayBuffer, Q, QIn> &
   LiveBytesBrand &
   LiveSnapshotBrand<"push"> &
-  LiveRefusalsBrand<C | LiveTooLarge<M>>;
+  LiveRefusalsBrand<C | LiveTooLarge<M>> &
+  LiveMachineBrand<NM>;
 export function liveValue<
   Item,
   Meta,
@@ -767,94 +789,120 @@ export function liveValue<
   O extends LiveValueOrigin = "worktree",
   const L extends LiveValueLoad = "push",
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
-  spec: LiveQueryValueSpec<T, Q, QIn, O, L> & LiveRefusalsSpec<C>,
-): LiveQueryValue<T, Q, QIn, O> & LiveSnapshotBrand<L> & LiveRefusalsBrand<C>;
+  spec: LiveQueryValueSpec<T, Q, QIn, O, L> &
+    LiveRefusalsSpec<C> &
+    LiveMachineSpec<NM>,
+): LiveQueryValue<T, Q, QIn, O> &
+  LiveSnapshotBrand<L> &
+  LiveRefusalsBrand<C> &
+  LiveMachineBrand<NM>;
 export function liveValue<
   T,
   const L extends LiveValueLoad = "push",
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
-  spec: LiveCentralValueSpec<T, L> & LiveRefusalsSpec<C>,
+  spec: LiveCentralValueSpec<T, L> & LiveRefusalsSpec<C> & LiveMachineSpec<NM>,
 ): LiveValue<T, Record<string, never>, "central"> &
   LiveSnapshotBrand<L> &
-  LiveRefusalsBrand<C>;
+  LiveRefusalsBrand<C> &
+  LiveMachineBrand<NM>;
 export function liveValue<
   T,
   const L extends LiveValueLoad = "push",
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
-  spec: LiveValueSpec<T, L> & LiveRefusalsSpec<C>,
+  spec: LiveValueSpec<T, L> & LiveRefusalsSpec<C> & LiveMachineSpec<NM>,
 ): LiveValue<T, Record<string, never>> &
   LiveSnapshotBrand<L> &
-  LiveRefusalsBrand<C>;
+  LiveRefusalsBrand<C> &
+  LiveMachineBrand<NM>;
 export function liveValue<
   T,
   const N extends readonly [string, ...string[]],
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
-  spec: LivePreloadedParamValueSpec<T, N> & LiveRefusalsSpec<C>,
+  spec: LivePreloadedParamValueSpec<T, N> &
+    LiveRefusalsSpec<C> &
+    LiveMachineSpec<NM>,
 ): LivePreloadedParamValue<T, LiveValueParams<N>> &
   LiveSnapshotBrand<"push"> &
-  LiveRefusalsBrand<C>;
+  LiveRefusalsBrand<C> &
+  LiveMachineBrand<NM>;
 export function liveValue<
   T,
   const N extends readonly [string, ...string[]],
   const L extends LiveValueLoad = "push",
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
   spec: LiveParamValueSpec<T, N, L> & {
     origin: "central";
-  } & LiveRefusalsSpec<C>,
+  } & LiveRefusalsSpec<C> &
+    LiveMachineSpec<NM>,
 ): LiveValue<T, LiveValueParams<N>, "central"> &
   LiveSnapshotBrand<L> &
-  LiveRefusalsBrand<C>;
+  LiveRefusalsBrand<C> &
+  LiveMachineBrand<NM>;
 export function liveValue<
   T,
   const N extends readonly [string, ...string[]],
   const L extends LiveValueLoad = "push",
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
   spec: LiveParamValueSpec<T, N, L> & {
     origin?: undefined;
-  } & LiveRefusalsSpec<C>,
+  } & LiveRefusalsSpec<C> &
+    LiveMachineSpec<NM>,
 ): LiveValue<T, LiveValueParams<N>> &
   LiveSnapshotBrand<L> &
-  LiveRefusalsBrand<C>;
+  LiveRefusalsBrand<C> &
+  LiveMachineBrand<NM>;
 export function liveValue<
   T,
   const R extends LiveValueParamParsers,
   const L extends LiveValueLoad = "push",
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
   spec: LiveTypedParamValueSpec<T, R, L> & {
     origin: "central";
   } & LiteralParamNames<R> &
-    LiveRefusalsSpec<C>,
+    LiveRefusalsSpec<C> &
+    LiveMachineSpec<NM>,
 ): LiveValue<T, LiveTypedValueParams<R>, "central"> &
   LiveSnapshotBrand<L> &
-  LiveRefusalsBrand<C>;
+  LiveRefusalsBrand<C> &
+  LiveMachineBrand<NM>;
 export function liveValue<
   T,
   const R extends LiveValueParamParsers,
   const L extends LiveValueLoad = "push",
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
   spec: LiveTypedParamValueSpec<T, R, L> & {
     origin?: undefined;
   } & LiteralParamNames<R> &
-    LiveRefusalsSpec<C>,
+    LiveRefusalsSpec<C> &
+    LiveMachineSpec<NM>,
 ): LiveValue<T, LiveTypedValueParams<R>> &
   LiveSnapshotBrand<L> &
-  LiveRefusalsBrand<C>;
+  LiveRefusalsBrand<C> &
+  LiveMachineBrand<NM>;
 export function liveValue<T>(
   key: string,
   spec: (
@@ -869,7 +917,8 @@ export function liveValue<T>(
     | LiveBytesTypedParamValueSpec<LiveValueParamParsers, number | undefined>
     | LiveBytesQueryValueSpec<unknown, unknown, number | undefined>
   ) &
-    LiveRefusalsSpec<string>,
+    LiveRefusalsSpec<string> &
+    LiveMachineSpec<MachineFeature | undefined>,
 ): DeclaredValue<T> {
   const { spec: s, fields: bytes } = bytesSpec<T>(key, spec);
   return plainOrQueryValue(key, s, bytes);
@@ -885,7 +934,8 @@ type JsonValueSpec<T> = (
   | LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin>
   | AnyPagedValueSpec
 ) &
-  LiveRefusalsSpec<string>;
+  LiveRefusalsSpec<string> &
+  LiveMachineSpec<MachineFeature | undefined>;
 
 /** {@link liveValue}'s body, over a spec whose bytes form is normalized (see {@link bytesSpec}). */
 function plainOrQueryValue<T>(
@@ -935,6 +985,7 @@ function plainOrQueryValue<T>(
       : {}),
     ...loadFields(spec.load),
     ...refusalFields(key, spec.refusals),
+    ...machineFields(spec),
     ...bytes,
   };
   registerResourceDescriptor(value as ResourceDescriptor<unknown>);
@@ -1127,7 +1178,8 @@ function queryValue<T>(
   spec: (
     LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin> | AnyPagedValueSpec
   ) &
-    LiveRefusalsSpec<string>,
+    LiveRefusalsSpec<string> &
+    LiveMachineSpec<MachineFeature | undefined>,
   bytes: BytesFields,
 ): DeclaredValue<T> {
   // Unreachable from typed code (each is `never` beside `query`).
@@ -1147,6 +1199,7 @@ function queryValue<T>(
     ...(spec.origin === "central" ? { origin: "central" as const } : {}),
     ...loadFields(spec.load),
     ...refusalFields(key, spec.refusals),
+    ...machineFields(spec),
     ...bytes,
   };
   let value: DeclaredValue<T>;
@@ -1192,12 +1245,19 @@ function pagedValue(
     load?: "on-demand";
     refusals?: readonly string[];
     refuse?: (code: string, message: string) => ResourceRefusal;
+    needsMachine?: MachineFeature;
   },
 ): LivePagedValue<unknown, unknown, unknown, unknown, LiveValueOrigin> {
   if ((s as { schema?: unknown }).schema !== undefined) {
     throw new Error(
       `liveValue("${key}"): a paged value derives its schema from \`paged\` — ` +
         `declare \`paged.item\` (and \`paged.meta\`), not \`schema\`.`,
+    );
+  }
+  if (common.needsMachine !== undefined) {
+    // Unreachable from typed code (`needsMachine` is `never` beside `paged`).
+    throw new Error(
+      `liveValue("${key}"): a paged value cannot be \`needsMachine\` yet — its pages are read through the page planner, which has no unavailable arm.`,
     );
   }
   if (common.load !== undefined) {

@@ -28,6 +28,8 @@
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
     - `plugin-meta/plugin-tree`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `core/repo-files.ts` (debt)
 - Sub-plugins:
   - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
   - **`checks`** — Check runner and built-in checks for ./singularity check

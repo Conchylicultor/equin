@@ -310,7 +310,9 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `reports/launch-fix`
     - `screenshot`
 - Exemptions:
-  - Exempts itself from: `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
+  - Exempts itself from:
+    - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `shared/symbol-names.ts` (debt)
   - Exempted by: `ui/icons` (0 debt)
 - Server:
   - Exports (types):

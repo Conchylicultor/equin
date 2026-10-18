@@ -70,6 +70,8 @@
     - `queue-health`
     - `runtime`
     - `sentinel`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/broadcasts-file.ts`, `server/internal/entries-served.ts`, `server/internal/handle-write.ts` (debt)
 - Shared:
   - Exports (types): `WriteBroadcastsBody`
   - Exports (values):

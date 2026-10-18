@@ -1,6 +1,6 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { emitQueueActivity } from "./slot-ledger";
+import { JobQueue } from "./queue";
 import { _jobWaits } from "./tables";
 
 /**
@@ -15,7 +15,7 @@ import { _jobWaits } from "./tables";
  * 2. Delete the not-yet-started timeout / sleep racer jobs for this run.
  * 3. Delete a not-yet-started resume of the main handler (jobKey === run).
  *
- * Only unlocked (`locked_at IS NULL`) graphile rows are deleted, so an
+ * Only not-yet-started queue rows are dropped (`cancelUnstarted`), so an
  * in-flight resume is left to finish; the cancelled wait row makes it no-op.
  */
 export async function abortDurableRun(workflowRunId: string): Promise<void> {
@@ -29,24 +29,15 @@ export async function abortDurableRun(workflowRunId: string): Promise<void> {
       ),
     );
 
-  // Cancel the scheduled timeout / sleep racers. We only know the jobKey
-  // prefix, not the id, so SQL it directly. `graphile_worker._private_jobs`
-  // stores the jobKey in column `key`. Mirror resume-job.ts's DELETE.
-  const timeoutPrefix = `jobs.resume.timeout:${workflowRunId}:%`;
-  const sleepPrefix = `jobs.resume.sleep:${workflowRunId}:%`;
-  await db.execute(
-    sql`DELETE FROM graphile_worker._private_jobs WHERE key LIKE ${timeoutPrefix} AND locked_at IS NULL`,
-  );
-  await db.execute(
-    sql`DELETE FROM graphile_worker._private_jobs WHERE key LIKE ${sleepPrefix} AND locked_at IS NULL`,
-  );
-
-  // Clear a not-yet-started resume of the main handler (jobKey === run).
-  await db.execute(
-    sql`DELETE FROM graphile_worker._private_jobs WHERE key = ${workflowRunId} AND locked_at IS NULL`,
-  );
-
-  // Deleting graphile rows sends no notification, and graphile_worker is
-  // outside the change-feed → announce it to the queue readers.
-  emitQueueActivity();
+  // Cancel the scheduled timeout / sleep racers (we only know their jobKey
+  // prefix, not their ids), then a not-yet-started resume of the main handler
+  // (jobKey === run).
+  const queue = JobQueue.get();
+  await queue.cancelUnstarted({
+    keyPrefix: `jobs.resume.timeout:${workflowRunId}:`,
+  });
+  await queue.cancelUnstarted({
+    keyPrefix: `jobs.resume.sleep:${workflowRunId}:`,
+  });
+  await queue.cancelUnstarted({ key: workflowRunId });
 }

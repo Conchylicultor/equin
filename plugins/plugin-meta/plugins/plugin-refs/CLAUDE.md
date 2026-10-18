@@ -106,6 +106,8 @@ links **into** research from anywhere else are.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `plugin-meta/relocate`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `core/resolve.ts` (debt)
 - Test helpers:
   - Core: `@plugins/plugin-meta/plugins/plugin-refs/core/testing`
     - `scanCssRefs` — Relative paths in one CSS source: `@source "rel"` (and `@source not "rel"`) and `@import "rel"`.

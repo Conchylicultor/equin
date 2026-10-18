@@ -294,6 +294,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `paths:data-root-not-joined` — `bin/launch.ts` (sanctioned)
     - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
     - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts`, `server/internal/launchd-service.ts`, `server/internal/systemd-service.ts` (debt)
 - Core:
   - Exports (values):
     - `isRuntimeEnvName`

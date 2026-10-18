@@ -1,5 +1,30 @@
 # jobs
 
+## Portable jobs, the host's queue: `JobQueue`
+
+`defineJob`, the registry, `job.enqueue`, the durable step / wait logs,
+`jobs.resume`, `NonRetryableError` and the hold table are portable `server/` +
+`core/` code. WHERE a row goes and WHO dispatches it is the **`JobQueue` host
+service** (`server/internal/queue.ts`): `enqueue(job, payload, { tx?, runAt?,
+jobKey?, maxAttempts? })`, `cancelUnstarted`, the Debug → Queue reads (`list`,
+`retry`, `cancel`, `onActivity` — the `jobs-list` value and the `/api/jobs`
+routes stay portable over them) and the lifecycle `install` / `start` /
+`schedule` / `refreshSchedules` / `stop`, which THIS plugin's own phase hooks
+call, so every dependent observes them exactly where it always has.
+
+- **Desktop: `jobs#machine`** — graphile-worker: everything below (the runner
+  ladder, the advisory job lock, cron, the sweeper, dead-job GC, the slot ledger,
+  run stats, introspection) lives in `machine/internal/`, and its diagnostics are
+  the `jobs/machine` barrel (read by `queue-health`, `background-arm` and the
+  `events-test` harnesses from their own `machine/` halves). The ONE row
+  insertion is `machine/internal/graphile-queue.ts`; routing (task, priority,
+  queue name) is `graphile-routing.ts`. `queue-schema.ts` / `superseded-trigger.ts`
+  stay in `server/internal/` (debt) only because other plugins' DB test suites
+  install the schema on throwaway databases through `server/testing`.
+- **No graphile: `plugins/in-process`** — an in-memory queue over the portable
+  row runner `UNSAFE_runJobRow` (schema-drift check, durable ctx, suspension,
+  failure classification) and the portable crontab reading in `core/cron.ts`.
+
 ## Every job says what it does: `description`
 
 `defineJob` (and `defineSupervisedJob`, which forwards it) requires
@@ -16,7 +41,7 @@ string is refused at define time.
 ## Liveness: shared fate, not a lease
 
 **"Is this job's worker alive" is answered by Postgres, never by a clock.** For a
-handler's whole lifetime `withJobLock` (`server/internal/job-lock.ts`) holds a
+handler's whole lifetime `withJobLock` (`machine/internal/job-lock.ts`) holds a
 session-scoped advisory lock on the graphile job id, on a **direct**-PG connection
 (5433 — pgbouncer's tx pooling would not preserve the session). Postgres releases
 it during backend teardown, so it vanishes the instant the owner dies (SIGKILL,
@@ -396,7 +421,7 @@ Design, measurements, prior art and the risks to watch:
 
 ## Slot ledger: which tier holds which job
 
-**The ledger (`server/internal/slot-ledger.ts`) is the only exact answer to
+**The ledger (`machine/internal/slot-ledger.ts`) is the only exact answer to
 "which runner's slot is this job in".** The database cannot say: the three
 runners share one job table, and a locked row records only graphile's random
 worker id. But we create the runners, so `startWorkers` gives each its own event
@@ -518,7 +543,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
 
 ## Plugin reference
 
-- Description: Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
+- Description: Durable background jobs primitive: plugins declare jobs via defineJob and enqueue via job.enqueue, onto the host's job queue (JobQueue — graphile-worker on the desktop).
 - Load-bearing: yes
 - Server:
   - Contributes:
@@ -528,58 +553,45 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `resource.declare` "job-runs.all"
     - `resource.declare` "job-runs.all:rows"
     - `resource.declare` "jobs-list"
+    - `host-service:jobs.queue` "jobs.queue"
     - `fork-schema-data-exclusion` "graphile_worker"
   - Uses:
     - `database.db`
-    - `database/admin.connectionString`
-    - `database/admin.ExcludeSchemaDataFromFork`
     - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
     - `database/connection.createDbPool`
     - `database/connection.withQueryDeadline`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
     - `database/sql-projection.parsed`
-    - `infra/background/timer.defineTimer`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `network/live.serveCollection`
     - `network/live.serveValue`
-    - `primitives/log-channels.Log`
   - DB schema:
     - `plugins/infra/plugins/jobs/server/internal/queue-schema.ts`
     - `plugins/infra/plugins/jobs/server/internal/tables.ts`
   - Exports (types):
-    - `BacklogJobStat`
-    - `CronRanges`
-    - `DeadJobGroupStat`
-    - `DeadJobStat`
     - `DefineJobSpec`
     - `DurableHooks`
     - `EnqueueOpts`
     - `EnqueueTx`
-    - `ForfeitedSlot`
     - `HoldClass`
     - `HoldClassSpec`
     - `JobCtx`
     - `JobDeadlineEvent`
     - `JobFactory`
-    - `JobRunOutcome`
-    - `JobRunRecord`
-    - `JobRunStats`
+    - `JobQueueImpl`
+    - `JobRowOpts`
+    - `JobRowOutcome`
     - `JobSlotFloorReport`
-    - `OccupiedSlot`
-    - `PickupStats`
-    - `QueueBacklogStat`
-    - `QueueClassBacklogStat`
-    - `QueueClassPulse`
+    - `JobTaskPayload`
+    - `QueuedJob`
     - `RegisteredJob`
     - `RunnerSpec`
-    - `RunningJobStat`
     - `ScheduleSpec`
     - `SerialSpec`
-    - `WaitingJobStat`
   - Exports (values):
     - `_deadJobs`
     - `_jobRuns`
@@ -587,17 +599,12 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `abortDurableRun`
     - `ALL_JOB_TASKS`
     - `ceilingMsFor`
-    - `cronRanges`
-    - `DEAD_ERROR_PREVIEW_CHARS`
     - `deadlineMsFor`
     - `DEFAULT_MAX_ATTEMPTS`
     - `defineJob`
     - `getAllRegisteredJobNames`
-    - `getForfeitedSlots`
     - `getJobHold`
     - `getJobSlowThresholdMs`
-    - `getOccupiedSlots`
-    - `getPickupStats`
     - `HOLD_CLASSES`
     - `HOLD_SPECS`
     - `HoldClassSchema`
@@ -608,43 +615,23 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `JOB_SLOT_FLOOR_KIND`
     - `JobDeadlineExceededError`
     - `jobDeadlineSink`
+    - `JobQueue`
     - `LEGACY_JOB_TASK`
     - `listRegisteredJobs`
-    - `nextScheduledRun`
     - `NonRetryableError`
-    - `onJobRunsChanged`
-    - `onJobSchedulesChanged`
-    - `onQueueActivity`
-    - `PICKUP_WINDOW_MS`
     - `pickupTargetMsFor`
     - `priorityFor`
-    - `queryBacklogByJobName`
-    - `queryDeadJobStats`
-    - `queryOldestWaiting`
-    - `queryQueueBacklog`
-    - `queryQueuePulse`
-    - `queryRecentDeadJobs`
-    - `queryRunningJobs`
-    - `QueueSchemaMissingError`
     - `reachableSlots`
-    - `readJobRunStats`
-    - `readRecentJobRuns`
-    - `RECENT_RUNS_RING`
     - `refreshJobSchedules`
     - `resolveJobCron`
     - `RUNNERS`
-    - `runningJobStarts`
     - `singletonJobKey`
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
     - `UNSAFE_getRegisteredJob`
     - `UNSAFE_installDurableHooks`
-    - `UNSAFE_sweepStuckLocks`
-    - `usableSlots`
-  - Register:
-    - `defineJob('jobs.resume')`
-    - `defineJob('jobs.dead-gc')`
-    - `defineTimer('jobs.stuck-lock-sweep')`
+    - `UNSAFE_runJobRow`
+  - Register: `defineJob('jobs.resume')`
   - Resources:
     - `dead-jobs` (keyed, window)
     - `dead-jobs:groups` (push)
@@ -673,6 +660,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
   - Exports (types):
+    - `Crontab`
     - `DeadJobListRow`
     - `DeadJobRow`
     - `DeadJobsPayload`
@@ -704,6 +692,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `LEGACY_JOB_TASK`
     - `listDeadJobs`
     - `listJobs`
+    - `nextCronFiring`
+    - `parseCrontab`
     - `pickupTargetMsFor`
     - `priorityFor`
     - `reachableSlots`
@@ -712,10 +702,11 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
 - Cross-plugin:
-  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: `ui/tokens/shape --spacing`
+  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×19
     - `conversations` ×14
-    - `infra` ×12
+    - `infra` ×13
     - `debug` ×9
     - `tasks` ×4
     - `database` ×3
@@ -728,18 +719,61 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `upstream`
 - Exemptions:
   - Exempts itself from:
-    - `timer/no-unlisted-timer` — `server/internal/stuck-lock-sweeper.ts` (sanctioned)
-    - `jobs:no-raw-addjob` — `server/internal/registry.ts`, `check/index.ts` (sanctioned)
-    - `jobs:no-raw-addjob` — `server/internal/enqueue-deadline.test.ts` (sanctioned)
+    - `timer/no-unlisted-timer` — `machine/internal/stuck-lock-sweeper.ts` (sanctioned)
+    - `jobs:no-raw-addjob` — `machine/internal/graphile-queue.ts`, `check/index.ts` (sanctioned)
+    - `jobs:no-raw-addjob` — `machine/internal/enqueue-deadline.test.ts` (sanctioned)
     - `jobs:no-raw-addjob:task-literal` — `core/hold.ts`, `check/index.ts` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
-    - `no-db-backed-notify` — `server/internal/resources.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `server/internal/queue-schema.ts`, `server/internal/superseded-trigger.ts` (debt)
+- Machine:
+  - Exports (types):
+    - `BacklogJobStat`
+    - `CronRanges`
+    - `DeadJobGroupStat`
+    - `DeadJobStat`
+    - `ForfeitedSlot`
+    - `JobRunOutcome`
+    - `JobRunRecord`
+    - `JobRunStats`
+    - `OccupiedSlot`
+    - `PickupStats`
+    - `QueueBacklogStat`
+    - `QueueClassBacklogStat`
+    - `QueueClassPulse`
+    - `RunningJobStat`
+    - `WaitingJobStat`
+  - Exports (values):
+    - `cronRanges`
+    - `DEAD_ERROR_PREVIEW_CHARS`
+    - `getForfeitedSlots`
+    - `getOccupiedSlots`
+    - `getPickupStats`
+    - `nextScheduledRun`
+    - `onJobRunsChanged`
+    - `onJobSchedulesChanged`
+    - `onQueueActivity`
+    - `PICKUP_WINDOW_MS`
+    - `queryBacklogByJobName`
+    - `queryDeadJobStats`
+    - `queryOldestWaiting`
+    - `queryQueueBacklog`
+    - `queryQueuePulse`
+    - `queryRecentDeadJobs`
+    - `queryRunningJobs`
+    - `readJobRunStats`
+    - `readRecentJobRuns`
+    - `runningJobStarts`
+    - `UNSAFE_sweepStuckLocks`
+  - Register:
+    - `defineJob('jobs.dead-gc')`
+    - `defineTimer('jobs.stuck-lock-sweep')`
 - Test helpers:
   - Server: `@plugins/infra/plugins/jobs/server/testing`
     - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
 - Sub-plugins:
   - **`background-arm`** — Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from graphile's own parse and…
   - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock…
+  - **`in-process`** (excluded) — The in-process job queue: provides the JobQueue host service in memory — a row runs in this process when it is due (a transaction's enqueue only once it commits), scheduled jobs fire on a one-shot…
   - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the…
 
 <!-- AUTOGENERATED:END -->

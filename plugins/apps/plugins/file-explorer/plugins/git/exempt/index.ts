@@ -16,4 +16,11 @@ export default [
     reason:
       "The client-fields resolver answers a ResourceResult composed of TWO reads (the folder's checkout, then that checkout's status) plus a settled 'not a checkout' state that has no read behind it; no single read to map from.",
   },
+  {
+    rule: "boundaries/no-platform-api",
+    paths: ["server/internal/checkout.ts", "server/internal/status.ts"],
+    kind: "debt",
+    task: "task-1792338443-riwqev",
+    reason: "not yet split into server/ + machine/",
+  },
 ] satisfies Exemptions;

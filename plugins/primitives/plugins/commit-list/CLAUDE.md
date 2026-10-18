@@ -61,7 +61,8 @@
     - `review/plugin-changes`
     - `tasks/attempt-work`
     - `tasks/sidequest-autopilot`
-    - `tasks/tasks-core`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-git.ts` (debt)
 - Core:
   - Exports (types):
     - `CommitRow`

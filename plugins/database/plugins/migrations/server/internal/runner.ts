@@ -1,5 +1,3 @@
-import { readdirSync, readFileSync } from "fs";
-import { join } from "path";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
@@ -17,10 +15,12 @@ import {
   installDerivedUpdatedAt,
   type DerivedUpdatedAtSpec,
 } from "@plugins/database/plugins/derived-updated-at/server";
-import {
-  migrationClaimId,
-  parseMigration,
-} from "@plugins/database/plugins/migrations/core";
+// The phase grammar by its own file, not through the `core` barrel: the barrel
+// also carries the generator's and the checks' filesystem tooling (drizzle-kit
+// staging, the published set, the snapshot DAG), and this runner runs on every
+// host. Moving that tooling out of `core` is follow-up work (task in the
+// portable-split plan's follow-ups).
+import { migrationClaimId, parseMigration } from "../../core/internal/phases";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { z } from "zod";
@@ -33,14 +33,10 @@ const log = defineLogSink({
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 
-// A packaged release reads the migration SQL files from a vendored dir via env
-// override: `import.meta.dir` resolves into the compiled binary's virtual FS
-// (not a real on-disk path), so the `../../data` relative lookup can't find the
-// `.sql` files. The release vendors `data/` and points here. When unset (dev),
-// resolve relative to this module as before.
-const MIGRATIONS_DIR =
-  process.env.SINGULARITY_MIGRATIONS_DIR ??
-  join(import.meta.dir, "..", "..", "data");
+/** Whether `file` is named as a migration (`YYYYMMDD_HHMMSS_<sha8>__<slug>.sql`). */
+export function isMigrationFileName(file: string): boolean {
+  return MIGRATION_RE.test(file);
+}
 
 export interface Migration {
   file: string;
@@ -66,20 +62,25 @@ export const migrationsReady: Promise<void> = new Promise<void>(
   },
 );
 
-// Ordered list of every migration file on disk, in timestamp order — the order
-// `planSchemaSteps` walks them.
-export function listMigrationFiles(dir: string): Migration[] {
-  const files = readdirSync(dir).filter((f) => MIGRATION_RE.test(f));
-  const migrations: Migration[] = files.map((f) => {
-    const m = MIGRATION_RE.exec(f)!;
-    const [, date, time, hash] = m as RegExpExecArray;
-    return {
-      file: f,
+// The migration list from a set of named SQL texts: the files whose name is a
+// migration's (`YYYYMMDD_HHMMSS_<sha8>__<slug>.sql`), in timestamp order — the
+// order `planSchemaSteps` walks them. Where the texts come from is the host's
+// (`MigrationSource`): the desktop reads `data/` off disk.
+export function migrationsFrom(
+  files: readonly { file: string; sqlText: string }[],
+): Migration[] {
+  const migrations: Migration[] = [];
+  for (const { file, sqlText } of files) {
+    const m = MIGRATION_RE.exec(file);
+    if (m === null) continue;
+    const [, date, time, hash] = m;
+    migrations.push({
+      file,
       hash: hash!,
       sortKey: `${date!}${time!}`,
-      sqlText: readFileSync(join(dir, f), "utf8"),
-    };
-  });
+      sqlText,
+    });
+  }
   migrations.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
   return migrations;
 }
@@ -452,13 +453,11 @@ export async function applySchemaLayerFrom(
 // `migrationsReady`.
 export async function applySchemaLayer(
   db: NodePgDatabase,
+  migrations: Migration[],
   inputs: SchemaLayerInputs,
   { commit }: { commit: boolean },
 ): Promise<SchemaLayerResult> {
-  const run = () =>
-    applySchemaLayerFrom(db, listMigrationFiles(MIGRATIONS_DIR), inputs, {
-      commit,
-    });
+  const run = () => applySchemaLayerFrom(db, migrations, inputs, { commit });
   if (!commit) return run();
   try {
     const result = await run();
@@ -474,8 +473,10 @@ export async function applySchemaLayer(
 // suites that build a throwaway database's tables (`createTestDb` +
 // `runMigrations`) and install whatever derived objects they need themselves.
 // Boot never calls this: it runs `applySchemaLayer`. Settles nothing.
-export async function runMigrations(db: NodePgDatabase): Promise<void> {
-  const migrations = listMigrationFiles(MIGRATIONS_DIR);
+export async function runMigrations(
+  db: NodePgDatabase,
+  migrations: Migration[],
+): Promise<void> {
   await db.transaction(async (tx) => {
     const applied = await getAppliedHashes(tx);
     const plan = planSchemaSteps(migrations, applied);
@@ -504,14 +505,14 @@ export async function runMigrations(db: NodePgDatabase): Promise<void> {
 // contribution was collected and no schema file was loaded.
 export async function dryRunPendingMigrations(
   db: NodePgDatabase,
+  migrations: Migration[],
   inputs: SchemaLayerInputs,
 ): Promise<{ pending: number }> {
   const applied = await getAppliedHashes(db);
-  const { pendingFiles } = planSchemaSteps(
-    listMigrationFiles(MIGRATIONS_DIR),
-    applied,
-  );
+  const { pendingFiles } = planSchemaSteps(migrations, applied);
   if (pendingFiles.length === 0) return { pending: 0 };
-  const { pending } = await applySchemaLayer(db, inputs, { commit: false });
+  const { pending } = await applySchemaLayer(db, migrations, inputs, {
+    commit: false,
+  });
   return { pending };
 }

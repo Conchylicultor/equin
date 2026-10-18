@@ -54,6 +54,8 @@ Worktree backends read connection params from `~/.singularity/state/db-config/da
     - `database/query-deadline`
     - `debug/sentinel`
     - `infra/launcher`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `shared/internal/paths.ts` (debt)
 - Server:
   - Exports (values):
     - `PG_DATA_DIR`

@@ -1,7 +1,7 @@
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { recordMemoryCheckpoint } from "../core/profiler";
-import { bootPluginGraph, runShutdownHooks } from "../shared/boot-stages";
+import { bootPluginGraph, runShutdownHooks } from "../core/boot-stages";
 
 // ── `exec` — the short-lived boot mode ───────────────────────────────────────
 //
@@ -11,7 +11,7 @@ import { bootPluginGraph, runShutdownHooks } from "../shared/boot-stages";
 // assert, and `onReadyBlocking` completed (DB pool, migrations, config
 // registry). It needs nothing else.
 //
-// It shares `../shared/boot-stages.ts` with `serve` (`../bin/index.ts`) rather
+// It shares `../core/boot-stages.ts` with `serve` (`../bin/index.ts`) rather
 // than re-implementing the sequence, because a second copy of a boot path that
 // only runs when something is already unusual is the copy that rots — the lesson
 // of release's recovery path
@@ -117,11 +117,12 @@ export async function runExec(
     // the future `supervised-exec` declaration that imports this barrel keeps a
     // trivial static closure, and neither the registry nor `spec.json` is read
     // by a `./singularity` invocation that is not this one.
-    const { serverEntries, hasCoreBarrel } =
+    const { serverEntries, machineEntries, hasCoreBarrel } =
       await import("../bin/active-runtime");
     ordered = await bootPluginGraph({
       mode: "exec",
-      entries: serverEntries,
+      // The same graph a serving desktop backend boots: both halves.
+      entries: [...serverEntries, ...machineEntries],
       hasCoreBarrel,
     });
     await body();

@@ -23,6 +23,8 @@ export interface DenyEdge {
 
 export type Edge = AllowEdge | DenyEdge;
 
+export type PlatformApiPolicy = "allowed" | "forbidden";
+
 export interface BoundaryConfig {
   zones: ZoneDefinition[];
 
@@ -30,6 +32,11 @@ export interface BoundaryConfig {
    *  unlisted = blocked. Exhaustive over `PluginFolder`, so a new folder name
    *  needs a row; the values are `RuntimeFolder`s, so no row can target a leaf. */
   folders: Record<PluginFolder, RuntimeFolder[]>;
+
+  /** Whether each plugin folder may import a platform API (`./platform-apis`).
+   *  Exhaustive over `PluginFolder`, so a new folder must decide; read by the
+   *  `boundaries/no-platform-api` lint rule. */
+  platformApis: Record<PluginFolder, PlatformApiPolicy>;
 
   /** Specific full-zone pairs that bypass the runtime check. "source.runtime -> target.runtime" */
   runtimeExceptions?: string[];

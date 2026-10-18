@@ -251,7 +251,6 @@ bar).
     - `config_v2` ×2
     - `infra/host/contention` ×2
     - `infra/host/duress` ×2
-    - `primitives/log-channels` ×2
     - `reports` ×2
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.defineChangeProducer`
@@ -260,6 +259,8 @@ bar).
     - `infra/endpoints.implement`
     - `infra/retention.defineRetention`
     - `network/live.serveCollection`
+    - `primitives/log-channels/log-files.readChannelJsonAsync`
+    - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
   - Exports (types): `RecordSlowOpInput`
   - Exports (values):

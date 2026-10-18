@@ -1,6 +1,6 @@
 // The `exec` boot mode: boot this process, run one registered piece of work,
 // exit. `serve` — the long-lived gateway-spawned backend — is `bin/index.ts`;
-// both run the one sequence in `shared/boot-stages.ts`. See `./run-exec.ts` for
+// both run the one sequence in `core/boot-stages.ts`. See `./run-exec.ts` for
 // what `exec` skips and why each skipped phase would be wrong in a short-lived
 // process.
 //

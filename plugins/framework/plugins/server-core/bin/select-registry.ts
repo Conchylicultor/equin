@@ -6,16 +6,23 @@ import {
   NAMESPACE_RE,
 } from "@plugins/infra/plugins/namespace/core";
 
+/** The two registries a desktop backend boots as one graph (`bootPluginGraph`):
+ *  every plugin's `server/` half and every plugin's `machine/` half. */
+export type BackendRegistry = "server" | "machine";
+
 /**
- * Which server plugin registry this backend boots, keyed on the COMPOSITION its
+ * Which plugin registry this backend boots, keyed on the COMPOSITION its
  * worktree spec declares (read off disk by `./spec-composition`, which owns the
  * "where does that value come from" half of this):
  *
- *   1. No composition, or the main one ⇒ `server.generated.ts`, the committed
- *      full registry. Unconditionally — a stray
+ *   1. No composition, or the main one ⇒ `<registry>.generated.ts`, the
+ *      committed full registry. Unconditionally — a stray
  *      `server.composition.singularity.generated.ts` is inert.
- *   2. Any other composition ⇒ `server.composition.<composition>.generated.ts`,
+ *   2. Any other composition ⇒ `<registry>.composition.<composition>.generated.ts`,
  *      that composition's filtered registry, and a THROW when it is absent.
+ *
+ * `registry` picks the half (`server` / `machine`); both are selected by the
+ * same identity, so the two halves a backend boots always belong to one app.
  *
  * Selection is by identity, never by file presence. Presence used to be the rule
  * and it misfired in both directions: a `server.composition.singularity.…` file
@@ -44,13 +51,15 @@ import {
  *   means a broken spawn and boot should say so
  * @param composition the spec's `composition` field, from `readSpecComposition`
  *   (absent/empty ⇒ the main composition ⇒ the committed registry)
+ * @param registry which half's registry to select
  */
 export function selectRegistry(
   coreDir: string,
   namespace: string | undefined,
   composition: string | undefined,
+  registry: BackendRegistry,
 ): string {
-  const full = join(coreDir, "server.generated.ts");
+  const full = join(coreDir, `${registry}.generated.ts`);
 
   if (namespace !== undefined && namespace !== "") {
     // `namespace` is `<composition>.<checkout>` with both sentinels elided, so
@@ -97,11 +106,11 @@ export function selectRegistry(
 
   const filtered = join(
     coreDir,
-    `server.composition.${composition}.generated.ts`,
+    `${registry}.composition.${composition}.generated.ts`,
   );
   if (!existsSync(filtered)) {
     throw new Error(
-      `Composition "${composition}" has no server registry at ${filtered}. ` +
+      `Composition "${composition}" has no ${registry} registry at ${filtered}. ` +
         `A composition's registry is gitignored, so a \`git clean\` in this checkout ` +
         `removes it; rebuild the composition (Studio -> Compositions -> Serve) to emit it again. ` +
         `Refusing to boot the full app under this composition's namespace and database.`,

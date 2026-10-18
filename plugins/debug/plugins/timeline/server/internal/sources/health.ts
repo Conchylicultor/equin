@@ -6,7 +6,7 @@ import {
   type HealthSample,
   type HostSample,
 } from "@plugins/debug/plugins/health-monitor/server";
-import { readChannelJson } from "@plugins/primitives/plugins/log-channels/server";
+import { readChannelJson } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import type { TimelineHealthPoint } from "../../../shared/frames";
 import { backendHealthPoints, hostHealthPoints } from "./health-map";
 

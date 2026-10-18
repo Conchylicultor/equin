@@ -1,4 +1,4 @@
-import { physFootprintBytes } from "./phys-footprint";
+import { physFootprintBytes } from "./memory-probe";
 
 export type PhaseId =
   | "register"

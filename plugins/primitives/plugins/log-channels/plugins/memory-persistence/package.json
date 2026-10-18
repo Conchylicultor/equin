@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-log-channels-memory-persistence",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Log persistence for a host without a disk: the LogPersistence host service with the in-memory ring only (the browser composition, the portable boot test). Never booted by the desktop."
+}

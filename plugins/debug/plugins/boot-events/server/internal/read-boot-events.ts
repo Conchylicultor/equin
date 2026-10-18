@@ -1,4 +1,4 @@
-import { readChannelJson } from "@plugins/primitives/plugins/log-channels/server";
+import { readChannelJson } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import { BootLineSchema, type BootEvent } from "./schema";
 import { pairBootLines } from "./pair-boot-lines";
 

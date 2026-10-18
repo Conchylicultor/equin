@@ -353,7 +353,7 @@ function node(pluginsRoot: string, path: string): PluginNode {
     loadBearing: false,
     collapsed: false,
     compositionRoot: false,
-    runtimes: { web: true, server: false, central: false },
+    runtimes: { web: true, server: false, machine: false, central: false },
     children: [],
     facets: {},
   };

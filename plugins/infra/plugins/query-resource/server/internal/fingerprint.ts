@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 import { Column, getTableName, is, type SQL } from "drizzle-orm";
 import { PgDialect, type PgColumn } from "drizzle-orm/pg-core";
 import type { Rollup } from "@plugins/database/plugins/derived-tables/core";
@@ -336,5 +336,5 @@ export function rollupDdlHash(rollup: Rollup): string {
 }
 
 export function sha256(text: string): string {
-  return createHash("sha256").update(text).digest("hex");
+  return sha256Hex(text);
 }

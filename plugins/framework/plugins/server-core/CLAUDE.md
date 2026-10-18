@@ -13,7 +13,7 @@ See the top-level [`CLAUDE.md`](../../../../CLAUDE.md) for overall architecture 
 ## Boot modes: `serve` and `exec`
 
 A backend process boots in one of two modes. Both run the ONE sequence in
-`shared/boot-stages.ts` — a second copy is the thing that rots, so add a phase
+`core/boot-stages.ts` — a second copy is the thing that rots, so add a phase
 there, not in a composition root, unless it is genuinely serve-only.
 
 - **`serve`** — the gateway-spawned, long-lived backend (`bin/index.ts`). Runs
@@ -21,13 +21,13 @@ there, not in a composition root, unless it is genuinely serve-only.
   `onReady`, `onAllReady`, `drainWarmups`, signal handlers and the orphan poll.
 - **`exec`** — a short-lived process that runs ONE registered piece of work and
   exits (`cli/run-exec.ts`, exported as `runExec` from
-  `@plugins/framework/plugins/server-core/cli`). Runs load waves, `register`,
-  `collectContributions`, the deferred-resource bind, the preload-declare assert
+  `@plugins/framework/plugins/server-core/cli`). Runs load waves,
+  `collectContributions`, the host-service assert, `register`, the deferred-resource bind, the preload-declare assert
   and the `onReadyBlocking` barrier, and nothing else.
 
 | phase                                          | `serve` | `exec` |
 | ---------------------------------------------- | ------- | ------ |
-| load waves, `register`, `collectContributions` | yes     | yes    |
+| load waves, `collectContributions`, host-service assert, `register` | yes | yes |
 | `bindDeferredResources`                        | yes     | yes    |
 | preload-declare assert                         | yes     | yes    |
 | socket bind                                    | yes     | no     |
@@ -142,6 +142,37 @@ The QoS boost stays in `bin/index.ts` and must not move into the shared sequence
 an `exec` child is background work spawned under a deliberately lowered priority,
 and raising it to user-interactive would defeat exactly the isolation it was
 spawned under.
+
+## Host services and the `machine/` half
+
+A capability portable server code needs from whatever host it runs on is a
+**host service** (`core/host-service.ts`, `defineHostService<T>(id)`): a provider
+plugin lists `Svc.provide(impl)` in its `contributions`, consumers call
+`Svc.get()`. Right after `collectContributions` — which now runs BEFORE the register phase,
+so a register token can read a service — `assertHostServices()` fails boot for
+any declared service with zero or two providers. The desktop's
+providers are `machine/` halves (booted in the same graph as `<id>#machine`
+nodes); providers for a host without the computer (`database/pglite`,
+`jobs/in-process`, the memory stores) are in `base-exclusions`, so no desktop
+composition boots two. Today's services: `database.driver`,
+`database.migration-source`, `jobs.queue`, `log-channels.persistence`,
+`attachments.blobs`, `tasks-core.push-ledger`.
+
+- **Identity is the plugin, not the node.** Contributions and registrations of
+  a machine half are stamped with its PLUGIN id (`pluginOfNode`), so a config's
+  store path or a job's "declared in" never reads `<id>#machine`.
+- **A headless test is an unbooted host.** The `bun test` preload hands the
+  desktop's providers (the machine halves that `.provide(` one) to
+  `provideHostServicesUnbooted` (`core/testing`); `get()` reads them only while
+  nothing has been collected.
+- **The boot sequence is `core/boot-stages.ts`** — off the core barrel (the two
+  composition roots import it by path), reachable by a suite through
+  `core/testing` (`bootPluginGraph`, `serverEntries`, `serverEntryFor`).
+- **Host probes.** `core` runs on every host, so the macOS memory probe (bun:ffi,
+  `bin/phys-footprint.ts`) and the native snapshot hash (`Bun.hash`) are installed
+  by `bin/host-probes.ts` (`installMemoryProbe`, `installSnapHash`), loaded by
+  `bin/active-runtime.ts` in both boot modes; uninstalled, `procMemory()` answers
+  `null` and the snapshot hash is the portable `hash64`.
 
 ## ServerPluginDefinition
 
@@ -264,19 +295,30 @@ The server itself is spawned and supervised by the gateway; never start it manua
 
 - Core:
   - Uses:
+    - `framework/plugin-id.asPluginId`
+    - `framework/plugin-id.isMachineNode`
+    - `framework/plugin-id.machineNode`
+    - `framework/plugin-id.pluginOfNode`
+    - `framework/plugin-loader.computeLoadWaves`
+    - `framework/plugin-loader.topoSortPlugins`
     - `framework/resource-runtime.createResourceRuntime`
     - `framework/tooling/collected-dir.defineCollectedDir`
+    - `packages/string-hash.hash64`
   - Exports (types):
     - `BootMode`
     - `ChangeSource`
     - `DependsOnEntry`
     - `ExternalResource`
+    - `HostService`
     - `HttpHandler`
     - `KeyedServerResourceOptions`
     - `LiveStateSnapshotHooks`
     - `LoadedServerPlugin`
     - `LoaderAggregateView`
+    - `MachineHttpHandler`
+    - `MachinePluginDefinition`
     - `MemoryCheckpoint`
+    - `MemoryProbe`
     - `PersistedBase`
     - `PersistedValueCheck`
     - `PersistMeta`
@@ -312,15 +354,19 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `collectContributions`
     - `defineDeferredResource`
     - `defineExternalResource`
+    - `defineHostService`
     - `defineResource`
     - `defineServerContribution`
     - `dropPendingPersists`
     - `getBootMode`
     - `getProfilingData`
     - `handleResourceHttp`
+    - `installMemoryProbe`
+    - `installSnapHash`
     - `isServerReady`
     - `keptSnapshotValue`
     - `loadResourceByKey`
+    - `machineCollectedDir`
     - `markServerReady`
     - `measureSubscribeCycle`
     - `notificationsWsHandler`
@@ -374,8 +420,14 @@ The server itself is spawned and supervised by the gateway; never start it manua
   - Exports (values): `runExec`
 - Test helpers:
   - Core: `@plugins/framework/plugins/server-core/core/testing`
+    - `bootPluginGraph` — Load the plugin graph, run `register`, collect contributions, run the `onReadyBlocking` barrier.
+    - `clearCollectedContributions` — Forget what was collected — back to the pre-boot state.
+    - `clearHostServices` — Forget every declared service — test support (`core/testing`), so a suite's services do not leak into the next suite's boot asserts in one bun process.
     - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
     - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
+    - `provideHostServicesUnbooted` — Name the host's providers for a process that runs graph code WITHOUT booting the graph — test support (`core/testing`), for the `bun test` preload, which hands it the contributions of the desktop host's machine halves.
     - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
+    - `serverEntries`
+    - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states.
 
 <!-- AUTOGENERATED:END -->

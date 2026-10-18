@@ -194,7 +194,6 @@ primitive and Stage 2.1).
     - `release`
     - `review/plugin-changes`
     - `tasks/attempt-work`
-    - `tasks/tasks-core`
 - Server:
   - Exports (types):
     - `GitStateMemo`

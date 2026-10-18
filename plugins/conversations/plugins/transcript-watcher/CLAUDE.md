@@ -133,6 +133,8 @@ memo degrades to a full chain re-read on every push.
     - `conversations/transcript-retention`
     - `conversations/usage`
     - `debug/session-divergence`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
 - Core:
   - Exports (types):
     - `ForeignSessionPayload`

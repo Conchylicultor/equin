@@ -100,7 +100,6 @@ client sees them at connect (Claude Code connects once per conversation).
     - `database/query`
     - `debug/profiling/boot-bench`
     - `debug/profiling/runtime`
-    - `debug/queue-health`
     - `debug/scratch-hello`
     - `debug/timeline`
     - `infra/mcp/browser`

@@ -164,11 +164,27 @@ export const compositionsConfig = defineConfig({
         // — because a negative cascades to descendants and transitive importers
         // exactly as the disabled closure did. One mechanism decides membership now,
         // and it is this one.
+        //
+        // The other five are the HOST-SERVICE PROVIDERS of a host without the
+        // computer — the PGlite database driver, the in-process job queue, and the
+        // memory stores for attachment bytes, logs and the push ledger. A desktop
+        // backend provides each of those services from a machine half
+        // (`database#machine`, `jobs#machine`, …), and a host booting two
+        // providers of one service fails boot (`assertHostServices`), so no app
+        // that runs on the desktop may ship them. A composition that runs without
+        // the computer takes them back by naming them.
         {
           id: BASE_EXCLUSIONS_ID,
           name: BASE_EXCLUSIONS_ID,
           category: "pack" as const,
-          entryPoints: ["!review.plugin-changes.**"],
+          entryPoints: [
+            "!review.plugin-changes.**",
+            "!database.pglite.**",
+            "!infra.jobs.in-process.**",
+            "!infra.attachments.memory-blobs.**",
+            "!primitives.log-channels.memory-persistence.**",
+            "!tasks.tasks-core.seeded-push-ledger.**",
+          ],
           selectedContributors: [] as string[],
           extends: [] as string[],
           excludes: [] as string[],

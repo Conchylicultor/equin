@@ -15,6 +15,8 @@ Server-only infra primitive exposing a cached, cluster-wide system-contention sn
   - Imported by:
     - `debug/slow-ops`
     - `debug/trace/contention`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/snapshot.ts` (debt)
 - Core:
   - Exports (types):
     - `ContentionSnapshot`

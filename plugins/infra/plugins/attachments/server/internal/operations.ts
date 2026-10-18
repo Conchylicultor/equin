@@ -1,22 +1,20 @@
 import { eq } from "drizzle-orm";
-import { unlink } from "node:fs/promises";
 import { db } from "@plugins/database/server";
 import { _attachments } from "./tables";
-import { diskPathFor, ensureAttachmentsRoot } from "./paths";
+import { AttachmentBlobs } from "./blobs";
 import type { Attachment } from "../../shared/types";
 
 // Mint an attachment from raw bytes (server-side seeding, no HTTP round-trip).
-// Writes the file to disk and inserts an unlinked `_attachments` row; callers
+// Stores the bytes (`AttachmentBlobs` — a file on the desktop) and inserts an
+// unlinked `_attachments` row; callers
 // link the returned id from their own submit path (see `Attachments.defineLink`).
 export async function createAttachment(
   bytes: Uint8Array,
   filename: string,
   mime: string,
 ): Promise<Attachment> {
-  await ensureAttachmentsRoot();
   const id = crypto.randomUUID();
-  const diskPath = diskPathFor(id, filename);
-  await Bun.write(diskPath, bytes);
+  const diskPath = await AttachmentBlobs.get().write(id, filename, bytes);
 
   const [row] = await db
     .insert(_attachments)
@@ -48,8 +46,8 @@ export async function deleteAttachment(id: string): Promise<boolean> {
     .where(eq(_attachments.id, id))
     .returning({ diskPath: _attachments.diskPath });
   if (!row) return false;
-  // eslint-disable-next-line promise-safety/no-absorbed-failure -- best-effort disk cleanup after the DB row is already deleted; the awaited result is discarded (fire-and-forget), so undefined only prevents an unhandled rejection, never feeds a decision
-  await unlink(row.diskPath).catch(() => undefined);
+  // Best-effort blob cleanup, after the DB row is already deleted.
+  await AttachmentBlobs.get().delete(row.diskPath);
   return true;
 }
 

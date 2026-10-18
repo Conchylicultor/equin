@@ -108,6 +108,7 @@ function backend(who: string, watermark: string) {
       );
     },
     assetUrl: (path) => `test-${who}:${path}`,
+    machine: true,
   };
   return { transport, opened, closed: () => closed };
 }

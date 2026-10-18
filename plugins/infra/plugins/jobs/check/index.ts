@@ -2,7 +2,7 @@ import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
-// The one file allowed to insert a `jobs.run` row is `server/internal/registry.ts`;
+// The one file allowed to insert a `jobs.run` row is `machine/internal/graphile-queue.ts`;
 // everything else goes through `job.enqueue(...)`, which routes there. The one
 // file that may SPELL a graphile task identifier is the class table
 // (`core/hold.ts`). Both are exempted in the jobs plugin's own manifest.
@@ -20,8 +20,8 @@ const TASK_LITERAL = "jobs:no-raw-addjob:task-literal";
 // site silently un-serializes that path, with no type error, no runtime error,
 // and no symptom until two of them run at once.
 //
-// So the queue name is derived from the registered job inside `registry.ts`
-// (`queueNameFor` / `graphileSpecFor`) and is never a caller argument — and this
+// So the queue name is derived from the registered job inside the desktop queue
+// (`queueNameFor` / `graphileSpecFor`, `machine/internal/graphile-routing.ts`) and is never a caller argument — and this
 // check keeps that true by making the alternative unspellable: `utils.addJob(`
 // and `graphile_worker.add_job` exist in exactly one file. There were five
 // insertion sites when `serial` landed (two in `registry.ts`, `resume-job.ts`'s
@@ -46,7 +46,7 @@ const TASK_LITERAL = "jobs:no-raw-addjob:task-literal";
 const check: Check = {
   id: "jobs:no-raw-addjob",
   description:
-    "Only jobs/registry.ts may insert graphile rows (`utils.addJob` / `graphile_worker.add_job`), so every enqueue carries the job's serialization queue and its hold class's task identifier — which only `core/hold.ts` may spell",
+    "Only the jobs plugin's graphile queue (machine/internal/graphile-queue.ts) may insert graphile rows (`utils.addJob` / `graphile_worker.add_job`), so every enqueue carries the job's serialization queue and its hold class's task identifier — which only `core/hold.ts` may spell",
   exemptable: {
     [INSERT]:
       "inserts a graphile row by hand (`utils.addJob` / `graphile_worker.add_job`), bypassing the job's serialization queue and hold-class task",
@@ -111,10 +111,10 @@ const check: Check = {
     const hints: string[] = [];
     if (insertOffenders.length > 0) {
       messages.push(
-        `${insertOffenders.length} graphile job insertion(s) outside plugins/infra/plugins/jobs/server/internal/registry.ts:\n    ${insertOffenders.join("\n    ")}`,
+        `${insertOffenders.length} graphile job insertion(s) outside plugins/infra/plugins/jobs/machine/internal/graphile-queue.ts:\n    ${insertOffenders.join("\n    ")}`,
       );
       hints.push(
-        `Enqueue through the registered job — \`job.enqueue(input, opts)\` — or, inside the jobs plugin, build the spec with \`graphileSpecFor(job, …)\` from plugins/infra/plugins/jobs/server/internal/registry.ts. A hand-written addJob omits the job's \`serial\` queue name, so that one path escapes serialization silently.`,
+        `Enqueue through the registered job — \`job.enqueue(input, opts)\` — or, inside the jobs plugin, build the spec with \`graphileSpecFor(job, …)\` from plugins/infra/plugins/jobs/machine/internal/graphile-routing.ts. A hand-written addJob omits the job's \`serial\` queue name, so that one path escapes serialization silently.`,
       );
     }
     if (taskOffenders.length > 0) {

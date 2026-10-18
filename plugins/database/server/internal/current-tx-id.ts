@@ -1,7 +1,7 @@
 import { executeOne } from "@plugins/database/plugins/sql-rows/core";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "./client";
+import { db } from "./driver";
 
 // db-or-tx executor, same shape as RankExecutor
 // (plugins/primitives/plugins/rank/server/internal/helpers.ts).

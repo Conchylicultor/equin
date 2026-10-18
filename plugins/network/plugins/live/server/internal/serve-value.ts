@@ -23,6 +23,7 @@ import {
   type LiveQueryValue,
   type LiveValue,
   type LiveValueOrigin,
+  type LivePortableDecl,
 } from "@plugins/network/plugins/live/core";
 import { serveValueOn } from "../../core/internal/serve-on";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
@@ -167,6 +168,114 @@ interface PreloadParamsOption<P> {
 }
 
 /**
+ * A paged value is never `needsMachine` (its pages have no unavailable arm), so
+ * only the portable host serves one. A conditional on the HOST, resolved where
+ * the overloads are instantiated — an intersection with `H` would cost the
+ * paged overload its inference of `Item` / `Meta`.
+ */
+type PagedFor<H, V> = [H] extends [LivePortableDecl] ? V : never;
+
+/**
+ * `serveValue`'s overloads, over the declarations a host serves (`H`,
+ * intersected into each overload's declaration): `LivePortableDecl` for
+ * `live/server`'s — a read every host can answer — and `LiveMachineDecl` for
+ * `live/machine`'s — one declared `needsMachine`. One overload set, so the two
+ * barrels cannot drift, and each is a tsc error for the other's declaration.
+ */
+export interface ServeValueOverloads<H> {
+  <
+    Item,
+    Meta,
+    Q,
+    QIn,
+    const R extends readonly ExternalServed[] = [],
+    C extends PagedChanges = "notified",
+    K extends string = never,
+  >(
+    value: PagedFor<H, LivePagedValue<Item, Meta, Q, QIn, "worktree", K>>,
+    opts: ServePagedValueOptions<
+      NoInfer<Item>,
+      NoInfer<Meta>,
+      NoInfer<Q>,
+      R,
+      C
+    > & {
+      /** A page is a keyed window, which no declared read reaches (D31). */
+      reads?: never;
+    },
+  ): ServedFor<C, ServedPagedValue<Item, Q>, ServedSilentPagedValue<Item>>;
+  <T, Q, QIn, const R extends readonly ExternalServed[] = []>(
+    value: LiveQueryValue<T, Q, QIn> &
+      SnapshotPairing<"notified"> &
+      BytesPairing<"db"> &
+      H,
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "db", R> & DbReadsOption,
+  ): ServedValue<T, LiveQueryParams>;
+  <
+    T,
+    Q,
+    QIn,
+    const R extends readonly ExternalServed[] = [],
+    C extends LiveValueChanges = "notified",
+  >(
+    value: LiveQueryValue<T, Q, QIn> & SnapshotPairing<C> & H,
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R, C> &
+      ExternalReadsOption<C>,
+  ): ServedFor<
+    C,
+    ServedExternalQueryValue<T, Q>,
+    ServedValue<T, LiveQueryParams>
+  >;
+  <
+    T,
+    P extends Record<string, string>,
+    const R extends readonly ExternalServed[] = [],
+  >(
+    value: LivePreloadedParamValue<T, P> & H,
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> &
+      DbReadsOption &
+      PreloadParamsOption<NoInfer<P>>,
+  ): ServedValue<T, P>;
+  <
+    T,
+    P extends Record<string, string>,
+    const R extends readonly ExternalServed[] = [],
+    C extends LiveValueChanges = "notified",
+  >(
+    value: LivePreloadedParamValue<T, P> & SnapshotPairing<C> & H,
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> &
+      PreloadParamsOption<NoInfer<P>> &
+      ExternalReadsOption<C>,
+  ): ServedFor<C, ServedExternalValue<T, P>, ServedValue<T, P>>;
+  <
+    T,
+    P extends Record<string, string>,
+    const R extends readonly ExternalServed[] = [],
+  >(
+    value: PlainValue<T, P> &
+      SnapshotPairing<"notified"> &
+      BytesPairing<"db"> &
+      H,
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> &
+      DbReadsOption & {
+        preloadParams?: never;
+      },
+  ): ServedValue<T, P>;
+  <
+    T,
+    P extends Record<string, string>,
+    const R extends readonly ExternalServed[] = [],
+    C extends LiveValueChanges = "notified",
+  >(
+    value: PlainValue<T, P> & SnapshotPairing<C> & H,
+    opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> &
+      ExternalReadsOption<C> & {
+        preloadParams?: never;
+      },
+  ): ServedFor<C, ServedExternalValue<T, P>, ServedValue<T, P>>;
+}
+
+/**
  * Serve a worktree `liveValue` (a central one is served by
  * `network/live/central`'s `serveValue` — passing it here is a tsc error).
  *
@@ -209,98 +318,15 @@ interface PreloadParamsOption<P> {
  * });
  * ```
  */
-export function serveValue<
-  Item,
-  Meta,
-  Q,
-  QIn,
-  const R extends readonly ExternalServed[] = [],
-  C extends PagedChanges = "notified",
-  K extends string = never,
->(
-  value: LivePagedValue<Item, Meta, Q, QIn, "worktree", K>,
-  opts: ServePagedValueOptions<
-    NoInfer<Item>,
-    NoInfer<Meta>,
-    NoInfer<Q>,
-    R,
-    C
-  > & {
-    /** A page is a keyed window, which no declared read reaches (D31). */
-    reads?: never;
-  },
-): ServedFor<C, ServedPagedValue<Item, Q>, ServedSilentPagedValue<Item>>;
-export function serveValue<
-  T,
-  Q,
-  QIn,
-  const R extends readonly ExternalServed[] = [],
->(
-  value: LiveQueryValue<T, Q, QIn> &
-    SnapshotPairing<"notified"> &
-    BytesPairing<"db">,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "db", R> & DbReadsOption,
-): ServedValue<T, LiveQueryParams>;
-export function serveValue<
-  T,
-  Q,
-  QIn,
-  const R extends readonly ExternalServed[] = [],
-  C extends LiveValueChanges = "notified",
->(
-  value: LiveQueryValue<T, Q, QIn> & SnapshotPairing<C>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R, C> &
-    ExternalReadsOption<C>,
-): ServedFor<
-  C,
-  ServedExternalQueryValue<T, Q>,
-  ServedValue<T, LiveQueryParams>
->;
-export function serveValue<
-  T,
-  P extends Record<string, string>,
-  const R extends readonly ExternalServed[] = [],
->(
-  value: LivePreloadedParamValue<T, P>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> &
-    DbReadsOption &
-    PreloadParamsOption<NoInfer<P>>,
-): ServedValue<T, P>;
-export function serveValue<
-  T,
-  P extends Record<string, string>,
-  const R extends readonly ExternalServed[] = [],
-  C extends LiveValueChanges = "notified",
->(
-  value: LivePreloadedParamValue<T, P> & SnapshotPairing<C>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> &
-    PreloadParamsOption<NoInfer<P>> &
-    ExternalReadsOption<C>,
-): ServedFor<C, ServedExternalValue<T, P>, ServedValue<T, P>>;
-export function serveValue<
-  T,
-  P extends Record<string, string>,
-  const R extends readonly ExternalServed[] = [],
->(
-  value: PlainValue<T, P> & SnapshotPairing<"notified"> & BytesPairing<"db">,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "db", R> &
-    DbReadsOption & {
-      preloadParams?: never;
-    },
-): ServedValue<T, P>;
-export function serveValue<
-  T,
-  P extends Record<string, string>,
-  const R extends readonly ExternalServed[] = [],
-  C extends LiveValueChanges = "notified",
->(
-  value: PlainValue<T, P> & SnapshotPairing<C>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> &
-    ExternalReadsOption<C> & {
-      preloadParams?: never;
-    },
-): ServedFor<C, ServedExternalValue<T, P>, ServedValue<T, P>>;
-export function serveValue<T, P extends Record<string, string>>(
+export const serveValue: ServeValueOverloads<LivePortableDecl> =
+  serveAnyValue as ServeValueOverloads<LivePortableDecl>;
+
+/**
+ * `serveValue`'s body, for a declaration of either kind — the one serving code
+ * path `live/server` and `live/machine` both expose (typed by
+ * {@link ServeValueOverloads}).
+ */
+export function serveAnyValue<T, P extends Record<string, string>>(
   value:
     | (LiveValue<T, P> & {
         preloadsParams?: true;

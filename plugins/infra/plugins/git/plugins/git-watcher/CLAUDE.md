@@ -70,7 +70,6 @@ the durable emit that follows.
     - `release`
     - `review/plugin-changes`
     - `tasks/attempt-work`
-    - `tasks/tasks-core`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-ref-advanced.ts` (debt)
 

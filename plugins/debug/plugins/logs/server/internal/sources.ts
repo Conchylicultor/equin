@@ -9,7 +9,7 @@ import {
   clientLogFamily,
   logsDir,
   logsDirFor,
-} from "@plugins/primitives/plugins/log-channels/server";
+} from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
 import { isNamespace } from "@plugins/infra/plugins/namespace/core";
 import type { LogScope } from "../../shared/resources";

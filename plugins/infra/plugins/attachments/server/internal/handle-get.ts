@@ -1,5 +1,5 @@
-import { stat } from "node:fs/promises";
 import { getAttachment } from "./operations";
+import { AttachmentBlobs } from "./blobs";
 
 export async function handleGet(
   _req: Request,
@@ -11,14 +11,11 @@ export async function handleGet(
   const row = await getAttachment(id);
   if (!row) return new Response("not found", { status: 404 });
 
-  try {
-    await stat(row.diskPath);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  const file = await AttachmentBlobs.get().read(row.diskPath);
+  if (file === null) {
     return new Response("file missing on disk", { status: 410 });
   }
 
-  const file = Bun.file(row.diskPath);
   return new Response(file, {
     headers: {
       "content-type": row.mime,

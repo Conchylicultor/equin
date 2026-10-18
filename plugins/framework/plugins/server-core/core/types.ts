@@ -15,6 +15,30 @@ export type HttpHandler = (
   params: Record<string, string>,
 ) => Response | Promise<Response>;
 
+declare const machineHandlerBrand: unique symbol;
+
+/**
+ * An HTTP handler that may only be served by a plugin's `machine/` half: one
+ * implementing an endpoint declared desktop-only (`needsMachine`), so every
+ * client already handles its "not available" answer on a host without the
+ * computer. Minted only by the endpoints primitive's machine barrel
+ * (`implementMachine`), and the only handler `MachinePluginDefinition`'s
+ * `httpRoutes` accepts — so a portable endpoint cannot be served by machine code
+ * alone, which would be a silent 404 on every other host.
+ */
+export type MachineHttpHandler = HttpHandler & {
+  readonly [machineHandlerBrand]: true;
+};
+
+/**
+ * An HTTP handler a `server/` barrel serves: any handler but a
+ * `MachineHttpHandler` — a desktop-only endpoint's handler is served by its
+ * plugin's `machine/` half, never by the portable one (tsc).
+ */
+export type PortableHttpHandler = HttpHandler & {
+  readonly [machineHandlerBrand]?: never;
+};
+
 // Opaque handle for a resource defined via `defineResource`. The concrete
 // `Resource<T, P>` type lives in ./resources; kept minimal here to avoid a
 // circular import.
@@ -60,7 +84,7 @@ export interface ServerPluginDefinition {
    */
   loadBearing?: boolean;
   collapsed?: boolean;
-  httpRoutes?: Record<string, HttpHandler>;
+  httpRoutes?: Record<string, PortableHttpHandler>;
   wsRoutes?: Record<string, WsHandler>;
   /**
    * Plugins this plugin's `register` array must run after. Most plugins need
@@ -130,7 +154,31 @@ export interface ServerPluginDefinition {
    */
   onShutdown?: () => void | Promise<void>;
   contributions?: import("./contributions").ServerContribution[];
+  /**
+   * "This plugin's server closure runs on every host": its `server/index.ts`
+   * statically reaches no platform API (a Node builtin, `bun`, `pg`, graphile,
+   * a native watcher), measured transitively by `boundaries:portable-closure`.
+   * The browser host loads only plugins that declare it.
+   *
+   * Transitional: once no `server/` file carries a `boundaries/no-platform-api`
+   * debt exemption, every server barrel is portable and the flag is deleted.
+   */
+  portable?: true;
 }
+
+/**
+ * The authored shape of a plugin's `machine/` barrel — its desktop-only half,
+ * booted in the same graph as the server entries as the node
+ * `<pluginPath>#machine` (after its own server half). It is a server plugin in
+ * every way but two: it cannot claim `portable` (it is the code that is not),
+ * and its `httpRoutes` take only `MachineHttpHandler`s.
+ */
+export type MachinePluginDefinition = Omit<
+  ServerPluginDefinition,
+  "httpRoutes" | "portable"
+> & {
+  httpRoutes?: Record<string, MachineHttpHandler>;
+};
 
 /**
  * A server plugin at runtime: the authored shape plus the loader-injected

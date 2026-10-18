@@ -194,6 +194,8 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
     - `build/build-commits`
     - `build/runs-arm`
     - `framework/cli/build`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `shared/stale-holder.ts` (debt)
 - Cli:
   - Exports (types): `BuildRunRecorder`
   - Exports (values): `createBuildRunRecorder`

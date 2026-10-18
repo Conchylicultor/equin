@@ -60,6 +60,8 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --line-height-3xs`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/file-served.ts`, `server/internal/files-served.ts`, `server/internal/memory-dir.ts` (debt)
 - Shared:
   - Exports (types): `MemoryFile`
   - Exports (values):

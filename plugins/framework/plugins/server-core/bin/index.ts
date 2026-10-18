@@ -21,17 +21,17 @@ import type {
 } from "@plugins/framework/plugins/server-core/core";
 // The one boot sequence, shared with the `exec` mode. Everything below this
 // import is what `serve` adds to it: the socket bind interleaved into the
-// sequence, and the post-serving phases after it. See `shared/boot-stages.ts`
+// sequence, and the post-serving phases after it. See `core/boot-stages.ts`
 // for the mode split and `cli/run-exec.ts` for what `exec` skips.
 import {
   bootPluginGraph,
   runAllReadyPhase,
   runGraphPhase,
   runShutdownHooks,
-} from "../shared/boot-stages";
+} from "../core/boot-stages";
 // The ACTIVE registry (which app is this backend?) and the on-disk plugins dir,
 // resolved once for both boot modes.
-import { serverEntries, hasCoreBarrel } from "./active-runtime";
+import { serverEntries, machineEntries, hasCoreBarrel } from "./active-runtime";
 import { boostInteractiveQos } from "@plugins/packages/plugins/spawn-priority/server";
 import {
   isMain,
@@ -185,7 +185,8 @@ function bindSocket(ordered: LoadedServerPlugin[]): void {
 // minus the bind.
 const ordered = await bootPluginGraph({
   mode: "serve",
-  entries: serverEntries,
+  // A desktop host boots both halves of every plugin as one graph.
+  entries: [...serverEntries, ...machineEntries],
   hasCoreBarrel,
   beforeReadyBarrier: bindSocket,
 });

@@ -110,6 +110,11 @@ export function defineServerContribution<P, I>(
   return token;
 }
 
+/** Forget what was collected — back to the pre-boot state. Test support (`core/testing`). */
+export function clearCollectedContributions(): void {
+  byKind = null;
+}
+
 export function collectContributions(
   plugins: {
     id: string;

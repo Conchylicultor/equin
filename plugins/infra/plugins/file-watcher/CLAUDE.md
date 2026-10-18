@@ -118,6 +118,7 @@ moved (see `apps/prototypes/files`).
   - Exempts itself from:
     - `detached-work-safety/no-raw-set-interval` — `shared/engine.ts` (sanctioned)
     - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
+    - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts` (debt)
 - Server:
   - Exports (types):
     - `DirWatchRelease`

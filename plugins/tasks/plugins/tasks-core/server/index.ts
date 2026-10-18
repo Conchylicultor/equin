@@ -27,8 +27,7 @@ import {
   conversationStatusChanged,
 } from "./internal/tables-events";
 import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
-import { pushLedgerReaction } from "./internal/push-ledger/reaction";
-import { ensurePushLedgerFresh } from "./internal/push-ledger/freshness";
+import { PushLedger } from "./internal/push-ledger/service";
 
 // Per-domain attachment link handles (FK cascade on owner deletion). In their
 // own file so they don't leak server-only imports into tasks-core/shared.
@@ -131,7 +130,8 @@ export {
   listPushesForAttempt,
   listPushesByPushId,
 } from "./internal/queries/pushes";
-export { ensurePushLedgerFresh } from "./internal/push-ledger/freshness";
+export { PushLedger } from "./internal/push-ledger/service";
+export type { PushLedgerImpl } from "./internal/push-ledger/service";
 
 // Mutation functions — writes (live-state invalidation is DB-feed-driven)
 export {
@@ -263,7 +263,6 @@ export default {
     taskStatusChanged,
     taskTitleChanged,
     conversationStatusChanged,
-    pushLedgerReaction,
   ],
   onReady: async () => {
     // The ledger's boot catch-up: whatever landed on `main` while this backend
@@ -271,6 +270,9 @@ export default {
     // an OPTIMIZATION the executor may skip — and this is the cold half of a
     // correctness guarantee. Bounded by the ledger's own high-water mark, so a
     // steady-state boot walks a day of commits and inserts nothing.
-    await Promise.all([sweepOrphanedAttempts(), ensurePushLedgerFresh()]);
+    await Promise.all([
+      sweepOrphanedAttempts(),
+      PushLedger.get().ensureFresh(),
+    ]);
   },
 } satisfies ServerPluginDefinition;

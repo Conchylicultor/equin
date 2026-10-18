@@ -10,7 +10,12 @@ export interface PluginNode {
   description?: string;
   loadBearing: boolean;
   collapsed: boolean;
-  runtimes: { web: boolean; server: boolean; central: boolean };
+  runtimes: {
+    web: boolean;
+    server: boolean;
+    machine: boolean;
+    central: boolean;
+  };
   children: PluginNode[];
   /**
    * Per-facet extracted data, keyed by facet id (e.g. "exports", "routes").

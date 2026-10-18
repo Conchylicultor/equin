@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { sql } from "drizzle-orm";
-import { db, awaitDbReady } from "./client";
+import { db, DatabaseDriver } from "./driver";
 import { currentTxId } from "./current-tx-id";
 
 // Real-DB invariant suite for the causal ack token: xid8 text is BigInt-parseable,
@@ -33,7 +33,7 @@ async function writeTxCapturingToken(): Promise<string> {
 
 describe("currentTxId", () => {
   test("returns BigInt-parseable xid8 decimal text", async () => {
-    await awaitDbReady();
+    await DatabaseDriver.get().ready();
     const token = await writeTxCapturingToken();
     expect(token).toMatch(/^\d+$/);
     expect(BigInt(token) > 0n).toBe(true);

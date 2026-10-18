@@ -127,6 +127,8 @@ changing the format changes how existing traces read.
   - Imported by:
     - `framework/tooling/checks`
     - `plugin-meta/barrel-import`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sampler.ts` (debt)
 - Core:
   - Exports (types):
     - `StackFrame`

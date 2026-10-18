@@ -7,11 +7,8 @@
 - Description: Nested tasks with attempts linking to conversations.
 - Server:
   - Contributes: `resource.declare` "tasks.repo-info"
-  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×16
-    - `tasks/task-subject` ×3
-    - `conversations` ×2
-    - `infra/claude-cli/availability` ×2
     - `infra/endpoints` ×2
     - `primitives/rank` ×2
     - `tasks/auto-start` ×2
@@ -19,8 +16,10 @@
     - `tasks/task-title` ×2
     - `tasks/task-track` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
+    - `conversations.maybeLaunchTaskJob`
     - `database.db`
     - `infra/attachments.getAttachment`
+    - `infra/claude-cli/availability.onClaudeCodeReady`
     - `infra/mcp.Mcp`
     - `infra/paths.GIT`
     - `infra/warmup.defineWarmup`
@@ -37,7 +36,6 @@
     - `GET /api/tasks`
     - `POST /api/tasks`
     - `POST /api/tasks/chain`
-    - `POST /api/tasks/launch`
     - `POST /api/tasks/insert-between`
     - `GET /api/tasks/:id`
     - `PATCH /api/tasks/:id`
@@ -62,6 +60,9 @@
     - `useActiveDependentCount`
     - `useTask`
     - `useTasksById`
+- Machine:
+  - Uses: `infra/endpoints.implementMachine`
+  - Routes: `POST /api/tasks/launch`
 - Core:
   - Uses:
     - `conversations/model-provider.ModelChoiceSchema`

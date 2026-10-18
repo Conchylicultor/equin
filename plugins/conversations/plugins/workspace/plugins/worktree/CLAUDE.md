@@ -20,6 +20,8 @@ reaper is `debug/worktree-cleanup`.
     - `infra/worktree.gitWorktreesDir`
     - `infra/worktree.setupWorktree`
     - `infra/worktree/spare-pool.spareRefillJob`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/worktree-workspace.ts` (debt)
 - Test helpers:
   - Server: `@plugins/conversations/plugins/workspace/plugins/worktree/server/testing`
     - `worktreeWorkspace`

@@ -101,6 +101,8 @@
     - `ui/tokens/type-scale --line-height-3xs`
     - `ui/tokens/type-scale --line-height-body`
     - `ui/tokens/type-scale --line-height-caption`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-generate.ts` (debt)
 - Shared:
   - Exports (values): `generateConversationSummary`
 

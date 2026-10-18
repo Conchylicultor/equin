@@ -321,7 +321,9 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `infra/safe-fetch/browser-fetch`
     - `infra/worktree`
 - Exemptions:
-  - Exempts itself from: `host-pools-declared` — `server` (sanctioned)
+  - Exempts itself from:
+    - `host-pools-declared` — `server` (sanctioned)
+    - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts` (debt)
 - Core:
   - Exports (types):
     - `CpuBudget`

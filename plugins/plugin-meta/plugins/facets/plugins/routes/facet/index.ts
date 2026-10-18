@@ -61,7 +61,7 @@ export default createFacet<RoutesData>({
     }
 
     // ── For each runtime, scan the barrel for httpRoutes and wsRoutes ─────────
-    for (const runtime of ["server", "central"] as const) {
+    for (const runtime of ["server", "machine", "central"] as const) {
       const barrelPath = join(ctx.dir, runtime, "index.ts");
       const raw = readIfExists(barrelPath);
       if (!raw) continue;
@@ -159,7 +159,7 @@ export default createFacet<RoutesData>({
     if (data.routes.length === 0 && data.endpointCallers.length === 0)
       return [];
     const facts: DocFact[] = [];
-    for (const runtime of ["server", "central"] as const) {
+    for (const runtime of ["server", "machine", "central"] as const) {
       const httpRoutes = data.routes.filter(
         (r) => r.runtime === runtime && r.type === "http",
       );
@@ -197,14 +197,14 @@ export default createFacet<RoutesData>({
 const API_PREFIX_RE = /\/api\/([A-Za-z0-9_-]+)/g;
 
 /**
- * Every `/api/<prefix>` named in the plugin's own web/server/central source,
+ * Every `/api/<prefix>` named in the plugin's own web/server/machine/central source,
  * deduped and sorted. This is the per-file half of the endpoint-caller join,
  * done in extract() so it runs inside the tree builder's time-sliced extract
  * loop: in relate() it was one ~2 s block over every file of every plugin.
  */
 function apiPrefixesUsedIn(dir: string): string[] {
   const files: string[] = [];
-  for (const sub of ["web", "server", "central"]) {
+  for (const sub of ["web", "server", "machine", "central"]) {
     walkFiles(join(dir, sub), files);
   }
   const hit = new Set<string>();

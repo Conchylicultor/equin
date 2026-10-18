@@ -236,7 +236,9 @@ Key invariants:
     - `framework/cli/build`
     - `framework/tooling/codegen`
 - Exemptions:
-  - Exempts itself from: `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
+  - Exempts itself from:
+    - `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
 - Cli:
   - Exports (types): `CarryForwardResult`
   - Exports (values): `carryForwardServedEntries`

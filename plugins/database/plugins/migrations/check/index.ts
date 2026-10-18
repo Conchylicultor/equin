@@ -5,6 +5,10 @@ import {
   publishedMigrationRefs,
 } from "@plugins/database/plugins/migrations/core";
 import { dryRunPendingMigrations } from "@plugins/database/plugins/migrations/server";
+import {
+  listMigrationFiles,
+  MIGRATIONS_DIR,
+} from "@plugins/database/plugins/migrations/machine";
 import { mintTestDbName } from "@plugins/database/plugins/db-test-fixture/core/testing";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { checkoutNamespace } from "@plugins/infra/plugins/paths/core";
@@ -117,7 +121,11 @@ const check: Check = {
     const database = await mainDatabaseOf(root);
     const dryRun = async (pool: Pool): Promise<CheckResult> => {
       try {
-        await dryRunPendingMigrations(drizzle(pool), declared.inputs);
+        await dryRunPendingMigrations(
+          drizzle(pool),
+          listMigrationFiles(MIGRATIONS_DIR),
+          declared.inputs,
+        );
         return { ok: true };
       } catch (e) {
         return {

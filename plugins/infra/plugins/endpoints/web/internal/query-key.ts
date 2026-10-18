@@ -1,4 +1,4 @@
-import type { EndpointDef } from "../../core";
+import type { EndpointDef, MachineEndpointDef } from "../../core";
 
 // Single source of the TanStack Query key for an endpoint read. useEndpoint
 // (the subscriber) and hydrateEndpoint (the boot-time seeder) must build the
@@ -10,7 +10,9 @@ export function endpointQueryKey<
   TResponse,
   TQuery,
 >(
-  endpoint: EndpointDef<Route, TParams, void, TResponse, TQuery>,
+  endpoint:
+    | EndpointDef<Route, TParams, void, TResponse, TQuery>
+    | MachineEndpointDef<Route, TParams, void, TResponse, TQuery>,
   params: TParams,
   query: TQuery | undefined,
 ): unknown[] {

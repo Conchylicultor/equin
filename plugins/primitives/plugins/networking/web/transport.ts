@@ -47,6 +47,14 @@ export interface Transport {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
   /** The `src` an element should load for the server asset at `path`. */
   assetUrl(path: string): string;
+  /**
+   * Whether the computer is behind this transport — the desktop app's own
+   * server — so a declaration that needs it (`needsMachine`: an endpoint, a
+   * live read) can be asked. `false` (an in-browser server): its clients answer
+   * such a declaration `unavailable` without asking. Required, so every
+   * transport states it.
+   */
+  readonly machine: boolean;
 }
 
 /** The page's own server: same-origin sockets, the global `fetch`, plain asset paths. */
@@ -55,6 +63,7 @@ export const originTransport: Transport = {
   openSocket: (url, options) => new SharedWebSocket(url, undefined, options),
   fetch: (input, init) => fetch(input, init),
   assetUrl: (path) => path,
+  machine: true,
 };
 
 const TransportContext = createContext<Transport>(originTransport);

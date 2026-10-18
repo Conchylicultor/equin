@@ -1,3 +1,6 @@
+// The desktop's native probes (memory, snapshot hash), installed into `core`
+// before either boot mode loads the graph — see `./host-probes`.
+import "./host-probes";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
@@ -10,6 +13,10 @@ import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 // bundler's closure IS the composition closure (no runtime dynamic specifier to
 // defeat `bun --compile`).
 import { serverEntries } from "@composition-server-registry";
+// The machine half, the same way: `@composition-machine-registry` resolves to
+// `plugins-active.ts` in dev and to the release's filtered
+// `core/machine.composition.<name>.generated.ts` at compile time.
+import { machineEntries } from "@composition-machine-registry";
 
 // ── What this process is booting, and where its plugins live on disk ─────────
 //
@@ -28,7 +35,7 @@ import { serverEntries } from "@composition-server-registry";
 // `paths` would close a cycle in the server import graph. `bin/` and `cli/`
 // edges sit outside that graph, so both consumers can reach it from here.
 
-export { serverEntries };
+export { serverEntries, machineEntries };
 
 /**
  * Whether `plugins/<pluginPath>/core/index.ts` exists — the predicate the load

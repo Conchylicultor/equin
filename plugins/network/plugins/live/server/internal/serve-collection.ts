@@ -77,6 +77,7 @@ import {
   type ServeExternalAllOptions,
   type ServeExternalLookupOptions,
   type ServeExternalWindowOptions,
+  type LivePortableDecl,
 } from "@plugins/network/plugins/live/core";
 import {
   LiveColumns,
@@ -1063,6 +1064,65 @@ export function compileCollection<
 }
 
 /**
+ * `serveCollection`'s overloads, over the declarations a host serves (`H`,
+ * intersected into each overload's collection): `LivePortableDecl` for
+ * `live/server`'s, `LiveMachineDecl` for `live/machine`'s (a collection declared
+ * `needsMachine`) — one overload set, as `serveValue`'s.
+ */
+export interface ServeCollectionOverloads<H> {
+  <Row, const C extends LiveCollectionChanges = "notified">(
+    collection: ExternalAllCollection<Row> & H,
+    opts: ServeExternalAllOptions<NoInfer<Row>, C>,
+  ): DeclaredCollection<ServedExternalAll<Row, C>>;
+  <Row, const C extends LiveCollectionChanges = "notified">(
+    collection: ExternalLookupCollection<Row> & H,
+    opts: ServeExternalLookupOptions<NoInfer<Row>, C>,
+  ): DeclaredCollection<ServedExternalLookup<Row, C>>;
+  <
+    Row,
+    F,
+    S extends string,
+    Cn,
+    const C extends LiveCollectionChanges = "notified",
+  >(
+    collection: ExternalWindowCollection<Row, F, S, Cn> & H,
+    opts: ServeExternalWindowOptions<
+      NoInfer<Row>,
+      NoInfer<F>,
+      NoInfer<S>,
+      NoInfer<Cn>,
+      C
+    >,
+  ): DeclaredCollection<ServedExternalWindow<Row, C>>;
+  <
+    Row,
+    F,
+    S extends string,
+    T extends ServedSource,
+    const J extends readonly JoinSpec[] = readonly [],
+  >(
+    collection: SingleTableCollection<Row, F, S> & H,
+    opts: ServeCollectionOptions<T, Row, J, keyof F & string>,
+  ): ServedCollection<Row>;
+  <
+    Row,
+    T extends ServedSource,
+    const J extends readonly AllJoinSpec[] = readonly [],
+  >(
+    collection: LiveAllCollection<Row> & H,
+    opts: ServeAllCollectionOptions<T, Row, J>,
+  ): ServedAllCollection<Row>;
+  <
+    Row,
+    T extends ServedSource,
+    const J extends readonly JoinSpec[] = readonly [],
+  >(
+    collection: LiveLookupCollection<Row> & H,
+    opts: ServeCollectionOptions<T, Row, J, never>,
+  ): ServedLookupCollection<Row>;
+}
+
+/**
  * Serve a `liveCollection` from a table (or Entity). Row fields bind to
  * columns by property name — type-checked against `from`; a renamed column
  * goes in `columns`. The projection is exactly the row schema's fields.
@@ -1079,63 +1139,14 @@ export function compileCollection<
  * // contributions: [...eventSourcesServed.declare]
  * ```
  */
-export function serveCollection<
-  Row,
-  const C extends LiveCollectionChanges = "notified",
->(
-  collection: ExternalAllCollection<Row>,
-  opts: ServeExternalAllOptions<NoInfer<Row>, C>,
-): DeclaredCollection<ServedExternalAll<Row, C>>;
-export function serveCollection<
-  Row,
-  const C extends LiveCollectionChanges = "notified",
->(
-  collection: ExternalLookupCollection<Row>,
-  opts: ServeExternalLookupOptions<NoInfer<Row>, C>,
-): DeclaredCollection<ServedExternalLookup<Row, C>>;
-export function serveCollection<
-  Row,
-  F,
-  S extends string,
-  Cn,
-  const C extends LiveCollectionChanges = "notified",
->(
-  collection: ExternalWindowCollection<Row, F, S, Cn>,
-  opts: ServeExternalWindowOptions<
-    NoInfer<Row>,
-    NoInfer<F>,
-    NoInfer<S>,
-    NoInfer<Cn>,
-    C
-  >,
-): DeclaredCollection<ServedExternalWindow<Row, C>>;
-export function serveCollection<
-  Row,
-  F,
-  S extends string,
-  T extends ServedSource,
-  const J extends readonly JoinSpec[] = readonly [],
->(
-  collection: SingleTableCollection<Row, F, S>,
-  opts: ServeCollectionOptions<T, Row, J, keyof F & string>,
-): ServedCollection<Row>;
-export function serveCollection<
-  Row,
-  T extends ServedSource,
-  const J extends readonly AllJoinSpec[] = readonly [],
->(
-  collection: LiveAllCollection<Row>,
-  opts: ServeAllCollectionOptions<T, Row, J>,
-): ServedAllCollection<Row>;
-export function serveCollection<
-  Row,
-  T extends ServedSource,
-  const J extends readonly JoinSpec[] = readonly [],
->(
-  collection: LiveLookupCollection<Row>,
-  opts: ServeCollectionOptions<T, Row, J, never>,
-): ServedLookupCollection<Row>;
-export function serveCollection<
+export const serveCollection: ServeCollectionOverloads<LivePortableDecl> =
+  serveAnyCollection as ServeCollectionOverloads<LivePortableDecl>;
+
+/**
+ * `serveCollection`'s body, for a declaration of either kind (typed by
+ * {@link ServeCollectionOverloads}).
+ */
+export function serveAnyCollection<
   Row,
   F,
   S extends string,

@@ -148,7 +148,7 @@ function installFakeDocServer(): void {
     if (endpoint === blockDocInit) return { state };
     if (endpoint === blockDocUpdate) return undefined;
     throw new Error("unexpected endpoint");
-  }) as typeof fetchEndpoint);
+  }) as unknown as typeof fetchEndpoint);
 }
 
 // ---------------------------------------------------------------------------

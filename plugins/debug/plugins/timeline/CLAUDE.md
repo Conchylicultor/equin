@@ -180,7 +180,7 @@ curl -s 'http://<wt>.localhost:9000/api/debug/timeline?fromMs=…&toMs=…'
     - `infra/mcp.Mcp`
     - `infra/ndjson-stream.ndjsonResponse`
     - `infra/paths.listWorktreeDirs`
-    - `primitives/log-channels.readChannelJson`
+    - `primitives/log-channels/log-files.readChannelJson`
   - Register: `mcpTool('get_timeline')`
   - Routes: `GET /api/debug/timeline`
 - Cross-plugin:
@@ -203,7 +203,9 @@ curl -s 'http://<wt>.localhost:9000/api/debug/timeline?fromMs=…&toMs=…'
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-medium`
 - Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-timeline-stream.ts` (debt)
+  - Exempts itself from:
+    - `live/no-endpoint-read` — `web/internal/use-timeline-stream.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/mcp-tool.ts`, `server/internal/sources/health.ts` (debt)
 - Core:
   - Exports (types):
     - `TimelineEvent`

@@ -3,7 +3,7 @@ import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { listDependentClosure, readTaskStatuses } from "./queries/tasks";
 import { computeStatusEmits } from "./status-emit";
 import {
-  currentStatusBatch,
+  statusBatchOn,
   type DbExecutor,
   type StatusBatch,
 } from "./status-batch";
@@ -58,9 +58,18 @@ export async function withTaskStatusChange<T>(
   write: () => Promise<T>,
 ): Promise<T> {
   const seeds = typeof seedIds === "string" ? [seedIds] : seedIds;
-  const batch = currentStatusBatch();
+  // The batch is found on the write's own executor. What that gave up: the
+  // batch used to be ambient (an AsyncLocalStorage), so a write inside an open
+  // batch but on ANOTHER executor — a captured tx used outside its batch, or a
+  // mutation handed the pool while a batch is open — failed loudly here (rung 4:
+  // its commit lands on a connection the flush cannot read, so its emit would be
+  // computed against statuses that do not include it). Keyed by executor, such a
+  // write simply finds no batch and takes the inline path, emitting for itself.
+  // The ambient half of that assertion comes back with the portable
+  // AsyncContext primitive (research/2026-10-18-global-portable-server-machine-split.md §1e);
+  // until then the `exec` threading the required parameter forces is the guard.
+  const batch = statusBatchOn(exec);
   if (batch) {
-    assertBatchExecutor(batch, exec);
     await recordEntryStatuses(seeds, batch);
     // Emit suppressed: `flushStatusBatch` emits the NET before→after per task
     // once, on the batch's tx, when the batch's callback returns.
@@ -87,22 +96,6 @@ export async function withTaskStatusChange<T>(
     );
   }
   return result;
-}
-
-// Rung 4 (a loud runtime failure for what no type can see): a batch is active,
-// but this write is on some OTHER executor — a captured tx used outside its
-// batch, or a mutation handed the pool while a batch is open. Either way the
-// write commits on a connection the flush cannot read, so its emit would be
-// computed against statuses that do not include it.
-function assertBatchExecutor(batch: StatusBatch, exec: DbExecutor): void {
-  if (batch.tx === exec) return;
-  throw new Error(
-    "[tasks-core] withTaskStatusChange: a status batch is active, but this write " +
-      "is on a different executor. Thread the batch's `tx` into every mutation " +
-      "called inside withTaskStatusBatch/runStatusBatchOn — a write on any other " +
-      "connection is invisible to the batch flush, so its status change would " +
-      "never be emitted.",
-  );
 }
 
 // Record each closure member's entry status, EARLIEST WINS: only ids the batch

@@ -36,7 +36,8 @@ shed engine's test.
     - `debug/latency-ledger`
     - `debug/sentinel`
     - `infra/host/duress`
-    - `primitives/log-channels`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/latch.ts` (debt)
 - Server:
   - Exports (types): `DuressLatch`
   - Exports (values):

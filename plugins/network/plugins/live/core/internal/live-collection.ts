@@ -33,6 +33,12 @@ import {
   type LiveWindowParams,
 } from "./query";
 import { LIVE_ROW_KEY } from "./row-key";
+import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
+import {
+  machineFields,
+  type LiveMachineBrand,
+  type LiveMachineSpec,
+} from "./needs-machine";
 import { createLiveQueryCodec } from "./query-codec";
 import { mintColumnRef, type LiveColumnRef } from "./column-ref";
 import {
@@ -582,6 +588,7 @@ export function liveCollection<
   const B extends false | undefined = undefined,
   const Al extends LiveAllOrder<FieldsRow<E, P, CP, OF, CF>> | undefined =
     undefined,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
   spec: Omit<LiveFieldsSpec<E, P, CP, OF, CF, R>, "related" | "fields"> & {
@@ -593,7 +600,8 @@ export function liveCollection<
     arms?: never;
     default?: never;
     all?: Al;
-  } & LiveFieldsForm<undefined, Al, never, undefined, R>,
+  } & LiveFieldsForm<undefined, Al, never, undefined, R> &
+    LiveMachineSpec<NM>,
 ): LiveNoWindowCollection<
   [Al] extends [undefined]
     ? FieldsRow<E, P, CP, OF, CF>
@@ -601,7 +609,10 @@ export function liveCollection<
       ? FieldsRow<E, P, CP, OF, CF>
       : WithContributedColumns<FieldsRow<E, P, CP, OF, CF>>,
   Al
-> & { fields: LiveFields<P | (keyof OF & string)>; from: FromEntity<E> };
+> & {
+  fields: LiveFields<P | (keyof OF & string)>;
+  from: FromEntity<E>;
+} & LiveMachineBrand<NM>;
 export function liveCollection<
   const OF extends FieldsRecord,
   const CF extends FieldsRecord = Record<never, never>,
@@ -648,6 +659,7 @@ export function liveCollection<
   const B extends false | undefined = undefined,
   const S extends keyof FieldsRow<E, P, CP, OF, CF> & string = never,
   const Cn extends true | undefined = undefined,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
   spec: Omit<LiveFieldsSpec<E, P, CP, OF, CF, R>, "related" | "fields"> & {
@@ -658,14 +670,18 @@ export function liveCollection<
     baseExposures?: B;
     arms?: never;
     default: LiveFieldsDefault<S>;
-  } & LiveFieldsForm<LiveFieldsDefault<S>, undefined, S, Cn, R>,
+  } & LiveFieldsForm<LiveFieldsDefault<S>, undefined, S, Cn, R> &
+    LiveMachineSpec<NM>,
 ): LiveCollectionOf<
   FieldsRow<E, P, CP, OF, CF>,
   FieldsSpecFilterable<E, P, OF>,
   S,
   Cn,
   FieldsSpecExposes<E, R, B>
-> & { fields: LiveFields<P | (keyof OF & string)>; from: FromEntity<E> };
+> & {
+  fields: LiveFields<P | (keyof OF & string)>;
+  from: FromEntity<E>;
+} & LiveMachineBrand<NM>;
 export function liveCollection<Row, F, S extends string>(
   key: string,
   declared: LiveFieldsSpec<
@@ -694,6 +710,7 @@ export function liveCollection<Row, F, S extends string>(
       all?: unknown;
       arms?: unknown;
       sortable?: readonly string[];
+      needsMachine?: MachineFeature;
     };
     // A union's rows are no entity's: its base fields are its own, and each
     // arm's are the arm's (`liveArm`).
@@ -734,8 +751,16 @@ export function liveCollection<Row, F, S extends string>(
       fields: _fields,
       carry: _carry,
       baseExposures: _baseExposures,
+      needsMachine: _needsMachine,
       ...rest
     } = fieldsSpec;
+    if (fieldsSpec.arms !== undefined && _needsMachine !== undefined) {
+      // Unreachable from typed code (the union overload takes none): a
+      // union's arms are served by other plugins, each its own host.
+      throw new Error(
+        `liveCollection("${key}"): \`needsMachine\` beside \`arms\` — a union collection's arms are served by their own plugins; declare it on a single-table collection.`,
+      );
+    }
     const window = fieldsSpec.default !== undefined;
     const lookup = !window && fieldsSpec.all === undefined;
     const minted = mintCollection(key, {
@@ -761,6 +786,7 @@ export function liveCollection<Row, F, S extends string>(
       fields: resolved.fields(sortable),
       from: from !== undefined && !isShape(from) ? from : null,
       rowsFrom: from ?? null,
+      ...machineFields(fieldsSpec),
     };
   }
 }

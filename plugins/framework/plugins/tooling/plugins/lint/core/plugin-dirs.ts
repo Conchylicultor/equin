@@ -3,7 +3,7 @@ import { join } from "path";
 
 /**
  * Walks all directories in the `plugins/<X>/plugins/<Y>/...` nesting pattern,
- * regardless of whether they have web/server/central barrels.
+ * regardless of whether they have web/server/machine/central barrels.
  */
 function walkPluginTree(root: string): string[] {
   const out: string[] = [];
@@ -32,7 +32,7 @@ function walkPluginTree(root: string): string[] {
 }
 
 /**
- * Plugin directories that have web/, server/, or central/ barrels.
+ * Plugin directories that have web/, server/, machine/ or central/ barrels.
  * Used by eslint.config.ts for lint rule discovery.
  */
 export function findPluginDirs(root: string): string[] {
@@ -40,6 +40,7 @@ export function findPluginDirs(root: string): string[] {
     (dir) =>
       existsSync(join(dir, "web", "index.ts")) ||
       existsSync(join(dir, "server", "index.ts")) ||
+      existsSync(join(dir, "machine", "index.ts")) ||
       existsSync(join(dir, "central", "index.ts")) ||
       existsSync(join(dir, "check", "index.ts")) ||
       existsSync(join(dir, "lint", "index.ts")) ||

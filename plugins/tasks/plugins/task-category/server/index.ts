@@ -17,4 +17,8 @@ export default {
     // The category, folded into every list whose rows reach a task.
     LiveColumns.Expose(tasksCategory),
   ],
+  // The first slice of the portable-server split: its whole server closure is
+  // meant to run in the browser host too (measured by
+  // `boundaries:portable-closure`).
+  portable: true,
 } satisfies ServerPluginDefinition;

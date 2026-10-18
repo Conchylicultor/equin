@@ -121,7 +121,9 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `apps/desktop/windows`
   - Endpoint callers: `windows`
 - Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/components/wallpaper-search-panel.tsx` (debt)
+  - Exempts itself from:
+    - `live/no-endpoint-read` — `web/components/wallpaper-search-panel.tsx` (debt)
+    - `boundaries/no-platform-api` — `server/internal/handle-image.ts`, `server/internal/store.ts` (debt)
 - Sub-plugins:
   - **`builtin`** — Built-in wallpaper source: contributes the Built-in tab to the desktop wallpaper picker, a grid of the bundled wallpapers (and the theme-following gradient); picking one writes its id to the…
   - **`from-url`** — From-URL wallpaper source: contributes the From URL tab to the desktop wallpaper picker, emitting a pasted image URL the picker imports (and the server validates) via the import-url endpoint.

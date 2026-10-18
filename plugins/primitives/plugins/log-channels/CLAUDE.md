@@ -5,6 +5,25 @@ lines that persist to disk per worktree, decoupled from the live-state WebSocket
 (the emitter flushes over plain HTTP), so logs still get through even when the
 live-state pipeline is wedged. `debug/logs` is the read-only viewer on top of this.
 
+## The registry is portable; durability is the host's
+
+The channel registry, the ring buffers, the live tail (`/ws/logs`) and the
+browser ingress route are portable `server/` code. Where a durable channel's
+lines go past the ring is the **`LogPersistence` host service**
+(`server/internal/persistence.ts`: `sinkFor(channel)`, `clientSinkFor(id)`,
+`clientIngressPaused()`), asked lazily on a channel's first publish. A sink
+receives the lines (`{ t, stream, line }`), not a wire format:
+
+- **desktop** — `log-channels#machine`: one bounded file sink per channel
+  (declared for every channel known at boot, in its `register`, so
+  `getFileSinks()` lists each before its first line), the browser's family
+  through `openDynamicSink`, and the ingress paused while the host duress latch
+  is set. The on-disk JSONL envelope, the per-worktree path, the read path and
+  the `client-log` family bound live in `plugins/log-files` (desktop-only, read
+  by the Debug tools; the sentinel's worker thread, which has no plugin graph,
+  writes its channel file through it directly).
+- **no disk** — `plugins/memory-persistence`: the ring only.
+
 ## Durable vs ephemeral channels
 
 Durability is a **declaration**, not a flag. There is no `persist` option: a
@@ -12,7 +31,7 @@ channel either declares a durable file sink or it doesn't.
 
 - **Durable (server):** `defineLogSink({ id, description }).publish(line, stream?, t?)`
   from `@plugins/primitives/plugins/log-channels/server`. This registers the
-  channel AND a `defineFileSink` under the per-worktree logs dir (declared at
+  channel AND (on the desktop, via `LogPersistence`) a `defineFileSink` under the per-worktree logs dir (declared at
   import, its path resolved lazily on first use) — one declared, enumerable, 128 MB × 3-rotation growth bound
   (`@plugins/infra/plugins/file-sink`, merged into `retention.getGrowthBounds()` as
   `file:<id>`). The `description` is what makes a perf sink (`health`,
@@ -137,6 +156,23 @@ count accumulates across drops.
 
 - Description: Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/emit + /ws/logs routes; debug/logs is the viewer.
 - Load-bearing: yes
+- Server:
+  - Contributes: `host-service:log-channels.persistence` "log-channels.persistence"
+  - Uses: `infra/endpoints.implement`
+  - Exports (types):
+    - `DurableLogChannel`
+    - `LogChannel`
+    - `LogPersistenceImpl`
+    - `LogSink`
+    - `LogStream`
+  - Exports (values):
+    - `declaredDurableChannels`
+    - `defineLogSink`
+    - `Log`
+    - `LogPersistence`
+  - Routes:
+    - `POST /api/logs/emit`
+    - `/ws/logs (WS)`
 - Web:
   - Uses:
     - `infra/endpoints.fetchEndpoint`
@@ -162,27 +198,6 @@ count accumulates across drops.
   - Exports (values):
     - `clientLog`
     - `LiveLogChannel`
-- Server:
-  - Uses:
-    - `infra/endpoints.implement`
-    - `infra/host/duress/latch.isUnderDuress`
-    - `infra/paths.worktreeDataDir`
-  - Exports (types):
-    - `LogChannel`
-    - `LogStream`
-  - Exports (values):
-    - `clientLogFamily`
-    - `defineLogSink`
-    - `listChannels`
-    - `Log`
-    - `logsDir`
-    - `logsDirFor`
-    - `readChannelEntries`
-    - `readChannelJson`
-    - `readChannelJsonAsync`
-  - Routes:
-    - `POST /api/logs/emit`
-    - `/ws/logs (WS)`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (types):
@@ -210,22 +225,28 @@ count accumulates across drops.
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `debug` ×12
+  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
-    - `infra` ×8
+    - `debug` ×9
     - `database` ×7
+    - `infra` ×7
     - `conversations` ×4
     - `build` ×2
+    - `primitives` ×2
     - `tasks` ×2
     - `backup`
     - `integrations/youtube/audio-fetch`
     - `network/live`
     - `page/annotations/agent-access`
-    - `primitives/live-state`
     - `release`
     - `reports/render-loop`
     - `stats/cost`
     - `upstream`
+  - Endpoint callers: `log-files`
+- Machine:
+  - Register: `log-file-sinks`
+- Sub-plugins:
+  - **`log-files`** — The desktop's log-channel files: where each worktree's <channel>.jsonl lives (logsDir / logsDirFor), the bounded read path (readChannelEntries / readChannelJson), and the client-log family bound.…
+  - **`memory-persistence`** (excluded) — Log persistence for a host without a disk: provides the LogPersistence host service with the in-memory ring only (the browser composition, the portable boot test) — a durable channel's lines live as…
 
 <!-- AUTOGENERATED:END -->

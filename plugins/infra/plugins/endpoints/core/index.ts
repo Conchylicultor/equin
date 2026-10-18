@@ -1,5 +1,12 @@
 export { defineEndpoint } from "./define-endpoint";
-export type { EndpointDef } from "./define-endpoint";
+export type { EndpointDef, MachineEndpointDef } from "./define-endpoint";
+export { unavailableMessage } from "./needs-machine";
+export type {
+  MachineAvailability,
+  MachineFeature,
+  MachineResult,
+  MachineUnavailable,
+} from "./needs-machine";
 export type { ExtractParams } from "./route-params";
 export { extractMethod, extractPath, interpolatePath } from "./route-params";
 export { implement, HttpError } from "./implement";

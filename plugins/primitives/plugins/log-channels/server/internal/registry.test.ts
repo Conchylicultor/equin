@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { FileSink } from "@plugins/infra/plugins/file-sink/core";
 import type { LogEntry, PublishLine } from "./registry";
+import type { LogLine, LogSink } from "./persistence";
 import {
   MAX_HISTORY,
   createChannel,
@@ -9,35 +9,23 @@ import {
 } from "./registry";
 
 // Pure: no fs, no env, no boot graph. The registry takes its durable backing store
-// as an INJECTED factory, so a stub `FileSink` is the whole test double — which is
+// as an INJECTED factory, so a stub `LogSink` is the whole test double — which is
 // also what makes "one write per batch" assertable at all.
 //
 // The registry is process-global and `createChannel` throws on a duplicate id, so
 // every test mints its own id.
 
-interface SinkStub extends FileSink {
+interface SinkStub extends LogSink {
   /** One entry per `appendAll` call, holding that call's lines. */
-  batches: string[][];
-  /** Every `append` (singular) call — must stay empty on the batched path. */
-  singles: string[];
+  batches: LogLine[][];
 }
 
 function makeSinkStub(): SinkStub {
   const stub: SinkStub = {
-    id: "stub",
-    description: "stub",
-    path: "/dev/null",
-    bound: { kind: "rotate", maxBytes: 1, keep: 1 },
     batches: [],
-    singles: [],
-    append: (line) => {
-      stub.singles.push(line);
-    },
     appendAll: (lines) => {
       stub.batches.push([...lines]);
     },
-    readTail: () => ({ kind: "missing" }),
-    readJsonlTail: () => ({ kind: "missing" }),
   };
   return stub;
 }
@@ -67,10 +55,8 @@ describe("publishAll", () => {
     expect(madeCount()).toBe(1); // sink resolved lazily, exactly once
     expect(sink.batches.length).toBe(1);
     expect(sink.batches[0]?.length).toBe(500);
-    expect(sink.singles).toEqual([]); // the singular path is never taken
-
-    // The envelope the read path parses back is still minted per line.
-    const first = JSON.parse(sink.batches[0]![0]!) as Record<string, unknown>;
+    // Every line reaches the sink as the channel stamped it.
+    const first = sink.batches[0]![0]!;
     expect(first.line).toBe("line-0");
     expect(first.stream).toBe("stdout");
     expect(typeof first.t).toBe("number");
@@ -127,9 +113,8 @@ describe("publish", () => {
     channel.publish("solo", "stderr", 1234);
 
     expect(sink.batches).toEqual([
-      [JSON.stringify({ t: 1234, stream: "stderr", line: "solo" })],
+      [{ t: 1234, stream: "stderr", line: "solo" }],
     ]);
-    expect(sink.singles).toEqual([]);
 
     const { history, unsubscribe } = subscribe("t-delegate", () => {});
     unsubscribe();

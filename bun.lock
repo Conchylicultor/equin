@@ -2251,6 +2251,13 @@
         "@equin/pgbouncer-linux-x64": "^1.25.7",
       },
     },
+    "plugins/database/plugins/pglite": {
+      "name": "@singularity/plugin-database-pglite",
+      "version": "0.0.1",
+      "dependencies": {
+        "@electric-sql/pglite": "^0.5.8",
+      },
+    },
     "plugins/database/plugins/query": {
       "name": "@singularity/plugin-database-query",
       "version": "0.0.1",
@@ -3556,6 +3563,10 @@
       "name": "@singularity/plugin-infra-attachments",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/attachments/plugins/memory-blobs": {
+      "name": "@singularity/plugin-infra-attachments-memory-blobs",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/audio-analysis": {
       "name": "@singularity/plugin-infra-audio-analysis",
       "version": "0.0.1",
@@ -3754,6 +3765,10 @@
     },
     "plugins/infra/plugins/jobs/plugins/deadline-audit": {
       "name": "@singularity/plugin-infra-jobs-deadline-audit",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/jobs/plugins/in-process": {
+      "name": "@singularity/plugin-infra-jobs-in-process",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/jobs/plugins/supervised-job": {
@@ -4047,6 +4062,9 @@
     "plugins/packages/plugins/string-hash": {
       "name": "@singularity/plugin-packages-string-hash",
       "version": "0.0.1",
+      "dependencies": {
+        "@noble/hashes": "^1.8.0",
+      },
     },
     "plugins/packages/plugins/wall-clock": {
       "name": "@singularity/plugin-packages-wall-clock",
@@ -5157,6 +5175,14 @@
       "name": "@singularity/plugin-primitives-log-channels",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/log-channels/plugins/log-files": {
+      "name": "@singularity/plugin-primitives-log-channels-log-files",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/log-channels/plugins/memory-persistence": {
+      "name": "@singularity/plugin-primitives-log-channels-memory-persistence",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/markdown": {
       "name": "@singularity/plugin-primitives-markdown",
       "version": "0.0.1",
@@ -5900,6 +5926,10 @@
       "name": "@singularity/plugin-tasks-tasks-core",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/tasks-core/plugins/seeded-push-ledger": {
+      "name": "@singularity/plugin-tasks-tasks-core-seeded-push-ledger",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/worktree-identity": {
       "name": "@singularity/plugin-tasks-worktree-identity",
       "version": "0.0.1",
@@ -6239,6 +6269,8 @@
     "@drizzle-team/brocli": ["@drizzle-team/brocli@0.10.2", "", {}, "sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w=="],
 
     "@ecies/ciphers": ["@ecies/ciphers@0.2.6", "", { "peerDependencies": { "@noble/ciphers": "^1.0.0" } }, "sha512-patgsRPKGkhhoBjETV4XxD0En4ui5fbX0hzayqI3M8tvNMGUoUvmyYAIWwlxBc1KX5cturfqByYdj5bYGRpN9g=="],
+
+    "@electric-sql/pglite": ["@electric-sql/pglite@0.5.10", "", {}, "sha512-tXc/25U3ulOkiRQuTFdwIv+JhBqtMdAF7Gvo6CfZZWtSB4+hgC4Wr2vwK5ngvvN5PJfAAEGIsfyCVy1JhCOBYw=="],
 
     "@embedded-postgres/darwin-arm64": ["@embedded-postgres/darwin-arm64@18.3.0-beta.17", "", { "os": "darwin", "cpu": "arm64" }, "sha512-Pvrej3Xz5flfyVc9mchVfekrKoTJyvPtM3U0vjuXamZkRKmi+inP2zRmnmzYecIVbr7Zhu82xbsCENMXrwMp9Q=="],
 
@@ -7850,6 +7882,8 @@
 
     "@singularity/plugin-database-pgbouncer": ["@singularity/plugin-database-pgbouncer@workspace:plugins/database/plugins/pgbouncer"],
 
+    "@singularity/plugin-database-pglite": ["@singularity/plugin-database-pglite@workspace:plugins/database/plugins/pglite"],
+
     "@singularity/plugin-database-query": ["@singularity/plugin-database-query@workspace:plugins/database/plugins/query"],
 
     "@singularity/plugin-database-query-deadline": ["@singularity/plugin-database-query-deadline@workspace:plugins/database/plugins/query-deadline"],
@@ -8476,6 +8510,8 @@
 
     "@singularity/plugin-infra-attachments": ["@singularity/plugin-infra-attachments@workspace:plugins/infra/plugins/attachments"],
 
+    "@singularity/plugin-infra-attachments-memory-blobs": ["@singularity/plugin-infra-attachments-memory-blobs@workspace:plugins/infra/plugins/attachments/plugins/memory-blobs"],
+
     "@singularity/plugin-infra-audio-analysis": ["@singularity/plugin-infra-audio-analysis@workspace:plugins/infra/plugins/audio-analysis"],
 
     "@singularity/plugin-infra-background": ["@singularity/plugin-infra-background@workspace:plugins/infra/plugins/background"],
@@ -8569,6 +8605,8 @@
     "@singularity/plugin-infra-jobs-background-arm": ["@singularity/plugin-infra-jobs-background-arm@workspace:plugins/infra/plugins/jobs/plugins/background-arm"],
 
     "@singularity/plugin-infra-jobs-deadline-audit": ["@singularity/plugin-infra-jobs-deadline-audit@workspace:plugins/infra/plugins/jobs/plugins/deadline-audit"],
+
+    "@singularity/plugin-infra-jobs-in-process": ["@singularity/plugin-infra-jobs-in-process@workspace:plugins/infra/plugins/jobs/plugins/in-process"],
 
     "@singularity/plugin-infra-jobs-supervised-job": ["@singularity/plugin-infra-jobs-supervised-job@workspace:plugins/infra/plugins/jobs/plugins/supervised-job"],
 
@@ -9220,6 +9258,10 @@
 
     "@singularity/plugin-primitives-log-channels": ["@singularity/plugin-primitives-log-channels@workspace:plugins/primitives/plugins/log-channels"],
 
+    "@singularity/plugin-primitives-log-channels-log-files": ["@singularity/plugin-primitives-log-channels-log-files@workspace:plugins/primitives/plugins/log-channels/plugins/log-files"],
+
+    "@singularity/plugin-primitives-log-channels-memory-persistence": ["@singularity/plugin-primitives-log-channels-memory-persistence@workspace:plugins/primitives/plugins/log-channels/plugins/memory-persistence"],
+
     "@singularity/plugin-primitives-markdown": ["@singularity/plugin-primitives-markdown@workspace:plugins/primitives/plugins/markdown"],
 
     "@singularity/plugin-primitives-metrics": ["@singularity/plugin-primitives-metrics@workspace:plugins/primitives/plugins/metrics"],
@@ -9559,6 +9601,8 @@
     "@singularity/plugin-tasks-task-track": ["@singularity/plugin-tasks-task-track@workspace:plugins/tasks/plugins/task-track"],
 
     "@singularity/plugin-tasks-tasks-core": ["@singularity/plugin-tasks-tasks-core@workspace:plugins/tasks/plugins/tasks-core"],
+
+    "@singularity/plugin-tasks-tasks-core-seeded-push-ledger": ["@singularity/plugin-tasks-tasks-core-seeded-push-ledger@workspace:plugins/tasks/plugins/tasks-core/plugins/seeded-push-ledger"],
 
     "@singularity/plugin-tasks-worktree-identity": ["@singularity/plugin-tasks-worktree-identity@workspace:plugins/tasks/plugins/worktree-identity"],
 

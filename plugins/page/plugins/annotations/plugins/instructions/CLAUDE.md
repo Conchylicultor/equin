@@ -169,6 +169,8 @@ at a time; exclusivity with `author`, and `global` requiring `instructions`, is
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
   - Imported by: `page/annotations/agent-access`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/delivery.ts` (debt)
 - Sub-plugins:
   - **`instructions-page`** — Instructions pages in the page editor: a sub-page whose data marks it `instructions: true` is tinted with the instructions card's wash wherever it is referenced (its row in the parent page, the…
 

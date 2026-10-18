@@ -1,4 +1,4 @@
-import type { FileSink } from "@plugins/infra/plugins/file-sink/core";
+import type { LogLine, LogSink } from "./persistence";
 
 export type LogStream = "stdout" | "stderr";
 
@@ -26,15 +26,16 @@ interface InternalChannel {
   entries: LogEntry[];
   listeners: Set<(entry: LogEntry) => void>;
   nextSeq: number;
-  // A durable channel resolves its bounded-append file sink LAZILY on first
-  // publish: `makeSink` builds it (its path needs the per-worktree logs dir, whose
-  // resolution asks for this process's runtime namespace and must NOT run at module import — the
+  // A durable channel resolves its sink LAZILY on first publish: `makeSink`
+  // asks the host's `LogPersistence` (a host service, read only inside the
+  // booted graph; on the desktop a file whose path needs this process's runtime
+  // namespace, which must NOT be resolved at module import — the
   // log-channels/server barrel is imported nearly everywhere, incl. inside the
   // import-safe @plugins/database/server graph). An ephemeral channel has
   // `makeSink === null` and stays memory-only. Durability is a declaration
-  // (`defineLogSink` / the client-ingress family), never a flag.
-  makeSink: (() => FileSink) | null;
-  sink: FileSink | null;
+  // (`defineLogSink` / the client-ingress), never a flag.
+  makeSink: (() => LogSink) | null;
+  sink: LogSink | null;
 }
 
 export interface LogChannel {
@@ -57,12 +58,10 @@ function makeChannel(internal: InternalChannel): LogChannel {
     if (items.length === 0) return;
 
     // Build the whole batch first, so the ring, the sink and the listeners all
-    // see exactly the same entries. The JSON envelope is minted HERE: file-sink
-    // is a generic bounded-append primitive that writes a plain string verbatim,
-    // so log-channels owns the `{t,stream,line}` wire format the read path
-    // parses back.
+    // see exactly the same entries. The sink gets them as lines; how a line is
+    // stored (the desktop's `{t,stream,line}` envelope) is the store's.
     const built: LogEntry[] = [];
-    const envelopes: string[] = [];
+    const lines: LogLine[] = [];
     for (const item of items) {
       const stream = item.stream ?? "stdout";
       const t = item.timestamp ?? Date.now();
@@ -72,7 +71,7 @@ function makeChannel(internal: InternalChannel): LogChannel {
         stream,
         timestamp: t,
       });
-      envelopes.push(JSON.stringify({ t, stream, line: item.line }));
+      lines.push({ t, stream, line: item.line });
     }
 
     // ORDER: ring → sink → listeners. "Durable before broadcast" then holds per
@@ -93,7 +92,7 @@ function makeChannel(internal: InternalChannel): LogChannel {
     // import-safe — see InternalChannel.makeSink). One write for the batch.
     if (!internal.sink && internal.makeSink)
       internal.sink = internal.makeSink();
-    if (internal.sink) internal.sink.appendAll(envelopes);
+    if (internal.sink) internal.sink.appendAll(lines);
 
     for (const entry of built) {
       for (const fn of internal.listeners) fn(entry);
@@ -118,7 +117,7 @@ function makeChannel(internal: InternalChannel): LogChannel {
  */
 export function createChannel(
   id: string,
-  makeSink: (() => FileSink) | null = null,
+  makeSink: (() => LogSink) | null = null,
 ): LogChannel {
   if (registry.has(id)) throw new Error(`Log channel "${id}" already exists`);
 
@@ -142,7 +141,7 @@ export function createChannel(
  */
 export function getOrCreateChannel(
   id: string,
-  makeSink?: () => FileSink,
+  makeSink?: () => LogSink,
 ): LogChannel {
   let internal = registry.get(id);
   if (!internal) {

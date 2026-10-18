@@ -6,11 +6,16 @@ import {
   type FetchWithRetryOptions,
   type Transport,
 } from "@plugins/primitives/plugins/networking/web";
-import type { EndpointDef } from "../../core";
+import type {
+  EndpointDef,
+  MachineEndpointDef,
+  MachineResult,
+} from "../../core";
 import {
   extractMethod,
   interpolatePath,
   isUnsupportedEndpointRefusal,
+  unavailableMessage,
 } from "../../core";
 import { endpointErrorSink } from "./error-reporter";
 
@@ -81,6 +86,9 @@ type FetchOpts<TBody, TQuery> = {
 } & ([TBody] extends [void] ? { body?: never } : { body: TBody }) &
   ([TQuery] extends [void] ? { query?: never } : { query: TQuery });
 
+/** What a request to an endpoint answers: its decoded response, `void` for none. */
+type Answer<TResponse> = TResponse extends void ? void : TResponse;
+
 /**
  * Typed fetch wrapper for endpoint definitions.
  *
@@ -90,7 +98,23 @@ type FetchOpts<TBody, TQuery> = {
  * - Parses response through responseSchema if provided
  * - Throws EndpointError on non-2xx (EndpointUnsupportedError, unreported,
  *   when the host refuses the endpoint as one it does not serve)
+ *
+ * A desktop-only endpoint (`needsMachine`) answers a `MachineResult`: `ok` with
+ * the value, or — when the transport has no computer behind it
+ * (`transport.machine` false: an in-browser server) — `unavailable` with the
+ * sentence to show, without making a request.
  */
+export async function fetchEndpoint<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+>(
+  endpoint: MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  params: TParams,
+  opts?: FetchOpts<TBody, TQuery>,
+): Promise<MachineResult<Answer<TResponse>>>;
 export async function fetchEndpoint<
   Route extends string,
   TParams,
@@ -101,7 +125,40 @@ export async function fetchEndpoint<
   endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   params: TParams,
   opts?: FetchOpts<TBody, TQuery>,
-): Promise<TResponse extends void ? void : TResponse> {
+): Promise<Answer<TResponse>>;
+export async function fetchEndpoint<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+>(
+  endpoint:
+    | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
+    | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  params: TParams,
+  opts?: FetchOpts<TBody, TQuery>,
+): Promise<Answer<TResponse> | MachineResult<Answer<TResponse>>> {
+  if (endpoint.needsMachine === undefined) {
+    return request(endpoint, params, opts);
+  }
+  if (!(opts?.transport ?? originTransport).machine) {
+    return {
+      kind: "unavailable",
+      message: unavailableMessage(endpoint.needsMachine),
+    };
+  }
+  return { kind: "ok", value: await request(endpoint, params, opts) };
+}
+
+/** One request to an endpoint over the caller's transport, decoded. */
+async function request<Route extends string, TParams, TBody, TResponse, TQuery>(
+  endpoint:
+    | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
+    | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  params: TParams,
+  opts?: FetchOpts<TBody, TQuery>,
+): Promise<Answer<TResponse>> {
   const method = extractMethod(endpoint.route);
   let url = interpolatePath(
     endpoint.path,
@@ -177,11 +234,11 @@ export async function fetchEndpoint<
 
   // void response (204 or no response codec)
   if (res.status === 204 || !endpoint.responseCodec) {
-    return undefined as TResponse extends void ? void : TResponse;
+    return undefined as Answer<TResponse>;
   }
 
   const parsed = await endpoint.responseCodec.decodeResponse(res);
-  return parsed as TResponse extends void ? void : TResponse;
+  return parsed as Answer<TResponse>;
 }
 
 /**
@@ -194,7 +251,12 @@ export function useFetchEndpoint(): typeof fetchEndpoint {
   const transport = useTransport();
   return useMemo(
     () =>
-      ((endpoint, params, opts) =>
+      ((
+        endpoint: EndpointDef<string, unknown, unknown, unknown, unknown>,
+        params: unknown,
+        opts?: FetchOpts<unknown, unknown>,
+      ) =>
+        // Either kind of endpoint: the bare function dispatches on it.
         fetchEndpoint(endpoint, params, {
           ...opts,
           transport,

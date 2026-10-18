@@ -556,6 +556,8 @@ per-composition scoping:
     - `reports`
     - `review/code-review`
     - `shell/global-action-bar`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/config-watcher.ts`, `server/internal/fork.ts`, `server/internal/jsonc-proxy.ts`, `server/internal/orphan-audit.ts`, `server/internal/registry.ts`, `server/internal/resource.ts`, `server/internal/scope-fork.ts`, `server/internal/scope-paths.ts`, `server/internal/scope-snapshot.ts` (debt)
 - Test helpers:
   - Web: `@plugins/config_v2/web/testing`
     - `useConfigDemoBackend` — Config inside a demo scope (`Demo.Resource`): the server's tier cascade over two browser layers, so a demo surface reads exactly what a fresh user of the committed repo would — and can change it.
@@ -565,7 +567,7 @@ per-composition scoping:
 - Sub-plugins:
   - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear…
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
-  - **`ledger`** — The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the…
+  - **`ledger`** [exempt] — The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the…
   - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field…
     - Plugins:
       - **`conflict-agent`** — Ask-an-agent button inside the config detail's conflict banners: opens the standard task-draft popover pre-filled with a factual description of the conflict (which fields disagree, and how).

@@ -31,6 +31,11 @@ import {
   isPointId,
   type CollectionRow,
 } from "@plugins/network/plugins/live/core";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
+import {
+  unavailableMessage,
+  type MachineFeature,
+} from "@plugins/infra/plugins/endpoints/core";
 import {
   useAllPages,
   useValuePages,
@@ -94,6 +99,36 @@ interface RefusalsDecl<C extends string> {
 interface SnapshotDecl {
   snapshot: true;
 }
+
+/**
+ * The read of a declaration that needs the computer (`needsMachine`) under a
+ * transport with none behind it (an in-browser server): nothing is read, and
+ * `message` is the sentence to show in its place. A state of its own — never
+ * `loading` (it will not arrive) nor `error` (nothing failed).
+ */
+export interface LiveUnavailable {
+  status: "unavailable";
+  message: string;
+}
+
+/**
+ * A declaration's `needsMachine`, as the parameter side of an overload infers
+ * it: `MachineFeature` for a declaration that needs the computer, `undefined`
+ * (or nothing to infer from — the default) for a portable one.
+ */
+interface MachineDecl<M> {
+  needsMachine?: M;
+}
+
+/**
+ * A read's result, plus the {@link LiveUnavailable} arm exactly when its
+ * declaration needs the computer — so a reader of such a declaration cannot
+ * reach `data` without first handling the arm, and a portable read's type is
+ * unchanged.
+ */
+export type WithMachine<M, R> = [M] extends [MachineFeature]
+  ? R | LiveUnavailable
+  : R;
 
 /** An explicit id set. Rows come back for the ids that exist; no filter applies. */
 export interface LiveIdsQuery {
@@ -248,23 +283,34 @@ type LiveValueRead<V, T, C extends string> = V extends SnapshotDecl
 // generic call TypeScript checks once, against the first overload's contextual
 // type — so that type must be the collection's own `LiveWhere` for the tree's
 // columns and operands to be checked against the declaration.
-export function useLive<Row, F, S extends string>(
-  collection: LiveCollection<Row, F, S>,
+export function useLive<
+  Row,
+  F,
+  S extends string,
+  NM extends MachineFeature | undefined = undefined,
+>(
+  collection: LiveCollection<Row, F, S> & MachineDecl<NM>,
   query?: LiveQuery<F, S>,
-): LiveListResult<CollectionRow<Row>>;
+): WithMachine<NM, LiveListResult<CollectionRow<Row>>>;
 export function useLive<
   Row,
   F,
   S extends string,
   const G extends LiveGroupableColumn<F>,
+  NM extends MachineFeature | undefined = undefined,
 >(
-  collection: LiveCollection<Row, F, S>,
+  collection: LiveCollection<Row, F, S> & MachineDecl<NM>,
   query: LiveGroupQuery<F, G>,
-): LiveListResult<LiveGroup<LiveGroupValue<Row, G>>>;
-export function useLive<Row, F, S extends string>(
-  collection: LiveCountedCollection<Row, F, S> | null,
+): WithMachine<NM, LiveListResult<LiveGroup<LiveGroupValue<Row, G>>>>;
+export function useLive<
+  Row,
+  F,
+  S extends string,
+  NM extends MachineFeature | undefined = undefined,
+>(
+  collection: (LiveCountedCollection<Row, F, S> & MachineDecl<NM>) | null,
   query: LiveCountQuery<F> | null,
-): ResourceResult<number>;
+): WithMachine<NM, ResourceResult<number>>;
 /**
  * - `useLive(c, query, { viewport, resetKey? })` — a collection's window read
  *   with no depth limit, its key-range pages kept live by the rows a surface
@@ -277,11 +323,16 @@ export function useLive<Row, F, S extends string>(
  *   read as the same pages, every one live: `loadMore()` splits the last
  *   page, and never pages past `maxLimit` rows.
  */
-export function useLive<Row, F, S extends string>(
-  collection: LiveCollection<Row, F, S> | null,
+export function useLive<
+  Row,
+  F,
+  S extends string,
+  NM extends MachineFeature | undefined = undefined,
+>(
+  collection: (LiveCollection<Row, F, S> & MachineDecl<NM>) | null,
   query: LivePagesQuery<F, S> | null,
   options: LivePagesOptions,
-): LivePagesResult<CollectionRow<Row>>;
+): WithMachine<NM, LivePagesResult<CollectionRow<Row>>>;
 /**
  * - `useLive(all)` — a collection declared `all`: every row, in its declared
  *   order, as `ResourceResult<Row[]>` (settled on its first render when the
@@ -300,17 +351,21 @@ export function useLive<Row, F, S extends string>(
  * has neither, so it never matches them) so a window query's contextual type
  * is still the first overload's.
  */
-export function useLive<Row>(
-  collection: LiveAllCollection<Row>,
-): ResourceResult<CollectionRow<Row>[]>;
-export function useLive<Row, S>(
-  collection: LiveAllCollection<Row>,
+export function useLive<Row, NM extends MachineFeature | undefined = undefined>(
+  collection: LiveAllCollection<Row> & MachineDecl<NM>,
+): WithMachine<NM, ResourceResult<CollectionRow<Row>[]>>;
+export function useLive<
+  Row,
+  S,
+  NM extends MachineFeature | undefined = undefined,
+>(
+  collection: LiveAllCollection<Row> & MachineDecl<NM>,
   options: LiveAllSelect<Row, S>,
-): ResourceResult<S>;
-export function useLive<Row>(
-  collection: LiveRowsCollection<Row>,
+): WithMachine<NM, ResourceResult<S>>;
+export function useLive<Row, NM extends MachineFeature | undefined = undefined>(
+  collection: LiveRowsCollection<Row> & MachineDecl<NM>,
   query: LiveIdsQuery,
-): ResourceResult<CollectionRow<Row>[]>;
+): WithMachine<NM, ResourceResult<CollectionRow<Row>[]>>;
 /**
  * - `useLive(value)` / `useLive(value, params)` — a declared `liveValue`:
  *   `ResourceResult<T>` (pending, then settled; settled on its first render
@@ -345,19 +400,27 @@ export function useLive<
   QIn,
   C extends string = never,
   V extends object = object,
+  NM extends MachineFeature | undefined = undefined,
 >(
-  value: LiveQueryValue<T, Q, QIn, LiveValueOrigin> & RefusalsDecl<C> & V,
+  value: LiveQueryValue<T, Q, QIn, LiveValueOrigin> &
+    RefusalsDecl<C> &
+    MachineDecl<NM> &
+    V,
   queries: LiveQueryList<NoInfer<QIn>>,
-): readonly LiveValueRead<V, T, C>[];
+): WithMachine<NM, readonly LiveValueRead<V, T, C>[]>;
 export function useLive<
   T,
   P extends Record<string, string>,
   C extends string = never,
   V extends object = object,
+  NM extends MachineFeature | undefined = undefined,
 >(
-  value: LivePlainValue<T, P, LiveValueOrigin> & RefusalsDecl<C> & V,
+  value: LivePlainValue<T, P, LiveValueOrigin> &
+    RefusalsDecl<C> &
+    MachineDecl<NM> &
+    V,
   params: LiveValueParamsList<NoInfer<P>>,
-): readonly LiveValueRead<V, T, C>[];
+): WithMachine<NM, readonly LiveValueRead<V, T, C>[]>;
 /**
  * - `useLive(pagedValue, query, { viewport, resetKey? })` — a key-range-paged
  *   value (`liveValue(key, { query, paged })`) read like a collection's window
@@ -387,16 +450,31 @@ export function useLive<Item, Meta, Q, QIn, C extends string = never>(
  *   nothing (pending), as for a param'd value; a changed question is a new
  *   tuple and shows loading.
  */
-export function useLive<T, Q, QIn, C extends string = never>(
+export function useLive<
+  T,
+  Q,
+  QIn,
+  C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
+>(
   value: LiveQueryValue<T, Q, QIn, LiveValueOrigin> &
     SnapshotDecl &
-    RefusalsDecl<C>,
+    RefusalsDecl<C> &
+    MachineDecl<NM>,
   query: NoInfer<QIn> | null,
-): LiveSnapshotResult<T, C>;
-export function useLive<T, Q, QIn, C extends string = never>(
-  value: LiveQueryValue<T, Q, QIn, LiveValueOrigin> & RefusalsDecl<C>,
+): WithMachine<NM, LiveSnapshotResult<T, C>>;
+export function useLive<
+  T,
+  Q,
+  QIn,
+  C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
+>(
+  value: LiveQueryValue<T, Q, QIn, LiveValueOrigin> &
+    RefusalsDecl<C> &
+    MachineDecl<NM>,
   query: NoInfer<QIn> | null,
-): ResourceResult<T, C>;
+): WithMachine<NM, ResourceResult<T, C>>;
 /**
  * - A value declared `load: "snapshot"` (plain or typed-query) reads the same
  *   way, and its result adds `refresh()` — see {@link LiveSnapshotResult}.
@@ -405,20 +483,27 @@ export function useLive<
   T,
   P extends Record<string, string>,
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
-  value: LivePlainValue<T, P, LiveValueOrigin> & SnapshotDecl & RefusalsDecl<C>,
+  value: LivePlainValue<T, P, LiveValueOrigin> &
+    SnapshotDecl &
+    RefusalsDecl<C> &
+    MachineDecl<NM>,
   ...params: LiveValueArgs<NoInfer<P>>
-): LiveSnapshotResult<T, C>;
+): WithMachine<NM, LiveSnapshotResult<T, C>>;
 export function useLive<
   T,
   P extends Record<string, string>,
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
-  value: LivePlainValue<T, P, LiveValueOrigin> & RefusalsDecl<C>,
+  value: LivePlainValue<T, P, LiveValueOrigin> &
+    RefusalsDecl<C> &
+    MachineDecl<NM>,
   // `NoInfer`: `P` is the declaration's — a `{ path } | null` argument must not
   // narrow it past a declared optional param.
   ...params: LiveValueArgs<NoInfer<P>>
-): ResourceResult<T, C>;
+): WithMachine<NM, ResourceResult<T, C>>;
 export function useLive<Row, F, S extends string>(
   source:
     | null
@@ -442,14 +527,27 @@ export function useLive<Row, F, S extends string>(
   | LiveListResult<unknown>
   | ResourceResult<unknown>
   | readonly ResourceResult<unknown>[]
-  | LivePagesResult<unknown> {
+  | LivePagesResult<unknown>
+  | LiveUnavailable {
+  // A declaration that needs the computer, under a transport with none behind
+  // it, reads nothing: its own kind of read (no subscription, no HTTP read),
+  // held like every other — a subtree's transport is fixed, and a
+  // declaration's `needsMachine` is.
+  const { machine } = useTransport();
+  const needsMachine =
+    source === null
+      ? undefined
+      : (source as { needsMachine?: MachineFeature }).needsMachine;
   // Which read this call is. Every branch below calls a different set of
   // hooks, so a call site must ask the same kind on every render: a
   // declaration never changes kind (it is a module-level const), and a call
   // site's overload fixes the rest — a viewport or not, a count or a window,
   // an id set or not. The first render's kind is held, and a later render
   // asking another throws rather than corrupting the hook order.
-  const kind = readKindOf(source, query, options);
+  const kind =
+    needsMachine !== undefined && !machine
+      ? "unavailable"
+      : readKindOf(source, query, options);
   const [firstKind] = useState(kind);
   if (kind !== firstKind) {
     throw new Error(
@@ -458,6 +556,8 @@ export function useLive<Row, F, S extends string>(
   }
   /* eslint-disable react-hooks/rules-of-hooks -- each branch is fixed per call site: asserted above */
   switch (kind) {
+    case "unavailable":
+      return useUnavailable(needsMachine!);
     case "viewport-pages":
       // Before `null → count`: a paged read passes a `null` collection to
       // read nothing (a detached or sectioned DataView), keeping its hooks.
@@ -532,6 +632,7 @@ export function useLive<Row, F, S extends string>(
 
 /** What one `useLive` call reads — each a different set of hooks — in words. */
 const READ_KIND = {
+  unavailable: "read that needs the computer, under a transport without it",
   "viewport-pages": "paged read kept live by a viewport",
   count: "count",
   "value-pages": "paged value (its pages every one live, no viewport)",
@@ -593,6 +694,14 @@ function readKindOf(
     "groupBy" in query &&
     (query as { groupBy?: unknown }).groupBy !== undefined;
   return isIds || isGroups ? "collection" : "all-pages";
+}
+
+/** The read of a declaration that needs the computer, where none is behind the transport. */
+function useUnavailable(feature: MachineFeature): LiveUnavailable {
+  return useMemo(
+    () => ({ status: "unavailable", message: unavailableMessage(feature) }),
+    [feature],
+  );
 }
 
 /** A source's key, for an error message. */
@@ -955,11 +1064,31 @@ const NO_ID: LiveRowResult<never> = {
  * handed an id from outside (a URL, a `[[page:…]]` token, an agent's tool
  * input) therefore renders its not-found state, never a render error.
  */
-export function useLiveRow<Row>(
-  collection: LiveRowsCollection<Row>,
+export function useLiveRow<
+  Row,
+  NM extends MachineFeature | undefined = undefined,
+>(
+  collection: LiveRowsCollection<Row> & MachineDecl<NM>,
   id: string | null,
-): LiveRowResult<CollectionRow<Row>> {
-  const absent = id === null || !isPointId(id);
+): WithMachine<NM, LiveRowResult<CollectionRow<Row>>>;
+export function useLiveRow<Row>(
+  collection: LiveRowsCollection<Row> & MachineDecl<MachineFeature | undefined>,
+  id: string | null,
+): LiveRowResult<CollectionRow<Row>> | LiveUnavailable {
+  // A collection that needs the computer, under a transport with none behind
+  // it: nothing is read (the same skip as a `null` id), and the read is
+  // `unavailable`.
+  const { machine } = useTransport();
+  const { needsMachine } = collection;
+  const unavailable = needsMachine !== undefined && !machine;
+  const unavailableRead = useMemo(
+    (): LiveUnavailable | null =>
+      needsMachine !== undefined && !machine
+        ? { status: "unavailable", message: unavailableMessage(needsMachine) }
+        : null,
+    [needsMachine, machine],
+  );
+  const absent = unavailable || id === null || !isPointId(id);
   const idsKey = absent ? null : collection.rows.point.encode([id]).ids;
   const params = useMemo(
     () => (idsKey === null ? null : { ids: idsKey }),
@@ -969,7 +1098,8 @@ export function useLiveRow<Row>(
   // The result keeps its identity until what it is built from changes, like
   // `useLive`'s list result: consumers memoize on it. `useResource`'s own
   // result changes only with its status / data / error / stale.
-  return useMemo((): LiveRowResult<CollectionRow<Row>> => {
+  return useMemo((): LiveRowResult<CollectionRow<Row>> | LiveUnavailable => {
+    if (unavailableRead !== null) return unavailableRead;
     // Determinate without the server: no (carriable) id names no row.
     if (absent) return NO_ID;
     const { refetch } = result;
@@ -996,5 +1126,5 @@ export function useLiveRow<Row>(
           : { status: "ready", found: true, row, refetch };
       }
     }
-  }, [absent, result]);
+  }, [unavailableRead, absent, result]);
 }

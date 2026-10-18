@@ -167,14 +167,14 @@ deadline sees it go silent. That needs a heartbeat.
 - Description: Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is abandoned — detached, held, never closed, since its fd may already be someone else's — and announced on queryDeadlineSink.
 - Cross-plugin:
   - Imported by:
-    - `database`
     - `database/admin`
     - `database/change-feed`
     - `database/query-deadline`
-    - `infra/events-test`
     - `infra/jobs`
 - Exemptions:
-  - Exempts itself from: `db-connection/no-raw-pg-connection` — `.` (sanctioned)
+  - Exempts itself from:
+    - `db-connection/no-raw-pg-connection` — `.` (sanctioned)
+    - `boundaries/no-platform-api` — `server/internal/client.ts`, `server/internal/deadline.ts` (debt)
   - Exempted by: `database/connection` (0 debt)
 - Server:
   - Exports (types):

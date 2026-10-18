@@ -20,7 +20,7 @@ export default createFacet<DocMetaRegistration[]>({
 
     const registrations: DocMetaRegistration[] = [];
     for (const { mod, runtime } of modules) {
-      if (runtime !== "server" && runtime !== "central") continue;
+      if (runtime === "web") continue;
       let def: Record<string, unknown> | undefined;
       try {
         def = mod.default as Record<string, unknown> | undefined;
@@ -54,7 +54,7 @@ export default createFacet<DocMetaRegistration[]>({
   renderDoc(data: DocMetaRegistration[]) {
     if (data.length === 0) return [];
     const facts: DocFact[] = [];
-    for (const runtime of ["server", "central"] as const) {
+    for (const runtime of ["server", "machine", "central"] as const) {
       const regs = data.filter((r) => r.runtime === runtime);
       if (regs.length === 0) continue;
       facts.push({

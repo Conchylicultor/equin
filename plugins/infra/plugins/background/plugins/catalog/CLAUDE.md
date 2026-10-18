@@ -143,7 +143,6 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `infra/background/timer`
     - `infra/events`
     - `infra/file-watcher/background-arm`
-    - `infra/jobs/background-arm`
     - `infra/spawn/daemon/background-arm`
     - `infra/warmup/background-arm`
     - `tasks/automations`

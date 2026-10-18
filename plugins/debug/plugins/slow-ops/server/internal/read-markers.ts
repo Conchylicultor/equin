@@ -1,4 +1,4 @@
-import { readChannelJsonAsync } from "@plugins/primitives/plugins/log-channels/server";
+import { readChannelJsonAsync } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import { SlowOpMarkerSchema, type SlowOpMarker } from "../../core";
 
 // Cap on marker lines read per worktree file (newest kept). Generous so a chatty

@@ -1,0 +1,146 @@
+/**
+ * A declaration that needs the computer (`needsMachine`), read under a
+ * transport with none behind it (`machine: false` — an in-browser server):
+ * `useLive` / `useLiveRow` answer the `unavailable` arm from the first render
+ * and subscribe nothing; under the page's own server (`machine: true`) the
+ * same read subscribes as any other. The type checks at the end are tsc's
+ * (every `@ts-expect-error` must be an error), in a hook never called.
+ */
+
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
+  clientLog: () => {},
+}));
+
+import { renderHook } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
+import { z } from "zod";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import {
+  createLiveStateHarness,
+  NotificationsClient,
+} from "@plugins/primitives/plugins/live-state/web/testing";
+import {
+  originTransport,
+  TransportProvider,
+  type Transport,
+} from "@plugins/primitives/plugins/networking/web";
+import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { useLive, useLiveRow, type LiveRowResult } from "../internal/use-live";
+
+const MESSAGE =
+  "Reading the checkout isn't available in this version of the app — it needs Singularity running on your computer.";
+
+const ROW_FIELDS = { id: textField({ label: "Id" }) };
+
+let seq = 0;
+function machineValue() {
+  return liveValue(`test.use-live-machine.value.${seq++}`, {
+    schema: z.object({ n: z.number() }),
+    needsMachine: { feature: "Reading the checkout" },
+  });
+}
+function machineCollection() {
+  return liveCollection(`test.use-live-machine.rows.${seq++}`, {
+    fields: ROW_FIELDS,
+    id: "id",
+    needsMachine: { feature: "Reading the checkout" },
+  });
+}
+
+/** The harness's pipeline under `transport`. */
+function wrapperFor(transport: Transport) {
+  const { Wrapper } = createLiveStateHarness();
+  return ({ children }: { children: ReactNode }) =>
+    createElement(TransportProvider, {
+      transport,
+      children: createElement(Wrapper, null, children),
+    });
+}
+
+const inBrowser: Transport = { ...originTransport, machine: false };
+
+describe("useLive of a needsMachine declaration", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("is unavailable under a transport with no computer, and subscribes nothing", () => {
+    const observe = vi.spyOn(NotificationsClient.prototype, "observe");
+    const value = machineValue();
+    const rows = machineCollection();
+    const read = renderHook(() => useLive(value), {
+      wrapper: wrapperFor(inBrowser),
+    });
+    const row = renderHook(() => useLiveRow(rows, "a"), {
+      wrapper: wrapperFor(inBrowser),
+    });
+    expect(read.result.current).toEqual({
+      status: "unavailable",
+      message: MESSAGE,
+    });
+    expect(row.result.current).toEqual({
+      status: "unavailable",
+      message: MESSAGE,
+    });
+    // Stable: a re-render hands back the same result.
+    const first = read.result.current;
+    read.rerender();
+    expect(read.result.current).toBe(first);
+    expect(
+      observe.mock.calls.filter(
+        ([key]) => key === value.key || key.startsWith(rows.key),
+      ),
+    ).toEqual([]);
+  });
+
+  it("reads as any other declaration under the page's own server", () => {
+    const observe = vi.spyOn(NotificationsClient.prototype, "observe");
+    const value = machineValue();
+    const read = renderHook(() => useLive(value), {
+      wrapper: wrapperFor(originTransport),
+    });
+    expect(read.result.current.status).toBe("loading");
+    expect(
+      observe.mock.calls.filter(([key]) => key === value.key).map(([k]) => k),
+    ).toEqual([value.key]);
+  });
+});
+
+const typedValue = liveValue("test.use-live-machine.types.value", {
+  schema: z.object({ n: z.number() }),
+  needsMachine: { feature: "Reading the checkout" },
+});
+const portableValue = liveValue("test.use-live-machine.types.portable", {
+  schema: z.object({ n: z.number() }),
+});
+const typedRows = liveCollection("test.use-live-machine.types.rows", {
+  fields: ROW_FIELDS,
+  id: "id",
+  needsMachine: { feature: "Reading the checkout" },
+});
+
+function useTypeChecks() {
+  const read = useLive(typedValue);
+  // @ts-expect-error a machine read may be unavailable: not a ResourceResult
+  const asResult: ResourceResult<{ n: number }> = read;
+  if (read.status === "ready") void read.data.n;
+  // @ts-expect-error `data` is only on the ready arm — the unavailable one has none
+  void read.data;
+  if (read.status === "unavailable") void read.message;
+
+  // A portable read's type is unchanged: no unavailable arm.
+  const portable: ResourceResult<{ n: number }> = useLive(portableValue);
+
+  const row = useLiveRow(typedRows, "a");
+  // @ts-expect-error a machine row read may be unavailable: not a LiveRowResult
+  const asRow: LiveRowResult<{ id: string }> = row;
+  if (row.status === "ready" && row.found) void row.row.id;
+  return [asResult, portable, asRow];
+}
+
+describe("useLive needsMachine types", () => {
+  it("the type assertions above compile", () => {
+    expect(typeof useTypeChecks).toBe("function");
+  });
+});

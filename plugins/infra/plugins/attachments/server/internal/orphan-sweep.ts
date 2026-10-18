@@ -1,9 +1,9 @@
 import { and, isNotNull, lt, not, or, sql } from "drizzle-orm";
-import { unlink } from "node:fs/promises";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { AttachmentBlobs } from "./blobs";
 import { _attachmentHolds, _attachments } from "./tables";
 import { getRegisteredLinks } from "./define-link";
 
@@ -58,21 +58,12 @@ export const orphanSweepJob = defineJob({
       .delete(_attachments)
       .where(and(lt(_attachments.createdAt, cutoff), unreferenced))
       .returning({ diskPath: _attachments.diskPath });
-    // Best-effort disk cleanup, AFTER the DB rows are already deleted: a
-    // per-file unlink failure must not abort the sweep of the remaining
-    // orphans. The absorbed result is never read and never a data decision.
-    //
-    // The directive sits on the `unlink` line itself rather than above the
-    // whole statement: `eslint-disable-next-line` binds to a LINE, and a
-    // one-line `await Promise.all(...)` here is long enough that formatting
-    // wraps it — which would slide the `.catch()` out from under the
-    // suppression and re-fire the rule on a line nobody wrote.
-    await Promise.all(
-      rows.map((r) =>
-        // eslint-disable-next-line promise-safety/no-absorbed-failure -- see above
-        unlink(r.diskPath).catch(() => undefined),
-      ),
-    );
+    // Best-effort blob cleanup, AFTER the DB rows are already deleted: a
+    // per-blob failure must not abort the sweep of the remaining orphans, which
+    // is the store's own contract (`AttachmentBlobs.delete` never throws for a
+    // missing or undeletable blob).
+    const blobs = AttachmentBlobs.get();
+    await Promise.all(rows.map((r) => blobs.delete(r.diskPath)));
     if (rows.length > 0) {
       log.publish(`orphan sweep removed ${rows.length} files`);
     }

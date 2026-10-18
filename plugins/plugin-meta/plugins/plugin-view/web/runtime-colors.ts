@@ -19,6 +19,9 @@ export type ExportRuntime = RuntimeFolder;
 export const RUNTIME_COLORS: Record<ExportRuntime, string> = {
   web: "bg-categorical-1/10 text-categorical-1",
   server: "bg-categorical-2/10 text-categorical-2",
+  // The desktop-only half of the same backend: it shares server's hue (the
+  // palette's ten hues are all taken, and the two halves boot as one graph).
+  machine: "bg-categorical-2/10 text-categorical-2",
   central: "bg-categorical-5/10 text-categorical-5",
   core: "bg-categorical-3/10 text-categorical-3",
   shared: "bg-categorical-9/10 text-categorical-9",

@@ -8,4 +8,15 @@ export default [
     reason:
       '`waitForFlock` reads "granted\\n" off the flock-wait child\'s live stdout while holding its stdin open as the release channel: the whole protocol is the open pipe, so temp-file capture is structurally impossible.',
   },
+  {
+    rule: "boundaries/no-platform-api",
+    paths: [
+      "core/internal/flock.ts",
+      "core/internal/lifeline.ts",
+      "core/internal/wait.ts",
+    ],
+    kind: "debt",
+    task: "task-1792338443-riwqev",
+    reason: "not yet split into server/ + machine/",
+  },
 ] satisfies Exemptions;

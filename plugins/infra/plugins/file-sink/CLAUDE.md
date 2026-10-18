@@ -198,7 +198,9 @@ as the only escape. Being importable from every runtime *is* the feature.
     - `framework/tooling/checks`
     - `packages/signal-origin/sink`
 - Exemptions:
-  - Exempts itself from: `sink-safety/no-adhoc-file-sink` — `.` (sanctioned)
+  - Exempts itself from:
+    - `sink-safety/no-adhoc-file-sink` — `.` (sanctioned)
+    - `boundaries/no-platform-api` — `core/internal/file-sink.ts`, `core/internal/history.ts`, `core/internal/read.ts` (debt)
 - Core:
   - Exports (types):
     - `FileSink`

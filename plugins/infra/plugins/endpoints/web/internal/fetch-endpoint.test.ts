@@ -4,6 +4,10 @@ import { defineEndpoint } from "../../core/define-endpoint";
 import { unsupportedEndpointResponse } from "../../core/unsupported";
 import { endpointErrorSink, type EndpointErrorInfo } from "./error-reporter";
 import {
+  originTransport,
+  type Transport,
+} from "@plugins/primitives/plugins/networking/web";
+import {
   EndpointError,
   EndpointUnsupportedError,
   fetchEndpoint,
@@ -151,5 +155,49 @@ describe("fetchEndpoint unsupported refusal", () => {
     expect(emitted).toEqual([
       { route: "POST /api/ping", status: 409, body: { reason: "conflict" } },
     ]);
+  });
+});
+
+describe("fetchEndpoint needsMachine", () => {
+  const launch = defineEndpoint({
+    route: "POST /api/launch",
+    body: z.object({ n: z.number() }),
+    response: z.object({ ok: z.boolean() }),
+    needsMachine: { feature: "Launching an agent" },
+  });
+
+  test("under a transport with no computer it answers unavailable, without a request", async () => {
+    const fn = mock(() => Promise.resolve(Response.json({ ok: true })));
+    const inBrowser: Transport = {
+      ...originTransport,
+      fetch: fn,
+      machine: false,
+    };
+    const res = await fetchEndpoint(
+      launch,
+      {},
+      { body: { n: 1 }, transport: inBrowser },
+    );
+    expect(res).toEqual({
+      kind: "unavailable",
+      message:
+        "Launching an agent isn't available in this version of the app — it needs Singularity running on your computer.",
+    });
+    expect(fn).toHaveBeenCalledTimes(0);
+  });
+
+  test("under the page's own server it asks, and answers ok with the value", async () => {
+    const fn = stubFetch([ok()]);
+    const res = await fetchEndpoint(launch, {}, { body: { n: 1 } });
+    expect(res).toEqual({ kind: "ok", value: { ok: true } });
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  test("a portable endpoint still answers its value, not a result", async () => {
+    stubFetch([ok()]);
+    const res = await fetchEndpoint(ping, {}, { body: { n: 1 } });
+    // @ts-expect-error — a portable endpoint's answer has no `kind`
+    expect(res.kind).toBeUndefined();
+    expect(res).toEqual({ ok: true });
   });
 });

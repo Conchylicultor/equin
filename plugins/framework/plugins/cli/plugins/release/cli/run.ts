@@ -119,8 +119,10 @@ import {
 const SENTINEL_WORKER_ENTRY =
   "plugins/debug/plugins/sentinel/server/internal/worker/entry.ts";
 
-// The registry the compiled backend's `@composition-server-registry` alias is
-// repointed at, so the bundler's closure IS the composition closure. Keyed by
+// The registries the compiled backend's `@composition-server-registry` and
+// `@composition-machine-registry` aliases are repointed at, so the bundler's
+// closure IS the composition closure (a release is a desktop host: it boots
+// both halves). Keyed by
 // composition NAME: filtered registries have no checkout-global flavour, so a
 // release can never reconfigure another namespace's backend.
 //
@@ -131,6 +133,8 @@ const SENTINEL_WORKER_ENTRY =
 // file that is never written, rather than release the main app.
 const FILTERED_SERVER_REGISTRY = (composition: string): string =>
   `plugins/framework/plugins/server-core/core/${compositionRegistryFileName("server", composition)}`;
+const FILTERED_MACHINE_REGISTRY = (composition: string): string =>
+  `plugins/framework/plugins/server-core/core/${compositionRegistryFileName("machine", composition)}`;
 const FILTERED_WEB_REGISTRY = (composition: string): string =>
   `plugins/framework/plugins/web-sdk/core/${compositionRegistryFileName("web", composition)}`;
 
@@ -325,11 +329,11 @@ async function resolveCompositionIconKey(opts: {
  * release ships no bun runtime and no TS source.
  *
  * `@plugins/*` resolves via the on-disk `tsconfig.json` nearest the entrypoint
- * (Bun.build auto-discovers it), exactly as in dev. `aliasOverride` repoints a
- * single bare specifier for THIS compile only via an `onResolve` resolver plugin
- * — used to pin the backend's `@composition-server-registry` import to the
- * filtered composition registry, so the bundled closure IS the composition
- * closure. (We use a resolver rather than `--tsconfig-override`, which
+ * (Bun.build auto-discovers it), exactly as in dev. `aliasOverrides` repoints
+ * bare specifiers for THIS compile only via an `onResolve` resolver plugin —
+ * used to pin the backend's `@composition-server-registry` and
+ * `@composition-machine-registry` imports to the filtered composition
+ * registries, so the bundled closure IS the composition closure. (We use a resolver rather than `--tsconfig-override`, which
  * `bun build` does not accept.)
  *
  * `platform` selects the standalone runtime baked into the binary. Bun
@@ -349,14 +353,13 @@ async function compile(opts: {
   // something a call site can be trusted to list. The launcher reaching the
   // unfiltered `deps` registry is how Playwright got into the website release.
   registries: RegistryRedirects;
-  aliasOverride?: { alias: string; target: string };
+  aliasOverrides?: { alias: string; target: string }[];
 }): Promise<void> {
-  const { entry, outfile, root, platform, registries, aliasOverride } = opts;
+  const { entry, outfile, root, platform, registries, aliasOverrides } = opts;
   mkdirSync(dirname(outfile), { recursive: true });
 
   const plugins: Bun.BunPlugin[] = [registryRedirectPlugin(registries)];
-  if (aliasOverride) {
-    const { alias, target } = aliasOverride;
+  for (const { alias, target } of aliasOverrides ?? []) {
     // Anchor the regex to the exact specifier so no other import is intercepted.
     const filter = new RegExp(
       `^${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
@@ -1030,6 +1033,8 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   const serverRegRel = FILTERED_SERVER_REGISTRY(opts.composition);
   const webRegRel = FILTERED_WEB_REGISTRY(opts.composition);
   const filteredServerReg = join(root, serverRegRel);
+  const machineRegRel = FILTERED_MACHINE_REGISTRY(opts.composition);
+  const filteredMachineReg = join(root, machineRegRel);
   const filteredWebReg = join(root, webRegRel);
   if (!existsSync(filteredServerReg)) {
     console.error(
@@ -1039,6 +1044,10 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   }
   if (!existsSync(filteredWebReg)) {
     console.error(`Composition build did not produce ${webRegRel}.`);
+    process.exit(1);
+  }
+  if (!existsSync(filteredMachineReg)) {
+    console.error(`Composition build did not produce ${machineRegRel}.`);
     process.exit(1);
   }
 
@@ -1098,10 +1107,10 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
     root,
     platform,
     registries,
-    aliasOverride: {
-      alias: "@composition-server-registry",
-      target: filteredServerReg,
-    },
+    aliasOverrides: [
+      { alias: "@composition-server-registry", target: filteredServerReg },
+      { alias: "@composition-machine-registry", target: filteredMachineReg },
+    ],
   });
 
   console.log("  • launcher");
