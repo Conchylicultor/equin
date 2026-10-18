@@ -239,7 +239,9 @@ export interface RowDropPlace {
 }
 
 /** Where a drop over a row lands: into the row (`placement: "into"`), or
- *  in the gap before / after it (`placement: "between"`). */
+ *  in the gap before / after it (`placement: "between"`). A gap has ONE
+ *  spelling: `"after"` the row painted above it, `"before"` only for a
+ *  section's first row (the gap above it has no row above). */
 export type RowDropEdge = "into" | "before" | "after";
 
 /**
@@ -249,7 +251,9 @@ export type RowDropEdge = "into" | "before" | "after";
  * highlighted (the drop-into ring) and takes the drop. **`"between"`**: the
  * drop goes in the gap above or below the row under the pointer (its nearer
  * half), drawn as an insertion line there — for an ordered list the drop is
- * inserted into (a sidebar's Favorites).
+ * inserted into (a sidebar's Favorites). The gap between two rows is one
+ * target whichever of them the pointer is over: `accepts` / `onDrop` see it
+ * as `"after"` the upper row, and one line is drawn for it.
  *
  * A row that does not accept lets the drop fall through to `background`; with
  * nothing accepting the pointer shows no-drop. Under a hierarchy (the nested
@@ -279,7 +283,9 @@ export interface RowDropConfig<TRow> {
   placement?: "into" | "between";
   /** The view's empty space — between and around the rows (a non-accepting
    *  row's area included); per group-by section in a list. Under
-   *  `"between"` it reads as the gap after the section's last row. */
+   *  `"between"` it is the gap after the section's last row — that row's
+   *  own `"after"` gap when the row accepts it (the same target, line and
+   *  `onDrop` as the row's lower half), else this handler's. */
   background?: {
     accepts: (types: readonly string[], at: RowDropPlace) => boolean;
     onDrop: (

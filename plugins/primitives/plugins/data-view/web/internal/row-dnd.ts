@@ -73,6 +73,15 @@ export interface RowDndHierarchy<TRow> {
   rowOf: (key: string) => TRow | undefined;
 }
 
+/** A `"between"` view's rows as painted, by key — what gives a gap its one
+ *  spelling: the gap above a row is the one after the row above it. */
+export interface RowDndSequence<TRow> {
+  /** The row painted just above `key` in its section; `null` for a
+   *  section's first row. */
+  above: (key: string) => string | null;
+  rowOf: (key: string) => TRow | undefined;
+}
+
 /**
  * One view's native row drag and drop (`rowDrag` / `rowDrop`): the handlers
  * its rows and its empty space spread, and where the drag is (read per row by
@@ -104,8 +113,9 @@ export const DROP_TARGET_RING = "ring-1 ring-primary/40";
  *  folder reads as the target, not just its row. */
 export const DROP_TARGET_WASH = "bg-primary/5";
 
-/** Where a drop over this row lands: through the row's nearer half under
- *  `"between"`. */
+/** Which half of the row the pointer is in, under `"between"` — the gap
+ *  above or below it, before {@link RowDnd}'s resolver gives it its one
+ *  spelling. */
 function edgeAt(e: DragEvent<HTMLElement>): "before" | "after" {
   const box = e.currentTarget.getBoundingClientRect();
   return e.clientY < box.top + box.height / 2 ? "before" : "after";
@@ -131,6 +141,12 @@ function dropContext(
   };
 }
 
+/** Who set the current drop target — only its own leave clears it (the next
+ *  target's enter comes before). */
+const rowSetter = (key: string) => `row:${key}`;
+const backgroundSetter = (group: string | null) =>
+  `background:${JSON.stringify(group)}`;
+
 /** The resolved target of a drag over one row. */
 type RowTarget =
   | { kind: "row"; key: string; row: unknown; edge: RowDropEdge }
@@ -146,7 +162,9 @@ type RowTarget =
  *   than one draws an "N items" drag image.
  * - **Drop on a row.** An accepting row (`rowDrop.accepts`) takes the drop and
  *   stops it there — into it, or under `"between"` at the gap of its nearer
- *   half. With `hierarchy`, a row that does not accept hands it to its nearest
+ *   half — ONE gap between two rows, spelled `"after"` the upper one (from
+ *   `sequence`), so the pointer crossing from one row into the other moves
+ *   neither the target nor the line. With `hierarchy`, a row that does not accept hands it to its nearest
  *   accepting ancestor, a root's to the empty space. Without, any other row
  *   lets it fall through to the empty space, and with nothing accepting the
  *   cursor says no-drop (`dropEffect: "none"`).
@@ -161,6 +179,8 @@ export function useRowDnd<TRow>(args: {
   rowDrop: ViewRowDropConfig<TRow> | undefined;
   dragRows: (key: string) => readonly { key: string; row: TRow }[];
   hierarchy?: RowDndHierarchy<TRow>;
+  /** The rows as painted — required under `placement: "between"`. */
+  sequence?: RowDndSequence<TRow>;
   spring?: { open: SpringOpen; springable: (key: string) => boolean };
   /** The view's ACTIVE manual order (`DataViewRenderProps.manualOrder`:
    *  absent while a sort overrides it) — a `"between"` drop's
@@ -170,13 +190,18 @@ export function useRowDnd<TRow>(args: {
   const latest = useLatestRef(args);
   // The keys THIS view is dragging: none of them may take its own drop.
   const dragging = useRef<ReadonlySet<string>>(new Set());
-  // The row whose hover set the target (it may name an ancestor): only its
-  // own leave clears it — the next row's enter comes before.
+  // Who set the target (`rowSetter` / `backgroundSetter`; a row's may name
+  // an ancestor or the gap above it): only its own leave clears it.
   const hoveredBy = useRef<string | null>(null);
   const hasDrag = args.rowDrag !== undefined;
   const hasDrop = args.rowDrop !== undefined;
   const hasBackground = args.rowDrop?.background !== undefined;
   const placement = args.rowDrop?.placement ?? "into";
+  if (placement === "between" && args.sequence === undefined) {
+    throw new Error(
+      'data-view useRowDnd: placement "between" needs `sequence` — a gap is spelled by the row painted above it',
+    );
+  }
   const dnd = useMemo<RowDnd<TRow>>(() => {
     const store = createDropOverStore();
     const effect = () => latest.current.rowDrop?.dropEffect ?? "move";
@@ -205,6 +230,34 @@ export function useRowDnd<TRow>(args: {
       return home;
     };
 
+    // The gap at `edge` of `key`, in its one spelling: the gap above a row
+    // that has a row above it is that row's `"after"`.
+    const resolveGap = (
+      key: string,
+      row: TRow | undefined,
+      edge: "before" | "after",
+      t: readonly string[],
+    ): RowTarget => {
+      const { rowDrop, sequence } = latest.current;
+      if (!rowDrop) return { kind: "none" };
+      let at = key;
+      let atRow = row;
+      let side = edge;
+      const above = edge === "before" ? (sequence?.above(key) ?? null) : null;
+      if (above !== null) {
+        at = above;
+        atRow = sequence?.rowOf(above);
+        side = "after";
+      }
+      if (
+        atRow !== undefined &&
+        !dragging.current.has(at) &&
+        rowDrop.accepts(atRow, t, side)
+      )
+        return { kind: "row", key: at, row: atRow, edge: side };
+      return { kind: "background" };
+    };
+
     const resolveRow = (
       key: string,
       row: TRow,
@@ -213,12 +266,7 @@ export function useRowDnd<TRow>(args: {
       const { rowDrop, hierarchy } = latest.current;
       if (!rowDrop) return { kind: "none" };
       const t = types(e);
-      if (placement === "between") {
-        const edge = edgeAt(e);
-        if (!dragging.current.has(key) && rowDrop.accepts(row, t, edge))
-          return { kind: "row", key, row, edge };
-        return { kind: "background" };
-      }
+      if (placement === "between") return resolveGap(key, row, edgeAt(e), t);
       if (!hierarchy) {
         if (!dragging.current.has(key) && rowDrop.accepts(row, t, "into"))
           return { kind: "row", key, row, edge: "into" };
@@ -262,6 +310,42 @@ export function useRowDnd<TRow>(args: {
       latest.current.spring?.open.hover(null, false);
     };
 
+    // A drag over a row target (from a row, or a gap's trailing empty space).
+    const overRow = (
+      target: RowTarget & { kind: "row" },
+      e: DragEvent<HTMLElement>,
+      setter: string,
+    ) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = effect();
+      store.set({ kind: "row", key: target.key, edge: target.edge });
+      hoveredBy.current = setter;
+      const spring = latest.current.spring;
+      spring?.open.hover(target.key, spring.springable(target.key));
+    };
+
+    const dropOnRow = (
+      target: RowTarget & { kind: "row" },
+      e: DragEvent<HTMLElement>,
+    ) => {
+      e.preventDefault();
+      e.stopPropagation();
+      finish(target.key);
+      const { rowDrop, order } = latest.current;
+      if (rowDrop)
+        void rowDrop.onDrop(
+          target.row as TRow,
+          e.dataTransfer,
+          target.edge,
+          dropContext(
+            order as ManualOrderConfig<unknown> | undefined,
+            target.key,
+            target.edge,
+          ),
+        );
+    };
+
     const rowProps = (key: string, row: TRow): RowDndProps => {
       const props: RowDndProps = {};
       if (hasDrag) {
@@ -295,39 +379,17 @@ export function useRowDnd<TRow>(args: {
             }
             return;
           }
-          e.preventDefault();
-          e.stopPropagation();
-          e.dataTransfer.dropEffect = effect();
-          store.set({ kind: "row", key: target.key, edge: target.edge });
-          hoveredBy.current = key;
-          const spring = latest.current.spring;
-          spring?.open.hover(target.key, spring.springable(target.key));
+          overRow(target, e, rowSetter(key));
         };
         props.onDragEnter = onOver;
         props.onDragOver = onOver;
         props.onDragLeave = (e) => {
           if (leftFor(e)) return;
-          if (store.get()?.kind === "row" && hoveredBy.current === key)
-            store.set(null);
+          if (hoveredBy.current === rowSetter(key)) store.set(null);
         };
         props.onDrop = (e) => {
           const target = resolveRow(key, row, e);
-          if (target.kind !== "row") return;
-          e.preventDefault();
-          e.stopPropagation();
-          finish(target.key);
-          const { rowDrop, order } = latest.current;
-          if (rowDrop)
-            void rowDrop.onDrop(
-              target.row as TRow,
-              e.dataTransfer,
-              target.edge,
-              dropContext(
-                order as ManualOrderConfig<unknown> | undefined,
-                target.key,
-                target.edge,
-              ),
-            );
+          if (target.kind === "row") dropOnRow(target, e);
         };
       }
       return props;
@@ -338,11 +400,26 @@ export function useRowDnd<TRow>(args: {
       lastKey: string | null,
     ): DropTargetProps | undefined => {
       if (!hasBackground) return undefined;
+      const setter = backgroundSetter(group);
+      // Under `"between"` the space after the rows is the last row's own
+      // `"after"` gap — one target, one line — when that row takes it.
+      const endGap = (e: DragEvent<HTMLElement>) => {
+        if (placement !== "between" || lastKey === null) return null;
+        const target = resolveGap(
+          lastKey,
+          latest.current.sequence?.rowOf(lastKey),
+          "after",
+          types(e),
+        );
+        return target.kind === "row" ? target : null;
+      };
       // The roots' own parent is no drop for rows already there.
       const accepts = (e: DragEvent<HTMLElement>) =>
         draggedHome() !== null &&
         (latest.current.rowDrop?.background?.accepts(types(e), group) ?? false);
       const onOver = (e: DragEvent<HTMLElement>) => {
+        const gap = endGap(e);
+        if (gap) return overRow(gap, e, setter);
         latest.current.spring?.open.hover(null, false);
         if (!accepts(e)) {
           e.dataTransfer.dropEffect = "none";
@@ -352,17 +429,18 @@ export function useRowDnd<TRow>(args: {
         e.preventDefault();
         e.dataTransfer.dropEffect = effect();
         store.set({ kind: "background", group });
+        hoveredBy.current = setter;
       };
       return {
         onDragEnter: onOver,
         onDragOver: onOver,
         onDragLeave: (e) => {
           if (leftFor(e)) return;
-          const over = store.get();
-          if (over?.kind === "background" && over.group === group)
-            store.set(null);
+          if (hoveredBy.current === setter) store.set(null);
         },
         onDrop: (e) => {
+          const gap = endGap(e);
+          if (gap) return dropOnRow(gap, e);
           if (!accepts(e)) return;
           e.preventDefault();
           finish(null);

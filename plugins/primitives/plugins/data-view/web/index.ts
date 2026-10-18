@@ -145,6 +145,7 @@ export type {
   RowDnd,
   RowDndHierarchy,
   RowDndProps,
+  RowDndSequence,
 } from "./internal/row-dnd";
 export { DropBackground, DropInsertLine } from "./components/drop-background";
 export { defineItemActions } from "./internal/define-item-actions";

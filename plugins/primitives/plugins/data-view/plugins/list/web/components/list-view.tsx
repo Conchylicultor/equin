@@ -46,6 +46,7 @@ import {
   type ItemActionsDescriptor,
   type ManualOrderConfig,
   type RowDnd,
+  type RowDndSequence,
   type ViewRowDropConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import {
@@ -299,6 +300,12 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // The host hands a fresh `setExpanded` closure each render; only a click
   // calls it, so a stable identity keeps it out of the rows' memo key.
   const setExpanded = useEventCallback(props.setExpanded);
+  // The rows as painted, per section: a `"between"` drop's gap is spelled by
+  // the row above it, so the gap between two rows is one target and one line.
+  const sequence = useMemo<RowDndSequence<unknown>>(
+    () => paintedSequence(sections),
+    [sections],
+  );
   // Rows and each section's empty space as native drop targets. A list row is
   // no native drag source: its drag is the manual order's reorder.
   const dnd = useRowDnd<unknown>({
@@ -307,6 +314,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     dragRows: () => [],
     // A drop in a gap inserts there in the manual order, when one is active.
     order: manualOrder,
+    sequence,
   });
 
   const { properties } = props.state;
@@ -908,4 +916,24 @@ function manualOrderItems(
       return rank != null ? [{ id: entry.key, rank, group: section.key }] : [];
     }),
   );
+}
+
+/** Each painted row's neighbour above it in its section, and its row. */
+function paintedSequence(
+  sections: readonly DataViewSection<unknown>[],
+): RowDndSequence<unknown> {
+  const above = new Map<string, string | null>();
+  const rows = new Map<string, unknown>();
+  for (const section of sections) {
+    let prev: string | null = null;
+    for (const entry of section.entries) {
+      above.set(entry.key, prev);
+      rows.set(entry.key, entry.row);
+      prev = entry.key;
+    }
+  }
+  return {
+    above: (key) => above.get(key) ?? null,
+    rowOf: (key) => rows.get(key),
+  };
 }

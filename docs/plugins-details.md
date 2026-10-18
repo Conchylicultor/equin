@@ -36474,6 +36474,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RowDnd`
           - `RowDndHierarchy`
           - `RowDndProps`
+          - `RowDndSequence`
           - `RowDragConfig`
           - `RowDropConfig`
           - `RowDropContext`
@@ -36944,8 +36945,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 51 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
-              - `primitives/data-view` ×31
+            - Uses: 52 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+              - `primitives/data-view` ×32
               - `primitives/rank-reorder` ×3
               - `primitives/css/spacing` ×2
               - `primitives/collapsible.FoldMotion`

@@ -1632,6 +1632,16 @@ hoist — it works under any field sort, and it is the path to OS drag-out.
   tree's insertion line (`DropInsertLine`), never a ring — a ring there reads
   as "into this row". `accepts` sees the edge, so a list can refuse a gap.
   List view takes either; the nested table drops into.
+- **A gap has one spelling.** The gap between two rows is reachable from the
+  lower half of the upper row and the upper half of the lower one; spelled
+  per row, it was two targets drawn on two edges, and the line hopped as the
+  pointer crossed the boundary. So `useRowDnd` resolves every gap to `"after"`
+  the row painted above it (`"before"` only for a section's first row), and
+  the section's trailing empty space to its last row's `"after"` when that
+  row accepts — one store value, one line, one `accepts` / `onDrop` call per
+  gap. The view says what "above" is: `sequence: RowDndSequence`
+  (`above(key)`, `rowOf(key)`, its sections' entries as painted), required
+  under `"between"` (it throws without).
 - **The drop lands where the line was.** Under `"between"`, while the view
   renders in its manual order (no sort overrides it) and that order has
   `onInsert`, `ctx.order.insert(keys)` places those row keys, in order, in
@@ -2775,6 +2785,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `RowDnd`
     - `RowDndHierarchy`
     - `RowDndProps`
+    - `RowDndSequence`
     - `RowDragConfig`
     - `RowDropConfig`
     - `RowDropContext`
