@@ -201,7 +201,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`
   - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/server/internal/tables.ts`
-  - Entity extension of: `apps/sonata/library` (table `library_ext_rhythm`)
+  - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_rhythm`)
   - Exports (values): `songRhythm`
   - Resources: `sonata-rhythm:rows` (keyed, point)
   - Routes: `POST /api/sonata/songs/:id/rhythm`

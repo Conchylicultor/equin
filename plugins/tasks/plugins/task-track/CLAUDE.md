@@ -91,7 +91,7 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
   - DB schema:
     - `plugins/tasks/plugins/task-track/server/internal/tables-events.ts`
     - `plugins/tasks/plugins/task-track/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_track`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_track`)
   - Exports (types):
     - `SidequestTask`
     - `TaskTrackChangedPayload`

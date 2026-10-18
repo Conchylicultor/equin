@@ -5,12 +5,10 @@ import {
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
 import {
-  attemptDeliveryFields,
-  pushFields,
-  taskDependencyFields,
-} from "../../core/internal/fields";
-import {
+  attemptDeliveriesEntityRef,
   attemptsEntityRef,
+  pushesEntityRef,
+  taskDependenciesEntityRef,
   conversationsEntityRef,
   tasksEntityRef,
 } from "../../core/entity-refs";
@@ -108,26 +106,22 @@ const attemptsEntity = defineEntity(attemptsEntityRef, {
 });
 export const _attempts = attemptsEntity.table;
 
-const taskDependenciesEntity = defineEntity(
-  "task_dependencies",
-  taskDependencyFields,
-  {
-    primaryKey: ["taskId", "dependsOnTaskId"],
-    columns: {
-      taskId: {
-        references: { column: () => tasksEntity.table.id, onDelete: "cascade" },
-      },
-      dependsOnTaskId: {
-        references: { column: () => tasksEntity.table.id, onDelete: "cascade" },
-      },
-      createdAt: { default: defaultNow() },
+const taskDependenciesEntity = defineEntity(taskDependenciesEntityRef, {
+  primaryKey: ["taskId", "dependsOnTaskId"],
+  columns: {
+    taskId: {
+      references: { column: () => tasksEntity.table.id, onDelete: "cascade" },
     },
-    indexes: (t) => [index("task_deps_depends_on_idx").on(t.dependsOnTaskId)],
+    dependsOnTaskId: {
+      references: { column: () => tasksEntity.table.id, onDelete: "cascade" },
+    },
+    createdAt: { default: defaultNow() },
   },
-);
+  indexes: (t) => [index("task_deps_depends_on_idx").on(t.dependsOnTaskId)],
+});
 export const _taskDependencies = taskDependenciesEntity.table;
 
-const pushesEntity = defineEntity("pushes", pushFields, {
+const pushesEntity = defineEntity(pushesEntityRef, {
   primaryKey: "id",
   columns: {
     attemptId: {
@@ -152,22 +146,18 @@ export const pushes = pushesEntity.table;
 
 // A non-push delivery (see `attemptDeliveryFields`): keyed by the attempt, so
 // recording it twice is an upsert, never a second fact.
-const attemptDeliveriesEntity = defineEntity(
-  "attempt_deliveries",
-  attemptDeliveryFields,
-  {
-    primaryKey: "attemptId",
-    columns: {
-      attemptId: {
-        references: {
-          column: () => attemptsEntity.table.id,
-          onDelete: "cascade",
-        },
+const attemptDeliveriesEntity = defineEntity(attemptDeliveriesEntityRef, {
+  primaryKey: "attemptId",
+  columns: {
+    attemptId: {
+      references: {
+        column: () => attemptsEntity.table.id,
+        onDelete: "cascade",
       },
-      deliveredAt: { default: defaultNow() },
     },
+    deliveredAt: { default: defaultNow() },
   },
-);
+});
 export const _attemptDeliveries = attemptDeliveriesEntity.table;
 
 const conversationsEntity = defineEntity(conversationsEntityRef, {

@@ -44,7 +44,7 @@ tuples that read the join.
     - `infra/entity-extensions.defineExtension`
     - `network/live.LiveColumns`
   - DB schema: `plugins/apps/plugins/sonata/plugins/playback-history/server/internal/tables.ts`
-  - Entity extension of: `apps/sonata/library` (table `library_ext_playback`)
+  - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_playback`)
   - Exports (values): `songPlayback`
   - Routes: `POST /api/sonata/songs/:id/play`
 - Cross-plugin:

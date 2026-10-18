@@ -133,9 +133,9 @@ a steady-state reboot writes nothing).
 - Core:
   - Uses:
     - `fields/string-list/config.stringListField`
-    - `fields/text/config.textField`
     - `network/live.liveCollection`
     - `network/live.liveValue`
+    - `page/block-entity.pagesEntityRef`
     - `ui/icons/emoji.EmojiSchema`
   - Exports (types):
     - `BacklinkRow`

@@ -2,7 +2,7 @@ import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
-import { bookmarkFields } from "../../core";
+import { browserBookmarksEntityRef } from "../../core";
 
 // `browser_bookmarks`: one row per bookmarked URL, ordered by createdAt asc in
 // the bookmarks bar. A plain table (not an entity extension) — bookmarks have
@@ -11,7 +11,7 @@ import { bookmarkFields } from "../../core";
 // The table + the `BookmarkRow` wire schema both derive from the single
 // `bookmarkFields` record (core), so a column/schema drift is unrepresentable
 // and `serveCollection` binds every row field to its column by name.
-const browserBookmarks = defineEntity("browser_bookmarks", bookmarkFields, {
+const browserBookmarks = defineEntity(browserBookmarksEntityRef, {
   primaryKey: "id",
   columns: {
     createdAt: { default: defaultNow() },

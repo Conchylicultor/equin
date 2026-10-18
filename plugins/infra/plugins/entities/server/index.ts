@@ -23,6 +23,7 @@ export type {
   EntityColumns,
   EntityReference,
   EntityRow,
+  EntityTable,
   DefaultedKeys,
   ServerOnlyKeys,
   ColumnDefault,

@@ -152,10 +152,26 @@ useLive(graphNodes, { select: countNodes });                          // a slice
   vocabulary (`tooling/resource-vocabulary`: each factory names the field it
   spells its preload with, and each mint whether the flag reaches it).
 - **Serve.** `serveCollection(c, { from, joins?, where?, columns? })` binds every ROW
-  field to a column of `from` (a `PgTable`, or an Entity's wire columns) BY
+  field to a column of `from` (an Entity's wire columns, or the table a
+  `defineEntity` built) BY
   PROPERTY NAME — type-checked: a field that is not a column fails in `tsc` until
   it is given in `columns: { name: (j) => j.base.col }` (and throws at module eval
   if it still binds nowhere).
+  - **A served collection reads the entity it is `from`.** `from` is
+    `ServedSource` — an Entity, an extension handle, or the `EntityTable` a
+    `defineEntity` built (a type-only brand): a raw `pgTable` is a tsc error,
+    so the table behind a list always has an entity. At serve time
+    `assertServesItsRows` (`server/internal/collection-source.ts`) throws
+    unless the collection's `rowsFrom` (its declared `from`) names the table
+    it reads — an entity ref by name, an extension shape by the served
+    extension's wire schema — so a collection over a table never restates its
+    entity's fields: it picks them (`from: ref, pick`), and its own `fields`
+    are only what it computes or decodes (a stored rank key carried as the
+    wire `Rank`). A collection declared by its own fields alone is served
+    from outside Postgres (`source: "external"`) or is a union. A union arm
+    is held to the same rule (`served.arm` takes an `EntityTable` and throws
+    unless `liveArm({ from })` names it). `compileCollection` /
+    `compileUnion` — test derivations — take any table.
   - **Joins.** `joins: [songPlayback.join("playback"), lookup, keyedSide]`
     reads other tables beside `from` (the vocabulary, its routes and checks:
     `plugins/infra/plugins/query-resource/CLAUDE.md`, *Joins*). A joined column
@@ -354,6 +370,13 @@ useLive(graphNodes, { select: countNodes });                          // a slice
       collection (throw only), a stray answer for the form (`window` on a
       lookup, `count` without `count: true`), and an empty `changes`
       reason. Tests: `core/internal/serve-on.test.ts`.
+- **Collection rows are marked.** Every row a collection read hands out
+  (`useLive(c)` window / pages / `all` / `{ ids }`, `useLiveRow`) is typed
+  `CollectionRow<Row>` (`core/internal/collection-row.ts`): an optional,
+  type-only key, assignable wherever a `Row` is and kept by a spread. A
+  DataView's hand-`fields` arm takes `NotCollectionRow` rows only, so a list
+  over a collection's rows derives its fields (`collection=`) instead of
+  restating them.
 - **Read — `useLive(c, query?)`.** The query's SHAPE picks the resource; there is
   one hook for every list read, and a separate hook only where the result has
   different STATES (`useLiveRow`).
@@ -1851,6 +1874,7 @@ never add one.
     - `ServedPagedValue`
     - `ServedScopedColumns`
     - `ServedSilentPagedValue`
+    - `ServedSource`
     - `ServedUnion`
     - `ServedValue`
     - `ServePagedValueOptions`
@@ -1885,6 +1909,7 @@ never add one.
     - `ClientFieldsOwner`
     - `ClientFieldsOwnerRow`
     - `ClientFieldValue`
+    - `CollectionRow`
     - `ContributedColumns`
     - `DomainOfValue`
     - `ExternalAllCollection`
@@ -2001,6 +2026,7 @@ never add one.
     - `LiveWindowCodec`
     - `LiveWindowDescriptor`
     - `LiveWindowParams`
+    - `NotCollectionRow`
     - `RequireLabel`
     - `RowKind`
     - `ScopedColumnMember`

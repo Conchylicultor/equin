@@ -1,5 +1,10 @@
 import { entityRef } from "@plugins/infra/plugins/entities/core";
-import { eventFields, eventSourceFields, eventSourceRunFields } from "./fields";
+import {
+  eventFields,
+  eventSourceFields,
+  eventSourceRunEventFields,
+  eventSourceRunFields,
+} from "./fields";
 
 // The Events entities a list reads, by reference — what a browser-safe
 // declaration names them with (a collection's `from`, a presentation's
@@ -14,4 +19,8 @@ export const eventSourcesEntityRef = entityRef(
 export const eventSourceRunsEntityRef = entityRef(
   "event_source_runs",
   eventSourceRunFields,
+);
+export const eventSourceRunEventsEntityRef = entityRef(
+  "event_source_run_events",
+  eventSourceRunEventFields,
 );

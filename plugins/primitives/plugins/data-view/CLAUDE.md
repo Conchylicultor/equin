@@ -1873,6 +1873,13 @@ declaration order:
 5. else its type's contributed cell (`DataViewSlots.Cell`: a date is a ticking
    relative time, an enum a chip wearing its option's variant).
 
+**Hand `fields` over DB rows has no spelling** (tsc): the live origin and the
+in-memory `collection` arm say `fields?: never`, and the hand-`fields` arm
+types its rows `NotCollectionRow` — rows read from a collection (`useLive`,
+`useLiveRow` mark them `CollectionRow`, a spread keeps it) are refused there,
+so they are listed with `collection=` and derive their fields. Pinned by
+`core/internal/data-origin-types.test.ts` and `web/internal/body-types.test.ts`.
+
 A list then says only what it changes, by id — `overrides={fieldOverrides(
 collection, { status: { groupable: false } })}` (typed against the
 collection's field ids: an unknown id is a tsc error, and throws at mount) —

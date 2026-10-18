@@ -4,15 +4,15 @@ import {
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
 import {
-  mailAccountFields,
-  mailSyncStateFields,
-  mailLabelFields,
+  mailAccountsEntityRef,
+  mailSyncStateEntityRef,
+  mailLabelsEntityRef,
   mailThreadsEntityRef,
-  mailMessageFields,
-  mailMessageLabelFields,
-  mailAttachmentFields,
-  mailDraftFields,
-  mailOutboxFields,
+  mailMessagesEntityRef,
+  mailMessageLabelsEntityRef,
+  mailAttachmentsEntityRef,
+  mailDraftsEntityRef,
+  mailOutboxEntityRef,
 } from "../../core";
 
 // Physical tables for the mail app's local mirror of a Gmail mailbox, derived
@@ -31,7 +31,7 @@ import {
 // `columns.<key>.name`) to avoid the SQL reserved words `from`/`to`; the TS
 // property keys (`from`, `to`, `cc`, `bcc`, `replyTo`) stay readable.
 
-const mailAccounts = defineEntity("mail_accounts", mailAccountFields, {
+const mailAccounts = defineEntity(mailAccountsEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). Profile columns count; identity does not.
@@ -52,7 +52,7 @@ const mailAccounts = defineEntity("mail_accounts", mailAccountFields, {
   },
 });
 
-const mailSyncState = defineEntity("mail_sync_state", mailSyncStateFields, {
+const mailSyncState = defineEntity(mailSyncStateEntityRef, {
   primaryKey: "accountId",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). The user-visible sync status counts; the engine's watermarks
@@ -86,7 +86,7 @@ const mailSyncState = defineEntity("mail_sync_state", mailSyncStateFields, {
   },
 });
 
-const mailLabels = defineEntity("mail_labels", mailLabelFields, {
+const mailLabels = defineEntity(mailLabelsEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). Every Gmail label attribute counts, so an identical re-upsert
@@ -183,7 +183,7 @@ const mailThreads = defineEntity(mailThreadsEntityRef, {
   ],
 });
 
-const mailMessages = defineEntity("mail_messages", mailMessageFields, {
+const mailMessages = defineEntity(mailMessagesEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). Content, envelope and flags count; the `bodyFetchedAt` hydration
@@ -246,10 +246,7 @@ const mailMessages = defineEntity("mail_messages", mailMessageFields, {
   ],
 });
 
-const mailMessageLabels = defineEntity(
-  "mail_message_labels",
-  mailMessageLabelFields,
-  {
+const mailMessageLabels = defineEntity(mailMessageLabelsEntityRef, {
     primaryKey: ["messageId", "labelId"],
     columns: {
       messageId: {
@@ -267,7 +264,7 @@ const mailMessageLabels = defineEntity(
   },
 );
 
-const mailAttachments = defineEntity("mail_attachments", mailAttachmentFields, {
+const mailAttachments = defineEntity(mailAttachmentsEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). Every attachment attribute counts, including the local
@@ -306,7 +303,7 @@ const mailAttachments = defineEntity("mail_attachments", mailAttachmentFields, {
   indexes: (t) => [index("mail_attachments_message_id_idx").on(t.messageId)],
 });
 
-const mailDrafts = defineEntity("mail_drafts", mailDraftFields, {
+const mailDrafts = defineEntity(mailDraftsEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). Every draft field counts; identity does not. (No writers yet.)
@@ -348,7 +345,7 @@ const mailDrafts = defineEntity("mail_drafts", mailDraftFields, {
   },
 });
 
-const mailOutbox = defineEntity("mail_outbox", mailOutboxFields, {
+const mailOutbox = defineEntity(mailOutboxEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). Every op field counts, retries included (the outbox IS the

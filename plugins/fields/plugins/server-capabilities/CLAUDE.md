@@ -32,13 +32,25 @@ export type StorageColumnFor<V> = PgColumnBuilderBase<
 >;
 
 export type FieldStorageContribution<B = unknown> = { type: FieldType<B> } & (
-  | { build: (name: string) => StorageColumnFor<B>; decode?: never }
+  | { build: (name: string) => StorageColumnFor<B>; decode?: never; stored?: never }
   | {
       decode: <V extends B>(name: string, valueSchema: ZodParser<V>) => StorageColumnFor<V>;
       build?: never;
+      stored?: never;
+    }
+  | {
+      // The column stores ANOTHER value; `B` is its declared wire form
+      // (sql-column `withWire`) — the `bytes` type's `bytea`, under base64.
+      stored: (name: string) => WithWire<PgColumnBuilderBase, B>;
+      build?: never;
+      decode?: never;
     }
 );
 ```
+
+A `stored` type's field def is marked `StoredAs<S>` (fields/core), which is
+what an entity's table types the column by (see infra/entities, "The storage
+arms").
 
 The signature it replaced — `(name: string) => PgColumnBuilderBase` — lost both
 halves: it never saw the schema, so it *could not* decode, and its return type
@@ -126,6 +138,7 @@ the live registry suffices.)
   - Imported by:
     - `fields/bool/storage`
     - `fields/bool/text-cast`
+    - `fields/bytes/storage`
     - `fields/date/storage`
     - `fields/date/text-cast`
     - `fields/float/storage`

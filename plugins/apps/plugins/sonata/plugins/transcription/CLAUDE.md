@@ -112,7 +112,7 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `infra/mcp.Mcp`
     - `network/live.LiveColumns`
   - DB schema: `plugins/apps/plugins/sonata/plugins/transcription/server/internal/tables.ts`
-  - Entity extension of: `apps/sonata/library` (table `library_ext_transcription`)
+  - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_transcription`)
   - Register:
     - `defineJob('sonata.transcription.conversation-status')`
     - `mcpTool('sonata_submit_transcription')`

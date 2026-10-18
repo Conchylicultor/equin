@@ -225,15 +225,18 @@ describe("defineExtension — exposes", () => {
         },
       }),
     );
+    // Not "origin": `tasks_ext_origin` is a real extension's table, and the
+    // derived-updatedAt registry is process-wide — a run that also loads it
+    // would see one table declared twice.
     const origin = defineExtension(
       tasks,
-      "origin",
+      "probe_origin",
       defineExtensionShape({
         key: "taskId",
         fields: {},
         exposes: {
           parent: tasksRef,
-          name: "origin",
+          name: "probe_origin",
           presence: {
             id: "origin",
             label: "Origin",

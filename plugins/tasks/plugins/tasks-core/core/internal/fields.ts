@@ -85,7 +85,7 @@ export const taskDependencyFields = {
 
 export const pushFields = {
   id: textField(),
-  attemptId: textField(),
+  attemptId: textField({ label: "Attempt" }),
   // Soft attribution to the conversation that ran the push (no FK).
   conversationId: nullable(textField()),
   sha: textField(),

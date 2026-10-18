@@ -42,6 +42,8 @@ type Rejects<A, B> = [A] extends [B] ? false : true;
 type Accepts<A, B> = [A] extends [B] ? true : false;
 
 type Base = { fields: FieldDef<Thread>[]; storageKey: DataViewId };
+/** A live origin's base: its fields are its collection's. */
+type LiveBase = Omit<Base, "fields">;
 type Source = LiveDataSource<Thread>;
 type RowKey = (row: Thread, index: number) => string;
 type Props = DataViewProps<Thread>;
@@ -50,41 +52,43 @@ type Bundle = DataViewSourceBundle<Thread>;
 // Each origin, alone, is accepted.
 const inMemory: Accepts<Base & { rows: Thread[]; rowKey: RowKey }, Props> =
   true;
-const live: Accepts<Base & { source: Source }, Props> = true;
-const liveBundle: Accepts<
-  Omit<Base, "storageKey"> & { source: Source },
-  Bundle
-> = true;
+const live: Accepts<LiveBase & { source: Source }, Props> = true;
+const liveBundle: Accepts<{ source: Source }, Bundle> = true;
+// A live source derives its fields from its collection: hand `fields` beside
+// one has no spelling.
+const fieldsBesideSource: Rejects<Base & { source: Source }, Props> = true;
 
 // Stand-ins beside a live origin.
 const rowsBesideSource: Rejects<
-  Base & { source: Source; rows: Thread[] },
+  LiveBase & { source: Source; rows: Thread[] },
   Props
 > = true;
 const readinessBesideSource: Rejects<
-  Base & { source: Source; readiness: ResourceReadiness },
+  LiveBase & { source: Source; readiness: ResourceReadiness },
   Props
 > = true;
 const twoOrigins: Rejects<
-  Base & { source: Source; rows: Thread[]; rowKey: RowKey },
+  LiveBase & { source: Source; rows: Thread[]; rowKey: RowKey },
   Props
 > = true;
 
 // What a live source refuses: its row key is its collection's id, a tree over
 // a paged set orphans children, a rank would reorder server-sorted segments,
 // and search is the source's `searchable`.
-const rowKeyOnLive: Rejects<Base & { source: Source; rowKey: RowKey }, Props> =
-  true;
+const rowKeyOnLive: Rejects<
+  LiveBase & { source: Source; rowKey: RowKey },
+  Props
+> = true;
 const hierarchyOnLive: Rejects<
-  Base & { source: Source; hierarchy: HierarchyConfig<Thread> },
+  LiveBase & { source: Source; hierarchy: HierarchyConfig<Thread> },
   Props
 > = true;
 const manualOrderOnLive: Rejects<
-  Base & { source: Source; manualOrder: ManualOrderConfig<Thread> },
+  LiveBase & { source: Source; manualOrder: ManualOrderConfig<Thread> },
   Props
 > = true;
 const searchAccessorOnLive: Rejects<
-  Base & { source: Source; searchAccessor: (row: Thread) => string },
+  LiveBase & { source: Source; searchAccessor: (row: Thread) => string },
   Props
 > = true;
 
@@ -142,6 +146,7 @@ describe("DataView data origin (type-level)", () => {
         inMemory,
         live,
         liveBundle,
+        fieldsBesideSource,
         rowsBesideSource,
         readinessBesideSource,
         twoOrigins,

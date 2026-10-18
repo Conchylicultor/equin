@@ -15,7 +15,6 @@
 
 import { describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { nullable } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import {
@@ -23,6 +22,7 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { defineEntity } from "@plugins/infra/plugins/entities/server";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { expr } from "@plugins/infra/plugins/query-resource/core";
@@ -46,12 +46,10 @@ const noteFields = {
   updatedAt: dateField({ label: "Updated" }),
 };
 const notesEntity = entityRef("ea_notes", noteFields);
-const notes = pgTable("ea_notes", {
-  id: text("id").primaryKey(),
-  title: text("title").notNull(),
-  mood: text("mood").$type<"calm" | "busy">().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-});
+const notes = defineEntity(notesEntity, {
+  primaryKey: "id",
+  updatedAt: { touchedBy: { id: false, title: true, mood: true } },
+}).table;
 
 const linkFields = {
   id: textField(),
@@ -60,12 +58,7 @@ const linkFields = {
   editedAt: dateField({ label: "Edited" }),
 };
 const linksEntity = entityRef("ea_links", linkFields);
-const links = pgTable("ea_links", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  url: text("url").notNull(),
-  editedAt: timestamp("edited_at", { withTimezone: true }).notNull(),
-});
+const links = defineEntity(linksEntity, { primaryKey: "id" }).table;
 
 // A note's extension, exposing one field (every list of notes shows it).
 const notePriority = defineExtension(
@@ -299,6 +292,32 @@ describe("an entity arm folds its entity's exposed fields", () => {
       columns: [priorityCols],
     });
     expect(() => compiled.window.validateParams!(filtered)).toThrow();
+  });
+
+  test("an arm declared by its own fields only is refused over a table", () => {
+    const bare = liveArm(activity, "bare", {
+      label: "Bare",
+      order: 40,
+      fields: { host: textField({ label: "Host" }) },
+    });
+    expect(() =>
+      served.arm(bare, {
+        from: notes,
+        id: notes.id,
+        base: (j) => ({
+          title: j.base.title,
+          updatedAt: j.base.updatedAt,
+          note: null,
+        }),
+        extra: () => ({
+          host: expr(sql`'x'`, {
+            decoder: String,
+            sqlType: "text",
+            notNull: true,
+          }),
+        }),
+      }),
+    ).toThrow(/declared by its own fields/);
   });
 
   test("two arms reaching one entity are refused", () => {

@@ -355,7 +355,9 @@ interface SectionActivation {
 /** All body hooks, unconditional — the only gate is the shell's placeholder
  *  early-return, which unmounts the whole body (a separate component). */
 function DataViewBodyInner<TRow>(
-  props: DataViewBodyProps<TRow> & {
+  // The origin's own `fields` (hand-declared, or `never` beside a collection)
+  // is replaced by the folded schema.
+  props: DistributiveOmit<DataViewBodyProps<TRow>, "fields"> & {
     /** The whole schema — derived, hand-declared and contributed, folded. */
     fields: FieldDef<TRow>[];
     /** The row key the origin implies (`rowKey`, or a live collection's id). */

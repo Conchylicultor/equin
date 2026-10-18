@@ -27,7 +27,10 @@ import type {
   LiveValue,
   LiveValueOrigin,
 } from "@plugins/network/plugins/live/core";
-import { isPointId } from "@plugins/network/plugins/live/core";
+import {
+  isPointId,
+  type CollectionRow,
+} from "@plugins/network/plugins/live/core";
 import {
   useAllPages,
   useValuePages,
@@ -248,7 +251,7 @@ type LiveValueRead<V, T, C extends string> = V extends SnapshotDecl
 export function useLive<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S>,
   query?: LiveQuery<F, S>,
-): LiveListResult<Row>;
+): LiveListResult<CollectionRow<Row>>;
 export function useLive<
   Row,
   F,
@@ -278,7 +281,7 @@ export function useLive<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S> | null,
   query: LivePagesQuery<F, S> | null,
   options: LivePagesOptions,
-): LivePagesResult<Row>;
+): LivePagesResult<CollectionRow<Row>>;
 /**
  * - `useLive(all)` — a collection declared `all`: every row, in its declared
  *   order, as `ResourceResult<Row[]>` (settled on its first render when the
@@ -299,7 +302,7 @@ export function useLive<Row, F, S extends string>(
  */
 export function useLive<Row>(
   collection: LiveAllCollection<Row>,
-): ResourceResult<Row[]>;
+): ResourceResult<CollectionRow<Row>[]>;
 export function useLive<Row, S>(
   collection: LiveAllCollection<Row>,
   options: LiveAllSelect<Row, S>,
@@ -307,7 +310,7 @@ export function useLive<Row, S>(
 export function useLive<Row>(
   collection: LiveRowsCollection<Row>,
   query: LiveIdsQuery,
-): ResourceResult<Row[]>;
+): ResourceResult<CollectionRow<Row>[]>;
 /**
  * - `useLive(value)` / `useLive(value, params)` — a declared `liveValue`:
  *   `ResourceResult<T>` (pending, then settled; settled on its first render
@@ -955,7 +958,7 @@ const NO_ID: LiveRowResult<never> = {
 export function useLiveRow<Row>(
   collection: LiveRowsCollection<Row>,
   id: string | null,
-): LiveRowResult<Row> {
+): LiveRowResult<CollectionRow<Row>> {
   const absent = id === null || !isPointId(id);
   const idsKey = absent ? null : collection.rows.point.encode([id]).ids;
   const params = useMemo(
@@ -966,7 +969,7 @@ export function useLiveRow<Row>(
   // The result keeps its identity until what it is built from changes, like
   // `useLive`'s list result: consumers memoize on it. `useResource`'s own
   // result changes only with its status / data / error / stale.
-  return useMemo((): LiveRowResult<Row> => {
+  return useMemo((): LiveRowResult<CollectionRow<Row>> => {
     // Determinate without the server: no (carriable) id names no row.
     if (absent) return NO_ID;
     const { refetch } = result;
@@ -975,7 +978,8 @@ export function useLiveRow<Row>(
         return result;
       case "error": {
         // A one-id tuple's payload is `[row]` or `[]` — its stale one included.
-        const stale = result.stale?.[0];
+        // Rows of a collection: the read's own (`CollectionRow`, type-only).
+        const stale = result.stale?.[0] as CollectionRow<Row> | undefined;
         return stale === undefined
           ? { status: "error", error: result.error, refetch }
           : {
@@ -986,7 +990,7 @@ export function useLiveRow<Row>(
             };
       }
       case "ready": {
-        const row = result.data[0];
+        const row = result.data[0] as CollectionRow<Row> | undefined;
         return row === undefined
           ? { status: "ready", found: false, refetch }
           : { status: "ready", found: true, row, refetch };

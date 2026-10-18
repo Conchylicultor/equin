@@ -78,7 +78,7 @@ Plan: `research/2026-09-29-page-emoji-page-icons.md` §4.
     - `page/editor.pageData`
     - `page/editor.setPageIcon`
   - DB schema: `plugins/apps/plugins/pages/plugins/auto-icon/server/internal/tables.ts`
-  - Entity extension of: `page/editor` (table `editor_ext_auto_icon`)
+  - Entity extension of: `page/editor` (table `page_blocks_ext_auto_icon`)
   - Register:
     - `defineJob('pages.auto-icon.generate')`
     - `defineJob('pages.auto-icon.schedule')`

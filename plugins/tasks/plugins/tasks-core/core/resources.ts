@@ -8,11 +8,11 @@ import {
   TASK_STATUS_OPTIONS,
   TaskStatusSchema,
 } from "./internal/schema";
-import { pushFields } from "./internal/fields";
 import { ConversationSummarySchema } from "./schemas";
 import {
   attemptsEntityRef,
   conversationsEntityRef,
+  pushesEntityRef,
   tasksEntityRef,
 } from "./entity-refs";
 import { nullable } from "@plugins/fields/core";
@@ -205,17 +205,13 @@ export const attemptWorkspaces = liveCollection("attempt-workspaces", {
 // `attempts` set does not read it: a push reaches its attempt through the
 // `attempt_push_agg` rollup's source route on `pushes`.
 export const pushRows = liveCollection("pushes", {
-  fields: { attemptId: textField({ label: "Attempt" }) },
+  from: pushesEntityRef,
+  pick: ["attemptId"],
   carry: {
-    fields: {
-      id: pushFields.id,
-      conversationId: pushFields.conversationId,
-      sha: pushFields.sha,
-      pushId: pushFields.pushId,
-      message: pushFields.message,
-      createdAt: pushFields.createdAt,
-    },
+    pick: ["id", "conversationId", "sha", "pushId", "message", "createdAt"],
   },
+  // Its wire rows stay the ledger's own columns: no extension exposes a push.
+  baseExposures: false,
   id: "id",
   sortable: ["createdAt"],
   default: { orderBy: [["createdAt", "desc"]], limit: 100 },

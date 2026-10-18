@@ -1,0 +1,7 @@
+{
+  "name": "@singularity/plugin-fields-bytes-config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Bytes field factory (bytesField) for building field records: a base64 wire value stored as bytes.",
+  "singularity": { "collapsed": true }
+}

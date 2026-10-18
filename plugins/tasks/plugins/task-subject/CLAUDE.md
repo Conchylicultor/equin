@@ -13,7 +13,7 @@
     - `network/live.serveValue`
     - `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-subject/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_subject`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_subject`)
   - Exports (values):
     - `findSubjectTask`
     - `setTaskSubject`

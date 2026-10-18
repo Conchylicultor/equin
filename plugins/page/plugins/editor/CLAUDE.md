@@ -4656,8 +4656,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `POST /api/pages/:pageId/blocks/op`
     - `POST /api/pages/:pageId/blocks/patch`
 - Core:
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×3
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×3
     - `primitives/collab-doc` ×3
     - `primitives/text-editor/token-extension` ×3
@@ -4666,7 +4665,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/rank` ×2
     - `fields/date/config.dateField`
     - `fields/rank/config.rankValueField`
-    - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `infra/endpoints.defineEndpoint`
     - `infra/trash.TrashOutcomeSchema`
@@ -4869,11 +4867,11 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives` ×2
     - `debug/slow-ops`
   - Extended by:
-    - `apps/pages/auto-icon` (table `editor_ext_auto_icon`)
-    - `apps/pages/agent-origin` (table `editor_ext_origin`)
-    - `apps/pages/starred` (table `editor_ext_starred`)
-    - `page/tags` (table `editor_ext_tags`)
-    - `page/annotations/todo/task-link` (table `editor_ext_todo_task`)
+    - `apps/pages/auto-icon` (table `page_blocks_ext_auto_icon`)
+    - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
+    - `apps/pages/starred` (table `page_blocks_ext_starred`)
+    - `page/tags` (table `page_blocks_ext_tags`)
+    - `page/annotations/todo/task-link` (table `page_blocks_ext_todo_task`)
   - Endpoint callers: `editor-collab`
 - Exemptions:
   - Exempts itself from:

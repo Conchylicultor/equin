@@ -100,8 +100,10 @@ import {
   type ServeAllCollectionOptions,
 } from "./serve-all";
 import {
+  assertServesItsRows,
   isEntitySource,
   type CollectionSource,
+  type ServedSource,
   type ColumnNamesOf,
   type ColumnsOf,
   type TableOf,
@@ -1111,7 +1113,7 @@ export function serveCollection<
   Row,
   F,
   S extends string,
-  T extends CollectionSource,
+  T extends ServedSource,
   const J extends readonly JoinSpec[] = readonly [],
 >(
   collection: SingleTableCollection<Row, F, S>,
@@ -1119,7 +1121,7 @@ export function serveCollection<
 ): ServedCollection<Row>;
 export function serveCollection<
   Row,
-  T extends CollectionSource,
+  T extends ServedSource,
   const J extends readonly AllJoinSpec[] = readonly [],
 >(
   collection: LiveAllCollection<Row>,
@@ -1127,7 +1129,7 @@ export function serveCollection<
 ): ServedAllCollection<Row>;
 export function serveCollection<
   Row,
-  T extends CollectionSource,
+  T extends ServedSource,
   const J extends readonly JoinSpec[] = readonly [],
 >(
   collection: LiveLookupCollection<Row>,
@@ -1137,7 +1139,7 @@ export function serveCollection<
   Row,
   F,
   S extends string,
-  T extends CollectionSource,
+  T extends ServedSource,
   const J extends readonly JoinSpec[] = readonly [],
 >(
   collection:
@@ -1172,6 +1174,9 @@ export function serveCollection<
       declare: external.resources.map((r) => ResourceContribution.Declare(r)),
     };
   }
+  // A table-backed collection reads the rows it is declared `from` — never a
+  // restatement of an entity's fields (`./collection-source`).
+  assertServesItsRows(collection, (served as { from: CollectionSource }).from);
   // First (C4): a collection declared `all` has no window either, so the
   // lookup-only branch below would serve it as `:rows` alone and never
   // register its `key`. Bound eagerly — unless it reaches exposures, whose

@@ -8,31 +8,32 @@
 
 import { describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
-import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { nullable } from "@plugins/fields/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { defineEntity } from "@plugins/infra/plugins/entities/server";
 import { expr } from "@plugins/infra/plugins/query-resource/core";
 import { liveArm } from "@plugins/network/plugins/live/core";
 import { runs } from "../../core";
 import { runsServed } from "./served";
 
-const ledger = pgTable("rt_type_runs", {
-  id: text("id").primaryKey(),
-  title: text("title").notNull(),
-  note: text("note"),
-  code: integer("code"),
-  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
-  finishedAt: timestamp("finished_at", { withTimezone: true }),
+const ledgerRef = entityRef("rt_type_runs", {
+  id: textField({ label: "Id" }),
+  title: textField({ label: "Title" }),
+  note: nullable(textField({ label: "Note" })),
+  code: nullable(intField({ label: "Code" })),
+  startedAt: dateField({ label: "Started" }),
+  finishedAt: nullable(dateField({ label: "Finished" })),
 });
+const ledger = defineEntity(ledgerRef, { primaryKey: "id" }).table;
 
 const columns = liveArm(runs, "typecheck", {
   label: "Typecheck",
   order: 10,
-  fields: {
-    code: nullable(intField({ label: "Code" })),
-    note: nullable(textField({ label: "Note" })),
-  },
+  from: ledgerRef,
+  pick: ["code", "note"],
 });
 
 const outcome = expr(sql`'succeeded'`, {

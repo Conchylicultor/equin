@@ -99,9 +99,9 @@ export const unrelatedRef = entityRef("unrelated", fields);
 
   test("resolves an entity's table: `defineEntity(…)` or `<entity>.table`", () => {
     const entityTables = `
-const traces = defineEntity("traces", traceFields, { primaryKey: "id" });
+const traces = defineEntity(tracesRef, { primaryKey: "id" });
 export const _traces = traces.table;
-export const _inline = defineEntity("inline_rows", fields).table;
+export const _inline = defineEntity(inlineRef).table;
 const notAnEntity = { table: 1 };
 export const _bogus = notAnEntity.table;
 `;
@@ -110,6 +110,10 @@ export const _bogus = notAnEntity.table;
         ts,
         [{ rel: "tables.ts", src: entityTables }],
         new Set(["_traces", "_inline", "_bogus"]),
+        new Map([
+          ["tracesRef", new Set(["traces"])],
+          ["inlineRef", new Set(["inline_rows"])],
+        ]),
       ),
     ).toEqual(
       new Map([

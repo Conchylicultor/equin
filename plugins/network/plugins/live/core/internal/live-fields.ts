@@ -127,14 +127,17 @@ export type RowFields<E, P extends string, CP extends string, OF, CF> = Pick<
 
 /**
  * The row a fields spec derives: over a shape, its wire row and the own /
- * carried fields; otherwise every row field's value.
+ * carried fields (a carried field named like a shape column decodes it);
+ * otherwise every row field's value.
  */
 export type FieldsRow<E, P extends string, CP extends string, OF, CF> = [
   E,
 ] extends [EntityRef]
   ? Flatten<RowOfFields<RowFields<E, P, CP, OF, CF>>>
   : [E] extends [AnyExtensionShape]
-    ? Flatten<z.infer<E["schema"]> & RowOfFields<OF & CF>>
+    ? Flatten<
+        Omit<z.infer<E["schema"]>, keyof (OF & CF)> & RowOfFields<OF & CF>
+      >
     : Flatten<RowOfFields<RowFields<E, P, CP, OF, CF>>>;
 
 /** The filterable columns a fields spec derives: every listed field with a domain. */
@@ -323,10 +326,14 @@ export function resolveFieldsSpec(
       : undefined;
   for (const name of spec.pick ?? [])
     add(listed, name, fromField(name), "`pick`");
-  // A shape's rows are its whole wire row: what no list shows is carried.
+  // A shape's rows are its whole wire row: what no list shows is carried —
+  // in its own field, unless `carry.fields` decodes the column (a stored rank
+  // key carried as the wire `Rank`, `rankValueField`), as over an entity.
   if (shape !== undefined) {
+    const decoded = spec.carry?.fields ?? {};
     for (const name of Object.keys(shape.schema.shape)) {
-      if (!seen.has(name)) add(carried, name, fromField(name), "the shape");
+      if (!seen.has(name) && !Object.hasOwn(decoded, name))
+        add(carried, name, fromField(name), "the shape");
     }
   }
   for (const [name, field] of Object.entries(spec.fields ?? {})) {

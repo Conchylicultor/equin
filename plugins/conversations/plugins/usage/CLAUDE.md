@@ -31,7 +31,7 @@
     - `stats/cost.onPriceTableUpdated`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/usage/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_usage`)
+  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_usage`)
   - Register:
     - `defineJob('conversations.usage.sync')`
     - `defineJob('conversations.usage.backfill')`

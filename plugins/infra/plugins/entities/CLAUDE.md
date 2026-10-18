@@ -1,6 +1,6 @@
 # entities
 
-`defineEntity(name, fields, meta)` derives BOTH a Drizzle `pgTable` AND a zod
+`defineEntity(ref, meta)` — the ref (`entityRef(name, fields)`, declared in the plugin's browser-safe `core/`) is the ONLY spelling; there is no string-name form — derives BOTH a Drizzle `pgTable` AND a zod
 wire schema from one `FieldsRecord`, so `entity.table.$inferSelect` is
 **identical by construction** to `z.infer<entity.schema>`. A loader becomes
 `db.select().from(entity.table)` with no row projection, and field-set drift
@@ -21,18 +21,21 @@ barrel is evaluated before any `defineEntity` body runs.
 ```ts
 import { defineEntity, defaultNow, defaultRandom } from "@plugins/infra/plugins/entities/server";
 
+// core/: the table name + browser-safe field record, declared once.
+export const slowOpsEntityRef = entityRef("slow_ops", {
+  id:            uuidField(),
+  worktree:      textField(),
+  operationKind: textField(),
+  count:         intField(),
+  // The schema is not decoration: it is what decodes the jsonb column, so
+  // `VariantBreakdown[]` is inferred from it rather than declared beside it.
+  variants:      jsonField({ schema: z.array(VariantBreakdownSchema), default: [] }),
+  firstSeenAt:   dateField(),
+});
+
+// server/: the table, built from the ref.
 export const slowOps = defineEntity(
-  "slow_ops",
-  {
-    id:            uuidField(),
-    worktree:      textField(),
-    operationKind: textField(),
-    count:         intField(),
-    // The schema is not decoration: it is what decodes the jsonb column, so
-    // `VariantBreakdown[]` is inferred from it rather than declared beside it.
-    variants:      jsonField({ schema: z.array(VariantBreakdownSchema), default: [] }),
-    firstSeenAt:   dateField(),
-  },
+  slowOpsEntityRef,
   {
     primaryKey: "id",                 // string → .primaryKey(); array → composite primaryKey({columns})
     columns: {
@@ -60,7 +63,10 @@ owning plugin's `core/`: `entityRef(name, fields)` (`entities/core`) — the
 table name plus the browser-safe field record. The server builds the table
 FROM it, `defineEntity(ref, meta)` (or `defineEntity(ref)` with no `meta`),
 so the fields a browser list reads off `ref.fields` and the table a server
-reads are one declaration. tasks-core's `tasksEntityRef` /
+reads are one declaration. A column only the server may see (a dedup key, a
+pid) is NOT on the ref: it is the middle argument,
+`defineEntity(ref, serverFields, meta)` — a column of the table, absent from
+the wire schema and `wireColumns`; `meta.serverOnly` has no spelling. tasks-core's `tasksEntityRef` /
 `attemptsEntityRef` / `conversationsEntityRef` are the reference.
 
 ## How it derives the two artifacts from one field record
@@ -72,14 +78,25 @@ reads are one declaration. tasks-core's `tasksEntityRef` /
   is unaffected by snake_case (purely a DDL concern).
 - **Schema** — `fieldsToZodObject(fields)`, keyed by the same JS props.
 
-## The two storage arms — and why nothing is asserted
+## The storage arms — and why nothing is asserted
 
-A field type either has a **fixed** column (`build`) or one **narrowed by the
-field's own schema** (`decode`), and `defineEntity` picks the arm:
+A field type either has a **fixed** column (`build`), one **narrowed by the
+field's own schema** (`decode`), or one that **stores another value than the
+field's** (`stored`), and `defineEntity` picks the arm:
 
 ```ts
-storage.build ? storage.build(columnName) : storage.decode(columnName, value)
+storage.build ? storage.build(columnName)
+  : storage.stored ? storage.stored(columnName)
+  : storage.decode(columnName, value)
 ```
+
+The `stored` arm is the one place a table's select type and the entity's wire
+schema differ, by declaration: the field's value is its WIRE form (a `bytes`
+field's base64 string), its def is marked `StoredAs<S>` (fields/core — the
+bytes stored), `EntityColumns` types the column by `InferStoredValue` (so
+`table.$inferSelect.state` is a `Uint8Array`), and the storage's column
+declares its wire form (sql-column `withWire`), which `serveCollection`
+encodes on every served row. Everywhere else `$inferSelect ≡ z.infer<schema>`.
 
 `value` is the field schema with its nullability peeled off (`splitNullability`),
 because a decoder never sees `null` in either direction — drizzle guards it on
@@ -146,7 +163,7 @@ cluster reads the same as hand-written drizzle while keeping the
 `$inferSelect ≡ z.infer<schema>` guarantee:
 
 ```ts
-export const mailThreads = defineEntity("mail_threads", { … }, {
+export const mailThreads = defineEntity(mailThreadsEntityRef, {
   primaryKey: "id",
   columns: {
     accountId: { references: { column: () => mailAccounts.table.id, onDelete: "cascade" } },
@@ -214,7 +231,7 @@ with `deriveUpdatedAt(pgTable(…), { touchedBy })` from
 Casts cross the runtime/type boundary in two places (the rest is precisely
 typed): the per-builder `as any` for the modifier chain (`PgColumnBuilderBase`
 doesn't surface chain methods), and the loosely-typed implementation behind
-`defineEntity`'s two overloads — `builders as unknown as EntityColumns` fed to
+`defineEntity`'s overloads — `builders as unknown as EntityColumns` fed to
 `pgTable`, restated by the overload return types so `pgTable` infers the select
 type. The pgTable stays in `internal/`; only the
 `defineEntity` factory + types leave via the barrel (cross-plugin imports of the
@@ -253,6 +270,7 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
     - `EntityMetaBase`
     - `EntityReference`
     - `EntityRow`
+    - `EntityTable`
     - `ServerOnlyKeys`
     - `TouchedBy`
     - `UpdatedAtMeta`
@@ -269,16 +287,17 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
     - `entityRef`
     - `wireSchema`
 - Cross-plugin:
-  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×8
+    - `conversations` ×7
     - `infra` ×5
-    - `conversations` ×4
     - `debug` ×4
-    - `page` ×3
+    - `page` ×4
     - `backup`
     - `build/run-ledger`
     - `history/engine`
     - `plugin-meta/plugin-health`
+    - `primitives/usage-rank`
     - `release`
     - `reports`
     - `shell/notifications`

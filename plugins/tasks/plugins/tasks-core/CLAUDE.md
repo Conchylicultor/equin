@@ -466,6 +466,7 @@ serves them.
     - `TrailerCommit`
   - Exports (values):
     - `ADOPTED_SPAWNED_BY`
+    - `attemptDeliveriesEntityRef`
     - `attemptRows`
     - `AttemptSchema`
     - `attemptsEntityRef`
@@ -488,11 +489,13 @@ serves them.
     - `isSettled`
     - `parseTrailerLog`
     - `PUSH_TRAILER_KEY`
+    - `pushesEntityRef`
     - `pushRows`
     - `PushSchema`
     - `RECENT_GONE_LIMIT`
     - `SETTLED_STATUSES`
     - `TASK_STATUS_OPTIONS`
+    - `taskDependenciesEntityRef`
     - `taskDescriptions`
     - `taskDetailRoute`
     - `TaskGraph`
@@ -519,26 +522,27 @@ serves them.
     - `plugin-meta/plugin-health`
     - `review/plugin-changes`
   - Extended by:
-    - `tasks/auto-start` (table `tasks-core_ext_auto_start`)
-    - `tasks/task-category` (table `tasks-core_ext_category`)
-    - `tasks/task-effort` (table `tasks-core_ext_effort`)
-    - `plugin-meta/plugin-health` (table `tasks-core_ext_health_review`)
-    - `tasks/automations` (table `tasks-core_ext_launch_decision`)
-    - `conversations/conversation-view/notes` (table `tasks-core_ext_notes`)
-    - `tasks/automations` (table `tasks-core_ext_origin`)
-    - `tasks/outcome-report` (table `tasks-core_ext_outcome_report`)
-    - `conversations/conversation-preprompt` (table `tasks-core_ext_preprompt`)
-    - `conversations/conversation-progress` (table `tasks-core_ext_progress`)
-    - `page/prompt/link` (table `tasks-core_ext_prompt_block`)
-    - `conversations/conversations-view/queue` (table `tasks-core_ext_queue`)
-    - `tasks/task-title` (table `tasks-core_ext_short_title`)
-    - `tasks/sidequest-autopilot` (table `tasks-core_ext_sidequest_triage`)
-    - `tasks/task-source-url` (table `tasks-core_ext_source_url`)
-    - `tasks/task-subject` (table `tasks-core_ext_subject`)
-    - `tasks/task-track` (table `tasks-core_ext_track`)
-    - `conversations/conversation-view/turn-summary` (table `tasks-core_ext_turn_summary`)
-    - `conversations/usage` (table `tasks-core_ext_usage`)
-    - `conversations/workspace/launch-option` (table `tasks-core_ext_workspace`)
+    - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
+    - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)
+    - `conversations/conversation-progress` (table `conversations_ext_progress`)
+    - `conversations/conversations-view/queue` (table `conversations_ext_queue`)
+    - `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`)
+    - `conversations/usage` (table `conversations_ext_usage`)
+    - `tasks/auto-start` (table `tasks_ext_auto_start`)
+    - `tasks/task-category` (table `tasks_ext_category`)
+    - `tasks/task-effort` (table `tasks_ext_effort`)
+    - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
+    - `tasks/automations` (table `tasks_ext_launch_decision`)
+    - `tasks/automations` (table `tasks_ext_origin`)
+    - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
+    - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
+    - `page/prompt/link` (table `tasks_ext_prompt_block`)
+    - `tasks/task-title` (table `tasks_ext_short_title`)
+    - `tasks/sidequest-autopilot` (table `tasks_ext_sidequest_triage`)
+    - `tasks/task-source-url` (table `tasks_ext_source_url`)
+    - `tasks/task-subject` (table `tasks_ext_subject`)
+    - `tasks/task-track` (table `tasks_ext_track`)
+    - `conversations/workspace/launch-option` (table `tasks_ext_workspace`)
 - Exemptions:
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)

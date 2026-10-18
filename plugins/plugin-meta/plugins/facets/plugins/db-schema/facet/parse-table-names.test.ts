@@ -1,9 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import { parseTableNames } from "./index";
+import { parseEntityRefNames, parseTableNames } from "./index";
+
+// The refs the fixtures' `defineEntity(<ref>, …)` calls name their tables by —
+// what `parseEntityRefNames` reads off `entityRef("<name>", …)` declarations.
+const REFS = new Map([
+  ["tasksEntityRef", "tasks"],
+  ["mailMessageLabelsEntityRef", "mail_message_labels"],
+  ["fooEntityRef", "foo"],
+  ["ghost2EntityRef", "ghost2"],
+  ["fake2EntityRef", "fake2"],
+]);
 
 function parse(src: string): Record<string, string> {
   const out = new Map<string, string>();
-  parseTableNames(src, out);
+  parseTableNames(src, out, REFS);
   return Object.fromEntries(out);
 }
 
@@ -16,7 +26,7 @@ describe("parseTableNames", () => {
 
   test("defineEntity binding re-exported via .table alias", () => {
     const src = `
-      const tasksEntity = defineEntity("tasks", taskFields, {
+      const tasksEntity = defineEntity(tasksEntityRef, {
         primaryKey: "id",
       });
       export const _tasks = tasksEntity.table;
@@ -28,8 +38,8 @@ describe("parseTableNames", () => {
   test("multi-line defineEntity call", () => {
     const src = `
       const mailMessageLabels = defineEntity(
-        "mail_message_labels",
-        fields,
+        mailMessageLabelsEntityRef,
+        {},
       );
       export const _mailMessageLabels = mailMessageLabels.table;
     `;
@@ -38,13 +48,13 @@ describe("parseTableNames", () => {
 
   test("inline defineEntity(...).table without a separate statement", () => {
     expect(
-      parse(`export const _foo = defineEntity("foo", fields).table;`),
+      parse(`export const _foo = defineEntity(fooEntityRef).table;`),
     ).toEqual({ _foo: "foo" });
   });
 
   test("intra-body <entity>.table references are not mistaken for aliases", () => {
     const src = `
-      const tasksEntity = defineEntity("tasks", taskFields, {
+      const tasksEntity = defineEntity(tasksEntityRef, {
         columns: {
           folderId: { references: { column: () => tasksEntity.table.id } },
         },
@@ -57,7 +67,7 @@ describe("parseTableNames", () => {
   test("mixed pgTable and defineEntity in one file", () => {
     const src = `
       export const _raw = pgTable("raw", {});
-      const fooEntity = defineEntity("foo", fields);
+      const fooEntity = defineEntity(fooEntityRef);
       export const _foo = fooEntity.table;
     `;
     expect(parse(src)).toEqual({ _raw: "raw", _foo: "foo" });
@@ -68,7 +78,7 @@ describe("parseTableNames", () => {
   test("commented-out pgTable / defineEntity is ignored", () => {
     const src = `
       // export const _ghost = pgTable("ghost", {});
-      /* const ghostEntity = defineEntity("ghost2", fields);
+      /* const ghostEntity = defineEntity(ghost2EntityRef);
          export const _ghost2 = ghostEntity.table; */
       export const _real = pgTable("real", {});
     `;
@@ -78,9 +88,20 @@ describe("parseTableNames", () => {
   test("stringified / templated declaration is ignored", () => {
     const src = [
       'const snippet = "export const _fake = pgTable(\\"fake\\", {})";',
-      "const tmpl = `const fakeEntity = defineEntity(\"fake2\", f); export const _f = fakeEntity.table;`;",
+      "const tmpl = `const fakeEntity = defineEntity(fake2EntityRef); export const _f = fakeEntity.table;`;",
       'export const _real = pgTable("real", {});',
     ].join("\n");
     expect(parse(src)).toEqual({ _real: "real" });
+  });
+
+  test("entityRef declarations name their bindings' tables", () => {
+    const out = new Map<string, string>();
+    parseEntityRefNames(
+      `export const fooEntityRef = entityRef("foo", fooFields);
+       // const ghostRef = entityRef("ghost", f);
+       const x = entityRef(\`dyn\`, f);`,
+      out,
+    );
+    expect(Object.fromEntries(out)).toEqual({ fooEntityRef: "foo" });
   });
 });

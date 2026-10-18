@@ -134,20 +134,31 @@ function ddl(table: PgTable) {
 
 describe("defineExtension DDL", () => {
   test("matches the old raw-drizzle primitive column for column", () => {
-    expect(ddl(thing.table)).toEqual(ddl(oldTable));
+    // Same columns, keys, indexes; only the ORDER differs: the shape's
+    // server-only fields (`label`, `created_at`) are the entity's server fields,
+    // appended after the ref's wire fields.
+    const byName = <T extends { name: string }>(cols: T[]) =>
+      [...cols].sort((a, b) => a.name.localeCompare(b.name));
+    const got = ddl(thing.table);
+    const want = ddl(oldTable);
+    expect({ ...got, columns: byName(got.columns) }).toEqual({
+      ...want,
+      columns: byName(want.columns),
+    });
   });
 
   test("spells out the columns it must keep", () => {
     const { columns, foreignKeys } = ddl(thing.table);
-    // Positional: drizzle-kit diffs by position, so the order is the contract.
+    // The ref's (wire) fields in shape order, then the server-only ones in
+    // shape order (drizzle diffs columns by name, so the move needs no migration).
     expect(columns.map((c) => c.name)).toEqual([
       "parent_id",
       "semitones",
       "enabled",
-      "label",
       "source",
-      "created_at",
       "updated_at",
+      "label",
+      "created_at",
     ]);
     expect(columns[0]).toMatchObject({ type: "text", primary: true });
     expect(foreignKeys).toEqual([
@@ -264,7 +275,7 @@ describe("defineExtension derived updatedAt", () => {
     );
     const [upsert] = statements;
     expect(conflictSet(upsert?.sql)).toBe(
-      `"semitones" = $5, "label" = $6, "source" = $7`,
+      `"semitones" = $5, "source" = $6, "label" = $7`,
     );
     expect(bindsADate(upsert?.params)).toBe(false);
   });

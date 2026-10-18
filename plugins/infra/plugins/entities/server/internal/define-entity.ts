@@ -21,7 +21,6 @@ import type {
   EntityMeta,
   EntityMetaBase,
   GeneratedKeys,
-  ServerOnlyKeys,
   UpdatedAtMeta,
 } from "./types";
 import { isDbDefault } from "./types";
@@ -94,11 +93,11 @@ function applyDefault(b: any, def: ColumnDefault<unknown>, key: string): any {
 // presence of `default` survives. (A non-enum default — bool / plain text — never
 // triggered the collapse, which is why slow_ops never caught it.)
 //
-// Two overloads per spelling: `meta` may be omitted only when the record has
+// Two overloads per form: `meta` may be omitted only when the record has
 // no `updatedAt` field — one that has it must declare `meta.updatedAt` (see
 // `EntityMeta`).
 //
-// The ref spelling — `defineEntity(ref, meta)` — builds the table FROM the
+// The ref is the ONLY spelling — `defineEntity(ref, meta)` — it builds the table FROM the
 // entity's browser-safe ref (`entityRef(name, fields)`, entities/core): its
 // name is the table's, its record the columns, so the fields a browser list
 // reads off the ref and the table the server reads are one declaration.
@@ -137,56 +136,36 @@ export function defineEntity<
   keyof SF & string,
   GeneratedKeys<F & SF, M>
 >;
-export function defineEntity<
-  F extends FieldsRecord,
-  const M extends EntityMeta<F> = EntityMeta<F>,
->(
-  name: string,
-  fields: F,
-  meta: M,
-): Entity<F, DefaultedKeys<F, M>, ServerOnlyKeys<F, M>, GeneratedKeys<F, M>>;
-export function defineEntity<F extends FieldsRecord & { updatedAt?: never }>(
-  name: string,
-  fields: F,
-): Entity<F>;
 // The implementation is typed loosely (`object` in, `unknown` out) so every
 // overload is compatible with it; the overloads are the contract.
 export function defineEntity(
-  nameOrRef: string | EntityRef,
-  fieldsOrMeta?: object,
+  ref: EntityRef,
+  serverFieldsOrMeta?: object,
   maybeMeta?: object,
 ): unknown {
-  if (typeof nameOrRef !== "string" && nameOrRef?.kind !== "entity") {
+  if (ref?.kind !== "entity") {
     throw new Error(
-      "defineEntity: the first argument is the table name or an EntityRef (`entityRef(name, fields)`).",
+      "defineEntity: the first argument is an EntityRef (`entityRef(name, fields)`).",
     );
   }
-  const name = typeof nameOrRef === "string" ? nameOrRef : nameOrRef.name;
-  // The ref spelling's optional middle argument: the server-only fields.
+  const name = ref.name;
+  // The optional middle argument: the server-only fields.
   const serverFields =
-    typeof nameOrRef !== "string" && maybeMeta !== undefined
-      ? (fieldsOrMeta as FieldsRecord)
-      : undefined;
-  const fields = (
-    typeof nameOrRef === "string"
-      ? fieldsOrMeta
-      : { ...nameOrRef.fields, ...serverFields }
-  ) as FieldsRecord;
+    maybeMeta !== undefined ? (serverFieldsOrMeta as FieldsRecord) : undefined;
+  const fields = { ...ref.fields, ...serverFields } as FieldsRecord;
   const rawMeta =
-    (typeof nameOrRef === "string" || serverFields !== undefined
-      ? maybeMeta
-      : fieldsOrMeta) ?? {};
+    (serverFields !== undefined ? maybeMeta : serverFieldsOrMeta) ?? {};
   const declared = rawMeta as EntityMetaBase<FieldsRecord> & {
     updatedAt?: UpdatedAtMeta<FieldsRecord>;
   };
-  if (typeof nameOrRef !== "string" && declared.serverOnly !== undefined) {
+  if (declared.serverOnly !== undefined) {
     throw new Error(
       `defineEntity("${name}"): a ref's fields are its wire fields — declare a ` +
         `server-only column as a server field (\`defineEntity(ref, serverFields, meta)\`), not in meta.serverOnly.`,
     );
   }
   for (const key of Object.keys(serverFields ?? {})) {
-    if (Object.hasOwn((nameOrRef as EntityRef).fields, key)) {
+    if (Object.hasOwn(ref.fields, key)) {
       throw new Error(
         `defineEntity("${name}"): server field "${key}" is also a field of the ref.`,
       );
@@ -213,8 +192,9 @@ export function defineEntity(
     const columnName = meta.columns?.[key]?.name ?? snakeCase(key);
     const { nullable, value } = splitNullability(field.schema);
     // The storage contribution picks its own arm: a fixed column holds exactly
-    // what the type declares, a decoding one is narrowed by THIS field's schema
-    // and so must be handed it (the value schema — never the `.nullable()`
+    // what the type declares, a stored one holds another value its declared
+    // wire form encodes (a `bytea`'s bytes as base64), a decoding one is
+    // narrowed by THIS field's schema and so must be handed it (the value schema — never the `.nullable()`
     // wrapper; see `splitNullability`).
     //
     // One `as any` at the runtime/type boundary: `PgColumnBuilderBase` doesn't
@@ -223,7 +203,9 @@ export function defineEntity(
     let b = (
       storage.build
         ? storage.build(columnName)
-        : storage.decode(columnName, value)
+        : storage.stored
+          ? storage.stored(columnName)
+          : storage.decode(columnName, value)
     ) as any;
 
     if (!nullable) b = b.notNull();
@@ -331,7 +313,7 @@ export function defineEntity(
   // The implementation returns `unknown`: inside this body `wireSchema` /
   // `wireColumns` are typed against the widened server-only set, not the
   // caller's literal `serverOnly`. The overloads' return type
-  // `ServerOnlyKeys<F, M>` is the contract consumers see — at a concrete call
+  // `keyof SF` is the contract consumers see — at a concrete call
   // site it resolves to the exact server-only keys, so `entity.schema` /
   // `entity.wireColumns` carry the precise omitted types.
   const derivedUpdatedAt = compileEntityUpdatedAt(name, fields, meta, table);

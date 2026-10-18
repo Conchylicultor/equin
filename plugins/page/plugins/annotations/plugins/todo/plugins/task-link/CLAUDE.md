@@ -186,7 +186,7 @@ card, not a collection.
     - `tasks/tasks-core.createTask`
     - `tasks/tasks-core.tasksView`
   - DB schema: `plugins/page/plugins/annotations/plugins/todo/plugins/task-link/server/internal/tables.ts`
-  - Entity extension of: `page/editor` (table `editor_ext_todo_task`)
+  - Entity extension of: `page/editor` (table `page_blocks_ext_todo_task`)
   - Exports (values):
     - `_pageBlocksTodoTaskExt`
     - `ensureTodoTask`

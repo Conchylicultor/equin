@@ -121,15 +121,20 @@ function parseEntityExtensionCalls(dbFiles: string[]): RawExtRef[] {
 // variable to extend it:
 //
 //   1. Raw drizzle:   `const _foo = pgTable("foo", …)`            → `_foo → foo`
-//   2. defineEntity:  `const fooEntity = defineEntity("foo", …)`  (infra/entities)
+//   2. defineEntity:  `const fooEntity = defineEntity(fooEntityRef, …)`  (infra/entities)
 //                     `export const _foo = fooEntity.table`        → `_foo → foo`
 //
 // For form (2) the `pgTable(...)` call is hidden inside `defineEntity`, so the
-// physical table surfaces as `<entity>.table`. We map the `.table` alias (the
+// physical table surfaces as `<entity>.table`; its name is the ref's, read from
+// the `const fooEntityRef = entityRef("foo", …)` declaration (`refNames`). We map the `.table` alias (the
 // name consumers actually import) to the entity's table name, and drop the
 // intermediate entity binding so a table is never reported twice.
-export function parseTableNames(src: string, out: Map<string, string>): void {
-  // FULL-mask so a `pgTable("x")` / `defineEntity("x")` / `.table` written in a
+export function parseTableNames(
+  src: string,
+  out: Map<string, string>,
+  refNames: ReadonlyMap<string, string> = new Map(),
+): void {
+  // FULL-mask so a `pgTable("x")` / `defineEntity(ref)` / `.table` written in a
   // comment, string, or template literal (a fixture, docs snippet, codegen
   // template) can't register a phantom table. Genuine calls are located over the
   // mask via `markerCallSpans`; the binding var name and the string name are
@@ -151,11 +156,15 @@ export function parseTableNames(src: string, out: Map<string, string>): void {
     if (varName && name) out.set(varName, name);
   }
 
-  // Form (2a): `const <entity> = defineEntity("name", …)` bindings.
+  // Form (2a): `const <entity> = defineEntity(<ref>, …)` bindings, named by
+  // the ref's own `entityRef("name", …)`.
   const entityVarToName = new Map<string, string>();
   for (const span of markerCallSpans(masked, "defineEntity")) {
     const varName = declBefore(span.identifier);
-    const name = firstStringArg(span.open, span.close);
+    const ref = /^\s*([A-Za-z_$][\w$]*)\s*[,)]/.exec(
+      masked.slice(span.open + 1, span.close + 1),
+    )?.[1];
+    const name = ref === undefined ? undefined : refNames.get(ref);
     if (varName && name) entityVarToName.set(varName, name);
   }
 
@@ -173,7 +182,7 @@ export function parseTableNames(src: string, out: Map<string, string>): void {
     aliasSources.add(m[2]!);
   }
 
-  // Inline `const <alias> = defineEntity("name", …).table` (no separate
+  // Inline `const <alias> = defineEntity(<ref>, …).table` (no separate
   // statement): the binding var is itself the usable handle. Keep every entity
   // var not already consumed as a `.table` alias source.
   for (const [v, name] of entityVarToName) {
@@ -181,12 +190,52 @@ export function parseTableNames(src: string, out: Map<string, string>): void {
   }
 }
 
-function parseTableNamesFromDbFiles(dbFiles: string[]): Map<string, string> {
+// `const <ref> = entityRef("name", …)` declarations in one source file:
+// `ref → table name`. A ref is declared in a plugin's browser-safe `core/` and
+// named by the `defineEntity(<ref>, …)` of its server `tables.ts`.
+export function parseEntityRefNames(
+  src: string,
+  out: Map<string, string>,
+): void {
+  const masked = maskSource(src);
+  for (const span of markerCallSpans(masked, "entityRef")) {
+    const varName = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*$/.exec(
+      masked.slice(0, span.identifier),
+    )?.[1];
+    const name = /^\s*["']([^"']+)["']/.exec(
+      src.slice(span.open + 1, span.close),
+    )?.[1];
+    if (varName && name) out.set(varName, name);
+  }
+}
+
+// Every ref a plugin declares anywhere in its own tree, and — module-wide, so a
+// plugin whose tables are built from ANOTHER plugin's ref (imported through its
+// barrel) resolves it in `relate` — every ref any plugin declared in `extract`.
+const allRefNames = new Map<string, string>();
+
+function collectRefNames(pluginDir: string): Map<string, string> {
+  const files: string[] = [];
+  walkFiles(pluginDir, files);
+  const local = new Map<string, string>();
+  for (const f of files) {
+    const raw = readIfExists(f);
+    if (!raw || !raw.includes("entityRef(")) continue;
+    parseEntityRefNames(stripTypes(raw), local);
+  }
+  for (const [k, v] of local) allRefNames.set(k, v);
+  return local;
+}
+
+function parseTableNamesFromDbFiles(
+  dbFiles: string[],
+  refNames: ReadonlyMap<string, string>,
+): Map<string, string> {
   const out = new Map<string, string>();
   for (const f of dbFiles) {
     const raw = readIfExists(f);
     if (!raw) continue;
-    parseTableNames(stripTypes(raw), out);
+    parseTableNames(stripTypes(raw), out, refNames);
   }
   return out;
 }
@@ -219,7 +268,10 @@ export default createFacet<DbSchemaFacetData>({
 
   extract(ctx) {
     const dbFiles = findDbFiles(ctx.dir);
-    const tableMap = parseTableNamesFromDbFiles(dbFiles);
+    const tableMap = parseTableNamesFromDbFiles(
+      dbFiles,
+      collectRefNames(ctx.dir),
+    );
     const tables = [...tableMap.entries()].map(([varName, name]) => ({
       name,
       varName,
@@ -231,6 +283,19 @@ export default createFacet<DbSchemaFacetData>({
     const { tree } = rawCtx as { tree: PluginTree };
     const byId = new Map<PluginId, PluginNode>();
     for (const node of tree.byDir.values()) byId.set(node.id, node);
+
+    // A table built from another plugin's ref could not be named in `extract`
+    // (that plugin's refs may not have been read yet): every plugin's refs are
+    // known now, so re-read each plugin's tables against all of them.
+    for (const node of tree.byDir.values()) {
+      const d = getFacet(node, dbSchemaFacetDef);
+      if (!d) continue;
+      const tableMap = parseTableNamesFromDbFiles(d.dbFiles, allRefNames);
+      d.tables = [...tableMap.entries()].map(([varName, name]) => ({
+        name,
+        varName,
+      }));
+    }
 
     // Build node.id → varName→tableName map from Phase 1 extract data
     const pluginVarToTable = new Map<PluginId, Map<string, string>>();

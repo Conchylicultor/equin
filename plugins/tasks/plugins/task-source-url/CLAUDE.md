@@ -14,7 +14,7 @@
     - `tasks/tasks-core._attempts`
     - `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-source-url/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_source_url`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_source_url`)
   - Exports (values):
     - `setTaskSourceUrl`
     - `tasksSourceUrl`

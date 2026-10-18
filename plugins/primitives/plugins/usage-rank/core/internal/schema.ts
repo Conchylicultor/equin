@@ -1,8 +1,10 @@
 import { z } from "zod";
-import { fieldsToZodObject } from "@plugins/fields/core";
+import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 
 /**
@@ -12,19 +14,18 @@ import { liveCollection } from "@plugins/network/plugins/live/core";
  * `lastUsedAt` crosses the wire as an ISO string, so it is coerced back to a
  * `Date` on read (the `conversation-category` precedent).
  */
-const USAGE_STAT_LISTED = {
-  namespace: textField({ label: "Namespace" }),
-};
-const USAGE_STAT_CARRIED = {
+export const usageStatFields = {
   usageKey: textField(),
+  namespace: textField({ label: "Namespace" }),
   score: floatField(),
-  useCount: floatField(),
+  useCount: intField(),
   lastUsedAt: dateField(),
-};
-export const UsageStatSchema = fieldsToZodObject({
-  ...USAGE_STAT_CARRIED,
-  ...USAGE_STAT_LISTED,
-});
+} satisfies FieldsRecord;
+
+/** The `usage_stats` entity — one rollup row per tracked (namespace, key). */
+export const usageStatsEntityRef = entityRef("usage_stats", usageStatFields);
+
+export const UsageStatSchema = fieldsToZodObject(usageStatFields);
 export type UsageStat = z.infer<typeof UsageStatSchema>;
 
 /**
@@ -47,8 +48,9 @@ export type UsageStat = z.infer<typeof UsageStatSchema>;
  * cache.
  */
 export const usageStats = liveCollection("usage-stats", {
-  fields: USAGE_STAT_LISTED,
-  carry: { fields: USAGE_STAT_CARRIED },
+  from: usageStatsEntityRef,
+  pick: ["namespace"],
+  carry: { pick: ["usageKey", "score", "useCount", "lastUsedAt"] },
   id: "usageKey",
   sortable: ["lastUsedAt"],
   default: { orderBy: [["lastUsedAt", "desc"]], limit: 20 },

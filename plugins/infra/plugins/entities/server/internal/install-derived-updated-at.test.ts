@@ -26,6 +26,7 @@ import { collectContributions } from "@plugins/framework/plugins/server-core/cor
 import { defineFieldType } from "@plugins/fields/core";
 import type { FieldDef } from "@plugins/fields/core";
 import { Fields } from "@plugins/fields/plugins/server-capabilities/server";
+import { entityRef } from "../../core";
 import { defineEntity } from "./define-entity";
 import {
   compileFromTable,
@@ -74,14 +75,13 @@ const statusField = field(
 // turn start / turn end / close count but whose resume bounce does not, and a
 // viewed-at that never counts.
 const items = defineEntity(
-  "dua_items",
-  {
+  entityRef("dua_items", {
     id: field(textType, z.string(), ""),
     title: field(textType, z.string(), ""),
     status: statusField,
     lastViewedAt: field(dateType, z.coerce.date(), new Date(0)),
     updatedAt: field(dateType, z.coerce.date(), new Date(0)),
-  },
+  }),
   {
     primaryKey: "id",
     columns: { updatedAt: { default: defaultNow() } },

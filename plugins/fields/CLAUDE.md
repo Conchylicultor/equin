@@ -102,16 +102,16 @@ tokens, so anything that imports the barrels back would cycle.
 - Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 - Web:
   - Slots: `Fields.Identity`
-  - Slot contributors: 26 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Fields.Identity` ×26
+  - Slot contributors: 27 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Fields.Identity` ×27
   - Exports (values): `Fields`
 - Cross-plugin:
-  - Imported by: 94 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×48
+  - Imported by: 97 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×50
     - `apps` ×11
+    - `conversations` ×5
     - `debug` ×5
     - `infra` ×5
-    - `conversations` ×4
     - `page` ×3
     - `tasks` ×3
     - `backup` ×2
@@ -139,10 +139,12 @@ tokens, so anything that imports the barrels back would cycle.
     - `FieldType`
     - `InferFieldsObject`
     - `InferFieldValue`
+    - `InferStoredValue`
     - `Labelled`
     - `MetaMarksOf`
     - `OptionKey`
     - `OptionValue`
+    - `StoredAs`
     - `Unfilterable`
   - Exports (values):
     - `declaredDefault`
@@ -158,6 +160,7 @@ tokens, so anything that imports the barrels back would cycle.
 - Sub-plugins:
   - **`avatar`** [2 sub-plugins] — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
   - **`bool`** [test helpers] [8 sub-plugins] — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
+  - **`bytes`** [2 sub-plugins] — Bytes field type: identity only — binary data whose wire value is base64. No cell or filter: no list shows a blob.
   - **`color`** [2 sub-plugins] — Color field type: identity only. The read-only swatch cell lives in the plugins/table sub-plugin; color has no filter (sparse).
   - **`date`** [8 sub-plugins] — Date field type: identity only. The data-view cell (relative time) and filter (date range) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`directory-path`** [1 sub-plugin] — Directory-path field type: identity only. The config-render capability (a folder picker) and the dirPathField factory live in the plugins/config sub-plugin.

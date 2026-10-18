@@ -29,7 +29,7 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
 import { compileWindowQuery } from "@plugins/infra/plugins/query-resource/server/testing";
 import { compileCollection } from "@plugins/network/plugins/live/server";
-import { stateToBase64 } from "@plugins/primitives/plugins/collab-doc/server";
+import { bytesToBase64 } from "@plugins/fields/plugins/bytes/plugins/storage/server";
 import { blockDocs } from "../../core";
 import type { BlockDocRow } from "../../core/internal/resources";
 import { _pageBlockDocs } from "./tables";
@@ -213,7 +213,7 @@ describe("blockDocs :rows (the served lookup-only collection)", () => {
     >;
   };
 
-  test("serves the bytea state as unfolded base64, byte-identical to stateToBase64", async () => {
+  test("serves the bytea state as unfolded base64, byte-identical to bytesToBase64", async () => {
     const blockId = await createBlock();
     // Well past 76 bytes — where SQL's `encode(…, 'base64')` would fold lines.
     const state = Y.encodeStateAsUpdate(docOf("x".repeat(400)));
@@ -224,7 +224,7 @@ describe("blockDocs :rows (the served lookup-only collection)", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.blockId).toBe(blockId);
     expect(rows[0]!.updatedAt).toBeInstanceOf(Date);
-    expect(rows[0]!.state).toBe(stateToBase64(await storedState(blockId)));
+    expect(rows[0]!.state).toBe(bytesToBase64(await storedState(blockId)));
     expect(rows[0]!.state).not.toContain("\n");
 
     // The base64 round-trips back to the exact stored doc.

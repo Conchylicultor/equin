@@ -7,7 +7,7 @@ import {
   eventSourcesEntityRef,
   eventsEntityRef,
   eventSourceRunsEntityRef,
-  eventSourceRunEventFields,
+  eventSourceRunEventsEntityRef,
 } from "../../core";
 
 // Physical tables for the Events app, derived from the web-safe field records in
@@ -149,37 +149,33 @@ const eventSourceRuns = defineEntity(eventSourceRunsEntityRef, {
   ],
 });
 
-const eventSourceRunEvents = defineEntity(
-  "event_source_run_events",
-  eventSourceRunEventFields,
-  {
-    // The pair IS the row's identity — a run touches an event once — so there is
-    // no synthetic id to keep unique separately. The PK's own index is prefixed
-    // by `run_id`, which is the only way this table is ever read.
-    primaryKey: ["runId", "eventId"],
-    columns: {
-      runId: {
-        references: {
-          column: () => eventSourceRuns.table.id,
-          onDelete: "cascade",
-          // The run ids are bare uuids due a prefix rewrite (`evrun-`,
-          // `plugins/ids`); this carries the run's events along with it.
-          onUpdate: "cascade",
-        },
-      },
-      eventId: {
-        references: { column: () => events.table.id, onDelete: "cascade" },
+const eventSourceRunEvents = defineEntity(eventSourceRunEventsEntityRef, {
+  // The pair IS the row's identity — a run touches an event once — so there is
+  // no synthetic id to keep unique separately. The PK's own index is prefixed
+  // by `run_id`, which is the only way this table is ever read.
+  primaryKey: ["runId", "eventId"],
+  columns: {
+    runId: {
+      references: {
+        column: () => eventSourceRuns.table.id,
+        onDelete: "cascade",
+        // The run ids are bare uuids due a prefix rewrite (`evrun-`,
+        // `plugins/ids`); this carries the run's events along with it.
+        onUpdate: "cascade",
       },
     },
-    indexes: (t) => [
-      // NOT redundant with the PK: the PK index is prefixed by `run_id`, so it
-      // cannot serve the `event_id` cascade. Without this, purging one
-      // disappeared event (the 90-day sweep, thousands at a time) seq-scans this
-      // whole table per row.
-      index("event_source_run_events_event_idx").on(t.eventId),
-    ],
+    eventId: {
+      references: { column: () => events.table.id, onDelete: "cascade" },
+    },
   },
-);
+  indexes: (t) => [
+    // NOT redundant with the PK: the PK index is prefixed by `run_id`, so it
+    // cannot serve the `event_id` cascade. Without this, purging one
+    // disappeared event (the 90-day sweep, thousands at a time) seq-scans this
+    // whole table per row.
+    index("event_source_run_events_event_idx").on(t.eventId),
+  ],
+});
 
 // drizzle-kit schema-glob discovery.
 export const _eventSources = eventSources.table;

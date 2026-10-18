@@ -103,6 +103,23 @@ export type FieldsRecord = Record<string, FieldDef>;
 
 export type InferFieldValue<F> = F extends FieldDef<infer T> ? T : never;
 
+// The stored form of a field whose column holds another JS value than the
+// field's own (its WIRE value): a `bytea` column holds the bytes a base64
+// string carries. Type-only — nothing sets it at runtime; the field type's
+// storage declares the column's wire form (sql-column `withWire`), so every
+// served row encodes the stored value into the field's. Required, not
+// optional: an optional phantom would match every field.
+declare const storedAs: unique symbol;
+
+/** Marks a field def whose column stores `S` (see `storedAs`). */
+export interface StoredAs<S> {
+  readonly [storedAs]: S;
+}
+
+/** What a field's column stores: its `StoredAs` value, else its own value. */
+export type InferStoredValue<F> =
+  F extends StoredAs<infer S> ? S : InferFieldValue<F>;
+
 export type InferFieldsObject<F extends FieldsRecord> = {
   [K in keyof F]: InferFieldValue<F[K]>;
 };

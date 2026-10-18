@@ -23,10 +23,11 @@ Originated as Plan B (`research/2026-07-07-page-per-block-crdt-plan-b.md`).
   hand-written keyed `blockContentResource` + `rowIdentity` (see
   `research/2026-09-26-global-live-values-migration-contract.md` §10; the older
   own-row analysis is `research/2026-08-25-global-own-row-resource-scoping.md`).
-  `state` is a `bytea` whose wire form (collab-doc's `bytea`, via sql-column's
-  `withWire`) is base64 encoded in JS per row — Postgres `encode(…, 'base64')`
-  folds lines at 76 chars — by `stateToBase64`, the one encoder the doc-init
-  response shares.
+  The table is the `page_block_docs` entity (`pageBlockDocsEntityRef`, core):
+  `state` is a `bytes` field (`fields/bytes`) — a `bytea` column whose wire
+  form (via sql-column's `withWire`) is base64 encoded in JS per row — Postgres
+  `encode(…, 'base64')` folds lines at 76 chars — by `bytesToBase64`, the one
+  encoder the doc-init response shares.
 - `POST /api/blocks/:id/doc-init` (body: raw update bytes via `blob()`) — the
   first-writer-wins seed and the ONLY row creator (`ON CONFLICT DO NOTHING`,
   then return the authoritative state as base64 JSON). A losing seeder merges
@@ -62,13 +63,13 @@ bun test plugins/page/plugins/editor-collab/server/internal
     - `page.editor.block.onCopy`
   - Uses:
     - `database.db`
-    - `database/derived-updated-at.deriveUpdatedAt`
+    - `fields/bytes/storage.bytesToBase64`
     - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `network/live.serveCollection`
     - `page/editor._blocks`
     - `page/editor.BlockLifecycle`
-    - `primitives/collab-doc.bytea`
-    - `primitives/collab-doc.stateToBase64`
   - DB schema: `plugins/page/plugins/editor-collab/server/internal/tables.ts`
   - Exports (values):
     - `_pageBlockDocs`
@@ -84,16 +85,19 @@ bun test plugins/page/plugins/editor-collab/server/internal
   - Uses:
     - `fields.FieldsRecord`
     - `fields.fieldsToZodObject`
+    - `fields/bytes/config.bytesField`
     - `fields/date/config.dateField`
     - `fields/text/config.textField`
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
   - Exports (values):
     - `blockDocInit`
     - `BlockDocRowSchema`
     - `blockDocs`
     - `blockDocUpdate`
+    - `pageBlockDocsEntityRef`
 - Cross-plugin:
   - Imported by:
     - `apps/pages/history`

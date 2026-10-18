@@ -1,6 +1,6 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
 import { conversationCategories } from "../../shared";
-import { _conversationCategories } from "./tables";
+import { conversationCategoriesEntity } from "./tables";
 
 // Server half of the assignment read: the lookup-only collection served from
 // the table. The loader reads only the subscribed id set (`WHERE id IN (ids)`),
@@ -15,5 +15,5 @@ import { _conversationCategories } from "./tables";
 // `categoryId`.
 export const conversationCategoriesServed = serveCollection(
   conversationCategories,
-  { from: _conversationCategories },
+  { from: conversationCategoriesEntity },
 );

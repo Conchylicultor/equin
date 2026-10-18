@@ -1,4 +1,5 @@
-import type { SQL } from "drizzle-orm";
+import { getTableName, type SQL } from "drizzle-orm";
+import type { EntityRef } from "@plugins/infra/plugins/entities/core";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type {
@@ -192,6 +193,19 @@ export function bindArm(
   };
   if (columns.owner.collection !== unionKey) {
     fail(`its columns belong to "${columns.owner.collection}".`);
+  }
+  // An arm reads the entity it is declared `from` (`liveArm({ from })`), as a
+  // single-table collection does (`assertServesItsRows`): its fields are that
+  // entity's, never restated over its table.
+  const reaches =
+    (columns as { readonly reaches?: EntityRef | null }).reaches ?? null;
+  const table = getTableName(spec.from);
+  if (reaches === null) {
+    fail(
+      `it reads table "${table}" but is declared by its own fields — declare it \`from\` that table's entity (\`liveArm(union, arm, { from: <entityRef>, pick: [...] })\`).`,
+    );
+  } else if (reaches.name !== table) {
+    fail(`it is \`from\` entity "${reaches.name}" but reads table "${table}".`);
   }
   const binding: UnionArmBinding = {
     columns,

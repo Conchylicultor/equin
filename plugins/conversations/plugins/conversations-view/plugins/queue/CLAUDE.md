@@ -29,7 +29,7 @@
     - `tasks/tasks-core.listDependentIds`
     - `tasks/tasks-core.taskStatusChanged`
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_queue`)
+  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_queue`)
   - Exports (values):
     - `conversationsQueue`
     - `endRank`
@@ -75,7 +75,6 @@
     - `fields/bool/config.boolField`
     - `fields/rank/config.rankField`
     - `fields/rank/config.rankValueField`
-    - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live.liveCollection`

@@ -30,7 +30,7 @@
     - `tasks/tasks-core.updateConversationsTitleForTask`
     - `tasks/tasks-core.updateTaskTitle`
   - DB schema: `plugins/tasks/plugins/task-title/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_short_title`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_short_title`)
   - Exports (values):
     - `scheduleTaskTitleUpdate`
     - `scheduleTaskTitleUpgrade`

@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import type { FieldsRecord } from "@plugins/fields/core";
+import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
 import {
   enumTextField,
   textField,
@@ -8,7 +8,7 @@ import {
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { tagsField } from "@plugins/fields/plugins/tags/plugins/config/core";
 import { idKindField } from "@plugins/ids/core";
-import { wireSchema } from "@plugins/infra/plugins/entities/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { pagesEntityRef } from "@plugins/page/plugins/block-entity/core";
 import { TAG_COLORS } from "./tag-color";
@@ -18,23 +18,28 @@ import { pageTagIdKind } from "./tag-id";
  * One vocabulary tag, as stored (`page_tags`). The table (server) and the wire
  * schema below both derive from this record, so the two cannot drift.
  *
- * `nameKey` is the name's identity (`tagKey`) — the column the unique index sits
- * on, so two spellings of one name cannot both be stored. It is server-only:
- * a reader that needs it derives it from `name` with the same function.
+ * `nameKey` (`pageTagServerFields`) is the name's identity (`tagKey`) — the
+ * column the unique index sits on, so two spellings of one name cannot both be
+ * stored. It is server-only: a reader that needs it derives it from `name` with
+ * the same function.
  */
 export const pageTagFields = {
   id: idKindField(pageTagIdKind),
   name: textField(),
-  nameKey: textField(),
   color: enumTextField(TAG_COLORS),
   createdAt: dateField(),
 } satisfies FieldsRecord;
 
-/** The vocabulary's server-only columns. */
-export const PAGE_TAG_SERVER_ONLY = ["nameKey"] as const;
+/** The vocabulary's server-only columns (beside the ref, never on the wire). */
+export const pageTagServerFields = {
+  nameKey: textField(),
+} satisfies FieldsRecord;
+
+/** The `page_tags` entity (its wire fields; `nameKey` is a server field). */
+export const pageTagsEntityRef = entityRef("page_tags", pageTagFields);
 
 /** One vocabulary tag, as the browser and the server read it. */
-export const PageTagRowSchema = wireSchema(pageTagFields, PAGE_TAG_SERVER_ONLY);
+export const PageTagRowSchema = fieldsToZodObject(pageTagFields);
 export type PageTagRow = z.infer<typeof PageTagRowSchema>;
 
 /**
@@ -63,15 +68,11 @@ export type PageTagAssignmentRow = z.infer<typeof PageTagAssignmentRowSchema>;
 
 /** The workspace's tag vocabulary, whole. */
 export const pageTagVocabulary = liveCollection("page-tags.vocabulary", {
-  // The stored record minus its server-only columns (`PAGE_TAG_SERVER_ONLY`).
-  carry: {
-    fields: {
-      id: pageTagFields.id,
-      name: pageTagFields.name,
-      color: pageTagFields.color,
-      createdAt: pageTagFields.createdAt,
-    },
-  },
+  // The entity's wire record (its server-only `nameKey` is not on the ref).
+  from: pageTagsEntityRef,
+  carry: { pick: ["id", "name", "color", "createdAt"] },
+  // Its wire rows stay the table's own columns: no extension exposes a tag.
+  baseExposures: false,
   id: "id",
   all: {
     orderBy: [["createdAt", "asc"]],

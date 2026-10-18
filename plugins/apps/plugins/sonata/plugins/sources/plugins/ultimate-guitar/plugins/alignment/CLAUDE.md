@@ -267,7 +267,7 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
     - `network/live.serveCollection`
     - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/server/internal/tables.ts`
-  - Entity extension of: `apps/sonata/library` (table `library_ext_ug_alignment`)
+  - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_ug_alignment`)
   - Register:
     - `defineSupervisedJob('sonata.ug-alignment.align')`
     - `defineJob('sonata.ug-alignment.on-tab-saved')`

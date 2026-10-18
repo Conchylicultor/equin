@@ -1,3 +1,4 @@
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
@@ -12,10 +13,16 @@ import { bookmarkIdKind } from "./id-kind";
 // column by name. `createdAt` is a coerced Date on the wire.
 export const bookmarkFields = {
   id: idKindField(bookmarkIdKind),
-  url: textField(),
+  url: textField({ label: "URL" }),
   title: textField(),
   createdAt: dateField(),
 } satisfies FieldsRecord;
+
+/** The `browser_bookmarks` entity. */
+export const browserBookmarksEntityRef = entityRef(
+  "browser_bookmarks",
+  bookmarkFields,
+);
 
 export const BookmarkRowSchema = fieldsToZodObject(bookmarkFields);
 export type BookmarkRow = z.infer<typeof BookmarkRowSchema>;
@@ -29,14 +36,11 @@ export type BookmarkRow = z.infer<typeof BookmarkRowSchema>;
 // `{ where: { url }, limit: 1 }` read answered by the server, never a scan of
 // the default window, which would miss a bookmark past its first 100 rows.
 export const browserBookmarks = liveCollection("browser-bookmarks", {
-  fields: { url: textField({ label: "URL" }) },
-  carry: {
-    fields: {
-      id: bookmarkFields.id,
-      title: bookmarkFields.title,
-      createdAt: bookmarkFields.createdAt,
-    },
-  },
+  from: browserBookmarksEntityRef,
+  pick: ["url"],
+  carry: { pick: ["id", "title", "createdAt"] },
+  // Its wire rows stay the table's own columns: no extension exposes a bookmark.
+  baseExposures: false,
   id: "id",
   sortable: ["createdAt"],
   default: { orderBy: [["createdAt", "asc"]], limit: 100 },

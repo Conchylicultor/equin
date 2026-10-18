@@ -109,10 +109,10 @@ questions.
     - `conversations.QuestionHolds`
     - `conversations.requestStatusReconcile`
     - `database.db`
-    - `database/sql-column.parsedJson`
-    - `database/sql-column.parsedText`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/retention.defineRetention`
     - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`
@@ -135,6 +135,7 @@ questions.
     - `fields/json/config.jsonField`
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
   - Exports (types):
     - `AnswerQuestionBody`

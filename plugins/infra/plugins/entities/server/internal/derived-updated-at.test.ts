@@ -9,6 +9,7 @@ import { collectContributions } from "@plugins/framework/plugins/server-core/cor
 import { defineFieldType } from "@plugins/fields/core";
 import type { FieldDef } from "@plugins/fields/core";
 import { Fields } from "@plugins/fields/plugins/server-capabilities/server";
+import { entityRef } from "../../core";
 import { defineEntity } from "./define-entity";
 import { defaultNow } from "./types";
 
@@ -60,7 +61,7 @@ function itemFields() {
 // ── defineEntity: registration, physical names, runtime backstops ──────────
 
 test("defineEntity compiles touchedBy from physical column names and registers it", () => {
-  const entity = defineEntity("dua_unit_items", itemFields(), {
+  const entity = defineEntity(entityRef("dua_unit_items", itemFields()), {
     primaryKey: "id",
     columns: {
       lastViewedAt: { name: "seen_at" },
@@ -83,7 +84,7 @@ test("defineEntity compiles touchedBy from physical column names and registers i
   expect(spec.functionDdl).not.toContain(`last_viewed_at`);
   // Registered: the same table declared again with different rules conflicts.
   expect(() =>
-    defineEntity("dua_unit_items", itemFields(), {
+    defineEntity(entityRef("dua_unit_items", itemFields()), {
       updatedAt: {
         touchedBy: {
           id: false,
@@ -103,7 +104,7 @@ test("deriveUpdatedAt on a raw pgTable compiles the same spec as the equivalent 
     status: { into: ["working"], outOf: ["done"] },
     lastViewedAt: false,
   } as const;
-  const entity = defineEntity("dua_same_items", itemFields(), {
+  const entity = defineEntity(entityRef("dua_same_items", itemFields()), {
     primaryKey: "id",
     columns: {
       lastViewedAt: { name: "seen_at" },
@@ -129,25 +130,24 @@ test("deriveUpdatedAt on a raw pgTable compiles the same spec as the equivalent 
 
 test("runtime backstops for callers typed against the widened record", () => {
   // As entity-extensions calls it: `FieldsRecord`-typed, invisible to the types.
-  const loose = defineEntity as unknown as (
-    name: string,
-    fields: object,
-    meta?: object,
+  const defineLoose = defineEntity as unknown as (
+    ref: object,
+    meta: object,
   ) => unknown;
-  expect(() => loose("dua_no_meta", itemFields(), {})).toThrow(
+  const loose = (name: string, fields: Record<string, never>, meta: object) =>
+    defineLoose(entityRef(name, fields), meta);
+  expect(() => loose("dua_no_meta", itemFields() as never, {})).toThrow(
     /meta.updatedAt must declare/,
   );
   expect(() =>
-    loose("dua_partial", itemFields(), {
+    loose("dua_partial", itemFields() as never, {
       updatedAt: { touchedBy: { id: false, title: true, bogus: true } },
     }),
   ).toThrow(/missing: status, lastViewedAt; not a column: bogus/);
   expect(() =>
-    loose(
-      "dua_no_field",
-      { id: field(textType, z.string(), "") },
-      { updatedAt: { touchedBy: { id: false } } },
-    ),
+    loose("dua_no_field", { id: field(textType, z.string(), "") } as never, {
+      updatedAt: { touchedBy: { id: false } },
+    }),
   ).toThrow(/no updatedAt field/);
 });
 
@@ -158,16 +158,16 @@ function _typeTests(): void {
 
   // An `updatedAt` field and no `meta.updatedAt` at all.
   // @ts-expect-error — meta is required when the record has updatedAt
-  defineEntity("t_no_meta", f);
+  defineEntity(entityRef("t_no_meta", f));
   // @ts-expect-error — meta without an updatedAt declaration
-  defineEntity("t_meta_no_decl", f, { primaryKey: "id" });
+  defineEntity(entityRef("t_meta_no_decl", f), { primaryKey: "id" });
 
   // A column nobody classified.
   const missingColumn = {
     updatedAt: { touchedBy: { id: false, title: true, status: true } },
   } as const;
   // @ts-expect-error — lastViewedAt is missing from touchedBy
-  defineEntity("t_missing_column", f, missingColumn);
+  defineEntity(entityRef("t_missing_column", f), missingColumn);
 
   // A transition value that is not one of the column's values.
   const mistyped = {
@@ -181,13 +181,13 @@ function _typeTests(): void {
     },
   } as const;
   // @ts-expect-error — "wroking" is not a Status
-  defineEntity("t_mistyped", f, mistyped);
+  defineEntity(entityRef("t_mistyped", f), mistyped);
 
   // A record WITHOUT updatedAt cannot declare one.
   const noUpdatedAt = { id: field(textType, z.string(), "") };
   const bogusDecl = { updatedAt: { touchedBy: { id: false } } } as const;
   // @ts-expect-error — no updatedAt field to derive
-  defineEntity("t_no_field", noUpdatedAt, bogusDecl);
+  defineEntity(entityRef("t_no_field", noUpdatedAt), bogusDecl);
 
   // The well-formed spellings compile.
   const ok = {
@@ -200,9 +200,9 @@ function _typeTests(): void {
       },
     },
   } as const;
-  defineEntity("t_ok", f, ok);
+  defineEntity(entityRef("t_ok", f), ok);
   // @ts-expect-error — the hand-stamped "app-managed" opt-out no longer exists
-  defineEntity("t_no_legacy", f, { updatedAt: "app-managed" });
-  defineEntity("t_ok_no_field", noUpdatedAt);
+  defineEntity(entityRef("t_no_legacy", f), { updatedAt: "app-managed" });
+  defineEntity(entityRef("t_ok_no_field", noUpdatedAt));
 }
 void _typeTests;

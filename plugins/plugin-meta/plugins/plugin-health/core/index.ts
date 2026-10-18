@@ -1,5 +1,6 @@
 export {
   pluginHealthReviewFields,
+  pluginHealthReviewsEntityRef,
   PluginHealthReviewSchema,
   PluginStalenessSchema,
   ReviewTaskSummarySchema,

@@ -1,10 +1,14 @@
 import { z } from "zod";
-import { nullable, type FieldsRecord } from "@plugins/fields/core";
+import {
+  fieldsToZodObject,
+  nullable,
+  type FieldsRecord,
+} from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
-import { wireSchema } from "@plugins/infra/plugins/entities/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { idKindField } from "@plugins/ids/core";
 import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 
@@ -27,7 +31,7 @@ import { songIdKind } from "@plugins/apps/plugins/sonata/plugins/library/core";
 //
 // The physical table (server) and the wire schema both derive from this single
 // `trackViewFields` record; the created/updated timestamps stay in the DDL but
-// are kept off the wire via `TRACK_VIEW_SERVER_ONLY`.
+// are kept off the wire as `trackViewServerFields`.
 export const trackViewFields = {
   songId: idKindField(songIdKind),
   trackId: textField(),
@@ -36,17 +40,21 @@ export const trackViewFields = {
   muted: boolField(),
   hidden: boolField(),
   volume: floatField({ min: 0, max: 2, default: 1 }),
+} satisfies FieldsRecord;
+
+/** The `sonata_track_view` entity (the wire fields; timestamps are server fields). */
+export const trackViewEntityRef = entityRef(
+  "sonata_track_view",
+  trackViewFields,
+);
+
+// Columns present in the table DDL but never on the wire (the loader never
+// fetches them): the created/updated timestamps the client never reads.
+export const trackViewServerFields = {
   createdAt: dateField(),
   updatedAt: dateField(),
 } satisfies FieldsRecord;
 
-// Columns present in the table DDL but omitted from the wire schema (and never
-// fetched by the loader): the created/updated timestamps the client never reads.
-export const TRACK_VIEW_SERVER_ONLY = ["createdAt", "updatedAt"] as const;
-
 // Client-facing row shape — 7 fields (omits the timestamps). Browser-safe.
-export const TrackViewRowSchema = wireSchema(
-  trackViewFields,
-  TRACK_VIEW_SERVER_ONLY,
-);
+export const TrackViewRowSchema = fieldsToZodObject(trackViewFields);
 export type TrackViewRow = z.infer<typeof TrackViewRowSchema>;

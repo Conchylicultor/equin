@@ -18,7 +18,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text } from "drizzle-orm/pg-core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import {
@@ -26,6 +26,7 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { defineEntity } from "@plugins/infra/plugins/entities/server";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import {
@@ -57,18 +58,19 @@ const attempts = pgTable("xp_attempts", {
   id: text("id").primaryKey(),
   taskId: text("task_id").notNull(),
 });
-const conversations = pgTable("xp_conversations", {
-  id: text("id").primaryKey(),
-  attemptId: text("attempt_id").notNull(),
-  title: text("title").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-});
 const tasksRef = entityRef("xp_tasks", {});
 const conversationsRef = entityRef("xp_conversations", {
   id: textField({ label: "Id", filterable: false }),
   title: textField({ label: "Title" }),
   createdAt: dateField({ label: "Created", filterable: false }),
 });
+// The served entity; `attemptId` is a server-only column (the owner joins read it).
+const conversationsEntity = defineEntity(
+  conversationsRef,
+  { attemptId: textField({ label: "Attempt" }) },
+  { primaryKey: "id" },
+);
+const conversations = conversationsEntity.table;
 
 const track = defineExtension(
   tasks,

@@ -8,6 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { db, type DbExecutor } from "@plugins/database/server";
 import type { FieldsRecord } from "@plugins/fields/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import {
   defaultNow,
   type DefaultedKeys,
@@ -216,7 +217,7 @@ export function defineExtension<
     touchedBy[k] =
       k === key || k === "createdAt" ? false : (overrides[k] ?? true);
   }
-  const entityMeta: EntityMeta<FieldsRecord> = {
+  const entityMeta: EntityMeta<FieldsRecord> & { serverOnly?: never } = {
     primaryKey: key,
     columns: {
       ...meta.columns,
@@ -236,12 +237,24 @@ export function defineExtension<
     // Every side-table carries the primitive's `updatedAt` timestamp, derived
     // by the database trigger from `touchedBy` — never written by the app.
     updatedAt: { touchedBy },
-    serverOnly: shape.serverOnly,
     // `as any` at the runtime/type boundary, as in `define-entity.ts`: the
     // precise `t` type rides in `ExtensionMeta`'s own signature.
     indexes: (t: any) => meta.indexes?.(t, builders) ?? [],
   };
-  const entity = defineEntity(tableName, fields, entityMeta);
+  // The shape's server-only fields are the entity's server fields, off the
+  // ref; the rest (key, wire fields, wire timestamps) are the ref's. Relative
+  // order inside each group is the shape's.
+  const serverOnlyKeys = new Set<string>(shape.serverOnly);
+  const refFields: FieldsRecord = {};
+  const serverFields: FieldsRecord = {};
+  for (const [k, f] of Object.entries(fields)) {
+    (serverOnlyKeys.has(k) ? serverFields : refFields)[k] = f;
+  }
+  const entity = defineEntity(
+    entityRef(tableName, refFields),
+    serverFields,
+    entityMeta,
+  );
 
   const { table } = entity;
   const keyColumn = table[key];

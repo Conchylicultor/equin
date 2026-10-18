@@ -160,7 +160,7 @@ export const mailMessageFields = {
     reason:
       "Gmail's own message id — the local mirror is keyed by the id the Gmail API returns.",
   }),
-  threadId: textField(),
+  threadId: textField({ label: "Thread" }),
   accountId: idKindField(mailAccountIdKind),
   from: jsonField<z.infer<typeof MailAddressSchema>>({
     schema: MailAddressSchema,
@@ -299,3 +299,42 @@ export const MailLabelRefSchema = MailLabelSchema.pick({
   textColor: true,
 });
 export type MailLabelRef = z.infer<typeof MailLabelRefSchema>;
+
+/** The `mail_accounts` entity. */
+export const mailAccountsEntityRef = entityRef(
+  "mail_accounts",
+  mailAccountFields,
+);
+
+/** The `mail_sync_state` entity. */
+export const mailSyncStateEntityRef = entityRef(
+  "mail_sync_state",
+  mailSyncStateFields,
+);
+
+/** The `mail_labels` entity. */
+export const mailLabelsEntityRef = entityRef("mail_labels", mailLabelFields);
+
+/** The `mail_messages` entity. */
+export const mailMessagesEntityRef = entityRef(
+  "mail_messages",
+  mailMessageFields,
+);
+
+/** The `mail_message_labels` entity. */
+export const mailMessageLabelsEntityRef = entityRef(
+  "mail_message_labels",
+  mailMessageLabelFields,
+);
+
+/** The `mail_attachments` entity. */
+export const mailAttachmentsEntityRef = entityRef(
+  "mail_attachments",
+  mailAttachmentFields,
+);
+
+/** The `mail_drafts` entity. */
+export const mailDraftsEntityRef = entityRef("mail_drafts", mailDraftFields);
+
+/** The `mail_outbox` entity. */
+export const mailOutboxEntityRef = entityRef("mail_outbox", mailOutboxFields);

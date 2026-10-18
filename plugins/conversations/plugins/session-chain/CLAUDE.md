@@ -85,10 +85,17 @@ bun test plugins/conversations/plugins/session-chain/server/internal
     - `recordSessionId`
 - Core:
   - Uses:
+    - `fields.FieldsRecord`
+    - `fields/date/config.dateField`
+    - `fields/text/config.textField`
     - `ids.defineIdKind`
+    - `ids.idKindField`
     - `ids.IdOf`
+    - `infra/entities.entityRef`
   - Exports (types): `SessionLinkId`
-  - Exports (values): `sessionLinkIdKind`
+  - Exports (values):
+    - `conversationSessionsEntityRef`
+    - `sessionLinkIdKind`
 - Cross-plugin:
   - Imported by:
     - `conversations`

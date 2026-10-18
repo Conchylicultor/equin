@@ -11,11 +11,12 @@ export {
 export type { TagColor } from "./tag-color";
 export { closestTagNames } from "./suggest";
 export {
-  PAGE_TAG_SERVER_ONLY,
   pageTagAssignmentShape,
   PageTagAssignmentRowSchema,
   pageTagAssignments,
   pageTagFields,
+  pageTagServerFields,
+  pageTagsEntityRef,
   PageTagRowSchema,
   pageTagVocabulary,
 } from "./resources";

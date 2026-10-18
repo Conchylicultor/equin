@@ -151,10 +151,9 @@ removes settled rows (accepted, merged, returned, withdrawn).
     - `report-kind` "turn-unverified"
   - Uses:
     - `database.db`
-    - `database/derived-updated-at.deriveUpdatedAt`
-    - `database/sql-column.parsedText`
-    - `ids.idColumn`
     - `ids.IdKinds`
+    - `infra/entities.defineEntity`
+    - `infra/entities.sqlDefault`
     - `infra/events.defineTriggerEvent`
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
@@ -198,6 +197,7 @@ removes settled rows (accepted, merged, returned, withdrawn).
     - `turn-ledger.turns:rows` (keyed, point)
 - Core:
   - Uses:
+    - `fields.FieldsRecord`
     - `fields.fieldsToZodObject`
     - `fields.nullable`
     - `fields/bool/config.boolField`
@@ -205,7 +205,9 @@ removes settled rows (accepted, merged, returned, withdrawn).
     - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
     - `ids.defineIdKind`
+    - `ids.idKindField`
     - `ids.IdOf`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
   - Exports (types):
     - `LedgerTurn`

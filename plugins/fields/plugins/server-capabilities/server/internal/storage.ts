@@ -5,6 +5,7 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 import type { ColumnBuilderBaseConfig, ColumnDataType } from "drizzle-orm";
 import type { PgColumnBuilderBase } from "drizzle-orm/pg-core";
+import type { WithWire } from "@plugins/database/plugins/sql-column/server";
 import type { FieldType } from "@plugins/fields/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
@@ -39,6 +40,7 @@ export type FieldStorageContribution<B = unknown> = { type: FieldType<B> } & (
       /** This type's column holds exactly `B`; no field can narrow it. */
       build: StorageColumnBuilder<B>;
       decode?: never;
+      stored?: never;
     }
   | {
       /** This type's column is narrowed by the FIELD's own schema, so that
@@ -50,6 +52,18 @@ export type FieldStorageContribution<B = unknown> = { type: FieldType<B> } & (
         valueSchema: ZodParser<V>,
       ) => StorageColumnFor<V>;
       build?: never;
+      stored?: never;
+    }
+  | {
+      /** This type's column stores ANOTHER value than `B` — `B` is its wire
+       *  form, which the column declares (sql-column `withWire`), so every
+       *  served row encodes what is stored into `B`. The field def says what
+       *  is stored (`StoredAs`, fields/core), so the entity's table types the
+       *  column by it while its wire schema stays `B` (a `bytea` holding the
+       *  bytes a base64 string carries). */
+      stored: (name: string) => WithWire<PgColumnBuilderBase, B>;
+      build?: never;
+      decode?: never;
     }
 );
 

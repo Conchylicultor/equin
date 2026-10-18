@@ -72,6 +72,7 @@ export {
 export {
   eventsEntityRef,
   eventSourcesEntityRef,
+  eventSourceRunEventsEntityRef,
   eventSourceRunsEntityRef,
 } from "./internal/entity-refs";
 export {

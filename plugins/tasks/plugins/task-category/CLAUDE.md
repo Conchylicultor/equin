@@ -97,7 +97,7 @@ Consumers read only the generic aggregate:
     - `network/live.serveValue`
     - `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-category/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_category`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_category`)
   - Exports (values):
     - `getTaskCategory`
     - `setTaskCategory`

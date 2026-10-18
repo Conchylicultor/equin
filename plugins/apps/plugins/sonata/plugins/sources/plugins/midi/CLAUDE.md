@@ -62,7 +62,7 @@ MIDI for playback is the `getSongMidi` endpoint.
     - `infra/entity-extensions.defineExtension`
     - `network/live.LiveColumns`
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server/internal/tables.ts`
-  - Entity extension of: `apps/sonata/library` (table `library_ext_midi`)
+  - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_midi`)
   - Exports (types): `ImportMidiSongInput`
   - Exports (values):
     - `getSongMidiBySourcePath`

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
+import { pagesEntityRef } from "@plugins/page/plugins/block-entity/core";
 import { BacklinkRowSchema } from "./schemas";
 
 // The pages that link TO `pageId`, ordered by title — one value per target
@@ -36,9 +36,12 @@ export const pageBacklinks = liveValue("page-backlinks", {
 //
 // Not preloaded: nothing reads it until the Pages sidebar mounts.
 export const pageLinkSources = liveCollection("page-links.sources", {
-  carry: {
-    fields: { id: textField(), linkedFrom: stringListField() },
-  },
+  // A page row (`page_blocks`) with the ids of the pages linking to it — an
+  // aggregate of the children join, computed by the server half.
+  from: pagesEntityRef,
+  carry: { pick: ["id"], fields: { linkedFrom: stringListField() } },
+  // Its wire rows stay `{ id, linkedFrom }`: no exposure of a page folds in.
+  baseExposures: false,
   id: "id",
   all: {
     orderBy: [["id", "asc"]],

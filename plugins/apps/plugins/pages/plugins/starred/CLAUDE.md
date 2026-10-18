@@ -76,7 +76,7 @@ Favorites/starred pages, as a **presence-only marker** — not a bespoke sidebar
     - `network/live.serveCollection`
     - `page/editor._blocks`
   - DB schema: `plugins/apps/plugins/pages/plugins/starred/server/internal/tables.ts`
-  - Entity extension of: `page/editor` (table `editor_ext_starred`)
+  - Entity extension of: `page/editor` (table `page_blocks_ext_starred`)
   - Exports (values):
     - `pageBlocksStarred`
     - `setPageStarred`

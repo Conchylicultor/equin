@@ -1,7 +1,5 @@
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { pluginHealthReviewFields } from "../core";
-
-const { pluginId, axis, ...carried } = pluginHealthReviewFields;
+import { pluginHealthReviewsEntityRef } from "../core";
 
 // The recorded reviews, as a live collection over `plugin_health_reviews`: a
 // bounded window (by axis, 50 / max 200) plus its `:rows` point sibling. The
@@ -11,8 +9,11 @@ const { pluginId, axis, ...carried } = pluginHealthReviewFields;
 // conflict target a re-review UPDATEs in place — so one plugin's window holds
 // one row per axis it was reviewed along.
 export const pluginHealthReviews = liveCollection("plugin-health-reviews", {
-  fields: { pluginId, axis },
-  carry: { fields: carried },
+  from: pluginHealthReviewsEntityRef,
+  pick: ["pluginId", "axis"],
+  carry: { pick: ["id", "commitHash", "conversationId", "createdAt"] },
+  // Its wire rows stay the table's own columns: no extension exposes a review.
+  baseExposures: false,
   id: "id",
   sortable: ["axis"],
   default: { orderBy: [["axis", "asc"]], limit: 50 },

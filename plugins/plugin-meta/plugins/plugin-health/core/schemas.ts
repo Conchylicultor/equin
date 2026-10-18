@@ -1,3 +1,4 @@
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { z } from "zod";
 import {
   fieldsToZodObject,
@@ -21,6 +22,12 @@ export const pluginHealthReviewFields = {
   conversationId: nullable(textField()),
   createdAt: dateField(),
 } satisfies FieldsRecord;
+
+/** The `plugin_health_reviews` entity. */
+export const pluginHealthReviewsEntityRef = entityRef(
+  "plugin_health_reviews",
+  pluginHealthReviewFields,
+);
 
 export const PluginHealthReviewSchema = fieldsToZodObject(
   pluginHealthReviewFields,

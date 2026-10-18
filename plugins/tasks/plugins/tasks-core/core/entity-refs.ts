@@ -1,7 +1,10 @@
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import {
   attemptFields,
+  attemptDeliveryFields,
   conversationFields,
+  pushFields,
+  taskDependencyFields,
   taskFields,
 } from "./internal/fields";
 
@@ -16,4 +19,13 @@ export const attemptsEntityRef = entityRef("attempts", attemptFields);
 export const conversationsEntityRef = entityRef(
   "conversations",
   conversationFields,
+);
+export const taskDependenciesEntityRef = entityRef(
+  "task_dependencies",
+  taskDependencyFields,
+);
+export const pushesEntityRef = entityRef("pushes", pushFields);
+export const attemptDeliveriesEntityRef = entityRef(
+  "attempt_deliveries",
+  attemptDeliveryFields,
 );

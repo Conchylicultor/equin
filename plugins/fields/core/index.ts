@@ -17,6 +17,8 @@ export type {
   Unfilterable,
   FieldsRecord,
   InferFieldValue,
+  InferStoredValue,
+  StoredAs,
   InferFieldsObject,
 } from "./internal/field-spec";
 export { pickMeta } from "./internal/pick-meta";

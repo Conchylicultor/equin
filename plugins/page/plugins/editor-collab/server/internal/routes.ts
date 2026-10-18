@@ -1,6 +1,6 @@
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { stateToBase64 } from "@plugins/primitives/plugins/collab-doc/server";
+import { bytesToBase64 } from "@plugins/fields/plugins/bytes/plugins/storage/server";
 import { blockDocInit, blockDocUpdate } from "../../core";
 import { initBlockDoc, mergeBlockDocUpdate } from "./doc-store";
 
@@ -9,7 +9,7 @@ export const handleBlockDocInit = implement(
   async ({ params, body }) => {
     const proposed = new Uint8Array(await body.arrayBuffer());
     const authoritative = await initBlockDoc(db, params.id, proposed);
-    return { state: stateToBase64(authoritative) };
+    return { state: bytesToBase64(authoritative) };
   },
 );
 

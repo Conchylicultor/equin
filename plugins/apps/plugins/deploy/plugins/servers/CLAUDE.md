@@ -159,7 +159,7 @@ plus `sshKey`.
     - `apps/deploy/deployments/runs-arm`
     - `apps/deploy/health`
     - `apps/deploy/ssh-setup`
-  - Extended by: `apps/deploy/health` (table `servers_ext_health`)
+  - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)
 - Shared:
   - Exports (types):
     - `CreateServerBody`

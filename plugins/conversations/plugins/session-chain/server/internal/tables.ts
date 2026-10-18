@@ -3,11 +3,7 @@ import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
-import { type FieldsRecord } from "@plugins/fields/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
-import { idKindField } from "@plugins/ids/core";
-import { sessionLinkIdKind } from "../../core";
+import { conversationSessionsEntityRef } from "../../core";
 
 // One row per distinct Claude session id a conversation has ever run under, in
 // first-seen order. A conversation's transcript is spread over SEVERAL session
@@ -15,15 +11,7 @@ import { sessionLinkIdKind } from "../../core";
 // none of Claude's own artifacts records that ordering — so the status reconciler records
 // it here as it observes each id change.
 //
-// The field record is local (not `core/`): nothing crosses the runtime boundary,
-// so there is no wire schema to keep in sync. `id` is an app-minted text PK
-// (`sess-<uuid>`, no DB default); `seenAt` defaults to now() in the DB.
-const conversationSessionFields = {
-  id: idKindField(sessionLinkIdKind),
-  conversationId: textField(),
-  claudeSessionId: textField(),
-  seenAt: dateField(),
-} satisfies FieldsRecord;
+// The fields live in `core/entity.ts` (`conversationSessionsEntityRef`).
 
 // Append-only chain rows — one per observed session id, never updated, never
 // deleted. Soft FK to conversations (text id, no cascade): the chain has its own
@@ -44,24 +32,20 @@ const conversationSessionFields = {
 //   • (claudeSessionId) serves the reverse lookup — which conversation a
 //     written transcript belongs to (`listConversationsForSessions`, the usage
 //     accumulator's per-write mapping).
-const conversationSessions = defineEntity(
-  "conversation_sessions",
-  conversationSessionFields,
-  {
-    primaryKey: "id",
-    columns: {
-      seenAt: { default: defaultNow() },
-    },
-    indexes: (t) => [
-      index("conversation_sessions_by_conv_idx").on(t.conversationId, t.seenAt),
-      uniqueIndex("conversation_sessions_conv_session_idx").on(
-        t.conversationId,
-        t.claudeSessionId,
-      ),
-      index("conversation_sessions_by_session_idx").on(t.claudeSessionId),
-    ],
+const conversationSessions = defineEntity(conversationSessionsEntityRef, {
+  primaryKey: "id",
+  columns: {
+    seenAt: { default: defaultNow() },
   },
-);
+  indexes: (t) => [
+    index("conversation_sessions_by_conv_idx").on(t.conversationId, t.seenAt),
+    uniqueIndex("conversation_sessions_conv_session_idx").on(
+      t.conversationId,
+      t.claudeSessionId,
+    ),
+    index("conversation_sessions_by_session_idx").on(t.claudeSessionId),
+  ],
+});
 
 // drizzle-kit schema-glob discovery.
 export const _conversationSessions = conversationSessions.table;

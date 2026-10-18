@@ -45,7 +45,10 @@ export type {
   AllWhereColumns,
   ServeAllCollectionOptions,
 } from "./internal/serve-all";
-export type { CollectionSource } from "./internal/collection-source";
+export type {
+  CollectionSource,
+  ServedSource,
+} from "./internal/collection-source";
 export type {
   CollectionSpecs,
   ColumnOverride,

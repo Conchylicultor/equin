@@ -317,8 +317,8 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `tasks.armTaskAutoStart`
   - DB schema: `plugins/tasks/plugins/automations/server/internal/tables.ts`
   - Entity extension of:
-    - `tasks/tasks-core` (table `tasks-core_ext_launch_decision`)
-    - `tasks/tasks-core` (table `tasks-core_ext_origin`)
+    - `tasks/tasks-core` (table `tasks_ext_launch_decision`)
+    - `tasks/tasks-core` (table `tasks_ext_origin`)
   - Exports (types):
     - `Automation`
     - `AutomationDetectCtx`

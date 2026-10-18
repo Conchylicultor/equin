@@ -110,8 +110,7 @@ interface SlowOpSample {
 // ── The slow_ops shape, rebuilt through defineEntity ───────────────────────
 function buildSlowOps() {
   return defineEntity(
-    "slow_ops",
-    {
+    entityRef("slow_ops", {
       id: field(uuidType, z.string(), ""),
       worktree: field(textType, z.string(), ""),
       operationKind: field(textType, z.string(), ""),
@@ -137,7 +136,7 @@ function buildSlowOps() {
       ),
       firstSeenAt: field(dateType, z.date(), new Date(0)),
       lastSeenAt: field(dateType, z.date(), new Date(0)),
-    },
+    }),
     {
       primaryKey: "id",
       columns: {
@@ -224,13 +223,12 @@ test("defineEntity reproduces per-column notNull / primary / hasDefault / SQL ty
 test("defineEntity passes through indexes via the third-arg callback", () => {
   const { uniqueIndex } = require("drizzle-orm/pg-core");
   const slowOps = defineEntity(
-    "slow_ops_idx",
-    {
+    entityRef("slow_ops_idx", {
       id: field(uuidType, z.string(), ""),
       worktree: field(textType, z.string(), ""),
       operationKind: field(textType, z.string(), ""),
       operation: field(textType, z.string(), ""),
-    },
+    }),
     {
       primaryKey: "id",
       columns: { id: { default: defaultRandom() } },
@@ -278,16 +276,20 @@ test("entity.schema validates a sample row", () => {
 
 test("defineEntity throws (naming key + type) for a field whose type has no storage", () => {
   expect(() =>
-    defineEntity("bad", {
-      id: field(uuidType, z.string(), ""),
-      kind: field(noStorageType, z.string(), ""),
-    }),
+    defineEntity(
+      entityRef("bad", {
+        id: field(uuidType, z.string(), ""),
+        kind: field(noStorageType, z.string(), ""),
+      }),
+    ),
   ).toThrow(/"kind"/);
   expect(() =>
-    defineEntity("bad", {
-      id: field(uuidType, z.string(), ""),
-      kind: field(noStorageType, z.string(), ""),
-    }),
+    defineEntity(
+      entityRef("bad", {
+        id: field(uuidType, z.string(), ""),
+        kind: field(noStorageType, z.string(), ""),
+      }),
+    ),
   ).toThrow(/__ent_no_storage__/);
 });
 
@@ -307,24 +309,24 @@ type _SelectInfer = (typeof slowOpsForType.table)["$inferSelect"];
 export type _RowMatchesWire = Expect<Equal<_SchemaInfer, _SelectInfer>>;
 
 // ── Server-only columns: in the table DDL, off the wire ─────────────────────
-// An entity with a `serverOnly` key keeps the column in the FULL table DDL but
+// An entity with a server field keeps the column in the FULL table DDL but
 // omits it from BOTH the derived wire `schema` and `wireColumns` (the loader's
 // select-map). The column-builder loop is untouched, so `$inferSelect` still
 // carries every column — the omit lives only on the wire side.
 function buildServerOnlyEnt() {
   return defineEntity(
-    "ent_server_only",
-    {
+    entityRef("ent_server_only", {
       id: field(uuidType, z.string(), ""),
       pageId: field(textType, z.string(), ""),
       output: field(textType, z.string(), ""),
-      // server-only columns:
+    }),
+    // server-only columns:
+    {
       prompt: field(textType, z.string(), ""),
       createdAt: field(dateType, z.date(), new Date(0)),
     },
     {
       primaryKey: "id",
-      serverOnly: ["prompt", "createdAt"],
       columns: {
         id: { default: defaultRandom() },
         createdAt: { default: defaultNow() },
@@ -362,39 +364,26 @@ test("server-only columns stay in the DDL but leave the wire schema + wireColumn
   expect("createdAt" in parsed).toBe(false);
 });
 
-test("defineEntity throws when a serverOnly key is not a field", () => {
-  expect(() =>
-    defineEntity(
-      "ent_bad_server_only",
-      { id: field(uuidType, z.string(), "") },
-      // `nope` is not a field key.
-      { primaryKey: "id", serverOnly: ["nope" as "id"] },
-    ),
-  ).toThrow(/serverOnly key "nope" is not a field/);
-});
-
-test("defineEntity throws when a serverOnly key is the primary key", () => {
+test("defineEntity throws when a server field is the primary key", () => {
   // Single-column PK.
   expect(() =>
     defineEntity(
-      "ent_pk_server_only",
-      {
-        id: field(uuidType, z.string(), ""),
+      entityRef("ent_pk_server_only", {
         note: field(textType, z.string(), ""),
-      },
-      { primaryKey: "id", serverOnly: ["id"] },
+      }),
+      { id: field(uuidType, z.string(), "") },
+      { primaryKey: "id" },
     ),
   ).toThrow(/primary-key column "id" cannot be serverOnly/);
 
   // Composite PK.
   expect(() =>
     defineEntity(
-      "ent_composite_pk_server_only",
-      {
+      entityRef("ent_composite_pk_server_only", {
         a: field(textType, z.string(), ""),
-        b: field(textType, z.string(), ""),
-      },
-      { primaryKey: ["a", "b"], serverOnly: ["b"] },
+      }),
+      { b: field(textType, z.string(), "") },
+      { primaryKey: ["a", "b"] },
     ),
   ).toThrow(/primary-key column "b" cannot be serverOnly/);
 });
@@ -507,8 +496,10 @@ function nullableTextFieldT(): FieldDef<string | null> {
   );
 }
 const nullableEnt = defineEntity(
-  "ent_nullable",
-  { id: field(textType, z.string(), ""), note: nullableTextFieldT() },
+  entityRef("ent_nullable", {
+    id: field(textType, z.string(), ""),
+    note: nullableTextFieldT(),
+  }),
   { primaryKey: "id" },
 );
 type _NullableInsert = (typeof nullableEnt.table)["$inferInsert"];
@@ -549,12 +540,11 @@ function enumBrandedField(): FieldDef<"a" | "b" | "c"> {
   );
 }
 const enumDefaultEnt = defineEntity(
-  "ent_enum_default",
-  {
+  entityRef("ent_enum_default", {
     id: field(textType, z.string(), ""),
     status: enumBrandedField(),
     createdAt: field(dateType, z.coerce.date(), new Date(0)),
-  },
+  }),
   {
     primaryKey: "id",
     columns: { status: { default: "a" }, createdAt: { default: defaultNow() } },
@@ -596,18 +586,16 @@ function nullableField(): FieldDef<string> {
 
 test("defineEntity emits FK constraints (cascade, set-null, self-ref, composite)", () => {
   const accounts = defineEntity(
-    "fk_accounts",
-    { id: field(textType, z.string(), "") },
+    entityRef("fk_accounts", { id: field(textType, z.string(), "") }),
     { primaryKey: "id" },
   );
 
   const labels = defineEntity(
-    "fk_labels",
-    {
+    entityRef("fk_labels", {
       id: field(textType, z.string(), ""),
       accountId: field(textType, z.string(), ""),
       parentId: nullableField(),
-    },
+    }),
     {
       primaryKey: "id",
       columns: {
@@ -626,11 +614,10 @@ test("defineEntity emits FK constraints (cascade, set-null, self-ref, composite)
   );
 
   const messages = defineEntity(
-    "fk_messages",
-    {
+    entityRef("fk_messages", {
       id: field(textType, z.string(), ""),
       accountId: field(textType, z.string(), ""),
-    },
+    }),
     {
       primaryKey: "id",
       columns: {
@@ -642,11 +629,10 @@ test("defineEntity emits FK constraints (cascade, set-null, self-ref, composite)
   );
 
   const messageLabels = defineEntity(
-    "fk_message_labels",
-    {
+    entityRef("fk_message_labels", {
       messageId: field(textType, z.string(), ""),
       labelId: field(textType, z.string(), ""),
-    },
+    }),
     {
       primaryKey: ["messageId", "labelId"],
       columns: {
@@ -720,16 +706,14 @@ test("defineEntity emits FK constraints (cascade, set-null, self-ref, composite)
 
 test("defineEntity defaults the FK action to NO ACTION when none is given", () => {
   const parent = defineEntity(
-    "fk_noaction_parent",
-    { id: field(textType, z.string(), "") },
+    entityRef("fk_noaction_parent", { id: field(textType, z.string(), "") }),
     { primaryKey: "id" },
   );
   const child = defineEntity(
-    "fk_noaction_child",
-    {
+    entityRef("fk_noaction_child", {
       id: field(textType, z.string(), ""),
       parentId: field(textType, z.string(), ""),
-    },
+    }),
     {
       primaryKey: "id",
       columns: { parentId: { references: { column: () => parent.table.id } } },
@@ -756,8 +740,7 @@ const KIND_VALUES = ["user", "agent", "system"] as const;
 
 test("a narrowed field's column really throws on an out-of-set read", () => {
   const ent = defineEntity(
-    "ent_decoded",
-    {
+    entityRef("ent_decoded", {
       id: field(textType, z.string(), ""),
       kind: field(
         decodedTextType as unknown as ReturnType<
@@ -766,7 +749,7 @@ test("a narrowed field's column really throws on an out-of-set read", () => {
         z.enum(KIND_VALUES),
         "user",
       ),
-    },
+    }),
     { primaryKey: "id" },
   );
 
@@ -791,11 +774,10 @@ test("a plain-string field's column carries NO decoder", () => {
   // same as decoding one that is, for zero guarantee. A `z.string()` field must
   // therefore keep a bare `text` column whose read is the identity.
   const ent = defineEntity(
-    "ent_undecoded",
-    {
+    entityRef("ent_undecoded", {
       id: field(textType, z.string(), ""),
       note: field(decodedTextType, z.string(), ""),
-    },
+    }),
     { primaryKey: "id" },
   );
 
@@ -811,8 +793,7 @@ test("a NULLABLE plain-string field still carries no decoder", () => {
   // `ZodString`, take the decoding branch, and quietly put a parse on every
   // nullable text column in the repo — 345 ns per value, verifying nothing.
   const ent = defineEntity(
-    "ent_undecoded_nullable",
-    {
+    entityRef("ent_undecoded_nullable", {
       id: field(textType, z.string(), ""),
       note: field(
         decodedTextType as unknown as ReturnType<
@@ -821,7 +802,7 @@ test("a NULLABLE plain-string field still carries no decoder", () => {
         z.string().nullable(),
         null,
       ),
-    },
+    }),
     { primaryKey: "id" },
   );
 
@@ -838,8 +819,7 @@ test("a nullable narrowed field decodes its UNWRAPPED schema and stays nullable"
   // would make every real value fail one half of the round trip. Nullability
   // stays drizzle's, derived from the same split.
   const ent = defineEntity(
-    "ent_decoded_nullable",
-    {
+    entityRef("ent_decoded_nullable", {
       id: field(textType, z.string(), ""),
       kind: field(
         decodedTextType as unknown as ReturnType<
@@ -848,7 +828,7 @@ test("a nullable narrowed field decodes its UNWRAPPED schema and stays nullable"
         z.enum(KIND_VALUES).nullable(),
         null,
       ),
-    },
+    }),
     { primaryKey: "id" },
   );
 
@@ -871,8 +851,7 @@ test("a nullable narrowed field decodes its UNWRAPPED schema and stays nullable"
 
 test("a narrowed jsonb field's column really throws on an out-of-shape read", () => {
   const ent = defineEntity(
-    "ent_json_decoded",
-    {
+    entityRef("ent_json_decoded", {
       id: field(textType, z.string(), ""),
       callers: field(
         jsonType<CallerBreakdown[]>(),
@@ -881,7 +860,7 @@ test("a narrowed jsonb field's column really throws on an out-of-shape read", ()
         ) as z.ZodType<CallerBreakdown[]>,
         [],
       ),
-    },
+    }),
     { primaryKey: "id" },
   );
 
@@ -908,11 +887,10 @@ test("a bare jsonb default carrying a `kind` key is a value, not a marker", () =
   // read as one matched no marker arm and built no column at all.
   const Spec = z.object({ kind: z.literal("worktree") });
   const ent = defineEntity(
-    "ent_json_kind_default",
-    {
+    entityRef("ent_json_kind_default", {
       id: field(textType, z.string(), ""),
       spec: field(jsonType<{ kind: "worktree" }>(), Spec, { kind: "worktree" }),
-    },
+    }),
     { primaryKey: "id", columns: { spec: { default: { kind: "worktree" } } } },
   );
 
@@ -925,11 +903,10 @@ test("a `z.unknown()` jsonField's column carries NO decoder", () => {
   // dial. A field whose schema declares nothing keeps a bare `jsonb` column
   // whose read is the identity, so it pays nothing.
   const ent = defineEntity(
-    "ent_json_unknown",
-    {
+    entityRef("ent_json_unknown", {
       id: field(textType, z.string(), ""),
       blob: field(jsonType<unknown>(), z.unknown(), null),
-    },
+    }),
     { primaryKey: "id" },
   );
 
@@ -946,8 +923,7 @@ test("a nullable narrowed jsonb field decodes its UNWRAPPED schema and stays nul
   // the `.nullable()` wrapper, which would make every real value fail one half
   // of the round trip.
   const ent = defineEntity(
-    "ent_json_decoded_nullable",
-    {
+    entityRef("ent_json_decoded_nullable", {
       id: field(textType, z.string(), ""),
       lastCaller: field(
         jsonType<CallerBreakdown | null>(),
@@ -956,7 +932,7 @@ test("a nullable narrowed jsonb field decodes its UNWRAPPED schema and stays nul
           .nullable() as z.ZodType<CallerBreakdown | null>,
         null,
       ),
-    },
+    }),
     { primaryKey: "id" },
   );
 
@@ -1010,11 +986,10 @@ test("defineEntity refuses a server field the ref already has, and meta.serverOn
 
 test("a generated column is GENERATED ALWAYS AS and leaves the insert model", () => {
   const ent = defineEntity(
-    "ent_generated",
-    {
+    entityRef("ent_generated", {
       id: field(textType, z.string(), ""),
       a: field(textType, z.string(), ""),
-    },
+    }),
     {
       primaryKey: "id",
       columns: { id: { generated: () => sql`a || ':x'` } },
@@ -1027,8 +1002,9 @@ test("a generated column is GENERATED ALWAYS AS and leaves the insert model", ()
   expect(insert.a).toBe("v");
   expect(() =>
     defineEntity(
-      "ent_generated_default",
-      { id: field(textType, z.string(), "") },
+      entityRef("ent_generated_default", {
+        id: field(textType, z.string(), ""),
+      }),
       { columns: { id: { generated: () => sql`'x'`, default: "y" } } },
     ),
   ).toThrow(/is generated, so it cannot also declare a default/);

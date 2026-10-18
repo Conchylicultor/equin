@@ -1,14 +1,11 @@
+import { index, uniqueIndex } from "drizzle-orm/pg-core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import {
-  index,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
-import { deriveUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
+  defaultNow,
+  defineEntity,
+} from "@plugins/infra/plugins/entities/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
-import { parsedText } from "@plugins/database/plugins/sql-column/server";
-import { CategorySourceSchema } from "../../shared/schemas";
+import { conversationCategoriesEntityRef } from "../../shared/schemas";
 
 // One row per (conversation, category) assignment. NOT a 1:1 entity extension:
 // a conversation carries one row per configured category, and `defineExtension`
@@ -19,25 +16,20 @@ import { CategorySourceSchema } from "../../shared/schemas";
 // collection's row id must be a SINGLE-column primary key — see
 // shared/row-id.ts and shared/schemas.ts. The unique index on the pair is the
 // writer's guard that the derived id and the logical key can never disagree.
-export const _conversationCategories = deriveUpdatedAt(
-  pgTable(
-    "conversation_categories",
-    {
-      id: text("id").primaryKey(),
-      conversationId: text("conversation_id")
-        .notNull()
-        .references(() => _conversations.id, { onDelete: "cascade" }),
-      categoryId: text("category_id").notNull(),
-      item: text("item").notNull(),
-      source: parsedText("source", CategorySourceSchema).notNull(),
-      createdAt: timestamp("created_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
-      updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
+export const conversationCategoriesEntity = defineEntity(
+  conversationCategoriesEntityRef,
+  // `createdAt` is the server field: never on the wire.
+  { createdAt: dateField() },
+  {
+    primaryKey: "id",
+    columns: {
+      conversationId: {
+        references: { column: () => _conversations.id, onDelete: "cascade" },
+      },
+      createdAt: { default: defaultNow() },
+      updatedAt: { default: defaultNow() },
     },
-    (t) => [
+    indexes: (t) => [
       // The PK index serves point reads (`WHERE id IN (…)`); this one serves the
       // per-conversation reads (the classify job's "what is already set?") and the
       // per-category scan the commits stats does.
@@ -47,15 +39,17 @@ export const _conversationCategories = deriveUpdatedAt(
         t.categoryId,
       ),
     ],
-  ),
-  {
-    touchedBy: {
-      item: true,
-      source: true,
-      id: false,
-      conversationId: false,
-      categoryId: false,
-      createdAt: false,
+    updatedAt: {
+      touchedBy: {
+        item: true,
+        source: true,
+        id: false,
+        conversationId: false,
+        categoryId: false,
+        createdAt: false,
+      },
     },
   },
 );
+
+export const _conversationCategories = conversationCategoriesEntity.table;

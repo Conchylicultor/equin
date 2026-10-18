@@ -7,28 +7,21 @@ import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
-import { pluginHealthReviewFields } from "../../core";
+import { pluginHealthReviewsEntityRef } from "../../core";
 
 // The table + the `PluginHealthReview` wire schema both derive from the single
 // `pluginHealthReviewFields` record (core), so a column/schema drift is
 // unrepresentable and the reviews collection binds every row field to its
 // column by name.
-const pluginHealthReviews = defineEntity(
-  "plugin_health_reviews",
-  pluginHealthReviewFields,
-  {
-    primaryKey: "id",
-    columns: {
-      createdAt: { default: defaultNow() },
-    },
-    indexes: (t) => [
-      uniqueIndex("plugin_health_reviews_plugin_axis_idx").on(
-        t.pluginId,
-        t.axis,
-      ),
-    ],
+const pluginHealthReviews = defineEntity(pluginHealthReviewsEntityRef, {
+  primaryKey: "id",
+  columns: {
+    createdAt: { default: defaultNow() },
   },
-);
+  indexes: (t) => [
+    uniqueIndex("plugin_health_reviews_plugin_axis_idx").on(t.pluginId, t.axis),
+  ],
+});
 
 // drizzle-kit schema-glob discovery. Name kept so consumers don't churn.
 export const _pluginHealthReviews = pluginHealthReviews.table;

@@ -1,20 +1,15 @@
-import {
-  doublePrecision,
-  integer,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { defineEntity } from "@plugins/infra/plugins/entities/server";
+import { usageStatsEntityRef } from "../../core/internal/schema";
 
 /**
  * Generic (namespace, key) usage rollup — ONE row per tracked thing, no event
  * log. Works for any consumer: `namespace` names the domain (`prompt-templates`,
  * a command palette, …), `usage_key` is `${namespace}:${key}` (see `usageKey`
- * in core).
+ * in core). Built from `usageStatFields` (core/internal/schema.ts).
  *
- * A plain `pgTable`, NOT `defineExtension`: an extension needs a parent table +
- * FK, and the things ranked here are config items / registry entries with no DB
- * row to hang off.
+ * An entity with no parent table: an extension needs a parent table + FK, and
+ * the things ranked here are config items / registry entries with no DB row to
+ * hang off.
  *
  * The single-column text PK is load-bearing — it IS the `usageStats`
  * collection's row id, which the change-feed intersects against each
@@ -24,10 +19,12 @@ import {
  * decays it to the write instant then adds 1, and every reader decays again to
  * its own now (`decayedScore`).
  */
-export const _usageStats = pgTable("usage_stats", {
-  usageKey: text("usage_key").primaryKey(),
-  namespace: text("namespace").notNull(),
-  score: doublePrecision("score").notNull().default(0),
-  useCount: integer("use_count").notNull().default(0),
-  lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull(),
+export const usageStatsEntity = defineEntity(usageStatsEntityRef, {
+  primaryKey: "usageKey",
+  columns: {
+    score: { default: 0 },
+    useCount: { default: 0 },
+  },
 });
+
+export const _usageStats = usageStatsEntity.table;

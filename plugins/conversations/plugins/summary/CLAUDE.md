@@ -67,6 +67,7 @@
     - `ids.defineIdKind`
     - `ids.idKindField`
     - `ids.IdOf`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
   - Exports (types):
     - `ConversationSummary`
@@ -74,6 +75,7 @@
     - `SummaryId`
   - Exports (values):
     - `conversationSummaries`
+    - `conversationSummariesEntityRef`
     - `conversationSummaryFields`
     - `ConversationSummarySchema`
     - `PHASE_VALUES`

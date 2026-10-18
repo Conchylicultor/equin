@@ -15,10 +15,15 @@ import type {
   AnyPgColumn,
   CheckBuilder,
   PgColumnBuilderBase,
+  PgTable,
   PgTableWithColumns,
   UpdateDeleteAction,
 } from "drizzle-orm/pg-core";
-import type { FieldsRecord, InferFieldValue } from "@plugins/fields/core";
+import type {
+  FieldsRecord,
+  InferFieldValue,
+  InferStoredValue,
+} from "@plugins/fields/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type {
   DerivedUpdatedAtSpec,
@@ -118,7 +123,9 @@ export interface EntityReference {
 // `(name) => PgColumnBuilderBase` — T erased. We assemble loosely, then cast
 // the column map once to this mapped type so `pgTable`'s own `BuildColumns`
 // infers the right select type. `$Type` brands `_.$type` (overriding the
-// column data type with `InferFieldValue<F[K]>`, which already encodes `T |
+// column data type with `InferStoredValue<F[K]>` (the field's value, or the
+// `StoredAs` value of a field whose column stores another — a `bytea`'s bytes
+// under a base64 wire value), which already encodes `T |
 // null` for a nullable field, so nullability rides along), and `NotNull`
 // brands `_.notNull`.
 //
@@ -157,22 +164,22 @@ export type EntityColumns<
   [K in keyof F]: K extends G
     ? HasGenerated<
         MaybeNotNull<
-          InferFieldValue<F[K]>,
-          EntityColumnBuilder<InferFieldValue<F[K]>>
+          InferStoredValue<F[K]>,
+          EntityColumnBuilder<InferStoredValue<F[K]>>
         >,
         { type: "always" }
       >
     : K extends D
-    ? HasDefault<
-        MaybeNotNull<
-          InferFieldValue<F[K]>,
-          EntityColumnBuilder<InferFieldValue<F[K]>>
+      ? HasDefault<
+          MaybeNotNull<
+            InferStoredValue<F[K]>,
+            EntityColumnBuilder<InferStoredValue<F[K]>>
+          >
         >
-      >
-    : MaybeNotNull<
-        InferFieldValue<F[K]>,
-        EntityColumnBuilder<InferFieldValue<F[K]>>
-      >;
+      : MaybeNotNull<
+          InferStoredValue<F[K]>,
+          EntityColumnBuilder<InferStoredValue<F[K]>>
+        >;
 };
 
 // The keys of `meta.columns` that carry a `default` — i.e. the columns with a
@@ -213,7 +220,7 @@ export interface EntityMetaBase<F extends FieldsRecord> {
   // is `readonly` so a `const`-inferred meta (see `defineEntity`) — which makes
   // a `["a","b"]` literal a `readonly` tuple — still satisfies the constraint.
   primaryKey?: (keyof F & string) | readonly (keyof F & string)[];
-  columns?: { [K in keyof F]?: EntityColumnMeta<InferFieldValue<F[K]>> };
+  columns?: { [K in keyof F]?: EntityColumnMeta<InferStoredValue<F[K]>> };
   // Wire-projection concern (distinct from the per-column DDL concerns above):
   // keys that stay in the table DDL but are OMITTED from the derived wire schema
   // (and from `wireColumns`, so the loader never even fetches them). Kept as a
@@ -263,6 +270,17 @@ export type ServerOnlyKeys<
   M extends EntityMetaBase<F>,
 > = M["serverOnly"] extends readonly (infer K)[] ? K & keyof F : never;
 
+// The brand of a table `defineEntity` built (type-only: nothing sets it at
+// runtime). What reads a table AS an entity's rows — `serveCollection`'s
+// `from` — takes an `EntityTable` (or the entity itself), so a raw `pgTable`
+// with hand-listed fields over it has no spelling there.
+declare const entityTable: unique symbol;
+
+/** A table built by `defineEntity` (see `entityTable`). */
+export type EntityTable<T extends PgTable = PgTable> = T & {
+  readonly [entityTable]: true;
+};
+
 export interface Entity<
   F extends FieldsRecord,
   D extends keyof F = never,
@@ -275,12 +293,14 @@ export interface Entity<
   // (DB-defaulted) keys ride through to `BuildColumns` so `$inferInsert` marks
   // them optional, while `$inferSelect` stays exact. UNCHANGED by `S` — the
   // server-only columns stay in the FULL table DDL.
-  readonly table: PgTableWithColumns<{
-    name: string;
-    schema: undefined;
-    dialect: "pg";
-    columns: BuildColumns<string, EntityColumns<F, D, G>, "pg">;
-  }>;
+  readonly table: EntityTable<
+    PgTableWithColumns<{
+      name: string;
+      schema: undefined;
+      dialect: "pg";
+      columns: BuildColumns<string, EntityColumns<F, D, G>, "pg">;
+    }>
+  >;
   // The WIRE schema = `wireSchema(fields, meta.serverOnly)`; keyed by JS prop
   // like `$inferSelect`, minus the server-only keys `S`. With `S = never`
   // (no server-only columns) this is `{ [K in keyof F]: F[K]["schema"] }` —

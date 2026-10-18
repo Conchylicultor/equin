@@ -159,13 +159,14 @@ plus a per-song reset.
   - Uses:
     - `apps/sonata/library.songIdKind`
     - `fields.FieldsRecord`
+    - `fields.fieldsToZodObject`
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/float/config.floatField`
     - `fields/text/config.textField`
     - `ids.idKindField`
-    - `infra/entities.wireSchema`
+    - `infra/entities.entityRef`
   - Exports (types): `TrackViewRow`
   - Exports (values): `TrackViewRowSchema`
 - Cross-plugin:

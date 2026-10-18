@@ -535,6 +535,7 @@ export const webEntries: CollectedEntry[] = [
   { pluginPath: "fields/plugins/bool/plugins/inline", id: "fields.bool.inline", loader: () => import("@plugins/fields/plugins/bool/plugins/inline/web"), dependsOn: ["primitives/plugins/css/plugins/center", "primitives/plugins/data-view", "ui/plugins/icons"] },
   { pluginPath: "fields/plugins/bool/plugins/table", id: "fields.bool.table", loader: () => import("@plugins/fields/plugins/bool/plugins/table/web"), dependsOn: ["primitives/plugins/data-view", "ui/plugins/icons"] },
   { pluginPath: "fields/plugins/bool", id: "fields.bool", loader: () => import("@plugins/fields/plugins/bool/web"), dependsOn: ["fields"] },
+  { pluginPath: "fields/plugins/bytes", id: "fields.bytes", loader: () => import("@plugins/fields/plugins/bytes/web"), dependsOn: ["fields"] },
   { pluginPath: "fields/plugins/color/plugins/config", id: "fields.color.config", loader: () => import("@plugins/fields/plugins/color/plugins/config/web"), dependsOn: ["config_v2/plugins/fields", "fields/plugins/color", "primitives/plugins/css/plugins/color-picker"] },
   { pluginPath: "fields/plugins/color/plugins/table", id: "fields.color.table", loader: () => import("@plugins/fields/plugins/color/plugins/table/web"), dependsOn: ["primitives/plugins/css/plugins/spacing", "primitives/plugins/css/plugins/text", "primitives/plugins/data-view"] },
   { pluginPath: "fields/plugins/color", id: "fields.color", loader: () => import("@plugins/fields/plugins/color/web"), dependsOn: ["fields"] },

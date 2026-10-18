@@ -232,6 +232,14 @@ export interface LiveRowsCollection<Row> {
    * picked fields. `null` over an extension shape or no `from`.
    */
   from: EntityRef | null;
+  /**
+   * What its rows ARE, as declared: its `from` — an entity ref or an
+   * extension shape — or `null` for a collection declared by its own fields
+   * alone (served from outside Postgres, or a union of arms). `serveCollection`
+   * asserts the table it reads is this one: a collection over an entity's
+   * table is `from` it, never a restatement of its fields.
+   */
+  rowsFrom: LiveFrom | null;
 }
 
 /**
@@ -752,6 +760,7 @@ export function liveCollection<Row, F, S extends string>(
       ...minted,
       fields: resolved.fields(sortable),
       from: from !== undefined && !isShape(from) ? from : null,
+      rowsFrom: from ?? null,
     };
   }
 }
@@ -985,6 +994,7 @@ function rowsPart<Row>(
     // Set by `liveCollection` from the declaration's fields.
     fields: Object.freeze({}),
     from: null,
+    rowsFrom: null,
   };
 }
 

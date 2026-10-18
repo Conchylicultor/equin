@@ -53,8 +53,11 @@ export {
 // The tasks-core entities by reference (`exposes` declarations). See
 // ./entity-refs.ts.
 export {
+  attemptDeliveriesEntityRef,
   attemptsEntityRef,
   conversationsEntityRef,
+  pushesEntityRef,
+  taskDependenciesEntityRef,
   tasksEntityRef,
 } from "./entity-refs";
 

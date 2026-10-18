@@ -72,7 +72,7 @@ The pages sidebar filters and groups by it with no tags code of its own.
     - `page/editor.liveBlocks`
     - `page/editor.PAGE_BLOCK_TYPE`
   - DB schema: `plugins/page/plugins/tags/server/internal/tables.ts`
-  - Entity extension of: `page/editor` (table `editor_ext_tags`)
+  - Entity extension of: `page/editor` (table `page_blocks_ext_tags`)
   - Exports (types):
     - `PageTag`
     - `ResolvedTag`
@@ -96,13 +96,15 @@ The pages sidebar filters and groups by it with no tags code of its own.
     - `DELETE /api/page-tags/:tagId`
 - Core:
   - Uses:
+    - `fields.FieldsRecord`
+    - `fields.fieldsToZodObject`
     - `fields/date/config.dateField`
     - `fields/tags/config.tagsField`
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `ids.defineIdKind`
     - `ids.idKindField`
-    - `infra/entities.wireSchema`
+    - `infra/entities.entityRef`
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live.liveCollection`
     - `page/block-entity.pagesEntityRef`
@@ -114,13 +116,14 @@ The pages sidebar filters and groups by it with no tags code of its own.
     - `closestTagNames`
     - `defaultTagColor`
     - `normalizeTagName`
-    - `PAGE_TAG_SERVER_ONLY`
     - `PageTagAssignmentRowSchema`
     - `pageTagAssignments`
     - `pageTagAssignmentShape`
     - `pageTagFields`
     - `pageTagIdKind`
     - `PageTagRowSchema`
+    - `pageTagsEntityRef`
+    - `pageTagServerFields`
     - `pageTagVocabulary`
     - `TAG_COLORS`
     - `TAG_NAME_MAX`

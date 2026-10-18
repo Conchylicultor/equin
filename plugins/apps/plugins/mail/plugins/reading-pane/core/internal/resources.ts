@@ -1,10 +1,5 @@
 import { liveCollection } from "@plugins/network/plugins/live/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { mailMessageFields } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-
-// The message row, split into the one field the pane filters by (listed, so
-// `where: { threadId }` type-checks) and the rest, carried.
-const { threadId: _threadId, ...MESSAGE_CARRIED } = mailMessageFields;
+import { mailMessagesEntityRef } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 
 // The messages of the mailbox, as a live collection — the reading pane reads
 // one thread's window of it (`useLive(threadMessages, { where: { threadId } })`).
@@ -24,8 +19,39 @@ const { threadId: _threadId, ...MESSAGE_CARRIED } = mailMessageFields;
 // first expand via the sync plugin's `mailHydrateMessageEndpoint` (cached
 // thereafter).
 export const threadMessages = liveCollection("mail-thread-messages", {
-  fields: { threadId: textField({ label: "Thread" }) },
-  carry: { fields: MESSAGE_CARRIED },
+  // The one field the pane filters by is listed (so `where: { threadId }`
+  // type-checks); the rest of the message row is carried.
+  from: mailMessagesEntityRef,
+  pick: ["threadId"],
+  carry: {
+    pick: [
+      "id",
+      "accountId",
+      "from",
+      "to",
+      "cc",
+      "bcc",
+      "replyTo",
+      "subject",
+      "snippet",
+      "headers",
+      "bodyText",
+      "bodyHtml",
+      "bodyFetchedAt",
+      "internalDate",
+      "unread",
+      "starred",
+      "isDraft",
+      "isSent",
+      "hasAttachments",
+      "sizeEstimate",
+      "historyId",
+      "createdAt",
+      "updatedAt",
+    ],
+  },
+  // Its wire rows stay the table's own columns.
+  baseExposures: false,
   id: "id",
   sortable: ["internalDate"],
   default: { orderBy: [["internalDate", "desc"]], limit: 100 },

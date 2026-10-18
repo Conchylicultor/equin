@@ -38,6 +38,7 @@ import {
   type UnionColumn,
 } from "@plugins/infra/plugins/query-resource/server";
 import type { PointParams } from "@plugins/primitives/plugins/live-state/core";
+import type { EntityTable } from "@plugins/infra/plugins/entities/server";
 import {
   LIVE_COLUMNS_KEY,
   LIVE_ROW_KEY,
@@ -177,7 +178,7 @@ export interface ServedUnion<
     CRow,
     F,
     S extends string,
-    T extends PgTable,
+    T extends EntityTable,
     // No `joins` → no join relations, not the constraint's open set (whose
     // string index would swallow `base`, so no column could bind).
     const J extends readonly JoinSpec[] = readonly [],

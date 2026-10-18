@@ -11,6 +11,7 @@
 // The `fields-eager-in-sync` check fails on drift.
 
 import "@plugins/fields/plugins/bool/plugins/storage/server";
+import "@plugins/fields/plugins/bytes/plugins/storage/server";
 import "@plugins/fields/plugins/date/plugins/storage/server";
 import "@plugins/fields/plugins/float/plugins/storage/server";
 import "@plugins/fields/plugins/int/plugins/storage/server";

@@ -75,7 +75,7 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
     - `page/editor.deleteBlocksSubtree`
     - `page/editor.liveBlocks`
   - DB schema: `plugins/apps/plugins/pages/plugins/agent-origin/server/internal/tables.ts`
-  - Entity extension of: `page/editor` (table `editor_ext_origin`)
+  - Entity extension of: `page/editor` (table `page_blocks_ext_origin`)
   - Exports (values): `pageBlocksOrigin`
   - Register: `defineJob('retention.page_blocks_ext_origin')`
 

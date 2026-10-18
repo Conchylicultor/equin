@@ -10,6 +10,7 @@ import type {
   LiveArms,
   LiveColumnRef,
   LiveRowsCollection,
+  NotCollectionRow,
 } from "@plugins/network/plugins/live/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
@@ -1324,8 +1325,19 @@ interface DataViewHeldRowProps<TRow> {
 export type DataViewInMemoryOrigin<TRow> = DataViewInMemoryRows<TRow> &
   (DataViewHierarchyRows<TRow> | DataViewPagedRows<TRow>) &
   (
-    | { collection?: undefined; fields: FieldDef<TRow>[] }
     | {
+        collection?: undefined;
+        /**
+         * The schema BY HAND — for rows of nothing declared. Rows read from
+         * a live collection (`CollectionRow`) are a tsc error here: their
+         * fields are the collection's, so the list passes `collection` and
+         * says what it changes in `overrides` / adds in `extraFields`.
+         */
+        fields: FieldDef<TRow>[];
+        rows: readonly NotCollectionRow<TRow>[];
+      }
+    | {
+        fields?: never;
         /**
          * The live collection the rows come from, when they are one's (the
          * Queue's `conversationsActive`, merged in memory with other reads):
@@ -1568,6 +1580,8 @@ export interface DataViewPaging<TRow> {
  */
 export interface DataViewLiveOrigin<TRow> {
   source: LiveDataSource<TRow>;
+  /** Derived from the source's collection — `overrides` / `extraFields` change and add. */
+  fields?: never;
   rows?: never;
   collection?: never;
   readiness?: never;
@@ -1593,18 +1607,6 @@ export interface DataViewSearch {
 }
 
 export interface DataViewBaseProps<TRow> {
-  /**
-   * The schema BY HAND — for rows of no collection declared by fields (an
-   * in-memory list of rows from nothing declared: required there). A list
-   * whose collection is declared by fields (`liveCollection({ from, pick,
-   * fields })`) DERIVES its schema — the collection's fields, the exposed
-   * fields of every entity it reaches, its arms' fields, each presented by
-   * its registration (`FieldPresentation`) — and passing `fields` beside one
-   * throws: it says what to change with `overrides` and adds with
-   * `extraFields`. (Beside a collection in the old `row` spelling, `fields`
-   * is still its base schema, until phase 2b deletes that spelling.)
-   */
-  fields?: FieldDef<TRow>[];
   /** Changes to derived fields, by id (`fieldOverrides(collection, { … })`). */
   overrides?: FieldOverrides<TRow>;
   /**

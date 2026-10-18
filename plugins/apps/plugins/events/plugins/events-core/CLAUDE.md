@@ -314,6 +314,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `eventSourceIdKind`
     - `eventSourceRunEventFields`
     - `EventSourceRunEventSchema`
+    - `eventSourceRunEventsEntityRef`
     - `eventSourceRunFields`
     - `eventSourceRuns`
     - `EventSourceRunSchema`

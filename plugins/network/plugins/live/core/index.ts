@@ -1,4 +1,8 @@
 export { liveCollection } from "./internal/live-collection";
+export type {
+  CollectionRow,
+  NotCollectionRow,
+} from "./internal/collection-row";
 // Whether a point id set can carry an id (non-empty, comma-free) — what
 // `useLiveRow` answers `found: false` for instead of encoding.
 export { isPointId } from "./internal/window-descriptor";

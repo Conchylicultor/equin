@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-bytes-storage",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Bytes field type: DB storage capability — a Postgres bytea column whose wire form is unfolded base64 (bytesToBase64, declared once through sql-column's withWire).",
+  "singularity": {
+    "collapsed": true
+  }
+}

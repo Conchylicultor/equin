@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-bytes",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Bytes field type: identity only — binary data (a Yjs doc state) whose column is a bytea and whose wire value is its unfolded base64 string.",
+  "singularity": {
+    "collapsed": true
+  }
+}

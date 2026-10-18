@@ -130,12 +130,12 @@ a catch-all say so in the category's hint: *"if unsure, pick Other"*.
     - `conversations.conversationTurnCompleted`
     - `conversations.readConversationTurns`
     - `database.db`
-    - `database/derived-updated-at.deriveUpdatedAt`
-    - `database/sql-column.parsedText`
     - `infra/claude-cli.ClaudeCliError`
     - `infra/claude-cli.runClaudePrint`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `network/live.serveCollection`

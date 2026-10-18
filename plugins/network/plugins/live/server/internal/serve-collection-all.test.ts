@@ -16,16 +16,10 @@
 
 import { describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
-import {
-  boolean,
-  index,
-  integer,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { z } from "zod";
-import { fieldsToZodObject } from "@plugins/fields/core";
+import { fieldsToZodObject, nullable } from "@plugins/fields/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
@@ -43,18 +37,21 @@ import {
   recordingQueryDb,
   type RecordedQuery,
 } from "@plugins/infra/plugins/query-resource/server/testing";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { defineEntity } from "@plugins/infra/plugins/entities/server";
 import { withWire } from "@plugins/database/plugins/sql-column/server";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { compileCollection, serveCollection } from "./serve-collection";
 import type { ServedScopedColumns } from "./serve-columns";
 
-const items = pgTable("sca_items", {
-  id: text("id").primaryKey(),
-  title: text("title").notNull(),
-  rank: integer("rank").notNull(),
-  archived: boolean("archived").notNull(),
-  note: text("note"),
+const itemsRef = entityRef("sca_items", {
+  id: textField({ label: "Id", filterable: false }),
+  title: textField({ label: "Title", filterable: false }),
+  rank: intField({ label: "Rank", filterable: false }),
+  archived: boolField({ label: "Archived" }),
+  note: nullable(textField({ label: "Note" })),
 });
+const items = defineEntity(itemsRef, { primaryKey: "id" });
 const notes = pgTable(
   "sca_notes",
   {
@@ -66,9 +63,7 @@ const notes = pgTable(
 );
 
 const ROW_FIELDS = {
-  id: textField({ label: "Id" }),
-  title: textField({ label: "Title" }),
-  rank: intField({ label: "Rank" }),
+  ...itemsRef.fields,
   notes: intField({ label: "Notes" }),
 };
 const Row = fieldsToZodObject(ROW_FIELDS);
@@ -82,7 +77,10 @@ const ALL = {
 let seq = 0;
 const allCollection = (preload?: "boot") =>
   liveCollection(`test.live.all-${seq++}`, {
-    fields: ROW_FIELDS,
+    from: itemsRef,
+    pick: ["id", "title", "rank"],
+    baseExposures: false,
+    fields: { notes: ROW_FIELDS.notes },
     id: "id",
     all: ALL,
     ...(preload ? { preload } : {}),
@@ -156,18 +154,16 @@ describe("serveCollection — the `all` arm (C4)", () => {
   test("A28 (runtime half): what serveCollection registers is exactly what the declaration minted — window, lookup-only and `all`", () => {
     const { db } = recordingQueryDb();
     const window = liveCollection(`test.live.all-window-${seq++}`, {
-      fields: {
-        id: textField({ label: "Id", filterable: false }),
-        title: textField({ label: "Title", filterable: false }),
-        rank: intField({ label: "Rank", filterable: false }),
-      },
+      from: itemsRef,
+      pick: ["id", "title", "rank"],
       id: "id",
       sortable: ["rank"],
       default: { orderBy: [["rank", "asc"]], limit: 10 },
       maxLimit: 20,
     });
     const lookup = liveCollection(`test.live.all-lookup-${seq++}`, {
-      carry: { fields: { id: textField(), title: textField() } },
+      from: itemsRef,
+      carry: { pick: ["id", "title"] },
       id: "id",
     });
     const all = allCollection();
@@ -219,10 +215,10 @@ describe("serveCollection — the `all` arm (C4)", () => {
 
   test("an expression over an aggregate binds like a column", async () => {
     const c = liveCollection(`test.live.all-expr-${seq++}`, {
-      fields: {
-        id: textField({ label: "Id" }),
-        label: textField({ label: "Label" }),
-      },
+      from: itemsRef,
+      pick: ["id"],
+      baseExposures: false,
+      fields: { label: textField({ label: "Label" }) },
       id: "id",
       all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
     });
@@ -320,6 +316,18 @@ describe("serveCollection — the `all` arm (C4)", () => {
     });
     expect(() => compileCollection(w, { from: wired, db })).toThrow(
       /reads a wire-encoded value/,
+    );
+  });
+
+  test("a collection declared by its own fields only is refused over a table", () => {
+    const { db } = recordingQueryDb();
+    const own = liveCollection(`test.live.all-own-${seq++}`, {
+      fields: { id: textField({ label: "Id" }) },
+      id: "id",
+      all: { orderBy: [["id", "asc"]], unbounded: { reason: "a test set" } },
+    });
+    expect(() => serveCollection(own, { from: items, db })).toThrow(
+      /declared by its own fields/,
     );
   });
 

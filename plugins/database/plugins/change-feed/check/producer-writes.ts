@@ -13,11 +13,11 @@ import type TS from "typescript";
 //     <binding>, … })` — the binding (an identifier) names the produced table,
 //     the producer variable is whose `.mutate` may write it;
 //  2. each binding's SQL name: the `pgTable("<name>", …)` or
-//     `defineEntity("<name>", …)` its declaration calls (through any wrapper,
+//     `defineEntity(<ref>, …)` its declaration calls (through any wrapper,
 //     e.g. `deriveUpdatedAt(pgTable(…))`), or — for an entity's table bound
 //     apart (`const _t = entity.table`) — the one its entity's declaration in
-//     the same file calls; an entity built from a ref (`defineEntity(ref, …)`)
-//     is named by that ref's own `entityRef("<name>", …)`, wherever it is
+//     the same file calls; an entity is built from a ref (`defineEntity(ref, …)`)
+//     and named by that ref's own `entityRef("<name>", …)`, wherever it is
 //     declared;
 //  3. the writes: a drizzle `.insert(<t>)` / `.update(<t>)` / `.delete(<t>)`
 //     whose `<t>` is a produced binding IN THAT FILE'S SCOPE — declared there,
@@ -113,11 +113,11 @@ export function findProducerDecls(
   return out;
 }
 
-/** The callees whose first string argument is a table's SQL name. */
+/** The callees that declare a table: `pgTable("<name>", …)` names it by its first string argument, `defineEntity(<ref>, …)` through its ref. */
 const TABLE_DECLARERS = new Set(["pgTable", "defineEntity"]);
 
 // The SQL table names `expr` declares: the first string argument of each
-// `pgTable(…)` / `defineEntity(…)` call within it (through any wrapper), or —
+// `pgTable(…)` call, or the ref's name of each `defineEntity(<ref>, …)` call, within it (through any wrapper), or —
 // when it is `<entity>.table` — those of `<entity>`'s own initializer in
 // `decls` (one hop: an entity is declared by its `defineEntity` call). A
 // `defineEntity(<ref>, …)` names its table through its ref: the ref's name is
@@ -138,6 +138,7 @@ function declaredTableNames(
     const first = inner.arguments[0];
     if (
       first &&
+      callee === "pgTable" &&
       (ts.isStringLiteral(first) || ts.isNoSubstitutionTemplateLiteral(first))
     ) {
       names.push(first.text);
@@ -180,7 +181,7 @@ function fileDecls(
 
 /**
  * Pass 2: each binding's SQL table name — what a `const <binding> = …`
- * initializer declares (`pgTable("<name>", …)` / `defineEntity("<name>", …)`,
+ * initializer declares (`pgTable("<name>", …)` / `defineEntity(<ref>, …)`,
  * through any wrapper, or `<entity>.table` resolved through its entity's
  * declaration in the same file). A `defineEntity(<ref>, …)` is named by
  * `refNames` (its ref's `entityRef` name, `resolveEntityRefNames`). A binding

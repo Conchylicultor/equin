@@ -224,25 +224,33 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `mailAccountFields`
     - `mailAccountIdKind`
     - `MailAccountSchema`
+    - `mailAccountsEntityRef`
     - `MailAddressSchema`
     - `mailAttachmentFields`
     - `mailAttachmentIdKind`
     - `MailAttachmentSchema`
+    - `mailAttachmentsEntityRef`
     - `mailDraftFields`
     - `mailDraftIdKind`
     - `MailDraftSchema`
+    - `mailDraftsEntityRef`
     - `mailLabelFields`
     - `MailLabelRefSchema`
     - `mailLabels`
     - `MailLabelSchema`
+    - `mailLabelsEntityRef`
     - `mailMessageFields`
     - `mailMessageLabelFields`
     - `MailMessageLabelSchema`
+    - `mailMessageLabelsEntityRef`
     - `MailMessageSchema`
+    - `mailMessagesEntityRef`
+    - `mailOutboxEntityRef`
     - `mailOutboxFields`
     - `mailOutboxIdKind`
     - `MailOutboxItemSchema`
     - `mailSyncState`
+    - `mailSyncStateEntityRef`
     - `mailSyncStateFields`
     - `MailSyncStateSchema`
     - `mailThreadFields`

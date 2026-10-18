@@ -2568,6 +2568,18 @@
       "name": "@singularity/plugin-fields-bool-text-cast",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/bytes": {
+      "name": "@singularity/plugin-fields-bytes",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/bytes/plugins/config": {
+      "name": "@singularity/plugin-fields-bytes-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/bytes/plugins/storage": {
+      "name": "@singularity/plugin-fields-bytes-storage",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/color": {
       "name": "@singularity/plugin-fields-color",
       "version": "0.0.1",
@@ -7979,6 +7991,12 @@
     "@singularity/plugin-fields-bool-table": ["@singularity/plugin-fields-bool-table@workspace:plugins/fields/plugins/bool/plugins/table"],
 
     "@singularity/plugin-fields-bool-text-cast": ["@singularity/plugin-fields-bool-text-cast@workspace:plugins/fields/plugins/bool/plugins/text-cast"],
+
+    "@singularity/plugin-fields-bytes": ["@singularity/plugin-fields-bytes@workspace:plugins/fields/plugins/bytes"],
+
+    "@singularity/plugin-fields-bytes-config": ["@singularity/plugin-fields-bytes-config@workspace:plugins/fields/plugins/bytes/plugins/config"],
+
+    "@singularity/plugin-fields-bytes-storage": ["@singularity/plugin-fields-bytes-storage@workspace:plugins/fields/plugins/bytes/plugins/storage"],
 
     "@singularity/plugin-fields-color": ["@singularity/plugin-fields-color@workspace:plugins/fields/plugins/color"],
 

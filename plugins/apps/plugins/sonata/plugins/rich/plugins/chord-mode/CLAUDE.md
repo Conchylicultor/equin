@@ -101,7 +101,7 @@ remove the overwrite trade-off.
     - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`
   - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/chord-mode/server/internal/tables.ts`
-  - Entity extension of: `apps/sonata/library` (table `library_ext_chord_mode`)
+  - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_chord_mode`)
   - Exports (values): `songChordMode`
   - Resources: `sonata-chord-mode:rows` (keyed, point)
   - Routes: `POST /api/sonata/songs/:id/chord-mode`

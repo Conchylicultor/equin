@@ -30,6 +30,7 @@ drift. Fix by running `./singularity build`.
 - Server:
   - Uses:
     - `fields/bool/storage`
+    - `fields/bytes/storage`
     - `fields/date/storage`
     - `fields/float/storage`
     - `fields/int/storage`

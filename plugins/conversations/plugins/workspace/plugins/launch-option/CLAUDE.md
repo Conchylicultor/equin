@@ -50,7 +50,7 @@ default, stored as no row) or one registered scratch profile. Design:
     - `tasks/launch-options.TaskLaunchServer`
     - `tasks/tasks-core._tasks`
   - DB schema: `plugins/conversations/plugins/workspace/plugins/launch-option/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_workspace`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_workspace`)
   - Exports (values):
     - `getTaskWorkspace`
     - `setTaskWorkspace`

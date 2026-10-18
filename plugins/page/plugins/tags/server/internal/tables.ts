@@ -6,17 +6,16 @@ import {
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { _blocks } from "@plugins/page/plugins/editor/server";
 import {
-  PAGE_TAG_SERVER_ONLY,
   pageTagAssignmentShape,
-  pageTagFields,
+  pageTagServerFields,
+  pageTagsEntityRef,
 } from "../../core";
 
 // `page_tags`: the workspace vocabulary. A tag's identity is its normalized
 // name (`name_key`, `tagKey`), unique, so `In progress` and `in  progress`
 // can never be two tags — the database and every resolver agree on one key.
-export const pageTags = defineEntity("page_tags", pageTagFields, {
+export const pageTags = defineEntity(pageTagsEntityRef, pageTagServerFields, {
   primaryKey: "id",
-  serverOnly: PAGE_TAG_SERVER_ONLY,
   columns: { createdAt: { default: defaultNow() } },
   indexes: (t) => [uniqueIndex("page_tags_name_key_idx").on(t.nameKey)],
 });

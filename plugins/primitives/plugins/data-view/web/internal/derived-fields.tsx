@@ -570,8 +570,9 @@ function ClientValuesLevel(props: {
 /**
  * A list's schema: its hand `fields` (no collection declared by fields) or
  * the derived ones with its `overrides` applied, then its `extraFields`.
- * Throws on `fields` beside a collection declared by fields (they are
- * derived — say what changes in `overrides`), on neither, on an override of
+ * Throws on `fields` beside a collection declared by fields — a tsc error
+ * for a typed caller (`DataViewProps`: the live origin and the `collection`
+ * arm say `fields?: never`), kept for a cast — on neither, on an override of
  * an id no derived field has (or one for another collection), and on an id
  * two fields share.
  */

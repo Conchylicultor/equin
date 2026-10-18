@@ -1,5 +1,6 @@
 export {
   conversationSummaryFields,
+  conversationSummariesEntityRef,
   ConversationSummarySchema,
   conversationSummaries,
   PhaseSchema,

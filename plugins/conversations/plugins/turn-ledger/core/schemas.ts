@@ -1,11 +1,4 @@
 import { z } from "zod";
-import { fieldsToZodObject, nullable } from "@plugins/fields/core";
-import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
-import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
-import {
-  parsedTextField,
-  textField,
-} from "@plugins/fields/plugins/text/plugins/config/core";
 
 /**
  * What a ledger row carries to the agent:
@@ -75,38 +68,3 @@ export const SETTLED_TURN_STATES = [
   "returned",
   "withdrawn",
 ] as const satisfies readonly TurnState[];
-
-/**
- * One ledger row, as the web reads it (`turn-ledger.turns`), declared once as
- * fields: `conversationId` is the one a reader filters on; the rest is
- * carried.
- */
-export const LEDGER_TURN_LISTED = {
-  conversationId: textField({ label: "Conversation" }),
-};
-
-export const LEDGER_TURN_CARRIED = {
-  id: textField(),
-  kind: parsedTextField(TurnKindSchema, { default: "turn" }),
-  /** What the user wrote, raw — for the draft and the echo. */
-  text: textField(),
-  state: parsedTextField(TurnStateSchema, { default: "held" }),
-  /**
-   * No hook will ever confirm this row — its session was launched without the
-   * ledger's hook, or the text is a `/` command or `!` shell line, which the CLI
-   * does not report. Its `typed` is final and means delivered.
-   */
-  hookless: boolField(),
-  /** `merged` only: the text the CLI submitted around this turn's. */
-  extraText: nullable(textField()),
-  /** `failed` / `unverified` (and kept by `withdrawn`): why. */
-  error: nullable(textField()),
-  createdAt: dateField(),
-  updatedAt: dateField(),
-};
-
-export const LedgerTurnSchema = fieldsToZodObject({
-  ...LEDGER_TURN_LISTED,
-  ...LEDGER_TURN_CARRIED,
-});
-export type LedgerTurn = z.infer<typeof LedgerTurnSchema>;

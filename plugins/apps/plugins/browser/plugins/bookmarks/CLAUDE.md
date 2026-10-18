@@ -85,6 +85,7 @@ Bookmarks section reads the same collection).
     - `ids.defineIdKind`
     - `ids.idKindField`
     - `ids.IdOf`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
   - Exports (types):
     - `BookmarkId`
@@ -94,6 +95,7 @@ Bookmarks section reads the same collection).
     - `bookmarkIdKind`
     - `BookmarkRowSchema`
     - `browserBookmarks`
+    - `browserBookmarksEntityRef`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `apps/browser/start-page`

@@ -85,6 +85,7 @@ the ranked things are config entries with no parent row to cascade from.
   - Uses:
     - `database.db`
     - `infra/endpoints.implement`
+    - `infra/entities.defineEntity`
     - `infra/retention.defineRetention`
     - `network/live.serveCollection`
   - DB schema: `plugins/primitives/plugins/usage-rank/server/internal/tables.ts`
@@ -97,11 +98,14 @@ the ranked things are config entries with no parent row to cascade from.
   - Routes: `POST /api/usage-rank/record`
 - Core:
   - Uses:
+    - `fields.FieldsRecord`
     - `fields.fieldsToZodObject`
     - `fields/date/config.dateField`
     - `fields/float/config.floatField`
+    - `fields/int/config.intField`
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entities.entityRef`
     - `network/live.liveCollection`
   - Exports (types):
     - `RecordUsageBody`

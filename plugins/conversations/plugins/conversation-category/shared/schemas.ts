@@ -6,6 +6,7 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 
 // Who set the classification. Written once: this IS the `source` column's decoder
 // (see server/internal/tables.ts) and the wire schema's own member, so the stored
@@ -25,6 +26,11 @@ export const conversationCategoryFields = {
   // When the item or source last changed (derived; see server/internal/tables.ts).
   updatedAt: dateField(),
 } satisfies FieldsRecord;
+/** The `conversation_categories` entity — one row per (conversation, category) assignment. */
+export const conversationCategoriesEntityRef = entityRef(
+  "conversation_categories",
+  conversationCategoryFields,
+);
 export const ConversationCategorySchema = fieldsToZodObject(
   conversationCategoryFields,
 );
@@ -47,5 +53,18 @@ export type ConversationCategory = z.infer<typeof ConversationCategorySchema>;
 // and CategoryAvatarRow renders a neutral disc for that one round-trip.
 export const conversationCategories = liveCollection(
   "conversation-categories",
-  { carry: { fields: conversationCategoryFields }, id: "id" },
+  {
+    from: conversationCategoriesEntityRef,
+    carry: {
+      pick: [
+        "id",
+        "conversationId",
+        "categoryId",
+        "item",
+        "source",
+        "updatedAt",
+      ],
+    },
+    id: "id",
+  },
 );

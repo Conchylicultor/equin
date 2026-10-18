@@ -1,3 +1,4 @@
+import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import {
@@ -47,6 +48,12 @@ export const conversationSummaryFields = {
   notes: nullable(textField()),
 } satisfies FieldsRecord;
 
+/** The `conversation_summaries` entity. */
+export const conversationSummariesEntityRef = entityRef(
+  "conversation_summaries",
+  conversationSummaryFields,
+);
+
 // Wire shape — what the resource ships and what the web reads. `generatedAt`
 // crosses the wire as a Date (`z.coerce.date()` parses the serialised ISO
 // string back into a Date on the client).
@@ -67,11 +74,24 @@ export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
 // { conversationId }, limit: 1 })`: the window is ordered server-side, so its
 // first row IS the latest (`useLatestConversationSummary`). NOT preloaded —
 // route-scoped, it hydrates post-mount via its sub-ack.
-const { conversationId: summaryConversationId, ...summaryCarried } =
-  conversationSummaryFields;
 export const conversationSummaries = liveCollection("conversation-summaries", {
-  fields: { conversationId: summaryConversationId },
-  carry: { fields: summaryCarried },
+  from: conversationSummariesEntityRef,
+  pick: ["conversationId"],
+  carry: {
+    pick: [
+      "id",
+      "generatedAt",
+      "model",
+      "turnCountAtGeneration",
+      "phase",
+      "phaseDetail",
+      "flags",
+      "nextAction",
+      "notes",
+    ],
+  },
+  // Its wire rows stay the table's own columns: no extension exposes a summary.
+  baseExposures: false,
   id: "id",
   sortable: ["generatedAt"],
   default: { orderBy: [["generatedAt", "desc"]], limit: 20 },

@@ -8,33 +8,40 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { defineEntity } from "@plugins/infra/plugins/entities/server";
 import { recordingQueryDb } from "@plugins/infra/plugins/query-resource/server/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { serveCollection } from "./serve-collection";
 
-const people = pgTable("pr_people", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
+const peopleRef = entityRef("pr_people", {
+  id: textField({ label: "Id" }),
+  name: textField({ label: "Name" }),
 });
-const scores = pgTable("pr_scores", {
-  personId: text("person_id").primaryKey(),
-  score: integer("score").notNull(),
+const people = defineEntity(peopleRef, { primaryKey: "id" });
+const scoresRef = entityRef("pr_scores", {
+  personId: textField({ label: "Person" }),
+  score: intField({ label: "Score" }),
 });
+const scores = defineEntity(scoresRef, { primaryKey: "personId" });
 
 let seq = 0;
 const peopleCollection = (preload?: "boot") =>
   liveCollection(`test.live.preload-rows-people-${seq++}`, {
-    carry: { fields: { id: textField(), name: textField() } },
+    from: peopleRef,
+    baseExposures: false,
+    carry: { pick: ["id", "name"] },
     id: "id",
     all: { orderBy: [["name", "asc"]], unbounded: { reason: "a test set" } },
     ...(preload === undefined ? {} : { preload }),
   });
 const scoresCollection = () =>
   liveCollection(`test.live.preload-rows-scores-${seq++}`, {
-    carry: { fields: { personId: textField(), score: intField() } },
+    from: scoresRef,
+    baseExposures: false,
+    carry: { pick: ["personId", "score"] },
     id: "personId",
     sortable: ["score"],
     default: { orderBy: [["score", "asc"]], limit: 10 },

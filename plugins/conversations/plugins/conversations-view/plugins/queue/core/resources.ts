@@ -6,7 +6,6 @@ import {
   rankField,
   rankValueField,
 } from "@plugins/fields/plugins/rank/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
 // One queue row: the conversation's position (`rank`) plus whether the user
@@ -46,16 +45,11 @@ export type QueueData = z.infer<typeof QueueDataSchema>;
 // `conversations-active` (the server half's `preloadRows`), so the queue's
 // all-or-nothing gate settles on the first render.
 export const queueRanks = liveCollection("queue-ranks", {
-  // Declared by fields, not `from: queueShape`: a shape's rows carry its
-  // columns' own fields, whose `rank` can only say `string` — the wire row
-  // decodes it into a `Rank` (`rankValueField`), the same keys as the shape.
-  carry: {
-    fields: {
-      conversationId: textField(),
-      rank: rankValueField(),
-      pinned: boolField(),
-    },
-  },
+  // The shape's whole wire row, with `rank` decoded: the stored key's field
+  // can only say `string`, so `carry.fields` reads it as the wire `Rank`
+  // (`rankValueField`) — the same keys as the shape.
+  from: queueShape,
+  carry: { fields: { rank: rankValueField() } },
   id: "conversationId",
   sortable: ["rank"],
   default: { orderBy: [["rank", "asc"]], limit: 100 },

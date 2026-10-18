@@ -42,6 +42,7 @@ vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => ({
 import { act, renderHook } from "@testing-library/react";
 import type {
   LedgerTurn,
+  TurnId,
   TurnKind,
   TurnState,
 } from "@plugins/conversations/plugins/turn-ledger/core";
@@ -70,7 +71,7 @@ function row(
   over: Partial<LedgerTurn> = {},
 ): LedgerTurn {
   return {
-    id,
+    id: id as TurnId,
     conversationId,
     kind: "turn" as TurnKind,
     text: `text of ${id}`,

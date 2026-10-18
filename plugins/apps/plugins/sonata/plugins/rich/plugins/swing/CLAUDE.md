@@ -33,7 +33,7 @@
     - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`
   - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/swing/server/internal/tables.ts`
-  - Entity extension of: `apps/sonata/library` (table `library_ext_swing`)
+  - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_swing`)
   - Exports (values): `songSwing`
   - Resources: `sonata-swing:rows` (keyed, point)
   - Routes: `POST /api/sonata/songs/:id/swing`

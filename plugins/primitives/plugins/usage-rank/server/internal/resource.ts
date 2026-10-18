@@ -1,6 +1,6 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
 import { usageStats } from "../../core";
-import { _usageStats } from "./tables";
+import { usageStatsEntity } from "./tables";
 
 // Server half of the collection: every row field binds to its `_usageStats`
 // column by name. The `:rows` point read loads only the subscribed id set
@@ -12,5 +12,5 @@ import { _usageStats } from "./tables";
 // `useRecentUsage`) is bounded by its declared limit; the table itself is
 // bounded by the one-year retention sweep.
 export const usageStatsServed = serveCollection(usageStats, {
-  from: _usageStats,
+  from: usageStatsEntity,
 });
