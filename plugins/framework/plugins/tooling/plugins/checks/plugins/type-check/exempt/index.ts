@@ -5,6 +5,8 @@ export default [
     rule: "boundaries/no-platform-api",
     paths: [
       "server/internal/spawn-worker.ts",
+      "shared/contract-refs.ts",
+      "shared/pass-set.ts",
       "shared/type-fingerprint.ts",
       "shared/worker.ts",
     ],

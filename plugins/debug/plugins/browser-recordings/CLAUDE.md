@@ -110,6 +110,8 @@ inside one `browser_batch` (one frame per call).
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
   - Imported by: `debug/browser-recordings/writer`
+- Exemptions:
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/list-runs.ts` (debt)
 - Sub-plugins:
   - **`writer`** — Writes one browser recording (node-only, so the web never bundles node:fs): openRecording files a run under its tool call, stores each step's frame once (by content), writes the manifest last — what…
 

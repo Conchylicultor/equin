@@ -19042,6 +19042,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
         - Imported by: `debug/browser-recordings/writer`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/list-runs.ts` (debt)
       - Plugins:
         - **`writer`** — Writes one browser recording (node-only, so the web never bundles node:fs): openRecording files a run under its tool call, stores each step's frame once (by content), writes the manifest last — what the conversation view's push keys on — and keeps the newest 200 runs. The one path the e2e harness and the browser_* MCP tools both record through.
           - Core:
@@ -19055,6 +19057,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FrameFormat`
               - `Recording`
             - Exports (values): `openRecording`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/writer.ts` (debt)
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) as a live DataView — searchable over prompt/output/error, filterable by source, model, status, duration and time — with a detail pane per call (prompt, system, output or error, context, meta).
       - Web:
         - Slots:
@@ -24258,6 +24262,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/pgbouncer` (1 debt)
               - `database/query` (1 debt)
               - `debug/broadcasts` (3 debt)
+              - `debug/browser-recordings` (1 debt)
+              - `debug/browser-recordings/writer` (1 debt)
               - `debug/health-monitor` (3 debt)
               - `debug/heap-snapshot` (2 debt)
               - `debug/logs` (2 debt)
@@ -24281,8 +24287,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling` (1 debt)
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (13 debt)
-              - `framework/tooling/checks/type-check` (3 debt)
-              - `framework/tooling/codegen` (27 debt)
+              - `framework/tooling/checks/type-check` (5 debt)
+              - `framework/tooling/codegen` (28 debt)
               - `framework/tooling/format` (5 debt)
               - `framework/tooling/guards` (10 debt)
               - `framework/tooling/import-closure` (1 debt)
@@ -24303,7 +24309,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/git/checkout-watch` (1 debt)
               - `infra/git/remotes` (2 debt)
               - `infra/host-account` (1 debt)
-              - `infra/host-fs` (14 debt)
+              - `infra/host-fs` (16 debt)
               - `infra/host-fs/image` (3 debt)
               - `infra/host-fs/zip` (1 debt)
               - `infra/host/contention` (1 debt)
@@ -24541,7 +24547,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shadow --shadow`
                   - `ui/tokens/shape --spacing`
               - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/type-fingerprint.ts`, `shared/worker.ts` (debt)
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/contract-refs.ts`, `shared/pass-set.ts`, `shared/type-fingerprint.ts`, `shared/worker.ts` (debt)
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses: 91 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
@@ -24715,7 +24721,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shape --spacing`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `core/app-css-utilities.ts`, `core/authored-override-seed.ts`, `core/barrel-free-tree.ts`, `core/barrel-stubs-gen.ts`, `core/config-git-layer-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/enriched-tree.ts`, `core/exempt-rule-ids-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/reorderable-slots-gen.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `core/app-css-utilities.ts`, `core/authored-override-seed.ts`, `core/barrel-free-tree.ts`, `core/barrel-stubs-gen.ts`, `core/companion-manifest-gen.ts`, `core/config-git-layer-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/enriched-tree.ts`, `core/exempt-rule-ids-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/reorderable-slots-gen.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
@@ -27421,7 +27427,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/zip`
           - `primitives/file-viewer`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/archive/locate.ts`, `server/internal/archive/tree.ts`, `server/internal/complete.ts`, `server/internal/entry.ts`, `server/internal/extract.ts`, `server/internal/list.ts`, `server/internal/open-file.ts`, `server/internal/open.ts`, `server/internal/path.ts`, `server/internal/peek.ts`, `server/internal/raw.ts`, `server/internal/stat.ts`, `server/internal/text.ts`, `server/internal/volume.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/archive/locate.ts`, `server/internal/archive/tree.ts`, `server/internal/complete.ts`, `server/internal/entry.ts`, `server/internal/extract.ts`, `server/internal/free-path.ts`, `server/internal/list.ts`, `server/internal/move.ts`, `server/internal/open-file.ts`, `server/internal/open.ts`, `server/internal/path.ts`, `server/internal/peek.ts`, `server/internal/raw.ts`, `server/internal/stat.ts`, `server/internal/text.ts`, `server/internal/volume.ts` (debt)
       - Plugins:
         - **`image`** — Images on the host filesystem: GET resized (a copy with a long edge from a closed set, EXIF-rotated, never enlarged — JPEG, or WebP with transparency — made with sharp, cached host-wide and served immutable for the file version the URL names; 415 when undecodable) and GET sizes (the upright pixel size of every resizable image in a folder, from the headers only). The daily host-fs-image.sweep keeps the cache within 30 days unused and 1 GB.
           - Server:
