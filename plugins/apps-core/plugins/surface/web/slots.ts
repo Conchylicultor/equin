@@ -156,6 +156,13 @@ export interface PlacementDef {
    * its dot instead of docking into the absent tab bar.
    */
   ownsChrome?: boolean;
+  /**
+   * The surface may hold no tab at all while in this mode (the desktop: closing
+   * the last window leaves a clear desktop). Every other mode keeps at least one
+   * tab — closing the last one, or leaving an empty surface for such a mode,
+   * seeds the composition's home app.
+   */
+  allowsEmpty?: boolean;
 }
 
 /**

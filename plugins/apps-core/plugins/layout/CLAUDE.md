@@ -13,8 +13,8 @@ what is contributed or configured: no tab bar, and the railless framing.
 - Load-bearing: yes
 - Web:
   - Contributes: `Core.Root` → `AppsLayout`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps-core/tabs` ×6
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps-core/tabs` ×7
     - `apps-core` ×5
     - `primitives/pane` ×3
     - `primitives/css/ui-kit` ×2

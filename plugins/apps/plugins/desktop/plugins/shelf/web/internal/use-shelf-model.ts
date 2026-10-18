@@ -75,7 +75,8 @@ export function useShelfModel(tabIds: string[]): ShelfModel {
       onDesktop.push({ id, appId, minimized: w.geo.minimized, z: w.geo.z });
     }
 
-    const focusedId = windowForTab(focusedTabId);
+    const focusedId =
+      focusedTabId === undefined ? undefined : windowForTab(focusedTabId);
     const focused =
       focusedId === undefined ? undefined : windows.get(focusedId);
     const focusedWindowId =

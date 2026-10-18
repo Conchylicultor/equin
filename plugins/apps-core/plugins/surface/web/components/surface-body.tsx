@@ -122,6 +122,9 @@ export function SurfaceBody() {
         ownsChrome: new Set(
           sorted.filter((d) => d.ownsChrome).map((d) => d.id),
         ),
+        allowsEmpty: new Set(
+          sorted.filter((d) => d.allowsEmpty).map((d) => d.id),
+        ),
       }),
     [sorted, defaultId],
   );

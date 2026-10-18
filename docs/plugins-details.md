@@ -10295,8 +10295,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`layout`** — Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.
       - Web:
         - Contributes: `Core.Root` → `AppsLayout`
-        - Uses: 24 symbols — full list in [`plugins/apps-core/plugins/layout/REFERENCE.md`](../plugins/apps-core/plugins/layout/REFERENCE.md)
-          - `apps-core/tabs` ×6
+        - Uses: 25 symbols — full list in [`plugins/apps-core/plugins/layout/REFERENCE.md`](../plugins/apps-core/plugins/layout/REFERENCE.md)
+          - `apps-core/tabs` ×7
           - `apps-core` ×5
           - `primitives/pane` ×3
           - `primitives/css/ui-kit` ×2
@@ -10420,10 +10420,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/surface`
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, and the surface-written placement-capabilities registry.
       - Web:
-        - Uses: 40 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Uses: 41 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `primitives/pane` ×18
+          - `apps-core` ×7
           - `primitives/scope/app-instance` ×7
-          - `apps-core` ×6
           - `primitives/embed` ×3
           - `primitives/link-gesture` ×2
           - `primitives/latest-ref.useLatestRef`
@@ -10445,6 +10445,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `loadScopePrefixFor`
           - `navigate`
           - `peekDefaultPlacement`
+          - `peekSurfaceEmpty`
           - `placementHasAppThemeScope`
           - `placementIsNewTabFollows`
           - `placementOwnsChrome`

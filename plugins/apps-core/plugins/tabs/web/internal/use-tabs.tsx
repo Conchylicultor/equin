@@ -18,6 +18,7 @@ import {
   setLiveStore,
   setHistoryAdapter,
   appNavSink,
+  type HistoryAdapter,
   type ParsedRoute,
   type PaneSlot,
   type PaneStore,
@@ -25,7 +26,10 @@ import {
 import { setFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
 import { getNavigationType } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { type Placement } from "@plugins/apps-core/core";
-import { useComposition } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  useComposition,
+  useDeferredLoadComplete,
+} from "@plugins/framework/plugins/web-sdk/core";
 import {
   Apps,
   useActiveApp,
@@ -40,6 +44,7 @@ import {
 import {
   peekDefaultPlacement,
   peekExitPlacement,
+  peekPlacementAllowsEmpty,
   usePlacementCapabilities,
 } from "./placement-registry";
 import {
@@ -55,7 +60,11 @@ import { isDeadUnresolvedLink, loadScopePrefixFor } from "./load-scope";
 
 export interface TabsApi {
   tabs: Tab[];
-  focusedTabId: string;
+  /**
+   * The focused tab — `undefined` exactly when `tabs` is empty, which only a
+   * surface mode that `allowsEmpty` (the desktop) permits.
+   */
+  focusedTabId: string | undefined;
   /**
    * Per-tab resolved content title (selected page / conversation / song …),
    * keyed by tabId. Absent when the tab is at its app index or its pane has no
@@ -162,6 +171,19 @@ function publishSurfaceMode(
   }
 }
 
+// Page-global by design, like surfaceMode above: whether the ONE tab set is empty, read by the apps layout (the provider's parent) to keep its bare-`/` canonicalization off the empty surface's own URL.
+let surfaceEmpty = false;
+
+/**
+ * Whether the surface holds no tab at all (the desktop with every window
+ * closed). One-shot read for effects: the apps layout renders ABOVE the
+ * provider, and the empty surface's URL is bare `/`, which it would otherwise
+ * canonicalize to the home app.
+ */
+export function peekSurfaceEmpty(): boolean {
+  return surfaceEmpty;
+}
+
 /**
  * Imperatively set the surface rendering mode from anywhere — the persistent
  * home for the mode control on the floating action bar, the fullscreen button,
@@ -242,7 +264,7 @@ function rebuildBackgroundTab(persisted: PersistedTab, apps: AppList): Tab {
 
 interface BootState {
   tabs: Tab[];
-  focusedTabId: string;
+  focusedTabId: string | undefined;
   /** Restored surface mode (registry default until `surface` registers). */
   mode: Placement;
 }
@@ -340,6 +362,13 @@ export function bootTabs(
   // reload, so no other app's tab is dropped; the focused tab is chosen and made
   // live from the URL below.
   const persisted = loadPersistedTabs();
+  // The instance was left EMPTY (the desktop with every window closed) and the
+  // address bar is still the empty surface's bare root: come back empty. A URL
+  // naming an app opens it, as on any boot. `TabsProvider` seeds the home app
+  // once the restored mode turns out not to allow an empty surface.
+  if (persisted?.tabs.length === 0 && !resolved) {
+    return { tabs: [], focusedTabId: undefined, mode: persisted.mode ?? "" };
+  }
   const tabs: Tab[] = (persisted?.tabs ?? []).map((p) =>
     rebuildBackgroundTab(p, apps),
   );
@@ -456,7 +485,9 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       bootTabs(apps, initialApp?.id ?? registeredHome(apps, homeId)?.id ?? ""),
     );
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
-  const [focusedTabId, setFocusedTabId] = useState<string>(initialFocus);
+  const [focusedTabId, setFocusedTabId] = useState<string | undefined>(
+    initialFocus,
+  );
   // The ONE surface rendering mode (docked / windows / solo). Per-surface, never
   // per-tab: every tab is displayed under this single value, so two modes can
   // never be visible at once. `previousMode` backs the solo (fullscreen) exit.
@@ -511,6 +542,10 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // eslint-disable-next-line react-hooks/refs -- intentional render-sync of a hybrid ref also written imperatively inside setMode; see the note above.
   modeRef.current = mode;
 
+  // The installed shell history adapter — the one writer for the empty
+  // surface's URL, which no pane store can write (none is live).
+  const adapterRef = useRef<HistoryAdapter | null>(null);
+
   const persist = useCallback(() => {
     savePersistedTabs(tabsRef.current, focusedRef.current, modeRef.current);
   }, []);
@@ -553,6 +588,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
    */
   const activate = useCallback(
     (next: Tab, target?: ActivateTarget, mode: "push" | "replace" = "push") => {
+      surfaceEmpty = false;
       const current = tabsRef.current.find(
         (t) => t.tabId === focusedRef.current,
       );
@@ -592,6 +628,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // never seeds a target and never writes history: restoration is a pure read
   // of the snapshot, never a new entry.
   const activateWithoutMirror = useCallback((next: Tab) => {
+    surfaceEmpty = false;
     const current = tabsRef.current.find((t) => t.tabId === focusedRef.current);
     if (current && current.tabId !== next.tabId) current.store.live = false;
     next.store.setBasePath(appPathFor(next.appId, appsRef.current));
@@ -780,17 +817,26 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
           focused.store.navigatePending(parsed.rawPath);
           return;
         }
+        // An empty surface has no tab to re-route: the link opens one.
+        if (!focused) {
+          openTabWith(resolved.app.id, {
+            kind: "pending",
+            rawPath: parsed.rawPath,
+          });
+          return;
+        }
         replaceTabAppWithPending(
-          focusedRef.current,
+          focused.tabId,
           resolved.app.id,
           parsed.rawPath,
         );
         return;
       }
       const route = parsed.slots;
-      if (opts?.newTab) {
+      if (opts?.newTab || !focused) {
         // A new tab is always a fresh tab, even when the target app is the one
         // already focused — that is what makes this the in-app middle-click.
+        // An empty surface has no tab to re-route, so the link opens one too.
         openTabWith(resolved.app.id, { kind: "route", route });
         return;
       }
@@ -803,7 +849,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       // Cross-app: swap the focused tab's app in place AND seed the target
       // route, so the focused tab's appId always matches the URL (no desync) —
       // consistent with the rail's in-place app switch.
-      replaceTabAppWithRoute(focusedRef.current, resolved.app.id, route);
+      replaceTabAppWithRoute(focused.tabId, resolved.app.id, route);
     },
     [replaceTabAppWithRoute, replaceTabAppWithPending, openTabWith],
   );
@@ -885,6 +931,28 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     };
   }, [focusedStore, rebuildTabApp, appsRef]);
 
+  // Fill an empty surface with a fresh home-app tab, focused — for a mode that
+  // does not allow an empty surface. Bails when the home is not registered (no
+  // app at all, or its shell failed: nothing to seed, and never another app in
+  // its place). Replace: the top entry names a tab that is gone (or the empty
+  // surface) — a correction, not an independently-reachable navigation.
+  const seedHome = useCallback(() => {
+    const seedApp = registeredHome(appsRef.current, homeId);
+    if (!seedApp) return;
+    const seedId = crypto.randomUUID();
+    const seed: Tab = {
+      tabId: seedId,
+      appId: seedApp.id,
+      store: createPaneStore({ live: false }),
+    };
+    tabsRef.current = [seed];
+    setTabs([seed]);
+    activate(seed, undefined, "replace");
+    focusedRef.current = seedId;
+    setFocusedTabId(seedId);
+    persist();
+  }, [activate, persist, homeId]);
+
   const closeTab = useCallback(
     (tabId: string) => {
       const prev = tabsRef.current;
@@ -895,25 +963,26 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       setTabTitle(tabId, undefined);
 
       if (remaining.length === 0) {
-        // Never allow zero tabs — seed a fresh home-app tab and focus it.
-        // Bail when the home is not registered (no app at all, or its shell
-        // failed: nothing to seed, and never another app in its place).
-        const seedApp = registeredHome(appsRef.current, homeId);
-        if (!seedApp) return;
-        const seedId = crypto.randomUUID();
-        const store = createPaneStore({ live: false });
-        const seed: Tab = {
-          tabId: seedId,
-          appId: seedApp.id,
-          store,
-        };
-        tabsRef.current = [seed];
-        setTabs([seed]);
-        // Replace: the top entry pointed at the tab we just destroyed — this is
-        // a correction, not an independently-reachable navigation.
-        activate(seed, undefined, "replace");
-        focusedRef.current = seedId;
-        setFocusedTabId(seedId);
+        if (!peekPlacementAllowsEmpty(modeRef.current)) {
+          seedHome();
+          return;
+        }
+        // The mode allows an empty surface (the desktop): nothing is focused,
+        // no store is live, and the address bar shows the empty surface's bare
+        // root.
+        prev[idx]!.store.live = false;
+        tabsRef.current = [];
+        setTabs([]);
+        focusedRef.current = undefined;
+        setFocusedTabId(undefined);
+        surfaceEmpty = true;
+        // Replace, like every close-tab correction: the top entry named the
+        // tab just closed. With nothing focused the entry carries no tab.
+        adapterRef.current?.commit({
+          url: "/",
+          state: { route: [] },
+          mode: "replace",
+        });
         persist();
         return;
       }
@@ -933,7 +1002,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       }
       persist();
     },
-    [activate, persist, setTabTitle, homeId],
+    [activate, persist, setTabTitle, seedHome],
   );
 
   // Reorder the open-tab set: move `activeId` to `overId`'s position. Pure array
@@ -967,9 +1036,30 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       modeRef.current = next;
       setModeState(next);
       persist();
+      // Leaving the desktop with no window open: the next mode needs a tab.
+      if (tabsRef.current.length === 0 && !peekPlacementAllowsEmpty(next)) {
+        seedHome();
+      }
     },
-    [persist],
+    [persist, seedHome],
   );
+
+  // An empty surface restored by boot whose mode turns out not to allow one (a
+  // removed mode, or one the registry resolves elsewhere): seed the home app
+  // once the placements are known. A stored mode not registered YET may be a
+  // placement of the deferred tier (the desktop's is) — judge it only once that
+  // tier settled, or every reload of an empty desktop would come back with a
+  // Home window.
+  const deferredComplete = useDeferredLoadComplete();
+  useEffect(() => {
+    if (capabilities === null || tabs.length > 0) return;
+    if (!capabilities.ids.has(rawMode) && !deferredComplete) return;
+    if (!capabilities.allowsEmpty.has(mode)) seedHome();
+  }, [capabilities, tabs.length, rawMode, mode, deferredComplete, seedHome]);
+
+  useEffect(() => {
+    surfaceEmpty = tabs.length === 0;
+  }, [tabs.length]);
 
   // Return to the mode in effect before the current one (solo's exit). Falls
   // back to another registered mode if the previous one is unknown or equals
@@ -1009,6 +1099,18 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       refocus: refocusForRestore,
       rebuildAppInPlace: (tabId, appId) =>
         rebuildTabApp(tabId, appId, undefined, { mirror: false }),
+      mintForRestore: (appId) => {
+        const tab: Tab = {
+          tabId: crypto.randomUUID(),
+          appId,
+          store: makeBackgroundStore(appId, appsRef.current),
+        };
+        const nextTabs = [...tabsRef.current, tab];
+        tabsRef.current = nextTabs;
+        setTabs(nextTabs);
+        activateWithoutMirror(tab);
+        setFocusedTabId(tab.tabId);
+      },
       restoreLiveRoute: () => {
         const t = tabsRef.current.find((x) => x.tabId === focusedRef.current);
         t?.store.handleLocationChange();
@@ -1016,6 +1118,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       setFocusedApp,
       persist,
     });
+    adapterRef.current = adapter;
     const uninstallAdapter = setHistoryAdapter(adapter);
     const focused = tabsRef.current.find((t) => t.tabId === focusedRef.current);
     if (focused) {
@@ -1031,7 +1134,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       });
     }
     return uninstallAdapter;
-  }, [refocusForRestore, rebuildTabApp, persist]);
+  }, [refocusForRestore, rebuildTabApp, activateWithoutMirror, persist]);
 
   const api = useMemo<TabsApi>(
     () => ({

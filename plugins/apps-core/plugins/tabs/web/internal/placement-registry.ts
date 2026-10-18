@@ -26,6 +26,8 @@ export interface PlacementCapabilities {
   /** Modes that draw their own frame: no tab bar, no app rail, and the global
    * action bar as its floating dot (solo, the desktop). */
   ownsChrome: Set<string>;
+  /** Modes in which the surface may hold no tab at all (the desktop). */
+  allowsEmpty: Set<string>;
 }
 
 /**
@@ -146,4 +148,14 @@ export function placementOwnsChrome(
   id: string,
 ): boolean {
   return caps?.ownsChrome.has(id) ?? false;
+}
+
+/**
+ * Whether the surface may hold no tab at all in mode `id` (the desktop). One-shot
+ * read for the tab manager's actions (closing the last tab, switching mode),
+ * which run after the surface registered. Not registered yet is `false`: the
+ * surface then keeps a tab, the safe direction.
+ */
+export function peekPlacementAllowsEmpty(id: string): boolean {
+  return placementSink.peek()?.allowsEmpty.has(id) ?? false;
 }

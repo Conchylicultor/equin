@@ -29,6 +29,7 @@ import {
 } from "@plugins/apps-core/web";
 import {
   TabsProvider,
+  peekSurfaceEmpty,
   useTabs,
   appLinkProps,
   placementOwnsChrome,
@@ -137,8 +138,13 @@ export function AppsLayout() {
   // so it fires ONLY where there is nothing to destroy. A non-bare unmatched
   // path is a broken link, not a path to canonicalize: it keeps its URL and gets
   // the not-found surface below.
+  //
+  // Except on the EMPTY surface (the desktop with every window closed), whose
+  // own URL is bare `/`: there it is what the user is looking at, not a missing
+  // app. Peeked in the effect — the provider is a child, so its effects (which
+  // publish the flag) have already run in this commit.
   useEffect(() => {
-    if (outcome === "redirect") redirectTo(homePath!);
+    if (outcome === "redirect" && !peekSurfaceEmpty()) redirectTo(homePath!);
   }, [outcome, homePath]);
 
   const basePath = activeApp?.app.basePath ?? "";

@@ -48,6 +48,7 @@ function makeDeps(opts: {
 }) {
   const refocus = vi.fn();
   const rebuildAppInPlace = vi.fn();
+  const mintForRestore = vi.fn();
   const restoreLiveRoute = vi.fn();
   const setFocusedApp = vi.fn();
   const persist = vi.fn();
@@ -57,6 +58,7 @@ function makeDeps(opts: {
     apps: () => APPS,
     refocus,
     rebuildAppInPlace,
+    mintForRestore,
     restoreLiveRoute,
     setFocusedApp,
     persist,
@@ -65,6 +67,7 @@ function makeDeps(opts: {
     deps,
     refocus,
     rebuildAppInPlace,
+    mintForRestore,
     restoreLiveRoute,
     setFocusedApp,
     persist,
@@ -171,13 +174,13 @@ describe("commit — stamps the focused tab's identity onto every entry", () => 
 });
 
 describe("restore — snapshot → the right history-free dep, never a history write", () => {
-  it("returns early when nothing is focused (popstate before the provider mounted)", () => {
+  it("empty surface, closed-tab entry: mints a tab on the entry's app (no history write)", () => {
     const {
       deps,
       refocus,
       rebuildAppInPlace,
+      mintForRestore,
       restoreLiveRoute,
-      setFocusedApp,
     } = makeDeps({ focused: null });
     window.history.replaceState(
       { tabId: "T1", appId: "pages", route: [] },
@@ -187,8 +190,21 @@ describe("restore — snapshot → the right history-free dep, never a history w
 
     makeShellHistoryAdapter(deps).restore();
 
+    expect(mintForRestore).toHaveBeenCalledWith("pages");
     expect(refocus).not.toHaveBeenCalled();
     expect(rebuildAppInPlace).not.toHaveBeenCalled();
+    expect(restoreLiveRoute).toHaveBeenCalled();
+  });
+
+  it("empty surface, its own bare-root entry: stays empty", () => {
+    const { deps, mintForRestore, restoreLiveRoute, setFocusedApp } = makeDeps({
+      focused: null,
+    });
+    window.history.replaceState({}, "", "/");
+
+    makeShellHistoryAdapter(deps).restore();
+
+    expect(mintForRestore).not.toHaveBeenCalled();
     expect(restoreLiveRoute).not.toHaveBeenCalled();
     expect(setFocusedApp).not.toHaveBeenCalled();
   });

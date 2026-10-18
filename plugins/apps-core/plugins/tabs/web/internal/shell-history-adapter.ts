@@ -60,7 +60,10 @@ type CompositeState = PaneHistoryState & {
  * it), so there is no way for the adapter to re-enter the commit path.
  */
 export interface ShellHistoryDeps {
-  /** The focused tab's `{ tabId, appId }`; null before any tab has mounted. */
+  /**
+   * The focused tab's `{ tabId, appId }`; null before any tab has mounted, and
+   * while the surface holds no tab (a mode that `allowsEmpty`, the desktop).
+   */
   focused(): { tabId: string; appId: string } | null;
   /** All open tabs, to locate a snapshot's originating tab by id. */
   tabs(): readonly Tab[];
@@ -74,6 +77,12 @@ export interface ShellHistoryDeps {
    * this only swaps the app, keeping one code path for the route.
    */
   rebuildAppInPlace(tabId: string, appId: string): void;
+  /**
+   * Mint a tab on `appId` and make it the live focused one WITHOUT writing
+   * history — restoring onto an EMPTY surface, where there is no focused tab to
+   * apply the snapshot to. Bounded: it only runs while the set is empty.
+   */
+  mintForRestore(appId: string): void;
   /** Restore the live (focused) store's route from the just-updated `history.state`. */
   restoreLiveRoute(): void;
   /** Publish the focused app id to the chrome-identity module store. */
@@ -112,8 +121,10 @@ export function makeShellHistoryAdapter(
     // complete picture of what was on screen: which tab, which app, which route
     // — and which app INSTANCE those ids belong to, so a later cold boot can
     // tell whether they name its own state or a foreign one.
-    // (Absent only pre-mount, before any tab is live — commit never runs then;
-    // an unstamped entry stays verbatim rather than carrying half a snapshot.)
+    // (Absent on the empty surface — the desktop with every window closed,
+    // whose bare-`/` entry names no tab — and pre-mount, when commit never
+    // runs; an unstamped entry stays verbatim rather than carrying half a
+    // snapshot.)
     const composite: CompositeState = focused
       ? stampAppInstance({
           ...state,
@@ -143,9 +154,6 @@ export function makeShellHistoryAdapter(
     // Runs AFTER the browser already updated the URL + `history.state`.
     const raw = (window.history.state ?? {}) as CompositeState;
     const focused = deps.focused();
-    // Nothing mounted yet (a popstate before TabsProvider wired up) — boot will
-    // stamp the first composite entry. Nothing to restore.
-    if (!focused) return;
 
     // 1. FOREIGN-INSTANCE entry: the snapshot names an app instance that is not
     //    the one running here, so its `tabId` addresses a tab set this document
@@ -168,8 +176,13 @@ export function makeShellHistoryAdapter(
     //    part of it this instance can trust.
     if (!raw.tabId || !raw.appId || foreignInstance) {
       const resolved = resolveAppForPath(currentRoutePath(), deps.apps());
-      const appId = resolved?.app.id ?? focused.appId;
-      if (appId !== focused.appId) deps.rebuildAppInPlace(focused.tabId, appId);
+      const appId = resolved?.app.id ?? focused?.appId;
+      // No app owns the URL and no tab is focused: the empty surface's own
+      // entry (bare `/`) — it stays empty.
+      if (appId === undefined) return;
+      if (!focused) deps.mintForRestore(appId);
+      else if (appId !== focused.appId)
+        deps.rebuildAppInPlace(focused.tabId, appId);
       deps.restoreLiveRoute();
       deps.setFocusedApp(appId);
       deps.persist();
@@ -182,8 +195,10 @@ export function makeShellHistoryAdapter(
     //    Never mint it back — a dead tabId can't be revived, and minting under
     //    repeated back/forward would grow the tab set unboundedly. Apply the
     //    snapshot's `{ appId, route | pending }` to the CURRENT focused tab.
+    //    On an empty surface there is no focused tab to apply it to: mint one.
     if (!target) {
-      if (raw.appId !== focused.appId) {
+      if (!focused) deps.mintForRestore(raw.appId);
+      else if (raw.appId !== focused.appId) {
         deps.rebuildAppInPlace(focused.tabId, raw.appId);
       }
       deps.restoreLiveRoute();
@@ -200,7 +215,7 @@ export function makeShellHistoryAdapter(
     //   - app matches, tab already focused ⇒ nothing; step 7 restores the route.
     if (target.appId !== raw.appId) {
       deps.rebuildAppInPlace(target.tabId, raw.appId);
-    } else if (focused.tabId !== target.tabId) {
+    } else if (focused?.tabId !== target.tabId) {
       deps.refocus(target.tabId);
     }
 

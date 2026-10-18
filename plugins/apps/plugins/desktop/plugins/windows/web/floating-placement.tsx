@@ -58,6 +58,8 @@ export const floatingDef: PlacementDef = {
   newTabFollows: true,
   // The desktop draws its own frame — its shelf replaces the tab bar and rail.
   ownsChrome: true,
+  // Closing the last window leaves a clear desktop, not a fresh Home window.
+  allowsEmpty: true,
   // Defer teardown of a just-closed floating tab by the close tween's duration so
   // `FloatingChrome` can animate the window out before the host unmounts it.
   // Single-sourced with the tween (CLOSE_MS) so retention + tween never drift.

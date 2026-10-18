@@ -168,10 +168,10 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 - Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, and the surface-written placement-capabilities registry.
 - Web:
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×18
+    - `apps-core` ×7
     - `primitives/scope/app-instance` ×7
-    - `apps-core` ×6
     - `primitives/embed` ×3
     - `primitives/link-gesture` ×2
     - `primitives/latest-ref.useLatestRef`
@@ -193,6 +193,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `loadScopePrefixFor`
     - `navigate`
     - `peekDefaultPlacement`
+    - `peekSurfaceEmpty`
     - `placementHasAppThemeScope`
     - `placementIsNewTabFollows`
     - `placementOwnsChrome`

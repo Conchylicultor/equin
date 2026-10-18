@@ -8,6 +8,7 @@ export {
   getSurfaceMode,
   useSurfaceMode,
   exitToPreviousMode,
+  peekSurfaceEmpty,
   type TabsApi,
   type NavigateOptions,
 } from "./internal/use-tabs";

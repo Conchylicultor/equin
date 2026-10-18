@@ -1,7 +1,7 @@
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { useAppNavBoundary } from "@plugins/primitives/plugins/pane/web";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
-import type { ActiveApp } from "@plugins/apps-core/web";
+import { useHomeApp, type ActiveApp } from "@plugins/apps-core/web";
 import { setSurfaceMode, useTabs } from "./use-tabs";
 
 /**
@@ -25,18 +25,38 @@ import { setSurfaceMode, useTabs } from "./use-tabs";
 export function useActivateApp(): (
   entry: Pick<ActiveApp, "id" | "surfaceMode" | "app">,
 ) => Activation {
-  const { focusedTabId, replaceTabApp } = useTabs();
+  const { tabs, focusedTabId, replaceTabApp, openTab, closeTab } = useTabs();
   const ownTabId = useSurfaceTabId();
   const boundary = useAppNavBoundary();
+  const home = useHomeApp();
   return (entry) => {
-    // A surface-mode app is an action, not a destination: it owns no URL.
+    const tabId = ownTabId ?? focusedTabId;
+    // A surface-mode app is an action, not a destination: it owns no URL. Picked
+    // from the home app (the gallery), it is also what the gallery tab was open
+    // for — the tab is consumed, as a tab app's pick swaps it in place — so the
+    // desktop opens clear rather than holding a Home window.
     const mode = entry.surfaceMode;
-    if (mode !== undefined) return () => setSurfaceMode(mode);
+    if (mode !== undefined)
+      return () => {
+        setSurfaceMode(mode);
+        const launchedFrom = tabs.find((t) => t.tabId === tabId);
+        if (
+          launchedFrom !== undefined &&
+          home.kind === "app" &&
+          launchedFrom.appId === home.app.id
+        ) {
+          closeTab(launchedFrom.tabId);
+        }
+      };
     return {
       open: () =>
         boundary !== null
           ? boundary(entry.app.basePath)
-          : replaceTabApp(ownTabId ?? focusedTabId, entry.id),
+          : tabId === undefined
+            ? // An empty surface (the desktop, every window closed) has no tab
+              // to swap: the pick opens one.
+              openTab(entry.id)
+            : replaceTabApp(tabId, entry.id),
       href: () => entry.app.basePath,
     };
   };

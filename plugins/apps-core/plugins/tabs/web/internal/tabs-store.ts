@@ -73,7 +73,8 @@ export interface PersistedTab {
 
 export interface PersistedTabs {
   tabs: PersistedTab[];
-  focusedTabId: string;
+  /** Absent exactly when `tabs` is empty (a mode that `allowsEmpty`, the desktop). */
+  focusedTabId?: string;
   /**
    * The single surface rendering mode (docked / windows / solo). Optional for
    * back-compat: payloads written before the per-surface mode (which stored a
@@ -182,7 +183,11 @@ export function loadPersistedTabs(): PersistedTabs | null {
     window.sessionStorage.getItem(storageKey()) ?? adoptLegacyPayload();
   if (raw === null) return null;
   const parsed = JSON.parse(raw) as PersistedTabs;
-  if (!Array.isArray(parsed.tabs) || typeof parsed.focusedTabId !== "string") {
+  if (
+    !Array.isArray(parsed.tabs) ||
+    (typeof parsed.focusedTabId !== "string" &&
+      !(parsed.focusedTabId === undefined && parsed.tabs.length === 0))
+  ) {
     throw new Error(
       `Malformed persisted app-tabs payload under "${storageKey()}".`,
     );
@@ -193,7 +198,7 @@ export function loadPersistedTabs(): PersistedTabs | null {
 /** Persist the live tab set (route serialized per store) to sessionStorage. */
 export function savePersistedTabs(
   tabs: Tab[],
-  focusedTabId: string,
+  focusedTabId: string | undefined,
   mode: Placement,
 ): void {
   if (typeof window === "undefined") return;

@@ -183,6 +183,7 @@ describe("push/replace matrix", () => {
   it("focusTab PUSHES and stamps the refocused tab", () => {
     mount();
     const pagesTab = hook.current.focusedTabId;
+    if (pagesTab === undefined) throw new Error("boot focused no tab");
     let storyId!: string;
     act(() => {
       storyId = hook.current.openTab("story");
