@@ -56,21 +56,41 @@ await withBrowser(async (h) => {
   await pressUntilOffset(page, RESTORED_END);
   await selectBack(page, RESTORED_END - CUT);
   const selected = await page.evaluate(() => window.getSelection()?.toString());
-  r.ok("P1 selected", selected === "text deleted", `selection=${JSON.stringify(selected)}`);
+  r.ok(
+    "P1 selected",
+    selected === "text deleted",
+    `selection=${JSON.stringify(selected)}`,
+  );
   await page.keyboard.press("Backspace");
   await page.waitForTimeout(RUN_CLOSE_MS);
-  r.ok("P1 deleted", (await blockText(block)) === "xxxxyyyy", await blockText(block));
+  r.ok(
+    "P1 deleted",
+    (await blockText(block)) === "xxxxyyyy",
+    await blockText(block),
+  );
 
   await page.keyboard.press("Meta+z");
   await page.waitForTimeout(400);
-  r.ok("P1 undo restores", (await blockText(block)) === LINE, await blockText(block));
+  r.ok(
+    "P1 undo restores",
+    (await blockText(block)) === LINE,
+    await blockText(block),
+  );
   const afterUndo = await caretLinear(page);
-  r.ok("P1 undo caret after restored text", afterUndo === RESTORED_END, `caret=${afterUndo}`);
+  r.ok(
+    "P1 undo caret after restored text",
+    afterUndo === RESTORED_END,
+    `caret=${afterUndo}`,
+  );
   await snap(page, out, "p1-undo");
 
   await page.keyboard.press("Meta+Shift+z");
   await page.waitForTimeout(400);
-  r.ok("P1 redo deletes", (await blockText(block)) === "xxxxyyyy", await blockText(block));
+  r.ok(
+    "P1 redo deletes",
+    (await blockText(block)) === "xxxxyyyy",
+    await blockText(block),
+  );
   const afterRedo = await caretLinear(page);
   r.ok("P1 redo caret at the cut", afterRedo === CUT, `caret=${afterRedo}`);
 
@@ -79,7 +99,11 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(200);
   await page.keyboard.press("Meta+z");
   await page.waitForTimeout(400);
-  r.ok("P2 undo restores", (await blockText(block)) === LINE, await blockText(block));
+  r.ok(
+    "P2 undo restores",
+    (await blockText(block)) === LINE,
+    await blockText(block),
+  );
   const p2 = await caretLinear(page);
   r.ok("P2 undo caret after restored text", p2 === RESTORED_END, `caret=${p2}`);
 
@@ -92,7 +116,11 @@ await withBrowser(async (h) => {
   await page.keyboard.press("End");
   await page.keyboard.press("Meta+z");
   await page.waitForTimeout(400);
-  r.ok("P3 undo typing", (await blockText(block)) === LINE, await blockText(block));
+  r.ok(
+    "P3 undo typing",
+    (await blockText(block)) === LINE,
+    await blockText(block),
+  );
   const p3u = await caretLinear(page);
   r.ok("P3 undo caret where typing began", p3u === CUT, `caret=${p3u}`);
   await page.keyboard.press("Meta+Shift+z");
