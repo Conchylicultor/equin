@@ -75,6 +75,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["pr-floating-bar"], extend: "pr" },
   { classes: ["anchor-floating-bar-band"], standalone: true, reason: "Names this box as an anchor; no built-in group sets anchor-name." },
   { classes: ["floating-bar-band"], standalone: true, reason: "Anchor-derived top + height pair for one fixed band; splitting them into top/h groups would let a later top-* silently detach it from its anchor." },
+  { classes: ["floating-bar-boundary"], standalone: true, reason: "Scopes the floating-bar safe-area var and anchor name to this box; no built-in group sets anchor-scope." },
   { classes: ["cp-panel"], extend: "p" },
   { classes: ["cp-surface"], extend: "w" },
   { classes: ["cp-body"], standalone: true, reason: "Composite band container (flex column + gap + the positioned first-rule mask); no single-value built-in group to conflict with." },

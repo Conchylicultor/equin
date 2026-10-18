@@ -1078,7 +1078,8 @@
  * fallbacks give a zero-height band at the corner offset: the auto margins meet
  * negative free space, resolve to 0, and the bar hangs from `0.5rem` — the old
  * `top-2`. The last visible anchor in tree order wins; a `display: none`
- * keep-alive tab's header cannot be one.
+ * keep-alive tab's header cannot be one, nor can a header inside a
+ * `floating-bar-boundary` (below).
  *
  * The anchor is named inside `anchor()` / `anchor-size()`, never through
  * `position-anchor`: a `position-anchor` naming an anchor that does not exist
@@ -1087,6 +1088,14 @@
  * (Home) the bar vanished instead of reaching the fallbacks. */
 @utility anchor-floating-bar-band { anchor-name: --floating-bar-band; } /* twmerge: standalone -- Names this box as an anchor; no built-in group sets anchor-name. */
 @utility floating-bar-band { top: anchor(--floating-bar-band top, 0.5rem); height: anchor-size(--floating-bar-band height, 0px); } /* twmerge: standalone -- Anchor-derived top + height pair for one fixed band; splitting them into top/h groups would let a later top-* silently detach it from its anchor. */
+
+/* Floating-bar boundary — a box that is NOT the viewport's top-right corner (a
+ * desktop window's content, an in-process app embed), though the surface inside
+ * it believes it is. Headers inside it neither reserve the bar's safe area (the
+ * var is reset, so `pr-floating-bar*` fall back to their own end inset) nor
+ * anchor its band (`anchor-scope` hides their anchor names from the band outside
+ * the box), so the bar stays at the corner instead of following the box. */
+@utility floating-bar-boundary { --floating-bar-safe-area: initial; anchor-scope: --floating-bar-band; } /* twmerge: standalone -- Scopes the floating-bar safe-area var and anchor name to this box; no built-in group sets anchor-scope. */
 
 /* Control-panel geometry — the one grid every data-control panel (filter, sort,
  * view settings, …) is drawn on, owned by the `control-panel` primitive. The

@@ -398,6 +398,9 @@ export function WindowChrome({
         // eslint-disable-next-line layout/no-adhoc-layout -- draggable window titlebar: top-edge-pinned, fixed height via style, hand-rolled flex row whose rigid / slack children coordinate with the move-drag region; window chrome, not a primitive row
         className={cn(
           "group/titlebar absolute inset-x-0 top-0 z-raised flex items-center",
+          // Under the dot, the titlebar is the row it sits in: naming it the
+          // band's anchor centres the bar on this line.
+          underActionBar && "anchor-floating-bar-band",
           classic
             ? cn("border-b border-border", focused ? "bg-muted" : "bg-muted/40")
             : "bg-background",

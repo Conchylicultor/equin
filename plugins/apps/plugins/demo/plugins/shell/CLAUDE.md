@@ -12,6 +12,7 @@
     - `apps-core/app-embed.AppEmbed`
     - `framework/browser-server/demo/scope.DemoScope`
     - `layouts/miller.PaneOverlayHost`
+    - `primitives/bar.Bar`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
 - Core:

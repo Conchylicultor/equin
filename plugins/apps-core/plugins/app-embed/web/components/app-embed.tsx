@@ -84,9 +84,12 @@ export function AppEmbed({
     <Theme
       name={appThemeScope(app)}
       surface="canvas"
+      // `floating-bar-boundary`: the embed is a box on its host's page, not
+      // the viewport's top-right corner — its headers must not reserve or
+      // anchor the global floating action bar.
       // eslint-disable-next-line layout/no-adhoc-layout -- the embed's own box: `relative isolate` contains its overlays and stacking, `transform-gpu` makes it the containing block for the app shell's fixed sidebar
       className={cn(
-        "relative isolate size-full transform-gpu overflow-hidden",
+        "floating-bar-boundary relative isolate size-full transform-gpu overflow-hidden",
         className,
       )}
     >

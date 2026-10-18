@@ -1611,6 +1611,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/app-embed.AppEmbed`
               - `framework/browser-server/demo/scope.DemoScope`
               - `layouts/miller.PaneOverlayHost`
+              - `primitives/bar.Bar`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
           - Core:
@@ -34214,6 +34215,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/browser/bookmarks`
           - `apps/browser/shell`
           - `apps/browser/tabs`
+          - `apps/demo/shell`
           - `apps/file-explorer/browser`
           - `conversations/conversation-view`
           - `primitives/app-shell`

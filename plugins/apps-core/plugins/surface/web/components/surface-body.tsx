@@ -352,7 +352,13 @@ function TabContainer({
           per-tab scope, so the chain is one link shorter and just as stable. */}
       <div
         // eslint-disable-next-line layout/no-adhoc-layout -- stable keep-alive content inset: always-present full-bleed layer whose CSS the active placement's Chrome pushes via insetStyle (titlebar inset / minimized hide); its parent-chain identity must not change, so no wrapping primitive
-        className="absolute inset-0 min-h-0 min-w-0 transform-gpu"
+        className={cn(
+          "absolute inset-0 min-h-0 min-w-0 transform-gpu",
+          // A window is a box inside the surface, not its top-right corner:
+          // the app's headers must not reserve or anchor the floating action
+          // bar (its own titlebar does, when it reaches the corner).
+          def?.frame === "window" && "floating-bar-boundary",
+        )}
         style={insetStyle ?? undefined}
       >
         <TabSurface tab={tab} />
