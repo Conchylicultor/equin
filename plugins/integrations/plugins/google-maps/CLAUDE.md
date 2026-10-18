@@ -40,18 +40,20 @@ and rate-limitable on the server.
 The user creates the style and the Map ID in the Cloud Console, guided by the
 **Smooth zoom** part of the Live map pane:
 
-1. Create a JavaScript Vector Map ID, with tilt and rotation off because the
-   pin canvas projects flat.
-2. Paste the Map ID (the preview checks it).
-3. Import `BASEMAP_STYLE_JSON` (the same rule the raster map passes inline, so
-   the two cannot drift) as a map style, and associate it with the Map ID.
+1. Import `BASEMAP_STYLE_JSON` (the same rule the raster map passes inline, so
+   the two cannot drift) as a map style, and publish it.
+2. Create a JavaScript Vector Map ID, with tilt and rotation off because the
+   pin canvas projects flat, and attach the style on the Map ID's own page
+   (Map styles → Edit → Light). Google attaches styles from the Map ID, not
+   from the style, so this order never goes back.
+3. Paste the Map ID; the preview checks it.
 
 The app never holds a Cloud permission. The Map Management API takes only the
 broad `cloud-platform` scope, which the user declined
 (`research/2026-10-16-global-google-vector-map-id.md`). Only the id string is
 stored.
 
-Nothing verifies the Map ID on write. The pane checks it live instead: step 2
+Nothing verifies the Map ID on write. The pane checks it live instead: step 3
 draws a **preview map** with the Map ID being set up (the valid draft, else the
 saved one) and the stored key, centred on central Paris so Google's shops and
 museums are visible if the style is not attached yet. It reads

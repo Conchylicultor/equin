@@ -269,9 +269,10 @@ function MapIdSetupSteps({
   const isSavedPreview = previewMapId === mapId;
   const vector = saved && isSavedPreview && outcome?.kind === "vector";
 
+  // Steps 1–2 happen in the Console: done once their result (a Map ID) is
+  // saved here. Step 3 is done once the saved id draws as a vector map.
   const createState: StepState = saved ? "done" : "active";
   const pasteState: StepState = vector ? "done" : "active";
-  const styleState: StepState = !saved ? "upcoming" : "active";
 
   async function handleSave() {
     setSaveError(null);
@@ -308,7 +309,37 @@ function MapIdSetupSteps({
       </Stack>
 
       <Steps>
-        <Step title="Create the Map ID" state={createState}>
+        <Step title="Create the map style" state={createState}>
+          <Stack gap="sm">
+            <StepLink href={`${CONSOLE}/google/maps-apis/studio/styles`} />
+            <StepActions>
+              <StepAction>
+                Click <StepKey>Create style</StepKey>, open its{" "}
+                <StepKey>JSON</StepKey> tab and choose <StepKey>Import</StepKey>
+                .
+              </StepAction>
+              <StepAction
+                detail={
+                  <StepCommand
+                    text={BASEMAP_STYLE_JSON}
+                    title="Copy style JSON"
+                  />
+                }
+              >
+                Paste this style (it hides Google&apos;s shops, museums and
+                restaurants):
+              </StepAction>
+              <StepAction>
+                Save it with any name, then click <StepKey>Publish</StepKey>.
+              </StepAction>
+            </StepActions>
+          </Stack>
+        </Step>
+
+        <Step
+          title="Create the Map ID and attach the style"
+          state={createState}
+        >
           <Stack gap="sm">
             <StepLink href={`${CONSOLE}/google/maps-apis/studio/maps`} />
             <StepActions>
@@ -316,24 +347,29 @@ function MapIdSetupSteps({
                 Click <StepKey>Create map ID</StepKey>, and give it any name.
               </StepAction>
               <StepAction>
-                Set <StepKey>Map type</StepKey> to <StepKey>JavaScript</StepKey>
-                .
+                Set <StepKey>Map type</StepKey> to <StepKey>JavaScript</StepKey>{" "}
+                → <StepKey>Vector</StepKey>, and leave <StepKey>Tilt</StepKey>{" "}
+                and <StepKey>Rotation</StepKey> <StepKey>unchecked</StepKey>{" "}
+                (the pins are drawn flat). Save.
               </StepAction>
               <StepAction>
-                Choose <StepKey>Vector</StepKey>.
+                On the Map ID&apos;s page, in <StepKey>Map styles</StepKey>{" "}
+                click <StepKey>Edit</StepKey> → under <StepKey>Light</StepKey>{" "}
+                pick the style from step 1 → <StepKey>Save</StepKey>.
               </StepAction>
               <StepAction>
-                Leave <StepKey>Tilt</StepKey> and <StepKey>Rotation</StepKey>{" "}
-                <StepKey>unchecked</StepKey> (the pins are drawn flat).
-              </StepAction>
-              <StepAction>
-                Save, then copy the <StepKey>Map ID</StepKey> from its row.
+                Copy the <StepKey>Map ID</StepKey> shown at the top of that
+                page.
               </StepAction>
             </StepActions>
+            <StepNote>
+              Already have a vector Map ID? Open it in Map management and do
+              only the Map styles part.
+            </StepNote>
           </Stack>
         </Step>
 
-        <Step title="Paste the Map ID" state={pasteState}>
+        <Step title="Paste the Map ID and check it" state={pasteState}>
           <Stack gap="sm">
             <Input
               placeholder="e.g. 8e0a97af9386fef"
@@ -365,6 +401,12 @@ function MapIdSetupSteps({
                 {saveError}
               </Text>
             ) : null}
+            <StepNote>
+              The map below must say Vector map ✓ and show no shops or museums —
+              nothing can detect hidden places automatically, so look at it.
+              Google can take a few minutes to serve a new Map ID or style:
+              press Check again.
+            </StepNote>
             {previewMapId === null ? (
               <StepNote>
                 Once you paste a Map ID, a map appears here and checks it.
@@ -379,45 +421,6 @@ function MapIdSetupSteps({
                 onCheckAgain={() => setAttempt((n) => n + 1)}
               />
             )}
-          </Stack>
-        </Step>
-
-        <Step title="Hide Google's places" state={styleState}>
-          <Stack gap="sm">
-            <StepLink href={`${CONSOLE}/google/maps-apis/studio/styles`} />
-            <StepActions>
-              <StepAction>
-                Click <StepKey>Create style</StepKey>, open its{" "}
-                <StepKey>JSON</StepKey> tab and choose <StepKey>Import</StepKey>
-                .
-              </StepAction>
-              <StepAction
-                detail={
-                  <StepCommand
-                    text={BASEMAP_STYLE_JSON}
-                    title="Copy style JSON"
-                  />
-                }
-              >
-                Paste this style, then save it with any name:
-              </StepAction>
-              <StepAction>
-                In the style, open <StepKey>Map IDs</StepKey> (or in the Map ID,{" "}
-                <StepKey>Map style</StepKey>) and{" "}
-                <StepKey>associate the style with the Map ID</StepKey> from step
-                1, for light mode.
-              </StepAction>
-              <StepAction>
-                Wait for the map above to drop the shops and museums, then press{" "}
-                <StepKey>Check again</StepKey>.
-              </StepAction>
-            </StepActions>
-            <StepNote>
-              Nothing here can detect hidden places automatically: look at the
-              map above. Google can take a few minutes to serve a changed style.
-              If shops still show, turn off Points of interest in the style
-              editor.
-            </StepNote>
           </Stack>
         </Step>
       </Steps>
