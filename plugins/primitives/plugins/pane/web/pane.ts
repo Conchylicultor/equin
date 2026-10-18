@@ -36,7 +36,11 @@ import {
   liveStoreAccessorSink,
   type SerializedSlot,
 } from "./history-sink";
-import { useAppNavigator } from "./app-nav-sink";
+import {
+  navigateApp,
+  useAppNavBoundary,
+  useAppNavigator,
+} from "./app-nav-sink";
 import {
   linkProps,
   type LinkGestureProps,
@@ -660,6 +664,41 @@ export function buildRouteUrl(route: PaneSlot[]): string {
   return "/" + parts.join("/") || "/";
 }
 
+/**
+ * The app a route belongs to: its ROOT pane's home (`Pane.define({ app })`).
+ * `undefined` when nothing names one yet: the empty route (a bare app root), or
+ * a head whose pane is not registered (a deferred plugin still loading, a stale
+ * pane id from an old bundle — the surface's own fallback handles those).
+ *
+ * A pane hosted by another app is a GUEST, beside one of the host's own panes —
+ * never the head of the host's route. A route headed by another app's pane is
+ * that app's surface stranded in this one: from Places, a Settings setup pane
+ * opened as `/places/accounts/google-maps/live-map` painted full screen with no
+ * Settings around it. So the head names the app, and both ways onto a surface —
+ * an open ({@link strandedRouteUrl}) and a URL (apps-core's resolver) — send
+ * the route to that app.
+ */
+export function routeHomeApp(route: readonly PaneSlot[]): AppRef | undefined {
+  const head = route[0];
+  if (!head) return undefined;
+  return registry.get(head.paneId)?.app;
+}
+
+/**
+ * Where `route` must go instead of a store at `basePath`, when it belongs to
+ * another app ({@link routeHomeApp}): the same route, rooted at its home app.
+ * `null` when it belongs here. The surface's side is its base path — the same
+ * comparison {@link useIndexMatch} makes — so it needs nothing a store does not
+ * already hold.
+ */
+function strandedRouteUrl(basePath: string, route: PaneSlot[]): string | null {
+  const home = routeHomeApp(route);
+  if (!home) return null;
+  const homeBase = normalizeAppPath(home.basePath);
+  if (homeBase === normalizeAppPath(basePath)) return null;
+  return homeBase + buildRouteUrl(route);
+}
+
 // ---------------------------------------------------------------------------
 // Layout route store — the primary source of truth for what's on screen.
 //
@@ -1068,13 +1107,16 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     params: Record<string, string>,
     implOpts?: { root?: boolean; options?: PaneOptions; hint?: PaneHintBag },
   ): void {
-    apply(
-      computeOpen(currentSlots(), undefined, internal, params, {
-        mode: implOpts?.root ? "root" : "push",
-        options: implOpts?.options,
-        hint: implOpts?.hint,
-      }),
-    );
+    const next = computeOpen(currentSlots(), undefined, internal, params, {
+      mode: implOpts?.root ? "root" : "push",
+      options: implOpts?.options,
+      hint: implOpts?.hint,
+    });
+    const away = next.changed
+      ? strandedRouteUrl(currentBasePath, next.route)
+      : null;
+    if (away !== null) navigateApp(away);
+    else apply(next);
   }
 
   function apply(next: OpenComputation): void {
@@ -3204,6 +3246,10 @@ export interface OpenPaneOpts<Options extends object, HintT extends object> {
 export function useOpenPane(): OpenPaneFn {
   const resolveStore = useStoreResolver();
   const callerInstanceId = useContext(PaneInstanceContext);
+  // An embed's boundary answers first, as for Expand; otherwise the installed
+  // navigator, sampled at click time (`navigateApp` throws when there is none —
+  // painting another app's route here instead is exactly the bug).
+  const navBoundary = useAppNavBoundary();
 
   return useMemo(() => {
     // The store is resolved per click, never at render: global chrome outlives
@@ -3228,7 +3274,12 @@ export function useOpenPane(): OpenPaneFn {
     ): void => {
       const store = resolveStore();
       const next = compute(store, target, params, opts);
-      if (next.changed) store.setRoute(next.route, next.replace);
+      if (!next.changed) return;
+      // A route headed by another app's pane belongs to that app: hand it over,
+      // exactly as Expand does, instead of stranding it here.
+      const away = strandedRouteUrl(store.getBasePath(), next.route);
+      if (away === null) store.setRoute(next.route, next.replace);
+      else (navBoundary ?? navigateApp)(away);
     };
     const to = (
       target: AnyPane,
@@ -3240,7 +3291,10 @@ export function useOpenPane(): OpenPaneFn {
       // route's URL is exactly it.
       href: () => {
         const store = resolveStore();
-        return store.routeUrl(compute(store, target, params, opts).route);
+        const { route } = compute(store, target, params, opts);
+        return (
+          strandedRouteUrl(store.getBasePath(), route) ?? store.routeUrl(route)
+        );
       },
     });
     const link = (
@@ -3249,5 +3303,5 @@ export function useOpenPane(): OpenPaneFn {
       opts: OpenRequest,
     ): LinkGestureProps => linkProps(to(target, params, opts));
     return Object.assign(open, { link, to }) as OpenPaneFn;
-  }, [resolveStore, callerInstanceId]);
+  }, [resolveStore, callerInstanceId, navBoundary]);
 }

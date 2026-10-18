@@ -31,7 +31,9 @@ import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 const testApp = defineApp({
   id: "chrome-app",
   name: "Global chrome test app",
-  basePath: "/chrome-app",
+  // Rooted at "/": the surfaces here run at the bare base path, and a route
+  // headed by another app's pane would be handed to that app.
+  basePath: "/",
   iconKey: "science",
 });
 

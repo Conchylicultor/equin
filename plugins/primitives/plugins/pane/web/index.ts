@@ -21,6 +21,7 @@ export {
   PaneBasePathContext,
   setBasePath,
   peekBasePath,
+  routeHomeApp,
   stripBasePath,
   currentRoutePath,
   useRoute,

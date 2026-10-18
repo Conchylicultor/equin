@@ -10406,8 +10406,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/surface`
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, and the surface-written placement-capabilities registry.
       - Web:
-        - Uses: 39 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `primitives/pane` ×17
+        - Uses: 40 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `primitives/pane` ×18
           - `primitives/scope/app-instance` ×7
           - `apps-core` ×6
           - `primitives/embed` ×3
@@ -10447,7 +10447,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 37 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps` ×12
           - `apps-core` ×9
           - `debug` ×7
@@ -10456,7 +10456,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/song`
           - `build`
           - `config_v2/config-link`
-          - `integrations/google-maps`
           - `tasks/worktree-identity`
           - `ui/theme-engine/quick-theme`
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer, and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
@@ -28569,11 +28568,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: 33 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
           - `primitives/setup-steps` ×10
           - `primitives/live-state` ×5
+          - `primitives/pane` ×4
           - `auth` ×3
-          - `primitives/pane` ×3
           - `infra/endpoints` ×2
           - `primitives/css/ui-kit` ×2
-          - `apps-core/tabs.appLinkProps`
           - `auth/google-maps/setup-wizard.googleMapsSetupPane`
           - `network/live.useLive`
           - `primitives/css/clip.Clip`
@@ -39801,6 +39799,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveFrom`
           - `resolveRow`
           - `restoreRoute`
+          - `routeHomeApp`
           - `rowOrStale`
           - `setBasePath`
           - `setHistoryAdapter`

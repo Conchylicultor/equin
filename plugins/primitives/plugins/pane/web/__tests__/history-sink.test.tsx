@@ -41,7 +41,9 @@ import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 const testApp = defineApp({
   id: "hist-app",
   name: "History test app",
-  basePath: "/hist-app",
+  // Rooted at "/": the stores here run at the bare base path, and a route
+  // headed by another app's pane would be handed to that app.
+  basePath: "/",
   iconKey: "science",
 });
 

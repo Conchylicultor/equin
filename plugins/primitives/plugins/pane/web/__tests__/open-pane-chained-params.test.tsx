@@ -35,7 +35,9 @@ import { createTestSurfaceStore, TestSurface, defaultStore } from "../testing";
 const chainApp = defineApp({
   id: "chain-app",
   name: "Chained params test app",
-  basePath: "/chain",
+  // Rooted at "/": the surfaces here run at the bare base path, and a route
+  // headed by another app's pane would be handed to that app.
+  basePath: "/",
   iconKey: "science",
 });
 

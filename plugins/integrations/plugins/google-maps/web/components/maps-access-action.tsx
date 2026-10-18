@@ -1,7 +1,6 @@
 import type { ReactElement } from "react";
-import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
-import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { googleMapsSetupPane } from "@plugins/auth/plugins/google-maps/plugins/setup-wizard/web";
 import {
@@ -33,6 +32,7 @@ export const MAPS_BLOCKER_BODY = {
  */
 export function MapsAccessAction(): ReactElement | null {
   const { blocker, loading, error, refetch } = useMapsAccess("places");
+  const openPane = useOpenPane();
 
   if (loading) return null;
   // Whether a key is configured could not be read: offer the read's Retry,
@@ -51,7 +51,7 @@ export function MapsAccessAction(): ReactElement | null {
   return (
     <Button
       variant="outline"
-      {...appLinkProps(googleMapsSetupPane.link(settingsApp, {}))}
+      {...openPane.link(googleMapsSetupPane, {}, { mode: "root" })}
     >
       Set up Google Maps
     </Button>

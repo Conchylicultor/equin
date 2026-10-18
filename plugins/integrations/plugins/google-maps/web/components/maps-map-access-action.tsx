@@ -1,7 +1,6 @@
 import type { ReactElement } from "react";
-import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
-import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useMapsAccess } from "../internal/use-maps-access";
 import { liveMapSetupPane } from "../panes";
@@ -18,6 +17,7 @@ import { liveMapSetupPane } from "../panes";
  */
 export function MapsMapAccessAction(): ReactElement | null {
   const { blocker, loading, error, refetch } = useMapsAccess("map");
+  const openPane = useOpenPane();
 
   if (loading) return null;
   if (error !== null)
@@ -34,7 +34,7 @@ export function MapsMapAccessAction(): ReactElement | null {
   return (
     <Button
       variant="outline"
-      {...appLinkProps(liveMapSetupPane.link(settingsApp, {}))}
+      {...openPane.link(liveMapSetupPane, {}, { mode: "root" })}
     >
       Set up the live map
     </Button>

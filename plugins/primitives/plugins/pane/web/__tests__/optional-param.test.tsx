@@ -29,7 +29,9 @@ import { createTestSurfaceStore, TestSurface, defaultStore } from "../testing";
 const optApp = defineApp({
   id: "optional-param-app",
   name: "Optional param test app",
-  basePath: "/opt",
+  // Rooted at "/": the surfaces here run at the bare base path, and a route
+  // headed by another app's pane would be handed to that app.
+  basePath: "/",
   iconKey: "science",
 });
 

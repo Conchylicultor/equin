@@ -14,6 +14,7 @@ import {
   createPaneStore,
   currentRoutePath,
   parseUrl,
+  routeHomeApp,
   setLiveStore,
   setHistoryAdapter,
   appNavSink,
@@ -661,7 +662,9 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       tabId: string,
       appId: string,
       target: ActivateTarget | undefined,
-      opts: { mirror: boolean },
+      // How the move reaches history: a new entry, one rewritten in place, or
+      // none (a restore, where the browser already moved).
+      opts: { mirror: "push" | "replace" | false },
     ) => {
       const idx = tabsRef.current.findIndex((t) => t.tabId === tabId);
       if (idx < 0) return;
@@ -672,7 +675,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       nextTabs[idx] = tab;
       tabsRef.current = nextTabs;
       setTabs(nextTabs);
-      if (opts.mirror) activate(tab, target, "push");
+      if (opts.mirror) activate(tab, target, opts.mirror);
       else activateWithoutMirror(tab);
       focusedRef.current = tabId;
       setFocusedTabId(tabId);
@@ -687,7 +690,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // directly on its target route.
   const replaceTabAppWithRoute = useCallback(
     (tabId: string, appId: string, route: PaneSlot[]) =>
-      rebuildTabApp(tabId, appId, { kind: "route", route }, { mirror: true }),
+      rebuildTabApp(tabId, appId, { kind: "route", route }, { mirror: "push" }),
     [rebuildTabApp],
   );
 
@@ -701,7 +704,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
         tabId,
         appId,
         { kind: "pending", rawPath },
-        { mirror: true },
+        { mirror: "push" },
       ),
     [rebuildTabApp],
   );
@@ -843,6 +846,44 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       uninstallAppNav();
     };
   }, [navigate]);
+
+  // A tab never shows another app's route (see `routeHomeApp`). The opener
+  // already hands such a route to its app; this catches every way that skips
+  // the opener — a hand-typed or stale URL, a deep link whose pane registered
+  // after boot, a back/forward into an entry written before the rule — and
+  // moves the focused tab to the route's app, REPLACING the entry so Back never
+  // returns to the stranded one. Deferred a microtask: a pending route resolves
+  // during render (the registry sync), where rebuilding the tab set would be a
+  // state update in the middle of another component's render.
+  const focusedStore = tabs.find((t) => t.tabId === focusedTabId)?.store;
+  useEffect(() => {
+    if (!focusedStore) return;
+    let disposed = false;
+    const rehome = () => {
+      if (disposed) return;
+      const state = focusedStore.getRouteState();
+      if (state.kind !== "resolved") return;
+      const home = routeHomeApp(state.slots);
+      const tab = tabsRef.current.find((t) => t.store === focusedStore);
+      if (!home || !tab || home.id === tab.appId) return;
+      // A composition without the route's app has nowhere to send it.
+      if (!appsRef.current.some((a) => a.id === home.id)) return;
+      rebuildTabApp(
+        tab.tabId,
+        home.id,
+        { kind: "route", route: state.slots },
+        { mirror: "replace" },
+      );
+    };
+    rehome();
+    const unsubscribe = focusedStore.subscribeRoute(() =>
+      queueMicrotask(rehome),
+    );
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
+  }, [focusedStore, rebuildTabApp, appsRef]);
 
   const closeTab = useCallback(
     (tabId: string) => {

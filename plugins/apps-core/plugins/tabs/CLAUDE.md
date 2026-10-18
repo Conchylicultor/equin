@@ -67,6 +67,16 @@ entry calling `navigate(url, { newTab: true })`.
 pane that declares a home app can be promoted into it. Pane sits below tabs and
 cannot import it, hence the sink.
 
+## A tab never shows another app's route
+
+A route belongs to its root pane's app (`routeHomeApp`, see the pane
+`CLAUDE.md`). The opener already hands such a route over; `TabsProvider` catches
+every path that skips it (a typed or stale URL, a pane registering after boot, an
+old history entry): when the focused tab's resolved route is headed by another
+registered app's pane, the tab is rebuilt on that app with the same route,
+**replacing** the entry. Deferred a microtask, because a pending route resolves
+during render.
+
 ## Keep-alive means a background tab still has listeners
 
 Every open tab stays MOUNTED — unfocused ones are `display: none`, and the
@@ -158,8 +168,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 - Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, and the surface-written placement-capabilities registry.
 - Web:
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×17
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×18
     - `primitives/scope/app-instance` ×7
     - `apps-core` ×6
     - `primitives/embed` ×3
@@ -199,7 +209,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×12
     - `apps-core` ×9
     - `debug` ×7
@@ -208,7 +218,6 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `active-data/song`
     - `build`
     - `config_v2/config-link`
-    - `integrations/google-maps`
     - `tasks/worktree-identity`
     - `ui/theme-engine/quick-theme`
 

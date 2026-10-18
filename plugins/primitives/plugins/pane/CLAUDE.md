@@ -726,6 +726,32 @@ means "nowhere to go" and paints no button. `open` / `href` are a link's two
 halves, so the button spreads `linkProps(promote)`: ⌘/middle-click opens the
 destination — the home-app URL, or the re-rooted route's — in a browser tab.
 
+### A route belongs to its root pane's app
+
+A guest is hosted **beside** one of the host's panes, never as the head of the
+host's route. A route headed by another app's pane is that app's surface
+stranded in this one: from Places, a Settings setup pane opened in place became
+`/places/accounts/google-maps/live-map` — full screen, with no Settings around
+it. `routeHomeApp(route)` names a route's app (its root pane's home), and every
+way onto a surface enforces it:
+
+- **Opening** — `useOpenPane()` / `openPane()` compute the route as usual; when
+  its head belongs to another app, they hand the SAME route, rooted at that
+  app, to the cross-app navigator (an embed's `AppNavBoundary` first) instead of
+  setting it here, and the link's href is that URL. So the in-app spelling
+  `openPane.link(settingsPane, {}, { mode: "root" })` is right from any app —
+  there is no second, cross-app spelling to remember. With no navigator
+  installed the open throws: painting the route here is the bug. A guest push
+  beside a host pane is untouched.
+- **Arriving by URL** — a hand-typed or stale link, a deep link whose pane
+  registers late, a back/forward into an old entry: the tab manager moves the
+  focused tab to the route's app, replacing the history entry
+  (`apps-core/tabs`).
+
+The surface's side of the comparison is its base path, as for the index pane.
+Expand's re-root obeys the same rule: it re-roots in place only for a pane of
+this app.
+
 ### A pane wears its home app's theme
 
 The same declaration decides how the pane **looks**. `PaneBox` stamps
@@ -1050,6 +1076,7 @@ See "Open questions" in the design doc.
     - `resolveFrom`
     - `resolveRow`
     - `restoreRoute`
+    - `routeHomeApp`
     - `rowOrStale`
     - `setBasePath`
     - `setHistoryAdapter`

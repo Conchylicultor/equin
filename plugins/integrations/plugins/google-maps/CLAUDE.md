@@ -166,11 +166,10 @@ over:
   - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×10
     - `primitives/live-state` ×5
+    - `primitives/pane` ×4
     - `auth` ×3
-    - `primitives/pane` ×3
     - `infra/endpoints` ×2
     - `primitives/css/ui-kit` ×2
-    - `apps-core/tabs.appLinkProps`
     - `auth/google-maps/setup-wizard.googleMapsSetupPane`
     - `network/live.useLive`
     - `primitives/css/clip.Clip`
