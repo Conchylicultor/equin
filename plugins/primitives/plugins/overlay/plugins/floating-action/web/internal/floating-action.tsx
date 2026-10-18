@@ -263,14 +263,18 @@ function FloatingActionPanel({
             // popover paint; open, the popover paint is the whole look.
             !open &&
               variant === "outlined" &&
-              "bg-background/80 shadow-sm ring-border/60 backdrop-blur",
+              "[--popover-fill:color-mix(in_oklab,var(--background)_80%,transparent)] [--popover-backdrop:blur(8px)] shadow-sm ring-border/60",
             !open &&
               variant === "ghost" &&
               "bg-transparent shadow-none ring-transparent",
             // Glass is its own surface over whatever app is behind it, so
             // every tone is a translucent mix rather than an opaque step:
             // - ground: the background at 72% under an 18px, 1.6× saturated
-            //   blur, so the app shows through, softened;
+            //   blur, so the app shows through, softened — set as this panel's
+            //   material tokens (what the overlay's `bg-popover-fill` /
+            //   `backdrop-popover` read), never as `bg-*` / `backdrop-blur`
+            //   classes, which the overlay's themed backdrop (default `none`)
+            //   silently overrides;
             // - ring: a hairline of the foreground at 9% (≈ 8% white on the
             //   chrome), lighter than the content behind it by the same
             //   step on light and dark apps alike, plus a 4% top highlight;
@@ -282,7 +286,7 @@ function FloatingActionPanel({
             //   draws in, the ground's own tone.
             variant === "glass" && [
               "ring-1 ring-foreground/9 inset-shadow-2xs inset-shadow-foreground/4",
-              "bg-background/72 backdrop-blur-[18px] backdrop-saturate-[1.6]",
+              "[--popover-fill:color-mix(in_oklab,var(--background)_72%,transparent)] [--popover-backdrop:blur(18px)_saturate(1.6)]",
               "shadow-2xl",
               "[--hover-fill:color-mix(in_oklab,var(--foreground)_8%,transparent)] [--chrome-mask:var(--background)]",
             ],

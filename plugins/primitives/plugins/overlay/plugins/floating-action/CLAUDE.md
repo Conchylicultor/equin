@@ -117,6 +117,8 @@ global action bar's `e2e/focus-restore.ts` checks this in Chromium.
     - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/material --popover-backdrop`
+    - `ui/tokens/material --popover-fill`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shadow --shadow-2xl`
     - `ui/tokens/shadow --shadow-sm`

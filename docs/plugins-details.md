@@ -39831,6 +39831,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --background`
               - `ui/tokens/color-palette --border`
               - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/material --popover-backdrop`
+              - `ui/tokens/material --popover-fill`
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shadow --shadow-2xl`
               - `ui/tokens/shadow --shadow-sm`
@@ -47820,7 +47822,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --popover`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: `primitives/css/ui-kit`
+            - Tokens used by:
+              - `primitives/css/ui-kit`
+              - `primitives/overlay/floating-action`
         - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), and their customizer section.
           - Web:
             - Contributes:

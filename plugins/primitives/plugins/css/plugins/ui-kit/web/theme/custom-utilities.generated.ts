@@ -17,7 +17,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["focus-ring-from"], standalone: true, reason: "Additive box-shadow/outline; no single-value built-in group to conflict with." },
   { classes: ["rounded-checkbox", "rounded-squircle", "rounded-card", "rounded-control", "rounded-control-sm", "rounded-control-xs", "rounded-popover"], extend: "rounded" },
   { classes: ["shadow-popover"], extend: "shadow" },
-  { classes: ["backdrop-popover"], standalone: true, reason: "The overlay role's themed backdrop-filter; no built-in backdrop group is extendable, and no caller layers a backdrop-* class onto an overlay panel." },
+  { classes: ["backdrop-popover"], standalone: true, reason: "The overlay role's themed backdrop-filter; no built-in backdrop group is extendable, so a backdrop-* class on an overlay panel is silently overridden — a panel that wants its own material sets --popover-fill / --popover-backdrop instead." },
   { classes: ["region-line"], standalone: true, reason: "Composite single-line invariant (align-items + whitespace); name doesn't misfile into a built-in group and it's a base layer, not a selectively-overridden single property." },
   { classes: ["no-scrollbar"], standalone: true, reason: "Hides scrollbar chrome (scrollbar-width + ::-webkit-scrollbar); additive, no single-value built-in group to conflict with." },
   { classes: ["scroll-fade"], standalone: true, reason: "Additive ::before/::after gradient overlays gated on data-fade-*; pseudo-element paint has no single-value built-in group to conflict with." },
