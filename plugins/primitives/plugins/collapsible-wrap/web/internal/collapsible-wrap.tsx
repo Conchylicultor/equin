@@ -11,7 +11,6 @@ import {
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
 import { ReorderLayoutContext, type ReorderLayout } from "@plugins/reorder/web";
-import { rectSortingStrategy } from "@plugins/primitives/plugins/sortable-list/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -79,15 +78,12 @@ export function CollapsibleWrap({
   const editMode = useEditMode();
   const expanded = userExpanded || editMode;
 
-  // Inject the 2-D wrap strategy into the reorder middleware: rectSortingStrategy
-  // makes cross-row drag work once chips spill onto multiple rows. Stable
+  // Tell the reorder middleware this row wraps: its layout editor then drags
+  // in 2-D, so cross-row drag works once chips spill onto multiple rows. Stable
   // identity so the middleware's context consumer doesn't churn. The spacer is
   // unchanged from the 1-D case — a `flex-1` push element behaves identically
   // under wrap (it grows to fill its line, pushing chips right until they wrap).
-  const wrapLayout = useMemo<ReorderLayout>(
-    () => ({ strategy: rectSortingStrategy }),
-    [],
-  );
+  const wrapLayout = useMemo<ReorderLayout>(() => ({ flow: "wrap" }), []);
 
   // --- Overflow + clamp-height detection ------------------------------------
   // Mirror adaptive-bar: ResizeObserver on the wrap box, deferred via

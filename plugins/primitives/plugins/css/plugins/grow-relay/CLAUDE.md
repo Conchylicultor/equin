@@ -133,7 +133,7 @@ it the same way (driven by `Scroll`) needs the ask to carry an axis.
     - `primitives/css/line`
     - `primitives/prompt-editor`
     - `primitives/slot-render`
-    - `reorder/editor`
+    - `reorder/area`
 - Web:
   - Exports (types): `GrowGrant`
   - Exports (values):

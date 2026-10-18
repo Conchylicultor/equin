@@ -97,7 +97,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `config_v2/settings`
     - `database/query-deadline`
     - `release/runs-arm`
-    - `reorder`
+    - `reorder/edit-mode`
     - `shell/notifications`
     - `stats/responsiveness`
 - Core:

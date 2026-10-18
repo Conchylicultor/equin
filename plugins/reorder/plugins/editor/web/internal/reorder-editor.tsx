@@ -2,13 +2,34 @@ import { Fragment, useMemo } from "react";
 import { DeferredSortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import {
   ReorderAreaContext,
-  RestoreButton,
   type ReorderAreaCtxValue,
-} from "./items";
+  type ReorderEntry,
+} from "@plugins/reorder/plugins/area/web";
+import { ReorderItemChrome, RestoreButton } from "./items";
 import type { ReorderEditorProps } from "./types";
 
 /**
- * Presentational drag-and-drop reorder editor. Owns the `SortableList`, the move
+ * The sortable ids of an area's entries: each item (unless pinned) and leaf
+ * node by its own id, a container by its members' (it is not itself draggable).
+ */
+export function sortableIdsOf(entries: readonly ReorderEntry[]): string[] {
+  const ids: string[] = [];
+  for (const e of entries) {
+    if (e.kind === "node") {
+      if (e.memberIds) ids.push(...e.memberIds);
+      else ids.push(e.id);
+    } else if (!e.excluded) {
+      ids.push(e.id);
+    }
+  }
+  return ids;
+}
+
+/**
+ * Presentational drag-and-drop reorder editor: a self-contained area (its own
+ * list, area context and item chrome) for surfaces that are an editor
+ * outright — the Config pane's reorder-tree field and the in-app popover
+ * regime. Owns the `SortableList`, the move
  * dispatch, the flat `sortableIds`, the hidden/insert affordances, and the area
  * context. It knows NOTHING about config_v2, the live contribution catalog, the
  * node-type registry, or the `ReorderTree` storage format — the consumer maps its
@@ -24,22 +45,9 @@ export function ReorderEditor({
   onRemoveNode,
   editMode,
   orientation = "vertical",
-  strategy,
-  wrap = false,
   renderOverlay,
 }: ReorderEditorProps) {
-  const sortableIds = useMemo(() => {
-    const ids: string[] = [];
-    for (const e of entries) {
-      if (e.kind === "node") {
-        if (e.memberIds) ids.push(...e.memberIds);
-        else ids.push(e.id);
-      } else if (!e.excluded) {
-        ids.push(e.id);
-      }
-    }
-    return ids;
-  }, [entries]);
+  const sortableIds = useMemo(() => sortableIdsOf(entries), [entries]);
 
   const handleMove = useMemo(
     () => (activeId: string, overId: string) => {
@@ -53,14 +61,14 @@ export function ReorderEditor({
       orientation,
       onHide,
       onRemoveNode,
+      ItemChrome: ReorderItemChrome,
     }),
     [orientation, onHide, onRemoveNode],
   );
 
-  // The sortable cells + trailing restore button, shared by the bare and
-  // wrap-container renders so dnd registration is identical in both. Every entry
-  // (item or node) carries opaque pre-rendered content — the editor never builds
-  // node UI (spacers/containers arrive already rendered via the registry).
+  // The sortable cells + trailing restore button. Every entry (item or node)
+  // carries opaque pre-rendered content — the editor never builds node UI
+  // (spacers/containers arrive already rendered via the registry).
   const itemNodes = (
     <>
       {entries.map((e) => (
@@ -88,21 +96,8 @@ export function ReorderEditor({
         overlay={renderOverlay}
         enabled={editMode}
         orientation={orientation}
-        strategy={strategy}
       >
-        {wrap ? (
-          // Editor-owned wrap container: a single honest flex parent of the
-          // sortable cells, so a horizontal row wraps instead of overflowing.
-          // `SortableContext` registers items by id regardless of DOM nesting,
-          // so one extra div is invisible to dnd-kit. Kept as one raw flex
-          // parent (fill + wrap + align-content) that dnd-kit measures directly.
-          // eslint-disable-next-line layout/no-adhoc-layout -- editor-owned flex-wrap fill container; single honest flex parent dnd-kit measures
-          <div className="flex flex-1 flex-wrap content-start items-start gap-xs min-w-0">
-            {itemNodes}
-          </div>
-        ) : (
-          itemNodes
-        )}
+        {itemNodes}
       </DeferredSortableList>
     </ReorderAreaContext.Provider>
   );

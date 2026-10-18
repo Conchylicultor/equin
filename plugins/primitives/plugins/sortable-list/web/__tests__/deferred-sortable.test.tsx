@@ -1,10 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { useState } from "react";
-import {
-  DeferredSortableItem,
-  DeferredSortableList,
-} from "../internal/deferred-sortable";
+import { DeferredSortableItem } from "@plugins/primitives/plugins/sortable-list/plugins/deferred-item/web";
+import { DeferredSortableList } from "../internal/deferred-sortable";
 
 afterEach(cleanup);
 

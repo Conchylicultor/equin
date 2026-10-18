@@ -16,6 +16,7 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { setEditMode } from "@plugins/reorder/plugins/edit-mode/e2e";
 
 const OUT = arg("out") ?? "/tmp/pages-overflow";
 
@@ -186,26 +187,19 @@ await withBrowser(async (h) => {
 
   await page.keyboard.press("Escape");
 
-  // --- Pen edit mode: the bucket must not hide its members behind a menu ------
+  // --- Edit mode: the bucket must not hide its members behind a menu ------
   // A closed dropdown would suppress drag and hide what is being authored, so
   // the container renders its inline form in edit mode instead.
   await page.locator('button[data-tooltip="Pages"]').click();
 
-  // The pen lives in the collapsed floating action bar; hover expands it.
-  const glyph = page.locator('[data-ui-owner^="GlobalActionBar"], svg').first();
-  await glyph.waitFor({ state: "attached", timeout: 10_000 });
-  const box = page.viewportSize();
-  if (box) await page.mouse.move(box.width - 36, 26);
-
-  const pen = page.getByRole("button", { name: "Reorder items", exact: true });
-  await pen.waitFor({ state: "visible", timeout: 10_000 });
-  await pen.click();
+  await setEditMode(page, true);
 
   await page.locator('[data-ui-owner^="TreeRowChrome"]').first().hover();
   await snap(page, OUT, "edit-mode");
   r.ok(
     "entered edit mode",
-    (await page.getByRole("button", { name: "Exit edit mode" }).count()) > 0,
+    (await page.locator('[aria-roledescription="sortable"]').count()) > 0,
+    "no sortables on the page",
   );
 
   const errors = [

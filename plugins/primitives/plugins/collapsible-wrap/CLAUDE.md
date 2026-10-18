@@ -53,8 +53,9 @@ is a reachable drag target, and the chevron is hidden (a toggle would be a no-op
 
 Force-expand also injects a `ReorderLayout` (from `@plugins/reorder/web`) into the reorder
 middleware via `ReorderLayoutContext.Provider` wrapped around `{children}` **inside** the
-wrap box. The injected layout sets `strategy: rectSortingStrategy` — dnd-kit's 2-D strategy,
-so chips drag correctly once they spill across wrapped rows. The **spacer is unchanged from
+wrap box. The injected layout is `{ flow: "wrap" }`, which the layout editor maps to dnd-kit's
+2-D `rectSortingStrategy`, so chips drag correctly once they spill across wrapped rows (plain data:
+reorder's apply side ships everywhere and imports no drag code). The **spacer is unchanged from
 the 1-D case**: a reorder spacer is `flex-1`, which under `flex-wrap` grows to fill its line,
 pushing following chips right until they wrap — exactly "push right while there's space, then
 collapse". (An earlier revision wrongly swapped it for a `basis-full` line-break spacer.) When
@@ -92,7 +93,6 @@ when `(overflowing || expanded) && !editMode`.
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/edit-mode-signal.useEditMode`
     - `primitives/icon-button.IconButton`
-    - `primitives/sortable-list.rectSortingStrategy`
     - `reorder.ReorderLayout`
     - `reorder.ReorderLayoutContext`
   - Exports (types): `CollapsibleWrapProps`

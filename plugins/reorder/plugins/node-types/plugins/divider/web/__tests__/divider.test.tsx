@@ -2,22 +2,29 @@ import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
-  DividerReorderItem,
   ReorderAreaContext,
   type ReorderAreaCtxValue,
-} from "../internal/items";
+} from "@plugins/reorder/plugins/area/web";
+import { DividerBox } from "../components/divider-box";
 
 afterEach(cleanup);
 
-function area(orientation: ReorderAreaCtxValue["orientation"]) {
-  return { orientation, onHide: () => {}, onRemoveNode: () => {} };
+function area(
+  orientation: ReorderAreaCtxValue["orientation"],
+): ReorderAreaCtxValue {
+  return {
+    orientation,
+    onHide: () => {},
+    onRemoveNode: () => {},
+    ItemChrome: null,
+  };
 }
 
 describe("a divider turns its rule to the area's flow", () => {
   it("draws a flat rule on the rail in a vertical area", () => {
     const { getByRole } = render(
       <ReorderAreaContext.Provider value={area("vertical")}>
-        <DividerReorderItem itemKey="d" editMode={false} />
+        <DividerBox itemKey="d" editMode={false} onRemove={() => {}} />
       </ReorderAreaContext.Provider>,
     );
     const sep = getByRole("separator");
@@ -28,7 +35,7 @@ describe("a divider turns its rule to the area's flow", () => {
 
   it("defaults to the flat rule outside any area", () => {
     const { getByRole } = render(
-      <DividerReorderItem itemKey="d" editMode={false} />,
+      <DividerBox itemKey="d" editMode={false} onRemove={() => {}} />,
     );
     expect(getByRole("separator").firstElementChild!.className).toContain(
       "border-t",
@@ -39,7 +46,7 @@ describe("a divider turns its rule to the area's flow", () => {
     const { getByRole } = render(
       <ReorderAreaContext.Provider value={area("horizontal")}>
         <ControlSizeProvider size="md">
-          <DividerReorderItem itemKey="d" editMode={false} />
+          <DividerBox itemKey="d" editMode={false} onRemove={() => {}} />
         </ControlSizeProvider>
       </ReorderAreaContext.Provider>,
     );

@@ -25,6 +25,7 @@ import {
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { setEditMode } from "@plugins/reorder/plugins/edit-mode/e2e";
 
 const PAGE_ID = requireArg(
   "page",
@@ -166,14 +167,12 @@ await withBrowser(async (h) => {
   }
 
   // ---- 4. reorder edit mode, last ---------------------------------------
-  // Deliberately the final step: the pen wraps every reorderable contribution
+  // Deliberately the final step: edit mode wraps every reorderable contribution
   // in a drag handle that swallows pointer events, so anything clicked after it
   // would fail for reasons that have nothing to do with the route.
   await page.goto(pathUrl(`/agents/c/${CONV_ID}`));
   await page.waitForTimeout(waitMs);
-  await barHost.hover();
-  await page.waitForTimeout(500);
-  await barHost.locator('button[aria-label="Reorder items"]').first().click();
+  await setEditMode(page, true);
   await page.waitForTimeout(1200);
   r.ok(
     "reorder edit mode engages without a crash",

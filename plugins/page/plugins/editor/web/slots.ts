@@ -161,8 +161,8 @@ type AnchorHandle = TextLessHandle & { anchor: true };
  *
  * **`excludeFromReorder` is on the TEXT-LESS arm only**, and that is a real hole
  * being closed rather than hygiene: `ReorderItemMiddleware`
- * (`plugins/reorder/web/internal/dnd-item-middleware.tsx`) early-returns
- * `<>{children}</>` where it otherwise renders `<SortableReorderItem>`,
+ * (`plugins/reorder/web/internal/item-middleware.tsx`) early-returns
+ * `<>{children}</>` where it otherwise renders `<ReorderItemBox>`,
  * discriminating on exactly that field — an element-type flip on an ANCESTOR of
  * the composer, keyed per contribution. A text-bearing type setting it would
  * remount Lexical on every conversion into or out of it: the reported bug,

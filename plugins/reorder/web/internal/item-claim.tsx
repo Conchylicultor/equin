@@ -16,8 +16,8 @@ import { createContext } from "react";
  * wraps each `renderItem(...)` result in a `value={true}` provider (which lands
  * directly above the item middleware's element), the item middleware consumes it,
  * and it re-provides `false` below — so nothing deeper can inherit membership at
- * any depth. The area context itself stays ambient on purpose: `SortableReorderItem`
- * and `SpacerReorderItem` read it, and both are rendered BY the area.
+ * any depth. The area context itself stays ambient on purpose: the item box
+ * and the node types read it, and both are rendered BY the area.
  *
  * Deliberately a boolean, not an object/symbol: a stable primitive value that can
  * never churn its consumers on re-render.

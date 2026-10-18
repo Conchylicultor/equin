@@ -1,8 +1,8 @@
 # spacer
 
 The `spacer` reorder node type — the first built-in. A leaf node (no payload, no
-members) that renders as a blank draggable gap via the editor's
-`SpacerReorderItem` primitive, and declares an `insert` ("Add Spacer") so the
+members) that renders as a blank gap (`SpacerBox`; in edit mode a dashed
+draggable placeholder, bound by the layout editor's drag host), and declares an `insert` ("Add Spacer") so the
 editor surfaces it in the insert popover. Contributes one
 `ReorderNodes.NodeType(...)` to the `reorder.node-type` registry.
 
@@ -14,8 +14,20 @@ editor surfaces it in the insert popover. Contributes one
 - Web:
   - Contributes: `ReorderNodes.NodeType` "spacer"
   - Uses:
-    - `reorder/editor.SpacerReorderItem`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/sortable-list/deferred-item.DeferredSortableItem`
+    - `reorder/node-types.RemoveNodeButton`
     - `reorder/node-types.ReorderNodes`
+- Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --control-height-sm`
+    - `ui/tokens/density --space-sm`
+    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --line-height-3xs`
 - Exemptions:
   - Exempted by: `apps/browser/shell` (0 debt)
 

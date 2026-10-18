@@ -7,7 +7,7 @@ import {
 
 export default {
   description:
-    "Applies every render slot's committed layout (and hosts its drag surface): reorder's list and item middleware, contributed to slot-render as companions so they ship wherever slots render.",
+    "Applies every render slot's committed layout: reorder's list and item middleware, contributed to slot-render as companions so they ship wherever slots render. Editing a layout is not here — it is reorder.edit-mode's opt-in area editor.",
   loadBearing: true,
   // Companions, not options: without them every slot silently renders in raw
   // registration order and ignores its `config/**/<slot>.jsonc` layout. Their

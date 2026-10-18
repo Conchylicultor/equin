@@ -8,11 +8,11 @@ import {
   reorderTreeFieldType,
   type ReorderTree,
 } from "@plugins/fields/plugins/reorder-tree/core";
+import { ReorderEditor } from "@plugins/reorder/plugins/editor/web";
 import {
-  ReorderEditor,
-  SortableReorderItem,
+  ReorderItemBox,
   type ReorderEntry,
-} from "@plugins/reorder/plugins/editor/web";
+} from "@plugins/reorder/plugins/area/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
 import {
@@ -35,11 +35,11 @@ import {
 /** A plain entryKey label chip, wrapped as a draggable item. */
 function ItemChip({ id }: { id: string }) {
   return (
-    <SortableReorderItem itemKey={id} editMode label={id}>
+    <ReorderItemBox itemKey={id} editMode label={id}>
       <Text variant="body" className="px-sm py-xs font-mono">
         {id}
       </Text>
-    </SortableReorderItem>
+    </ReorderItemBox>
   );
 }
 

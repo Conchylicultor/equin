@@ -5,11 +5,14 @@ import {
   getEditMode,
   setEditMode,
 } from "@plugins/primitives/plugins/edit-mode-signal/web";
+import { ReorderSlots } from "@plugins/reorder/web";
+import { ReorderItemChrome } from "@plugins/reorder/plugins/editor/web";
 import { EditLayoutSwitch } from "./internal/edit-layout-switch";
+import { AreaEditor } from "./internal/area-editor";
 
 export default {
   description:
-    "Edit-layout switch in the action bar's view-options popover that toggles global edit mode for all reorderable slots; Esc exits edit mode.",
+    "Slot-layout editing, opt-in: the Edit layout switch in the action bar's view-options popover (Esc exits), and the area editor every reorderable slot mounts beside its items while edit mode is on — the drag host, item chrome, hide/restore/insert and the narrow-row popover. Ships only where a composition selects it, carrying the DnD editor and dnd-kit with it.",
   contributions: [
     ActionBar.ViewOption({
       id: "reorder-pen",
@@ -25,6 +28,17 @@ export default {
       group: "Reorder",
       handler: () => setEditMode(false),
       when: () => getEditMode(),
+      // Esc leaves the innermost mode first. Fullscreen's own Esc
+      // (`surface.exit-solo`) is live whenever edit mode is, and an equal
+      // priority went to whichever registered first — so Esc left fullscreen
+      // and edit mode stayed on, with its switch in an unclickable gear.
+      priority: 10,
+    }),
+    // The switch and the editor ship together: the switch is the only thing
+    // that turns edit mode on, and reorder throws if edit mode is on with no
+    // editor registered.
+    ReorderSlots.AreaEditor({
+      editor: { Area: AreaEditor, ItemChrome: ReorderItemChrome },
     }),
   ],
 } satisfies PluginDefinition;

@@ -5380,6 +5380,10 @@
       "name": "@singularity/plugin-primitives-sortable-list",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/sortable-list/plugins/deferred-item": {
+      "name": "@singularity/plugin-primitives-sortable-list-deferred-item",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/sync-status": {
       "name": "@singularity/plugin-primitives-sync-status",
       "version": "0.0.1",
@@ -5528,6 +5532,10 @@
     },
     "plugins/reorder": {
       "name": "@singularity/plugin-reorder",
+      "version": "0.0.1",
+    },
+    "plugins/reorder/plugins/area": {
+      "name": "@singularity/plugin-reorder-area",
       "version": "0.0.1",
     },
     "plugins/reorder/plugins/edit-mode": {
@@ -9320,6 +9328,8 @@
 
     "@singularity/plugin-primitives-sortable-list": ["@singularity/plugin-primitives-sortable-list@workspace:plugins/primitives/plugins/sortable-list"],
 
+    "@singularity/plugin-primitives-sortable-list-deferred-item": ["@singularity/plugin-primitives-sortable-list-deferred-item@workspace:plugins/primitives/plugins/sortable-list/plugins/deferred-item"],
+
     "@singularity/plugin-primitives-sync-status": ["@singularity/plugin-primitives-sync-status@workspace:plugins/primitives/plugins/sync-status"],
 
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
@@ -9375,6 +9385,8 @@
     "@singularity/plugin-release-source-checkout": ["@singularity/plugin-release-source-checkout@workspace:plugins/release/plugins/source-checkout"],
 
     "@singularity/plugin-reorder": ["@singularity/plugin-reorder@workspace:plugins/reorder"],
+
+    "@singularity/plugin-reorder-area": ["@singularity/plugin-reorder-area@workspace:plugins/reorder/plugins/area"],
 
     "@singularity/plugin-reorder-edit-mode": ["@singularity/plugin-reorder-edit-mode@workspace:plugins/reorder/plugins/edit-mode"],
 

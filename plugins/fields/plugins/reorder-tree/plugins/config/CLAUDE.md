@@ -13,9 +13,9 @@
     - `config_v2/fields.defineFieldShape`
     - `config_v2/fields.Fields`
     - `primitives/css/text.Text`
+    - `reorder/area.ReorderEntry`
+    - `reorder/area.ReorderItemBox`
     - `reorder/editor.ReorderEditor`
-    - `reorder/editor.ReorderEntry`
-    - `reorder/editor.SortableReorderItem`
     - `reorder/node-types.useReorderNodeTypes`
 - Core:
   - Uses:

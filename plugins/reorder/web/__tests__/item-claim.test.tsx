@@ -3,8 +3,8 @@ import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { DeferredSortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { ReorderAreaContext } from "@plugins/reorder/plugins/editor/web";
-import { ReorderItemMiddleware } from "../internal/dnd-item-middleware";
+import { ReorderAreaContext } from "@plugins/reorder/plugins/area/web";
+import { ReorderItemMiddleware } from "../internal/item-middleware";
 import { ReorderItemClaimContext } from "../internal/item-claim";
 import { setEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
 
@@ -29,9 +29,9 @@ function contributionOf(
 }
 
 /**
- * The ambient shape a real reorder area establishes: `ReorderEditor`'s
- * `DeferredSortableList` (enabled — edit mode) with the area context around
- * it. The CLAIM is deliberately NOT part of it — the list middleware
+ * The ambient shape a real reorder area establishes in edit mode: the area
+ * context around a binding provider with the editor's drag host mounted
+ * (`DeferredSortableList`, enabled). The CLAIM is deliberately NOT part of it — the list middleware
  * hands one out per `renderItem` call, which `Claimed` below stands in for.
  */
 function Area({ ids, children }: { ids: string[]; children: ReactNode }) {
@@ -41,6 +41,7 @@ function Area({ ids, children }: { ids: string[]; children: ReactNode }) {
         orientation: "vertical",
         onHide: () => {},
         onRemoveNode: () => {},
+        ItemChrome: null,
       }}
     >
       <DeferredSortableList enabled items={ids} onMove={() => {}}>

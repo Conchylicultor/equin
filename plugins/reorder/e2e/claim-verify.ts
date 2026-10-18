@@ -44,6 +44,7 @@ import {
   requirePage,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { setEditMode } from "@plugins/reorder/plugins/edit-mode/e2e";
 
 const SORTABLE = '[aria-roledescription="sortable"]';
 
@@ -65,24 +66,7 @@ await withBrowser(async (h) => {
   await page.goto(url);
   await page.waitForTimeout(3000);
 
-  // Pen toggle lives on the global action bar; label flips once engaged.
-  // The global action bar is a hover-revealed floating panel when unpinned, so
-  // the pen is present but pointer-intercepted until the bar is disclosed.
-  const bar = page.locator('[data-source*="floating-action"]').first();
-  if (await bar.count()) {
-    await bar.hover();
-    await page.waitForTimeout(600);
-  }
-
-  const pen = page.getByRole("button", { name: "Reorder items" });
-  if ((await pen.count()) === 0) {
-    r.fail(
-      `${name}: edit mode`,
-      "pen button not found — probe would be vacuous",
-    );
-    return;
-  }
-  await pen.first().click();
+  await setEditMode(page, true);
   await page.waitForTimeout(800);
 
   const total = await page.locator(SORTABLE).count();
@@ -105,7 +89,7 @@ await withBrowser(async (h) => {
   );
   r.eq(`${name}: no sortable inside nested content`, inside, 0);
 
-  await page.getByRole("button", { name: "Exit edit mode" }).first().click();
+  await setEditMode(page, false);
   await page.waitForTimeout(400);
 });
 

@@ -16,11 +16,11 @@
  */
 import {
   arg,
-  pathUrl,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
 const OUT = arg("out") ?? "/tmp/reorder-containers";
 
@@ -31,18 +31,11 @@ await withBrowser(async (h) => {
   const r = report("reorder — header container renders its members");
   const { page, captured } = await h.session();
 
-  await page.goto(pathUrl("pages"), { waitUntil: "domcontentloaded" });
-
-  // Open the first page so the editor mounts.
-  const firstPage = page.locator('[data-ui-owner^="TreeRowChrome"]').first();
-  await firstPage.waitFor({ state: "visible", timeout: 30_000 });
-  await firstPage.click();
-
-  // Focus the editor body and summon the block menu.
-  const editor = page.locator('[contenteditable="true"]').first();
-  await editor.waitFor({ state: "visible", timeout: 30_000 });
-  await editor.click();
-  await page.keyboard.press("End");
+  // A fresh blank page, never one of the user's: summoning the menu types a
+  // "/" into the document, and in an existing page that edit outlives the run
+  // (a run killed before removing it left a "/" that stopped the next run's
+  // menu from opening).
+  await openBlankPage(page);
   await page.keyboard.type("/");
 
   // The menu is the caret-anchored block picker; wait for its first group label.

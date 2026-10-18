@@ -54,13 +54,23 @@ fields.
     - `ReorderNodes.NodeType` ← `reorder.node-types.header`
     - `ReorderNodes.NodeType` ← `reorder.node-types.overflow`
     - `ReorderNodes.NodeType` ← `reorder.node-types.spacer`
+  - Uses: `ui/icons.Icon`
   - Exports (values):
+    - `RemoveNodeButton`
     - `ReorderNodes`
     - `useReorderNodeTypes`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --destructive-foreground`
+    - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-scale`
+    - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --line-height-3xs`
   - Imported by:
     - `fields/reorder-tree/config`
     - `reorder`
+    - `reorder/edit-mode`
     - `reorder/node-types/divider`
     - `reorder/node-types/header`
     - `reorder/node-types/overflow`

@@ -103,6 +103,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/launch/plugins/investigate", id: "primitives.launch.investigate", loader: () => import("@plugins/primitives/plugins/launch/plugins/investigate/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/pane", id: "primitives.pane", loader: () => import("@plugins/primitives/plugins/pane/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/scope/plugins/dom-scope", id: "primitives.scope.dom-scope", loader: () => import("@plugins/primitives/plugins/scope/plugins/dom-scope/check"), dependsOn: [] },
+  { pluginPath: "reorder", id: "reorder", loader: () => import("@plugins/reorder/check"), dependsOn: [] },
   { pluginPath: "toolchain", id: "toolchain", loader: () => import("@plugins/toolchain/check"), dependsOn: ["infra/plugins/launcher", "infra/plugins/paths"] },
   { pluginPath: "ui/plugins/icons", id: "ui.icons", loader: () => import("@plugins/ui/plugins/icons/check"), dependsOn: [] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/check"), dependsOn: [] },

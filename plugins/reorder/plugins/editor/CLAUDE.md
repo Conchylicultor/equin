@@ -1,107 +1,54 @@
 # editor
 
-The **presentational** drag-and-drop reorder editor, shared by two consumers:
+The **presentational** drag-and-drop reorder editor. Edit side only — it ships
+where layouts can be edited (`reorder/edit-mode`, the Config pane's
+`reorder-tree` field), never with `reorder`'s apply path, which imports none of it.
 
-1. **`reorder`'s list middleware** (`ReorderListMiddleware`) — wired to config_v2
-   `setConfig("items", …)` over the live contribution catalog.
-2. **The `reorder-tree` field renderer**
-   (`fields/reorder-tree/plugins/config/web`) — wired to the field's `onChange`,
-   operating directly on the saved `ReorderTree`. This is what makes the Config
-   settings pane a full drag editor.
+- **`ReorderEditor`** — a self-contained area: its own `DeferredSortableList`,
+  `ReorderAreaContext` (with this plugin's item chrome) and trailing
+  `RestoreButton`. Used where the surface IS an editor: the `reorder-tree` field
+  (wired to the field's `onChange`) and the in-app `popover` regime.
+- **`ReorderItemChrome`** — what an editable `ReorderItemBox` (from `reorder/area`)
+  mounts ahead of its content: the hide ×-badge, the empty-item placeholder, and
+  the classes it publishes for the box and its content wrapper. The in-app editor
+  contributes it to `ReorderSlots.AreaEditor`; `ReorderEditor` provides it too.
+- **`RestoreButton`** (hidden items + registry inserts popover) and
+  **`sortableIdsOf`** (an area's sortable ids: a container's members, never itself).
 
-It is deliberately **display-only**: it knows nothing about config_v2, the live
-catalog, the `ReorderTree` format, or any specific node type. Each consumer
-pre-renders its node types via the node-type registry and maps its own data into
-`entries` + callbacks. Because it imports **neither `reorder/web` nor the
-`reorder-tree` field**, the field plugin can import it without forming a
-`reorder ↔ reorder-tree` cycle.
-
-## API
-
-```tsx
-import { ReorderEditor } from "@plugins/reorder/plugins/editor/web";
-
-<ReorderEditor
-  entries={entries}            // (item | node) in display order — `node` is opaque
-  hiddenItems={hiddenItems}    // { key, label }[] for the restore popover
-  onDrop={…} onHide={…} onRestore={…}
-  inserts={[{ label, onInsert }]}   // registry-driven insert affordances (e.g. "Add Spacer")
-  onRemoveNode={(id) => …}          // remove a node by id (e.g. a spacer's × button)
-  editMode={…} orientation="vertical" strategy={…} wrap={…} renderOverlay={…}
-/>
-```
-
-### `wrap` — editor-owned flex-wrap container
-
-`wrap` (default `false`) renders the sortable cells inside an owned
-`flex flex-1 flex-wrap` container so a horizontal row wraps onto multiple lines
-instead of overflowing. Pair it with `strategy={rectSortingStrategy}` for correct
-2-D drag. Use it ONLY when the host does **not** already own wrapping — never with
-a `CollapsibleWrap` host, whose child-measurement would break on an interposed
-wrapper div. The `reorder` list middleware sets it only in the "editor-wrap"
-regime (see `reorder`'s CLAUDE.md). Default (`false`) renders the cells bare, so
-the CollapsibleWrap-host and plain-row paths are byte-for-byte unchanged.
-
-### Two opaque entry kinds
-
-`ReorderEntry` is `item | node`. An `item` carries a pre-rendered contribution
-`node` (the middleware wraps it via `ReorderItemMiddleware` → `SortableReorderItem`;
-the field renderer wraps a label chip). A `node` entry carries opaque
-pre-rendered content for any registered node type, plus optional `memberIds` for
-containers (so the shared `SortableContext` registers the child ids; a container
-pushes only its members, never its own id — it isn't top-level draggable). The
-editor renders both opaquely and knows nothing about spacers, headers, etc.
-`SortableReorderItem` and `SpacerReorderItem` are exported so node-type plugins
-and consumers wrap with the same draggable primitive.
+It imports `reorder/area` (the drawing contract), never `reorder/web`: `reorder`
+reaches this plugin back through `fields/reorder-tree/config`. It knows nothing about config_v2, the live catalog, the `ReorderTree` format, or
+any node type: each consumer pre-renders its nodes via the node-type registry
+and maps its data into `entries` + callbacks. `editMode` and `orientation` are
+props, not the global signal (the field renderer is always editable, vertical).
 
 ### `fill` — bounding a height-filling contribution
 
-`SortableReorderItem` takes a `fill?: boolean` prop (default `false`). A non-fill
-row sizes to its content; the edit-mode chrome leaves its layout untouched. A
-**fill** contribution wants to consume its host column's remaining height and
-scroll internally (an inner `flex-1 min-h-0` region — e.g. the conversations
-sidebar section). For those, `fill` makes the edit-mode wrapper a bounded flex
-column at **both** levels (the outer item box and the inner content wrapper) so
-the scroll region clamps instead of expanding to its natural height and
-overflowing onto the rows below. The `reorder` list middleware maps it from the
-contribution's `fill: true` field; the field renderer never fills.
+`ReorderItemBox` takes `fill?: boolean` (default `false`), and the chrome reads
+it. A **fill** contribution consumes its host column's remaining height and
+scrolls internally (an inner `flex-1 min-h-0` region — the conversations sidebar
+section). For those, the edit-mode chrome makes both box levels a bounded flex
+column so the scroll region clamps instead of overflowing onto the rows below.
+The list middleware maps it from the contribution's `fill: true`.
 
-`fill` is a **slot-level layout role, not a reorder detail** — it is declared on
-the render-slot contribution and `slot-render`'s own per-contribution cell reads
-it too. Reorder is one of two readers, which is why the field is named `fill`
-rather than `reorderFill`.
+`fill` is a **slot-level layout role, not a reorder detail** (slot-render's
+per-contribution cell reads it too) and always the **block** axis. The INLINE
+grow is not declared: the widget asks ([`grow-relay`](../../../primitives/plugins/css/plugins/grow-relay/CLAUDE.md))
+and the edit-mode box and content wrapper relay the ask. Merging the two would
+turn a bar into a flex column.
 
-Here it is always the **block** axis. The INLINE grow — a row cell that expands
-instead of shrink-wrapping — is not declared at all any more: the widget that
-needs it asks ([`grow-relay`](../../../primitives/plugins/css/plugins/grow-relay/CLAUDE.md)),
-and the edit-mode item box and its content wrapper relay the ask like the slot
-cell above them, so a bar inside a contribution keeps its width while the pen is
-on. Merging the two would turn that bar into a flex column.
-
-In a **column** host a forgotten `fill` is invisible in normal mode (the wrapper
-is `display:contents`, so the child participates in its host column directly) and
-only breaks in edit mode — a silent, mode-specific footgun. `SortableReorderItem`
-therefore detects it after mount: if the contribution's root box declares
-`flex-grow` but `fill` is false, it logs a one-time `console.error` naming the
-contribution and pointing at `fill: true`. A relayed inline ask is the OTHER
-explanation for that same `flex-grow`, and silences it — otherwise the error
-would send an author to add the flag that breaks their bar.
-
-### `editMode` is a prop, not a signal
-
-The editor must not depend on `reorder`, so the global `useEditMode()` signal is
-**not** read here — the consumer threads `editMode` in (middleware passes
-`useEditMode()`; the field renderer passes `true`). `orientation` is likewise a
-prop (middleware auto-detects; field is always `"vertical"`).
+A forgotten `fill` is invisible at rest (both levels are `display: contents`) and
+only breaks in edit mode, so the chrome detects it after mount — the
+contribution's root box declares `flex-grow` but `fill` is false — and logs a
+one-time `console.error` naming the contribution. A relayed inline ask is the
+other explanation for that `flex-grow`, and silences it.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers and dividers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
+- Description: Presentational drag-and-drop reorder editor: a self-contained ReorderEditor (list, hide/restore, inserts), the item chrome that dresses a reorder item box in edit mode, and the restore/insert popover. Display-only — no config_v2, catalog, or tree-format knowledge. Edit side only: the in-app layout editor (reorder.edit-mode) and the Config pane's reorder-tree field.
 - Web:
   - Uses:
-    - `primitives/css/grow-relay.GrowRelay`
     - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/row.Row`
@@ -109,27 +56,21 @@ prop (middleware auto-detects; field is always `"vertical"`).
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSize`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.Input`
-    - `primitives/css/ui-kit.useControlSize`
     - `primitives/overlay/popover.InlinePopover`
-    - `primitives/sortable-list.DeferredSortableItem`
     - `primitives/sortable-list.DeferredSortableList`
+    - `reorder/area.ReorderAreaContext`
+    - `reorder/area.ReorderAreaCtxValue`
+    - `reorder/area.ReorderEntry`
+    - `reorder/area.ReorderItemChromeProps`
     - `ui/icons.Icon`
-  - Exports (types):
-    - `ReorderAreaCtxValue`
-    - `ReorderEditorProps`
-    - `ReorderEntry`
-    - `ReorderItemEntry`
-    - `ReorderNodeEntry`
+  - Exports (types): `ReorderEditorProps`
   - Exports (values):
-    - `DividerReorderItem`
-    - `ReorderAreaContext`
     - `ReorderEditor`
+    - `ReorderItemChrome`
     - `RestoreButton`
-    - `SortableReorderItem`
-    - `SpacerReorderItem`
+    - `sortableIdsOf`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
@@ -137,7 +78,6 @@ prop (middleware auto-detects; field is always `"vertical"`).
     - `ui/tokens/color-palette --destructive-foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
-    - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --control-height-sm`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
@@ -153,9 +93,7 @@ prop (middleware auto-detects; field is always `"vertical"`).
     - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
     - `fields/reorder-tree/config`
-    - `reorder`
-    - `reorder/node-types/divider`
-    - `reorder/node-types/spacer`
+    - `reorder/edit-mode`
 - Exemptions:
   - Exempts itself from: `data-view/no-adhoc-row-list` — `.` (sanctioned)
 

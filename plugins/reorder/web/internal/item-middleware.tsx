@@ -6,8 +6,8 @@ import { ReorderItemClaimContext } from "./item-claim";
 import { contributionKey, contributionLabel } from "./sorting";
 import {
   ReorderAreaContext,
-  SortableReorderItem,
-} from "@plugins/reorder/plugins/editor/web";
+  ReorderItemBox,
+} from "@plugins/reorder/plugins/area/web";
 
 export function ReorderItemMiddleware({
   contribution,
@@ -34,11 +34,6 @@ export function ReorderItemMiddleware({
     // area of its own).
     if (!ctx || !claimed) return <>{children}</>;
 
-    // Display-only override (popover regime's inline render): render the
-    // contribution bare. Crucially this skips `SortableReorderItem`/`useSortable`,
-    // which would otherwise need a `SortableContext` the inline render never mounts.
-    if (override === false) return <>{children}</>;
-
     const key = contributionKey(contribution);
     if (!key) return <>{children}</>;
 
@@ -53,14 +48,16 @@ export function ReorderItemMiddleware({
       contributionLabel(contribution);
 
     return (
-      <SortableReorderItem
+      // The display-only override (popover regime's inline row) arrives as
+      // `editMode === false`: the box stays at rest, wearing no chrome.
+      <ReorderItemBox
         itemKey={key}
         editMode={editMode}
         label={label}
         fill={fill}
       >
         {children}
-      </SortableReorderItem>
+      </ReorderItemBox>
     );
   }
 

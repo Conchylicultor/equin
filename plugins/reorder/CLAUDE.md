@@ -5,16 +5,19 @@ Generic reorder primitive integrated into `RenderSlot.Render` via middleware. Ev
 ## Public API (web)
 
 `ReorderLayoutContext` / `ReorderLayout` (host-injected layout for the
-middleware), `useReorderedEntries` + `isNodeData` (see below), and the entry
-types.
+middleware, closed data: `{ flow: "wrap" }`), `useReorderedEntries` + `isNodeData`
+(see below), the entry types, and the apply/edit seam: `ReorderSlots.AreaEditor`
+and the editor contract types. What an area DRAWS — `ReorderAreaContext`,
+`ReorderItemBox`, the entry and item-chrome types — is the leaf `reorder/area`,
+shared with the editor (which may not import this barrel: `reorder` reaches it
+back through `fields/reorder-tree/config`).
 
 **Edit mode is NOT here.** `setEditMode` / `getEditMode` / `useEditMode` live in
 the leaf `@plugins/primitives/plugins/edit-mode-signal/web` — reorder consumes
 it like everyone else. Read that plugin's CLAUDE.md before moving it back: a
-primitive must not take on `reorder/web` (and its `styles.css` side-effect
-import) just to read a boolean.
+primitive must not take on `reorder/web` just to read a boolean.
 
-Hosts just use `<MySlot.Render>{(item) => ...}</MySlot.Render>` — the reorder list and item middlewares handle sorting, DnD wrapping, registry-driven node types (spacers, container groups), and edit-mode affordances automatically. No configuration needed.
+Hosts just use `<MySlot.Render>{(item) => ...}</MySlot.Render>` — the reorder list and item middlewares handle sorting, registry-driven node types (spacers, container groups) and, where `reorder/edit-mode` ships, edit-mode affordances automatically. No configuration needed.
 
 ### `useReorderedEntries` — data-level layout read
 
@@ -35,34 +38,37 @@ The data-level counterpart to `<Slot.Render>` for consumers that draw their **ow
 - Hosts use `<Slot.Render>`, not `slot.useContributions()`.
 - `excludeFromReorder: true` opts a single contribution out (used by the edit-layout switch itself).
 
-## Architecture
+## Architecture — apply here, edit opt-in
 
-Two middlewares registered by the reorder plugin, built on the shared
-presentational editor `@plugins/reorder/plugins/editor/web` (itself wrapping
-`@plugins/primitives/plugins/sortable-list/web` / `@dnd-kit/sortable`):
+Two capabilities, two shipping rules:
 
-1. **`ReorderListMiddleware`** (list, priority 0) — reads the slot's `items` tree via `useConfig(descriptor)`, applies it over the live catalog via `applyTree()`, maps the resulting `groupedEntries` into the editor's presentational `entries` (items as item-middleware-wrapped contributions, spacers, pre-rendered group boxes), and renders `<ReorderEditor>` wired to `setConfig` + the DB-backed group endpoints. If a slot has no descriptor (runtime-only render slot or an unresolved id), it falls back to natural order with no reorder applied.
-2. **`ReorderItemMiddleware`** (item, priority 50) — wraps each contribution with `SortableReorderItem` (from the editor barrel) for smooth displacement animations during drag. In edit mode, also renders grouping zones (center zone for group creation, join zone for existing groups).
+- **Applying** a committed layout is this plugin. Its middlewares are companions
+  of `slot-render` (via `reorder/slot-middleware`), so they ship wherever slots
+  render. It imports no drag code: no `reorder/editor`, no
+  `primitives/sortable-list` (only its dnd-free `deferred-item`).
+- **Editing** one is `reorder/edit-mode`, opt-in (main's `**` selects it, no app
+  does). It contributes the one `ReorderSlots.AreaEditor` — `{ Area, ItemChrome }`
+  — together with the Edit layout switch, the only `setEditMode(true)` caller.
+  Edit mode with no editor registered throws (`list-middleware.tsx`).
+  `reorder:apply-is-lean` fails if `slot-render`'s closure reaches the editor.
+  (dnd-kit itself still ships everywhere — `config_v2 → fields/list/config` and
+  data-view import `sortable-list` — but no longer because of reorder.)
 
-**Outside edit mode an area mounts no drag machinery.** Every render slot is an area — several per list row — so the editor's list is a `DeferredSortableList` (`primitives/sortable-list`): the `DndContext` and the per-item `useSortable` registrations mount beside the items only while edit mode is on, and toggling it never remounts a contribution. Likewise the list middleware measures its host (flow axis, width) only while something reads it — the edit-mode chrome, or an area drawing nodes (a divider's upright rule) — not for an area of plain contributions at rest.
+1. **`ReorderListMiddleware`** (list, priority 0) — reads the slot's `items` tree via `useConfig(descriptor)`, applies it over the live catalog (`applyTree()`), and draws the area's **frame**: `ReorderAreaContext` > `ItemBindingProvider` (`sortable-list/deferred-item`, dnd-free) > the entries (claimed items, node-type nodes) — and, while edit mode is on, `<editor.Area>` **beside** them. No descriptor (runtime-only render slot or an unresolved id) → natural order, nothing applied.
+2. **`ReorderItemMiddleware`** (item, priority 50) — wraps each claimed contribution in `ReorderItemBox` (`reorder/area`): a `DeferredSortableItem` around a content wrapper, both `display: contents` at rest. Editable, the box mounts the area's `ItemChrome` **ahead of** its content and wears the classes it publishes (ring, `pointer-events-none`, fill bound).
+
+**Toggling edit mode remounts no contribution (vertical areas).** Nothing an editor adds is an ancestor of a contribution: the drag host (`DeferredSortableHost`) binds the boxes from beside them, the chrome is a sibling of the content. Horizontal areas change shape in edit mode (the `editor-wrap` div, the `popover` regime) and remount there, as they always have. Outside edit mode an area mounts no drag machinery, and the list middleware measures its host only while something reads it — edit mode, or nodes drawn at rest (a divider's upright rule).
+
+The writes (`area-writes.ts`: hide, restore, drop, insert, removeNode, patchNode) live here, not in the editor, because one is live at rest — a header's collapse toggle. The editor receives them as `ReorderAreaEditorProps.writes`. Node types render both their forms themselves (`editMode` prop); the leaf ones' draggable form is a `DeferredSortableItem` the editor's host binds.
 
 ### Shared presentational editor (`plugins/editor`)
 
-The drag-and-drop list itself lives in the **`editor` sub-plugin**
-(`plugins/reorder/plugins/editor/`) as `<ReorderEditor>` — a purely
-presentational component (DeferredSortableList + move dispatch + flat `sortableIds` +
-hide/restore + registry-driven `inserts`/`onRemoveNode`). It has just two opaque
-entry kinds — `item` and a generic `node` (with optional `memberIds` for
-containers) — and knows nothing about config_v2, the live catalog, the
-`ReorderTree` format, or any specific node type; the consumer pre-renders each
-node via the node-type registry and maps its own data into `entries` + callbacks,
-threading `editMode`/`orientation` as props (the editor does **not** read the
-global `useEditMode()` signal). This lets the **same editor** power both the
-in-app pen-drag (this middleware, wired to `setConfig`) and the `reorder-tree`
-field renderer in the Config settings pane (`fields/reorder-tree/plugins/config/web`,
-wired to the field's `onChange`). Because the editor imports neither `reorder/web`
-nor the `reorder-tree` field, the field plugin can import it without a
-`reorder ↔ reorder-tree` cycle.
+`<ReorderEditor>` is a self-contained area (its own `DeferredSortableList`, area
+context and item chrome) for surfaces that are an editor outright: the
+`reorder-tree` field in the Config pane and the in-app `popover` regime. It knows
+nothing about config_v2, the live catalog or the `ReorderTree` format. It also
+exports `ReorderItemChrome` (the chrome the in-app editor contributes),
+`RestoreButton` and `sortableIdsOf`.
 
 ## Storage — config_v2 `items` tree (materialized)
 
@@ -104,7 +110,7 @@ The `reorderable-slots-in-sync` check fails if the manifest drifts; rebuild to r
 
 ### Write path
 
-Every edit **materializes** the top-level order into a fresh `items` tree (`materializeTree` in `dnd-list-middleware.tsx`) and `setConfig("items", tree)`. Container subtrees are re-emitted **verbatim** from the raw tree (members/payload preserved) — in-app editing rewrites only the loose top-level items/spacers around them:
+Every edit **materializes** the top-level order into a fresh `items` tree (`materializeTree` in `area-writes.ts`) and `setConfig("items", tree)`. Container subtrees are re-emitted **verbatim** from the raw tree (members/payload preserved) — in-app editing rewrites only the loose top-level items/spacers around them:
 
 - **Drag reorder:** the new top-level order — contributions as bare strings, leaf/container nodes verbatim; the existing hidden set is appended as `{ item, hidden: true }` so a reorder never un-hides.
 - **Hide / restore:** materialize, flipping the target to/from `{ item, hidden: true }`.
@@ -132,58 +138,62 @@ Because the origin default is the materialized catalog, adding/removing a contri
 
 ## Edit mode
 
-Module-level signal in `@plugins/primitives/plugins/edit-mode-signal/web` (no React Context). The edit-layout switch toggles it; middlewares read it via `useSyncExternalStore`. Esc exits edit mode (a registered shortcut in `reorder/edit-mode`).
+Module-level signal in `@plugins/primitives/plugins/edit-mode-signal/web` (no React Context). The edit-layout switch (`reorder/edit-mode`) toggles it; middlewares read it via `useSyncExternalStore`. Esc exits edit mode (a registered shortcut in `reorder/edit-mode`).
 
 ## Constrained-space regimes (horizontal areas)
 
-Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholder, trailing `+Add`), which overflows a narrow horizontal band. The list middleware (`dnd-list-middleware.tsx`) measures the host width (ResizeObserver + rAF on the sentinel's parent, no timers) and picks a regime:
+Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholder, trailing `+Add`), which overflows a narrow horizontal band. The list middleware (`list-middleware.tsx`) measures the host width (ResizeObserver + rAF on the sentinel's parent, no timers) and picks a regime:
 
 - **host-wrap** — a `CollapsibleWrap` host already owns wrapping (detected via the injected `ReorderLayoutContext`). Rendered exactly as before; the editor adds no wrapper (an interposed div would break CollapsibleWrap's child-measurement).
 - **passthrough** — vertical orientation or not in edit mode. Vertical rows already stack `w-full`; outside edit mode there's no chrome. Unchanged render.
-- **editor-wrap** — horizontal, edit mode, width ≥ `POPOVER_WIDTH_THRESHOLD` (280px). The editor wraps items onto multiple rows via its `wrap` prop + `rectSortingStrategy` (see `editor`'s CLAUDE.md). Also the default before the first width measurement (wrapping never overlaps).
-- **popover** — horizontal, edit mode, width < threshold. The inline view renders the live contributions **display-only** (clean, not draggable) and a `MdTune` button opens a roomy **vertical** reorder popover hosting the full list (visible + hidden + spacers + groups). The popover is the only drag surface, so the single-`SortableContext`-per-dataset invariant holds.
+- **editor-wrap** — horizontal, edit mode, width ≥ `POPOVER_WIDTH_THRESHOLD` (280px). The frame wraps items in a `flex-wrap` div and the editor drags with `rectSortingStrategy`. Also the default before the first width measurement (wrapping never overlaps).
+- **popover** — horizontal, edit mode, width < threshold. The inline row renders the live contributions **display-only** (clean, not draggable) and the editor renders a `tune` button opening a roomy **vertical** `ReorderEditor` popover hosting the full list (visible + hidden + spacers + groups). The popover is the only drag surface, so each id is registered once.
 
-**Effective edit mode.** The display-only inline render forces items/groups non-draggable via `ReorderEffectiveEditModeContext` (`web/internal/effective-edit-mode.tsx`, internal): `null` → read the global signal; `false` → display-only. `ReorderItemMiddleware` and `ReorderGroupBox` both honor it. The popover's editor is rendered OUTSIDE that provider, so its items read the global `true` and drag normally. All four regimes share the same `entriesRef`/`hiddenKeysRef` write paths — only the dispatching surface differs.
+**Effective edit mode.** The frame always wraps its items in `ReorderEffectiveEditModeContext` (`web/internal/effective-edit-mode.tsx`, internal): `null` → read the global signal; `false` (popover regime) → display-only. The editor is rendered OUTSIDE that provider, so the popover's items read the global `true` and drag normally. All regimes share the same writes — only the dispatching surface differs.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
+- Description: Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout everywhere slots render; editing a layout (drag, hide, insert) is the opt-in ReorderSlots.AreaEditor, mounted beside an area's items only while edit mode is on. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
 - Load-bearing: yes
 - Web:
+  - Slots: `ReorderSlots.AreaEditor`
+  - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
   - Contributes: 244 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `ConfigV2.WebRegister` ×244
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
-    - `primitives/css/badge.Badge`
-    - `primitives/css/ui-kit.Button`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/layout-host.flowAxis`
     - `primitives/dom/layout-host.layoutHost`
     - `primitives/edit-mode-signal.useEditMode`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/overlay/popover.InlinePopover`
-    - `primitives/sortable-list.rectSortingStrategy`
-    - `reorder/editor.ReorderAreaContext`
-    - `reorder/editor.ReorderAreaCtxValue`
-    - `reorder/editor.ReorderEditor`
-    - `reorder/editor.ReorderEntry`
-    - `reorder/editor.SortableReorderItem`
+    - `primitives/sortable-list/deferred-item.ItemBindingProvider`
+    - `reorder/area.ReorderAreaContext`
+    - `reorder/area.ReorderAreaCtxValue`
+    - `reorder/area.ReorderEntry`
+    - `reorder/area.ReorderItemBox`
     - `reorder/node-types.useReorderNodeTypes`
-    - `ui/icons.Icon`
   - Exports (types):
+    - `ReorderAreaEditor`
+    - `ReorderAreaEditorProps`
+    - `ReorderAreaWrites`
     - `ReorderLayout`
     - `ReorderNodeData`
+    - `ReorderRegime`
     - `ReorderState`
     - `TopLevelEntry`
   - Exports (values):
+    - `contributionLabel`
+    - `entryKey`
     - `isNodeData`
     - `ReorderItemMiddleware`
     - `ReorderLayoutContext`
     - `ReorderListMiddleware`
+    - `ReorderSlots`
     - `useReorderedEntries`
 - Server:
   - Contributes: 243 contributions — full list in [REFERENCE.md](./REFERENCE.md)
@@ -194,13 +204,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `reorderDirectiveDescriptor`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --background`
-    - `ui/tokens/color-palette --border`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/density --space-2xs`
-    - `ui/tokens/density --space-sm`
-    - `ui/tokens/shadow --shadow-lg`
-    - `ui/tokens/shape --radius`
+    - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/app-launcher`
@@ -208,16 +212,21 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `conversations/conversation-view/artifacts`
     - `page/editor`
     - `primitives/collapsible-wrap`
+    - `reorder/edit-mode`
     - `reorder/slot-middleware`
 - Shared:
   - Exports (types): `ReorderableSlot`
   - Exports (values):
     - `reorderableSlots`
     - `reorderDirectiveDescriptor`
+- Test helpers:
+  - Web: `@plugins/reorder/web/testing`
+    - `ReorderItemClaim` — Stands in for the list middleware's per-`renderItem` claim, so a test can render `ReorderItemMiddleware` as an item of a hand-built area.
 - Sub-plugins:
-  - **`edit-mode`** — Edit-layout switch in the action bar's view-options popover that toggles global edit mode for all reorderable slots; Esc exits edit mode.
-  - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers and dividers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
+  - **`area`** — What a reorder area draws, shared by applying a slot layout (reorder) and editing one (reorder/editor, reorder/edit-mode): the area context, the entry types, and ReorderItemBox — an item box at rest…
+  - **`edit-mode`** — Slot-layout editing, opt-in: the Edit layout switch in the action bar's view-options popover (Esc exits), and the area editor every reorderable slot mounts beside its items while edit mode is on…
+  - **`editor`** — Presentational drag-and-drop reorder editor: a self-contained ReorderEditor (list, hide/restore, inserts), the item chrome that dresses a reorder item box in edit mode, and the restore/insert…
   - **`node-types`** — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
-  - **`slot-middleware`** — Applies every render slot's committed layout (and hosts its drag surface): reorder's list and item middleware, contributed to slot-render as companions so they ship wherever slots render.
+  - **`slot-middleware`** — Applies every render slot's committed layout: reorder's list and item middleware, contributed to slot-render as companions so they ship wherever slots render. Editing a layout is not here — it is…
 
 <!-- AUTOGENERATED:END -->

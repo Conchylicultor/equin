@@ -3117,7 +3117,7 @@ A type therefore declares `chrome` (`BlockChrome`) and never a `component`:
 `Editor.Block`'s registration is a union discriminated off the handle's `text`
 lens, so a text-bearing type naming a `component` is a **compile error**, and
 `excludeFromReorder` is on the text-less arm ONLY — `ReorderItemMiddleware` flips
-between `<SortableReorderItem>` and a Fragment on that field, i.e. an element-type
+between `<ReorderItemBox>` and a Fragment on that field, i.e. an element-type
 flip on an ancestor of the composer.
 
 Four constraints that are not stylistic:
@@ -4859,13 +4859,14 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 75 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `page` ×57
     - `apps` ×8
     - `reports` ×4
     - `active-data` ×3
     - `primitives` ×2
     - `debug/slow-ops`
+    - `reorder/node-types`
   - Extended by:
     - `apps/pages/auto-icon` (table `page_blocks_ext_auto_icon`)
     - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)

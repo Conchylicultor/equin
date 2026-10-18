@@ -1,83 +1,43 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useLayoutEffect,
-  useState,
   useSyncExternalStore,
-  type CSSProperties,
   type ReactNode,
 } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  ItemBindingProvider,
+  useItemBindingStore,
+  type ItemBindingStore,
+} from "@plugins/primitives/plugins/sortable-list/plugins/deferred-item/web";
 import { SortableList, type SortableListProps } from "./sortable-list";
-import type { SortableItemState } from "./sortable-item";
+
+export type DeferredSortableHostProps = Omit<
+  SortableListProps,
+  "disabled" | "children"
+>;
 
 /**
- * What a bound item's wrapper box wears while its list is enabled: the drag
- * listeners + a11y attributes dnd-kit hands a draggable, its displacement
- * transform, and whether it is the one being dragged.
+ * The drag half of a deferred list: a plain `SortableList` whose children are
+ * one invisible registrar per id, binding dnd-kit to the wrapper nodes the
+ * `DeferredSortableItem`s of the enclosing `ItemBindingProvider` published.
+ * Mount it as a SIBLING of those items, only while dragging is possible — it is
+ * never their ancestor, so mounting or unmounting it remounts nothing.
  */
-interface ItemDrag {
-  wrapperProps: Record<string, unknown>;
-  style: CSSProperties;
-  isDragging: boolean;
+export function DeferredSortableHost({
+  items,
+  ...listProps
+}: DeferredSortableHostProps): ReactNode {
+  const store = useItemBindingStore();
+  return (
+    <SortableList items={items} {...listProps}>
+      {items.map((id) => (
+        <SortableRegistrar key={id} id={id} store={store} />
+      ))}
+    </SortableList>
+  );
 }
-
-/**
- * The meeting point between a deferred list's items (always mounted, cheap) and
- * its drag host (mounted only while enabled): each item publishes its wrapper
- * node by id, and the host's per-id registrar publishes back the drag props for
- * that node. Per id, so a frame of one row's drag re-renders that row alone.
- */
-function createBindingStore() {
-  const nodes = new Map<string, HTMLElement>();
-  const drags = new Map<string, ItemDrag>();
-  const subs = new Map<string, Set<() => void>>();
-  const notify = (id: string) => {
-    for (const cb of subs.get(id) ?? []) cb();
-  };
-  return {
-    subscribe(id: string, cb: () => void): () => void {
-      let set = subs.get(id);
-      if (!set) subs.set(id, (set = new Set()));
-      set.add(cb);
-      return () => {
-        set.delete(cb);
-        if (set.size === 0) subs.delete(id);
-      };
-    },
-    node: (id: string): HTMLElement | null => nodes.get(id) ?? null,
-    drag: (id: string): ItemDrag | null => drags.get(id) ?? null,
-    setNode(id: string, el: HTMLElement | null) {
-      if ((nodes.get(id) ?? null) === el) return;
-      if (el) nodes.set(id, el);
-      else nodes.delete(id);
-      notify(id);
-    },
-    setDrag(id: string, next: ItemDrag | null) {
-      const prev = drags.get(id) ?? null;
-      if (sameDrag(prev, next)) return;
-      if (next) drags.set(id, next);
-      else drags.delete(id);
-      notify(id);
-    },
-  };
-}
-
-type BindingStore = ReturnType<typeof createBindingStore>;
-
-function sameDrag(a: ItemDrag | null, b: ItemDrag | null): boolean {
-  if (a === null || b === null) return a === b;
-  if (a.isDragging !== b.isDragging) return false;
-  if (a.style.transform !== b.style.transform) return false;
-  if (a.style.transition !== b.style.transition) return false;
-  const ak = Object.keys(a.wrapperProps);
-  if (ak.length !== Object.keys(b.wrapperProps).length) return false;
-  return ak.every((k) => a.wrapperProps[k] === b.wrapperProps[k]);
-}
-
-const BindingContext = createContext<BindingStore | null>(null);
 
 export interface DeferredSortableListProps extends Omit<
   SortableListProps,
@@ -96,7 +56,7 @@ export interface DeferredSortableListProps extends Omit<
  * A sortable list for surfaces that are draggable only in a mode — reorder's
  * edit mode — and plain the rest of the time. Same contract as
  * {@link SortableList} (which it mounts, as is, while `enabled`), with items
- * written as {@link DeferredSortableItem}.
+ * written as `DeferredSortableItem`.
  *
  * Why it exists: `SortableList` wraps its items in a `DndContext`, and each
  * `SortableItem` runs dnd-kit's `useSortable` (~50 hooks), whether or not
@@ -107,6 +67,10 @@ export interface DeferredSortableListProps extends Omit<
  * mounted only while enabled, it runs one `useSortable` per id against the
  * wrapper node the item published, and publishes the drag props back for the
  * item to wear. The items' own element chain never changes.
+ *
+ * It is `ItemBindingProvider` + children + `enabled && DeferredSortableHost`. A
+ * surface that renders the items without ever importing dnd-kit (reorder's
+ * at-rest layout) composes those two halves itself.
  */
 export function DeferredSortableList({
   enabled,
@@ -114,18 +78,11 @@ export function DeferredSortableList({
   children,
   ...listProps
 }: DeferredSortableListProps): ReactNode {
-  const [store] = useState(createBindingStore);
   return (
-    <BindingContext.Provider value={store}>
+    <ItemBindingProvider>
       {children}
-      {enabled ? (
-        <SortableList items={items} {...listProps}>
-          {items.map((id) => (
-            <SortableRegistrar key={id} id={id} store={store} />
-          ))}
-        </SortableList>
-      ) : null}
-    </BindingContext.Provider>
+      {enabled ? <DeferredSortableHost items={items} {...listProps} /> : null}
+    </ItemBindingProvider>
   );
 }
 
@@ -139,7 +96,7 @@ function SortableRegistrar({
   store,
 }: {
   id: string;
-  store: BindingStore;
+  store: ItemBindingStore;
 }): null {
   const {
     attributes,
@@ -165,49 +122,4 @@ function SortableRegistrar({
   });
   useLayoutEffect(() => () => store.setDrag(id, null), [store, id]);
   return null;
-}
-
-export interface DeferredSortableItemProps {
-  id: string;
-  className?: string | ((state: SortableItemState) => string);
-  children: (state: SortableItemState) => ReactNode;
-}
-
-/**
- * An item of a {@link DeferredSortableList}: one wrapper `div` that is the
- * drag source and drop target while the list is enabled, and a plain box (no
- * listeners, no transform) while it is not. Throws outside a deferred list —
- * an item no host can ever bind is a silent no-op drag otherwise.
- */
-export function DeferredSortableItem({
-  id,
-  className,
-  children,
-}: DeferredSortableItemProps): ReactNode {
-  const store = useContext(BindingContext);
-  if (store === null)
-    throw new Error(
-      `DeferredSortableItem "${id}" rendered outside a DeferredSortableList`,
-    );
-  const drag = useSyncExternalStore(
-    useCallback((cb: () => void) => store.subscribe(id, cb), [store, id]),
-    () => store.drag(id),
-  );
-  const ref = useCallback(
-    (el: HTMLDivElement | null) => {
-      store.setNode(id, el);
-    },
-    [store, id],
-  );
-  const state: SortableItemState = { isDragging: drag?.isDragging ?? false };
-  return (
-    <div
-      ref={ref}
-      style={drag?.style}
-      className={typeof className === "function" ? className(state) : className}
-      {...drag?.wrapperProps}
-    >
-      {children(state)}
-    </div>
-  );
 }

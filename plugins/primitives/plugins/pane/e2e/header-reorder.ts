@@ -22,7 +22,7 @@
  *  2. Every header CONTRIBUTION in the band is itself a sortable item — not
  *     merely inside one, and not merely some of them.
  *  3. The band's sortables are EXACTLY the contributions plus the reorder
- *     config's spacers, so no count is left unexplained.
+ *     config's leaf nodes (spacers, dividers), so no count is left unexplained.
  *  4. Edit mode OFF again ⇒ back to zero, and the session is left as it was
  *     found.
  *
@@ -66,6 +66,7 @@ import {
   withBrowser,
   type Session,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { setEditMode } from "@plugins/reorder/plugins/edit-mode/e2e";
 
 /**
  * The harness's page, named through the harness rather than by importing
@@ -75,8 +76,14 @@ import {
 type Page = Session["page"];
 
 const SORTABLE = '[aria-roledescription="sortable"]';
-/** A contribution's lineage marker, stamped by `ui-context` on every one. */
-const CONTRIBUTION = '[data-lineage="contribution"]';
+/**
+ * A reorderable contribution's lineage marker, stamped by `ui-context`. A
+ * render-slot contribution must carry an `id`, so an empty one is a MOUNT
+ * slot's — headless, deliberately not reorderable (the app launcher's brand
+ * paints into the Sonata header through one) — and is not counted.
+ */
+const CONTRIBUTION =
+  '[data-lineage="contribution"]:not([data-contribution-id=""])';
 /**
  * The pane-header band: the `pane`-tier `<Bar>` `PaneChrome` renders its header
  * `AdaptiveBar` into. `h-chrome-pane` is that tier's own height token and the
@@ -85,8 +92,14 @@ const CONTRIBUTION = '[data-lineage="contribution"]';
  * every number below meaningless.
  */
 const HEADER_BAND = ".h-chrome-pane";
-/** The reorder editor's spacer placeholder, by the only control it owns. */
-const SPACER = 'button[aria-label="Remove spacer"]';
+/**
+ * The reorder config's leaf nodes (spacers, dividers), each by the one control
+ * it owns in edit mode. They are sortables that belong to no contribution.
+ */
+const SPACER = [
+  'button[aria-label="Remove spacer"]',
+  'button[aria-label="Remove divider"]',
+].join(", ");
 
 interface Surface {
   name: string;
@@ -136,18 +149,13 @@ await withBrowser(async (h) => {
       0,
     );
 
-    if (!(await setEditMode(page, true))) {
-      r.fail(
-        `${s.name}: enter edit mode`,
-        "pen button not found — probe vacuous",
-      );
-      continue;
-    }
+    await setEditMode(page, true);
+    await page.waitForTimeout(800);
 
     const on = await readBand(page);
     r.note(
       `${s.name}: contributions=${on.contributions} sortable=${on.sortableContributions} ` +
-        `spacers=${on.spacers} sortables in band=${on.sortables}` +
+        `leaf nodes=${on.spacers} sortables in band=${on.sortables}` +
         (on.ids.length ? `\n        ${on.ids.join("\n        ")}` : ""),
     );
 
@@ -169,12 +177,13 @@ await withBrowser(async (h) => {
       on.contributions,
     );
     r.eq(
-      `${s.name}: band sortables = contributions + spacers`,
+      `${s.name}: band sortables = contributions + leaf nodes`,
       on.sortables,
       on.contributions + on.spacers,
     );
 
     await setEditMode(page, false);
+    await page.waitForTimeout(800);
     const back = await readBand(page);
     r.eq(`${s.name}: edit mode OFF again ⇒ back to zero`, back.sortables, 0);
   }
@@ -189,7 +198,7 @@ interface BandReading {
   contributions: number;
   /** Of those, how many hold EXACTLY ONE sortable item of their own. */
   sortableContributions: number;
-  /** Spacer placeholders the slot's reorder config put in the row. */
+  /** Leaf nodes (spacers, dividers) the slot's reorder config put in the row. */
   spacers: number;
   /** `<contribution-id> [sortables: n]`, for the transcript. */
   ids: string[];
@@ -233,29 +242,6 @@ async function readBand(page: Page): Promise<BandReading> {
     },
     [HEADER_BAND, SORTABLE, CONTRIBUTION, SPACER] as const,
   );
-}
-
-/**
- * Flip global edit mode via the pen on the global action bar. That bar is a
- * hover-revealed floating panel when unpinned, so the button is in the DOM but
- * pointer-intercepted until the bar is disclosed — a blind click fails.
- *
- * Returns false when the toggle was not found, so the caller can fail loudly
- * instead of reading a zero that means "nothing happened".
- */
-async function setEditMode(page: Page, on: boolean): Promise<boolean> {
-  const bar = page.locator('[data-source*="floating-action"]').first();
-  if (await bar.count()) {
-    await bar.hover();
-    await page.waitForTimeout(600);
-  }
-  const toggle = page.getByRole("button", {
-    name: on ? "Reorder items" : "Exit edit mode",
-  });
-  if ((await toggle.count()) === 0) return false;
-  await toggle.first().click();
-  await page.waitForTimeout(800);
-  return true;
 }
 
 /**
