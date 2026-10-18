@@ -265,8 +265,8 @@ export function useFloatingWindowStyle(
   }, []);
 
   // React to a minimize/restore flip — in a LAYOUT effect, so the frame in
-  // between (resting phase, already flagged minimized → hidden) is never
-  // painted and the tween's first frame measures a laid-out window.
+  // between (resting phase, flag already flipped) is never painted and the
+  // tween's first frame measures a laid-out window.
   // Reduced-motion (or an inactive member) jumps straight to the resting phase.
   useLayoutEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- animation phase machine: a minimize/restore flip in geo.minimized drives a timed CSS tween. The phase, aim and play arm are temporal tween stages, not derivable in render; `seenMinimized` gates this to an actual edge so it fires once per flip. */
@@ -332,16 +332,25 @@ export function useFloatingWindowStyle(
       ? snapBox(geo.snap, reserve)
       : { left: geo.x, top: geo.y, width: geo.w, height: geo.h };
 
+    // A minimise/restore flip the phase machine has not reacted to yet: the
+    // flag flips one commit before it enters `minimizing` / `restoring`. That
+    // commit keeps the window laid out (a restore's at opacity 0, so it never
+    // flashes at rest): its pushed style is what the tween's aim measures, and a
+    // `display:none` reaching the DOM there nulls the measurement and cancels a
+    // minimise's exit tween outright. Unanimated windows have no pending flip.
+    const pendingFlip = isActive && !reduced && geo.minimized !== seenMinimized;
+
     // Fully hidden: off the active virtual desktop, an inactive member, a
-    // settled-minimized window, or a window that is flagged minimized while
-    // resting (hydrated-minimized / reduced). Off-desktop hides unconditionally;
-    // otherwise a `closing` window keeps painting to animate.
+    // settled-minimized window, or a window resting minimized (hydrated-minimized).
+    // Off-desktop hides unconditionally; otherwise a `closing` window keeps
+    // painting to animate.
     const hidden =
       !onActiveDesktop ||
       (phase !== "closing" &&
+        !pendingFlip &&
         (!isActive ||
           phase === "minimized" ||
-          ((phase === "normal" || phase === "intro") && geo.minimized)));
+          ((phase === "normal" || phase === "intro") && seenMinimized)));
 
     const isPeeked = peeked === win.id;
     let transform: string | undefined;
@@ -365,6 +374,9 @@ export function useFloatingWindowStyle(
       transform = play ? "scale(0.96)" : "none";
       opacity = play ? 0 : 1;
       transformOrigin = "center";
+    } else if (pendingFlip && !geo.minimized) {
+      // A restore about to start from the minimized rest: laid out, unseen.
+      opacity = 0;
     } else {
       // At rest: the overview glides it into its grid cell; a peek elsewhere
       // fades it almost away.
@@ -418,6 +430,7 @@ export function useFloatingWindowStyle(
     reserve,
     isActive,
     phase,
+    seenMinimized,
     play,
     aim,
     boxReady,
