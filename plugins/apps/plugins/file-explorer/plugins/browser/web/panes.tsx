@@ -133,10 +133,17 @@ export function useExplorerLocation(): ExplorerLocation {
 }
 
 /**
- * The routed explorer on `dir` as a link (a new history entry; ⌘/middle-click
- * opens it in a new browser tab).
+ * The routed explorer on `dir` — with `open` previewed beside it, when given —
+ * as a link (a new history entry; ⌘/middle-click opens it in a new browser
+ * tab).
  */
-export function useExplorerFolderTarget(): (dir: string) => LinkTarget {
+export function useExplorerFolderTarget(): (
+  dir: string,
+  open?: string,
+) => LinkTarget {
   const openPane = useOpenPane();
-  return (dir) => openPane.to(filesAtPane, { dir }, { mode: "root" });
+  return (dir, open) =>
+    openPane.to(filesAtPane, paramsOf({ dir, open: open ?? null }), {
+      mode: "root",
+    });
 }

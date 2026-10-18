@@ -55,6 +55,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.file-explorer.browser.files-at.actions", pluginId: "apps.file-explorer.browser", configName: "files-at.actions" },
   { slotId: "apps.file-explorer.browser.files-home.actions", pluginId: "apps.file-explorer.browser", configName: "files-home.actions" },
   { slotId: "apps.file-explorer.browser.row-actions", pluginId: "apps.file-explorer.browser", configName: "row-actions" },
+  { slotId: "apps.file-explorer.places.row-actions", pluginId: "apps.file-explorer.places", configName: "row-actions" },
   { slotId: "apps.file-explorer.shell.sidebar", pluginId: "apps.file-explorer.shell", configName: "sidebar" },
   { slotId: "apps.file-explorer.shell.toolbar", pluginId: "apps.file-explorer.shell", configName: "toolbar" },
   { slotId: "apps.home.shell.section", pluginId: "apps.home.shell", configName: "section" },

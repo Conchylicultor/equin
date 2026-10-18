@@ -4,7 +4,7 @@ import type { GlobalRowOrderProps } from "@plugins/primitives/plugins/data-view/
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
-import { seedRanks, computeMoveWrites } from "../../core";
+import { seedRanks, computeMoveWrites, computeInsertWrites } from "../../core";
 import { useRowOrder, useSetRowOrder } from "../internal/use-row-order";
 
 /**
@@ -99,7 +99,30 @@ export function RowOrderContribution({
       return setRowOrder({ dataViewId: storageKey, viewId, writes });
     };
 
-    return { getRank, onMove };
+    // A drop from elsewhere (`rowDrop` under `placement: "between"`): the keys
+    // may name rows the consumer has not created yet — they take their ranks
+    // now, so the rows render in the gap they were dropped in once they land.
+    const onInsert = async (
+      keys: readonly string[],
+      dest: { targetId: string; zone: "before" | "after" },
+    ): Promise<void> => {
+      const writes = computeInsertWrites({
+        orderedKeys,
+        persisted,
+        keys,
+        targetId: dest.targetId,
+        zone: dest.zone,
+      });
+      if (writes === null) {
+        throw new Error(
+          `view-order: onInsert anchored on a row outside the ordered set (targetId=${dest.targetId})`,
+        );
+      }
+      if (writes.length === 0) return; // legitimate no-op
+      await setRowOrder({ dataViewId: storageKey, viewId, writes });
+    };
+
+    return { getRank, onMove, onInsert };
   }, [order, orderedKeys, stableRowKey, setRowOrder, storageKey, viewId]);
 
   return <>{render(config)}</>;

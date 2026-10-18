@@ -1,4 +1,4 @@
-// @hash fb54c22abdc4
+// @hash 53fb0fbdb60d
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -8,13 +8,17 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
   // Extract here is the one action worth a glance on the row (it shows only on
-  // archives); Copy path is rarer, so it waits behind the row's `⋯`.
+  // archives); Copy path and Add to Favorites are rarer, so they wait behind
+  // the row's `⋯`.
   "items": [
     "apps.file-explorer.browser:extract",
     {
       "type": "overflow",
       "id": "row-overflow",
-      "items": ["apps.file-explorer.browser:copy-path"]
+      "items": [
+        "apps.file-explorer.browser:copy-path",
+        "apps.file-explorer.places:add-to-favorites"
+      ]
     }
   ]
 }

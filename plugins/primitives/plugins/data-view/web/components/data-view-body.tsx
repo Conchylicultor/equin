@@ -28,6 +28,7 @@ import {
   type DataViewPageNotice,
   type DataViewViewportSink,
   type SortRule,
+  type ViewRowDropConfig,
   type ViewState,
 } from "../../core";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
@@ -393,6 +394,9 @@ function DataViewBodyInner<TRow>(
     manualOrder,
     aggregate,
     selection,
+    rowSelection,
+    rowDrag,
+    rowDrop,
     itemActions,
     creators,
     storageKey,
@@ -511,6 +515,22 @@ function DataViewBodyInner<TRow>(
     activeViewId,
     rowKey,
   ]);
+  // The drop config as a view takes it: the view instance bound into the
+  // empty-space drop, so a view (which knows no instance id) passes its group.
+  const viewRowDrop = useMemo<ViewRowDropConfig<TRow> | undefined>(() => {
+    if (!rowDrop) return undefined;
+    const { background, ...rest } = rowDrop;
+    if (!background) return rest;
+    return {
+      ...rest,
+      background: {
+        accepts: (types, group) =>
+          background.accepts(types, { viewId: activeViewId, group }),
+        onDrop: (dt, group, ctx) =>
+          background.onDrop(dt, { viewId: activeViewId, group }, ctx),
+      },
+    };
+  }, [rowDrop, activeViewId]);
   // Reveal the selection unless it was just activated in ANOTHER section.
   const lastActivation = sectionActivation?.last;
   const revealSelection = !(
@@ -1221,6 +1241,9 @@ function DataViewBodyInner<TRow>(
           // (list/table/gallery) act on it — the tree ignores it.
           aggregate: aggregate as DataViewRenderProps<unknown>["aggregate"],
           selection,
+          rowSelection,
+          rowDrag: rowDrag as DataViewRenderProps<unknown>["rowDrag"],
+          rowDrop: viewRowDrop as DataViewRenderProps<unknown>["rowDrop"],
           expanded: activeState.expanded,
           setExpanded: (changes) =>
             viewModel.setExpanded(activeViewId, changes),

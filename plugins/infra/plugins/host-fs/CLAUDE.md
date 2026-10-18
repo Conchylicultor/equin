@@ -17,6 +17,7 @@ and build byte URLs with `hostFileUrl(path)`.
 | `GET /api/host-fs/volume?path` (`hostFsVolume`) | `ok {name, total, free}` · `missing` · `denied` |
 | `POST /api/host-fs/open {path, reveal?}` (`hostFsOpen`) | `opened` · `in-archive` · `missing`; 403 off-origin, 501 off macOS |
 | `POST /api/host-fs/extract {path}` (`hostFsExtract`) | `extracted {created, layout: single \| folder}` · `not-an-archive` · `missing` · `denied` · `unreadable-archive`; 403 off-origin |
+| `POST /api/host-fs/move {sources, destDir, resolutions?}` (`hostFsMove`) | `ok {destDir, results}` — one per source: `moved {from, to}` · `exists {from, to}` · `skipped` · `into-self` · `replaces-ancestor` · `same-dir` · `missing` · `denied` · `archive`; or, for the destination, `missing` · `denied` · `not-a-dir` · `archive`; 403 off-origin |
 
 Images get two more reads in the `image` sub-plugin: resized copies
 (`GET /api/host-fs/image/resized`) and a folder's pixel sizes
@@ -73,6 +74,23 @@ A path may cross into an archive file: `~/Downloads/photos.zip/2022/a.jpg`.
   `__MACOSX/` and `.DS_Store`) is extracted as itself next to the archive;
   several go into a new folder named after the archive less its extension.
 
+## Move asks before it overwrites
+
+`move` never overwrites on its own: a source whose name is taken in `destDir`
+answers `exists {from, to}` and stays put while the others move. The caller
+asks the user and re-sends just those sources with `resolutions[from]`:
+`replace` (the taken entry is set aside, restored if the move fails, removed
+once it lands; refused as `replaces-ancestor` when it holds the source),
+`keep-both` (the Finder's next free name — `freePath`, shared with `extract`)
+or `skip`. Across volumes (`EXDEV`) the source is copied into a hidden staging
+sibling, renamed into place, then removed. Comparisons (`into-self`,
+`same-dir`) use real paths, a symlink source compared by its own location.
+
+Dragging host paths between surfaces uses one payload (core):
+`HOST_PATHS_MIME`, `writeHostPaths(dt, paths)`, `readHostPaths(dt)` →
+`paths` · `absent` · `malformed`, and `hasHostPaths(types)` for `dragover`
+(the data is unreadable until `drop`).
+
 `decodeTextBytes` (server barrel) is the one size + binary gate for decoding
 file bytes as text; code-explorer's git-ref reads use it too.
 
@@ -85,18 +103,20 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
 - **No path sandbox.** The server reads whatever the user account can read;
   **filesystem permissions are the boundary**, and hitting one is the typed
   `denied` state (e.g. `~/.Trash` without Full Disk Access).
-- **Read-only, with two side effects.** `POST open` spawns macOS `open <path>`
+- **Read-only, with three side effects.** `POST open` spawns macOS `open <path>`
   (or `open -R <path>` to reveal) through `infra/spawn`, the path one argv
   element (never a shell) and always absolute, so it cannot be read as a flag.
   `POST extract` writes an archive's members beside it — only NEW paths (a
   taken name gets a number, never overwritten), only under the archive's own
   folder (member names are normalised: no `..`, no absolute path; symlink
   members are not written), staged in a hidden sibling and renamed into place.
+  `POST move` renames paths the user dragged; it overwrites only on an explicit
+  per-source `replace`.
 - **The exposure is other web pages in the user's browser, not the user.** A
   site must not be able to read `~/.ssh` through `localhost:9000`:
   - Cross-origin `fetch` reads are blocked by CORS (no endpoint sends CORS
     headers).
-  - `POST open` and `POST extract` refuse (403) any request whose `Origin` is not `localhost` or
+  - `POST open`, `POST extract` and `POST move` refuse (403) any request whose `Origin` is not `localhost` or
     `*.localhost` — a missing or `null` Origin included — since a cross-site
     form POST is a "simple request" CORS does not stop.
   - `raw` serves `Content-Disposition: inline` with
@@ -114,7 +134,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
 
 ## Plugin reference
 
-- Description: The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder), both refused unless the Origin is the app's own *.localhost.
+- Description: The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it: replace / keep-both / skip), all three refused unless the Origin is the app's own *.localhost.
 - Server:
   - Uses:
     - `infra/endpoints.HttpError`
@@ -147,6 +167,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `POST /api/host-fs/peek`
     - `POST /api/host-fs/open`
     - `POST /api/host-fs/extract`
+    - `POST /api/host-fs/move`
 - Core:
   - Uses:
     - `infra/endpoints.blob`
@@ -158,21 +179,29 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `HostFsEntryKind`
     - `HostFsExtractResult`
     - `HostFsListResult`
+    - `HostFsMoveOutcome`
+    - `HostFsMoveResolution`
+    - `HostFsMoveResult`
     - `HostFsOpenResult`
     - `HostFsPeekResult`
     - `HostFsStatResult`
     - `HostFsTextResult`
     - `HostFsVolumeResult`
     - `HostFsWithin`
+    - `ReadHostPathsResult`
   - Exports (values):
+    - `hasHostPaths`
     - `HOST_FS_COMPLETE_LIMIT`
+    - `HOST_FS_MOVE_MAX_SOURCES`
     - `HOST_FS_PEEK_MAX_NAMES`
     - `HOST_FS_PEEK_MAX_PATHS`
     - `HOST_FS_TEXT_MAX_BYTES`
+    - `HOST_PATHS_MIME`
     - `hostFileUrl`
     - `hostFsComplete`
     - `hostFsExtract`
     - `hostFsList`
+    - `hostFsMove`
     - `hostFsOpen`
     - `hostFsPeek`
     - `hostFsRaw`
@@ -180,6 +209,8 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `hostFsText`
     - `hostFsVolume`
     - `isBrowsable`
+    - `readHostPaths`
+    - `writeHostPaths`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:

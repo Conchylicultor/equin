@@ -3767,6 +3767,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `filesAtPane.Actions` ← `primitives.pane`
               - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
               - `FileBrowserSlots.RowActions` ← `apps.file-explorer.browser`
+              - `FileBrowserSlots.RowActions` ← `apps.file-explorer.places`
             - Contributes:
               - `Pane.Register` "files-at"
               - `Pane.Register` "files-home"
@@ -3774,10 +3775,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 54 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
-              - `primitives/css/ui-kit` ×7
-              - `infra/endpoints` ×5
-              - `primitives/data-view` ×5
+            - Uses: 62 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+              - `primitives/css/ui-kit` ×9
+              - `primitives/data-view` ×9
+              - `infra/endpoints` ×6
               - `primitives/file-viewer` ×5
               - `primitives/pane` ×4
               - `network/live` ×2
@@ -3799,6 +3800,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/link-gesture.activationProps`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
+              - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/persistent-draft.useDraft`
               - `primitives/scope/dom-scope.defineDomScope`
               - `primitives/scope/surface-id.useSurfaceTabId`
@@ -3862,6 +3864,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --primary`
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-sm`
@@ -3928,40 +3931,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `live/no-endpoint-read` — `web/internal/use-git.ts` (debt)
               - `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
-        - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Where the file explorer's Singularity place leads: serves the file-explorer.main-checkout value, the main checkout's path.
+        - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the user's pinned favorites, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Host paths dragged onto Favorites (HOST_PATHS_MIME) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. Where the file explorer's Singularity place leads: serves the file-explorer.main-checkout value, the main checkout's path; registers the pinned-favorites config.
           - Web:
+            - Slots: `row-actions`
+            - Slot contributors: `row-actions` ← `apps.file-explorer.places`
             - Contributes:
               - `FileExplorer.Sidebar` "Places" → `PlacesSidebar`
               - `FileExplorer.Sidebar` "Storage" → `StorageMeter`
               - `FileExplorer.Places` "downloads"
               - `FileExplorer.Places` "home"
+              - `FileExplorer.Places` "pinned"
               - `FileExplorer.Places` "singularity"
               - `FileExplorer.Places` "startup-volume"
               - `FileExplorer.Places` "trash"
-            - Uses:
-              - `apps/file-explorer/browser.useExplorerFolderTarget`
-              - `apps/file-explorer/browser.useExplorerLocation`
-              - `apps/file-explorer/browser.useHomeDir`
-              - `apps/file-explorer/shell.FileExplorer`
-              - `apps/file-explorer/shell.PlaceGroup`
-              - `apps/file-explorer/shell.PlacesSource`
-              - `apps/file-explorer/shell.PlacesState`
-              - `infra/endpoints.getEndpointErrorMessage`
-              - `infra/endpoints.useEndpoint`
+              - `ConfigV2.WebRegister` "config"
+              - `row-actions` "remove-favorite" → `RemoveFavoriteAction`
+              - `FileBrowserSlots.RowActions` "add-to-favorites" → `AddToFavoritesAction`
+            - Uses: 31 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md)
+              - `primitives/data-view` ×6
+              - `apps/file-explorer/browser` ×4
+              - `infra/endpoints` ×4
+              - `apps/file-explorer/shell` ×3
+              - `config_v2` ×3
+              - `primitives/css/ui-kit` ×2
               - `network/live.useLive`
               - `primitives/css/clip.Clip`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.ControlSizeProvider`
-              - `primitives/data-view.DataView`
-              - `primitives/data-view.defineDataView`
-              - `primitives/data-view.FieldDef`
+              - `primitives/icon-button.IconButton`
+              - `primitives/live-state.foldResource`
+              - `shell/toast.showToast`
               - `ui/icons.Icon`
           - Server:
-            - Contributes: `resource.declare` "file-explorer.main-checkout"
-            - Uses: `network/live.serveValue`
+            - Contributes:
+              - `resource.declare` "file-explorer.main-checkout"
+              - `ConfigV2.Register` "config"
+            - Uses:
+              - `config_v2.ConfigV2`
+              - `network/live.serveValue`
             - Resources: `file-explorer.main-checkout` (push, fixed)
           - Cross-plugin:
             - Uses tokens:
@@ -11952,8 +11960,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 88 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×88
+    - Slot contributors: 89 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×89
     - Contributes: `Demo.Resource` "config-v2"
     - Uses:
       - `framework/browser-server/demo.Demo`
@@ -12121,8 +12129,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `withOverrideLegend`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/shape --spacing`
-    - Imported by: 110 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×30
+    - Imported by: 111 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×31
       - `debug` ×14
       - `backup` ×13
       - `conversations` ×13
@@ -26871,7 +26879,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hostHome`
       - Cross-plugin:
         - Imported by: `apps/pages/shell`
-    - **`host-fs`** — The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder), both refused unless the Origin is the app's own *.localhost.
+    - **`host-fs`** — The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it: replace / keep-both / skip), all three refused unless the Origin is the app's own *.localhost.
       - Server:
         - Uses:
           - `infra/endpoints.HttpError`
@@ -26904,6 +26912,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/host-fs/peek`
           - `POST /api/host-fs/open`
           - `POST /api/host-fs/extract`
+          - `POST /api/host-fs/move`
       - Core:
         - Uses:
           - `infra/endpoints.blob`
@@ -26915,21 +26924,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostFsEntryKind`
           - `HostFsExtractResult`
           - `HostFsListResult`
+          - `HostFsMoveOutcome`
+          - `HostFsMoveResolution`
+          - `HostFsMoveResult`
           - `HostFsOpenResult`
           - `HostFsPeekResult`
           - `HostFsStatResult`
           - `HostFsTextResult`
           - `HostFsVolumeResult`
           - `HostFsWithin`
+          - `ReadHostPathsResult`
         - Exports (values):
+          - `hasHostPaths`
           - `HOST_FS_COMPLETE_LIMIT`
+          - `HOST_FS_MOVE_MAX_SOURCES`
           - `HOST_FS_PEEK_MAX_NAMES`
           - `HOST_FS_PEEK_MAX_PATHS`
           - `HOST_FS_TEXT_MAX_BYTES`
+          - `HOST_PATHS_MIME`
           - `hostFileUrl`
           - `hostFsComplete`
           - `hostFsExtract`
           - `hostFsList`
+          - `hostFsMove`
           - `hostFsOpen`
           - `hostFsPeek`
           - `hostFsRaw`
@@ -26937,6 +26954,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hostFsText`
           - `hostFsVolume`
           - `isBrowsable`
+          - `readHostPaths`
+          - `writeHostPaths`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
@@ -36406,6 +36425,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSources`
           - `DataViewSwitcherProps`
           - `DataViewViewportSink`
+          - `DropTargetProps`
           - `FieldCellProps`
           - `FieldDef`
           - `FieldExtensionContribution`
@@ -36452,7 +36472,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ManualOrderConfig`
           - `PartitionOptions`
           - `ProjectedRow`
+          - `RowDnd`
+          - `RowDndHierarchy`
+          - `RowDndProps`
+          - `RowDragConfig`
+          - `RowDropConfig`
+          - `RowDropContext`
+          - `RowDropEdge`
+          - `RowDropPlace`
           - `RowFilter`
+          - `RowSelectionConfig`
           - `RowTone`
           - `SectionBodyProps`
           - `SelectionConfig`
@@ -36462,6 +36491,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TableCellProps`
           - `UnavailableRule`
           - `ValueCodec`
+          - `ViewRowDropConfig`
           - `ViewState`
         - Exports (values):
           - `applyFilter`
@@ -36474,6 +36504,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineDataView`
           - `defineDataViewSources`
           - `defineItemActions`
+          - `DROP_TARGET_RING`
+          - `DROP_TARGET_WASH`
+          - `DropBackground`
+          - `DropInsertLine`
           - `EditableCell`
           - `EditableTreeLabel`
           - `FieldCell`
@@ -36509,6 +36543,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useGroupingClock`
           - `useGroupingRegistry`
           - `useHierarchyTree`
+          - `useIsBackgroundDropTarget`
           - `useIsChipField`
           - `useItemActionZones`
           - `useLivePagedValuePaging`
@@ -36520,6 +36555,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useResolveGroupings`
           - `useResolveOperatorSet`
           - `useResolveValueCodec`
+          - `useRowDnd`
+          - `useRowDropState`
           - `useRowFilter`
           - `useSortController`
       - Server:
@@ -36618,6 +36655,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ManualOrderConfig`
           - `PresetId`
           - `PropertyEntry`
+          - `RowDragConfig`
+          - `RowDropConfig`
+          - `RowDropContext`
+          - `RowDropEdge`
+          - `RowDropPlace`
+          - `RowSelectionConfig`
           - `RowTone`
           - `SectionCount`
           - `SectionsToolbar`
@@ -36630,6 +36673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ToolbarPartForms`
           - `ToolbarParts`
           - `ValueCodec`
+          - `ViewRowDropConfig`
           - `ViewState`
         - Exports (values):
           - `atLeastCount`
@@ -36654,27 +36698,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `splitFieldSections`
           - `UNGROUPED_FOLD_KEY`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --background`
-          - `ui/tokens/color-palette --card`
-          - `ui/tokens/color-palette --faint-foreground`
-          - `ui/tokens/color-palette --foreground`
-          - `ui/tokens/color-palette --muted`
-          - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/color-palette --primary-text`
-          - `ui/tokens/density --chrome-pad-x`
-          - `ui/tokens/density --control-height-sm`
-          - `ui/tokens/density --pad-row-compact-y`
-          - `ui/tokens/density --pad-row-x`
-          - `ui/tokens/density --pad-row-y`
-          - `ui/tokens/density --section-head-pad-bottom`
-          - `ui/tokens/density --section-head-pad-top`
-          - `ui/tokens/density --space-md`
-          - `ui/tokens/density --space-sm`
-          - `ui/tokens/density --space-xs`
+        - Uses tokens: 28 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ui/tokens/color-palette` ×10
+          - `ui/tokens/density` ×10
+          - `ui/tokens/type-scale` ×5
+          - `ui/tokens/shape` ×2
           - `ui/tokens/shadow --shadow`
-          - `ui/tokens/shape --spacing`
-          - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by: 96 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
           - `apps` ×22
@@ -36916,8 +36945,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 44 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
-              - `primitives/data-view` ×24
+            - Uses: 51 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+              - `primitives/data-view` ×31
               - `primitives/rank-reorder` ×3
               - `primitives/css/spacing` ×2
               - `primitives/collapsible.FoldMotion`
@@ -36943,6 +36972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --section-body-pad-top`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xl`
+              - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
           - Core:
             - Exports (types): `ListViewOptions`
@@ -36968,9 +36998,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: 58 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
-              - `primitives/data-view` ×26
-              - `primitives/tree` ×17
+            - Uses: 66 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
+              - `primitives/data-view` ×33
+              - `primitives/tree` ×18
               - `primitives/data-table` ×6
               - `primitives/rank-reorder` ×3
               - `primitives/css/badge.Badge`
@@ -36983,7 +37013,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/color-palette --primary`
               - `ui/tokens/color-palette --ring`
               - `ui/tokens/density --chrome-pad-x`
               - `ui/tokens/density --tree-pill-indent`
@@ -37114,6 +37143,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SetRowOrderBody`
             - Exports (values):
               - `applyMove`
+              - `computeInsertWrites`
               - `computeMoveWrites`
               - `rowOrder`
               - `RowOrderRowSchema`
@@ -37987,8 +38017,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 115 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×38
+        - Imported by: 116 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×39
           - `primitives` ×21
           - `conversations` ×20
           - `page` ×7
@@ -38090,8 +38120,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
-          - `primitives` ×32
+        - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+          - `primitives` ×33
           - `apps` ×22
           - `page` ×4
           - `conversations` ×2
@@ -38392,8 +38422,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 244 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×68
+        - Imported by: 245 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×69
           - `conversations` ×42
           - `debug` ×23
           - `tasks` ×22
@@ -39443,6 +39473,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/ssh-setup`
               - `apps/desktop/wallpaper`
               - `apps/events/sources`
+              - `apps/file-explorer/browser`
               - `apps/home/app-cards`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/transcription`
@@ -41142,7 +41173,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `Tree.Disclosure`
         - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-        - Uses: 26 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/primitives/plugins/tree/REFERENCE.md`](../plugins/primitives/plugins/tree/REFERENCE.md)
           - `primitives/css/ui-kit` ×6
           - `primitives/collapsible` ×2
           - `primitives/row-actions` ×2
@@ -41156,6 +41187,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
+          - `primitives/latest-ref.useLatestRef`
           - `primitives/link-gesture.linkProps`
           - `primitives/loading.Loading`
           - `primitives/rank-reorder.useRankReorderItem`
@@ -41166,6 +41198,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FlatExpandAll`
           - `RowControls`
           - `RowMenu`
+          - `RowSelectionClick`
+          - `SpringOpen`
           - `TreeContextValue`
           - `TreeDisclosureContribution`
           - `TreeDisclosureToggleProps`
@@ -41182,6 +41216,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `groupFoldAction`
           - `RowControlsProvider`
+          - `SPRING_OPEN_MS`
           - `Tree`
           - `TreeChildPlaceholder`
           - `TreeDisclosureToggle`
@@ -41199,6 +41234,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useOptionalRowControls`
           - `useOptionalTreeContext`
           - `useRowControls`
+          - `useSpringOpen`
           - `useTreeContext`
           - `useTreeKeyboard`
           - `useTreeModel`
@@ -41216,6 +41252,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LazyChildren`
           - `RowMenuHelpers`
           - `RowMenuItem`
+          - `RowSelectionGesture`
+          - `RowSelectionState`
           - `TreeChildrenState`
           - `TreeDisclosureProps`
           - `TreeKeyMove`
@@ -41224,9 +41262,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `buildTree`
           - `childPlaceholder`
           - `computeDrop`
+          - `extendTarget`
           - `flatNodeIds`
           - `flattenVisible`
           - `isDescendant`
+          - `nextRowSelection`
           - `resolveDropParent`
           - `selectionRoots`
           - `subtreeIds`
@@ -41754,8 +41794,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Slots: `ReorderSlots.AreaEditor`
     - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
-    - Contributes: 244 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×244
+    - Contributes: 245 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×245
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -41790,8 +41830,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderSlots`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 243 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×243
+    - Contributes: 244 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×244
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -43494,8 +43534,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by: 21 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
-          - `apps` ×7
+        - Imported by: 22 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+          - `apps` ×8
           - `conversations` ×2
           - `page` ×2
           - `primitives` ×2

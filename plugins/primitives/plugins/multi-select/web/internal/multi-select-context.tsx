@@ -1,4 +1,8 @@
 import { createContext, useContext, useReducer, type Dispatch } from "react";
+import {
+  nextRowSelection,
+  type RowSelectionGesture,
+} from "@plugins/primitives/plugins/tree/core";
 
 export type MultiSelectState = {
   orderedIds: readonly string[];
@@ -24,7 +28,9 @@ const MultiSelectContext = createContext<MultiSelectContextValue | null>(null);
 export function useMultiSelectContext(): MultiSelectContextValue {
   const ctx = useContext(MultiSelectContext);
   if (!ctx)
-    throw new Error("useMultiSelect* must be used inside <MultiSelectProvider>");
+    throw new Error(
+      "useMultiSelect* must be used inside <MultiSelectProvider>",
+    );
   return ctx;
 }
 
@@ -38,37 +44,26 @@ function shallowEqual(a: readonly string[], b: readonly string[]): boolean {
   return true;
 }
 
-function sameMembers(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
-  if (a.size !== b.size) return false;
-  for (const id of a) {
-    if (!b.has(id)) return false;
-  }
-  return true;
-}
-
-function toggleRange(
+/**
+ * The selection half of the state, moved by the tree primitive's ONE row
+ * selection reducer (`nextRowSelection`, tree/core) — the range and anchor
+ * rules a DataView's Finder-style selection uses too. `isActive` follows the
+ * set; the reducer's identity bail-out (same members, same anchor → the same
+ * object) becomes this reducer's.
+ */
+function withSelection(
   state: MultiSelectState,
-  id: string,
-): Set<string> {
-  const { orderedIds, anchorId, selectedIds } = state;
-  if (!anchorId) return new Set([...selectedIds, id]);
-
-  const anchorIdx = orderedIds.indexOf(anchorId);
-  const targetIdx = orderedIds.indexOf(id);
-  if (anchorIdx === -1 || targetIdx === -1) {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
-  }
-
-  const lo = Math.min(anchorIdx, targetIdx);
-  const hi = Math.max(anchorIdx, targetIdx);
-  const next = new Set(selectedIds);
-  for (let i = lo; i <= hi; i++) {
-    next.add(orderedIds[i]!);
-  }
-  return next;
+  gesture: RowSelectionGesture,
+): MultiSelectState {
+  const prev = { selected: state.selectedIds, anchor: state.anchorId };
+  const next = nextRowSelection(prev, gesture, state.orderedIds);
+  if (next === prev) return state;
+  return {
+    ...state,
+    selectedIds: new Set(next.selected),
+    anchorId: next.anchor,
+    isActive: next.selected.size > 0,
+  };
 }
 
 export function multiSelectReducer(
@@ -76,84 +71,46 @@ export function multiSelectReducer(
   action: MultiSelectAction,
 ): MultiSelectState {
   switch (action.type) {
-    case "TOGGLE": {
-      const { id, shiftKey } = action;
-
-      if (shiftKey) {
-        const nextSelected = toggleRange(state, id);
-        return {
-          ...state,
-          selectedIds: nextSelected,
-          isActive: nextSelected.size > 0,
-        };
-      }
-
-      // Plain click or meta/ctrl click — toggle single item
-      const next = new Set(state.selectedIds);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return {
-        ...state,
-        selectedIds: next,
-        anchorId: id,
-        isActive: next.size > 0,
-      };
-    }
+    case "TOGGLE":
+      // A checkbox's shift-click ADDS the span to what is checked; a plain or
+      // meta/ctrl click toggles the one box.
+      return withSelection(
+        state,
+        action.shiftKey
+          ? { kind: "range", id: action.id, additive: true }
+          : { kind: "toggle", id: action.id },
+      );
 
     case "SET_RANGE": {
       // Replace the selection with exactly the contiguous range
       // [anchorId..targetId] (document-style range select, as opposed to the
       // additive TOGGLE+shift behavior). No-op if either id is unknown.
-      const { anchorId, targetId } = action;
-      const anchorIdx = state.orderedIds.indexOf(anchorId);
-      const targetIdx = state.orderedIds.indexOf(targetId);
-      if (anchorIdx === -1 || targetIdx === -1) return state;
-      const lo = Math.min(anchorIdx, targetIdx);
-      const hi = Math.max(anchorIdx, targetIdx);
-      const next = new Set<string>();
-      for (let i = lo; i <= hi; i++) next.add(state.orderedIds[i]!);
+      //
       // A range drag re-dispatches the SAME range many times a second — once per
       // pointermove, and once per animation frame while the pointer sits parked
-      // at a scrolling viewport edge. Returning the identical state object lets
-      // React bail out of the render entirely; without it every row in the list
-      // re-renders at 60fps for a selection that did not change. The anchor is
-      // part of what this case writes (extendTo / shift-arrow read it), so an
-      // identical set under a moved anchor is still a real change.
-      if (sameMembers(state.selectedIds, next) && state.anchorId === anchorId)
-        return state;
-      return {
-        ...state,
-        selectedIds: next,
-        anchorId,
-        isActive: next.size > 0,
-      };
-    }
-
-    case "SELECT_ALL": {
-      const all = new Set(state.orderedIds);
-      return {
-        ...state,
-        selectedIds: all,
-        isActive: all.size > 0,
-      };
-    }
-
-    case "CLEAR_ALL":
-      // Same bail, cheaper test: this case writes exactly these three keys, so
-      // an already-cleared state has nothing to write and clearing twice must
-      // not re-render the list.
+      // at a scrolling viewport edge. The reducer hands back the identical state
+      // object then, so React bails out of the render entirely; without it every
+      // row in the list re-renders at 60fps for a selection that did not change.
+      // The anchor is part of what this case writes (extendTo / shift-arrow read
+      // it), so an identical set under a moved anchor is still a real change.
+      const { anchorId, targetId } = action;
       if (
-        state.selectedIds.size === 0 &&
-        state.anchorId === null &&
-        !state.isActive
+        !state.orderedIds.includes(anchorId) ||
+        !state.orderedIds.includes(targetId)
       )
         return state;
-      return {
-        ...state,
-        selectedIds: new Set(),
-        anchorId: null,
-        isActive: false,
-      };
+      const anchored =
+        state.anchorId === anchorId
+          ? state
+          : { ...state, anchorId, isActive: state.selectedIds.size > 0 };
+      return withSelection(anchored, { kind: "range", id: targetId });
+    }
+
+    case "SELECT_ALL":
+      return withSelection(state, { kind: "all" });
+
+    case "CLEAR_ALL":
+      return withSelection(state, { kind: "clear" });
 
     case "SET_ORDERED_IDS": {
       if (shallowEqual(state.orderedIds, action.ids)) return state;

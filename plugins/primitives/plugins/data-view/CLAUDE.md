@@ -404,8 +404,20 @@ interface ManualOrderConfig<TRow> {
   onReseat?: (id: string, dest: {
     groupKey: string | null; targetId: string; zone: "before" | "after";
   }) => void | Promise<void>;
+  // place keys (present rows, or rows not created yet) as one run next to a row
+  onInsert?: (keys: readonly string[], dest: {
+    targetId: string; zone: "before" | "after";
+  }) => Promise<void>;
 }
 ```
+
+`onInsert` is what a native `rowDrop` under `placement: "between"` reaches
+(see "Row selection, and native row drag and drop"): a drop from outside the
+view that must land in the gap it was dropped in. Its keys may name rows that
+do not exist yet — view-order ranks them now (`computeInsertWrites`), so the
+consumer writes its data afterwards and the new rows render where they were
+dropped. It rides `usePendingMoveOverlay` untouched (the wrapper spreads the
+config); the overlay only holds `onMove` drops.
 
 ### Two sources, one rule
 
@@ -1553,6 +1565,123 @@ it (`afterOpen`) — a host's business with its own chrome (the build popover
 closing itself), never instead of where the row goes. A row no owner sends
 anywhere activates only through the list's own.
 
+## Row selection, and native row drag and drop
+
+Three props, independent of each other and of the checkbox `selection`, for a
+Finder-class surface (the file explorer is the first). All three are generic
+over `TRow` and know nothing about what the rows are.
+
+### `rowSelection` — a set, not a single id
+
+```ts
+interface RowSelectionConfig {
+  selected: ReadonlySet<string>;   // row keys
+  anchor: string | null;           // what a range grows from
+  onChange(next: { selected: ReadonlySet<string>; anchor: string | null }): void;
+}
+```
+
+Controlled by the consumer. The rows are the gestures: click (that row, the
+new anchor — and the row's usual select / activation still runs), ⌘/Ctrl-click
+(toggle, selection only: it is no longer the new-tab link gesture there;
+middle-click still is), Shift-click (the range from the anchor, replacing the
+set), Shift+↑/↓ (extend from the focused row; focus moves, `onSelect` does
+not run), ⌘/Ctrl+A (every painted row), Escape (clear; the key still
+propagates to the host's own Escape). Every change is the next whole state
+from the tree primitive's ONE reducer, `nextRowSelection` (tree/core), over
+the rows **as painted** — a collapsed folder's children are never in a range.
+`selectedRowId` stays the primary row; with `rowSelection` the highlight and
+`aria-selected` come from the set, and the grid says `aria-multiselectable`.
+Honoured by the nested table (its rows become focusable, so the keys work
+without an `onRowOpen`).
+
+### `rowDrag` / `rowDrop` — HTML5 drag and drop, not dnd-kit
+
+```ts
+rowDrag?: { write(rows: readonly TRow[], dt: DataTransfer): void };
+rowDrop?: {
+  accepts(row: TRow, types: readonly string[], edge: RowDropEdge): boolean;
+  onDrop(row: TRow, dt: DataTransfer, edge: RowDropEdge, ctx: RowDropContext): void | Promise<void>;
+  placement?: "into" | "between";         // default "into"
+  background?: {
+    accepts(types: readonly string[], at: { viewId: string; group: string | null }): boolean;
+    onDrop(dt: DataTransfer, at: { viewId: string; group: string | null }, ctx: RowDropContext): void | Promise<void>;
+  };
+  dropEffect?: "move" | "copy" | "link";   // default "move"
+  springOpenMs?: number;                   // default 700 (tree's SPRING_OPEN_MS)
+};
+// RowDropEdge = "into" | "before" | "after"
+// RowDropContext = { order: { insert(keys: readonly string[]): Promise<void> } | null }
+```
+
+Native, deliberately, rather than the `rank-reorder` dnd-kit machinery that
+manual order and `hierarchy.onMove` use: it is not a reorder (it carries rows
+somewhere else), it must cross plugins (one DataView's rows dropped on
+another's) — the `DataTransfer` MIME type is the whole contract, no context to
+hoist — it works under any field sort, and it is the path to OS drag-out.
+
+- **Drag.** The grabbed row carries the `rowSelection` set when it is in it
+  (painted order), else itself; more than one draws an "N items" drag image.
+  Nested table only — and never beside `hierarchy.onMove` (two gestures
+  claiming one row's drag: it throws). A list row's drag is its manual order.
+- **Placement: into, or between.** `"into"` (the folder tree): an accepting
+  row reads highlighted (the drop-into ring, `DROP_TARGET_RING`) and takes
+  the drop, `edge: "into"`. `"between"` (an ordered list a drop is inserted
+  into — the Favorites sidebar): the drop goes in the gap at the nearer half
+  of the row under the pointer, `edge: "before" | "after"`, drawn as the
+  tree's insertion line (`DropInsertLine`), never a ring — a ring there reads
+  as "into this row". `accepts` sees the edge, so a list can refuse a gap.
+  List view takes either; the nested table drops into.
+- **The drop lands where the line was.** Under `"between"`, while the view
+  renders in its manual order (no sort overrides it) and that order has
+  `onInsert`, `ctx.order.insert(keys)` places those row keys, in order, in
+  the drop's gap — beside the row at its edge, or after the section's last
+  row for a background drop. The keys may be rows the consumer creates in
+  response (a pinned favorite): insert first, then write the data. Otherwise
+  (`"into"`, a sort set, no manual order) `ctx.order` is `null` and the
+  consumer places the rows itself — at the end, typically. `useRowDnd` builds
+  it from the view's `order` (`DataViewRenderProps.manualOrder`) and the
+  section's last key (`DropBackground lastKey`).
+- **Fall-through.** A row that does not accept lets the drop fall through to
+  `background`; with nothing accepting, the cursor says no-drop. **Under a
+  hierarchy (nested table)** it goes UP instead: to the nearest accepting
+  ancestor — a file row's drop is its folder's, the folder ringed and its
+  visible rows washed (`DROP_TARGET_WASH`, `useRowDropState` → `"inside"`) —
+  and from the roots to `background` (or, with none, to whatever box around
+  the view takes it, a pane). Under `"between"`, `background` reads as the
+  gap after the section's last row (the insertion line at its foot).
+- **Own rows cancel.** A drag of the view's own rows is no drop over a dragged
+  row, inside one, or (under a hierarchy) onto the parent already holding
+  every dragged row — the background too, for rows that are all roots. Such a
+  drop never reaches `onDrop`; the drag cancels, so dropping a row back where
+  it was does nothing.
+- The data is not readable until the drop, so `accepts` decides by MIME type;
+  read the `DataTransfer` in `onDrop` before its first `await`.
+- **Spring-open (nested table).** A collapsed accepting row with children —
+  or a lazy row that may have some — opens after the drag rests on it
+  `springOpenMs`; when the drag ends, every folder it opened closes again
+  unless the drop landed inside it (`useSpringOpen`, tree/web).
+- **Background.** The view's empty space: the nested table's box around its
+  rows (`group: null`), each list section's band (its group key). The host
+  binds the view instance in (`at.viewId`), so on a `sections` surface the
+  consumer knows which section's empty space took it; a view only receives
+  `ViewRowDropConfig` (its group). It covers the view's own box — a pane's
+  empty area below a short listing is the pane's.
+
+The plumbing is one hook every view shares (`useRowDnd`, web barrel —
+handlers per row, a per-view store of where the drag is, read per row by
+`useRowDropState` — `into` / `before` / `after` / `inside` / `null` — so a
+moving drag re-renders the rows it leaves and enters, never the list; a
+hierarchical view passes `hierarchy: { parentOf, rowOf }` for the fall-up and
+the cancel rules) and two components (`DropBackground`, `DropInsertLine`). A
+new view honouring the props spreads `dnd.rowProps(key, row)` on its ONE row
+element (a `relative` box, for the line) and wraps a section in
+`DropBackground`.
+
+Rows of the nested table and of the tree chrome are `select-none`: a
+press-and-drag across rows is a row gesture, never a text selection (an inline
+editor inside is a form control and keeps its own).
+
 ## Row tone: a row can read as inactive
 
 `DataViewProps.rowTone` is `(row) => "default" | "muted"`. `"muted"` dims the
@@ -2596,6 +2725,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSources`
     - `DataViewSwitcherProps`
     - `DataViewViewportSink`
+    - `DropTargetProps`
     - `FieldCellProps`
     - `FieldDef`
     - `FieldExtensionContribution`
@@ -2642,7 +2772,16 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ManualOrderConfig`
     - `PartitionOptions`
     - `ProjectedRow`
+    - `RowDnd`
+    - `RowDndHierarchy`
+    - `RowDndProps`
+    - `RowDragConfig`
+    - `RowDropConfig`
+    - `RowDropContext`
+    - `RowDropEdge`
+    - `RowDropPlace`
     - `RowFilter`
+    - `RowSelectionConfig`
     - `RowTone`
     - `SectionBodyProps`
     - `SelectionConfig`
@@ -2652,6 +2791,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `TableCellProps`
     - `UnavailableRule`
     - `ValueCodec`
+    - `ViewRowDropConfig`
     - `ViewState`
   - Exports (values):
     - `applyFilter`
@@ -2664,6 +2804,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `defineDataView`
     - `defineDataViewSources`
     - `defineItemActions`
+    - `DROP_TARGET_RING`
+    - `DROP_TARGET_WASH`
+    - `DropBackground`
+    - `DropInsertLine`
     - `EditableCell`
     - `EditableTreeLabel`
     - `FieldCell`
@@ -2699,6 +2843,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useGroupingClock`
     - `useGroupingRegistry`
     - `useHierarchyTree`
+    - `useIsBackgroundDropTarget`
     - `useIsChipField`
     - `useItemActionZones`
     - `useLivePagedValuePaging`
@@ -2710,6 +2855,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useResolveGroupings`
     - `useResolveOperatorSet`
     - `useResolveValueCodec`
+    - `useRowDnd`
+    - `useRowDropState`
     - `useRowFilter`
     - `useSortController`
 - Server:
@@ -2808,6 +2955,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ManualOrderConfig`
     - `PresetId`
     - `PropertyEntry`
+    - `RowDragConfig`
+    - `RowDropConfig`
+    - `RowDropContext`
+    - `RowDropEdge`
+    - `RowDropPlace`
+    - `RowSelectionConfig`
     - `RowTone`
     - `SectionCount`
     - `SectionsToolbar`
@@ -2820,6 +2973,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ToolbarPartForms`
     - `ToolbarParts`
     - `ValueCodec`
+    - `ViewRowDropConfig`
     - `ViewState`
   - Exports (values):
     - `atLeastCount`
@@ -2844,27 +2998,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `splitFieldSections`
     - `UNGROUPED_FOLD_KEY`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --background`
-    - `ui/tokens/color-palette --card`
-    - `ui/tokens/color-palette --faint-foreground`
-    - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --muted`
-    - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --primary-text`
-    - `ui/tokens/density --chrome-pad-x`
-    - `ui/tokens/density --control-height-sm`
-    - `ui/tokens/density --pad-row-compact-y`
-    - `ui/tokens/density --pad-row-x`
-    - `ui/tokens/density --pad-row-y`
-    - `ui/tokens/density --section-head-pad-bottom`
-    - `ui/tokens/density --section-head-pad-top`
-    - `ui/tokens/density --space-md`
-    - `ui/tokens/density --space-sm`
-    - `ui/tokens/density --space-xs`
+  - Uses tokens: 28 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×10
+    - `ui/tokens/density` ×10
+    - `ui/tokens/type-scale` ×5
+    - `ui/tokens/shape` ×2
     - `ui/tokens/shadow --shadow`
-    - `ui/tokens/shape --spacing`
-    - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: 96 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×30
     - `apps` ×22

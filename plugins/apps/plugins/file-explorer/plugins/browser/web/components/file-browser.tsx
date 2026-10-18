@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type DragEvent,
   type ReactNode,
 } from "react";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
@@ -42,10 +43,17 @@ import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import type { HostFsEntry } from "@plugins/infra/plugins/host-fs/core";
+import {
+  hasHostPaths,
+  readHostPaths,
+  type HostFsEntry,
+} from "@plugins/infra/plugins/host-fs/core";
+import type { RowSelectionState } from "@plugins/primitives/plugins/tree/core";
+import { DROP_TARGET_RING } from "@plugins/primitives/plugins/data-view/web";
 import {
   absolutePath,
   baseName,
+  displayPath,
   formatCount,
   HOME,
   isWithin,
@@ -60,7 +68,8 @@ import {
   useHomeDir,
   useRootVolumeName,
 } from "../internal/host-path-source";
-import { useListings } from "../internal/listings";
+import { isOnDisk, useListings, type Listings } from "../internal/listings";
+import { useMoveInto } from "../internal/move-into";
 import {
   useLocalNavigator,
   type ExplorerNavigator,
@@ -263,7 +272,13 @@ function Listing({
 }): ReactNode {
   const { dir, open } = nav.location;
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string | null>(open);
+  // The selected rows, by path: Finder's set and the anchor a range grows
+  // from. The anchor is the primary row — the one the status bar names.
+  const [selection, setSelection] = useState<RowSelectionState>(() => ({
+    selected: new Set(open === null ? [] : [open]),
+    anchor: open,
+  }));
+  const selected = selection.anchor;
   const treeRef = useRef<HTMLElement | null>(null);
   const rootName = useRootVolumeName();
   const source = useMemo(
@@ -271,6 +286,20 @@ function Listing({
     [home, rootName, root],
   );
   const { listings, request } = useListings(dir);
+  const moveInto = useMoveInto();
+  // The paths this listing is dragging right now: dropping them back into
+  // the folder they sit in is no move, so the pane does not offer it.
+  const dragging = useRef<readonly string[] | null>(null);
+  const onDragPaths = useCallback((paths: readonly string[]) => {
+    dragging.current = paths;
+    window.addEventListener(
+      "dragend",
+      () => {
+        dragging.current = null;
+      },
+      { once: true, capture: true },
+    );
+  }, []);
   const publishControls = ExplorerControlsSlot.usePublishRef();
 
   // Show hidden files, then every lens hide rule that is not switched to show.
@@ -340,11 +369,57 @@ function Listing({
   // so ⌘/middle-click previews it in a new browser tab instead. A folder's
   // click descends (the tree's `openOnActivate`), through `onOpen`.
   const rowActivation = (row: EntryRow): Activation => {
-    const select = () => setSelected(row.path);
+    const select = () => setSelection(only(row.path));
     return row.browsable ? select : beforeOpen(fileAt(row.path), select);
   };
   const onOpen = (row: EntryRow) =>
     runActivation(row.browsable ? nav.to(row.path, open) : fileAt(row.path));
+
+  // A ⌘/Shift-click changes the set only; the preview follows its anchor
+  // when that is a file the gesture added (a plain click opens it itself).
+  const onSelectionChange = (next: RowSelectionState) => {
+    setSelection(next);
+    const anchor = next.anchor;
+    if (
+      fileTarget === undefined &&
+      next.selected.size > 1 &&
+      anchor !== null &&
+      anchor !== open &&
+      next.selected.has(anchor) &&
+      isFile(listings, anchor, home)
+    ) {
+      runActivation(nav.fileTo(anchor));
+    }
+  };
+
+  // Host paths dropped on a folder (`target`, display form) move into it.
+  // The drop's data is read here, before anything is awaited.
+  const dropInto = (target: string, dt: DataTransfer) => {
+    const read = readHostPaths(dt);
+    if (read.kind === "absent") return;
+    if (read.kind === "malformed") {
+      throw new Error(
+        `file-explorer: malformed host-paths drop: ${read.error}`,
+      );
+    }
+    void moveInto(read.paths, absolutePath(target, home)).then((moved) => {
+      if (moved.length === 0) return;
+      const gone = new Set(moved.map((p) => displayPath(p, home)));
+      setSelection((s) => ({
+        selected: new Set([...s.selected].filter((p) => !gone.has(p))),
+        anchor: s.anchor !== null && gone.has(s.anchor) ? null : s.anchor,
+      }));
+      if (open !== null && gone.has(open)) runActivation(nav.fileTo(null));
+    });
+  };
+  // The listing's own empty space — below the rows too — is this folder.
+  const background = useBackgroundDrop({
+    accepts: (types) =>
+      hasHostPaths(types) &&
+      isOnDisk(listings, dir) &&
+      !allIn(dragging.current, absolutePath(dir, home)),
+    onDrop: (dt) => dropInto(dir, dt),
+  });
 
   const rootListing = listings.get(dir);
   const result = rootListing?.result ?? null;
@@ -387,6 +462,10 @@ function Listing({
         rowActivation={rowActivation}
         onOpen={onOpen}
         emptyState={<Placeholder>This folder is empty</Placeholder>}
+        home={home}
+        rowSelection={{ ...selection, onChange: onSelectionChange }}
+        onDragPaths={onDragPaths}
+        onDropInto={dropInto}
       />
     );
   }
@@ -476,7 +555,14 @@ function Listing({
         </Bar>
       }
       body={
-        <Scroll ref={treeRef} className="h-full rail-x-sm">
+        <Scroll
+          ref={treeRef}
+          {...background.props}
+          className={cn(
+            "h-full rail-x-sm",
+            background.over && cn(DROP_TARGET_RING, "ring-inset"),
+          )}
+        >
           {body}
         </Scroll>
       }
@@ -485,6 +571,7 @@ function Listing({
           dir={dir}
           count={entries?.length ?? null}
           selected={selected}
+          selectedCount={selection.selected.size}
         />
       }
     />
@@ -540,16 +627,20 @@ function StatusBar({
   dir,
   count,
   selected,
+  selectedCount,
 }: {
   dir: string;
   count: number | null;
   selected: string | null;
+  selectedCount: number;
 }): ReactNode {
   const left = [
     count === null ? null : formatCount(count),
-    selected !== null && isWithin(selected, dir)
-      ? `“${baseName(selected)}” selected`
-      : null,
+    selectedCount > 1
+      ? `${selectedCount} selected`
+      : selected !== null && isWithin(selected, dir)
+        ? `“${baseName(selected)}” selected`
+        : null,
   ]
     .filter((s) => s !== null)
     .join(" · ");
@@ -584,4 +675,91 @@ function focusRow(
   const target =
     rows.find((r) => r.dataset.treeId === selected) ?? rows[0] ?? null;
   target?.focus();
+}
+
+/** Exactly `path`, which is the anchor — kept as is when it already is. */
+function only(path: string): (s: RowSelectionState) => RowSelectionState {
+  return (s) =>
+    s.anchor === path && s.selected.size === 1 && s.selected.has(path)
+      ? s
+      : { selected: new Set([path]), anchor: path };
+}
+
+/** Whether `path` (display form) is a listed entry that opens as a file. */
+function isFile(listings: Listings, path: string, home: string): boolean {
+  const parent = parentPath(path, home);
+  if (parent === null) return false;
+  const result = listings.get(parent)?.result;
+  if (result?.kind !== "ok") return false;
+  const entry = result.entries.find((e) => e.name === baseName(path));
+  return (
+    entry !== undefined && entry.kind !== "dir" && entry.archive === undefined
+  );
+}
+
+/** Whether every one of `paths` (absolute) sits directly in `dir`. */
+function allIn(paths: readonly string[] | null, dir: string): boolean {
+  if (paths === null || paths.length === 0) return false;
+  return paths.every((p) => {
+    const cut = p.lastIndexOf("/");
+    return (cut <= 0 ? "/" : p.slice(0, cut)) === dir;
+  });
+}
+
+/**
+ * An element as a native drop target for whatever its children let through:
+ * a row that takes the drop stops it, so this sees only the rest — the space
+ * between and below the rows. `over` while a drag it accepts is over it.
+ */
+function useBackgroundDrop({
+  accepts,
+  onDrop,
+}: {
+  accepts: (types: readonly string[]) => boolean;
+  onDrop: (dt: DataTransfer) => void;
+}): {
+  over: boolean;
+  props: {
+    onDragOverCapture: () => void;
+    onDropCapture: () => void;
+    onDragOver: (e: DragEvent<HTMLElement>) => void;
+    onDragLeave: (e: DragEvent<HTMLElement>) => void;
+    onDrop: (e: DragEvent<HTMLElement>) => void;
+  };
+} {
+  const [over, setOver] = useState(false);
+  const types = (e: DragEvent<HTMLElement>) => Array.from(e.dataTransfer.types);
+  return {
+    over,
+    props: {
+      // A child taking the drag (an accepting row) stops it before it bubbles
+      // here: the capture pass clears the highlight first, and the bubble pass
+      // sets it again only when nothing below took it.
+      onDragOverCapture: () => setOver(false),
+      onDropCapture: () => setOver(false),
+      onDragOver: (e) => {
+        if (!accepts(types(e))) {
+          setOver(false);
+          return;
+        }
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        setOver(true);
+      },
+      onDragLeave: (e) => {
+        // A leave onto a child is no leave (no `relatedTarget` in Chromium:
+        // what is under the pointer says where it went).
+        const to =
+          e.relatedTarget ?? document.elementFromPoint(e.clientX, e.clientY);
+        if (to instanceof Node && e.currentTarget.contains(to)) return;
+        setOver(false);
+      },
+      onDrop: (e) => {
+        setOver(false);
+        if (!accepts(types(e))) return;
+        e.preventDefault();
+        onDrop(e.dataTransfer);
+      },
+    },
+  };
 }

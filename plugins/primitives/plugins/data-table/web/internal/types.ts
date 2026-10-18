@@ -147,6 +147,12 @@ export interface DataTableTree<TRow> {
    * of its indent. Ignored in `grid` (a ruled row has no pill to move).
    */
   pillIndent?: (row: TRow) => string;
+  /**
+   * Several rows can be selected at once (a Finder-style row selection): the
+   * grid says so (`aria-multiselectable`), and each row states its own
+   * selection through its decoration's `selected`.
+   */
+  multiSelectable?: boolean;
 }
 
 /**
@@ -300,6 +306,12 @@ export interface DataTableRowDecoration {
    * presentation's own selected tint, which the sticky first cell follows.
    */
   highlighted?: boolean;
+  /**
+   * The row reads selected — in place of `rowKey(row) === selectedRowId` —
+   * when the decoration knows better: a row of a multi-row selection. Absent →
+   * the table's own answer.
+   */
+  selected?: boolean;
   /**
    * Wraps everything drawn INSIDE the row — its cells, its action clusters, its
    * overlay — so they render under a context the row provides (a nested row's

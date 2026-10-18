@@ -9,6 +9,9 @@ import {
 } from "@plugins/primitives/plugins/data-table/web";
 import {
   DataViewGroupHeader,
+  DROP_TARGET_RING,
+  DROP_TARGET_WASH,
+  DropBackground,
   EditableTreeLabel,
   FieldCell,
   leadingSlot,
@@ -18,7 +21,9 @@ import {
   resolveBodyFields,
   rowToneClass,
   useHierarchyTree,
+  useRowDropState,
   useItemActionZones,
+  useRowDnd,
   useResolveCell,
   useResolveCellEditor,
   DATA_VIEW_HEADER_OFFSET_VAR,
@@ -26,10 +31,13 @@ import {
   type FieldDef,
   type ItemActionsDescriptor,
   type ProjectedRow,
+  type RowDragConfig,
+  type ViewRowDropConfig,
 } from "@plugins/primitives/plugins/data-view/web";
-import type {
-  FlatTreeLine,
-  RowMenuHelpers,
+import {
+  nextRowSelection,
+  type FlatTreeLine,
+  type RowMenuHelpers,
 } from "@plugins/primitives/plugins/tree/core";
 import {
   groupFoldAction,
@@ -43,6 +51,7 @@ import {
   TreeRowActions,
   TreeToolbar,
   useFlatExpandAll,
+  useSpringOpen,
   treeRowGestures,
   treeRowIndentStyle,
   useTreeKeyboard,
@@ -219,17 +228,96 @@ export function NestedTableView(
     guides: options.guides,
     multiSelect: !!props.selection,
   });
+  // Finder-style selection, native drag and drop: type-erased like `options`.
+  const rowSelection = props.rowSelection;
+  const rowDrag = props.rowDrag as RowDragConfig<unknown> | undefined;
+  const rowDrop = props.rowDrop as ViewRowDropConfig<unknown> | undefined;
   // Arrow keys walk the painted lines. Rows are focusable exactly when the
-  // view has an open gesture, so that is what turns the keys on (as in the tree).
+  // view has an open gesture or a row selection, so that is what turns the
+  // keys on (as in the tree).
   const keyboard = useTreeKeyboard({
     flatNodes: model.flat,
-    enabled: !!treeArgs.onOpen,
+    enabled: !!treeArgs.onOpen || !!rowSelection,
     selectedId: props.selectedRowId,
     onSelect: treeArgs.onSelect,
     setExpanded: props.setExpanded,
     lazyChildren: treeArgs.lazyChildren,
+    rowSelection: rowSelection && {
+      state: rowSelection,
+      onChange: rowSelection.onChange,
+    },
   });
   const { canReorder, canCreate } = model.context;
+  if (rowDrag && canReorder) {
+    throw new Error(
+      "DataView nested table: `rowDrag` and `hierarchy.onMove` both claim the row's drag — " +
+        "a native drag carries rows elsewhere, a reorder moves them in the tree. Pass one.",
+    );
+  }
+
+  // The painted node lines by id: what a drag carries, and where a spring
+  // folder sits in the tree.
+  const nodeById = useMemo(() => {
+    const map = new Map<string, NodeLine["node"]>();
+    for (const line of model.flat) {
+      if (line.kind === "node") map.set(line.node.id, line.node);
+    }
+    return map;
+  }, [model.flat]);
+  const parentOf = useMemo(
+    () => new Map(hierarchy.rows.map((r) => [r.id, r.parentId])),
+    [hierarchy.rows],
+  );
+  const lazyChildren = treeArgs.lazyChildren;
+  const springOpen = useSpringOpen({
+    delayMs: rowDrop?.springOpenMs,
+    setExpanded: props.setExpanded,
+    isWithin: (id, ancestorId) => {
+      for (
+        let cur: string | null | undefined = id;
+        cur;
+        cur = parentOf.get(cur)
+      ) {
+        if (cur === ancestorId) return true;
+      }
+      return false;
+    },
+  });
+  const selectedIds = rowSelection?.selected;
+  const dnd = useRowDnd<unknown>({
+    rowDrag,
+    rowDrop,
+    // The grabbed row's selection when it is in it — painted order, real rows
+    // only (an alias is a second drawing) — else the grabbed row alone.
+    dragRows: (key) => {
+      const carried = selectedIds?.has(key)
+        ? model.orderedIds.filter((id) => selectedIds.has(id))
+        : [key];
+      return carried.flatMap((id) => {
+        const node = nodeById.get(id);
+        return node && !node.alias ? [{ key: id, row: node.__row }] : [];
+      });
+    },
+    // A drop over a row that takes none goes up to its nearest folder that
+    // does. A parent outside the rows (a scoped `rootId`) is the roots'.
+    hierarchy: {
+      parentOf: (key) => {
+        const p = parentOf.get(key);
+        return p != null && parentOf.has(p) ? p : null;
+      },
+      rowOf: (key) => nodeById.get(key)?.__row,
+    },
+    spring: {
+      open: springOpen,
+      springable: (key) => {
+        const node = nodeById.get(key);
+        if (!node || node.expanded) return false;
+        return (
+          node.children.length > 0 || (lazyChildren?.hasChildren(node) ?? false)
+        );
+      },
+    },
+  });
   // The toolbar's whole-table expand-all, over the rows in scope — the same
   // hook `TreeList` runs over its own.
   const viewExpandAll = useFlatExpandAll(model.scoped, props.setExpanded);
@@ -270,7 +358,11 @@ export function NestedTableView(
   );
 
   if (hierarchy.rows.length === 0 && props.emptyState !== undefined) {
-    return <>{props.emptyState}</>;
+    return (
+      <DropBackground dnd={dnd} group={null} lastKey={null}>
+        {props.emptyState}
+      </DropBackground>
+    );
   }
 
   // The label's per-row emphasis: the host's `rowTone`, then the surface's
@@ -363,6 +455,7 @@ export function NestedTableView(
       ) : null,
     containerRef: keyboard.containerRef,
     onKeyDown: keyboard.onKeyDown,
+    multiSelectable: !!rowSelection,
     // The first column's label over the rows' labels: a depth-0 row's lead
     // inset and disclosure slot (where the tree's aligned header put it).
     headerLeading: (label) => (
@@ -403,6 +496,16 @@ export function NestedTableView(
     const { childRef, dragSource } = controls;
     // A reference row has no position of its own: never a drag source.
     const draggable = canReorder && !node.alias;
+    // A native drag / drop row (`rowDrag` / `rowDrop`); an alias is neither.
+    const native =
+      dnd && !node.alias ? dnd.rowProps(node.id, node.__row) : null;
+    // `into`: the drop goes into this row; `inside`: into the folder holding it.
+    const dropState = useRowDropState(dnd, node.id);
+    const isDropTarget = dropState === "into";
+    // In a row selection, this row's own membership is its highlight.
+    const isSelected = rowSelection
+      ? rowSelection.selected.has(node.id)
+      : controls.isSelected;
     const dragRef = dragSource.ref;
     const ref = useCallback(
       (el: HTMLElement | null) => {
@@ -416,6 +519,21 @@ export function NestedTableView(
       selectHref: controls.selectHref,
       onOpen: controls.open,
       clickOpens: controls.clickOpens,
+      selection:
+        rowSelection && !node.alias
+          ? (gesture) => {
+              const next = nextRowSelection(
+                rowSelection,
+                gesture === "click"
+                  ? { kind: "click", id: node.id }
+                  : gesture === "toggle"
+                    ? { kind: "toggle", id: node.id }
+                    : { kind: "range", id: node.id },
+                model.orderedIds,
+              );
+              if (next !== rowSelection) rowSelection.onChange(next);
+            }
+          : undefined,
     });
     // The row's revealed cluster, from its own controls (`treeRowTrailing`,
     // the one `RowChrome` uses): `null` when it offers nothing, so no empty
@@ -441,10 +559,11 @@ export function NestedTableView(
         ...gestures,
         ...(draggable ? dragSource.attributes : {}),
         ...(draggable ? dragSource.listeners : {}),
+        ...native,
         role: "row",
         "aria-level": (line as NodeLine).depth + 1,
         "aria-expanded": controls.hasChildren ? controls.isOpen : undefined,
-        "aria-selected": controls.isSelected,
+        "aria-selected": isSelected,
         "data-tree-row": true,
         "data-tree-id": node.id,
         // An alias is a second drawing of a row the real node already marks.
@@ -453,11 +572,16 @@ export function NestedTableView(
       className: cn(
         // The named group the disclosure's hover reveal reads.
         "group/tree-row",
-        // A focusable row (one with an open gesture) is walked with the arrow
-        // keys, so the row the keys are on must show it.
-        controls.open && "focus-ring",
+        // A press-and-drag across rows is a row gesture (a selection, a
+        // drag), never a text selection. An inline editor in the row is a
+        // form control and keeps its own.
+        "select-none",
+        // A focusable row (one with an open gesture or a row selection) is
+        // walked with the arrow keys, so the row the keys are on must show it.
+        (controls.open || rowSelection) && "focus-ring",
         controls.isDragging && "opacity-40",
-        controls.isOverChild && "ring-1 ring-primary/40",
+        (controls.isOverChild || isDropTarget) && DROP_TARGET_RING,
+        (isDropTarget || dropState === "inside") && DROP_TARGET_WASH,
       ),
       // A nested row sits flush on its parent; a root stands apart.
       style:
@@ -465,7 +589,8 @@ export function NestedTableView(
           ? { marginTop: "var(--tree-root-gap)" }
           : undefined,
       // A drop onto the row nests under it: the row reads highlighted.
-      highlighted: controls.isOverChild,
+      highlighted: controls.isOverChild || isDropTarget,
+      selected: rowSelection ? isSelected : undefined,
       // Everything in the row reads its controls, as inside a `RowChrome`:
       // the trailing cluster, and any cell or item action asking
       // `useOptionalRowControls`.
@@ -650,7 +775,9 @@ export function NestedTableView(
               />
             </div>
           )}
-          {renderTable(activeId)}
+          <DropBackground dnd={dnd} group={null} lastKey={null}>
+            {renderTable(activeId)}
+          </DropBackground>
           {addLabel != null && (
             <div className="rail-follow">
               <TreeRootAdd

@@ -26,6 +26,15 @@ export interface Listing {
 /** Every listing a browser holds, by the path it was asked under. */
 export type Listings = ReadonlyMap<string, Listing>;
 
+/**
+ * Whether `dir` was listed from the disk itself — not from inside an archive
+ * (`within`), whose entries cannot be written to.
+ */
+export function isOnDisk(listings: Listings, dir: string): boolean {
+  const result = listings.get(dir)?.result;
+  return result?.kind === "ok" && result.within === undefined;
+}
+
 function toListing(query: UseQueryResult<HostFsListResult>): Listing {
   return {
     result: query.data ?? null,

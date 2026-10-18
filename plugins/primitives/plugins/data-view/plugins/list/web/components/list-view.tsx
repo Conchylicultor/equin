@@ -17,6 +17,9 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { TreeRowChrome } from "@plugins/primitives/plugins/tree/web";
 import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import {
+  DROP_TARGET_RING,
+  DropBackground,
+  DropInsertLine,
   FieldCell,
   GroupedSections,
   SectionBody,
@@ -32,6 +35,8 @@ import {
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
+  useRowDropState,
+  useRowDnd,
   type DataViewAggregateConfig,
   type DataViewRowEntry,
   type DataViewRenderProps,
@@ -40,6 +45,8 @@ import {
   type ItemActionProps,
   type ItemActionsDescriptor,
   type ManualOrderConfig,
+  type RowDnd,
+  type ViewRowDropConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import {
   RankReorderProvider,
@@ -131,6 +138,8 @@ interface ListRowConfig {
   rowTone: DataViewRenderProps<unknown>["rowTone"];
   revealed: ((p: ItemActionProps<unknown>) => ReactNode) | null;
   setExpanded: DataViewRenderProps<unknown>["setExpanded"];
+  /** Native drop targets (`rowDrop`): `null` when the view takes none. */
+  dnd: RowDnd<unknown> | null;
 }
 
 /** One row's props: the shared config plus what is this row's own. Each is a
@@ -160,7 +169,15 @@ interface ListEntryProps {
  * choice, not a conditional hook.
  */
 const ListEntry = memo(function ListEntry(props: ListEntryProps): ReactNode {
-  const node = listRowNode(props);
+  const row = listRowNode(props);
+  const { dnd } = props.config;
+  const node = dnd ? (
+    <DropRow dnd={dnd} rowKey={props.rowKey} row={props.row}>
+      {row}
+    </DropRow>
+  ) : (
+    row
+  );
   if (props.rank == null) return node;
   return (
     <ManualOrderRow id={props.rowKey} rank={props.rank} group={props.group}>
@@ -168,6 +185,38 @@ const ListEntry = memo(function ListEntry(props: ListEntryProps): ReactNode {
     </ManualOrderRow>
   );
 });
+
+/**
+ * A row as a native drop target (`rowDrop`): its box takes the drop when the
+ * row accepts it — highlighted while it would, with the drop-into ring, or
+ * under `placement: "between"` the insertion line on the edge the drop goes
+ * in at — and lets it fall through to its section's empty space otherwise. A
+ * box of its own around the row, so it serves `Row` and the tree chrome alike.
+ */
+function DropRow({
+  dnd,
+  rowKey,
+  row,
+  children,
+}: {
+  dnd: RowDnd<unknown>;
+  rowKey: string;
+  row: unknown;
+  children: ReactNode;
+}): ReactNode {
+  const over = useRowDropState(dnd, rowKey);
+  return (
+    <div
+      {...dnd.rowProps(rowKey, row)}
+      className={cn("relative rounded-md", over === "into" && DROP_TARGET_RING)}
+    >
+      {children}
+      {over === "before" || over === "after" ? (
+        <DropInsertLine at={over} />
+      ) : null}
+    </div>
+  );
+}
 
 /**
  * List view: a compact, single-row-per-item dense list. Composes the `Row`
@@ -250,6 +299,15 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // The host hands a fresh `setExpanded` closure each render; only a click
   // calls it, so a stable identity keeps it out of the rows' memo key.
   const setExpanded = useEventCallback(props.setExpanded);
+  // Rows and each section's empty space as native drop targets. A list row is
+  // no native drag source: its drag is the manual order's reorder.
+  const dnd = useRowDnd<unknown>({
+    rowDrag: undefined,
+    rowDrop: props.rowDrop as ViewRowDropConfig<unknown> | undefined,
+    dragRows: () => [],
+    // A drop in a gap inserts there in the manual order, when one is active.
+    order: manualOrder,
+  });
 
   const { properties } = props.state;
   const { fields, rowActivation, rowTone } = props;
@@ -290,6 +348,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       rowTone,
       revealed,
       setExpanded,
+      dnd,
     };
   }, [
     fields,
@@ -308,6 +367,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     rowTone,
     revealed,
     setExpanded,
+    dnd,
   ]);
 
   // The rank-reorder host's item list (id + rank + group); the provider keys
@@ -351,11 +411,13 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);
   if (totalCount === 0) {
     return (
-      <Center axis="both" className="py-xl">
-        <Text as="div" variant="body" className="text-muted-foreground">
-          {props.emptyState}
-        </Text>
-      </Center>
+      <DropBackground dnd={dnd} group={null} lastKey={null}>
+        <Center axis="both" className="py-xl">
+          <Text as="div" variant="body" className="text-muted-foreground">
+            {props.emptyState}
+          </Text>
+        </Center>
+      </DropBackground>
     );
   }
 
@@ -406,40 +468,46 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     const quietGroup = group !== null && props.groupHeaders === "quiet";
     const windowed = entries.length > VIRTUALIZE_THRESHOLD;
     return (
-      <SectionBody
-        section={section}
-        foldLines={props.foldLines}
-        // Tree-chrome rows keep the tree view's rhythm: no band padding, the
-        // rows sit flush under the header like a tree's do. The padding never
-        // depends on `windowed`: a read growing past the threshold would drop
-        // it, and every row on screen would jump by it (`VirtualRows` measures
-        // its own offset inside the band, so it needs no special case).
-        className={
-          options.rowChrome === "tree"
-            ? undefined
-            : // The top gap is the theme's (density `sectionBodyPadTop`,
-              // default the `sm` step of the bottom one).
-              cn("pt-section-body pb-sm", quietGroup && "pt-none")
-        }
+      <DropBackground
+        dnd={dnd}
+        group={group}
+        lastKey={entries.at(-1)?.key ?? null}
       >
-        {/* A section whose rows are all folded draws no rows — its header and
+        <SectionBody
+          section={section}
+          foldLines={props.foldLines}
+          // Tree-chrome rows keep the tree view's rhythm: no band padding, the
+          // rows sit flush under the header like a tree's do. The padding never
+          // depends on `windowed`: a read growing past the threshold would drop
+          // it, and every row on screen would jump by it (`VirtualRows` measures
+          // its own offset inside the band, so it needs no special case).
+          className={
+            options.rowChrome === "tree"
+              ? undefined
+              : // The top gap is the theme's (density `sectionBodyPadTop`,
+                // default the `sm` step of the bottom one).
+                cn("pt-section-body pb-sm", quietGroup && "pt-none")
+          }
+        >
+          {/* A section whose rows are all folded draws no rows — its header and
             fold line say everything. */}
-        {entries.length === 0 ? null : windowed ? (
-          <VirtualRows<DataViewRowEntry<unknown>>
-            items={entries}
-            estimateSize={estimateSize}
-            getKey={(entry) => entry.key}
-            keepMounted={activeId ? [activeId] : undefined}
-            raisedKey={activeId ?? undefined}
-          >
-            {(entry) => renderEntry(entry, group)}
-          </VirtualRows>
-        ) : (
-          <Stack gap="none">
-            {entries.map((entry) => renderEntry(entry, group))}
-          </Stack>
-        )}
-      </SectionBody>
+          {entries.length === 0 ? null : windowed ? (
+            <VirtualRows<DataViewRowEntry<unknown>>
+              items={entries}
+              estimateSize={estimateSize}
+              getKey={(entry) => entry.key}
+              keepMounted={activeId ? [activeId] : undefined}
+              raisedKey={activeId ?? undefined}
+            >
+              {(entry) => renderEntry(entry, group)}
+            </VirtualRows>
+          ) : (
+            <Stack gap="none">
+              {entries.map((entry) => renderEntry(entry, group))}
+            </Stack>
+          )}
+        </SectionBody>
+      </DropBackground>
     );
   };
 

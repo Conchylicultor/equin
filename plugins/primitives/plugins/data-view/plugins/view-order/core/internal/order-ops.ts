@@ -141,25 +141,92 @@ export function computeMoveWrites(args: {
   targetId: string;
   zone: "before" | "after";
 }): RowOrderWrite[] | null {
-  const { orderedKeys, persisted, id, targetId, zone } = args;
+  const { orderedKeys, id, targetId } = args;
+  // A move is an insert of one PRESENT row; `null` keeps the broken-invariant
+  // report `applyMove` gives for a row outside the ordered set.
+  if (!orderedKeys.includes(id) || !orderedKeys.includes(targetId)) return null;
+  return computeInsertWrites({ ...args, keys: [id] });
+}
 
-  // 1. Total, distinct ranks over the ordered set, then 2. the display order.
-  const ranks = seedRanks(orderedKeys, persisted);
-  const display = [...orderedKeys].sort((a, b) =>
+/**
+ * The bounded write set that places `keys` — in the given order, as ONE
+ * contiguous run — immediately `before`/`after` `targetId`: `computeMoveWrites`
+ * generalized to several rows, and to rows the ordered set does not hold yet.
+ *
+ * A key absent from `orderedKeys` is a row the consumer is about to create (a
+ * file just pinned to a sidebar): it is treated as appended to the ordered set,
+ * then moved like any other. Once its row appears it already holds its
+ * persisted rank, so it renders where it was dropped — wherever the consumer's
+ * source order puts it.
+ *
+ * The same rule as a single move, for a run `X1..Xk`: persist the run plus
+ * every seed now ahead of `X1` in `next`; everything after the run stays
+ * seeded. The materialized seeds rank after `max(persisted)`; the run ranks
+ * between `pred` (the key before `X1`, from `effective`) and `succ` (the key
+ * after `Xk`, from `persisted` — a seed there re-flows after the run).
+ *
+ * `targetId` in `keys` stays where it is and the rest of the run gathers
+ * around it (before it when `zone` is `before`, else after) — so dropping a
+ * row on its own edge is a no-op.
+ *
+ * Returns `null` when `targetId` is outside the ordered set (a broken caller
+ * invariant), `[]` for a no-op (only possible when every key is present),
+ * else a non-empty, rank-ascending write set.
+ */
+export function computeInsertWrites(args: {
+  /** The ordered set, in SOURCE order (this derives the display order itself). */
+  orderedKeys: readonly string[];
+  persisted: ReadonlyMap<string, Rank>;
+  /** The run to place, in order; present rows or rows not created yet. */
+  keys: readonly string[];
+  targetId: string;
+  zone: "before" | "after";
+}): RowOrderWrite[] | null {
+  const { orderedKeys, persisted, targetId, zone } = args;
+  if (!orderedKeys.includes(targetId)) return null;
+  const keys = [...new Set(args.keys)];
+  if (keys.length === 0) return [];
+
+  // 1. The ordered set with the not-yet-created keys appended, then 2. its
+  //    total ranks and display order.
+  const present = new Set(orderedKeys);
+  const universe = [...orderedKeys, ...keys.filter((k) => !present.has(k))];
+  const ranks = seedRanks(universe, persisted);
+  const display = [...universe].sort((a, b) =>
     Rank.compare(ranks.get(a)!, ranks.get(b)!),
   );
 
-  // 3. Splice X to its new slot in DISPLAY order. `null` propagates the broken
-  //    invariant; an unchanged sequence is a legitimate no-op (skip the POST).
-  const next = applyMove(display, id, targetId, zone);
-  if (next === null) return null;
-  if (next.every((key, i) => key === display[i])) return [];
+  // 3. Splice the run next to the target in DISPLAY order. The target itself
+  //    never moves: the rest of the run gathers on its `zone` side.
+  const moving = keys.filter((k) => k !== targetId);
+  const run = keys.includes(targetId)
+    ? zone === "before"
+      ? [...moving, targetId]
+      : [targetId, ...moving]
+    : moving;
+  const rest = display.filter((k) => !moving.includes(k));
+  const at = rest.indexOf(targetId);
+  const runStart = keys.includes(targetId)
+    ? at
+    : zone === "before"
+      ? at
+      : at + 1;
+  const next = [
+    ...rest.slice(0, runStart),
+    ...run,
+    ...rest.slice(keys.includes(targetId) ? at + 1 : runStart),
+  ];
+  // A no-op only when every key already has its row: a key not created yet
+  // must hold a rank of its own, since where its row will sit in the source
+  // order — and so where it would seed — is not known.
+  const allPresent = keys.every((k) => present.has(k));
+  if (allPresent && next.every((key, i) => key === display[i])) return [];
 
-  // 4. The seeds now ahead of X, in next-order — every unpersisted key before X.
-  const xIdx = next.indexOf(id);
+  // 4. The seeds now ahead of the run, in next-order.
+  const runSet = new Set(run);
   const toMaterialize = next
-    .slice(0, xIdx)
-    .filter((key) => !persisted.has(key));
+    .slice(0, runStart)
+    .filter((key) => !persisted.has(key) && !runSet.has(key));
 
   // 5. Materialized seeds rank after `max(persisted)` — the max over the WHOLE
   //    map (including keys the view currently filters out), the same anchor
@@ -171,22 +238,28 @@ export function computeMoveWrites(args: {
   const minted = Rank.nBetween(maxP, null, toMaterialize.length);
 
   // 6. `effective` lets `pred` see a just-minted predecessor; `succ` reads
-  //    `persisted` so a seed after X re-flows rather than pinning X.
+  //    `persisted` so a seed after the run re-flows rather than pinning it.
   const effective = new Map(persisted);
   toMaterialize.forEach((key, i) => effective.set(key, minted[i]!));
-
-  const pred = xIdx > 0 ? (effective.get(next[xIdx - 1]!) ?? null) : null;
-  const succKey = next[xIdx + 1];
+  const pred =
+    runStart > 0 ? (effective.get(next[runStart - 1]!) ?? null) : null;
+  const succKey = next[runStart + run.length];
   const succ =
     succKey !== undefined ? (persisted.get(succKey) ?? null) : null;
-  const rankX = Rank.between(pred, succ);
+  const runRanks =
+    run.length === 1
+      ? [Rank.between(pred, succ)]
+      : Rank.nBetween(pred, succ, run.length);
 
-  // 7. The bounded write: the materialized seeds, then X — rank-ascending.
+  // 7. The bounded write: the materialized seeds, then the run — rank-ascending.
   return [
     ...toMaterialize.map((key, i): RowOrderWrite => ({
       rowKey: key,
       rank: minted[i]!,
     })),
-    { rowKey: id, rank: rankX },
+    ...run.map((key, i): RowOrderWrite => ({
+      rowKey: key,
+      rank: runRanks[i]!,
+    })),
   ];
 }

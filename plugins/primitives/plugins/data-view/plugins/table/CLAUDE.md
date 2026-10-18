@@ -162,9 +162,9 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
 - Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
-  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×26
-    - `primitives/tree` ×17
+  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×33
+    - `primitives/tree` ×18
     - `primitives/data-table` ×6
     - `primitives/rank-reorder` ×3
     - `primitives/css/badge.Badge`
@@ -177,7 +177,6 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --ring`
     - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --tree-pill-indent`

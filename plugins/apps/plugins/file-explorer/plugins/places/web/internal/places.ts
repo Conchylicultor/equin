@@ -12,6 +12,7 @@ import {
 } from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { fileExplorerMainCheckout } from "../../shared/resources";
+import { PINNED_SOURCE, usePinnedPlaces } from "./favorites";
 
 const homeIcon = symbol("home");
 const downloadsIcon = symbol("download");
@@ -115,6 +116,12 @@ export const placeContributions = [
     id: "singularity",
     group: "favorites",
     usePlaces: useSingularityPlace,
+  }),
+  // The user's own pins, after the built-in favorites.
+  FileExplorer.Places({
+    id: PINNED_SOURCE,
+    group: "favorites",
+    usePlaces: usePinnedPlaces,
   }),
   FileExplorer.Places({
     id: "startup-volume",

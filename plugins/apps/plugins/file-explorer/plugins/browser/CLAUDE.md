@@ -16,6 +16,7 @@
     - `filesAtPane.Actions` ← `primitives.pane`
     - `FileBrowserSlots.Lens` ← `apps.file-explorer.git`
     - `FileBrowserSlots.RowActions` ← `apps.file-explorer.browser`
+    - `FileBrowserSlots.RowActions` ← `apps.file-explorer.places`
   - Contributes:
     - `Pane.Register` "files-at"
     - `Pane.Register` "files-home"
@@ -23,10 +24,10 @@
     - `FieldPresentation.Register` "collection:file-explorer.entry"
     - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
     - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×7
-    - `infra/endpoints` ×5
-    - `primitives/data-view` ×5
+  - Uses: 62 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×9
+    - `primitives/data-view` ×9
+    - `infra/endpoints` ×6
     - `primitives/file-viewer` ×5
     - `primitives/pane` ×4
     - `network/live` ×2
@@ -48,6 +49,7 @@
     - `primitives/link-gesture.activationProps`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
+    - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/persistent-draft.useDraft`
     - `primitives/scope/dom-scope.defineDomScope`
     - `primitives/scope/surface-id.useSurfaceTabId`
@@ -111,6 +113,7 @@
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`

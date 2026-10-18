@@ -1,4 +1,4 @@
-// @hash fb54c22abdc4
+// @hash 53fb0fbdb60d
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.file-explorer.browser:extract",
-    "apps.file-explorer.browser:copy-path"
+    "apps.file-explorer.browser:copy-path",
+    "apps.file-explorer.places:add-to-favorites"
   ]
 }

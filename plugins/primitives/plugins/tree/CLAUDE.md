@@ -117,6 +117,42 @@ Enter still opens. A double-click opens only the row its FIRST click landed on,
 so the second click of a gesture that just opened a folder cannot open whatever
 row the new listing put under the pointer.
 
+## Row selection: one reducer, over the painted rows
+
+`nextRowSelection(state, gesture, orderedIds)` (core) is the ONE
+implementation of a set-plus-anchor selection: `click`, `toggle` (⌘/Ctrl),
+`range` (Shift; replacing, or `additive` for a checkbox list), `extend`
+(Shift+↑/↓ from the focused row — `extendTarget` is where its far end lands),
+`all`, `clear`. `orderedIds` is the painted order (`TreeModel.orderedIds`), so
+a range never sweeps up a collapsed folder's children. It returns the input
+object when nothing changed, which is what lets a reducer or setter bail out
+of a render (a range drag re-applies the same range every frame).
+`multi-select`'s checkbox reducer calls it rather than keeping a second copy.
+
+The renderer reaches it through two seams: `treeRowGestures({ selection })`
+turns a click into `click` / `toggle` / `range` (a modified click only
+reshapes the selection — no navigation, no new tab, no text selection — and
+the row becomes focusable), and `useTreeKeyboard({ rowSelection })` adds
+Shift+↑/↓, ⌘/Ctrl+A and Escape and makes a plain arrow move a `click`.
+data-view's nested table wires both from `DataViewProps.rowSelection`.
+
+## Spring-loaded folders during a native drag
+
+`useSpringOpen({ delayMs?, setExpanded, isWithin })` → `{ hover, end }`: a
+drag renderer calls `hover(id, springable)` on every `dragenter` / `dragover` and `end(id |
+null)` on the drop. Resting on a closed row with children for `delayMs`
+(default `SPRING_OPEN_MS`, 700) opens it through the ordinary batched
+`setExpanded` — a lazy folder lists itself as on any open. When the drag ends
+the rows it opened close again, except the ones the drop landed in (`isWithin`
+— the row or a descendant). Timer based, not polling: one `setTimeout` per
+hovered row, cleared by the first `dragenter` / `dragover` outside that row
+(a document capture listener held while the timer runs — never `dragleave`,
+which also fires crossing the row's own children, and after which a resting
+drag sends no event to restart the timer); a drag that ends with no drop of
+ours (cancelled, dropped on another view) is caught by the document's
+`dragend`, listened for only while something is waiting to close. It knows no
+`DataTransfer` — data-view's `useRowDnd` drives it.
+
 ## Reveal: a row must never land somewhere invisible
 
 The tree model (`useTreeModel` + `useTreeRow`) owns three reveal behaviors, so no consumer has to (and so none is
@@ -235,7 +271,7 @@ that layout — while row-fold moves rows with transform / clip / opacity.
 - Web:
   - Slots: `Tree.Disclosure`
   - Slot contributors: `Tree.Disclosure` ← `ui.tree-disclosure`
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
     - `primitives/collapsible` ×2
     - `primitives/row-actions` ×2
@@ -249,6 +285,7 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `primitives/css/text.Text`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.linkProps`
     - `primitives/loading.Loading`
     - `primitives/rank-reorder.useRankReorderItem`
@@ -259,6 +296,8 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `FlatExpandAll`
     - `RowControls`
     - `RowMenu`
+    - `RowSelectionClick`
+    - `SpringOpen`
     - `TreeContextValue`
     - `TreeDisclosureContribution`
     - `TreeDisclosureToggleProps`
@@ -275,6 +314,7 @@ that layout — while row-fold moves rows with transform / clip / opacity.
   - Exports (values):
     - `groupFoldAction`
     - `RowControlsProvider`
+    - `SPRING_OPEN_MS`
     - `Tree`
     - `TreeChildPlaceholder`
     - `TreeDisclosureToggle`
@@ -292,6 +332,7 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `useOptionalRowControls`
     - `useOptionalTreeContext`
     - `useRowControls`
+    - `useSpringOpen`
     - `useTreeContext`
     - `useTreeKeyboard`
     - `useTreeModel`
@@ -309,6 +350,8 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `LazyChildren`
     - `RowMenuHelpers`
     - `RowMenuItem`
+    - `RowSelectionGesture`
+    - `RowSelectionState`
     - `TreeChildrenState`
     - `TreeDisclosureProps`
     - `TreeKeyMove`
@@ -317,9 +360,11 @@ that layout — while row-fold moves rows with transform / clip / opacity.
     - `buildTree`
     - `childPlaceholder`
     - `computeDrop`
+    - `extendTarget`
     - `flatNodeIds`
     - `flattenVisible`
     - `isDescendant`
+    - `nextRowSelection`
     - `resolveDropParent`
     - `selectionRoots`
     - `subtreeIds`

@@ -133,6 +133,20 @@ export { pickPrimaryField } from "./internal/pick-primary-field";
 export { pickLeadingField } from "./internal/pick-leading-field";
 export { resolveBodyFields } from "./internal/resolve-body-fields";
 export { rowToneClass } from "./internal/row-tone";
+export {
+  DROP_TARGET_RING,
+  DROP_TARGET_WASH,
+  useIsBackgroundDropTarget,
+  useRowDropState,
+  useRowDnd,
+} from "./internal/row-dnd";
+export type {
+  DropTargetProps,
+  RowDnd,
+  RowDndHierarchy,
+  RowDndProps,
+} from "./internal/row-dnd";
+export { DropBackground, DropInsertLine } from "./components/drop-background";
 export { defineItemActions } from "./internal/define-item-actions";
 export type {
   ItemActions,
@@ -151,6 +165,13 @@ export type {
   RowTone,
   HierarchyConfig,
   SelectionConfig,
+  RowDragConfig,
+  RowDropConfig,
+  RowDropContext,
+  RowDropEdge,
+  RowDropPlace,
+  RowSelectionConfig,
+  ViewRowDropConfig,
   CreateOption,
   ManualOrderConfig,
   SortRule,

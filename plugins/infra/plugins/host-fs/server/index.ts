@@ -3,6 +3,7 @@ import {
   hostFsComplete,
   hostFsExtract,
   hostFsList,
+  hostFsMove,
   hostFsOpen,
   hostFsPeek,
   hostFsRaw,
@@ -13,6 +14,7 @@ import {
 import { handleComplete } from "./internal/complete";
 import { handleExtract } from "./internal/extract";
 import { handleList } from "./internal/list";
+import { handleMove } from "./internal/move";
 import { handleOpen } from "./internal/open";
 import { handlePeek } from "./internal/peek";
 import { handleRaw } from "./internal/raw";
@@ -36,7 +38,7 @@ export {
 
 export default {
   description:
-    "The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder), both refused unless the Origin is the app's own *.localhost.",
+    "The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it: replace / keep-both / skip), all three refused unless the Origin is the app's own *.localhost.",
   httpRoutes: {
     [hostFsList.route]: handleList,
     [hostFsStat.route]: handleStat,
@@ -47,5 +49,6 @@ export default {
     [hostFsPeek.route]: handlePeek,
     [hostFsOpen.route]: handleOpen,
     [hostFsExtract.route]: handleExtract,
+    [hostFsMove.route]: handleMove,
   },
 } satisfies ServerPluginDefinition;

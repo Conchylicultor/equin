@@ -4,40 +4,45 @@
 
 ## Plugin reference
 
-- Description: The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Where the file explorer's Singularity place leads: serves the file-explorer.main-checkout value, the main checkout's path.
+- Description: The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the user's pinned favorites, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Host paths dragged onto Favorites (HOST_PATHS_MIME) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. Where the file explorer's Singularity place leads: serves the file-explorer.main-checkout value, the main checkout's path; registers the pinned-favorites config.
 - Web:
+  - Slots: `row-actions`
+  - Slot contributors: `row-actions` ← `apps.file-explorer.places`
   - Contributes:
     - `FileExplorer.Sidebar` "Places" → `PlacesSidebar`
     - `FileExplorer.Sidebar` "Storage" → `StorageMeter`
     - `FileExplorer.Places` "downloads"
     - `FileExplorer.Places` "home"
+    - `FileExplorer.Places` "pinned"
     - `FileExplorer.Places` "singularity"
     - `FileExplorer.Places` "startup-volume"
     - `FileExplorer.Places` "trash"
-  - Uses:
-    - `apps/file-explorer/browser.useExplorerFolderTarget`
-    - `apps/file-explorer/browser.useExplorerLocation`
-    - `apps/file-explorer/browser.useHomeDir`
-    - `apps/file-explorer/shell.FileExplorer`
-    - `apps/file-explorer/shell.PlaceGroup`
-    - `apps/file-explorer/shell.PlacesSource`
-    - `apps/file-explorer/shell.PlacesState`
-    - `infra/endpoints.getEndpointErrorMessage`
-    - `infra/endpoints.useEndpoint`
+    - `ConfigV2.WebRegister` "config"
+    - `row-actions` "remove-favorite" → `RemoveFavoriteAction`
+    - `FileBrowserSlots.RowActions` "add-to-favorites" → `AddToFavoritesAction`
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×6
+    - `apps/file-explorer/browser` ×4
+    - `infra/endpoints` ×4
+    - `apps/file-explorer/shell` ×3
+    - `config_v2` ×3
+    - `primitives/css/ui-kit` ×2
     - `network/live.useLive`
     - `primitives/css/clip.Clip`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.FieldDef`
+    - `primitives/icon-button.IconButton`
+    - `primitives/live-state.foldResource`
+    - `shell/toast.showToast`
     - `ui/icons.Icon`
 - Server:
-  - Contributes: `resource.declare` "file-explorer.main-checkout"
-  - Uses: `network/live.serveValue`
+  - Contributes:
+    - `resource.declare` "file-explorer.main-checkout"
+    - `ConfigV2.Register` "config"
+  - Uses:
+    - `config_v2.ConfigV2`
+    - `network/live.serveValue`
   - Resources: `file-explorer.main-checkout` (push, fixed)
 - Cross-plugin:
   - Uses tokens:

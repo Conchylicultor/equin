@@ -20,6 +20,11 @@ export type {
   TreeKeyMove,
 } from "./internal/flatten";
 export type { ExpandChange } from "./internal/expand";
+export { extendTarget, nextRowSelection } from "./internal/row-selection";
+export type {
+  RowSelectionGesture,
+  RowSelectionState,
+} from "./internal/row-selection";
 export type {
   LazyChildren,
   RowMenuHelpers,

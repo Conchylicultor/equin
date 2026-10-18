@@ -15,7 +15,13 @@ export interface Place {
   /** Unique within its source; the row's key is `<source id>:<place id>`. */
   id: string;
   label: string;
+  /** The folder it opens. */
   path: string;
+  /**
+   * A file it previews in that folder (display form) — a place that is a
+   * file opens its folder with the file beside it. Absent for a folder.
+   */
+  open?: string;
   icon: IconRef;
 }
 

@@ -561,6 +561,7 @@ export function DataTable<TRow>({
           // Nesting rows make the grid a treegrid, and the grid the keyboard
           // host: a key on a focused row walks the painted lines.
           role={tree ? "treegrid" : undefined}
+          aria-multiselectable={tree?.multiSelectable ? true : undefined}
           ref={composeRefs<HTMLElement>(tree?.containerRef, fitGridRef)}
           // The fold's host: its direct children are the body's lines.
           {...fold.hostProps}
@@ -747,6 +748,7 @@ function DataTableRow<TRow>({
   const decorationOverlay = decoration?.overlay;
   const decorationHighlighted = decoration?.highlighted;
   const decorationProvide = decoration?.provide;
+  const decorationSelected = decoration?.selected;
   // The revealed cluster's content: the decoration's, when it states one.
   const revealedActions =
     decoration && "actions" in decoration
@@ -758,7 +760,7 @@ function DataTableRow<TRow>({
   // decoration disabled virtualization).
   const rowRef = composeRefs<HTMLElement>(decorationRef, measure?.ref);
   const look = ROW_LOOK[presentation];
-  const selected = key === selectedRowId;
+  const selected = decorationSelected ?? key === selectedRowId;
   return (
     <div
       ref={rowRef}

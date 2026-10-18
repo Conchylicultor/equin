@@ -6,6 +6,9 @@ import {
   defineDataView,
   type FieldDef,
   type HierarchyConfig,
+  type RowDragConfig,
+  type RowDropConfig,
+  type RowSelectionConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import type {
   HostedToolbar,
@@ -13,7 +16,9 @@ import type {
 } from "@plugins/primitives/plugins/data-view/core";
 import type { TreeChildrenState } from "@plugins/primitives/plugins/tree/core";
 import {
+  hasHostPaths,
   isBrowsable,
+  writeHostPaths,
   type HostFsEntry,
   type HostFsListResult,
 } from "@plugins/infra/plugins/host-fs/core";
@@ -22,6 +27,7 @@ import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import {
+  absolutePath,
   archiveReasonMessage,
   ENTRY_CATEGORY_OPTIONS,
   entryCategory,
@@ -37,7 +43,7 @@ import {
   type EntryFilter,
   type EntryRow,
 } from "../../core";
-import type { Listing, Listings } from "../internal/listings";
+import { isOnDisk, type Listing, type Listings } from "../internal/listings";
 import { useFolderPeek } from "../internal/folder-peek";
 import { FileBrowserSlots } from "../slots";
 import { ExplorerControlsSlot } from "../internal/controls-slot";
@@ -318,6 +324,14 @@ export interface FileTreeProps {
   onOpen: (row: EntryRow) => void;
   /** What an empty folder shows. */
   emptyState: ReactNode;
+  /** The home directory, absolute: a drag carries absolute paths. */
+  home: string;
+  /** The selected rows (a set and its anchor), by path. */
+  rowSelection: RowSelectionConfig;
+  /** The dragged rows' absolute paths, as a drag starts. */
+  onDragPaths: (paths: readonly string[]) => void;
+  /** Host paths dropped on a folder row (`dir`, display form). */
+  onDropInto: (dir: string, dt: DataTransfer) => void;
 }
 
 /**
@@ -341,6 +355,10 @@ export function FileTree({
   rowActivation,
   onOpen,
   emptyState,
+  home,
+  rowSelection,
+  onDragPaths,
+  onDropInto,
 }: FileTreeProps): ReactNode {
   // "Today" is today as of this listing: the folder is re-listed on every visit.
   const [now] = useState(() => Date.now());
@@ -363,6 +381,32 @@ export function FileTree({
       },
     }),
     [listings, request],
+  );
+
+  // Rows drag as host paths (the selection when the grabbed row is in it), so
+  // any surface taking `HOST_PATHS_MIME` — a folder row here, the Favorites
+  // sidebar — can take them.
+  const rowDrag = useMemo<RowDragConfig<EntryRow>>(
+    () => ({
+      write: (dragged, dt) => {
+        const paths = dragged.map((r) => absolutePath(r.path, home));
+        writeHostPaths(dt, paths);
+        onDragPaths(paths);
+      },
+    }),
+    [home, onDragPaths],
+  );
+  // A real folder takes them — not an archive file, nor a folder inside one
+  // (its listing is an archive's: `within`), which cannot be written to.
+  const rowDrop = useMemo<RowDropConfig<EntryRow>>(
+    () => ({
+      accepts: (r, types) =>
+        r.kind === "dir" &&
+        hasHostPaths(types) &&
+        isOnDisk(listings, r.parentId ?? root),
+      onDrop: (r, dt) => onDropInto(r.path, dt),
+    }),
+    [listings, root, onDropInto],
   );
 
   // When the listing is narrow Kind, then Modified, give their room to the
@@ -462,6 +506,9 @@ export function FileTree({
       search={{ query, onQueryChange }}
       searchAccessor={(r) => r.name}
       selectedRowId={selectedPath ?? undefined}
+      rowSelection={rowSelection}
+      rowDrag={rowDrag}
+      rowDrop={rowDrop}
       rowActivation={rowActivation}
       onRowOpen={onOpen}
       viewOptions={{ table: tableOptions }}

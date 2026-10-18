@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, rename, rm, stat, utimes } from "node:fs/promises";
+import { mkdir, rename, rm, stat, utimes } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import {
@@ -11,6 +11,7 @@ import { locateHostPath } from "./archive/locate";
 import { isCorruptStream } from "./archive/read";
 import { archiveFormatFor } from "./archive/registry";
 import { archiveTree } from "./archive/tree";
+import { freePath } from "./free-path";
 import { isAppOrigin } from "./open";
 import { classifyFsError, resolveHostPath } from "./path";
 
@@ -30,34 +31,6 @@ function folderNameFor(archiveName: string): string {
     archiveName.length - extname(archiveName).length,
   );
   return stem === "" ? archiveName : stem;
-}
-
-async function isTaken(path: string): Promise<boolean> {
-  try {
-    await lstat(path);
-    return true;
-  } catch (err) {
-    if (classifyFsError(err) === "missing") return false;
-    throw err;
-  }
-}
-
-/**
- * `name` in `dir`, or — when that is taken — the Finder's next free spelling:
- * `photos 2`, `photos 3`, … for a folder, `a 2.txt` for a file.
- */
-async function freePath(
-  dir: string,
-  name: string,
-  isFile: boolean,
-): Promise<string> {
-  const ext = isFile ? extname(name) : "";
-  const stem = name.slice(0, name.length - ext.length);
-  let candidate = join(dir, name);
-  for (let n = 2; await isTaken(candidate); n++) {
-    candidate = join(dir, `${stem} ${n}${ext}`);
-  }
-  return candidate;
 }
 
 /**

@@ -120,6 +120,19 @@ second drag on. `computeMoveWrites` derives the display order internally (sortin
 `orderedKeys` by `seedRanks`), so the caller keeps handing it source order; pinned
 by the second-drag regression test in `order-ops.test.ts`.
 
+### Inserting rows from elsewhere (`onInsert`)
+
+A native `rowDrop` under `placement: "between"` lands in a gap of the view
+(`RowDropContext.order.insert`), carrying keys that may name rows the consumer
+has not created yet (a folder just pinned to the Places sidebar).
+`computeInsertWrites` is `computeMoveWrites` generalized: the absent keys are
+appended to the ordered set, the keys are spliced next to the target as ONE run
+in the given order, and the write is the run plus every seed now ahead of it —
+the same invariant, so the row renders in its gap wherever its source order
+puts it once it appears. An absent key is never a no-op: it always takes a rank,
+since where it would seed is unknown. `computeMoveWrites` is the one-present-key
+case and delegates to it.
+
 ### Why neighbour coordinates, not `dest.rank`
 
 `ManualOrderConfig.onMove` carries both. `RankReorderProvider` computes
@@ -190,7 +203,8 @@ set). Identical posture to `data_view_custom_values`.
 ## Tests
 
 - `core/internal/order-ops.test.ts` (bun:test, pure) — `seedRanks`, `applyMove`,
-  `computeMoveWrites`: the A,B,C stability counterexample, the downward-seed case,
+  `computeMoveWrites`, `computeInsertWrites` (absent keys, runs, and its own
+  round-trip property test with new rows at random source positions): the A,B,C stability counterexample, the downward-seed case,
   the second-drag regression, the cost gates, and the **LCG round-trip property
   test** — the real stability gate: folding a random drag's `writes` into
   `persisted` and re-seeding reproduces the post-move display exactly, invariant
@@ -248,6 +262,7 @@ set). Identical posture to `data_view_custom_values`.
     - `SetRowOrderBody`
   - Exports (values):
     - `applyMove`
+    - `computeInsertWrites`
     - `computeMoveWrites`
     - `rowOrder`
     - `RowOrderRowSchema`

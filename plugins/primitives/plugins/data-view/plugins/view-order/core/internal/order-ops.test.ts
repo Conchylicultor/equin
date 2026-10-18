@@ -10,6 +10,7 @@ import {
   seedRanks,
   applyMove,
   computeMoveWrites,
+  computeInsertWrites,
   type RowOrderWrite,
 } from "./order-ops";
 
@@ -350,5 +351,189 @@ describe("computeMoveWrites round-trip stability (the real gate)", () => {
 
     // Guard the loop actually exercised the intended number of moves.
     expect(draws).toBeGreaterThanOrEqual(500);
+  });
+});
+
+describe("computeInsertWrites", () => {
+  test("a row not created yet lands in the gap it was dropped in", () => {
+    // Home, Downloads, Singularity built in, one pin; nothing arranged yet. A
+    // new pin dropped after Home: Home is materialized as its anchor.
+    const orderedKeys = ["home", "dl", "sing", "pin:a"];
+    const writes = computeInsertWrites({
+      orderedKeys,
+      persisted: new Map(),
+      keys: ["pin:new"],
+      targetId: "home",
+      zone: "after",
+    });
+    expect(writes!.map((w) => w.rowKey)).toEqual(["home", "pin:new"]);
+    // The row appears (at the END of its source order) once the consumer
+    // writes it, and renders where it was dropped.
+    const folded = applyWrites(new Map(), writes!);
+    expect(displayOf([...orderedKeys, "pin:new"], folded)).toEqual([
+      "home",
+      "pin:new",
+      "dl",
+      "sing",
+      "pin:a",
+    ]);
+  });
+
+  test("several keys land as one run, in the given order", () => {
+    const orderedKeys = ["A", "B", "C"];
+    const persisted = persist(["A", "B", "C"]);
+    const writes = computeInsertWrites({
+      orderedKeys,
+      persisted,
+      keys: ["Y", "C", "X"],
+      targetId: "B",
+      zone: "before",
+    });
+    expect(writes!.map((w) => w.rowKey)).toEqual(["Y", "C", "X"]);
+    const folded = applyWrites(persisted, writes!);
+    expect(displayOf(["X", ...orderedKeys, "Y"], folded)).toEqual([
+      "A",
+      "Y",
+      "C",
+      "X",
+      "B",
+    ]);
+  });
+
+  test("a present key moves exactly as computeMoveWrites moves it", () => {
+    const args = {
+      orderedKeys: ["A", "B", "C", "D"],
+      persisted: persist(["B", "A"]),
+      targetId: "A",
+      zone: "after" as const,
+    };
+    expect(computeInsertWrites({ ...args, keys: ["D"] })).toEqual(
+      computeMoveWrites({ ...args, id: "D" }),
+    );
+  });
+
+  test("null for a target outside the ordered set", () => {
+    expect(
+      computeInsertWrites({
+        orderedKeys: ["A"],
+        persisted: new Map(),
+        keys: ["N"],
+        targetId: "Z",
+        zone: "after",
+      }),
+    ).toBeNull();
+  });
+
+  test("[] for a drop on the target's own edge, an adjacent drop, or no keys", () => {
+    const base = {
+      orderedKeys: ["A", "B"],
+      persisted: new Map<string, Rank>(),
+    };
+    expect(
+      computeInsertWrites({
+        ...base,
+        keys: ["A"],
+        targetId: "A",
+        zone: "after",
+      }),
+    ).toEqual([]);
+    expect(
+      computeInsertWrites({
+        ...base,
+        keys: ["A"],
+        targetId: "B",
+        zone: "before",
+      }),
+    ).toEqual([]);
+    expect(
+      computeInsertWrites({ ...base, keys: [], targetId: "B", zone: "after" }),
+    ).toEqual([]);
+  });
+
+  test("an absent key dropped after the last seed persists the whole prefix", () => {
+    // The drop is past every row: each seed ahead of it is materialized.
+    const writes = computeInsertWrites({
+      orderedKeys: ["A", "B"],
+      persisted: new Map(),
+      keys: ["N"],
+      targetId: "B",
+      zone: "after",
+    });
+    expect(writes!.map((w) => w.rowKey)).toEqual(["A", "B", "N"]);
+  });
+
+  test("round trip: folding writes reproduces the drop, new rows anywhere in source order", () => {
+    let s = 0x5eed >>> 0;
+    const rand = () => {
+      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+      return s / 0x100000000;
+    };
+    const pick = <T>(arr: readonly T[]): T =>
+      arr[Math.floor(rand() * arr.length)]!;
+    const shuffle = <T>(arr: readonly T[]): T[] => {
+      const out = [...arr];
+      for (let i = out.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [out[i], out[j]] = [out[j]!, out[i]!];
+      }
+      return out;
+    };
+
+    let draws = 0;
+    for (let iter = 0; iter < 800; iter++) {
+      const n = 1 + Math.floor(rand() * 7);
+      const orderedKeys = Array.from({ length: n }, (_, i) => `r${i}`);
+      const persisted = persist(
+        shuffle(orderedKeys).slice(0, Math.floor(rand() * (n + 1))),
+      );
+      const fresh = Array.from(
+        { length: Math.floor(rand() * 3) },
+        (_, i) => `new${i}`,
+      );
+      const moved = orderedKeys.filter(() => rand() < 0.3);
+      const keys = shuffle([...fresh, ...moved]);
+      if (keys.length === 0) continue;
+      const targetId = pick(orderedKeys);
+      const zone: "before" | "after" = rand() < 0.5 ? "before" : "after";
+
+      const writes = computeInsertWrites({
+        orderedKeys,
+        persisted,
+        keys,
+        targetId,
+        zone,
+      });
+      expect(writes).not.toBeNull();
+      for (let i = 1; i < writes!.length; i++) {
+        expect(Rank.compare(writes![i - 1]!.rank, writes![i]!.rank)).toBe(-1);
+      }
+
+      // The expected display: the run spliced next to the target.
+      const before = displayOf(orderedKeys, persisted);
+      const moving = keys.filter((k) => k !== targetId);
+      const run = keys.includes(targetId)
+        ? zone === "before"
+          ? [...moving, targetId]
+          : [targetId, ...moving]
+        : moving;
+      const rest = before.filter((k) => !moving.includes(k));
+      const at = rest.indexOf(targetId);
+      const expected = keys.includes(targetId)
+        ? [...rest.slice(0, at), ...run, ...rest.slice(at + 1)]
+        : zone === "before"
+          ? [...rest.slice(0, at), ...run, ...rest.slice(at)]
+          : [...rest.slice(0, at + 1), ...run, ...rest.slice(at + 1)];
+
+      // The new rows appear at random places in the source order.
+      const after = [...orderedKeys];
+      for (const k of fresh) {
+        after.splice(Math.floor(rand() * (after.length + 1)), 0, k);
+      }
+      const folded = applyWrites(persisted, writes!);
+      expect(displayOf(after, folded)).toEqual(expected);
+      expect(persistedBeforeSeeded(after, folded)).toBe(true);
+      draws++;
+    }
+    expect(draws).toBeGreaterThanOrEqual(400);
   });
 });

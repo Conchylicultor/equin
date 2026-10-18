@@ -17,6 +17,7 @@ import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/c
 import type {
   ExpandChange,
   LazyChildren,
+  RowSelectionState,
 } from "@plugins/primitives/plugins/tree/core";
 import type { DataViewId } from "./define-data-view";
 import type { GroupByRule } from "./grouping";
@@ -197,6 +198,136 @@ export interface SelectionConfig {
    *  provider, so they may call useMultiSelect()). */
   bulkActions?: ReactNode;
 }
+
+/**
+ * Finder-style row selection — a SET of rows plus the anchor a range grows
+ * from — controlled by the consumer. A separate thing from the checkbox
+ * {@link SelectionConfig}: no checkboxes, no bar; the rows themselves are the
+ * selection's gestures (click, ⌘/Ctrl-click, Shift-click, Shift+↑/↓, ⌘/Ctrl+A,
+ * Escape), every change reported through `onChange` as the next whole state
+ * (`nextRowSelection`, tree/core, computes it over the rows as painted).
+ *
+ * `selectedRowId` stays the primary (opened / focused) row; with this set the
+ * highlight and `aria-selected` come from `selected`. Honoured by the nested
+ * table.
+ */
+export interface RowSelectionConfig extends RowSelectionState {
+  onChange: (next: RowSelectionState) => void;
+}
+
+/**
+ * Rows are native drag sources (HTML5 drag and drop — not a reorder: see
+ * `manualOrder` / `HierarchyConfig.onMove` for that). The drag's
+ * `DataTransfer` MIME type is the contract with whatever accepts the drop, so
+ * a drop target in another plugin needs no shared context.
+ */
+export interface RowDragConfig<TRow> {
+  /**
+   * Write the dragged rows onto the drag. They are the grabbed row's
+   * {@link RowSelectionConfig} selection when it is in it (in painted order),
+   * else the grabbed row alone. With more than one, the drag image reads
+   * "N items".
+   */
+  write: (rows: readonly TRow[], dt: DataTransfer) => void;
+}
+
+/** Where a drop on a view's empty space landed: the view instance (a
+ *  `sections` surface stacks several) and the group-by section, if any. */
+export interface RowDropPlace {
+  viewId: string;
+  group: string | null;
+}
+
+/** Where a drop over a row lands: into the row (`placement: "into"`), or
+ *  in the gap before / after it (`placement: "between"`). */
+export type RowDropEdge = "into" | "before" | "after";
+
+/**
+ * Rows (and, optionally, the view's empty space) are native drop targets.
+ *
+ * Two placements. **`"into"`** (default): a row that `accepts` the drag reads
+ * highlighted (the drop-into ring) and takes the drop. **`"between"`**: the
+ * drop goes in the gap above or below the row under the pointer (its nearer
+ * half), drawn as an insertion line there — for an ordered list the drop is
+ * inserted into (a sidebar's Favorites).
+ *
+ * A row that does not accept lets the drop fall through to `background`; with
+ * nothing accepting the pointer shows no-drop. Under a hierarchy (the nested
+ * table, `"into"`) a row that does not accept hands the drop to its nearest
+ * accepting ancestor instead — a file row's drop goes into its folder, the
+ * folder highlighted with its rows — and the roots' to `background`. A drag
+ * of this view's own rows is no drop over itself, inside itself, or onto the
+ * parent already holding every one of them (it cancels). Independent of sort
+ * and of reordering: it works under any field sort.
+ *
+ * The `DataTransfer` is only readable during the drop event: read it before
+ * the first `await` in `onDrop`.
+ */
+export interface RowDropConfig<TRow> {
+  /** Can `row` take a drag carrying these MIME `types` at `edge` (always
+   *  `"into"` under the default placement)? The data itself is not readable
+   *  until the drop — decide by type. */
+  accepts: (row: TRow, types: readonly string[], edge: RowDropEdge) => boolean;
+  onDrop: (
+    row: TRow,
+    dt: DataTransfer,
+    edge: RowDropEdge,
+    ctx: RowDropContext,
+  ) => void | Promise<void>;
+  /** Into the row (default), or between rows. List view only takes
+   *  `"between"`; the nested table drops into. */
+  placement?: "into" | "between";
+  /** The view's empty space — between and around the rows (a non-accepting
+   *  row's area included); per group-by section in a list. Under
+   *  `"between"` it reads as the gap after the section's last row. */
+  background?: {
+    accepts: (types: readonly string[], at: RowDropPlace) => boolean;
+    onDrop: (
+      dt: DataTransfer,
+      at: RowDropPlace,
+      ctx: RowDropContext,
+    ) => void | Promise<void>;
+  };
+  /** The cursor's drop effect over an accepting target. Default `"move"`. */
+  dropEffect?: "move" | "copy" | "link";
+  /**
+   * A collapsed accepting row with children (or lazily, maybe some) springs
+   * open after the drag rests on it this long; the rows a drag opened close
+   * again when it ends anywhere but inside them. Default 700 ms (tree's
+   * `SPRING_OPEN_MS`). Nested table only.
+   */
+  springOpenMs?: number;
+}
+
+/**
+ * What a drop knows about the view it landed in. `order` is the view's manual
+ * order at the drop's gap — present under `placement: "between"` while the
+ * view renders in its manual order (no sort overrides it) and that order can
+ * place rows (`ManualOrderConfig.onInsert`); else `null`. `insert(keys)` puts
+ * those row keys, as one run in the given order, in the gap the insertion line
+ * was drawn at — after the section's last row for a background drop. A key may
+ * name a row the consumer has not created yet: insert it FIRST, then write the
+ * data, and the new row renders where it was dropped.
+ */
+export interface RowDropContext {
+  order: { insert: (keys: readonly string[]) => Promise<void> } | null;
+}
+
+/** {@link RowDropConfig} as a view receives it: the host has bound the view
+ *  instance into `background`, so a view passes only its group. */
+export type ViewRowDropConfig<TRow> = Omit<
+  RowDropConfig<TRow>,
+  "background"
+> & {
+  background?: {
+    accepts: (types: readonly string[], group: string | null) => boolean;
+    onDrop: (
+      dt: DataTransfer,
+      group: string | null,
+      ctx: RowDropContext,
+    ) => void | Promise<void>;
+  };
+};
 
 export interface ItemActionProps<TRow> {
   row: TRow;
@@ -855,6 +986,17 @@ export interface ManualOrderConfig<TRow> {
       zone: "before" | "after";
     },
   ) => void | Promise<void>;
+  /**
+   * Place `keys` as one contiguous run, in the given order, immediately
+   * `dest.zone` of `dest.targetId` — rows already present, or keys of rows that
+   * do not exist yet (they render there once the consumer writes them). What a
+   * `rowDrop` under `placement: "between"` reaches through
+   * `RowDropContext.order`. Absent ⇒ such drops get no `order`.
+   */
+  onInsert?: (
+    keys: readonly string[],
+    dest: { targetId: string; zone: "before" | "after" },
+  ) => Promise<void>;
 }
 
 /**
@@ -975,6 +1117,13 @@ export interface DataViewRenderProps<TRow> {
   aggregate?: DataViewAggregateConfig<TRow>;
   /** Present → the view enables checkbox multi-select (currently the tree). */
   selection?: SelectionConfig;
+  /** Finder-style row selection (see {@link RowSelectionConfig}). */
+  rowSelection?: RowSelectionConfig;
+  /** Rows are native drag sources (see {@link RowDragConfig}). */
+  rowDrag?: RowDragConfig<TRow>;
+  /** Rows and the view's empty space are native drop targets (see
+   *  {@link RowDropConfig}); `background` already bound to this view. */
+  rowDrop?: ViewRowDropConfig<TRow>;
   /** This view's expand map — the ONE home for tree collapse state. Persisted in
    * ViewState (localStorage), keyed per (surface, view-instance, row). */
   expanded?: Record<string, boolean>;
@@ -1721,6 +1870,23 @@ export interface DataViewBaseProps<TRow> {
   aggregate?: DataViewAggregateConfig<TRow>;
   /** Present → selectable views (tree) enable checkbox multi-select. */
   selection?: SelectionConfig;
+  /**
+   * Finder-style row selection — a set and an anchor, controlled here. See
+   * {@link RowSelectionConfig}. Honoured by the nested table.
+   */
+  rowSelection?: RowSelectionConfig;
+  /**
+   * Rows are native (HTML5) drag sources — see {@link RowDragConfig}.
+   * Honoured by the nested table (which then must not also reorder:
+   * `hierarchy.onMove` beside it throws).
+   */
+  rowDrag?: RowDragConfig<TRow>;
+  /**
+   * Rows and the view's empty space are native drop targets — see
+   * {@link RowDropConfig}. Honoured by the nested table (with spring-open
+   * folders) and the list (per-section `background`).
+   */
+  rowDrop?: RowDropConfig<TRow>;
   /** Per-item action slot descriptor minted by `defineItemActions`; views render
    *  each contributed action in their natural trailing affordance. */
   itemActions?: ItemActionsDescriptor<TRow>;

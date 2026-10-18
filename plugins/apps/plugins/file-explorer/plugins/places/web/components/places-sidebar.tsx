@@ -4,11 +4,17 @@ import {
   DataView,
   defineDataView,
   type FieldDef,
+  type RowDropConfig,
+  type RowDropContext,
 } from "@plugins/primitives/plugins/data-view/web";
+import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import {
+  hasHostPaths,
+  readHostPaths,
+} from "@plugins/infra/plugins/host-fs/core";
 import type { SectionsToolbar } from "@plugins/primitives/plugins/data-view/core";
 import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   useExplorerLocation,
@@ -18,12 +24,17 @@ import {
 import { absolutePath } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 import {
   FileExplorer,
-  type PlaceGroup,
   type PlacesSource,
   type PlacesState,
 } from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
+import { pinRowKey, useFavorites } from "../internal/favorites";
+import type { PlaceRow } from "../internal/place-row";
+import { PlacesSlots } from "../slots";
 
 const PLACES_VIEW = defineDataView("file-explorer.places");
+
+/** The Favorites section's view id (config-authored, `file-explorer.places`). */
+const FAVORITES = "favorites";
 
 /**
  * Every authored section (Favorites, Worktrees, Locations) at once, each under
@@ -34,17 +45,6 @@ const SECTIONS: SectionsToolbar = {
   kind: "sections",
   forms: { header: "group" },
 };
-
-/** One place as a row: resolved, or a failed source (listed, saying why). */
-interface PlaceRow {
-  id: string;
-  group: PlaceGroup;
-  icon: IconRef;
-  label: string;
-  /** Where it leads; `null` for a place that failed to resolve. */
-  path: string | null;
-  message: string | null;
-}
 
 const GROUP_OPTIONS = [
   { value: "favorites", label: "Favorites" },
@@ -194,10 +194,13 @@ function placeRows(
       case "failed":
         rows.push({
           id: source.id,
+          source: source.id,
+          placeId: null,
           group: source.group,
           icon: state.icon,
           label: state.label,
           path: null,
+          open: null,
           message: state.message,
         });
         break;
@@ -205,10 +208,13 @@ function placeRows(
         for (const place of state.places) {
           rows.push({
             id: `${source.id}:${place.id}`,
+            source: source.id,
+            placeId: place.id,
             group: source.group,
             icon: place.icon,
             label: place.label,
             path: place.path,
+            open: place.open ?? null,
             message: null,
           });
         }
@@ -234,11 +240,58 @@ function PlacesList({
       : { status: "ready" };
   const activeId = useMemo(() => {
     if (home.kind !== "ready") return undefined;
-    const here = absolutePath(location.dir, home.home);
-    return rows.find(
-      (r) => r.path !== null && absolutePath(r.path, home.home) === here,
+    const abs = (p: string) => absolutePath(p, home.home);
+    const here = abs(location.dir);
+    const opened = location.open === null ? null : abs(location.open);
+    const inHere = rows.filter((r) => r.path !== null && abs(r.path) === here);
+    // The file showing, when it is a place; else the folder.
+    return (
+      inHere.find((r) => r.open !== null && abs(r.open) === opened) ??
+      inHere.find((r) => r.open === null)
     )?.id;
-  }, [rows, location.dir, home]);
+  }, [rows, location.dir, location.open, home]);
+
+  // Host paths dropped on Favorites go in the gap the line shows — between
+  // any two favorites, built-in or pinned, or after the last for the
+  // section's empty space: the drop places their rows in the view's own row
+  // order FIRST, then pins them (a pin already there just moves). Under a
+  // sort there is no gap to keep, so they are pinned at the end. The drop's
+  // data is read before anything is awaited.
+  const { lookUp, pin } = useFavorites();
+  const rowDrop = useMemo<RowDropConfig<PlaceRow>>(() => {
+    const pinDrop = (dt: DataTransfer, ctx: RowDropContext) => {
+      const read = readHostPaths(dt);
+      if (read.kind === "absent") return;
+      if (read.kind === "malformed") {
+        throw new Error(
+          `file-explorer places: malformed host-paths drop: ${read.error}`,
+        );
+      }
+      const place = async () => {
+        const pins = await lookUp(read.paths);
+        if (pins.length === 0) return;
+        if (ctx.order) await ctx.order.insert(pins.map(pinRowKey));
+        pin(pins);
+      };
+      // A failed lookup or order write is already shown by the endpoint
+      // error toast.
+      void place().catch((err: unknown) => {
+        if (err instanceof EndpointError) return;
+        throw err;
+      });
+    };
+    return {
+      placement: "between",
+      accepts: (r, types, edge) =>
+        r.group === "favorites" && edge !== "into" && hasHostPaths(types),
+      onDrop: (_r, dt, _edge, ctx) => pinDrop(dt, ctx),
+      background: {
+        accepts: (types, at) => at.viewId === FAVORITES && hasHostPaths(types),
+        onDrop: (dt, _at, ctx) => pinDrop(dt, ctx),
+      },
+      dropEffect: "link",
+    };
+  }, [lookUp, pin]);
 
   return (
     // The block padding sits on an inner box, never on the `Scroll`: a sticky
@@ -257,8 +310,12 @@ function PlacesList({
           density="compact"
           selectedRowId={activeId}
           rowActivation={(r) =>
-            r.path === null ? undefined : folderTarget(r.path)
+            r.path === null
+              ? undefined
+              : folderTarget(r.path, r.open ?? undefined)
           }
+          itemActions={PlacesSlots.RowActions}
+          rowDrop={rowDrop}
           rowTone={(r) => (r.path === null ? "muted" : "default")}
           viewOptions={listOptions(activeId)}
         />

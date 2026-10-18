@@ -152,6 +152,10 @@ export function TreeRowChrome({
         // tokens (`treeRowH`, `treeRowGap`, `treeRowPadStart`, `treeIndent`),
         // so a theme owns a tree's rhythm.
         "group/tree-row min-h-tree-row gap-tree-row rounded-md px-xs py-xs text-body",
+        // A press-and-drag across rows is a row gesture (a selection, a
+        // drag), never a text selection; an inline editor inside the row is a
+        // form control and keeps its own.
+        "select-none",
         // A focusable row (one with an open gesture) is walked with the arrow
         // keys, so the row the keys are on must show it.
         onOpen && "focus-ring",
