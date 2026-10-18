@@ -129,6 +129,16 @@ ruleTester.run(
         code: `const a = <PopoverContent className="bg-popover rounded-lg shadow-md p-md" />;`,
         errors: [{ messageId: "adhocOverlay" }],
       },
+      // hand-rolled glass — an alpha popover fill + a backdrop blur is the
+      // overlay material a theme sets (material group), shadow or not.
+      {
+        code: `const a = <div className="bg-popover/90 backdrop-blur-[30px] backdrop-saturate-[1.8]" />;`,
+        errors: [{ messageId: "adhocOverlay" }],
+      },
+      {
+        code: `const a = <div className="rounded-2xl bg-popover-fill shadow-lg" />;`,
+        errors: [{ messageId: "adhocOverlay" }],
+      },
     ],
   },
 );

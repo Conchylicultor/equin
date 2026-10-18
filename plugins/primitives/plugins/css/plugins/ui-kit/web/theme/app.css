@@ -82,6 +82,10 @@
     --color-primary: var(--primary);
     --color-popover-foreground: var(--popover-foreground);
     --color-popover: var(--popover);
+    /* A floating panel's fill (material group, `bg-popover-fill`) — the
+       overlay surface role's background. Default = `--popover`; a frosted
+       theme makes it translucent while `--popover` stays opaque. */
+    --color-popover-fill: var(--popover-fill);
     --color-card-foreground: var(--card-foreground);
     --color-card: var(--card);
     --color-foreground: var(--foreground);
@@ -336,6 +340,11 @@
  * replace it. The declaration is Tailwind's own `shadow-*` composition, so the
  * overlay's `ring-1` still draws beside it. */
 @utility shadow-popover { --tw-shadow: var(--shadow-popover); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
+/* …and what it does to what shows through it (`--popover-backdrop`, the
+ * material group's backdrop filter, default `none`) — `SURFACE_LEVELS.overlay`
+ * wears it beside `bg-popover-fill`, so a frosted theme frosts every popover,
+ * menu and dialog together. */
+@utility backdrop-popover { -webkit-backdrop-filter: var(--popover-backdrop); backdrop-filter: var(--popover-backdrop); } /* twmerge: standalone -- The overlay role's themed backdrop-filter; no built-in backdrop group is extendable, and no caller layers a backdrop-* class onto an overlay panel. */
 
 /* Single-line region invariant — the shared base for horizontal chrome strips
  * (the Bar primitive), interactive rows (Row), and chips. Bakes the two-class

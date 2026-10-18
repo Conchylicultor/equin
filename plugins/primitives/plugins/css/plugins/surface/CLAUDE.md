@@ -19,7 +19,14 @@ re-themes all surfaces of a role at once.
 | `sunken`  | `bg-muted`                                               | recessed well / band *below* the base plane     |
 | `base`    | `bg-background`                                           | page / pane canvas, toolbar bands, sticky headers |
 | `raised`  | `rounded-card border border-border bg-card shadow-sm`    | a card lifted one step above base               |
-| `overlay` | `rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-popover-border` (+ `--hover-fill: var(--popover-hover)`, default `--selected`) | floats above all: popovers, menus, floating panels |
+| `overlay` | `rounded-popover bg-popover-fill backdrop-popover text-popover-foreground shadow-popover ring-1 ring-popover-border` (+ `--hover-fill: var(--popover-hover)`, default `--selected`) | floats above all: popovers, menus, floating panels |
+
+`overlay`'s material is the [`material`](../../../../../ui/plugins/tokens/plugins/material/CLAUDE.md)
+token group's — `--popover-fill` (default `var(--popover)`) and
+`--popover-backdrop` (default `none`) — so a theme that sets them (the
+Desktop's frosted glass) turns every popover, menu, select and dialog opened in
+its scope into glass at once. Never hand-roll `bg-popover/90 backdrop-blur-*`:
+the lint flags it.
 
 `raised`'s corners are the shape group's `radiusCard` token (`rounded-card`),
 which defaults to the `rounded-md` step, so a theme can round its cards without
@@ -69,7 +76,8 @@ silently letting a recipe smuggled through a layout component's `className` slip
 
 - **raised** — `rounded` + `border` + the `bg-card` token + padding (this is the
   former `no-adhoc-card`, folded in here).
-- **overlay** — the `bg-popover` token + a `shadow-*` + `rounded`.
+- **overlay** — the `bg-popover` token (or `bg-popover-fill`, at any alpha) + a
+  `shadow-*` + `rounded`, or + a `backdrop-blur*` (hand-rolled glass).
 
 There are exactly **two sanctioned homes** for the recipe, both invisible to the
 gate by construction:

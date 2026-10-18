@@ -1,4 +1,4 @@
-// @hash 646c301ecd9d
+// @hash e979d7a6bbae
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -20,6 +20,7 @@
     "ui.tokens.scrollbar:scrollbar",
     "ui.tokens.icons:icons",
     "ui.tokens.shadow:shadow",
+    "ui.tokens.material:material",
     "ui.tokens.chart:chart",
     "ui.tokens.categorical:categorical",
     "ui.tokens.file-type-palette:file-type-palette",

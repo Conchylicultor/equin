@@ -62,5 +62,9 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
     // to the `rounded-lg` and `shadow-md` steps it always wore. A text field
     // inside wears the popover's own field tokens (`--popover-field`, default =
     // the canvas field), so a theme can sink a menu's search row into the panel.
-    "rounded-popover bg-popover text-popover-foreground shadow-popover ring-1 ring-popover-border [--chrome-mask:var(--popover)] [--hover-fill:var(--popover-hover)] [--field-fill:var(--popover-field)] [--field-outline:var(--popover-field-border)]",
+    // Its material is the material group's (`bg-popover-fill`,
+    // `backdrop-popover`): opaque and unfiltered by default, frosted glass in a
+    // theme that sets them — while `--popover`, which the mask and a sticky
+    // header paint, stays opaque.
+    "rounded-popover bg-popover-fill backdrop-popover text-popover-foreground shadow-popover ring-1 ring-popover-border [--chrome-mask:var(--popover)] [--hover-fill:var(--popover-hover)] [--field-fill:var(--popover-field)] [--field-outline:var(--popover-field-border)]",
 };

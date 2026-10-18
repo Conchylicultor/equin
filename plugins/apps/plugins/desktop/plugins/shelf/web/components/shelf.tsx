@@ -52,12 +52,13 @@ const APP_PEEK_GAP = 16;
 const DESKTOP_PEEK_GAP = 20;
 
 /**
- * The peek's own look over the shared overlay panel: the mockup's frosted menu
- * glass (`--menu-bg` + blur 30 saturate 1.8), its hairline-plus-lift shadow in
- * place of the panel's ring (no token spells this shadow), and its entry.
+ * The peek's own look over the shared overlay panel: its hairline-plus-lift
+ * shadow in place of the panel's ring (no token spells this shadow), and its
+ * entry. Its frosted glass is the panel's own — the desktop theme's overlay
+ * material.
  */
 const PEEK_CHROME = cn(
-  "ring-0 bg-popover/90 backdrop-blur-[30px] backdrop-saturate-[1.8]",
+  "ring-0",
   "shadow-[0_0_0_0.5px_var(--input),0_16px_40px_-10px_rgba(0,0,0,0.35),0_2px_6px_rgba(0,0,0,0.08)]",
   "animate-in fade-in-0 slide-in-from-bottom-1 zoom-in-98 duration-[140ms] ease-[cubic-bezier(.2,.8,.2,1)]",
 );

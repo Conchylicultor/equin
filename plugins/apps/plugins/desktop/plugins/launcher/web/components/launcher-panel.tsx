@@ -143,7 +143,7 @@ export function LauncherPanel({ onClose }: { onClose(): void }) {
             role="dialog"
             aria-label="Apps"
             className={cn(
-              "w-full max-w-160 rounded-2xl bg-popover/90 backdrop-blur-2xl backdrop-saturate-180",
+              "w-full max-w-160 rounded-2xl",
               // The mockup's two-layer lift; no shadow token carries this much spread.
               "shadow-[0_30px_80px_-20px_rgba(0,0,0,0.45),0_4px_12px_rgba(0,0,0,0.1)]",
               "animate-in fade-in-0 zoom-in-97 slide-in-from-top-1.5 duration-150 ease-out",

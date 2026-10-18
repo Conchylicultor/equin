@@ -154,8 +154,8 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `ThemeEngine.SubTheme`
     - `ThemeEngine.FixedTheme`
     - `ThemeEngine.ThemeSource`
-  - Slot contributors: 38 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ThemeEngine.TokenGroup` ×16
+  - Slot contributors: 39 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ThemeEngine.TokenGroup` ×17
     - `ThemeEngine.Theme` ×9
     - `ThemeEngine.VariantGroup` ×6
     - `ThemeEngine.SubTheme` ×4
@@ -263,8 +263,8 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui` ×26
+  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui` ×27
     - `apps` ×11
     - `apps-core/chrome-theme`
     - `plugin-meta/token-usage`

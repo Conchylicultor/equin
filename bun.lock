@@ -6071,6 +6071,10 @@
       "name": "@singularity/plugin-ui-tokens-icons",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/material": {
+      "name": "@singularity/plugin-ui-tokens-material",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/place-palette": {
       "name": "@singularity/plugin-ui-tokens-place-palette",
       "version": "0.0.1",
@@ -9643,6 +9647,8 @@
     "@singularity/plugin-ui-tokens-font-family-google-fonts": ["@singularity/plugin-ui-tokens-font-family-google-fonts@workspace:plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts"],
 
     "@singularity/plugin-ui-tokens-icons": ["@singularity/plugin-ui-tokens-icons@workspace:plugins/ui/plugins/tokens/plugins/icons"],
+
+    "@singularity/plugin-ui-tokens-material": ["@singularity/plugin-ui-tokens-material@workspace:plugins/ui/plugins/tokens/plugins/material"],
 
     "@singularity/plugin-ui-tokens-place-palette": ["@singularity/plugin-ui-tokens-place-palette@workspace:plugins/ui/plugins/tokens/plugins/place-palette"],
 

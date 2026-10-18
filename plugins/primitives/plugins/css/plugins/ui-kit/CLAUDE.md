@@ -586,7 +586,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useSingleLine`
     - `WithTooltip`
 - Cross-plugin:
-  - Uses tokens: 233 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 235 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/density` ×70
     - `ui/tokens/color-palette` ×57
     - `ui/tokens/type-scale` ×42
@@ -597,6 +597,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/sidebar-palette` ×9
     - `ui/tokens/chart` ×5
     - `ui/tokens/font-family` ×4
+    - `ui/tokens/material` ×2
     - `ui/tokens/scrollbar --scrollbar-color`
   - Imported by: 416 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×105

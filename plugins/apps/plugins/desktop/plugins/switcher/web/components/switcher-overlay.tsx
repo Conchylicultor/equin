@@ -137,7 +137,7 @@ export function SwitcherOverlay() {
         <Surface
           level="overlay"
           className={cn(
-            "pointer-events-auto max-w-[min(1100px,100%)] rounded-2xl bg-popover/90 p-sm backdrop-blur-2xl backdrop-saturate-180",
+            "pointer-events-auto max-w-[min(1100px,100%)] rounded-2xl p-sm",
             // The mockup's lift; no shadow token carries this much spread.
             "shadow-[0_30px_80px_-20px_rgba(0,0,0,0.5)]",
             "animate-in fade-in-0 zoom-in-97 slide-in-from-top-1.5 duration-150 ease-out",

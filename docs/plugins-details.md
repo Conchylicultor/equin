@@ -2590,7 +2590,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted`
               - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/color-palette --popover`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-md`
@@ -2631,8 +2630,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/overlay/floating-surface.FloatingSurface`
               - `ui/icons.Icon`
           - Cross-plugin:
-            - Uses tokens: 26 vars — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
-              - `ui/tokens/color-palette` ×11
+            - Uses tokens: 25 vars — full list in [`plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/shelf/REFERENCE.md)
+              - `ui/tokens/color-palette` ×10
               - `ui/tokens/type-scale` ×10
               - `ui/tokens/density` ×2
               - `ui/tokens/shape` ×2
@@ -2716,7 +2715,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --background`
               - `ui/tokens/color-palette --border`
               - `ui/tokens/color-palette --foreground`
-              - `ui/tokens/color-palette --popover`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-md`
@@ -34522,10 +34520,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `conversations` ×11
+          - `ui` ×10
           - `apps` ×9
-          - `ui` ×9
           - `primitives` ×8
           - `plugin-meta` ×4
           - `review` ×3
@@ -35484,9 +35482,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×7
               - `ui/tokens/density` ×4
               - `ui/tokens/shape` ×2
-            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+            - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
               - `apps` ×15
-              - `ui` ×11
+              - `ui` ×12
               - `page` ×10
               - `primitives` ×9
               - `conversations` ×5
@@ -35618,12 +35616,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 396 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 397 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×62
               - `primitives` ×51
               - `debug` ×36
-              - `ui` ×28
+              - `ui` ×29
               - `page` ×24
               - `plugin-meta` ×15
               - `tasks` ×11
@@ -36118,7 +36116,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSingleLine`
               - `WithTooltip`
           - Cross-plugin:
-            - Uses tokens: 233 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Uses tokens: 235 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `ui/tokens/density` ×70
               - `ui/tokens/color-palette` ×57
               - `ui/tokens/type-scale` ×42
@@ -36129,6 +36127,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/sidebar-palette` ×9
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
+              - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
             - Imported by: 416 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×105
@@ -38422,12 +38421,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 245 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 246 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×69
           - `conversations` ×42
           - `debug` ×23
+          - `ui` ×23
           - `tasks` ×22
-          - `ui` ×22
           - `page` ×12
           - `primitives` ×10
           - `active-data` ×7
@@ -38514,9 +38513,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 190 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 191 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×63
-          - `ui` ×19
+          - `ui` ×20
           - `conversations` ×18
           - `debug` ×18
           - `primitives` ×17
@@ -46498,8 +46497,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 38 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
-          - `ThemeEngine.TokenGroup` ×16
+        - Slot contributors: 39 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+          - `ThemeEngine.TokenGroup` ×17
           - `ThemeEngine.Theme` ×9
           - `ThemeEngine.VariantGroup` ×6
           - `ThemeEngine.SubTheme` ×4
@@ -46607,8 +46606,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --chrome-pad-x`
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 40 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
-          - `ui` ×26
+        - Imported by: 41 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+          - `ui` ×27
           - `apps` ×11
           - `apps-core/chrome-theme`
           - `plugin-meta/token-usage`
@@ -46747,6 +46746,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThemeCustomizer.Section` ← `ui.tokens.file-type-palette`
               - `ThemeCustomizer.Section` ← `ui.tokens.font-family`
               - `ThemeCustomizer.Section` ← `ui.tokens.icons`
+              - `ThemeCustomizer.Section` ← `ui.tokens.material`
               - `ThemeCustomizer.Section` ← `ui.tokens.place-palette`
               - `ThemeCustomizer.Section` ← `ui.tokens.scrollbar`
               - `ThemeCustomizer.Section` ← `ui.tokens.shadow`
@@ -46798,27 +46798,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shadow --shadow`
-            - Imported by:
+            - Imported by: 21 plugins — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md)
+              - `ui` ×20
               - `apps/settings/appearance`
-              - `ui/theme-engine/quick-theme`
-              - `ui/theme-engine/theme-gallery`
-              - `ui/tokens/categorical`
-              - `ui/tokens/chart`
-              - `ui/tokens/chord-palette`
-              - `ui/tokens/color-adjust`
-              - `ui/tokens/color-palette`
-              - `ui/tokens/density`
-              - `ui/tokens/file-type-palette`
-              - `ui/tokens/font-family`
-              - `ui/tokens/icons`
-              - `ui/tokens/place-palette`
-              - `ui/tokens/scrollbar`
-              - `ui/tokens/shadow`
-              - `ui/tokens/shape`
-              - `ui/tokens/sidebar-metrics`
-              - `ui/tokens/sidebar-palette`
-              - `ui/tokens/type-scale`
-              - `ui/tweakcn/community-browser`
         - **`theme-gallery`** — The Theme DataView: every selectable theme plus every catalog's unsaved entries, with My themes / Community / Curated views. Picking one selects it for the current scope (saving a catalog entry first). Shown as the customizer's first section (cards, with rename and delete on saved themes) and in the quick-theme popover (compact rows).
           - Web:
             - Slots: `item-actions`
@@ -46985,14 +46967,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 484 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 485 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×107
               - `conversations` ×84
               - `primitives` ×75
               - `debug` ×34
               - `page` ×32
               - `plugin-meta` ×26
-              - `ui` ×21
+              - `ui` ×22
               - `tasks` ×14
               - `fields` ×12
               - `reports` ×12
@@ -47194,6 +47176,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readIconTokens`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
+        - **`material`** — Material token group (a floating panel's fill and backdrop filter — opaque, unfiltered by default; frosted glass when a theme sets them) with its customizer section.
+          - Web:
+            - Contributes:
+              - `ThemeEngine.TokenGroup` "Material"
+              - `ThemeCustomizer.Section` "Material" → `MaterialSection`
+            - Uses:
+              - `primitives/collapsible.Collapsible`
+              - `primitives/collapsible.CollapsibleContent`
+              - `primitives/css/row.SectionHeaderRow`
+              - `primitives/css/spacing.Stack`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
+              - `ui/theme-engine.ThemeEngine`
+              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
+            - Exports (types): `MaterialTokenValues`
+            - Exports (values): `materialGroup`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --popover`
+              - `ui/tokens/shape --spacing`
+            - Tokens used by: `primitives/css/ui-kit`
         - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), and their customizer section.
           - Web:
             - Contributes:
@@ -47338,13 +47345,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 669 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 670 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×143
               - `primitives` ×124
               - `conversations` ×99
               - `page` ×46
               - `debug` ×40
-              - `ui` ×34
+              - `ui` ×35
               - `framework` ×21
               - `infra` ×20
               - `tasks` ×19

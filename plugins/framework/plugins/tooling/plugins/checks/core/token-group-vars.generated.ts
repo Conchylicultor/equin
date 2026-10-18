@@ -16,6 +16,7 @@ export const TOKEN_GROUP_VARS: Record<string, readonly string[]> = {
   "file-type-palette": ["--file-blue", "--file-green", "--file-grey", "--file-ignored", "--file-neutral", "--file-orange", "--file-pink", "--file-purple", "--file-red", "--file-yellow", "--folder"],
   "font-family": ["--font-mono", "--font-sans", "--font-serif", "--font-smoothing", "--letter-spacing"],
   "icons": ["--icon-active-fill", "--icon-family", "--icon-fill", "--icon-shape", "--icon-stroke"],
+  "material": ["--popover-backdrop", "--popover-fill"],
   "place": ["--place-automotive", "--place-business", "--place-culture", "--place-education", "--place-entertainment", "--place-facilities", "--place-finance", "--place-food", "--place-geographic", "--place-government", "--place-health", "--place-housing", "--place-lodging", "--place-nature", "--place-none", "--place-services", "--place-shopping", "--place-sports", "--place-transport", "--place-worship"],
   "rich-text-palette": ["--rt-color-blue", "--rt-color-brown", "--rt-color-gray", "--rt-color-green", "--rt-color-orange", "--rt-color-pink", "--rt-color-purple", "--rt-color-red", "--rt-color-yellow"],
   "scrollbar": ["--scrollbar-color"],

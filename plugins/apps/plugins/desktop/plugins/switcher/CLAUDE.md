@@ -65,7 +65,6 @@ character on a US keyboard.
     - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-md`

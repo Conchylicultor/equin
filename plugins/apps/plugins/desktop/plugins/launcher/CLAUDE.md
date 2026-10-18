@@ -86,7 +86,6 @@ defaults.
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-md`

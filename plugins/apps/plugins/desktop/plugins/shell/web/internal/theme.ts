@@ -3,6 +3,7 @@ import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-pale
 import { fontFamilyGroup } from "@plugins/ui/plugins/tokens/plugins/font-family/core";
 import { shapeGroup } from "@plugins/ui/plugins/tokens/plugins/shape/core";
 import { shadowGroup } from "@plugins/ui/plugins/tokens/plugins/shadow/core";
+import { materialGroup } from "@plugins/ui/plugins/tokens/plugins/material/core";
 
 /** The desktop's accent — the mockup's indigo. Pips, the selection tint, the
  * launcher's highlight and every app tile's gradient read it (`--primary`). */
@@ -17,9 +18,9 @@ const INK = "#16181d";
  * The same values in both colour modes: the chrome is designed light — a
  * frosted panel the wallpaper shows through — over light AND dark apps alike,
  * and the colour mode is one global setting, so a dark arm would claim a choice
- * the desktop's design does not make. Translucency is not spelled here: each
- * surface applies its own alpha to these tokens (the dock `bg-background/55`,
- * a menu `bg-popover/90`), so the palette stays opaque, as every group expects.
+ * the desktop's design does not make. The palette stays opaque, as every
+ * group expects: the overlays' translucency is the {@link material} below, and
+ * the dock applies its own alpha (`bg-background/55`).
  */
 const colorPalette = colorPaletteGroup.fragment(
   both({
@@ -78,6 +79,19 @@ const shadow = shadowGroup.fragment(
 );
 
 /**
+ * The mockup's frosted menu glass (`--menu-bg`: the popover at 90%, blur 30
+ * saturate 1.8): every overlay opened in the desktop's scope — the window
+ * system menu, the shelf and launcher app menus, the desktop's context menu,
+ * the shelf peek, the launcher, the switcher — wears it.
+ */
+const material = materialGroup.fragment(
+  both({
+    popoverFill: "color-mix(in oklab, var(--popover) 90%, transparent)",
+    popoverBackdrop: "blur(30px) saturate(1.8)",
+  }),
+);
+
+/**
  * The Desktop's own theme — the look of everything the desktop draws around
  * its windows. Selected for the desktop app in
  * `config/ui/theme-engine/@app/desktop/theme.jsonc`, and switchable like any
@@ -87,5 +101,5 @@ const shadow = shadowGroup.fragment(
 export const desktopTheme = defineTheme({
   id: "desktop",
   label: "Desktop",
-  fragments: [colorPalette, fontFamily, shape, shadow],
+  fragments: [colorPalette, fontFamily, shape, shadow, material],
 });

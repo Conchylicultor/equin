@@ -342,7 +342,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu)…
         - **`theme-gallery`** — The Theme DataView: every selectable theme plus every catalog's unsaved entries, with My themes / Community / Curated views. Picking one selects it for the current scope (saving a catalog entry…
     - **`theme-toggle`** — Light/dark switch inside the quick-theme popover.
-    - **`tokens`** [exempt] [18 sub-plugins] — Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.
+    - **`tokens`** [exempt] [19 sub-plugins] — Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.
     - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
       - Plugins:
         - **`column`** — Column tree disclosure — a dedicated chevron column ahead of the icon, present only on rows with children (Finder / VS Code style).
