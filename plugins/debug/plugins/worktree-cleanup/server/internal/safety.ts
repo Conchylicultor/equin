@@ -3,19 +3,27 @@ import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
+// The one git fact that decides whether a checkout has anything to lose:
+// uncommitted state (modified, staged, deleted or untracked files). Commits are
+// deliberately NOT part of it — not pushed, not ahead-of-upstream, not merged.
+// Reaping removes the worktree DIR and leaves the branch ref in the main repo
+// (nothing in reapAttempt deletes a branch), so every commit an attempt made
+// survives the reap and `git worktree add <path> <branch>` restores it. Only
+// what was never committed lives exclusively in the checkout.
+//
+// This used to carry an `unpushedCount` read from `# branch.ab`, with a missing
+// upstream read as "never pushed". `./singularity push` lands work by merging
+// into local main and many branches never get an upstream, so ~200 clean,
+// finished checkouts failed that term on every hourly sweep and none was ever
+// reaped — while the term protected nothing the branch ref does not already keep.
 export interface GitHygiene {
-  unpushedCount: number;
   isDirty: boolean;
 }
 
 // The conservative answer: "assume there is something to lose". Returned for
 // EVERY path where we failed to establish otherwise, so a hygiene probe that
 // could not run can never certify a worktree as safe to delete.
-//
-// `isDirty: true` alone is enough to fail `isSafeToReap`; the sentinel
-// unpushedCount makes the reason legible in the UI rather than reading as a
-// genuinely clean tree.
-const HYGIENE_UNKNOWN: GitHygiene = { unpushedCount: 1, isDirty: true };
+const HYGIENE_UNKNOWN: GitHygiene = { isDirty: true };
 
 /**
  * PURE helper (exported for unit testing): classify `git status --porcelain=v2
@@ -23,16 +31,10 @@ const HYGIENE_UNKNOWN: GitHygiene = { unpushedCount: 1, isDirty: true };
  * fail-open bugs lived — is directly testable.
  *
  * Returns the conservative HYGIENE_UNKNOWN when the output does not prove the
- * tree is clean and published:
- *
- *   - No `# branch.oid` header ⇒ this is not parseable status output at all
- *     (empty stdout from a failed git, a truncated read). Previously an empty
- *     string sailed through as `{unpushedCount: 0, isDirty: false}` — "clean,
- *     nothing unpushed", the maximally-reapable answer.
- *   - No `# branch.ab` header ⇒ the branch has NO UPSTREAM. git only emits that
- *     line when a tracking branch exists, so a never-pushed branch produced no
- *     match and read as 0 unpushed. Every commit on such a branch exists ONLY in
- *     that worktree, which is the strongest possible reason not to delete it.
+ * tree is clean: no `# branch.oid` header means this is not parseable status
+ * output at all (empty stdout from a failed git, a truncated read). Previously an
+ * empty string sailed through as clean, the maximally-reapable answer. The
+ * header is why the probe keeps `--branch`: it is the proof of a real run.
  */
 export function classifyGitStatus(statusOut: string): GitHygiene {
   const lines = statusOut.split("\n");
@@ -42,18 +44,7 @@ export function classifyGitStatus(statusOut: string): GitHygiene {
   if (!lines.some((l) => l.startsWith("# branch.oid "))) return HYGIENE_UNKNOWN;
 
   // Any non-header line is a file change.
-  const isDirty = lines.some((l) => l.length > 0 && !l.startsWith("#"));
-
-  // Header line: "# branch.ab +<ahead> -<behind>". Emitted ONLY when the branch
-  // has an upstream — no upstream means nothing has been published anywhere.
-  const abLine = lines.find((l) => l.startsWith("# branch.ab "));
-  if (!abLine)
-    return { unpushedCount: HYGIENE_UNKNOWN.unpushedCount, isDirty: true };
-
-  const aheadMatch = abLine.match(/\+(\d+)/);
-  if (!aheadMatch) return HYGIENE_UNKNOWN;
-
-  return { unpushedCount: parseInt(aheadMatch[1]!, 10), isDirty };
+  return { isDirty: lines.some((l) => l.length > 0 && !l.startsWith("#")) };
 }
 
 // A `git status` over a 690 MB checkout is a CPU/IO-heavy read (measured ~0.4 s
@@ -79,7 +70,7 @@ export function classifyGitStatus(statusOut: string): GitHygiene {
 // `spawnCaptured` reports a failed command as a RESULT (`exitCode !== 0`,
 // `timedOut: true`) rather than throwing, so a failed `git status` would
 // otherwise reach `classifyGitStatus` with empty stdout — which is exactly the
-// input that used to parse as "clean, 0 unpushed", the maximally-reapable
+// input that used to parse as "clean", the maximally-reapable
 // answer. All three arms (throw, timeout, non-zero exit) funnel into
 // HYGIENE_UNKNOWN.
 export async function getGitHygiene(
@@ -134,7 +125,6 @@ export const SAFE_REAP_AGE_MS = 72 * 60 * 60 * 1000;
 export interface SafetyInput {
   dirExists: boolean;
   dbPresent: boolean;
-  unpushedCount: number;
   isDirty: boolean;
   taskDeletable: boolean;
   ageMs: number;
@@ -164,11 +154,7 @@ export function isSafeToReap(i: SafetyInput): boolean {
   if (i.retained) return false; // the user has not finished with this — never reap
   if (!i.dirExists && i.dbPresent) return true; // orphan: nothing to lose, just drop the DB
   return (
-    i.dirExists &&
-    i.unpushedCount === 0 &&
-    !i.isDirty &&
-    i.taskDeletable &&
-    i.ageMs >= SAFE_REAP_AGE_MS
+    i.dirExists && !i.isDirty && i.taskDeletable && i.ageMs >= SAFE_REAP_AGE_MS
   );
 }
 
@@ -179,12 +165,12 @@ export function isSafeToReap(i: SafetyInput): boolean {
 //
 // The reaper's verdict is `isSafeToReap(...) || hardFloor`. With `retained: false`
 // and `dirExists: true`, `isSafeToReap` reduces to
-// `clean && taskDeletable && ageMs >= SAFE_REAP_AGE_MS`, where `clean`
-// (`unpushedCount === 0 && !isDirty`) is the ONLY term the subprocess supplies.
+// `!isDirty && taskDeletable && ageMs >= SAFE_REAP_AGE_MS`, where `isDirty` is
+// the ONLY term the subprocess supplies.
 // So:
 //   - `hardFloor`                    ⇒ verdict is true whatever git says ⇒ no probe
 //   - `!taskDeletable` or too young  ⇒ verdict is false whatever git says ⇒ no probe
-//   - otherwise                      ⇒ the verdict IS `clean` ⇒ probe required
+//   - otherwise                      ⇒ the verdict IS `!isDirty` ⇒ probe required
 //
 // This is a REORDERING, not a policy change: the probe is skipped only where its
 // answer is provably ignored. The property test in safety.test.ts pins that —

@@ -87,21 +87,18 @@ function DirtyIndicator({ entry }: { entry: WorktreeEntry }) {
       </Text>
     );
   }
-  if (entry.isSafe) {
+  if (!entry.isDirty) {
     return (
       <Text as="span" variant="caption" className="text-muted-foreground">
         clean
       </Text>
     );
   }
-  const parts: string[] = [];
-  if (entry.unpushedCount > 0) parts.push(`${entry.unpushedCount} unpushed`);
-  if (entry.isDirty) parts.push("uncommitted");
   return (
     <Text as="div" variant="caption" className="text-warning">
       <Stack direction="row" gap="xs" align="center">
         <Icon icon={warningIcon} className="size-3.5" />
-        {parts.join(", ")}
+        uncommitted
       </Stack>
     </Text>
   );
@@ -477,7 +474,9 @@ function EntryRow({
           <td colSpan={5} className="px-lg py-sm">
             <Stack direction="row" gap="lg" align="center" justify="between">
               <Text as="span" variant="caption" className="text-warning">
-                This worktree has unpushed commits or uncommitted changes.
+                {entry.isDirty
+                  ? "This worktree has uncommitted changes."
+                  : "This worktree is not finished (open conversation, open task, or under 72 h old)."}{" "}
                 Delete anyway?
               </Text>
               <ControlSizeProvider size="sm">

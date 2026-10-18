@@ -14,7 +14,6 @@ export const WorktreeEntrySchema = z.object({
   createdAt: z.string(),
   dirExists: z.boolean(),
   dbExists: z.boolean(),
-  unpushedCount: z.number(),
   isDirty: z.boolean(),
   isSafe: z.boolean(),
 });

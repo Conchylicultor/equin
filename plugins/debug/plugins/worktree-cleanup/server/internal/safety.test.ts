@@ -20,73 +20,61 @@ const CLEAN_HEADER = [
 ].join("\n");
 
 describe("classifyGitStatus", () => {
-  test("clean, published branch is clean with nothing unpushed", () => {
-    expect(classifyGitStatus(CLEAN_HEADER)).toEqual({
-      unpushedCount: 0,
-      isDirty: false,
-    });
-  });
-
-  test("counts commits ahead of upstream", () => {
-    const out = CLEAN_HEADER.replace("# branch.ab +0 -0", "# branch.ab +2 -0");
-    expect(classifyGitStatus(out)).toEqual({
-      unpushedCount: 2,
-      isDirty: false,
-    });
+  test("a clean tree reads clean", () => {
+    expect(classifyGitStatus(CLEAN_HEADER)).toEqual({ isDirty: false });
   });
 
   test("a modified file reads dirty", () => {
     const out =
       CLEAN_HEADER + "1 .M N... 100644 100644 100644 abc def plugins/foo.ts\n";
-    expect(classifyGitStatus(out)).toEqual({ unpushedCount: 0, isDirty: true });
+    expect(classifyGitStatus(out)).toEqual({ isDirty: true });
   });
 
-  // The regression that let the reaper delete never-pushed work: git emits
-  // `# branch.ab` ONLY when a tracking branch exists, so a branch that was never
-  // pushed anywhere produced no match and read as "0 unpushed".
-  test("a branch with NO upstream is never treated as published", () => {
+  test("an untracked file reads dirty", () => {
+    expect(classifyGitStatus(CLEAN_HEADER + "? notes.md\n")).toEqual({
+      isDirty: true,
+    });
+  });
+
+  // Commits are not hygiene: the reap leaves the branch ref in the main repo,
+  // so a branch with no upstream (most of them — push merges into local main)
+  // or ahead of it has nothing that exists only in the checkout.
+  test("a clean branch with NO upstream reads clean and is reapable", () => {
     const noUpstream = [
       "# branch.oid 73be6f4e9860a9801bfdc60ff93c50093c812f08",
       "# branch.head claude-web/att-1786116592-q1dq",
       "",
     ].join("\n");
     const hygiene = classifyGitStatus(noUpstream);
-    expect(hygiene.unpushedCount).toBeGreaterThan(0);
-    expect(hygiene.isDirty).toBe(true);
-    expect(isSafeToReap(input({ ...hygiene }))).toBe(false);
+    expect(hygiene).toEqual({ isDirty: false });
+    expect(isSafeToReap(input({ ...hygiene }))).toBe(true);
   });
 
-  // The other half: Bun.spawn does not throw on a nonzero exit, so a failed
-  // `git status` reached the parser as an empty string and — having no non-`#`
-  // lines and no branch.ab — read as "clean, 0 unpushed", the maximally
-  // reapable answer.
+  test("commits ahead of upstream do not read dirty", () => {
+    const out = CLEAN_HEADER.replace("# branch.ab +0 -0", "# branch.ab +2 -0");
+    expect(classifyGitStatus(out)).toEqual({ isDirty: false });
+  });
+
+  // Bun.spawn does not throw on a nonzero exit, so a failed `git status`
+  // reached the parser as an empty string and — having no non-`#` lines — read
+  // as clean, the maximally reapable answer.
   test("empty output (failed git) is conservative, not clean", () => {
-    expect(classifyGitStatus("")).toEqual({ unpushedCount: 1, isDirty: true });
+    expect(classifyGitStatus("")).toEqual({ isDirty: true });
   });
 
   test("unparseable output is conservative", () => {
     expect(classifyGitStatus("fatal: not a git repository\n")).toEqual({
-      unpushedCount: 1,
       isDirty: true,
     });
   });
-
-  test("a malformed branch.ab line is conservative", () => {
-    const out = CLEAN_HEADER.replace(
-      "# branch.ab +0 -0",
-      "# branch.ab garbage",
-    );
-    expect(classifyGitStatus(out)).toEqual({ unpushedCount: 1, isDirty: true });
-  });
 });
 
-// A fully reapable attempt: dir present, published, clean, task finished, old
+// A fully reapable attempt: dir present, clean, task finished, old
 // enough, and the user has closed every conversation on it.
 function input(over: Partial<SafetyInput> = {}): SafetyInput {
   return {
     dirExists: true,
     dbPresent: true,
-    unpushedCount: 0,
     isDirty: false,
     taskDeletable: true,
     ageMs: SAFE_REAP_AGE_MS,
@@ -117,10 +105,6 @@ describe("isSafeToReap", () => {
     const orphan = input({ dirExists: false, dbPresent: true });
     expect(isSafeToReap(orphan)).toBe(true);
     expect(isSafeToReap({ ...orphan, retained: true })).toBe(false);
-  });
-
-  test("unpushed commits block reaping", () => {
-    expect(isSafeToReap(input({ unpushedCount: 1 }))).toBe(false);
   });
 
   test("a dirty tree blocks reaping", () => {
@@ -154,8 +138,8 @@ describe("isSafeToReap", () => {
 // clean and dirty there while the verdict does not. Below the floor the two
 // statements coincide, and the second assertion pins that stronger form.
 describe("needsHygiene short-circuit", () => {
-  const CLEAN = { unpushedCount: 0, isDirty: false };
-  const DIRTY = { unpushedCount: 1, isDirty: true };
+  const CLEAN = { isDirty: false };
+  const DIRTY = { isDirty: true };
 
   const AGES = [
     0,

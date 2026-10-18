@@ -27,9 +27,8 @@ import {
 const NOW = Date.UTC(2026, 7, 17);
 const WT = "/repo/.claude/worktrees/att-1-a";
 
-const CLEAN: GitHygiene = { unpushedCount: 0, isDirty: false };
-const DIRTY: GitHygiene = { unpushedCount: 1, isDirty: true };
-const UNPUSHED: GitHygiene = { unpushedCount: 2, isDirty: false };
+const CLEAN: GitHygiene = { isDirty: false };
+const DIRTY: GitHygiene = { isDirty: true };
 
 function attempt(over: Partial<AttemptFacts> = {}): AttemptFacts {
   return {
@@ -80,7 +79,7 @@ describe("classifyAttempt — the four ways to become a target", () => {
     expect(classifyAttempt(a, ctx({ hygiene: CLEAN }))).toEqual(target(a));
   });
 
-  test("HARD FLOOR: ≥90d takes a dirty, unpushed, held worktree", () => {
+  test("HARD FLOOR: ≥90d takes a dirty, held worktree", () => {
     const a = attempt({ createdAt: new Date(NOW - AUTO_REAP_AGE_MS) });
     expect(
       classifyAttempt(a, ctx({ taskStatus: "held", hygiene: DIRTY })),
@@ -133,10 +132,9 @@ describe("classifyAttempt — when a git probe is asked for", () => {
     expect(classifyAttempt(a, ctx())).toBeNull();
   });
 
-  test("a dirty or unpushed tree past 72h is not a target", () => {
+  test("a dirty tree past 72h is not a target", () => {
     const a = attempt();
     expect(classifyAttempt(a, ctx({ hygiene: DIRTY }))).toBeNull();
-    expect(classifyAttempt(a, ctx({ hygiene: UNPUSHED }))).toBeNull();
   });
 });
 
@@ -156,7 +154,6 @@ function referenceClassify(
   const safe = isSafeToReap({
     dirExists: true,
     dbPresent: c.hasDB,
-    unpushedCount: c.hygiene.unpushedCount,
     isDirty: c.hygiene.isDirty,
     taskDeletable,
     ageMs: age,
@@ -168,12 +165,7 @@ function referenceClassify(
 
 const BOOLS = [true, false];
 const STATUSES = ["done", "dropped", "held", "in_progress", undefined];
-const HYGIENES: GitHygiene[] = [
-  CLEAN,
-  DIRTY,
-  UNPUSHED,
-  { unpushedCount: 0, isDirty: true },
-];
+const HYGIENES: GitHygiene[] = [CLEAN, DIRTY];
 const AGES = [
   0,
   SAFE_REAP_AGE_MS - 1,
@@ -211,7 +203,7 @@ describe("classifyAttempt is bit-identical to the pre-inversion logic", () => {
         checked++;
       }
     }
-    expect(checked).toBeGreaterThan(1000);
+    expect(checked).toBeGreaterThan(900);
   });
 
   // The short-circuit's whole claim: where the probe is skipped, the answer

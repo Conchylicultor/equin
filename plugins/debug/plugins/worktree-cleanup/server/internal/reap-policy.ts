@@ -40,7 +40,7 @@ import {
 } from "./safety";
 
 // Abandonment backstop. Deliberately status-agnostic: it fires even for a task
-// the 72h clean path refuses to touch (held, in-progress, dirty, unpushed), so
+// the 72h clean path refuses to touch (held, in-progress, dirty), so
 // nothing can pin a worktree on disk forever. 90 days rather than 30 because a
 // *held* task is parked work the user means to resume — the shorter floor was
 // reaping held worktrees out from under them well before they came back — but a
@@ -123,9 +123,10 @@ export type ClassifyResult = ReapTarget | null | typeof NEEDS_HYGIENE;
 //   - ORPHAN: worktree dir gone but a fork DB and/or registry entry linger →
 //     drop them. Age-free, so its caller MUST confirm the "dir is gone" input
 //     with a real stat (see collectReapable).
-//   - CLEAN PATH (72h): dir present, pushed + clean + task done/dropped + ≥72h —
+//   - CLEAN PATH (72h): dir present, no uncommitted changes + task done/dropped
+//     + ≥72h —
 //     the hygiene-aware "nothing to lose" set. The only branch needing a probe.
-//   - HARD FLOOR (≥90d): abandonment backstop — takes even dirty/unpushed dirs
+//   - HARD FLOOR (≥90d): abandonment backstop — takes even dirty dirs
 //     and held tasks, which the clean path deliberately never reaps.
 //
 // "Retained" is USER INTENT (attempts_v.retained — no conversation left
@@ -171,7 +172,6 @@ export function classifyAttempt(
   const safe = isSafeToReap({
     dirExists: true,
     dbPresent: ctx.hasDB,
-    unpushedCount: ctx.hygiene.unpushedCount,
     isDirty: ctx.hygiene.isDirty,
     taskDeletable,
     ageMs: age,

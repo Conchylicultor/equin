@@ -51,14 +51,9 @@ async function buildEntry(
   const exists = await dirExists(attempt.worktreePath);
   const dbPresent = dbSet.has(attempt.id);
 
-  let unpushedCount = 0;
-  let isDirty = false;
-
-  if (exists) {
-    const hygiene = await getGitHygiene(attempt.worktreePath);
-    unpushedCount = hygiene.unpushedCount;
-    isDirty = hygiene.isDirty;
-  }
+  const isDirty = exists
+    ? (await getGitHygiene(attempt.worktreePath)).isDirty
+    : false;
 
   const taskDeletable = isTaskDeletable(task?.status);
   // Passing `retained` here is what finally makes the badge and the reaper agree.
@@ -69,7 +64,6 @@ async function buildEntry(
   const isSafe = isSafeToReap({
     dirExists: exists,
     dbPresent,
-    unpushedCount,
     isDirty,
     taskDeletable,
     ageMs: Date.now() - attempt.createdAt.getTime(),
@@ -86,7 +80,6 @@ async function buildEntry(
     createdAt: attempt.createdAt.toISOString(),
     dirExists: exists,
     dbExists: dbPresent,
-    unpushedCount,
     isDirty,
     isSafe,
   };
@@ -109,7 +102,7 @@ async function buildOrphanEntry(
   const now = Date.now();
   const ageMs = await dirAgeMs(dir.path, now);
   const dbPresent = dbSet.has(dir.name);
-  const { unpushedCount, isDirty } = await getGitHygiene(dir.path);
+  const { isDirty } = await getGitHygiene(dir.path);
 
   return {
     attemptId: dir.name,
@@ -121,12 +114,10 @@ async function buildOrphanEntry(
     createdAt: new Date(now - ageMs).toISOString(),
     dirExists: true,
     dbExists: dbPresent,
-    unpushedCount,
     isDirty,
     isSafe: isSafeToReap({
       dirExists: true,
       dbPresent,
-      unpushedCount,
       isDirty,
       taskDeletable: true,
       ageMs,
