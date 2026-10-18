@@ -11,7 +11,7 @@ own **placement only** — never a reveal. Placement is a closed set:
 | Gallery card (hover cluster) | `<RowActions pin="top-right">` |
 | Gallery card footer (actions that live at rest) | `<RowActions pin={null} alwaysVisible>` |
 | Table (reserved `auto` grid track) | `<RowActions pin={null}>`, persistent twin `pin={null} alwaysVisible` before it |
-| Beside prose (a headerless transcript turn) | `<RowActions pin={null} float>` — the text wraps around it |
+| Beside prose (a headerless transcript turn) | `<RowActions pin={null} float>` — the text wraps around it; the float is one text line tall (`h-lh`), so it centres on the first line and only that line wraps |
 
 `alwaysVisible` is **per-cluster by design** — a cluster either fades or doesn't.
 Which cluster a given action belongs to is the *action's* call, declared once as

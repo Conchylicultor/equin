@@ -263,12 +263,15 @@ function RowActionsCluster({
             </Pin>
           );
         }
-        // Floated: the float and its gutter (start + below, as padding so the
-        // ramp owns it) ride the outermost node with the reveal, so the held box
-        // and the visible buttons are the same box.
+        // Floated: the float and its start gutter ride the outermost node with
+        // the reveal, so the held box and the visible buttons are the same box.
+        // `h-lh`: the float is exactly ONE text line tall, its buttons centred
+        // on it (taller xs buttons overflow it symmetrically). Any taller and
+        // the buttons sit below the first line's centre, and the second line
+        // wraps around the float too — the cluster reads as spanning two rows.
         return cluster(
           float
-            ? cn("float-right", insetClass({ l: "sm", b: "2xs" }), outer)
+            ? cn("float-right h-lh", insetClass({ l: "sm" }), outer)
             : outer,
         );
       }}
