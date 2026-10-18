@@ -94,13 +94,9 @@ await withBrowser(async (h) => {
   const r = report("data-view nested table — per-group fold");
   const { page, captured } = await h.session();
 
-  // The shed-under-duress log beacon answers 429 while the host duress latch is
-  // set, and the browser echoes that as a bare "Failed to load resource" console
-  // error. It says nothing about this surface, so responses are asserted with
-  // that one route excluded rather than by muting console errors wholesale.
   const badResponses: string[] = [];
   page.on("response", (res) => {
-    if (res.status() >= 400 && !res.url().includes("/api/logs/emit")) {
+    if (res.status() >= 400) {
       badResponses.push(`${res.status()} ${res.url()}`);
     }
   });

@@ -81,23 +81,25 @@ describe("POST /api/logs/emit", () => {
     const channel = nextChannel();
     const res = await handleEmit(emitRequest(channel, ["a", "b", "c"]), {});
 
-    expect(res.status).toBe(204);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "accepted" });
     expect(getChannelIds()).toContain(channel);
     expect(
       readChannelEntries(worktree, channel, 10)?.map((e) => e.line),
     ).toEqual(["a", "b", "c"]);
   });
 
-  test("rejects with 429 while the duress latch is set, touching nothing", async () => {
+  test("answers paused with a 200 while the duress latch is set, touching nothing", async () => {
     const channel = nextChannel();
     setDuress("test");
     const res = await handleEmit(emitRequest(channel, ["dropped"]), {});
 
-    // 429 is asserted as a LITERAL on purpose. The client-side endpoint-error
-    // reporter files a crash report for every `status >= 500`, so a 503 here would
-    // turn each rejected POST into a "server error" report during duress — a
-    // report storm caused by the storm-suppression mechanism itself.
-    expect(res.status).toBe(429);
+    // A 200 is asserted as a LITERAL on purpose. The browser prints "Failed to
+    // load resource" for every non-2xx, and the endpoint-error reporter files a
+    // crash report for every 5xx — an error status here would either fill the
+    // console for the whole duress episode or set off a report storm.
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ status: "paused", reason: "duress" });
     // Nothing downstream ran: no channel opened, nothing on disk.
     expect(getChannelIds()).not.toContain(channel);
     expect(readChannelEntries(worktree, channel, 10)).toBeNull();
@@ -106,14 +108,14 @@ describe("POST /api/logs/emit", () => {
   test("resumes ingesting once the latch clears", async () => {
     const channel = nextChannel();
     setDuress("test");
-    expect((await handleEmit(emitRequest(channel, ["x"]), {})).status).toBe(
-      429,
-    );
+    expect(
+      await (await handleEmit(emitRequest(channel, ["x"]), {})).json(),
+    ).toEqual({ status: "paused", reason: "duress" });
 
     clearDuress();
-    expect((await handleEmit(emitRequest(channel, ["x"]), {})).status).toBe(
-      204,
-    );
+    expect(
+      await (await handleEmit(emitRequest(channel, ["x"]), {})).json(),
+    ).toEqual({ status: "accepted" });
     expect(
       readChannelEntries(worktree, channel, 10)?.map((e) => e.line),
     ).toEqual(["x"]);

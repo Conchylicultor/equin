@@ -20,9 +20,22 @@ export const EmitLogsBodySchema = z.object({
 });
 export type EmitLogsBody = z.infer<typeof EmitLogsBodySchema>;
 
+// Whether the server took the batch. `paused` is backpressure (the host duress
+// latch is set): the batch was NOT ingested and the client must re-queue it and
+// back off. It is a 200 with a typed arm rather than an HTTP error status on
+// purpose — the browser prints "Failed to load resource" for every non-2xx
+// response, so an error status would fill the console with noise for the whole
+// duress episode, about a refusal that is expected and lossless.
+export const EmitLogsResultSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("accepted") }),
+  z.object({ status: z.literal("paused"), reason: z.literal("duress") }),
+]);
+export type EmitLogsResult = z.infer<typeof EmitLogsResultSchema>;
+
 export const emitLogs = defineEndpoint({
   route: "POST /api/logs/emit",
   body: EmitLogsBodySchema,
+  response: EmitLogsResultSchema,
   // One batch is one ring trim plus one file write, so this route has no honest
   // reason to take even a fraction of a second. Declaring the bar means a future
   // regression here NAMES this route in slow-ops instead of surfacing as an

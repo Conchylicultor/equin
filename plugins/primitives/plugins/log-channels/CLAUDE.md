@@ -98,29 +98,33 @@ needed, extend it to fall back across `channel.jsonl.1…N`.
 
 ### Backpressure: the endpoint can say "stop"
 
-`POST /api/logs/emit` answers **429** while the host-global duress latch is set
-(`isUnderDuress()` from `@plugins/infra/plugins/host/plugins/duress/plugins/latch/server`, one
-read per request, memoized to at most one `statSync` per 2 s). This is the one
-observability channel whose volume driver is *external* — a browser that keeps
-POSTing regardless of host state — so during an episode the whole request is
-refused before the parse, the ring pushes, the file write and the WS fan-out.
+`POST /api/logs/emit` answers **`{ status: "paused", reason: "duress" }`** while
+the host-global duress latch is set (`isUnderDuress()` from
+`@plugins/infra/plugins/host/plugins/duress/plugins/latch/server`, one read per
+request, memoized to at most one `statSync` per 2 s), and `{ status: "accepted" }`
+otherwise. This is the one observability channel whose volume driver is
+*external* — a browser that keeps POSTing regardless of host state — so during an
+episode the whole request is refused before the ring pushes, the file write and
+the WS fan-out.
 
-**429, not 503.** The client-side endpoint-error reporter files a crash report for
-every `status >= 500`, so a 503 would make each rejected POST file a "server
-error" report *during* duress — a report storm set off by the storm-suppression
-mechanism itself. Do not "upgrade" the status.
+**A typed 200, never an error status.** The browser prints "Failed to load
+resource" for every non-2xx response (a 429 used to fill the console for the
+whole episode), and the client-side endpoint-error reporter files a crash report
+for every `status >= 500` (a 503 would set off a report storm *during* duress —
+the storm-suppression mechanism causing one). The refusal is expected and
+lossless, so it is an arm of the response type, not a failure.
 
 Nothing is lost. `clientLog`'s buffer re-queues the rejected batch in order and
 retries it — and the retry honours the backoff. A rejected POST ends the flush pass
 and sets a **hold** whose single timer (armed on the failure edge, never a poll) is
-the only thing that flushes next: 5 s after a plain failure, 30 s after a 429.
+the only thing that flushes next: 5 s after a plain failure, 30 s after a `paused`.
 While held, new `clientLog` lines only buffer and WS `open` events send nothing;
 the one exception is that an `open` lifts a plain-failure hold (the backend is back),
-never a 429 hold (the duress latch is host-wide; a reconnect says nothing about it).
+never a `paused` hold (the duress latch is host-wide; a reconnect says nothing about it).
 Flushes are **single-flight**: a trigger while one runs marks it dirty and it goes
 round once more, so batches never interleave or reorder. Do not add a flush trigger
 that bypasses `requestFlush` — several sockets publish WS `open`, and each bypass
-re-POSTs straight into the 429. That buffer is also capped per channel (4 000 lines,
+re-POSTs straight into the pause. That buffer is also capped per channel (4 000 lines,
 **drop-oldest** — the opposite of the server shed buffer's drop-newest, because
 the browser has no first-N-durable guarantee and its newest lines describe the
 problem the user is looking at). A drop is never silent: one
@@ -135,7 +139,6 @@ count accumulates across drops.
 - Load-bearing: yes
 - Web:
   - Uses:
-    - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleProvider`
@@ -161,7 +164,6 @@ count accumulates across drops.
     - `LiveLogChannel`
 - Server:
   - Uses:
-    - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/host/duress/latch.isUnderDuress`
     - `infra/paths.worktreeDataDir`
@@ -186,6 +188,7 @@ count accumulates across drops.
   - Exports (types):
     - `ClientMessage`
     - `EmitLogsBody`
+    - `EmitLogsResult`
     - `EntryMsg`
     - `ErrorMsg`
     - `HistoryMsg`

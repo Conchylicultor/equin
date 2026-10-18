@@ -1,6 +1,6 @@
 /**
- * clientLog's flush scheduling: the hold after a failed POST (30 s after a 429,
- * 5 s after a plain failure) gates every trigger but its own retry timer, a WS
+ * clientLog's flush scheduling: the hold after a refused POST (30 s after a
+ * `paused` answer, 5 s after a plain failure) gates every trigger but its own retry timer, a WS
  * `open` lifts only a plain-failure hold, and flushes are single-flight so
  * concurrent triggers never interleave batches.
  *
@@ -11,9 +11,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// The endpoints barrel is replaced whole: clientLog uses only `fetchEndpoint`
-// and `EndpointError` (for its 429 check), so the mock's own error class is the
-// one both sides see — no second module instance to disagree on `instanceof`.
+// The endpoints barrel is replaced whole: clientLog uses only `fetchEndpoint`,
+// and the tests reject it with an `EndpointError` for a plain failure.
 const mocks = vi.hoisted(() => ({
   fetchEndpoint: vi.fn(),
   wsListeners: [] as ((ev: { url: string; status: string }) => void)[],
@@ -27,6 +26,9 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 const { EndpointError } = mocks;
+
+const ACCEPTED = { status: "accepted" };
+const PAUSED = { status: "paused", reason: "duress" };
 
 vi.mock("@plugins/infra/plugins/endpoints/web", () => ({
   fetchEndpoint: mocks.fetchEndpoint,
@@ -83,13 +85,13 @@ afterEach(() => {
 });
 
 describe("clientLog flush hold", () => {
-  it("after a 429, sends nothing on new lines or WS opens until the 30 s backoff, then retries once in order", async () => {
-    mocks.fetchEndpoint.mockRejectedValueOnce(new EndpointError(429, null));
+  it("after a paused answer, sends nothing on new lines or WS opens until the 30 s backoff, then retries once in order", async () => {
+    mocks.fetchEndpoint.mockResolvedValueOnce(PAUSED);
     clientLog("c", "a");
     await settle();
     expect(sent()).toHaveLength(1);
 
-    mocks.fetchEndpoint.mockResolvedValue(undefined);
+    mocks.fetchEndpoint.mockResolvedValue(ACCEPTED);
     for (let i = 0; i < 10; i++) {
       clientLog("c", `b${i}`);
       wsOpen();
@@ -117,7 +119,7 @@ describe("clientLog flush hold", () => {
     await settle();
     expect(sent()).toHaveLength(1);
 
-    mocks.fetchEndpoint.mockResolvedValue(undefined);
+    mocks.fetchEndpoint.mockResolvedValue(ACCEPTED);
     clientLog("c", "b");
     await settle(1_000);
     expect(sent()).toHaveLength(1); // still held: the debounce is a no-op
@@ -136,7 +138,7 @@ describe("clientLog flush hold", () => {
     mocks.fetchEndpoint.mockRejectedValueOnce(new TypeError("fetch failed"));
     clientLog("c", "a");
     await settle();
-    mocks.fetchEndpoint.mockResolvedValue(undefined);
+    mocks.fetchEndpoint.mockResolvedValue(ACCEPTED);
     await settle(4_000);
     expect(sent()).toHaveLength(1);
     await settle(1_000);
@@ -144,7 +146,7 @@ describe("clientLog flush hold", () => {
   });
 
   it("stops the pass at the first rejection instead of POSTing every channel", async () => {
-    mocks.fetchEndpoint.mockRejectedValue(new EndpointError(429, null));
+    mocks.fetchEndpoint.mockResolvedValue(PAUSED);
     clientLog("a", "1");
     clientLog("b", "2");
     clientLog("c", "3");
@@ -157,9 +159,9 @@ describe("clientLog single-flight", () => {
   it("concurrent triggers produce one in-flight POST and keep order", async () => {
     let release!: () => void;
     mocks.fetchEndpoint.mockImplementationOnce(
-      () => new Promise<void>((r) => (release = r)),
+      () => new Promise((r) => (release = () => r(ACCEPTED))),
     );
-    mocks.fetchEndpoint.mockResolvedValue(undefined);
+    mocks.fetchEndpoint.mockResolvedValue(ACCEPTED);
 
     clientLog("c", "1");
     await settle(); // first POST now in flight

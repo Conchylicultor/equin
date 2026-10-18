@@ -38130,7 +38130,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/emit + /ws/logs routes; debug/logs is the viewer.
       - Web:
         - Uses:
-          - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/collapsible.CollapsibleContent`
           - `primitives/collapsible.CollapsibleProvider`
@@ -38156,7 +38155,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveLogChannel`
       - Server:
         - Uses:
-          - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/host/duress/latch.isUnderDuress`
           - `infra/paths.worktreeDataDir`
@@ -38181,6 +38179,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `ClientMessage`
           - `EmitLogsBody`
+          - `EmitLogsResult`
           - `EntryMsg`
           - `ErrorMsg`
           - `HistoryMsg`

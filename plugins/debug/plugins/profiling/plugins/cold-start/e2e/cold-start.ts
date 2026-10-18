@@ -174,7 +174,7 @@ interface Iteration {
   page: PageTimings;
   /** The server's boot profile, or why there is none (a timed-out load whose server never came up). */
   server: { ok: true; data: ProfilingData } | { ok: false; reason: string };
-  /** Responses the server shed with 429 (the log-channels beacon under host duress — expected under load), by path. */
+  /** Responses the server shed with 429 (load shedding — expected under host duress, so counted, not failed), by path. */
   shed: Record<string, number>;
   loadAvgEnd: number[];
   browser: BrowserTrack;
@@ -1011,8 +1011,8 @@ for (const e of heaviest)
     `  ${e.key.slice(0, 50).padEnd(50)} ${e.source.padEnd(9)} work ${ms(e.median)} ms`,
   );
 
-// 429s are the log-channels beacon shedding under host duress: expected under
-// load, so counted rather than failed.
+// 429s are load shedding under host duress: expected under load, so counted
+// rather than failed.
 const shedByPath = new Map<string, number>();
 for (const run of iterationsRun)
   for (const [path, n] of Object.entries(run.shed))

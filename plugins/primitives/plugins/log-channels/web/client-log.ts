@@ -1,7 +1,4 @@
-import {
-  EndpointError,
-  fetchEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
 import { emitLogs, MAX_EMIT_LINES } from "../core";
 
@@ -13,9 +10,10 @@ import { emitLogs, MAX_EMIT_LINES } from "../core";
 // Flush invariants (every trigger goes through `requestFlush`):
 // - Single-flight: at most one flush runs; a trigger during it re-runs it once after.
 // - Hold after failure: a rejected POST sets a hold whose one timer is the ONLY
-//   thing that flushes next — 5 s after a plain failure, 30 s after a 429. The
-//   debounce and WS-`open` triggers are no-ops meanwhile, except that an `open`
-//   lifts a plain-failure hold (the backend is back); it never lifts a 429 hold.
+//   thing that flushes next — 5 s after a plain failure, 30 s after a `paused`
+//   answer. The debounce and WS-`open` triggers are no-ops meanwhile, except that
+//   an `open` lifts a plain-failure hold (the backend is back); it never lifts a
+//   `paused` hold.
 // - No polling: timers exist only for the debounce and on a failure edge.
 
 type LogStream = "stdout" | "stderr";
@@ -38,13 +36,13 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Per-channel buffer cap. The buffer used to be unbounded, so a long backend
- * outage (or a duress episode, during which the server answers 429) plus a chatty
+ * outage (or a duress episode, during which the server answers `paused`) plus a chatty
  * tab grew browser memory without limit — and one-instance-per-user means that is
  * the same host that is already in trouble.
  */
 const MAX_BUFFERED_LINES = 4_000;
 
-/** Backoff after a failed flush, and the longer one the server's 429 asks for. */
+/** Backoff after a failed flush, and the longer one the server's `paused` asks for. */
 const RETRY_DELAY_MS = 5_000;
 const BACKPRESSURE_RETRY_DELAY_MS = 30_000;
 
@@ -109,8 +107,8 @@ function scheduleFlush(): void {
  * Why the last flush failed, which decides how a WS reconnect treats the hold:
  * - `failure`: the backend refused or was unreachable (mid-restart, the
  *   `./singularity build` case). A reconnect proves it is back, so it lifts the hold.
- * - `backpressure`: the server answered 429 because the host-global duress latch is
- *   set. A reconnect says nothing about the latch, so only the timer lifts it.
+ * - `backpressure`: the server answered `paused` because the host-global duress
+ *   latch is set. A reconnect says nothing about the latch, so only the timer lifts it.
  */
 type HoldKind = "failure" | "backpressure";
 
@@ -195,7 +193,7 @@ async function runFlush(): Promise<void> {
 }
 
 /**
- * One pass over every channel. Stops at the FIRST rejected batch — a 429 or an
+ * One pass over every channel. Stops at the FIRST rejected batch — a `paused` or an
  * unreachable backend will refuse the next channel's POST just the same, and each
  * refused POST is exactly the traffic the rejection asked us to shed.
  */
@@ -206,28 +204,31 @@ async function drainBuffer(): Promise<HoldKind | null> {
     // so the chunk size — not the accumulated buffer length — bounds each request.
     while (lines.length > 0) {
       const drained = lines.splice(0, MAX_EMIT_LINES);
+      let refused: HoldKind | null = null;
       try {
-        await fetchEndpoint(
+        const result = await fetchEndpoint(
           emitLogs,
           {},
           { body: { channel, lines: drained.map(toWire) } },
         );
+        // `paused` is the server saying "stop, the box is on fire" — back off far
+        // harder than for a plain restart, which resolves in seconds.
+        if (result.status === "paused") refused = "backpressure";
       } catch (err) {
         if (!(err instanceof Error)) throw err;
+        // Surface the failure for visibility; the hold's timer retries.
+        console.debug("[clientLog] flush failed, will retry:", err.message);
+        refused = "failure";
+      }
+      if (refused !== null) {
         // Deliberate, self-correcting re-queue: the backend may be mid-restart
-        // or refusing ingress while the host is under duress (429). Put the lines
-        // back ahead of anything newly buffered — single-flight guarantees nothing
+        // or pausing ingress while the host is under duress. Put the lines back
+        // ahead of anything newly buffered — single-flight guarantees nothing
         // older is in flight — and re-apply the cap, since the buffer kept growing
         // while this batch was out.
         lines.unshift(...drained);
         capBuffer(lines);
-        // Surface the failure for visibility; the hold's timer retries.
-        console.debug("[clientLog] flush failed, will retry:", err.message);
-        // A 429 is the server saying "stop, the box is on fire" — back off far
-        // harder than for a plain restart, which resolves in seconds.
-        return err instanceof EndpointError && err.status === 429
-          ? "backpressure"
-          : "failure";
+        return refused;
       }
     }
   }
