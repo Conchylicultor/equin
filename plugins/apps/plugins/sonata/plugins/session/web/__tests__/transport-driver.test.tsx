@@ -178,7 +178,11 @@ describe("the playback timeline", () => {
   function manualClock(s: ReturnType<typeof renderSession>) {
     const clock = { t: 0 };
     act(() => {
-      s.session().registerClock({ now: () => clock.t, latency: () => 0 });
+      s.session().registerClock({
+        now: () => clock.t,
+        drawNow: () => clock.t,
+        latency: () => 0,
+      });
     });
     return clock;
   }
@@ -233,11 +237,17 @@ describe("registerClock", () => {
     const s = renderSession(song(16));
     act(() => {
       s.session().registerCountIn(() => 4);
-      s.session().registerClock({ now: () => 10, latency: () => 0 });
+      s.session().registerClock({
+        now: () => 10,
+        drawNow: () => 10,
+        latency: () => 0,
+      });
     });
     let offB: () => void = () => {};
     act(() => {
-      offB = s.session().registerClock({ now: () => 20, latency: () => 0 });
+      offB = s
+        .session()
+        .registerClock({ now: () => 20, drawNow: () => 20, latency: () => 0 });
     });
     act(() => offB());
     act(() => s.session().playWithCountIn());
@@ -419,7 +429,11 @@ describe("an A–B loop's rest", () => {
     const s = renderSession(song(16));
     const clock = { t: 0 };
     act(() => {
-      s.session().registerClock({ now: () => clock.t, latency: () => 0 });
+      s.session().registerClock({
+        now: () => clock.t,
+        drawNow: () => clock.t,
+        latency: () => 0,
+      });
       s.session().setLoopOptions({ rest: true, ahead: false });
       s.session().setLoop({ start: 4, end: 8, enabled: true });
       s.session().seekTo(4);
@@ -485,7 +499,11 @@ describe("the output latency", () => {
     const s = renderSession(score);
     const clock = { t: 0 };
     act(() => {
-      s.session().registerClock({ now: () => clock.t, latency: () => LATENCY });
+      s.session().registerClock({
+        now: () => clock.t,
+        drawNow: () => clock.t,
+        latency: () => LATENCY,
+      });
     });
     return {
       s,

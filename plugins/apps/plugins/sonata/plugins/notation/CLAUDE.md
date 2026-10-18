@@ -128,6 +128,10 @@ measures — is a **pure, unit-tested** pipeline, kept renderer-free:
     takes each system's `pitch` as its exact row size.
   - `drawSystem(host, plan, systemIndex, colors)` — draws ONE system into its own
     `<svg>` (rebuilding fresh voices), returning that system's `{ anchors, notes }`.
+- `web/internal/anchors.ts` — `playheadPath(onsets, end)`: a system's beat→x
+  path for the playhead — one point per onset beat at its leftmost x, x never
+  decreasing, ending on the closing barline at the next system's start beat — so
+  the interpolated playhead only moves forward. Pure + tested.
 - `web/components/notation-system.tsx` — `<NotationSystem>`: one windowed system
   row. Draws itself in a layout effect and registers its `{ anchors, notes }`
   into a shared `Map<systemIndex, …>` ref (unregisters + clears its SVG on

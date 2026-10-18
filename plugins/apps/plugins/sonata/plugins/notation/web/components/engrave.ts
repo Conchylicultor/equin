@@ -46,6 +46,7 @@ import type {
   EngVoice,
   StemDir,
 } from "../internal/convert";
+import { playheadPath, type OnsetPoint } from "../internal/anchors";
 import {
   measureStaffExtents,
   unionExtent,
@@ -82,8 +83,6 @@ export interface SystemPlan {
   minWidths: number[];
   /** index === 0 → draw the time signature + part labels. */
   scoreStart: boolean;
-  /** Last system → append the terminal (score-end) anchor here. */
-  isLast: boolean;
   /** First-measure extra width (clef + key sig + optional time sig). */
   extra0: number;
   /** Proportional width scale applied to each measure's minimum. */
@@ -477,7 +476,6 @@ export function planEngraving(
       measures,
       minWidths,
       scoreStart,
-      isLast: index === sliceMeasures.length - 1,
       extra0,
       scale: (available - extra0) / totalMin,
       startBeat: measures[0]!.startBeat,
@@ -569,7 +567,7 @@ export function drawSystem(
 
   const staffTop = (i: number): number => sys.staffTops[i]!;
 
-  const anchors: BeatAnchor[] = [];
+  const onsets: OnsetPoint[] = [];
   const notes: NoteEl[] = [];
 
   // Rebuild fresh voices per measure (Pass-1 voices were discarded).
@@ -653,7 +651,7 @@ export function drawSystem(
           seq = [];
           seqs.set(key, seq);
         }
-        tagVoice(bv.eng.tickables, bv.notes, seq, systemIndex, anchors, notes);
+        tagVoice(bv.eng.tickables, bv.notes, seq, onsets, notes);
       });
     });
 
@@ -689,12 +687,12 @@ export function drawSystem(
     drawPartLabels(plan.parts, sys.staffTops, ctx);
   }
 
-  // Terminal anchor at the score end, so the playhead travels to the finish.
-  if (sys.isLast && anchors.length > 0) {
-    const lastX = Math.max(...anchors.map((a) => a.x));
-    anchors.push({ beat: plan.endBeat, systemIndex, x: lastX + 20 });
-  }
-  anchors.sort((a, b) => a.beat - b.beat);
+  // The playhead glides to the system's closing barline (`x`, past the last
+  // measure) by the beat the next system starts — the score end on the last.
+  const endBeat = plan.systems[systemIndex + 1]?.startBeat ?? plan.endBeat;
+  const anchors = playheadPath(onsets, { beat: endBeat, x }).map(
+    (p): BeatAnchor => ({ ...p, systemIndex }),
+  );
 
   return { anchors, notes };
 }
@@ -744,20 +742,18 @@ function drawConnectors(
   connect(top, bottom, "singleRight", ctx);
 }
 
-/** Tag drawn note elements + collect beat anchors for one voice. */
+/** Tag drawn note elements + collect the onsets of one voice. */
 function tagVoice(
   tickables: readonly EngTickable[],
   notes: readonly StaveNote[],
   seq: { t: EngTickable; n: StaveNote }[],
-  sysIndex: number,
-  anchors: BeatAnchor[],
+  onsets: OnsetPoint[],
   noteEls: NoteEl[],
 ): void {
   tickables.forEach((t, i) => {
     const note = notes[i]!;
     seq.push({ t, n: note });
-    const ax = note.getAbsoluteX();
-    anchors.push({ beat: t.beat, systemIndex: sysIndex, x: ax });
+    onsets.push({ beat: t.beat, x: note.getAbsoluteX() });
     if (t.isRest) return;
     const el = note.getSVGElement();
     if (!el) return;

@@ -257,7 +257,8 @@ function NotationInner({ score }: NotationProps) {
     const reg = registryRef.current.get(sysIndex);
 
     // x within the active system — interpolate between the two bracketing
-    // anchors. The active system is kept mounted (auto-scroll centers it); if
+    // anchors (a forward-only path ending on the system's closing barline, see
+    // `playheadPath`). The active system is kept mounted (auto-scroll centers it); if
     // its registry entry is momentarily missing (mid-scroll), fall back to the
     // left pad — the playhead re-locates once the system registers next frame.
     let x = plan.leftPad;

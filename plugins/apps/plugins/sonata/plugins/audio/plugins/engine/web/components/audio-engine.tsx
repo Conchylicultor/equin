@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { createSmoothClockModel } from "@plugins/packages/plugins/smooth-clock/core";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import type { SongSetting } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
@@ -278,8 +279,26 @@ export function AudioEngine() {
     // Its latency is the output device's, so the cursor shows the music when
     // it is heard while the schedulers keep placing notes on `currentTime`.
     const latency = createOutputLatency(ctx);
+
+    // Drawn SMOOTHED: `currentTime` advances once per rendered audio buffer, so
+    // successive animation frames read it 0 or 2 steps apart and every playhead
+    // moves in jerks. The smooth clock extrapolates on the wall clock between
+    // readings and slews (never jumps) toward each one, staying within a buffer
+    // of the audio. While the context is not running its time is frozen: hand
+    // that back raw and forget the fit, so a resume snaps to the context
+    // instead of to a line that ran on without it.
+    const smooth = createSmoothClockModel();
     const unregisterClock = registerClock({
       now: () => ctx.currentTime,
+      drawNow: () => {
+        if (ctx.state !== "running") {
+          smooth.reset();
+          return ctx.currentTime;
+        }
+        const perfMs = performance.now();
+        smooth.observe(ctx.currentTime, perfMs, 1);
+        return smooth.at(perfMs) ?? ctx.currentTime;
+      },
       latency: () => latency.read(),
     });
 

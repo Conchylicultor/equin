@@ -94,6 +94,14 @@ function seekSubdivisions(tempoScale: number): number {
 export interface TransportClock {
   /** Current time in seconds (same units/origin the audio scheduler uses). */
   now(): number;
+  /**
+   * `now()` for drawing a frame: continuous from one frame to the next, within
+   * a buffer of `now()`. A source that advances in steps (an AudioContext's
+   * `currentTime`, once per rendered buffer) smooths it here — read raw, frames
+   * land 0 or 2 steps apart and every playhead moves in jerks. Only the cursor
+   * reads it; schedulers place sound on the exact `now()`.
+   */
+  drawNow(): number;
   /** Seconds from rendering a sample at `now()` to hearing it (≥ 0). Read every frame: it changes with the output device. */
   latency(): number;
 }
@@ -434,6 +442,7 @@ export function useSession(): SessionValue {
 /** The default time source: the browser wall clock, in seconds. */
 const wallClock: TransportClock = {
   now: () => performance.now() / 1000,
+  drawNow: () => performance.now() / 1000,
   latency: () => 0,
 };
 
@@ -1237,8 +1246,11 @@ export function PlaybackSession({
         return;
       }
       // The music being heard — one output latency behind what is rendered,
-      // on the timeline that scheduled it.
-      const reading = heard.read(heardNow());
+      // on the timeline that scheduled it — read on the clock's continuous
+      // drawing time so the cursor glides instead of stepping per buffer.
+      const reading = heard.read(
+        clockRef.current.drawNow() - clockRef.current.latency(),
+      );
       if (reading === null) return;
       const { timeline, c } = reading;
 
