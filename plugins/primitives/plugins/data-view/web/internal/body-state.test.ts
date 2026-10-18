@@ -9,15 +9,22 @@ import { describe, expect, test } from "bun:test";
 import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import type { FieldDef, FilterNode } from "../../core";
 import { fieldsReadByView, resolveBodyState } from "./body-state";
+import {
+  UnavailableFilterRuleError,
+  UnavailableSortRuleError,
+} from "./live-filter";
 
 const refetch = () => Promise.resolve();
 const failure = new ResourceError("loader-failed", "boom", null);
+const NONE = { filter: [], fold: [] };
+const DANGLING = { id: "r1", fieldId: "gone", operatorId: "is" };
 
 describe("resolveBodyState", () => {
   test("a failed read renders the error state, not the view", () => {
     const state = resolveBodyState({
       readFields: [],
-      rulesPending: false,
+      unavailable: NONE,
+      deferredComplete: true,
       server: null,
       readiness: { status: "error", error: failure, refetch },
     });
@@ -31,7 +38,8 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
-        rulesPending: false,
+        unavailable: NONE,
+        deferredComplete: true,
         server: null,
         readiness: { status: "loading" },
       }).kind,
@@ -39,7 +47,8 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
-        rulesPending: false,
+        unavailable: NONE,
+        deferredComplete: true,
         server: null,
         readiness: { status: "ready" },
       }).kind,
@@ -52,11 +61,89 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
-        rulesPending: true,
+        unavailable: { filter: [DANGLING], fold: [] },
+        deferredComplete: false,
         server: null,
         readiness: { status: "ready" },
       }).kind,
     ).toBe("loading");
+  });
+
+  test("a filter rule that never resolves → the rule error, naming it", () => {
+    const state = resolveBodyState({
+      readFields: [],
+      unavailable: { filter: [DANGLING], fold: [] },
+      deferredComplete: true,
+      server: null,
+      readiness: { status: "ready" },
+    });
+    expect(state.kind).toBe("rule-error");
+    if (state.kind !== "rule-error") throw new Error("unreachable");
+    expect(state.error).toBeInstanceOf(UnavailableFilterRuleError);
+    const error = state.error as UnavailableFilterRuleError;
+    expect(error.tree).toBe("filter");
+    expect(error.rules).toEqual([DANGLING]);
+  });
+
+  test("a fold rule that never resolves → the rule error on both paths", () => {
+    const fold = { filter: [], fold: [DANGLING] };
+    const inMemory = resolveBodyState({
+      readFields: [],
+      unavailable: fold,
+      deferredComplete: true,
+      server: null,
+      readiness: { status: "ready" },
+    });
+    const live = resolveBodyState({
+      readFields: [],
+      unavailable: fold,
+      deferredComplete: true,
+      server: { loading: false, error: null, readError: null },
+      readiness: undefined,
+    });
+    for (const state of [inMemory, live]) {
+      expect(state.kind).toBe("rule-error");
+      if (state.kind !== "rule-error") throw new Error("unreachable");
+      expect((state.error as UnavailableFilterRuleError).tree).toBe("fold");
+    }
+    // …and loading on the live path too while the deferred tier is loading.
+    expect(
+      resolveBodyState({
+        readFields: [],
+        unavailable: fold,
+        deferredComplete: false,
+        server: { loading: false, error: null, readError: null },
+        readiness: undefined,
+      }).kind,
+    ).toBe("loading");
+  });
+
+  test("a live source's unavailable rule is the same rule-error arm", () => {
+    for (const error of [
+      new UnavailableFilterRuleError([DANGLING], "filter"),
+      new UnavailableSortRuleError(["gone"]),
+    ]) {
+      const state = resolveBodyState({
+        readFields: [],
+        unavailable: NONE,
+        deferredComplete: true,
+        server: { loading: false, error, readError: null },
+        readiness: undefined,
+      });
+      expect(state).toEqual({ kind: "rule-error", error });
+    }
+  });
+
+  test("a failed read outranks a rule error", () => {
+    expect(
+      resolveBodyState({
+        readFields: [],
+        unavailable: { filter: [DANGLING], fold: [] },
+        deferredComplete: true,
+        server: null,
+        readiness: { status: "error", error: failure, refetch },
+      }).kind,
+    ).toBe("error");
   });
 
   test("without readiness, the rows are the view", () => {
@@ -65,7 +152,8 @@ describe("resolveBodyState", () => {
         server: null,
         readiness: undefined,
         readFields: [],
-        rulesPending: false,
+        unavailable: NONE,
+        deferredComplete: true,
       }).kind,
     ).toBe("view");
   });
@@ -75,7 +163,8 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
-        rulesPending: false,
+        unavailable: NONE,
+        deferredComplete: true,
         server: { loading: false, error: err, readError: null },
         readiness: { status: "loading" },
       }),
@@ -83,7 +172,8 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
-        rulesPending: false,
+        unavailable: NONE,
+        deferredComplete: true,
         server: { loading: true, error: null, readError: null },
         readiness: undefined,
       }).kind,
@@ -95,7 +185,8 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
-        rulesPending: false,
+        unavailable: NONE,
+        deferredComplete: true,
         server: { loading: false, error: null, readError },
         readiness: undefined,
       }),
@@ -105,7 +196,8 @@ describe("resolveBodyState", () => {
     expect(
       resolveBodyState({
         readFields: [],
-        rulesPending: false,
+        unavailable: NONE,
+        deferredComplete: true,
         server: { loading: false, error: err, readError },
         readiness: undefined,
       }).kind,
@@ -134,7 +226,8 @@ describe("a field the view is laid out by", () => {
         server: null,
         readiness: { status: "ready" },
         readFields: [known, pending],
-        rulesPending: false,
+        unavailable: NONE,
+        deferredComplete: true,
       }).kind,
     ).toBe("loading");
     expect(
@@ -142,7 +235,8 @@ describe("a field the view is laid out by", () => {
         server: { loading: false, error: null, readError: null },
         readiness: undefined,
         readFields: [pending],
-        rulesPending: false,
+        unavailable: NONE,
+        deferredComplete: true,
       }).kind,
     ).toBe("loading");
   });
@@ -152,7 +246,8 @@ describe("a field the view is laid out by", () => {
       server: null,
       readiness: { status: "ready" },
       readFields: [pending, failed],
-      rulesPending: false,
+      unavailable: NONE,
+      deferredComplete: true,
     });
     expect(state).toEqual({
       kind: "field-error",
@@ -168,7 +263,8 @@ describe("a field the view is laid out by", () => {
         server: null,
         readiness: { status: "error", error: failure, refetch },
         readFields: [failed],
-        rulesPending: false,
+        unavailable: NONE,
+        deferredComplete: true,
       }).kind,
     ).toBe("error");
   });
@@ -241,7 +337,8 @@ describe("a field the view is laid out by", () => {
         server: null,
         readiness: { status: "ready" },
         readFields,
-        rulesPending: false,
+        unavailable: NONE,
+        deferredComplete: true,
       }).kind,
     ).toBe("view");
     // …while the same fold IN effect holds it.
@@ -264,7 +361,8 @@ describe("a field the view is laid out by", () => {
         server: null,
         readiness: { status: "ready" },
         readFields: folded,
-        rulesPending: false,
+        unavailable: NONE,
+        deferredComplete: true,
       }).kind,
     ).toBe("loading");
   });

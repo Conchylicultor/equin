@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { FieldDef, FilterOperatorSet, ViewState } from "../../core";
-import { useRowFilter } from "./use-row-filter";
+import { bodyRowMatcher, useRowFilter } from "./use-row-filter";
 import { makeSortComparator } from "./sort-rows";
 
 function isSearchable<TRow>(field: FieldDef<TRow>): boolean {
@@ -21,8 +21,11 @@ export function useRowMatcher<TRow>(
   searchAccessor?: (row: TRow) => string,
 ): ((row: TRow) => boolean) | null {
   // The filter tree lowered into the filter language once per (tree, clock),
-  // never per row; null ⇒ nothing constrains.
-  const matchesFilter = useRowFilter(state.filter, fields, resolveOperatorSet);
+  // never per row; null ⇒ nothing constrains (an unavailable rule never
+  // reaches here: the body refuses to render the view — `bodyRowMatcher`).
+  const matchesFilter = bodyRowMatcher(
+    useRowFilter(state.filter, fields, resolveOperatorSet),
+  );
   const query = state.query.trim();
   return useMemo(() => {
     // --- Search (substring, case-insensitive) ---
@@ -46,6 +49,12 @@ export function useRowMatcher<TRow>(
   }, [query, fields, matchesFilter, searchAccessor]);
 }
 
+/**
+ * The view's rows, searched, filtered and sorted in memory. For a view rendered
+ * by the DataView body: a filter rule that does not resolve is not applied
+ * here (`bodyRowMatcher`), because the body shows the rule error in place of
+ * the view. A caller outside the body that needs to know reads `useRowFilter`.
+ */
 export function useFlatRows<TRow>(
   rows: readonly TRow[],
   fields: FieldDef<TRow>[],

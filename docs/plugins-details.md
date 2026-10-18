@@ -34439,9 +34439,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×28
-              - `primitives` ×23
+              - `primitives` ×24
               - `page` ×17
               - `conversations` ×7
               - `debug` ×6
@@ -35988,7 +35988,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 102 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 104 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×18
           - `primitives/css/ui-kit` ×12
           - `primitives/data-view/view-core` ×8
@@ -36000,6 +36000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/collapsible` ×2
           - `primitives/css/overlay` ×2
           - `primitives/css/row` ×2
+          - `primitives/css/spacing` ×2
           - `primitives/css/sticky/stack` ×2
           - `primitives/css/sticky` ×2
           - `primitives/cursor-pagination` ×2
@@ -36011,6 +36012,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/sortable-list` ×2
           - `fields.Fields`
           - `ids.IdKinds`
+          - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/inline.Inline`
@@ -36019,7 +36021,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
-          - `primitives/css/spacing.Stack`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
           - `primitives/css/toggle-chip.ToggleChip`
@@ -36108,6 +36109,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ManualOrderConfig`
           - `PartitionOptions`
           - `ProjectedRow`
+          - `RowFilter`
           - `RowTone`
           - `SectionBodyProps`
           - `SelectionConfig`
@@ -36115,6 +36117,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortPreset`
           - `SortRule`
           - `TableCellProps`
+          - `UnavailableRule`
           - `ValueCodec`
           - `ViewState`
         - Exports (values):

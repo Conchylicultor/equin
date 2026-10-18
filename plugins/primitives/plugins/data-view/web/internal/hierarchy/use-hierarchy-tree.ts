@@ -15,7 +15,7 @@ import {
 } from "../../../core";
 import { useResolveOperatorSet } from "../../filter-slot";
 import { useGroupingRegistry } from "../../grouping-slot";
-import { useRowFilter } from "../use-row-filter";
+import { bodyRowMatcher, useRowFilter } from "../use-row-filter";
 import { makeSortComparator } from "../sort-rows";
 import { partitionIntoSections } from "../use-data-view-sections";
 import {
@@ -118,10 +118,8 @@ export function useHierarchyTree(args: {
     return projectRows({ rows, rowKey, hierarchy, expanded, defaultExpanded });
   }, [rows, rowKey, hierarchy, expanded, defaultExpanded]);
 
-  const matchesFilter = useRowFilter(
-    props.state.filter,
-    fields,
-    resolveOperatorSet,
+  const matchesFilter = bodyRowMatcher(
+    useRowFilter(props.state.filter, fields, resolveOperatorSet),
   );
   const filterScope = props.state.filterScope ?? "rows";
   const visibleProjected = useMemo(() => {

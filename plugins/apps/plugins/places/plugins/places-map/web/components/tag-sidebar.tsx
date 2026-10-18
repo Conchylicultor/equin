@@ -120,11 +120,19 @@ export function TagSidebar({
     placeSearchText,
   ).length;
 
-  // Faceted counts: the rows the rest of the view filter keeps.
+  // Faceted counts: the rows the rest of the view filter keeps — none while
+  // that filter names a rule that does not resolve (the view shows the rule
+  // error, and counts over every place would claim rows it cannot vouch for).
   const rest = useMemo(() => withoutSidebarRules(filter), [filter]);
   const keep = useRowFilter(rest, fields, resolveOperatorSet);
   const counts = useMemo(
-    () => tagPlaceCounts(keep ? places.filter(keep) : places, tags),
+    () =>
+      keep.kind === "unavailable"
+        ? null
+        : tagPlaceCounts(
+            keep.kind === "match" ? places.filter(keep.matches) : places,
+            tags,
+          ),
     [keep, places, tags],
   );
 
@@ -276,7 +284,8 @@ function FilterSummary(props: {
 
 function TagTree(props: {
   tags: readonly PlaceTag[];
-  counts: ReadonlyMap<string, number>;
+  /** Null while the rest of the view filter cannot run: no counts drawn. */
+  counts: ReadonlyMap<string, number> | null;
   state: SidebarState;
   onCycle: (tagId: string) => void;
 }): ReactNode {
@@ -351,7 +360,7 @@ function TagTree(props: {
 /** What every branch of the tree reads, handed down unchanged. */
 interface TagBranchContext {
   tags: readonly PlaceTag[];
-  counts: ReadonlyMap<string, number>;
+  counts: ReadonlyMap<string, number> | null;
   state: SidebarState;
   onCycle: (tagId: string) => void;
   childrenOf: ReadonlyMap<string | null, readonly PlaceTag[]>;
@@ -382,7 +391,7 @@ function TagBranch(props: {
         tags={ctx.tags}
         depth={depth}
         leaf={children.length === 0}
-        count={ctx.counts.get(tag.id) ?? 0}
+        count={ctx.counts === null ? null : (ctx.counts.get(tag.id) ?? 0)}
         filterState={tagFilterState(ctx.state, tag.id)}
         partial={hasPickedDescendant(ctx.state, tag.id, ctx.tags)}
         onCycle={() => ctx.onCycle(tag.id)}
@@ -410,7 +419,7 @@ function TagTreeRow(props: {
   tags: readonly PlaceTag[];
   depth: number;
   leaf: boolean;
-  count: number;
+  count: number | null;
   filterState: TagFilterState;
   partial: boolean;
   onCycle: () => void;
@@ -467,9 +476,11 @@ function TagTreeRow(props: {
                 {tag.name}
               </Text>
             </Fill>
-            <Text variant="count" tone="faint" className="min-w-6 text-right">
-              {count}
-            </Text>
+            {count === null ? null : (
+              <Text variant="count" tone="faint" className="min-w-6 text-right">
+                {count}
+              </Text>
+            )}
           </>
         </Row>
       </Fill>

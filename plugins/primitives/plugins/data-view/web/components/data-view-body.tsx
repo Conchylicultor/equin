@@ -49,7 +49,12 @@ import {
 } from "../internal/use-sort-controller";
 import { useGroupingRegistry } from "../grouping-slot";
 import { useLiveSource, type SourceView } from "../internal/live-source";
-import { unavailableRules } from "../internal/live-filter";
+import {
+  unavailableRules,
+  UnavailableFilterRuleError,
+} from "../internal/live-filter";
+import { pruneRules } from "../internal/filter-tree-ops";
+import type { UnavailableRule } from "../internal/evaluate-filter";
 import { useCollectionItemActions } from "../internal/collection-item-actions";
 import {
   checkFieldColumns,
@@ -63,7 +68,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResolveOperatorSet } from "../filter-slot";
 import { useGroupingClock } from "../internal/use-grouping-clock";
-import { useRowFilter } from "../internal/use-row-filter";
+import { bodyRowMatcher, useRowFilter } from "../internal/use-row-filter";
 import { useRowMatcher } from "../internal/use-flat-rows";
 import {
   isGroupableField,
@@ -564,12 +569,14 @@ function DataViewBodyInner<TRow>(
   // The operator-set resolver, read here (not off the filter controller below)
   // because the live source's paging hold needs it before that exists.
   const resolveOperatorSet = useResolveOperatorSet();
-  // The fold rule's `keep` tree as a row predicate (null ⇒ keeps every row).
-  const matchesFoldKeep = useRowFilter(
+  // The fold rule's `keep` tree as a row filter. One naming an unavailable
+  // rule never folds: the body renders the rule error instead (below).
+  const foldKeepFilter = useRowFilter(
     fold?.keep ?? null,
     fields,
     resolveOperatorSet,
   );
+  const matchesFoldKeep = bodyRowMatcher(foldKeepFilter);
 
   // A live source: its fields resolved against the collection (what the Sort
   // and Filter controls offer, and each field's column).
@@ -846,20 +853,67 @@ function DataViewBodyInner<TRow>(
     activeState,
     fold,
   );
-  // A rule the in-memory filter cannot resolve YET (its field or operator
-  // comes from a plugin still in the deferred tier) would be dropped — every
-  // row shown, then taken back. A live origin holds it in its own lowering.
+  // A rule the in-memory evaluation cannot resolve would be dropped — every
+  // row shown (the filter) or nothing folded (the fold IN EFFECT): loading
+  // while the deferred tier may still contribute it, the rule error after.
+  // A live origin lowers its filter itself (its `error`); its fold, like
+  // every fold, runs here.
   const deferredComplete = useDeferredLoadComplete();
-  const rulesPending =
-    !deferredComplete &&
-    origin == null &&
-    unavailableRules(activeState.filter, fields, resolveOperatorSet).length > 0;
+  const filterUnavailable = useMemo(
+    () =>
+      origin == null
+        ? unavailableRules(activeState.filter, fields, resolveOperatorSet)
+        : NO_UNAVAILABLE,
+    [origin, activeState.filter, fields, resolveOperatorSet],
+  );
+  const unavailable = useMemo(
+    () => ({
+      filter: filterUnavailable,
+      fold:
+        foldKeepFilter.kind === "unavailable"
+          ? foldKeepFilter.rules
+          : NO_UNAVAILABLE,
+    }),
+    [filterUnavailable, foldKeepFilter],
+  );
   const bodyState = resolveBodyState({
     server: origin,
     readiness,
     readFields,
-    rulesPending,
+    unavailable,
+    deferredComplete,
   });
+  // The rule error's way out: drop its rules from the tree they sit in and
+  // save the view, like any filter / fold / sort edit.
+  const removeUnavailableRules = useCallback(
+    (error: Extract<typeof bodyState, { kind: "rule-error" }>["error"]) => {
+      if (!(error instanceof UnavailableFilterRuleError)) {
+        const gone = new Set(error.fieldIds);
+        viewModel.setSortRules(
+          activeViewId,
+          activeState.sort.filter((r) => !gone.has(r.fieldId)),
+        );
+        return;
+      }
+      const ids = error.rules.map((r) => r.id);
+      if (error.tree === "filter") {
+        viewModel.setFilter(
+          activeViewId,
+          activeState.filter && pruneRules(activeState.filter, ids),
+        );
+        return;
+      }
+      // The STORED fold: the one in effect is it, unless a search suspends it
+      // (and then no fold rule error is shown).
+      const stored = activeState.fold;
+      const keep = stored ? pruneRules(stored.keep, ids) : null;
+      viewModel.setFold(
+        activeViewId,
+        stored && keep ? { ...stored, keep } : null,
+      );
+    },
+    [viewModel, activeViewId, activeState],
+  );
 
   // A sections surface renders this view as one section, and a section whose
   // config row says `hideWhenEmpty` is decided HERE, before the view mounts:
@@ -873,10 +927,14 @@ function DataViewBodyInner<TRow>(
   const sectioned = isSectionsToolbar(chrome.toolbar);
   const presentation = viewModel.sectionFor(activeViewId);
   const decideEmptiness = sectioned && presentation.hideWhenEmpty;
-  const emptinessFilter = useRowFilter(
-    decideEmptiness && !origin ? activeState.filter : null,
-    fields,
-    resolveOperatorSet,
+  // An unavailable rule never reaches `hasNoRows`'s answer: the body state is
+  // then the rule error (or loading), which decides the section first.
+  const emptinessFilter = bodyRowMatcher(
+    useRowFilter(
+      decideEmptiness && !origin ? activeState.filter : null,
+      fields,
+      resolveOperatorSet,
+    ),
   );
   const rootsScoped = activeState.filterScope === "roots" && activeNests;
   const hasNoRows = useMemo(() => {
@@ -1269,6 +1327,7 @@ function DataViewBodyInner<TRow>(
                         loadingState={loadingState}
                         loadingVariant={activeInstance.viewType.loadingVariant}
                         loadingCount={activeInstance.viewType.loadingCount}
+                        onRemoveRules={removeUnavailableRules}
                       />
                     </div>
                   ) : (
@@ -1531,6 +1590,7 @@ function isSectionCollapsed(
   return section?.key != null && collapsed.has(section.key);
 }
 const NO_QUERY = { query: "", filter: null };
+const NO_UNAVAILABLE: readonly UnavailableRule[] = [];
 // Every row of a read with no `isPaged` is the read's.
 const ALL_ROWS = (): boolean => true;
 const NOOP = () => {};

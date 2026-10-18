@@ -467,7 +467,8 @@ function LiveBody(props: {
     server: origin,
     readiness: undefined,
     readFields: [],
-    rulesPending: false,
+    unavailable: { filter: [], fold: [] },
+    deferredComplete: true,
   });
   return state.kind === "view" ? (
     <ul>
@@ -482,6 +483,7 @@ function LiveBody(props: {
       loadingState={<p>loading</p>}
       loadingVariant={undefined}
       loadingCount={undefined}
+      onRemoveRules={() => {}}
     />
   );
 }

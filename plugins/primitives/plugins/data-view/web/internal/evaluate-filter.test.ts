@@ -172,6 +172,7 @@ describe("lowerFilterGroup", () => {
         ],
       },
       readsClock: false,
+      unavailable: [],
     });
   });
 
@@ -183,7 +184,7 @@ describe("lowerFilterGroup", () => {
         resolve,
         0,
       ),
-    ).toEqual({ filter: undefined, readsClock: false });
+    ).toEqual({ filter: undefined, readsClock: false, unavailable: [] });
     expect(lowerFilterGroup(null, fields, resolve, 0).filter).toBeUndefined();
   });
 
@@ -231,5 +232,28 @@ describe("coerceToDomain (the one DataView-side adapter)", () => {
   it("stringArray: the array, else NULL", () => {
     expect(coerceToDomain(["a"], "stringArray")).toEqual(["a"]);
     expect(coerceToDomain("a", "stringArray")).toBe(null);
+  });
+});
+
+describe("lowerFilterGroup — unavailable rules", () => {
+  it("reports every rule that does not resolve, by id, at any depth", () => {
+    // The `or` is TRUE from its first (dangling) child — the later dangling
+    // rule is still reported, so removing the first cannot reveal a second.
+    const g = group("and", [
+      rule("name", "contains", "ann"),
+      group("or", [
+        rule("gone", "contains", "x"),
+        rule("name", "no-such-op", "x"),
+      ]),
+    ]);
+    expect(lowerFilterGroup(g, fields, resolve, 0).unavailable).toEqual([
+      { id: "gone-contains", fieldId: "gone", operatorId: "contains" },
+      { id: "name-no-such-op", fieldId: "name", operatorId: "no-such-op" },
+    ]);
+  });
+
+  it("an incomplete rule is not unavailable — it constrains nothing, as authored", () => {
+    const g = group("and", [rule("name", "contains")]);
+    expect(lowerFilterGroup(g, fields, resolve, 0).unavailable).toEqual([]);
   });
 });

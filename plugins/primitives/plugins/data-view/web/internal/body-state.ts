@@ -1,11 +1,17 @@
 import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
 import type { FieldDef, FilterNode, FoldRule, ViewState } from "../../core";
+import type { UnavailableRule } from "./evaluate-filter";
+import {
+  UnavailableFilterRuleError,
+  UnavailableSortRuleError,
+} from "./live-filter";
 
 /**
  * What the body renders in place of the active view, if anything — the one
  * precedence both data paths share:
  *
- *   server error > failed read > failed field > loading > pending field > the view.
+ *   server error > failed read > failed field > rule error > loading >
+ *   pending field > the view.
  *
  * A server-ordered origin's `error` is the query it could not form or page
  * (`server-error`); its `readError` is the read itself failing with nothing to
@@ -23,15 +29,28 @@ import type { FieldDef, FilterNode, FoldRule, ViewState } from "../../core";
  * "None"), sorting would order by nothing and a filter would match nothing —
  * each a claim about the rows that then reverses.
  *
- * `rulesPending`: the view's filter names a field or operator that does not
- * resolve YET — the plugin contributing it is still in the deferred load
- * tier. The in-memory filter drops an unresolved rule (it keeps every row), so
- * rendering now would show rows the view hides, then take them back once the
- * plugin lands (measured: the Pages sidebar's Favorites listing every page,
- * then shrinking to the starred ones). Loading instead, like a pending field.
+ * `unavailable`: the rules of the view's filter and of its fold IN EFFECT
+ * that name a field or operator that does not resolve, evaluated in memory
+ * (the filter only on the in-memory path — a live source lowers its own and
+ * reports the same failure as its `error`; the fold on both, since it always
+ * runs over the loaded rows). Running without them would show rows the view
+ * hides, or fold nothing, so the body never renders the view:
+ *
+ * - while `deferredComplete` is false it is `loading` — the plugin
+ *   contributing the field may still be in the deferred load tier (measured:
+ *   the Pages sidebar's Favorites listing every page, then shrinking to the
+ *   starred ones once `starred` registered);
+ * - after, it is `rule-error`: the rules, named, with a way to remove them.
+ *
+ * A live source's own `UnavailableFilterRuleError` / `UnavailableSortRuleError`
+ * is that same `rule-error` arm, so both paths offer the same way out.
  */
 export type BodyState =
   | { kind: "server-error"; error: Error }
+  | {
+      kind: "rule-error";
+      error: UnavailableFilterRuleError | UnavailableSortRuleError;
+    }
   | { kind: "error"; error: Extract<ResourceReadiness, { status: "error" }> }
   | {
       kind: "field-error";
@@ -50,9 +69,29 @@ export function resolveBodyState(input: {
   } | null;
   readiness: ResourceReadiness | undefined;
   readFields: readonly FieldDef<unknown>[];
-  rulesPending: boolean;
+  unavailable: {
+    filter: readonly UnavailableRule[];
+    fold: readonly UnavailableRule[];
+  };
+  deferredComplete: boolean;
 }): BodyState {
-  const { server, readiness, readFields, rulesPending } = input;
+  const { server, readiness, readFields, unavailable, deferredComplete } =
+    input;
+  // The rule error the in-memory evaluation found (the filter first: it is
+  // the one hiding rows), or `pending` while the deferred tier may still
+  // contribute the field.
+  const local: BodyState | "pending" | null =
+    unavailable.filter.length === 0 && unavailable.fold.length === 0
+      ? null
+      : !deferredComplete
+        ? "pending"
+        : {
+            kind: "rule-error",
+            error:
+              unavailable.filter.length > 0
+                ? new UnavailableFilterRuleError(unavailable.filter, "filter")
+                : new UnavailableFilterRuleError(unavailable.fold, "fold"),
+          };
   const failedField = readFields.find((f) => f.readError !== undefined);
   const fieldFailure: BodyState | null =
     failedField?.readError !== undefined
@@ -67,16 +106,24 @@ export function resolveBodyState(input: {
       : null;
   const fieldPending = readFields.some((f) => f.pending === true);
   if (server) {
+    if (
+      server.error instanceof UnavailableFilterRuleError ||
+      server.error instanceof UnavailableSortRuleError
+    ) {
+      return { kind: "rule-error", error: server.error };
+    }
     if (server.error) return { kind: "server-error", error: server.error };
     if (server.readError) return { kind: "error", error: server.readError };
     if (fieldFailure) return fieldFailure;
-    return server.loading || fieldPending
+    if (local !== null && local !== "pending") return local;
+    return server.loading || fieldPending || local === "pending"
       ? { kind: "loading" }
       : { kind: "view" };
   }
   if (readiness?.status === "error") return { kind: "error", error: readiness };
   if (fieldFailure) return fieldFailure;
-  return readiness?.status === "loading" || fieldPending || rulesPending
+  if (local !== null && local !== "pending") return local;
+  return readiness?.status === "loading" || fieldPending || local === "pending"
     ? { kind: "loading" }
     : { kind: "view" };
 }

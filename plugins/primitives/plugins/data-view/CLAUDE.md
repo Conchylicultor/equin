@@ -59,8 +59,8 @@ build-time codegen scrapes the markers, the primitive registers one
 
 Pass the read backing `rows` as `readiness={result}` (any `useLive` /
 `useResource` / combined result — its `status` is all the DataView reads). The
-body's precedence is `server error > failed read > failed field > loading >
-pending field > the view` (`web/internal/body-state.ts`; the field arms are
+body's precedence is `server error > failed read > failed field > rule error >
+loading > pending field > the view` (`web/internal/body-state.ts`; the field arms are
 "A field's own read" under Field extensions): `error` renders `errorState` (default
 `<ResourceErrorInline variant="block"/>` — the message with Retry, or Reload for
 an out-of-date tab), `loading` renders `loadingState` (the view's skeleton), and
@@ -2007,16 +2007,31 @@ the ONE filter language (`network/live/plugins/filter`, design in
 - **`lowerFilterGroup(group, fields, resolveOperatorSet, now)`** walks the tree:
   a dangling or incomplete rule is TRUE (dropped from an `and`; it makes an `or`
   TRUE), an empty group is TRUE, a one-child group is its child. It returns
-  `{ filter, readsClock }`; `readsClock` is recorded generically (`ctx.now` is a
-  getter), so a relative date anchor ("Today", "within the past week") marks the
-  filter clock-dependent without data-view naming the date type. Relative time is
-  lowered HERE, on the client, to absolute ISO instants — the language has no
-  clock.
-  In memory, a rule that does not resolve while the deferred plugin tier is
-  still loading (its field or operator set not contributed YET) holds the body
-  in its loading state instead (`resolveBodyState`'s `rulesPending`): dropping
-  it would show every row and then take them back. Measured on the Pages
-  sidebar, whose Favorites listed every page before `starred` registered.
+  `{ filter, readsClock, unavailable }`; `readsClock` is recorded generically
+  (`ctx.now` is a getter), so a relative date anchor ("Today", "within the past
+  week") marks the filter clock-dependent without data-view naming the date
+  type. Relative time is lowered HERE, on the client, to absolute ISO instants
+  — the language has no clock.
+- **A dangling rule is reported, never silently dropped.** `unavailable` lists
+  every rule whose field or operator does not resolve (by node id), and
+  `useRowFilter` returns a `RowFilter` union — `all` / `match` / `unavailable`
+  — so no caller can mistake "a filter I could not run" for "no filter". The
+  body (`resolveBodyState`) refuses to render the view while the filter (in
+  memory) or the fold IN EFFECT (both paths — a fold always runs over the
+  loaded rows) names one: loading while the deferred plugin tier is still
+  loading (the contributor may not have registered the field YET — measured on
+  the Pages sidebar, whose Favorites listed every page before `starred`
+  registered), then the `rule-error` arm — the rule named, with **Remove**,
+  which prunes it from its tree (`pruneRules`; nothing left → the filter /
+  fold is cleared) and saves the view. A live source's own
+  `UnavailableFilterRuleError` / `UnavailableSortRuleError` is the same arm, so
+  a stale saved view (a deleted custom column, a renamed field id) gets the same
+  way out on either path. A `hideWhenEmpty` section shows the error (only
+  `loading` and an empty `view` hide it). Inside the body, views read the
+  predicate through `bodyRowMatcher` (unavailable ⇒ no predicate, safe only
+  because the body never renders them then); a caller outside the body reads
+  `useRowFilter` and handles `unavailable` (the Places tag sidebar draws no
+  counts).
 - **In memory** (`applyFilter`, `useRowFilter`): lower once, then
   `matchesFilter` per row over a record of just the columns the filter reads. The
   row value is `projectFieldValue` coerced to the set's domain by ONE adapter,
@@ -2499,7 +2514,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 102 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 104 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
     - `primitives/css/ui-kit` ×12
     - `primitives/data-view/view-core` ×8
@@ -2511,6 +2526,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/collapsible` ×2
     - `primitives/css/overlay` ×2
     - `primitives/css/row` ×2
+    - `primitives/css/spacing` ×2
     - `primitives/css/sticky/stack` ×2
     - `primitives/css/sticky` ×2
     - `primitives/cursor-pagination` ×2
@@ -2522,6 +2538,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/sortable-list` ×2
     - `fields.Fields`
     - `ids.IdKinds`
+    - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/inline.Inline`
@@ -2530,7 +2547,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
@@ -2619,6 +2635,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ManualOrderConfig`
     - `PartitionOptions`
     - `ProjectedRow`
+    - `RowFilter`
     - `RowTone`
     - `SectionBodyProps`
     - `SelectionConfig`
@@ -2626,6 +2643,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `SortPreset`
     - `SortRule`
     - `TableCellProps`
+    - `UnavailableRule`
     - `ValueCodec`
     - `ViewState`
   - Exports (values):

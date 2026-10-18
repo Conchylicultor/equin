@@ -29,14 +29,31 @@ export interface LoweredFilter {
    * when the day rolls over — see `useFilterClock`.
    */
   readsClock: boolean;
+  /**
+   * Every rule that does not resolve (its field or operator is gone), in tree
+   * order. Each lowered as TRUE above — the filter it is part of keeps every
+   * row it would have narrowed — so a caller must not run `filter` as the
+   * view's answer while this is non-empty: the body refuses instead
+   * (`resolveBodyState`'s `rule-error`), naming these by id.
+   */
+  unavailable: UnavailableRule[];
+}
+
+/** A saved filter rule whose field or operator does not resolve. */
+export interface UnavailableRule {
+  /** The rule node's id — what removing it from its tree takes. */
+  id: string;
+  fieldId: string;
+  operatorId: string;
 }
 
 /**
  * Lower a DataView `FilterGroup` into a filter-language `Filter`, each rule
  * through its operator's `lower` with `ctx.column` = the field id.
  *
- * - An unresolvable rule (dangling field/operator) or an incomplete one
- *   (`lower` answers `undefined`) is TRUE: it keeps every row.
+ * - An incomplete rule (`lower` answers `undefined`) is TRUE: it keeps every
+ *   row. An unresolvable one (dangling field/operator) is TRUE too, and is
+ *   reported in `unavailable` — never dropped silently.
  * - `and` drops TRUE children; `or` with any TRUE child is itself TRUE (the
  *   in-memory `some` over a no-op child always held).
  * - An empty group is TRUE; a one-child group is its child.
@@ -51,23 +68,34 @@ export function lowerFilterGroup<TRow>(
   now: number,
 ): LoweredFilter {
   let readsClock = false;
+  const unavailable: UnavailableRule[] = [];
   const lowerNode = (node: FilterNode): Filter | undefined => {
     if (node.kind === "group") {
+      // Every child is lowered (no early return on a TRUE `or` branch), so
+      // `unavailable` lists every dangling rule in the tree.
       const children: Filter[] = [];
+      let alwaysTrue = false;
       for (const child of node.children) {
         const lowered = lowerNode(child);
         if (lowered === undefined) {
-          if (node.conjunction === "or") return undefined;
+          if (node.conjunction === "or") alwaysTrue = true;
           continue;
         }
         children.push(lowered);
       }
-      if (children.length === 0) return undefined;
+      if (alwaysTrue || children.length === 0) return undefined;
       if (children.length === 1) return children[0];
       return node.conjunction === "and" ? and(...children) : or(...children);
     }
     const resolved = resolveRuleOperator(node, fields, resolveOperatorSet);
-    if (!resolved) return undefined;
+    if (!resolved) {
+      unavailable.push({
+        id: node.id,
+        fieldId: node.fieldId,
+        operatorId: node.operatorId,
+      });
+      return undefined;
+    }
     const ctx: FilterLowerContext = {
       column: resolved.field.id,
       field: resolved.field as FieldDef<unknown>,
@@ -79,7 +107,7 @@ export function lowerFilterGroup<TRow>(
     return resolved.op.lower(node.value, ctx);
   };
   const filter = group ? lowerNode(group) : undefined;
-  return { filter, readsClock };
+  return { filter, readsClock, unavailable };
 }
 
 /**

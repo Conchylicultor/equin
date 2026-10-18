@@ -117,8 +117,12 @@ export { useGroupByController } from "./internal/use-group-by-controller";
 export type { GroupByController } from "./internal/use-group-by-controller";
 export { liveDataSource } from "./internal/live-data-source";
 export { applyFilter } from "./internal/evaluate-filter";
-export type { LoweredFilter } from "./internal/evaluate-filter";
+export type {
+  LoweredFilter,
+  UnavailableRule,
+} from "./internal/evaluate-filter";
 export { useRowFilter } from "./internal/use-row-filter";
+export type { RowFilter } from "./internal/use-row-filter";
 export { useFilterClock } from "./internal/use-filter-clock";
 export { isFilterGroup } from "./internal/filter-shape";
 export { useFilterController } from "./internal/use-filter-controller";

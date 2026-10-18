@@ -141,6 +141,19 @@ export function deleteNode(root: FilterGroup, id: string): FilterGroup {
 }
 
 /**
+ * `root` without the rules `ids` names (`deleteNode` for each), or `null` when
+ * no rule is left — a tree of empty groups constrains nothing, and the view
+ * stores no filter rather than one that says nothing.
+ */
+export function pruneRules(
+  root: FilterGroup,
+  ids: readonly string[],
+): FilterGroup | null {
+  const pruned = ids.reduce((tree, id) => deleteNode(tree, id), root);
+  return countRules(pruned) === 0 ? null : pruned;
+}
+
+/**
  * Wrap the rule with `ruleId` in a fresh group (default conjunction "and"),
  * replacing the rule in place with the new group containing it. Notion's "Turn
  * into group" affordance.

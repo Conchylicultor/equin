@@ -21,7 +21,7 @@ import { useGroupingRegistry } from "../grouping-slot";
 import { IDENTITY_GROUPING } from "./identity-grouping";
 import { useFlatRows } from "./use-flat-rows";
 import { foldSections, makeFoldKeep } from "./fold-sections";
-import { useRowFilter } from "./use-row-filter";
+import { bodyRowMatcher, useRowFilter } from "./use-row-filter";
 
 /** Sentinel bucket key for rows whose group-by value is null/undefined. Holds a
  *  control char so it can never collide with a real stringified field value.
@@ -453,10 +453,8 @@ export function useDataViewSections<TRow>(
   } = opts;
   const fold = state.fold;
   // The fold rule's `keep` tree, lowered once per (tree, clock) like the filter.
-  const matchesKeep = useRowFilter(
-    fold?.keep ?? null,
-    fields,
-    resolveOperatorSet,
+  const matchesKeep = bodyRowMatcher(
+    useRowFilter(fold?.keep ?? null, fields, resolveOperatorSet),
   );
   const resolveGrouping = useGroupingRegistry().resolve;
   // A stored rule carries its `groupingId` (`readGroupBy` defaults it), but a

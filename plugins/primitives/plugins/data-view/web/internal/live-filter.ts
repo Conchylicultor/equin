@@ -7,36 +7,33 @@ import {
   type Filter,
   type Filterable,
 } from "@plugins/network/plugins/live/plugins/filter/core";
-import type {
-  FieldDef,
-  FilterGroup,
-  FilterNode,
-  FilterOperatorSet,
-} from "../../core";
-import { lowerFilterGroup } from "./evaluate-filter";
-import { resolveRuleOperator } from "./rule-resolution";
+import type { FieldDef, FilterGroup, FilterOperatorSet } from "../../core";
+import { lowerFilterGroup, type UnavailableRule } from "./evaluate-filter";
 import { useFilterClock } from "./use-filter-clock";
 
 type ResolveOperatorSet = (typeId: string) => FilterOperatorSet | undefined;
 
 /**
- * A saved rule a live source cannot run: its field's column is not one the
- * collection declares filterable (or the field no longer exists), or its
- * operator is gone.
- * Running the rest of the filter without it would silently show rows the view
- * says it hides, so the query is refused instead.
+ * A saved rule a view cannot run: its field no longer exists (a deleted custom
+ * column, a renamed field id, a contributor that failed to load), its operator
+ * is gone, or — on a live source — its field's column is not one the
+ * collection declares filterable.
+ * Running the rest of the tree without it would silently show rows the view
+ * says it hides (`tree: "filter"`) or fold nothing (`tree: "fold"`, the fold
+ * rule's `keep`), so the body shows this instead, with a way to remove them.
  */
 export class UnavailableFilterRuleError extends Error {
   override name = "UnavailableFilterRuleError";
   constructor(
-    readonly rules: readonly { fieldId: string; operatorId: string }[],
+    readonly rules: readonly UnavailableRule[],
+    readonly tree: "filter" | "fold",
   ) {
     super(
-      `This view filters on ${rules
+      `This view ${tree === "filter" ? "filters" : "folds"} on ${rules
         .map((r) => `"${r.fieldId}" (${r.operatorId})`)
-        .join(", ")}, which this list cannot filter on — remove ${
-        rules.length === 1 ? "that rule" : "those rules"
-      } from the filter.`,
+        .join(", ")}, which this list cannot ${
+        tree === "filter" ? "filter" : "fold"
+      } on.`,
     );
   }
 }
@@ -53,9 +50,7 @@ export class UnavailableSortRuleError extends Error {
     super(
       `This view sorts by ${fieldIds
         .map((f) => `"${f}"`)
-        .join(", ")}, which this list cannot sort by — remove ${
-        fieldIds.length === 1 ? "that rule" : "those rules"
-      } from the sort.`,
+        .join(", ")}, which this list cannot sort by.`,
     );
   }
 }
@@ -65,21 +60,16 @@ export type ViewFilterResult =
   | { kind: "ok"; filter: Filter | undefined }
   | { kind: "error"; error: FilterError | UnavailableFilterRuleError };
 
-/** Every rule in `group` that does not resolve against `fields` (dangling field or operator). */
+/**
+ * Every rule in `group` that does not resolve against `fields` (dangling field
+ * or operator) — the lowering's own answer (`LoweredFilter.unavailable`).
+ */
 export function unavailableRules<TRow>(
   group: FilterGroup | null,
   fields: FieldDef<TRow>[],
   resolveOperatorSet: ResolveOperatorSet,
-): { fieldId: string; operatorId: string }[] {
-  const out: { fieldId: string; operatorId: string }[] = [];
-  const walk = (node: FilterNode): void => {
-    if (node.kind === "group") node.children.forEach(walk);
-    else if (resolveRuleOperator(node, fields, resolveOperatorSet) === null) {
-      out.push({ fieldId: node.fieldId, operatorId: node.operatorId });
-    }
-  };
-  if (group) walk(group);
-  return out;
+): UnavailableRule[] {
+  return lowerFilterGroup(group, fields, resolveOperatorSet, 0).unavailable;
 }
 
 /**
@@ -124,24 +114,19 @@ export function lowerViewFilter<TRow>(args: {
   filterable: Filterable;
   now: number;
 }): ViewFilterResult & { readsClock: boolean } {
-  const unavailable = unavailableRules(
-    args.group,
-    args.fields,
-    args.resolveOperatorSet,
-  );
-  if (unavailable.length > 0) {
-    return {
-      kind: "error",
-      error: new UnavailableFilterRuleError(unavailable),
-      readsClock: false,
-    };
-  }
   const lowered = lowerFilterGroup(
     args.group,
     args.fields,
     args.resolveOperatorSet,
     args.now,
   );
+  if (lowered.unavailable.length > 0) {
+    return {
+      kind: "error",
+      error: new UnavailableFilterRuleError(lowered.unavailable, "filter"),
+      readsClock: false,
+    };
+  }
   try {
     return {
       kind: "ok",

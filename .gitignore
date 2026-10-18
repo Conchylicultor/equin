@@ -73,7 +73,8 @@ v1/package-lock.json
 skills-lock.json
 .claude/worktrees/
 .claude/scheduled_tasks.lock
-.allow-main
+# Guard bypass files (BYPASS_TOKENS in tooling/guards): per-checkout overrides, never committed.
+.allow-*
 .git-diff-main-reminded
 
 # Python bytecode from `python/` uv projects (infra/deps python kind)

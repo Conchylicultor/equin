@@ -6,6 +6,7 @@ import {
   deleteNode,
   emptyGroup,
   newRule,
+  pruneRules,
   setConjunction,
   updateRule,
   wrapRuleInGroup,
@@ -125,5 +126,34 @@ describe("filter-tree-ops", () => {
     setConjunction(tree, "root", "or");
     deleteNode(tree, rule.id);
     expect(tree).toEqual(snapshot);
+  });
+});
+
+describe("pruneRules", () => {
+  it("removes the named rules at any depth, keeping the rest", () => {
+    const keep = newRule("a", "is");
+    const gone = newRule("b", "is");
+    const deep = newRule("c", "is");
+    const nested: FilterGroup = {
+      kind: "group",
+      id: "inner",
+      conjunction: "or",
+      children: [deep],
+    };
+    const next = pruneRules(root(keep, gone, nested), [gone.id, deep.id]);
+    expect(next).toEqual(root(keep, { ...nested, children: [] }));
+  });
+
+  it("is null once no rule is left — the view stores no filter", () => {
+    const only = newRule("a", "is");
+    const nested: FilterGroup = {
+      kind: "group",
+      id: "inner",
+      conjunction: "or",
+      children: [newRule("b", "is")],
+    };
+    const tree = root(only, nested);
+    const ids = [only.id, (nested.children[0] as FilterRule).id];
+    expect(pruneRules(tree, ids)).toBeNull();
   });
 });

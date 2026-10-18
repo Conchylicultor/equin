@@ -78,6 +78,8 @@ A row click cycles include → exclude → off; including a tag replaces any
 included tag it subsumes or narrows. A row's count is `tagPlaceCounts` over the
 places the REST of the filter keeps (`withoutSidebarRules` → `useRowFilter`),
 nested tags included. The quick-search text is not applied to the counts.
+While the rest of the filter names a rule that does not resolve, no counts
+are drawn (the DataView shows the rule error).
 
 The tree rows are transient filter chrome (the brief's exemption from
 DataView): a disclosure button beside a `Row` (never nested in it), the
