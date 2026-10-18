@@ -12961,8 +12961,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Conversation.AbovePromptInput`
           - `conversationPane.Actions`
         - Slot contributors:
-          - `Conversation.PromptBar` ← `conversations.conversation-view.branch`
-          - `Conversation.PromptBar` ← `conversations.conversation-view.dependencies`
           - `Conversation.PromptBar` ← `conversations.conversation-view.fork-conversation`
           - `Conversation.PromptBar` ← `conversations.conversation-view.launch-prompts`
           - `Conversation.PromptBar` ← `conversations.conversation-view.notes`
@@ -12975,6 +12973,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationPane.Actions` ← `conversations.conversation-preprompt`
           - `conversationPane.Actions` ← `conversations.conversation-progress`
           - `conversationPane.Actions` ← `conversations.conversation-view.allow-monitor`
+          - `conversationPane.Actions` ← `conversations.conversation-view.dependencies`
           - `conversationPane.Actions` ← `conversations.conversation-view.model`
           - `conversationPane.Actions` ← `conversations.conversation-view.pin`
           - `conversationPane.Actions` ← `conversations.conversation-view.status`
@@ -13022,8 +13021,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --measure-reading`
-        - Imported by: 61 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
-          - `conversations` ×50
+        - Imported by: 60 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+          - `conversations` ×49
           - `active-data` ×5
           - `tasks` ×2
           - `debug/profiling/ops`
@@ -13230,28 +13229,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/pane.useOpenPane`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/density --space-sm`
-        - **`branch`** — Forks the current Claude session into a background conversation with the typed draft as the opening prompt.
-          - Web:
-            - Contributes: `Conversation.PromptBar` "Branch" → `BranchButtons`
-            - Uses:
-              - `conversations/conversation-view.Conversation`
-              - `conversations/model-provider.ModelChoiceLabel`
-              - `conversations/model-provider.useDefaultModel`
-              - `conversations/model-provider.useVisibleModels`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/launch.useLaunchConversation`
-              - `primitives/overlay/popover.InlinePopover`
-              - `primitives/text-editor.TextEditor`
-              - `shell/notifications.toast`
-              - `ui/icons.Icon`
-          - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --subtle-foreground`
-              - `ui/tokens/density --space-md`
-              - `ui/tokens/density --space-xs`
-              - `ui/tokens/shape --spacing`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Web:
             - Contributes: `Demo.Resource` "edited-files"
@@ -13415,45 +13392,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-caption`
               - `ui/tokens/type-scale --font-weight-control`
               - `ui/tokens/type-scale --line-height-caption`
-        - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
+        - **`dependencies`** — The task's links in the conversation header: ↑ open blockers · ↓ open dependents (shown only on header hover when none is open: a faint ↕ when all are resolved, a link icon when there are none), one popover listing and editing every link of both directions.
           - Web:
-            - Contributes: `Conversation.PromptBar` "Deps" → `DependenciesButton`
-            - Uses: 28 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/dependencies/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/dependencies/REFERENCE.md)
-              - `primitives/css/ui-kit` ×3
+            - Contributes: `conversationPane.Actions` "dependencies" → `DependenciesButton`
+            - Uses: 27 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/dependencies/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/dependencies/REFERENCE.md)
+              - `conversations` ×2
               - `infra/endpoints` ×2
-              - `primitives/css/fill` ×2
+              - `primitives/css/control-panel` ×2
               - `primitives/css/text` ×2
+              - `primitives/css/ui-kit` ×2
               - `primitives/live-state` ×2
-              - `primitives/overlay/hover-card` ×2
               - `primitives/search` ×2
               - `conversations/conversation-ui/item.ConversationItem`
-              - `conversations/conversation-view.Conversation`
-              - `conversations.useActiveConversations`
+              - `conversations/conversation-view.conversationPane`
               - `network/live.useLive`
-              - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
-              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/fill.Fill`
               - `primitives/css/row.Row`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
-              - `primitives/overlay/popover.InlinePopover`
+              - `primitives/hover-reveal.hoverRevealTargetInAnchor`
+              - `primitives/icon-button.IconButton`
               - `shell/notifications.toast`
+              - `tasks/task-status.StatusIcon`
               - `ui/icons.Icon`
           - Cross-plugin:
             - Uses tokens:
-              - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/density --space-2xs`
               - `ui/tokens/density --space-sm`
-              - `ui/tokens/density --space-xs`
-              - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-              - `ui/tokens/type-scale --font-scale`
-              - `ui/tokens/type-scale --font-size-3xs`
-              - `ui/tokens/type-scale --font-size-caption`
-              - `ui/tokens/type-scale --font-weight-normal`
-              - `ui/tokens/type-scale --line-height-3xs`
-              - `ui/tokens/type-scale --line-height-caption`
         - **`dependent-count`** — Per-row "N blocked" chip on a conversation item: how many tasks are transitively blocked by that conversation's task. The conversation toolbar shows the same count inside its Tasks button instead of as a chip of its own.
           - Web:
             - Contributes: `Item.Chips` → `DependentCountItemChip`
@@ -13589,19 +13556,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
-        - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
+        - **`fork-conversation`** — Side chat: an icon split under the prompt that opens a new, blank conversation in the same worktree — the icon on the default model, the chevron to pick another.
           - Web:
             - Contributes: `Conversation.PromptBar` "New" → `ForkConversationButtons`
             - Uses:
               - `conversations/conversation-view.Conversation`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/ui-kit.WithTooltip`
               - `primitives/launch.LaunchControl`
-              - `ui/icons.Icon`
-          - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/shape --spacing`
         - **`header`** — HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips in the conversation pane header share.
           - Web:
             - Uses: `primitives/css/badge.Badge`
@@ -15616,7 +15576,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.Button`
               - `tasks/task-draft-form.TaskDraftPopover`
               - `ui/icons.Icon`
-        - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
+        - **`notes`** — Free-form per-conversation notes, auto-saved to the server. The note button opens and hides the note; a dot on it marks a written note it is hiding. Per-conversation free-form notes, auto-saved to the server.
           - Web:
             - Contributes:
               - `Demo.Resource` "conversation-notes"
@@ -15629,6 +15589,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.LiveRowResult`
               - `network/live.useLiveRow`
               - `primitives/css/pin.Pin`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/status-dot.StatusDot`
+              - `primitives/css/ui-kit.cn`
               - `primitives/editable-field.EditableField`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
@@ -16721,7 +16684,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations`
           - `conversations/agents`
           - `conversations/all-conversations`
-          - `conversations/conversation-view/branch`
           - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
           - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
           - `conversations/conversation-view/launch-prompts`
@@ -34439,11 +34401,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 110 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×28
               - `primitives` ×24
               - `page` ×17
-              - `conversations` ×7
+              - `conversations` ×6
               - `debug` ×6
               - `ui` ×6
               - `apps-core` ×4
@@ -34644,7 +34606,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow`
-            - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×14
               - `page` ×5
               - `primitives` ×4
@@ -34653,6 +34615,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×2
               - `ui` ×2
               - `apps-core/surface`
+              - `conversations/conversation-view/dependencies`
               - `fullscreen`
               - `reorder/edit-mode`
               - `reports/panel-overflow`
@@ -35074,9 +35037,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 112 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×21
-              - `conversations` ×21
+              - `conversations` ×20
               - `primitives` ×17
               - `debug` ×11
               - `page` ×7
@@ -35257,9 +35220,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 395 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 394 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×100
-              - `conversations` ×63
+              - `conversations` ×62
               - `primitives` ×51
               - `debug` ×35
               - `ui` ×28
@@ -35334,9 +35297,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --status-dot-md`
               - `ui/tokens/density --status-dot-sm`
               - `ui/tokens/density --status-dot-xs`
-            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
+            - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
               - `apps` ×11
-              - `conversations` ×8
+              - `conversations` ×9
               - `debug` ×8
               - `active-data` ×3
               - `build` ×2
@@ -35479,9 +35442,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 368 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 367 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×97
-              - `conversations` ×72
+              - `conversations` ×71
               - `primitives` ×42
               - `debug` ×34
               - `page` ×21
@@ -35768,10 +35731,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 411 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 410 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×105
               - `apps` ×84
-              - `conversations` ×55
+              - `conversations` ×54
               - `page` ×25
               - `debug` ×22
               - `ui` ×21
@@ -37619,13 +37582,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `apps` ×9
           - `page` ×8
           - `primitives` ×7
           - `ui` ×4
+          - `conversations` ×2
           - `apps-core/surface/floating`
-          - `conversations/conversation-view/pin`
           - `integrations/youtube`
           - `layouts/miller`
           - `tasks/task-description`
@@ -37644,10 +37607,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 115 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 116 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×38
           - `primitives` ×21
-          - `conversations` ×19
+          - `conversations` ×20
           - `page` ×7
           - `tasks` ×7
           - `debug` ×5
@@ -37802,6 +37765,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTaskLaunch`
       - Cross-plugin:
         - Uses tokens:
+          - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/color-palette --primary`
           - `ui/tokens/color-palette --primary-foreground`
           - `ui/tokens/density --space-sm`
@@ -37814,7 +37778,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/prototypes/gallery`
           - `apps/sonata/transcription`
           - `config_v2/settings/conflict-agent`
-          - `conversations/conversation-view/branch`
           - `conversations/conversation-view/fork-conversation`
           - `conversations/conversation-view/jsonl-viewer/investigate-event`
           - `conversations/conversation-view/rewind`
@@ -38923,7 +38886,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `active-data/commit-link`
               - `apps/prototypes/thumbnails`
-              - `conversations/conversation-view/dependencies`
               - `primitives/text-editor/composer/picker-pill`
               - `ui/segmented-progress-bar`
         - **`hover-popover`** — Hover-opened popover: a controlled ui-kit Popover revealed by pointer hover (open intent delay, grace close while the pointer is on neither the trigger nor the portaled panel), ArrowDown, or a first touch tap; closed by Esc, outside press or focus leaving. The trigger's own click is never intercepted, so a trigger can navigate on click and preview on hover.
@@ -39151,11 +39113,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `InlinePopover`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
+            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
               - `page` ×6
               - `primitives` ×5
               - `apps` ×4
-              - `conversations` ×4
+              - `conversations` ×2
               - `fields` ×2
               - `reorder` ×2
               - `shell` ×2
@@ -40431,7 +40393,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/task`
           - `apps/website/improve`
           - `conversations/agents`
-          - `conversations/conversation-view/branch`
           - `primitives/prompt-editor`
           - `primitives/text-editor/composer`
           - `primitives/text-editor/inline-chip`
@@ -43001,8 +42962,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×7
           - `ui/tokens/density` ×4
           - `ui/tokens/shape --spacing`
-        - Imported by: 35 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
-          - `conversations` ×16
+        - Imported by: 34 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+          - `conversations` ×15
           - `tasks` ×6
           - `apps` ×2
           - `build` ×2
@@ -44837,6 +44798,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
         - Imported by:
           - `active-data/task-link`
+          - `conversations/conversation-view/dependencies`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
           - `conversations/conversation-view/tasks-panel`
           - `page/annotations/todo/task-link`
@@ -45424,9 +45386,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 305 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 303 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×65
-          - `conversations` ×57
+          - `conversations` ×55
           - `primitives` ×41
           - `page` ×40
           - `fields` ×33
@@ -46492,9 +46454,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 477 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 475 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×100
-              - `conversations` ×86
+              - `conversations` ×84
               - `primitives` ×75
               - `debug` ×33
               - `page` ×32
@@ -46551,10 +46513,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 313 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 312 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×65
               - `apps` ×63
-              - `conversations` ×47
+              - `conversations` ×46
               - `debug` ×26
               - `page` ×20
               - `ui` ×16
@@ -46845,10 +46807,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 661 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 659 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `apps` ×136
               - `primitives` ×124
-              - `conversations` ×101
+              - `conversations` ×99
               - `page` ×46
               - `debug` ×39
               - `ui` ×34
@@ -46983,10 +46945,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 224 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 223 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×55
-              - `conversations` ×38
               - `primitives` ×38
+              - `conversations` ×37
               - `debug` ×16
               - `plugin-meta` ×15
               - `page` ×12

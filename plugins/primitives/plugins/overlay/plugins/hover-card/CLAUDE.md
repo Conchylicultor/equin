@@ -60,7 +60,6 @@ hangs off.
   - Imported by:
     - `active-data/commit-link`
     - `apps/prototypes/thumbnails`
-    - `conversations/conversation-view/dependencies`
     - `primitives/text-editor/composer/picker-pill`
     - `ui/segmented-progress-bar`
 

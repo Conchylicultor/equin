@@ -164,96 +164,95 @@ function DependenciesButtonInner({
             .join(" · ");
 
   return (
-      <ControlPanelPopover
-        open={open}
-        onOpenChange={setOpen}
-        align="end"
-        size="described"
-        label="Task links"
-        trigger={
-          <Button
-            variant="ghost"
-            aria-label={tip}
-            tooltip={tip}
-            tooltipSide="bottom"
-            className={cn(
-              "gap-sm text-muted-foreground tabular-nums",
-              up + down === 0 && !open && hoverRevealTargetInAnchor,
-            )}
-          >
-            {total === 0 ? (
-              <Icon icon={linkIcon} className="size-4" />
-            ) : up + down === 0 ? (
-              <Icon icon={resolvedIcon} className="size-4 opacity-60" />
-            ) : (
-              <>
-                {up > 0 && (
-                  <Stack as="span" direction="row" gap="2xs" align="center">
-                    <Icon icon={upIcon} className="size-3.5" />
-                    {up}
-                  </Stack>
+    <ControlPanelPopover
+      open={open}
+      onOpenChange={setOpen}
+      align="end"
+      label="Task links"
+      trigger={
+        <Button
+          variant="ghost"
+          aria-label={tip}
+          tooltip={tip}
+          tooltipSide="bottom"
+          className={cn(
+            "gap-sm text-muted-foreground tabular-nums",
+            up + down === 0 && !open && hoverRevealTargetInAnchor,
+          )}
+        >
+          {total === 0 ? (
+            <Icon icon={linkIcon} className="size-4" />
+          ) : up + down === 0 ? (
+            <Icon icon={resolvedIcon} className="size-4 opacity-60" />
+          ) : (
+            <>
+              {up > 0 && (
+                <Stack as="span" direction="row" gap="2xs" align="center">
+                  <Icon icon={upIcon} className="size-3.5" />
+                  {up}
+                </Stack>
                 )}
-                {down > 0 && (
-                  <Stack as="span" direction="row" gap="2xs" align="center">
-                    <Icon icon={downIcon} className="size-3.5" />
-                    {down}
-                  </Stack>
-                )}
-              </>
-            )}
-          </Button>
-        }
-      >
-        {/* One band per direction; the panel rules the line between them. */}
-        <ControlPanel.Section>
-          <DepSection
-            label="Runs after"
-            hint="starts once these are done"
-            linked={after}
-            candidates={candidatesExcept(after)}
+              {down > 0 && (
+                <Stack as="span" direction="row" gap="2xs" align="center">
+                  <Icon icon={downIcon} className="size-3.5" />
+                  {down}
+                </Stack>
+              )}
+            </>
+          )}
+        </Button>
+      }
+    >
+      {/* One band per direction; the panel rules the line between them. */}
+      <ControlPanel.Section>
+        <DepSection
+          label="Runs after"
+          hint="starts once these are done"
+          linked={after}
+          candidates={candidatesExcept(after)}
+          busy={busy}
+          onAdd={(c) =>
+            void mutate(c.taskId!, () =>
+              fetchEndpoint(
+                addTaskDependency,
+                { id: taskId },
+                { body: { dependsOnTaskId: c.taskId! } },
+              ),
+            )
+          }
+          onRemove={(id) =>
+            void mutate(id, () =>
+              fetchEndpoint(removeTaskDependency, {
+                id: taskId,
+                depId: id,
+              }),
+            )
+          }
+        />
+      </ControlPanel.Section>
+      <ControlPanel.Section>
+        <DepSection
+          label="Blocks"
+          hint="wait for this one"
+          linked={blocks}
+          candidates={candidatesExcept(blocks)}
             busy={busy}
-            onAdd={(c) =>
-              void mutate(c.taskId!, () =>
-                fetchEndpoint(
-                  addTaskDependency,
-                  { id: taskId },
-                  { body: { dependsOnTaskId: c.taskId! } },
-                ),
-              )
-            }
-            onRemove={(id) =>
-              void mutate(id, () =>
-                fetchEndpoint(removeTaskDependency, {
-                  id: taskId,
-                  depId: id,
-                }),
-              )
-            }
+          onAdd={(c) =>
+            void mutate(c.taskId!, () =>
+              fetchEndpoint(
+                addTaskDependency,
+                { id: c.taskId! },
+                { body: { dependsOnTaskId: taskId } },
+              ),
+            )
+          }
+          onRemove={(id) =>
+            void mutate(id, () =>
+              fetchEndpoint(removeTaskDependency, { id, depId: taskId }),
+            )
+          }
           />
-        </ControlPanel.Section>
-        <ControlPanel.Section>
-          <DepSection
-            label="Blocks"
-            hint="wait for this one"
-            linked={blocks}
-            candidates={candidatesExcept(blocks)}
-            busy={busy}
-            onAdd={(c) =>
-              void mutate(c.taskId!, () =>
-                fetchEndpoint(
-                  addTaskDependency,
-                  { id: c.taskId! },
-                  { body: { dependsOnTaskId: taskId } },
-                ),
-              )
-            }
-            onRemove={(id) =>
-              void mutate(id, () =>
-                fetchEndpoint(removeTaskDependency, { id, depId: taskId }),
-              )
-            }
-          />
-        </ControlPanel.Section>
-      </ControlPanelPopover>
+      </ControlPanel.Section>
+    </ControlPanelPopover>
   );
 }
