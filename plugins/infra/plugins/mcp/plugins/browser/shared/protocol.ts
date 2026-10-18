@@ -6,7 +6,7 @@ import { z } from "zod";
  * the routes or bodies below — a backend never talks to a host speaking
  * another protocol.
  */
-export const HOST_PROTOCOL = 1;
+export const HOST_PROTOCOL = 2;
 
 /** Files in the host's data dir (`data-dirs`). */
 export const HOST_FILES = {
@@ -19,11 +19,24 @@ export const HOST_FILES = {
 /** The origin a request over the socket carries; the socket is the address. */
 export const HOST_ORIGIN = "http://agent-browser";
 
-export const HostTargetSchema = z.object({
-  /** `http://<namespace>.localhost:9000`, no trailing slash. */
-  origin: z.string(),
-  namespace: z.string(),
-});
+/**
+ * What a conversation's routes (`/agents/…`) resolve against: the deploy its
+ * checkout's last build registered, or nothing yet. An unbuilt checkout still
+ * browses — absolute URLs work — and only a route is refused.
+ */
+export const HostTargetSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("deploy"),
+    /** `http://<namespace>.localhost:9000`, no trailing slash. */
+    origin: z.string(),
+    namespace: z.string(),
+  }),
+  z.object({
+    kind: z.literal("unbuilt"),
+    /** The checkout no build has registered a deploy for. */
+    checkout: z.string(),
+  }),
+]);
 export type HostTarget = z.infer<typeof HostTargetSchema>;
 
 export const HostCallBodySchema = z.object({

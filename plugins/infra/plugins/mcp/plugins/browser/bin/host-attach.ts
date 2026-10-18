@@ -23,6 +23,15 @@ function playwrightVersion(): string {
 export async function issueAttachTicket(
   session: Session,
 ): Promise<{ ticket: string; tab: Tab }> {
+  // A script resolves its own routes against the build it checked; with no
+  // build there is none for it to check, so there is nothing to attach to.
+  if (session.target.kind !== "deploy") {
+    throw new Error(
+      `No deploy is registered for this conversation's checkout (${session.target.checkout}), and an e2e script drives one. ` +
+        "Run `./singularity build` there first.",
+    );
+  }
+  const { origin } = session.target;
   const endpoint = await bindEndpoint();
   const tab = await openTab(session);
   const marker = attachMarker(crypto.randomUUID());
@@ -32,7 +41,7 @@ export async function issueAttachTicket(
     endpoint,
     marker,
     tab: tab.id,
-    origin: session.target.origin,
+    origin,
     playwright: playwrightVersion(),
   });
   return { ticket, tab };

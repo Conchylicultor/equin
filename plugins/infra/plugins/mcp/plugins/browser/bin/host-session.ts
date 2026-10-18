@@ -8,6 +8,10 @@ import {
   ORIGIN_SOURCE_HEADER,
 } from "@plugins/infra/plugins/request-origin/core";
 import {
+  GATEWAY_PORT,
+  namespaceFromHost,
+} from "@plugins/infra/plugins/namespace/core";
+import {
   MAX_HOST_ERRORS,
   MAX_SESSIONS,
   MAX_TABS,
@@ -15,7 +19,7 @@ import {
   type AgentBrowserSession,
 } from "../core";
 import { browserSessionSource, type HostTarget } from "../shared/protocol";
-import { revertSessionWrites } from "../shared/revert";
+import { revertSessionWritesOn } from "../shared/revert";
 
 /**
  * The sessions the host holds — the ONE Chromium, a `BrowserContext` per
@@ -77,7 +81,13 @@ export interface Tab {
 
 export interface Session {
   conversationId: string;
+  /** Where routes resolve — the latest call's, so a build since takes effect. */
   target: HostTarget;
+  /**
+   * Every deploy a request of this session reached, stamped with its
+   * agent-origin headers: where its writes may be, so what closing reverts.
+   */
+  origins: Set<string>;
   context: BrowserContext;
   tabs: Map<string, Tab>;
   /** The tab a call naming none acts on: the last one used. */
@@ -139,7 +149,8 @@ export function hostSnapshot(): {
     idleExitAt: hostIdleExitAt?.toISOString() ?? null,
     sessions: [...sessions.values()].map((s) => ({
       conversationId: s.conversationId,
-      origin: s.target.origin,
+      target: s.target.kind === "deploy" ? s.target.origin : null,
+      origins: [...s.origins],
       openedAt: s.openedAt.toISOString(),
       idleDeadline: s.idleDeadline.toISOString(),
       tabs: [...s.tabs.values()].map((t) => ({
@@ -242,6 +253,20 @@ function touch(session: Session): void {
   }, SESSION_IDLE_MS);
 }
 
+/**
+ * A request to a deploy behind the gateway (`http://<namespace>.localhost:9000`)
+ * — this checkout's build, main, any other worktree. Those, and only those,
+ * read the agent-origin headers and keep a write ledger to revert; anything
+ * else (a CDN, a public website) never sees the headers.
+ */
+function isDeployOrigin(url: URL): boolean {
+  return (
+    url.protocol === "http:" &&
+    url.port === String(GATEWAY_PORT) &&
+    namespaceFromHost(url.host) !== null
+  );
+}
+
 /** The conversation's session, opened (and the browser launched) on first use. */
 export async function getSession(
   conversationId: string,
@@ -249,6 +274,7 @@ export async function getSession(
 ): Promise<Session> {
   const existing = sessions.get(conversationId);
   if (existing) {
+    existing.target = target;
     touch(existing);
     onChange();
     return existing;
@@ -269,9 +295,9 @@ export async function getSession(
   });
   context.setDefaultTimeout(ACTION_MS);
   context.setDefaultNavigationTimeout(BOUND_MS);
-  // The headers belong to the target only; strip them from every other origin.
+  // The headers belong to the deploys only; strip them from every other origin.
   await context.route(
-    (url) => url.origin !== new URL(target.origin).origin,
+    (url) => !isDeployOrigin(url),
     async (route) => {
       const headers = { ...route.request().headers() };
       delete headers[ORIGIN_HEADER];
@@ -283,6 +309,7 @@ export async function getSession(
   const raced = sessions.get(conversationId);
   if (raced) {
     await context.close();
+    raced.target = target;
     touch(raced);
     return raced;
   }
@@ -290,6 +317,7 @@ export async function getSession(
   const session: Session = {
     conversationId,
     target,
+    origins: new Set(),
     context,
     tabs: new Map(),
     current: null,
@@ -302,6 +330,12 @@ export async function getSession(
   // Every page of the context is a tab — the ones a script attached through
   // `bindEndpoint` opens (and popups) too, not only `openTab`'s.
   context.on("page", (page) => adoptPage(session, page));
+  context.on("request", (req) => {
+    const url = new URL(req.url());
+    if (!isDeployOrigin(url) || session.origins.has(url.origin)) return;
+    session.origins.add(url.origin);
+    onChange();
+  });
   touch(session);
   armHostIdle();
   onChange();
@@ -428,7 +462,7 @@ export async function closeTab(session: Session, id: string): Promise<void> {
 
 /**
  * Close a conversation's session: drop its context, then revert the durable
- * writes IT made on its target — its own request-origin source only, so
+ * writes IT made on every deploy it reached — its own request-origin source only, so
  * another conversation's session or an e2e run on the same deploy keeps
  * theirs. Returns false when there was none.
  */
@@ -439,7 +473,7 @@ export async function closeSession(conversationId: string): Promise<boolean> {
   if (session.idle) clearTimeout(session.idle);
   try {
     await closeBounded(session.context.close(), "context");
-    await revertSessionWrites(session.target.origin, conversationId);
+    await revertSessionWritesOn([...session.origins], conversationId);
   } finally {
     armHostIdle();
     onChange();

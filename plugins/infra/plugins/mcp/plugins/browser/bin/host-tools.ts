@@ -52,8 +52,19 @@ async function tabOf(ctx: CallContext, id?: string): Promise<Tab> {
   return findTab(s, id) ?? (await openTab(s));
 }
 
+/** Where a route resolves: the build's origin, `null` while unbuilt. */
+function targetOrigin(s: Session): string | null {
+  return s.target.kind === "deploy" ? s.target.origin : null;
+}
+
 function resolveUrl(s: Session, url: string): string {
-  if (url.startsWith("/")) return `${s.target.origin}${url}`;
+  if (url.startsWith("/")) {
+    if (s.target.kind === "deploy") return `${s.target.origin}${url}`;
+    throw new Error(
+      `"${url}" is a route, and no deploy is registered for this conversation's checkout (${s.target.checkout}) to resolve it against. ` +
+        "Run `./singularity build` there first, or pass an absolute http(s) URL.",
+    );
+  }
   if (/^https?:\/\//.test(url)) return url;
   throw new Error(
     `"${url}" is neither a route ("/…", on this worktree's build) nor an absolute http(s) URL.`,
@@ -170,7 +181,7 @@ const impls: Impls = {
         current: t.id === s.current,
       })),
     );
-    return text({ target: s.target.origin, tabs });
+    return text({ target: targetOrigin(s), tabs });
   },
 
   async browser_navigate({ url, tab: id }, ctx) {
@@ -325,7 +336,7 @@ const impls: Impls = {
     const { ticket, tab } = await issueAttachTicket(s);
     return text({
       tab: tab.id,
-      target: s.target.origin,
+      target: targetOrigin(s),
       flag: `--attach ${ticket}`,
     });
   },

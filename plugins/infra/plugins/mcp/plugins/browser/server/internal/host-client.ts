@@ -18,6 +18,7 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   agentBrowserStatus,
   AgentBrowserHostStatusSchema,
+  type AgentBrowserSession,
   type AgentBrowserStatus,
 } from "../../core";
 import { agentBrowserDir } from "../../data-dirs";
@@ -32,7 +33,7 @@ import {
   type HostCallBody,
   type HostToolResult,
 } from "../../shared/protocol";
-import { revertSessionWrites } from "../../shared/revert";
+import { revertSessionWritesOn } from "../../shared/revert";
 
 /**
  * The backend's half of the agent browser: find the machine's host, launch it
@@ -275,10 +276,10 @@ function followHost(): void {
  * revert each one's writes before a new host takes the status file over.
  */
 async function reclaimDeadSessions(
-  sessions: readonly { conversationId: string; origin: string }[],
+  sessions: readonly AgentBrowserSession[],
 ): Promise<void> {
   for (const s of sessions)
-    await revertSessionWrites(s.origin, s.conversationId);
+    await revertSessionWritesOn(s.origins, s.conversationId);
 }
 
 async function launchHost(): Promise<void> {
@@ -390,7 +391,7 @@ export async function closeConversationSession(
     const held = status.host.sessions.find(
       (s) => s.conversationId === conversationId,
     );
-    if (held) await revertSessionWrites(held.origin, conversationId);
+    if (held) await revertSessionWritesOn(held.origins, conversationId);
     return false;
   }
   if (status.kind !== "running") return false;

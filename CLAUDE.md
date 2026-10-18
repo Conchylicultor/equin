@@ -164,7 +164,7 @@ For a checkout cloned from someone else's repo, that repo is **upstream** (read-
 
 `./singularity build` first: every script resolves its target from the deploy registry THIS checkout's build wrote, and refuses when there is none. Never hand-write `http://<worktree>.localhost:9000` — in an agent session the name comes out as `singularity` and the run drives main. Chromium is an on-demand dependency (`infra/deps`), installed on the first browser run (~280 MB).
 
-**Explore interactively with the `browser_*` MCP tools** ([`infra/mcp/browser`](plugins/infra/plugins/mcp/plugins/browser/CLAUDE.md)) — a headless tab on your own build that stays open across calls; script what must be repeatable with the headless scripts below. Not Claude-in-Chrome: that is one shared Chrome on the user's screen with their real accounts — only for what needs it (their sign-ins, a state they have open, a demo they watch).
+**Explore interactively with the `browser_*` MCP tools** ([`infra/mcp/browser`](plugins/infra/plugins/mcp/plugins/browser/CLAUDE.md)) — a headless tab that stays open across calls: routes (`/agents/…`) open your own build (so they need one), an absolute URL (any website, or main) works before you have built; script what must be repeatable with the headless scripts below. Not Claude-in-Chrome: that is one shared Chrome on the user's screen with their real accounts — only for what needs it (their sign-ins, a state they have open, a demo they watch).
 
 **A script failed mid-flow? Continue from where it stopped**: call `browser_attach`, rerun the script with the `--attach <ticket>` it returns — it drives a tab of your `browser_*` session instead of its own browser and leaves it there, pass or fail — then inspect that tab with `browser_*`.
 

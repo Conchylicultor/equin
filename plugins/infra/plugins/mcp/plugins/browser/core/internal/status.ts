@@ -15,15 +15,40 @@ export const AgentBrowserTabSchema = z.object({
 });
 export type AgentBrowserTab = z.infer<typeof AgentBrowserTabSchema>;
 
-export const AgentBrowserSessionSchema = z.object({
+/**
+ * A protocol-1 host (from before unbuilt checkouts could browse) listed one
+ * `origin` per session: its target, and the one deploy it stamped. Read it as
+ * such, so a backend on newer code still sees that host — and can replace it,
+ * or reclaim its sessions when it died — instead of an unreadable status.
+ */
+function fromProtocol1(raw: unknown): unknown {
+  if (typeof raw !== "object" || raw === null) return raw;
+  if (!("origin" in raw) || "origins" in raw) return raw;
+  const { origin, ...rest } = raw;
+  return { ...rest, target: origin, origins: [origin] };
+}
+
+const SessionShape = z.object({
   conversationId: z.string(),
-  /** The deploy the session drives: `http://<namespace>.localhost:9000`. */
-  origin: z.string(),
+  /**
+   * Where the session's routes resolve: its checkout's build,
+   * `http://<namespace>.localhost:9000`; `null` while the checkout is unbuilt.
+   */
+  target: z.string().nullable(),
+  /**
+   * Every deploy the session stamped with its agent-origin headers — where its
+   * writes may be, and so what closing it reverts.
+   */
+  origins: z.array(z.string()),
   openedAt: z.string(),
   /** When the session closes if no call touches it first. */
   idleDeadline: z.string(),
   tabs: z.array(AgentBrowserTabSchema).max(MAX_TABS),
 });
+export const AgentBrowserSessionSchema = z.preprocess(
+  fromProtocol1,
+  SessionShape,
+);
 export type AgentBrowserSession = z.infer<typeof AgentBrowserSessionSchema>;
 
 export const AgentBrowserHostErrorSchema = z.object({

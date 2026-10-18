@@ -74,13 +74,13 @@ export function AgentBrowserDetail(): ReactElement {
         width: "minmax(0,1fr)",
       },
       {
-        id: "origin",
+        id: "target",
         label: "Target",
         type: "text",
-        value: (s) => s.origin,
+        value: (s) => s.target ?? "",
         cell: (s) => (
           <Text variant="caption" tone="muted" className="truncate">
-            {new URL(s.origin).host}
+            {s.target === null ? "unbuilt" : new URL(s.target).host}
           </Text>
         ),
         width: "12rem",

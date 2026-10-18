@@ -16,7 +16,8 @@ import { z } from "zod";
 const PREAMBLE =
   "Headless agent browser: one shared Chromium, an isolated session per conversation, " +
   "tabs that stay open across calls (and across server restarts). Routes (`/agents/…`) resolve " +
-  "against THIS conversation's own worktree build; an absolute http:// URL is the escape hatch.";
+  "against THIS conversation's own worktree build (refused until it has one); an absolute http(s) URL " +
+  "works with or without a build — a public website, main, another worktree.";
 
 const tabArg = z
   .string()

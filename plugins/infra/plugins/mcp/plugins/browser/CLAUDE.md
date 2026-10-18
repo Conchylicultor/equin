@@ -47,9 +47,12 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
 - **Session** — one `BrowserContext` per conversation. Closed after 30 idle
   minutes, on `browser_close`, and when the conversation goes `done` or `gone`
   (`conversation-ended.ts`; `HAS_AGENT` names every status). Its requests carry
-  the agent-origin headers with source `mcp-browser:<conversationId>` on the
-  target origin only, and closing reverts THAT source's writes on the target
-  (`shared/revert.ts`) — never another conversation's or an e2e run's.
+  the agent-origin headers with source `mcp-browser:<conversationId>` on every
+  deploy behind the gateway (`http://<namespace>.localhost:9000` — its own
+  build, main, another worktree) and on nothing else (a CDN, a public website).
+  The session records each deploy it reached (`origins` in the status), and
+  closing reverts THAT source's writes on each (`shared/revert.ts`) — never
+  another conversation's or an e2e run's.
 - **A host that dies** (SIGKILL, OOM) leaves `status.json` saying `ready` for a
   dead pid (`died`). Its sessions' writes are still in each target's ledger:
   the next `ensureHost` reverts every listed session before relaunching, and a
@@ -73,8 +76,12 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
 
 `resolveTarget` (`target.ts`): conversation → `worktreePath` →
 `resolveCheckoutDeploy` (the deploy registry the harness reads) →
-`namespaceUrl`. A route resolves against it; an unbuilt checkout is a refusal.
-Never derive the origin from a name.
+`namespaceUrl`, sent with every call (`HostTarget`: `deploy` or `unbuilt`), so
+a build made mid-session takes effect on the next call. A route (`/…`)
+resolves against it, and is refused while the checkout is `unbuilt` — never
+derive the origin from a name, which would drive main. An absolute http(s) URL
+needs no build: an agent can open a public website, or main, before it has
+built anything. `browser_attach` needs a build (a script drives one).
 
 ## Tools
 
