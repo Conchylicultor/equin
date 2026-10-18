@@ -75,6 +75,8 @@ export const warmupsBackgroundKind = defineBackgroundKind({
   kind: "warmup",
   order: 10,
   label: "Warm-ups",
+  // Warm-up state is the in-process registry, never Postgres.
+  tables: [],
   list: () => Promise.resolve(listWarmupEntries()),
   recentRuns: warmupRecentRuns,
 });

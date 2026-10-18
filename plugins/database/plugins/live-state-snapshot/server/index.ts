@@ -41,13 +41,6 @@ export {
   readPersistedSnapshots,
   clearPersistedSnapshots,
 } from "./internal/public-snapshots";
-// db-parametrized (takes `db` explicitly) — a table's owner calls it in its own
-// `onReady` to assert its reader-set invariant and evict a stale read-set edge.
-export { reconcileReadSetTable } from "./internal/persist";
-// Read-set shrink seam: the debug/read-set-shrink monitor subscribes here; persist
-// emits on a shed. Kept as a seam so DB-infra never imports reports/debug.
-export { onReadSetShrink } from "./internal/read-set-shrink-hook";
-export type { ReadSetShrinkEvent } from "./internal/read-set-shrink-hook";
 
 export default {
   description:

@@ -43,6 +43,12 @@ export interface SignedMemo<T> {
    * Capturing the signature *after* the compute inverts this — the stored
    * signature would describe a snapshot newer than the value, and every
    * subsequent `get` would hit and serve that stale value until the next change.
+   *
+   * **And it MUST prime only if a re-probe AFTER the compute still returns
+   * `signature`** (as `get` does for its own computes) — unless the signature
+   * can never come back to an earlier value (an append-only chain). Otherwise
+   * a change landing mid-compute and later undone leaves the stored signature
+   * current again over a value that carries the undone change: a hit, for good.
    */
   prime(key: string, signature: string, value: T): void;
   /** Drop the cached entry for `key` (subscription-lifecycle cleanup). */
@@ -69,7 +75,7 @@ export interface SignedMemo<T> {
  *
  * Everything else — the `Map<key, {signature, value}>` cache, the embedded
  * per-key `createInflight` single-flight, the `chargeWait` hit/miss/coalesce
- * markers, the ≤1-event staleness-sharing contract of a mid-flight joiner — is
+ * markers, the same-signature-only join of a mid-flight caller — is
  * `createGitStateMemo`'s, unchanged: this is a thin binding wrapper over exactly
  * one cache implementation.
  *

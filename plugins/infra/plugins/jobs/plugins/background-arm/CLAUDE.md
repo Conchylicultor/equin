@@ -27,6 +27,8 @@ the catalog.
 - Server:
   - Uses:
     - `infra/background/catalog.defineBackgroundKind`
+    - `infra/jobs._jobRuns`
+    - `infra/jobs._jobRunStats`
     - `infra/jobs.cronRanges`
     - `infra/jobs.JobRunRecord`
     - `infra/jobs.JobRunStats`

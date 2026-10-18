@@ -216,6 +216,8 @@ export const daemonsBackgroundKind = defineBackgroundKind({
   kind: "daemon",
   order: 40,
   label: "Long-lived processes",
+  // Daemon state is the process registry and `ps`, never Postgres.
+  tables: [],
   list: listDaemonEntries,
   recentRuns: daemonRecentRuns,
 });

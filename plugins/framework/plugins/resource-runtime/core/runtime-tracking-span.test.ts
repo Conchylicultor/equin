@@ -18,7 +18,21 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { createHarness, tick, type RecordedFrame } from "./test-support";
+import {
+  createHarness,
+  tick,
+  type Harness,
+  type RecordedFrame,
+} from "./test-support";
+import { feedChange, wholeReach } from "./testing/routed-fixture";
+
+/** A param'd push value reading table `t` whole (a reach plan). */
+function defineDbp(h: Harness, loader: () => string): void {
+  h.runtime.defineResource(
+    { key: "dbp", schema: z.string(), validateParams: () => {} },
+    { mode: "push", reach: wholeReach(["t"]), loader },
+  );
+}
 
 /** The answer socket `i` got to its latest (re)subscription of `key`. */
 function answerOn(
@@ -75,23 +89,15 @@ describe("a replay after a tracking gap is never up-to-date", () => {
   });
 
   test("a param'd DB-backed tuple the change feed did not route to", async () => {
-    const h = createHarness({ sockets: 2, readSet: () => ["t"] });
+    const h = createHarness({ sockets: 2 });
     let truth = "v1";
-    h.runtime.defineResource({
-      key: "dbp",
-      mode: "push",
-      schema: z.string(),
-      loader: (_p: { id: string }) => truth,
-    });
+    defineDbp(h, () => truth);
     await h.subscribe("dbp", { id: "a" }, { socket: 0 });
     const ack = h.frames.find((f) => f.kind === "sub-ack")!;
 
     h.closeSocket(0);
     truth = "v2";
-    h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "t",
-    });
+    feedChange(h, { table: "t", op: "U", ids: null });
     await tick();
     await tick();
 
@@ -106,14 +112,9 @@ describe("a replay after a tracking gap is never up-to-date", () => {
   });
 
   test("another socket resubscribed in between: its fresh load does not vouch for the old version", async () => {
-    const h = createHarness({ sockets: 3, readSet: () => ["t"] });
+    const h = createHarness({ sockets: 3 });
     let truth = "v1";
-    h.runtime.defineResource({
-      key: "dbp",
-      mode: "push",
-      schema: z.string(),
-      loader: (_p: { id: string }) => truth,
-    });
+    defineDbp(h, () => truth);
     await h.subscribe("dbp", { id: "a" }, { socket: 0 });
     const ack = h.frames.find((f) => f.kind === "sub-ack")!;
 
@@ -135,14 +136,9 @@ describe("a replay after a tracking gap is never up-to-date", () => {
   });
 
   test("a version read over HTTP while nobody subscribed", async () => {
-    const h = createHarness({ readSet: () => ["t"] });
+    const h = createHarness();
     let truth = "v1";
-    h.runtime.defineResource({
-      key: "dbp",
-      mode: "push",
-      schema: z.string(),
-      loader: (_p: { id: string }) => truth,
-    });
+    defineDbp(h, () => truth);
     const res = await h.runtime.handleResourceHttp(
       new Request("http://localhost/api/resources/dbp?id=a"),
       { key: "dbp" },
@@ -168,16 +164,11 @@ describe("a replay after a tracking gap is never up-to-date", () => {
 
 describe("within one span the short-circuit still holds", () => {
   test("a same-socket replay of a tuple it still holds is up-to-date, with no load", async () => {
-    const h = createHarness({ readSet: () => ["t"] });
+    const h = createHarness();
     let loads = 0;
-    h.runtime.defineResource({
-      key: "dbp",
-      mode: "push",
-      schema: z.string(),
-      loader: (_p: { id: string }) => {
+    defineDbp(h, () => {
         loads++;
-        return "v1";
-      },
+      return "v1";
     });
     await h.subscribeBatch([{ key: "dbp", params: { id: "a" } }], {
       tabId: "t1",
@@ -199,13 +190,8 @@ describe("within one span the short-circuit still holds", () => {
   test("a replay reaching the server before the old socket's close is still in the span", async () => {
     // The old socket still holds the tuple, so changes kept reaching it (and
     // its frames went to a dead socket): the version is still this span's.
-    const h = createHarness({ sockets: 2, readSet: () => ["t"] });
-    h.runtime.defineResource({
-      key: "dbp",
-      mode: "push",
-      schema: z.string(),
-      loader: (_p: { id: string }) => "v1",
-    });
+    const h = createHarness({ sockets: 2 });
+    defineDbp(h, () => "v1");
     await h.subscribe("dbp", { id: "a" }, { socket: 0 });
     const ack = h.frames.find((f) => f.kind === "sub-ack")!;
     await h.subscribeBatch(
@@ -217,13 +203,8 @@ describe("within one span the short-circuit still holds", () => {
   });
 
   test("each span's first sub-ack carries a version above every earlier one", async () => {
-    const h = createHarness({ readSet: () => ["t"] });
-    h.runtime.defineResource({
-      key: "dbp",
-      mode: "push",
-      schema: z.string(),
-      loader: (_p: { id: string }) => "v",
-    });
+    const h = createHarness();
+    defineDbp(h, () => "v");
     await h.subscribe("dbp", { id: "a" });
     await h.unsub("dbp", { id: "a" });
     await h.subscribe("dbp", { id: "a" });

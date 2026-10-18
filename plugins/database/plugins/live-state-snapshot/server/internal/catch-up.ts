@@ -51,9 +51,9 @@ const MinPositionRowSchema = z.object({ min_position: z.string().nullable() });
 // rows as if they had just arrived over NOTIFY" — reusing `routeChange` makes that
 // true by construction and prevents drift, and THAT INVARIANT requires preserving
 // `row.ids` for every op (the live listener never strips them). A genuinely id-less
-// bulk statement still arrives with `row.ids === null` → FULL; a legacy entry
-// recomputes in FULL regardless of ids (`applyLegacyFullChange`); a routed entry
-// gains the same scoped delivery it gets on the live path.
+// bulk statement still arrives with `row.ids === null` → FULL; a reach entry
+// recomputes in FULL regardless of ids; a membership entry gains the same
+// scoped delivery it gets on the live path.
 // See research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
 function replayChange(
   row: ChangelogRow,
@@ -145,10 +145,10 @@ export async function probeCatchUp(
 // flows through the recompute cascade → push to subscribers → re-persist,
 // advancing the floor.
 //
-// It routes every replayed row through `routeChange` (routed entries through
-// their routes, legacy ones through `applyLegacyFullChange`, which inverts the IN-MEMORY
-// read-set index seeded at boot from the persisted `tables_read` column — so
-// catch-up works at a cold boot with NO loader having run). It also relies on
+// It routes every replayed row through `routeChange` (every entry through its
+// declared reads, plus each persisted entry's drift seeded at boot from its
+// `tables_read` — so catch-up works at a cold boot with NO loader having run;
+// a persisted entry is targeted at `{}` with nobody subscribed). It also relies on
 // the post-LISTEN ordering documented at the call site in `server/index.ts`:
 // this runs after change-feed's listener has its LISTEN up, so a commit landing
 // after the `SELECT` below is delivered on the live path (no gap).

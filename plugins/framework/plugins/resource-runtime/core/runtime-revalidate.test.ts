@@ -21,7 +21,9 @@
 
 import { test, expect, describe, mock } from "bun:test";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
+import { ResourceRefusal } from "@plugins/packages/plugins/resource-protocol/core";
 import { z } from "zod";
+import { mintReachPlan } from "./routing";
 import {
   createHarness,
   controllable,
@@ -624,5 +626,242 @@ describe("conditional revalidation — a push etag rides only the update frame",
     const subAck = h.frames.find((f) => f.kind === "sub-ack")!;
     expect(update.seq).toBeLessThan(subAck.seq); // the push hits the wire first
     expect("etag" in update).toBe(false); // no revalidate ⇒ no etag on the frame
+  });
+});
+
+/**
+ * D8 — a recompute that changed nothing sends nothing. A non-keyed drain of a
+ * pushed `revalidate` resource with subscribers loads before it mints; when the
+ * loader hands back the very object (`===`) every holder holds — a signed
+ * memo's hit — it sends no frame, bumps no version, and only acks. Equal
+ * content in a new object is a change (nothing is hashed). The held object is
+ * set by the frame that carried it and by the sub-ack that opened the tuple's
+ * span to its sole holder; a read handing anyone anything else, a failed load
+ * and N→0 drop it.
+ */
+describe("D8 — a recompute returning the object last sent sends nothing", () => {
+  function memoized(mode: "push" | "invalidate" = "push") {
+    let current = { s: "s1" };
+    let loads = 0;
+    let refuse = false;
+    let gate: Promise<void> = Promise.resolve();
+    const h = createHarness({ sockets: 2 });
+    const r = h.runtime.defineExternalResource(
+      {
+        key: "r",
+        schema: z.object({ s: z.string() }),
+        validateParams: () => {},
+        refusals: ["gone"],
+      },
+      {
+        mode,
+        // A signed memo: the cached object until the state moves.
+        loader: async () => {
+          loads++;
+          await gate;
+          if (refuse) throw new ResourceRefusal("gone", "it went away");
+          return current;
+        },
+        revalidate: async () => current.s,
+      },
+    );
+    return {
+      h,
+      r,
+      loads: () => loads,
+      /** A new object (the memo recomputed), with content `s`. */
+      replace: (s: string) => {
+        current = { s };
+      },
+      current: () => current,
+      /** Hand back an earlier object again (a memo holding it still). */
+      restore: (obj: { s: string }) => {
+        current = obj;
+      },
+      refuse: (on: boolean) => {
+        refuse = on;
+      },
+      /** Park every load until the returned release is called. */
+      park: () => {
+        let release!: () => void;
+        gate = new Promise((res) => (release = res));
+        return () => {
+          gate = Promise.resolve();
+          release();
+        };
+      },
+    };
+  }
+  const subAckVersion = (h: { frames: RecordedFrame[] }): number =>
+    h.frames.find((f) => f.kind === "sub-ack")!.version!;
+
+  test("the same object as the sub-ack's: no frame and no version bump", async () => {
+    const t = memoized();
+    await t.h.subscribe("r"); // the sole holder: it holds the memo's object
+    const v0 = subAckVersion(t.h);
+    t.r.notify();
+    await tick();
+    t.r.notify();
+    await tick();
+    expect(t.h.pushesFor("r")).toEqual([]);
+    // No version was minted for the skipped drains: the next real change is v0 + 1.
+    t.replace("s2");
+    t.r.notify();
+    await tick();
+    expect(t.h.pushesFor("r").map((f) => [f.kind, f.version, f.value])).toEqual(
+      [["update", v0 + 1, { s: "s2" }]],
+    );
+  });
+
+  test("the same object as the last frame's: no frame", async () => {
+    const t = memoized();
+    await t.h.subscribe("r", {}, { socket: 0 });
+    await t.h.subscribe("r", {}, { socket: 1 });
+    t.replace("s2");
+    t.r.notify(); // a new object: the frame carries it to both holders
+    await tick();
+    t.r.notify(); // the same object again
+    await tick();
+    expect(t.h.pushesFor("r", 1).map((f) => [f.kind, f.value])).toEqual([
+      ["update", { s: "s2" }],
+    ]);
+  });
+
+  test("a skipped recompute still acks the write it was routed for", async () => {
+    const value = { s: "same" };
+    let loads = 0;
+    const h = createHarness();
+    h.runtime.defineExternalResource(
+      {
+        key: "r",
+        schema: z.object({ s: z.string() }),
+        validateParams: () => {},
+      },
+      {
+        mode: "push",
+        reach: mintReachPlan({
+          routes: [
+            {
+              id: "c",
+              table: "conversations",
+              map: { kind: "full", reason: "whole" },
+              columns: ["id"],
+            },
+          ],
+          usesOf: () => new Map([["c", { role: "membership" as const }]]),
+        }),
+        loader: () => {
+          loads++;
+          return value;
+        },
+        revalidate: async () => "same",
+      },
+    );
+    await h.subscribe("r", {}, { acks: true });
+    const write = (xid: string) =>
+      h.runtime.routeTableChange({
+        source: "feed",
+        table: "conversations",
+        op: "U",
+        ids: ["x"],
+        keys: null,
+        unchanged: null,
+        xid,
+      });
+    const before = loads;
+    write("tx-1");
+    await tick();
+    write("tx-2");
+    await tick();
+    expect(loads).toBe(before + 2); // the recompute runs: only the frame is skipped
+    expect(h.pushesFor("r").map((f) => [f.kind, f.ackTx])).toEqual([
+      ["ack", ["tx-1"]],
+      ["ack", ["tx-2"]],
+    ]);
+  });
+
+  test("a new object with equal content is a change: the frame goes out", async () => {
+    const t = memoized();
+    await t.h.subscribe("r");
+    t.replace("s1");
+    t.r.notify();
+    await tick();
+    expect(t.h.pushesFor("r").map((f) => [f.kind, f.value])).toEqual([
+      ["update", { s: "s1" }],
+    ]);
+  });
+
+  test("a changed value delivers, and is then the held object", async () => {
+    const t = memoized();
+    await t.h.subscribe("r");
+    t.replace("s2");
+    t.r.notify();
+    await tick();
+    t.r.notify();
+    await tick();
+    expect(t.h.pushesFor("r").map((f) => [f.kind, f.value])).toEqual([
+      ["update", { s: "s2" }],
+    ]);
+  });
+
+  test("a refused load drops the held object: the holder on the refusal gets the value back", async () => {
+    const t = memoized();
+    await t.h.subscribe("r");
+    t.refuse(true);
+    t.r.notify();
+    await tick();
+    t.refuse(false);
+    t.r.notify(); // the very object the sub-ack carried — but the holder sits on the refusal
+    await tick();
+    expect(t.h.pushesFor("r").map((f) => [f.kind, f.value])).toEqual([
+      ["sub-error", undefined],
+      ["update", { s: "s1" }],
+    ]);
+  });
+
+  test("a second holder's sub-ack under another object drops the held one", async () => {
+    const t = memoized();
+    const s1 = t.current();
+    await t.h.subscribe("r", {}, { socket: 0 }); // sole: holds s1
+    t.replace("s2");
+    await t.h.subscribe("r", {}, { socket: 1 }); // reads s2
+    // The loader hands back s1 again: socket 0 holds it, socket 1 does not.
+    t.restore(s1);
+    t.r.notify();
+    await tick();
+    expect(t.h.pushesFor("r", 1).map((f) => [f.kind, f.value])).toEqual([
+      ["update", { s: "s1" }],
+    ]);
+  });
+
+  test("the last unsubscribe drops the held object", async () => {
+    const t = memoized();
+    await t.h.subscribe("r"); // sole: holds the object
+    await t.h.unsub("r");
+    // Two subscribers land together, so neither sub-ack is a sole holder's: a
+    // held object surviving N→0 would skip the notify below.
+    const release = t.park();
+    const a = t.h.subscribe("r", {}, { socket: 0 });
+    const b = t.h.subscribe("r", {}, { socket: 1 });
+    await a;
+    await b;
+    release();
+    await tick();
+    t.r.notify();
+    await tick();
+    expect(t.h.pushesFor("r", 0).map((f) => f.kind)).toEqual(["update"]);
+  });
+
+  test("invalidate mode is unaffected: every recompute sends its invalidate", async () => {
+    const t = memoized("invalidate");
+    await t.h.subscribe("r");
+    t.r.notify();
+    await tick();
+    t.r.notify();
+    await tick();
+    expect(t.h.pushesFor("r").map((f) => f.kind)).toEqual([
+      "invalidate",
+      "invalidate",
+    ]);
   });
 });

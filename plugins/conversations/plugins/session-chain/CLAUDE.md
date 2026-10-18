@@ -79,6 +79,7 @@ bun test plugins/conversations/plugins/session-chain/server/internal
     - `SessionChainEntry`
     - `SharedSessionId`
   - Exports (values):
+    - `_conversationSessions`
     - `listConversationsForSessions`
     - `listSessionChain`
     - `listSharedClaudeSessionIds`

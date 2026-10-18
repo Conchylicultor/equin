@@ -5,7 +5,7 @@ import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 
 // Bridges the impedance mismatch between where changes ORIGINATE and where the
 // read-set OBSERVES them. Triggers fire on base tables (you cannot put a row
-// trigger on a view), but a legacy loader may read from the derived-views layer
+// trigger on a view), but a loader may read from the derived-views layer
 // (`tasks_v`, `agents_v`, …) — so the L3 read-set records the VIEW name, not
 // the base table.
 //

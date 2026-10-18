@@ -25,8 +25,6 @@
   read, not muted, error or warning). The panel tests it in memory
   (`matchesFilter`), the badge's loader compiles it to SQL (`filterSql`); both
   go through the one op table the filter plugin's parity suite pins.
-- **Read-set guard.** `reconcile-read-set.ts` asserts on boot that the table's
-  only live-state readers are the collection's three keys plus the value's.
 - `e2e/bell-filter.ts` drives all of it on a deployed build, "View all" included.
 
 ## The pane: Debug → Notifications
@@ -120,7 +118,6 @@ DataView (`web/components/notifications-view.tsx`):
   - Uses:
     - `database.db`
     - `database/admin.ExcludeFromFork`
-    - `database/live-state-snapshot.reconcileReadSetTable`
     - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
@@ -130,7 +127,6 @@ DataView (`web/components/notifications-view.tsx`):
     - `network/live.serveCollection`
     - `network/live.serveValue`
     - `network/live/filter.filterSql`
-    - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
   - Exports (types): `RecordNotificationInput`
   - Exports (values):

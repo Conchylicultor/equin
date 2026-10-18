@@ -2429,10 +2429,6 @@
       "name": "@singularity/plugin-debug-read-set",
       "version": "0.0.1",
     },
-    "plugins/debug/plugins/read-set-shrink": {
-      "name": "@singularity/plugin-debug-read-set-shrink",
-      "version": "0.0.1",
-    },
     "plugins/debug/plugins/render-profiler": {
       "name": "@singularity/plugin-debug-render-profiler",
       "version": "0.0.1",
@@ -7941,8 +7937,6 @@
     "@singularity/plugin-debug-queue-health": ["@singularity/plugin-debug-queue-health@workspace:plugins/debug/plugins/queue-health"],
 
     "@singularity/plugin-debug-read-set": ["@singularity/plugin-debug-read-set@workspace:plugins/debug/plugins/read-set"],
-
-    "@singularity/plugin-debug-read-set-shrink": ["@singularity/plugin-debug-read-set-shrink@workspace:plugins/debug/plugins/read-set-shrink"],
 
     "@singularity/plugin-debug-render-profiler": ["@singularity/plugin-debug-render-profiler@workspace:plugins/debug/plugins/render-profiler"],
 

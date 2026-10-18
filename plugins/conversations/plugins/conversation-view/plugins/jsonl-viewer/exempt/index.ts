@@ -2,11 +2,10 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
-    rule: "no-db-backed-notify",
-    paths: ["server/internal/jsonl-events-resource.ts"],
-    kind: "debt",
-    task: "task-1791766351-ziteb8",
+    rule: "no-raw-websocket",
+    paths: ["e2e/no-op-frames.ts"],
+    kind: "sanctioned",
     reason:
-      "Its external loader looks the conversation up in Postgres (`getConversation` / `getConversationClaudeSessionId`, for the worktree path or Claude session id) before reading the filesystem, so a change to that row is invisible to it. Make the lookup an honest input (a param, or a db-served value it derives from) and drop the DB read from the external loader.",
+      "A measurement script run under bun, not a browser tab: it speaks the live-resource wire protocol directly to count every frame the server sends, so it needs its own raw socket (SharedWebSocket is a browser SharedWorker primitive).",
   },
 ] satisfies Exemptions;

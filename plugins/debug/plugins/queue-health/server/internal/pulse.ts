@@ -1,6 +1,7 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { getConfig } from "@plugins/config_v2/server";
 import {
+  _deadJobs,
   PICKUP_WINDOW_MS,
   getForfeitedSlots,
   getOccupiedSlots,
@@ -41,10 +42,11 @@ import { assemblePulse } from "./assemble-pulse";
 // one load per second.
 //
 // The loader reads the database only through the jobs plugin's introspection
-// API (`no-db-backed-notify` flags a `db.` inside an external `serveValue`
-// call). Deaths need nothing extra: graphile emits `job:complete` after writing
-// a final failure, and the dead-job GC that moves rows into the `dead_jobs`
-// archive announces activity itself.
+// API. Its one public read, the `dead_jobs` archive, is declared in `reads`;
+// graphile's own `_private_*` tables are a schema the change feed never
+// captures, which the reason says. Deaths need nothing extra: graphile emits
+// `job:complete` after writing a final failure, and the dead-job GC that moves
+// rows into the `dead_jobs` archive announces activity itself.
 
 // setTimeout's largest delay; anything longer fires immediately in Bun/Node.
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
@@ -106,6 +108,11 @@ async function loadQueuePulse(): Promise<QueuePulse> {
 export const queuePulseServed = serveValue(queuePulse, {
   source: "external",
   changes: "notified",
+  reads: {
+    tables: [_deadJobs],
+    reason:
+      "the pulse counts the last day's deaths across the whole dead_jobs archive, so archiving any job may change it; its other reads are graphile-worker's private queue tables, outside the schema the change feed covers, which the queue-activity signal and the next-change timer notify instead",
+  },
   loader: loadQueuePulse,
   throttleMs: 1000,
   whileSubscribed: (_params, notify) => {

@@ -12,20 +12,26 @@
  *   - `defineRoutedTable(h, spec)` — register a keyed resource on that plan with
  *     an `alias` (unbounded window), `window` or `point` membership, and get
  *     back its handle and a `feed` for its table.
- *   - `feedChange(h, change)` — one base-table change, to the routed router and
- *     then the legacy one (`routeChange` in the change feed): every entry is
- *     served by exactly one of them.
- *   - `legacyFull(h, table, o)` — the legacy router alone: every non-routed
- *     reader of `table` recomputes FULL.
+ *   - `wholeReach(tables)` — the reach plan a non-keyed value declares when it
+ *     reads each of `tables` whole: one `full` route per table, every tuple
+ *     reading all of them — a change to any recomputes each tracked tuple FULL.
+ *   - `feedChange(h, change)` — one base-table change, as the change feed
+ *     delivers it (`routeChange` → `routeTableChange`).
  *
  * A routed entry is reached ONLY through its routes, so a `readSet` the harness
- * answers for its key would be a dead option a migrated suite carried over from
- * the legacy router: `defineRoutedTable` refuses it.
+ * answers for its key would be a dead option (display only):
+ * `defineRoutedTable` refuses it.
  */
 
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import { mintRoutePlan, type ChangeSource, type RoutePlan } from "../routing";
+import {
+  mintReachPlan,
+  mintRoutePlan,
+  type ChangeSource,
+  type ReachPlan,
+  type RoutePlan,
+} from "../routing";
 import type { Resource, ResourceParams } from "../runtime";
 import type { Harness } from "../test-support";
 
@@ -44,6 +50,25 @@ export function identityPlan(
   });
 }
 
+/**
+ * The reach plan of a non-keyed value reading each of `tables` whole: one
+ * `full` route per table, read by every tuple — so a change to any of them
+ * recomputes each tracked tuple (and a param-less persisted / cascading
+ * entry's `{}`) FULL.
+ */
+export function wholeReach(tables: readonly string[]): ReachPlan {
+  return mintReachPlan({
+    routes: tables.map((table) => ({
+      id: table,
+      table,
+      map: { kind: "full" as const, reason: `reads ${table} whole` },
+      columns: ["id"],
+    })),
+    usesOf: () =>
+      new Map(tables.map((t) => [t, { role: "membership" as const }])),
+  });
+}
+
 /** The fields of a base-table change a test states (the rest default as the feed's). */
 export interface FedChange {
   table: string;
@@ -56,10 +81,7 @@ export interface FedChange {
   unchanged?: readonly string[] | null;
 }
 
-/**
- * One base-table change as the change feed delivers it (`routeChange`): to the
- * routed router, then the legacy one.
- */
+/** One base-table change as the change feed delivers it (`routeChange`). */
 export function feedChange(h: Harness, change: FedChange): void {
   const source = change.source ?? "feed";
   h.runtime.routeTableChange({
@@ -71,21 +93,6 @@ export function feedChange(h: Harness, change: FedChange): void {
     unchanged: change.unchanged ?? null,
     ...(change.xid !== undefined ? { xid: change.xid } : {}),
     ...(change.changedAt !== undefined ? { changedAt: change.changedAt } : {}),
-  });
-  legacyFull(h, change.table, change);
-}
-
-/** The legacy router alone: every non-routed reader of `table` recomputes FULL. */
-export function legacyFull(
-  h: Harness,
-  table: string,
-  o: { xid?: string; changedAt?: number; source?: ChangeSource } = {},
-): void {
-  h.runtime.applyLegacyFullChange({
-    source: o.source ?? "feed",
-    table,
-    ...(o.xid !== undefined ? { xid: o.xid } : {}),
-    ...(o.changedAt !== undefined ? { changedAt: o.changedAt } : {}),
   });
 }
 

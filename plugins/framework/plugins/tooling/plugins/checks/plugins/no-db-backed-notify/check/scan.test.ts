@@ -123,6 +123,39 @@ describe("scanDbBackedNotify — serveValue", () => {
     expect(await scan(src)).toEqual([]);
   });
 
+  test("passes an external value that declares its reads, static or a thunk", async () => {
+    const declared = (reads: string) =>
+      [
+        "export const served = serveValue(things, {",
+        '  source: "external",',
+        '  changes: "notified",',
+        `  reads: ${reads},`,
+        "  loader: async () => db.select().from(_things),",
+        "});",
+      ].join("\n");
+    expect(
+      await scan(declared('{ tables: [_things], reason: "a lookup" }')),
+    ).toEqual([]);
+    expect(
+      await scan(
+        declared('() => ({ tables: tablesOf(), reason: "provider tables" })'),
+      ),
+    ).toEqual([]);
+  });
+
+  test("a reads key inside the loader (not the options' own) declares nothing", async () => {
+    const src = [
+      "export const served = serveValue(things, {",
+      '  source: "external",',
+      "  loader: async () => {",
+      "    const meta = { reads: [] };",
+      "    return { meta, rows: await db.select().from(_things) };",
+      "  },",
+      "});",
+    ].join("\n");
+    expect((await scan(src)).map((o) => o.marker)).toEqual(["serveValue"]);
+  });
+
   test("reads only the options object's own source, never one inside the loader", async () => {
     const src = [
       "export const served = serveValue(things, {",
@@ -555,8 +588,8 @@ describe("scanDbBackedNotify — derived feed-exclusion exemption", () => {
   });
 
   // The ledger's real summary value: an external serveValue whose loader is
-  // imported (./query) and reads the excluded tables through raw SQL — the
-  // whole path the exemption has to carry, on the real files.
+  // imported (./query) and reads the excluded tables through raw SQL, on the
+  // real files.
   test("the latency ledger's real summary value passes", async () => {
     const repoRoot = resolve(import.meta.dir, "../../../../../../../../..");
     const disk = new ModuleIndex({
@@ -578,14 +611,15 @@ describe("scanDbBackedNotify — derived feed-exclusion exemption", () => {
         disk,
       ),
     ).toEqual([]);
-    // Without the exclusions, the same value is caught through its import.
+    // It declares its reads (all `outsideFeed`), so it passes without the
+    // exclusions too.
     expect(
       await scanDbBackedNotify(
         [read(`${ledger}/server/internal/summary-resource.ts`)],
         new Map(),
         disk,
       ),
-    ).toHaveLength(1);
+    ).toEqual([]);
   });
 
   // Pins the link the exemption was built for: the latency ledger's real

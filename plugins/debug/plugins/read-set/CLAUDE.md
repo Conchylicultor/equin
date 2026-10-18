@@ -18,16 +18,13 @@ resources section and the live-state emit pane's resource dropdown.
 Every entry carries a `policy` from a closed set the runtime decides
 (`debugPolicyOf`, in this order): `unbound` (a deferred placeholder not bound
 yet), `external` (declared outside Postgres — its own `notify()` reaches it),
-`routed` (compiler-emitted routes) or `legacy-full` (the legacy router: a write
-to any relation base of its captured read-set recomputes every tracked tuple
-FULL). The policy is what an entry IS, not the whole of who reaches it: the
-legacy router indexes EVERY non-routed entry, so an external or unbound entry
-whose loader read the DB (`automations.catalog`, `edited-files`) is also
-recomputed FULL by a write to its bases. The runtime emits that delivery truth
-as `legacyReach` — the bases it indexes the entry under, from the same
-predicate `tableToResources` reads (`legacyRouted`). The pane never re-derives
-either from routes or read-sets, so it cannot disagree with the router. The
-schema (`core/resources-debug.ts`) models only the fields the panes read, parses
+`routed` (declared routes: a compiled collection's, or a db value's reach
+plan) or `unrouted` (a DB-backed entry no table change reaches — change-feed
+refuses one at boot, so a running server lists none). The policy is what an
+entry IS; how a table change reaches it is its `routes` / `relationReads`,
+which an external with declared reads carries too. The pane never re-derives
+either from read-sets, so it cannot disagree with the router. The schema
+(`core/resources-debug.ts`) models only the fields the panes read, parses
 `policy` against the closed set and requires every field the runtime always
 emits, so a server/pane mismatch fails loudly rather than reading as an empty
 entry.
@@ -35,29 +32,27 @@ entry.
 Sections, in render order:
 
 - **A — Notify provenance** — per-resource hand / feed / producer notify counts,
-  flagging read-set-gap candidates (hand > 0 and no change-source delivery).
+  flagging read-set-gap candidates (hand > 0, no change-source delivery, and
+  no declared route or relation read — a routed change reaches only subscribed
+  tuples, so a declared entry nobody holds counts no `feed`).
 - **B — Captured index** — the inverted, searchable `table → readers` list over
   the raw read-set (the view / table / rollup names loaders actually read).
 - **C — Read-set ceiling** (`web/internal/ceiling.ts`, `computeCeiling`, pure
   and bun-tested beside it):
   - per-policy counts;
-  - **Legacy FULL** — every entry the legacy router reaches: each
-    `legacy-full` entry (listed even before its loader has run, with no bases)
-    and each external / unbound entry with a non-empty `legacyReach` (tagged
-    with its policy). Each shows its bases (the read-set expanded through the
-    relation bases: views transitively, rollups to their sources —
-    `edited-files` shows `attempts, conversations, tasks`, not the
-    `conversations_v` it read), its FULL loads per base write (one per
-    subscribed tuple, or one for a persisted entry nobody subscribes to), its
-    tuples, and whether it is L2-persisted with its row's position age;
-  - **Routed FULL** — every routed `full` route with its table and declared
-    reason, so a routed FULL is never silent;
-  - **Route drift** — a routed entry's `routeDrifted`: the A8 guard's own record
-    of captured tables no route names (raw-table space, as the guard judged
-    them — never recomputed from the bases, which would flag the rollup
-    sources a plan reaches as derived reads);
-  - **Routed** (folded), **External** (only the external entries with no
-    legacy reach — those really are reached only by their own `notify()`) and
+  - **Routed FULL** — every declared `full` route with its table and reason,
+    whatever the policy: a routed entry's, and an external one's declared
+    reads (tagged `external`), so a routed FULL is never silent;
+  - **Relation reads** — every view / rollup a plan reads whole
+    (`relationReads`), with its relation bases and reason (externals tagged);
+  - **Route drift** — any entry's `routeDrifted`: the guard's own record (A8
+    for a routed entry, D5 for a notified external one) of captured tables
+    its plan does not cover (raw-table space, as the guard judged them —
+    never recomputed from the bases, which would flag the rollup sources a
+    plan reaches as derived reads); externals tagged;
+  - **Routed** (folded), **External** (only the external entries no table
+    change reaches — no declared route or relation read, no drift: those
+    really are reached only by their own `notify()`), **Unrouted** and
     **Unbound** — listed by key.
 - **D — Declared freshness** — every external value's `changes` (the runtime's
   `freshness` label, set by `network/live`'s `serveValue`): `notified`, or
@@ -65,15 +60,15 @@ Sections, in render order:
   first. `null` (not listed) for a db entry or a resource not served through
   `network/live`.
 
-A caveat notes that read-sets cover only loaders that have run since boot (or
-were seeded from a persisted row), and that direct `notify()` sites are not
-modeled.
+A caveat notes that read-sets and drift cover only loaders that have run since
+boot (drift also seeded from a persisted row), and that direct `notify()` sites
+are not modeled.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Read-set debug pane: the captured loader→table index and the read-set ceiling — every live-state resource under its change policy (routed, legacy-full, external, unbound), with legacy-full relation bases, routed full routes and route drift. Serves resources.debug: the resource runtime's per-resource debug payload (policy, read-set, legacy reach, routes, drift, subscribers, loader and notify counters, declared freshness) as one snapshot value every live-state debug pane reads.
+- Description: Read-set debug pane: the captured loader→table index and the read-set ceiling — every live-state resource under its change policy (routed, external, unrouted, unbound), with its full routes, relation reads and route drift. Serves resources.debug: the resource runtime's per-resource debug payload (policy, read-set, routes, relation reads, drift, subscribers, loader and notify counters, declared freshness) as one snapshot value every live-state debug pane reads.
 - Web:
   - Slots: `readSetPane.Actions`
   - Slot contributors: `readSetPane.Actions` ← `primitives.pane`

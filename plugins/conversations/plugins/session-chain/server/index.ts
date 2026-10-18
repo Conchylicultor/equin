@@ -9,6 +9,9 @@ export {
   listConversationsForSessions,
 } from "./internal/record";
 export type { SessionChainEntry, SharedSessionId } from "./internal/record";
+// The table itself, for a live value's declared reads (a loader that reads the
+// chain names this table so a write to it routes a recompute).
+export { _conversationSessions } from "./internal/tables";
 
 export default {
   description:

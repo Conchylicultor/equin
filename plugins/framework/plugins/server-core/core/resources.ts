@@ -25,12 +25,7 @@ import {
   getRuntimeProfile,
   registerGateGauge,
 } from "./profiler-hooks";
-import {
-  bumpReadSetVersion,
-  getLastLoaderReadSet,
-  readSetOf,
-  readSetVersion,
-} from "./read-set";
+import { getLastLoaderReadSet, readSetOf } from "./read-set";
 import { defineServerContribution } from "./contributions";
 import { reportServerError, type ServerErrorReport } from "./error-reporter";
 
@@ -156,28 +151,29 @@ export const Resource = {
 };
 
 // Relation bases (C30): the base tables a read of a relation depends on — a
-// view's tables, transitively, with each rollup replaced by its sources. The
-// legacy router indexes every read-set relation under its bases, so a reader of
-// `tasks_v` is reached by a `conversations` write. The graph lives in the
+// view's tables, transitively, with each rollup replaced by its sources. A reach
+// plan's relation reads are indexed under them, so a reader of `tasks_v` is
+// reached by a `conversations` write. The graph lives in the
 // database layer (views, rollups), which server-core/core must NOT statically
 // import (derived-views/server already imports this barrel — a cycle), so
 // change-feed injects it at boot (`setRelationBases`, in its `onReadyBlocking`,
 // D34). Read before that, the holder THROWS: a router or guard running before
 // the graph is set would silently miss every view reader, so a wrong boot order
-// is loud. Setting it bumps the read-set version (D33), so the router's
-// memoized table → resource inversion is rebuilt through the new bases.
+// is loud. Setting it indexes every routed resource's relation reads
+// (`ReachPlan.relations`) under their bases — the router reaches a view
+// through them.
 let relationBasesHolder: ((relation: string) => readonly string[]) | null =
   null;
 export function setRelationBases(
   fn: (relation: string) => readonly string[],
 ): void {
   relationBasesHolder = fn;
-  bumpReadSetVersion();
+  runtime.indexRelationReads();
 }
 /** Back to "not set" (test support: a suite that set bases must not leak them into the next). */
 export function clearRelationBases(): void {
   relationBasesHolder = null;
-  bumpReadSetVersion();
+  runtime.resetRelationReads();
 }
 function relationBasesOf(relation: string): readonly string[] {
   if (relationBasesHolder === null) {
@@ -357,11 +353,9 @@ const runtime = createResourceRuntime({
   },
   // Automatic loader→table read-set: the tables each loader actually read,
   // captured at the DB pool chokepoint into the runtime-owned sink (./read-set —
-  // independent of the profiler's kill-switch and resets). The legacy router
-  // inverts it, and the _debug endpoint shows it. central: omitted.
+  // independent of the profiler's kill-switch and resets). The _debug endpoint
+  // shows it; no change routes through it. central: omitted.
   readSet: (key) => readSetOf(key),
-  // The sink's version: the legacy router's table → resource memo key.
-  readSetVersion: () => readSetVersion(),
   // Per-run read-set of the key's LAST loader run — the self-healing capture the
   // runtime persists after a FULL recompute (replace, not union), so a dropped
   // dependency is shed from the durable `tables_read` seed instead of carried
@@ -371,7 +365,8 @@ const runtime = createResourceRuntime({
   // load under a test runner (bun:test sets NODE_ENV=test), and is reported
   // once per table in a running server.
   strictRoutes: process.env.NODE_ENV === "test",
-  // The legacy router's read-set expansion (and the _debug read-set bases):
+  // Relation bases (reach plans' relation reads, the drift guard's fail-open
+  // and the _debug read-set bases):
   // the boot-injected holder, read at call time — it throws until change-feed
   // sets it. central: omitted (identity).
   relationBases: (r) => relationBasesOf(r),
@@ -444,13 +439,8 @@ export const {
   // Re-emit a registered resource to its current subscribers without a DB change
   // (a real no-op push). Drives the live-state-churn deterministic-churn emitter.
   triggerResourcePush,
-  // L4 DB change-feed router for every non-routed resource: the change-feed's
-  // `routeChange` calls it with each change, and each legacy reader of the
-  // table (through its relation bases) recomputes FULL.
-  applyLegacyFullChange,
-  // Scoped change routing for ROUTED entries (compiler-emitted routes): every
-  // change producer calls it beside `applyLegacyFullChange`; each entry is
-  // served by exactly one of the two.
+  // The one table-change router (compiler-emitted routes / reach plans):
+  // every change producer calls it.
   routeTableChange,
   // L2 boot init: force a FULL recompute of one resource (no usable persisted
   // read-set yet), re-persisting its value AND read-set for the next boot.
@@ -464,6 +454,16 @@ export const {
   // Every table a reach plan reads outside the change feed by declaration —
   // the change-feed refuses one it covers (a write it reports would be missed).
   unfedResourceTables,
+  // Every relation (view, rollup) a reach plan reads whole — change-feed
+  // holds each one's bases to a change source at boot.
+  relationResourceReads,
+  // Every bound DB-backed resource declaring no route plan (no table change
+  // reaches it) — D6: change-feed refuses boot on one.
+  unroutedResourceKeys,
+  // D7: fail the drift guard open on every persisted `tables_read` relation a
+  // resource's declaration does not cover — live-state-snapshot's boot init,
+  // before catch-up.
+  seedRouteDrift,
   // The trigger layout each routed table needs (carried key columns, the
   // column sets its routes read) — the change feed installs the richer
   // trigger from it.

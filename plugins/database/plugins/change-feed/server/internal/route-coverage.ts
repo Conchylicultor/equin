@@ -36,14 +36,44 @@
 // so any real base table a resource legitimately reads is present by
 // construction, and a miss is never a false positive.
 
-/** One table a routed resource's routes name (server-core's `scopedResourceTables`). */
+/**
+ * One table a routed resource's delivery depends on: a table its routes name
+ * (server-core's `scopedResourceTables`), or a base of a relation its reach
+ * plan reads whole (`relationReadTables`).
+ */
 export interface ScopedResourceTable {
   /** The resource key (for the diagnostic). */
   key: string;
   /** The base table the resource depends on. */
   table: string;
-  /** The route that names it: `route "<id>"`. */
-  via: `route "${string}"`;
+  /** What names it: `route "<id>"`, or `relation "<view or rollup>"`. */
+  via: `route "${string}"` | `relation "${string}"`;
+}
+
+/** One relation a reach plan reads whole (server-core's `relationResourceReads`). */
+export interface RelationResourceRead {
+  key: string;
+  relation: string;
+}
+
+/**
+ * A reach plan's relation reads, each expanded to its relation bases: the
+ * tables whose writes reach the resource (the runtime indexes it under them),
+ * so each is held to the same rule as a route table (A1′) — a relation over
+ * a table the feed skips would leave the value silently stale, where D35 alone
+ * accepts an opted-out base (a drifted reader's hydrate-on-mount).
+ */
+export function relationReadTables(
+  reads: readonly RelationResourceRead[],
+  basesOf: (relation: string) => readonly string[],
+): ScopedResourceTable[] {
+  return reads.flatMap(({ key, relation }) =>
+    basesOf(relation).map((table) => ({
+      key,
+      table,
+      via: `relation "${relation}"` as const,
+    })),
+  );
 }
 
 // Why a table is not in the triggered set — drives the per-violation
@@ -206,5 +236,22 @@ export function assertUnfedTablesOptedOut(
     `[change-feed] resources declare reads outside the change feed of tables the feed was not told to skip — ` +
       `each must be opted out (ExcludeFromChangeFeed), or routed as an ordinary read:\n` +
       wrong.map((u) => `  - ${u.key}: "${u.table}"`).join("\n"),
+  );
+}
+
+/**
+ * D6: every DB-backed resource declares the tables that reach it — `routes`
+ * (a compiled collection) or a `reach` plan (a served db value). One that
+ * declares neither (`unroutedResourceKeys()`) is reached by no table change:
+ * a value nothing would ever update, with no signal. Refused here, at boot,
+ * rather than in `createResource`, since a DB-free test resource is
+ * legitimately unrouted. Throws (blocks boot), like A1′.
+ */
+export function assertNoUnroutedResources(keys: readonly string[]): void {
+  if (keys.length === 0) return;
+  throw new Error(
+    `[change-feed] ${keys.length} DB-backed resource(s) declare no reads — no table change reaches them (D6):\n` +
+      keys.map((k) => `  - ${k}`).join("\n") +
+      "\nFix: serve it through `network/live` (a db value declares `reads`, a collection is compiled with routes), or declare it external with its own notify.",
   );
 }

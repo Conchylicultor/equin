@@ -8,6 +8,7 @@ import type {
   ReachPlan,
   ResourceParams,
   ResourceRuntime,
+  ServerResourceOptions,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   compiledValueReach,
@@ -55,7 +56,11 @@ import type {
 //   in-memory registry), which no change feed can see. It must declare how its
 //   answer changes (`changes`, `LiveValueChanges`): `"notified"` — the served
 //   value has `notify(params?)`, and nothing else does — or an immutable,
-//   fixed or snapshot answer, with its reason and no `notify`.
+//   fixed or snapshot answer, with its reason and no `notify`. A `"notified"`
+//   value whose loader ALSO reads Postgres (a lookup beside its files, a
+//   config-gated query) declares those reads (`reads`, as the db arm does): a
+//   write to one recomputes every subscribed tuple, merged with its notifies,
+//   and the drift guard holds the loader to them as it holds a db value's.
 //
 // The body is the core's `serveValueOn` — the one serving code path every host
 // runs (central and a browser server too) — on server-core's runtime; this
@@ -128,6 +133,22 @@ interface DbReadsOption {
   reads: ServedValueReads;
 }
 
+/**
+ * The external arm's declaration of the Postgres reads its loader makes beside
+ * its own truth — optional, and only on a `changes: "notified"` value (an
+ * immutable, fixed or snapshot value claims no push, so a write could tell it
+ * nothing). Compiled like the db arm's, a thunk bound at
+ * `bindDeferredResources`. Without it, a loader that reads Postgres anyway is
+ * caught by the runtime's undeclared-read guard (D5): reported, thrown under
+ * a test runner.
+ */
+type ExternalReadsOption<C extends LiveValueChanges> = [C] extends ["notified"]
+  ? {
+      /** Every table the loader reads, and why a write to any row may change any tuple. */
+      reads?: ServedValueReads;
+    }
+  : { reads?: never };
+
 /** Any other worktree value: its `serveValue` takes no `preloadParams`. */
 type PlainValue<T, P extends Record<string, string>> = LiveValue<T, P> & {
   preloadsParams?: never;
@@ -198,7 +219,16 @@ export function serveValue<
   K extends string = never,
 >(
   value: LivePagedValue<Item, Meta, Q, QIn, "worktree", K>,
-  opts: ServePagedValueOptions<NoInfer<Item>, NoInfer<Meta>, NoInfer<Q>, R, C>,
+  opts: ServePagedValueOptions<
+    NoInfer<Item>,
+    NoInfer<Meta>,
+    NoInfer<Q>,
+    R,
+    C
+  > & {
+    /** A page is a keyed window, which no declared read reaches (D31). */
+    reads?: never;
+  },
 ): ServedFor<C, ServedPagedValue<Item, Q>, ServedSilentPagedValue<Item>>;
 export function serveValue<
   T,
@@ -219,7 +249,8 @@ export function serveValue<
   C extends LiveValueChanges = "notified",
 >(
   value: LiveQueryValue<T, Q, QIn> & SnapshotPairing<C>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R, C>,
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R, C> &
+    ExternalReadsOption<C>,
 ): ServedFor<
   C,
   ServedExternalQueryValue<T, Q>,
@@ -243,7 +274,8 @@ export function serveValue<
 >(
   value: LivePreloadedParamValue<T, P> & SnapshotPairing<C>,
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> &
-    PreloadParamsOption<NoInfer<P>>,
+    PreloadParamsOption<NoInfer<P>> &
+    ExternalReadsOption<C>,
 ): ServedFor<C, ServedExternalValue<T, P>, ServedValue<T, P>>;
 export function serveValue<
   T,
@@ -263,9 +295,10 @@ export function serveValue<
   C extends LiveValueChanges = "notified",
 >(
   value: PlainValue<T, P> & SnapshotPairing<C>,
-  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> & {
-    preloadParams?: never;
-  },
+  opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C> &
+    ExternalReadsOption<C> & {
+      preloadParams?: never;
+    },
 ): ServedFor<C, ServedExternalValue<T, P>, ServedValue<T, P>>;
 export function serveValue<T, P extends Record<string, string>>(
   value:
@@ -376,12 +409,14 @@ function runtimeFor(
 }
 
 /**
- * The runtime a value registers on: `host`'s, with a db value's declared
- * `reads` compiled into the routing plan (`reach`) its registration carries —
- * at once, or at the host's `bindDeferredResources` for a thunk. Checked when
- * the value registers, after its other options: a db value without `reads`, or
- * an external one with them, is refused (tsc pairs them; this is the untyped
- * caller's check).
+ * The runtime a value registers on: `host`'s, with a value's declared `reads`
+ * compiled into the routing plan (`reach`) its registration carries — at once,
+ * or at the host's `bindDeferredResources` for a thunk (an external one through
+ * the runtime's deferred-external arm, so it is external, with its freshness,
+ * from definition). Checked when the value registers, after its other options:
+ * a db value without `reads`, and `reads` on an external value that is not
+ * `"notified"` or on a paged value's keyed pages, are refused (tsc pairs them;
+ * this is the untyped caller's check).
  */
 export function valueRuntime(
   key: string,
@@ -392,27 +427,49 @@ export function valueRuntime(
     host;
   const label = `serveValue("${key}")`;
   const { reads } = opts;
+  const routed = (options: object, declared: ValueReads) =>
+    ({
+      ...options,
+      reach: compiledValueReach(declared, label) as ReachPlan<ResourceParams>,
+    }) as never;
   const define = (contract: never, options: object) => {
     if (reads === undefined) {
       throw new Error(
         `${label}: a database-backed value declares the tables its loader reads (\`reads: { tables, reason }\`).`,
       );
     }
-    const routed = (reach: ReachPlan<ResourceParams>) =>
-      ({ ...options, reach }) as never;
     return typeof reads === "function"
-      ? defineDeferredResource(contract, () =>
-          routed(compiledValueReach(reads(), label)),
-        )
-      : defineResource(contract, routed(compiledValueReach(reads, label)));
+      ? defineDeferredResource(contract, () => routed(options, reads()))
+      : defineResource(contract, routed(options, reads));
   };
   const defineExternal = (contract: never, options: never) => {
-    if (reads !== undefined) {
+    if (reads === undefined) return defineExternalResource(contract, options);
+    if ((contract as { keyed?: unknown }).keyed !== undefined) {
+      // Unreachable from typed code (`reads?: never` on the paged overload).
       throw new Error(
-        `${label}: \`reads\` is the db arm's — an external value is told of its changes by its own notify.`,
+        `${label}: \`reads\` is a plain value's — a paged value's pages are keyed windows, which no declared read reaches.`,
       );
     }
-    return defineExternalResource(contract, options);
+    const { mode, freshness } = options as ServerResourceOptions<
+      unknown,
+      ResourceParams
+    >;
+    if (freshness?.kind !== "notified") {
+      // Unreachable from typed code (`ExternalReadsOption`).
+      throw new Error(
+        `${label}: \`reads\` is a "notified" value's — an immutable, fixed or snapshot value claims no push, so a write could tell it nothing.`,
+      );
+    }
+    if (typeof reads !== "function") {
+      return defineExternalResource(contract, routed(options, reads));
+    }
+    // A deferred EXTERNAL value: external, with its mode and freshness, from
+    // here on; its bind adds the plan once the registry the thunk reads is
+    // complete.
+    return defineDeferredResource(contract, () => routed(options, reads()), {
+      mode: mode as "push" | "invalidate",
+      freshness,
+    });
   };
   return {
     defineResource: define as LiveRuntime["defineResource"],
@@ -437,6 +494,12 @@ function servePaged(
     // Unreachable from typed code (a paged value is never preloaded).
     throw new Error(
       `serveValue("${value.key}"): a paged value is never preloaded — no \`preloadParams\`.`,
+    );
+  }
+  if (opts.reads !== undefined) {
+    // Unreachable from typed code (`reads?: never` on the paged overload).
+    throw new Error(
+      `serveValue("${value.key}"): a paged value declares no \`reads\` — its pages are keyed windows, which no declared read reaches.`,
     );
   }
   const { meta, ...served } = serveValueOn(

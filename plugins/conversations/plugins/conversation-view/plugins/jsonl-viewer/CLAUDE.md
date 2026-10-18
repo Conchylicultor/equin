@@ -216,6 +216,7 @@ back.
   - Uses:
     - `conversations/transcript-watcher.readJsonlEventsFromChain`
     - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+    - `conversations/transcript-watcher.transcriptChainReads`
     - `conversations/transcript-watcher.transcriptChainSignature`
     - `conversations/transcript-watcher.watchTranscript`
     - `infra/git/git-read-cache.createSignedMemo`
@@ -240,7 +241,7 @@ back.
     - `apps/agent-manager/demo`
     - `tasks/outcome-report`
 - Exemptions:
-  - Exempts itself from: `no-db-backed-notify` — `server/internal/jsonl-events-resource.ts` (debt)
+  - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
 - Sub-plugins:
   - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that…
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.

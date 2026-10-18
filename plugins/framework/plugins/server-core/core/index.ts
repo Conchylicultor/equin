@@ -34,16 +34,11 @@ export {
 } from "./profiler";
 export type { PhaseId, Span, MemoryCheckpoint } from "./profiler";
 export { isServerReady, markServerReady } from "./readiness";
-export {
-  recordLoaderReadSet,
-  removeReadSetTable,
-  seedReadSetIndex,
-} from "./read-set";
+export { recordLoaderReadSet } from "./read-set";
 export { getBootMode, registeringPlugin } from "./boot-mode";
 export type { BootMode } from "./boot-mode";
 export {
   Resource,
-  applyLegacyFullChange,
   assertPreloadedResourcesDeclared,
   bindDeferredResources,
   defineDeferredResource,
@@ -61,6 +56,9 @@ export {
   routeTableChange,
   scopedResourceTables,
   unfedResourceTables,
+  relationResourceReads,
+  unroutedResourceKeys,
+  seedRouteDrift,
   routedTableRequirements,
   boundedMembershipKeys,
   persistedKeys,

@@ -1,16 +1,12 @@
 import {
-  applyLegacyFullChange,
   routeTableChange,
   type TableChange,
 } from "@plugins/framework/plugins/server-core/core";
 import type { ResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
 import type { DbChange } from "./parse-payload";
 
-/** The two routers a change is delivered to (see `routeChange`). */
-type ResourceRuntimeRouters = Pick<
-  ResourceRuntime,
-  "routeTableChange" | "applyLegacyFullChange"
->;
+/** The router a change is delivered to (see `routeChange`). */
+type ResourceRuntimeRouter = Pick<ResourceRuntime, "routeTableChange">;
 
 /** A change from the Postgres feed: a NOTIFY, a catch-up row, a reconnect sweep. */
 export type FeedChange = TableChange & { source: "feed" };
@@ -77,47 +73,29 @@ function tableChangeOf(change: RoutedChange): TableChange {
 // one would. See
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
 //
-// Two routers read each change, and each resource is served by exactly one of
-// them: `routeTableChange` serves the ROUTED resources (compiler-emitted routes —
-// per-tuple read-sets, host-id maps), `applyLegacyFullChange` every other one: a
-// FULL recompute of each tracked tuple of every legacy resource whose read-set
-// reaches the table through its relation bases (a view or rollup it read
-// expands to the tables that feed it — `./relation-bases`), so a `conversations`
-// write reaches a reader of `tasks_v`. Both carry the change's `source`. See
-// research/2026-09-29-global-scoped-change-routing.md and
-// research/2026-10-08-global-scoped-change-routing-p8-steps-23-24.md.
+// One router reads each change: `routeTableChange`, over every resource's
+// declared reads — compiler-emitted routes (per-tuple read-sets, host-id
+// maps) and reach plans (a view or rollup a plan reads is reached through its
+// relation bases — `./relation-bases` — so a `conversations` write reaches a
+// reader of `tasks_v`). A DB-backed resource that declares none is refused at
+// boot (D6). See research/2026-09-29-global-scoped-change-routing.md and
+// research/2026-10-17-global-live-declared-reads-externals-session2.md.
 export const routeChange: (routed: RoutedChange) => void = createChangeRouter({
   routeTableChange,
-  applyLegacyFullChange,
 });
 
 /**
- * The routing above, into ANY runtime's two routers — `routeChange` is it
+ * The routing above, into ANY runtime's router — `routeChange` is it
  * bound to server-core's process-global runtime. A suite that registers real
  * declarations on a runtime of its own (`createResourceRuntime`: the tree
  * oracle) routes its feed through this, so it never registers a key on the
  * global registry a barrel's module eval already registered it on.
  */
 export function createChangeRouter(
-  runtime: ResourceRuntimeRouters,
+  runtime: ResourceRuntimeRouter,
 ): (routed: RoutedChange) => void {
-  const { routeTableChange, applyLegacyFullChange } = runtime;
-  return (routed) => {
-    const change = tableChangeOf(routed);
-    // A routed table's trigger carries its key layout and, for a gated UPDATE,
-    // the unchanged columns; every other table's leaves both null (unknown).
-    routeTableChange(change);
-    // `xid` (the source transaction — mutation-ack attribution) and the change's
-    // wall clock forward to the legacy FULL too: it reads post-commit, so the
-    // ackTx claim holds, and a view-backed list is late by the same amount as
-    // the table that fed it.
-    applyLegacyFullChange({
-      table: change.table,
-      source: change.source,
-      ...(change.xid !== undefined ? { xid: change.xid } : {}),
-      ...(change.changedAt !== undefined
-        ? { changedAt: change.changedAt }
-        : {}),
-    });
-  };
+  const { routeTableChange } = runtime;
+  // A routed table's trigger carries its key layout and, for a gated UPDATE,
+  // the unchanged columns; every other table's leaves both null (unknown).
+  return (routed) => routeTableChange(tableChangeOf(routed));
 }

@@ -99,6 +99,8 @@ export {
 } from "./internal/forfeit";
 export type { ForfeitedSlot, JobSlotFloorReport } from "./internal/forfeit";
 export { abortDurableRun } from "./internal/abort-run";
+// The tables a served value reading the jobs API declares in its `reads`.
+export { _deadJobs, _jobRunStats, _jobRuns } from "./internal/tables";
 export {
   queryDeadJobStats,
   queryQueueBacklog,

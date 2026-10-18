@@ -53,17 +53,16 @@ export const routeSchema = z.union([
 
 /**
  * What one entry IS (A7, the runtime's `debugPolicyOf`): `routed` — reached
- * through its compiler-emitted routes; `legacy-full` — reached only by the
- * legacy router (a write to a relation base of its captured read-set recomputes
- * each tracked tuple FULL); `external` — declared outside Postgres, reached by
- * its own `notify()`; `unbound` — a deferred placeholder not bound yet. An
- * external or unbound entry with a captured read-set is ALSO reached by the
- * legacy router — `legacyReach` is that delivery truth, not the policy.
+ * through its declared routes (a compiled collection's, or a db value's reach
+ * plan); `external` — declared outside Postgres, reached by its own `notify()`
+ * and by its declared reads (`routes`) if it has any; `unrouted` — a DB-backed
+ * entry no table change reaches (change-feed refuses one at boot, D6, so a
+ * running server shows none); `unbound` — a deferred placeholder not bound yet.
  */
 export const policySchema = z.enum([
   "routed",
-  "legacy-full",
   "external",
+  "unrouted",
   "unbound",
 ]);
 
@@ -85,6 +84,17 @@ export const loaderStatsSchema = z.object({
   maxMs: z.number(),
 });
 
+/**
+ * A view (or rollup) a reach plan reads whole (`ReachPlan.relations`): no route
+ * names it, so a write to any of its relation `bases` recomputes the entry
+ * FULL, for the declared `reason`.
+ */
+export const relationReadSchema = z.object({
+  relation: z.string(),
+  reason: z.string(),
+  bases: z.array(z.string()),
+});
+
 export const resourceDebugSchema = z.object({
   key: z.string(),
   mode: z.enum(["push", "invalidate", "keyed"]),
@@ -97,27 +107,19 @@ export const resourceDebugSchema = z.object({
   loaderStats: loaderStatsSchema.optional(),
   /** What this entry is — see `policySchema`. */
   policy: policySchema,
-  /**
-   * Captured table names this resource's loader read since boot (seeded from
-   * the durable `tables_read`).
-   */
+  /** Captured table names this resource's loader read since boot. */
   readSet: z.array(z.string()),
   /**
-   * The bases under which the runtime's legacy router indexes this entry (the
-   * router's own predicate: every non-routed entry, external and unbound ones
-   * included): its captured read-set expanded through the relation bases —
-   * views transitively, rollups to their sources (`agents_v` → `agents`;
-   * `conversations_v` → `attempts, conversations, tasks`). A write to any of
-   * them recomputes it FULL. `[]` for a routed entry, or one with no captured
-   * reads.
+   * The routes a change reaches this entry through — a routed resource's, or
+   * an external one's declared reads (D1); `null` = no routing record.
    */
-  legacyReach: z.array(z.string()),
-  /** A routed resource's routes; `null` = not routed (see `policy`). */
   routes: z.array(routeSchema).nullable(),
+  /** The views / rollups its reach plan reads whole, each with its bases. `[]` otherwise. */
+  relationReads: z.array(relationReadSchema),
   /**
-   * The A8 drift guard's record for a routed resource: captured tables no route
-   * names (raw-table space, as the guard judged them) — tables whose writes
-   * never reach it. `[]` otherwise.
+   * The drift guard's record — A8 for a routed resource, D5 for a notified
+   * external one: captured tables its plan does not cover (raw-table space,
+   * as the guard judged them), each now recomputing it FULL. `[]` otherwise.
    */
   routeDrifted: z.array(z.string()),
   /** Subscribed params-tuples a change recomputes. */

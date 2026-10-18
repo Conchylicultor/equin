@@ -9,8 +9,7 @@ import type { RoutedChange } from "./route-change";
 // between the change (Postgres's NOTIFY, or an in-process producer's flush) and
 // the runtime's recompute.
 //
-// The duration is the synchronous routing work only (both routers:
-// `routeTableChange` and `applyLegacyFullChange`). `sinceChangeMs` — the time from
+// The duration is the synchronous routing work only (`routeTableChange`). `sinceChangeMs` — the time from
 // the trigger firing to routing done — is a measure, not the duration: it also
 // counts how long the writing transaction stayed open after the statement,
 // which is not routing's cost.

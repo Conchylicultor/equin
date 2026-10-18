@@ -18,8 +18,8 @@ single cause hides a bigger one (a minute-scale span, a never-ready boot).
 durable failure signal dedupes here with a source, count, noise flag, a linked
 investigation task, and — for perf kinds — a *View-trace* chip to the evidence.
 Kinds include crashes, `slow-op` / `op-rate` / `op-time`, queue-health,
-boot-budget, event-loop-stall, live-state churn, duress-shed, read-set-shrink,
-and session-divergence. A report often already names the layer — start here.
+boot-budget, event-loop-stall, live-state churn, duress-shed and
+session-divergence. A report often already names the layer — start here.
 → [`plugins/debug/plugins/reports/CLAUDE.md`](../../../plugins/debug/plugins/reports/CLAUDE.md)
 
 **Timeline — "what happened when?"** The cross-worktree wall-clock Gantt:

@@ -6,14 +6,26 @@ import {
   type DirWatchRelease,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { BYPASS_TOKENS } from "@plugins/framework/plugins/tooling/plugins/guards/core";
-import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
+import { findWorkspaceOfConversation } from "@plugins/conversations/plugins/workspace/server";
+import {
+  _attempts,
+  _conversations,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { allowFiles, type AllowFiles } from "../../shared";
 
+// The directory the conversation's agent runs in (its attempt's worktree, or a
+// scratch workspace's directory) — null for an unknown conversation or one with
+// no path yet.
+async function worktreePathOf(conversationId: string): Promise<string | null> {
+  const found = await findWorkspaceOfConversation(conversationId);
+  if (!found.found || !found.workspace.path) return null;
+  return found.workspace.path;
+}
+
 async function loadAllowFiles(conversationId: string): Promise<AllowFiles> {
-  const conversation = await getConversation(conversationId);
+  const worktreePath = await worktreePathOf(conversationId);
   // No worktree means no guard runs there, so no bypass can be in effect.
-  if (!conversation?.worktreePath) return { allowFiles: [] };
-  const worktreePath = conversation.worktreePath;
+  if (!worktreePath) return { allowFiles: [] };
   const present = await Promise.all(
     BYPASS_TOKENS.map(async (name) =>
       (await Bun.file(join(worktreePath, name)).exists()) ? name : null,
@@ -30,8 +42,7 @@ async function watchAllowFiles(
   conversationId: string,
   notify: () => void,
 ): Promise<DirWatchRelease | null> {
-  const conversation = await getConversation(conversationId);
-  const worktreePath = conversation?.worktreePath;
+  const worktreePath = await worktreePathOf(conversationId);
   if (!worktreePath) return null;
   const release = await acquireDirWatch({
     dir: worktreePath,
@@ -50,6 +61,11 @@ async function watchAllowFiles(
 export const allowFilesServed = serveValue(allowFiles, {
   source: "external",
   changes: "notified",
+  reads: {
+    tables: [_conversations, _attempts],
+    reason:
+      "each tuple resolves its conversation's worktree path (conversations → attempts) before checking the bypass files on disk, and the watch resolves it the same way; a write to any conversation or attempt row may move which directory a tuple reads — whole-table until the path is a param or a db-served value",
+  },
   loader: ({ id }) => loadAllowFiles(id),
   // One hub watch per watched conversation, for as long as it has a
   // subscriber. The start stays SYNC: an async start is awaited on the

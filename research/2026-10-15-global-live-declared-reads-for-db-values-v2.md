@@ -152,3 +152,40 @@ Two sessions instead of three: session 1 is mechanical after the framework part,
 **Known limits (follow-ups)**
 - A8's fail-open is in memory: a persisted reach value (`notifications.unread`, `icons.saved-sprites`) that drifted forgets it across a restart until the next load drifts again (the L2 `tables_read` seed only feeds the legacy index). Moot once declarations are complete; delete with the legacy index in session 2 or seed `drifted` from `tables_read`.
 - No performance change by design: page-blocks, attempt-work, commits-graph and the externals on `conversations` still reload on any write to their tables — the compiled-narrowing item.
+
+## As landed — session 2 (2026-10-18, worktree `att-1792115018-dpdljq`)
+
+Plan: `research/2026-10-17-global-live-declared-reads-externals-session2.md`.
+
+**Externals declare reads.** D1–D8 landed: `reach` on a non-keyed external, relation reads (views / rollups expanded through `relationBases`), A5 deleted, deferred externals registered external at definition, the D5 undeclared-read guard on every `notified` external, D6 `unroutedResourceKeys()`, D7 `seedRouteDrift()`, and D8's "a recompute that changed nothing sends nothing". The 12 externals of the plan's table declare their reads.
+
+**Gate (deployed, before the deletion):** `_debug` showed 211 routed, 80 external, 0 legacy-full, 0 non-empty `legacyReach`, 0 `routeDrifted`.
+
+**Deleted — the legacy read-set router.**
+- resource-runtime: `applyLegacyFullChange`, the read-set inversion (cache, signature, drift rebuild epoch), `legacyRouted`, `readSetVersion`, `guardUndeclaredExternalReads` (D5 is always armed), `_debug.legacyReach`. The `DebugPolicy` value `legacy-full` became `unrouted` (only a DB-free harness can show one: change-feed refuses it at boot, D6).
+- server-core `read-set.ts`: the version, `bumpReadSetVersion`, `seedReadSetIndex`. `removeReadSetTable` moved to `core/testing` (tests are its only callers now).
+- change-feed: `routeChange` is `routeTableChange` alone; D6 runs first in `installFeed`.
+- live-state-snapshot: the boot read-set seed (→ `seedRouteDrift`), the shrink CTE, `reconcileReadSetTable`.
+- notifications' `reconcile-read-set.ts` (D7); the whole `debug/read-set-shrink` plugin; the `legacyFull` test helper (`wholeReach` replaces it).
+
+**Kept:** the per-run capture (A8 / D5 and the persisted `tables_read`) and the append-only union, now display only (`_debug`). Correction to the plan's Keep list: there is no "central fallback" — central persists nothing, and every persisted server entry is routed (D6), so `floorGuardTables`' union arm is reached only by an unrouted entry in a DB-free harness.
+
+**Fixed in review:** a relation seeded from `tables_read` that the next load does not read is dropped and its bases un-indexed (`dropUnreadSeeds`) — before, it routed FULL to the entry for the rest of the process.
+
+**D8 changed design on the way: a skip by object identity, not by signature.**
+- **Why:** declaring `conversations` for the four transcript values made every `conversations` write recompute them, and a push drain always ships its value — 2 MB per write for `jsonl-events`.
+- **The first design** skipped the load when the entry's `revalidate` signature, probed before the load, equalled a held one. An adversarial review showed it pins a stale value whenever a change's notify lands after the frame and the signature later returns to an earlier value (ABA). Every fix added machinery and left a hole, and it cost an extra probe per frame. It was removed.
+- **As landed:** a pushed, non-persisted entry with `revalidate` sends no frame (and mints no version, only acks) when its loader returns **the very object** last sent to the tuple. Memo-backed loaders return the cached object on a signature hit. The comparison is on what was delivered, so notify timing cannot fool it.
+  - Invalidate mode is not skipped: edited-files still sends a few-byte invalidate per routed write.
+- **Memo fixes kept, all pre-existing bugs** (`git-read-cache`):
+  - the in-flight compute is keyed by signature, so a caller no longer joins an older compute;
+  - a compute is cached only when a re-probe returns the same signature;
+  - a prime or a compute landing under the signature already cached hands back the held object.
+- **Measured** (e2e `jsonl-viewer/e2e/no-op-frames.ts`): 10 `conversations` writes with a finished conversation's pane open. Feed +10 and loads +10 on each value; **0 update frames** on `jsonl-events`, `subagent-activity`, `background-shell-output` and `subagent-transcript`, in 3 of 3 runs. `edited-files` sent 10 invalidates of 95 chars each.
+
+**Known limits (follow-ups)**
+- Subscribing to a watcher-backed transcript value can ship the value twice. The watcher's start notify lands while the sub-ack is loading, and a second object with the same content is sent. This predates the branch.
+- edited-files: one invalidate plus a client revalidate per write to `conversations` / `attempts` while a pane is open. It goes away with [12] (narrowing to the conversation's own row).
+- D6 is a boot check: a DB-backed resource registered or bound after change-feed's `onReadyBlocking` would be unrouted with nothing refusing it. No such caller exists.
+- D5 now files a `route drift` report for any undeclared incidental DB read of a notified external (config, auth), where the legacy router silently routed it. The gate showed none; reads inside `whileSubscribed` / `revalidate` are not captured either way.
+- Old `read-set-shrink` report rows and any persisted graphile cron item for the deleted `debug.read-set-shrink-monitor` job are left as they are.

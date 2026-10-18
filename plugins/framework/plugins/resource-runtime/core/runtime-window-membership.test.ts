@@ -38,8 +38,7 @@
  * Every window / point case runs with the entry declaring the identity route
  * `compileWindowQuery` emits (served by `routeTableChange`,
  * research/2026-09-29-global-scoped-change-routing.md P1) — a membership entry
- * is always routed; the legacy router (`applyLegacyFullChange`) serves only
- * non-keyed entries, FULL.
+ * is always routed.
  *
  * The `scopedMembership` alias's byte-identical behavior is pinned by
  * `runtime-scoped-membership.test.ts` (kept green unchanged — that suite IS the

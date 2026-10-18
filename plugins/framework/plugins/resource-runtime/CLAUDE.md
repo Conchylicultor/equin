@@ -162,13 +162,13 @@ bounded). Pinned by `runtime-derive.test.ts` §"an external keyed window" and
 (which also pins a `defineExternalResource` on a runtime with open sockets
 serving the next sub of its key).
 
-A non-keyed entry has no scope policy. A DB-backed one is reached through its
-captured read-set (the legacy router, `applyLegacyFullChange`, FULL — see
-*Scoped change routing*) or a compiler's `reach` plan; an external one through
-its `notify()`. Either may take `dependsOn` edges, whose upstream must be
+A non-keyed entry has no scope policy. A DB-backed one is reached through a
+`reach` plan (see *Scoped change routing*) — one with none is reached by no
+change, and change-feed refuses it at boot (D6); an external one through its
+`notify()`, and through its declared reads when it has a `reach` plan. Either may take `dependsOn` edges, whose upstream must be
 EXTERNAL (T15 — a throw in both registration orders and again at the DAG
 rebuild, deferred placeholders judged at their bind): a DB-backed upstream's
-writes are tables the downstream's own read-set or routes reach.
+writes are tables the downstream's own routes reach.
 
 ## Bounded membership (`membership`) and the `scopedMembership` alias
 
@@ -276,8 +276,8 @@ the diff base), and a scoped drain that changed it arms a **floor persist** (see
 *L2 persists* below) rather than writing the row itself; branch 2/3
 (`drainMembershipFull`) seeds/replaces the snapshot even with zero subs so the
 next incremental diff has a base, and REPLACES the row. A membership drain
-cascades nothing: a membership entry has no downstream, since A5 refuses a
-`dependsOn` onto a routed entry and D32 one onto an external window, in
+cascades nothing: a membership entry has no downstream, since D32 refuses a
+`dependsOn` onto any membership entry (a routed one or an external window), in
 either registration order, and the DAG rebuild asserts it.
 
 At **boot**, the L2 layer restores each persisted alias's in-memory diff base from
@@ -392,7 +392,7 @@ The `persistSnapshot` hook takes `{ mode, definition, guardTables }`, and per
 (key, pk) its calls are serialized (`persistChains`), never concurrent:
 
 - **`replace`** — every FULL recompute of a persisted entry (`drainMembershipFull`,
-  the legacy FULL branch): the value, floored by its flight's own watermark, with
+  the non-membership FULL branch): the value, floored by its flight's own watermark, with
   the run's read-set as `guardTables` (written as `tables_read`). The row's
   `position`, `position_at`, `tables_read` and definition are all replaced. A
   replace cancels an armed floor window SYNCHRONOUSLY, before it enqueues (and
@@ -438,35 +438,35 @@ plan's definition".
 
 ## Scoped change routing (`routes` + `routeTableChange`)
 
-The legacy router (`applyLegacyFullChange`) knows one thing per resource: the
-union of the tables its loader runs read (the L3 read-set), each relation
-expanded to its **relation bases** — a view to the tables it reads,
-transitively, and a trigger-maintained rollup to its sources
-(`opts.relationBases`, injected by change-feed through server-core's
-`setRelationBases`; identity on central and in the DB-free harness). A write to
-any base is FULL for every subscribed tuple of every reader (or its `{}` tuple when
-none is subscribed) — even tuples whose SQL never reads that table, since the
-read-set is one union per key. The inversion (`tableToResources`) is memoized on
-the read-set sink's version counter, which `setRelationBases` also moves. A
-**routed** resource instead declares, as data
-its compiler emits, a `RoutePlan` (`core/routing.ts`, SQL-free, names no
+Every DB-backed resource declares, as data, which tables reach it — no change
+is routed through the captured loader read-set. A **routed** resource declares
+a `RoutePlan` its compiler emits (`core/routing.ts`, SQL-free, names no
 contributor): every table occurrence the query may read (`Route` — its `HostMap`
 from changed rows to host ids: `identity`, `alias`, `reverse`, `full`, where an
 `identity` or `alias` map with no `column` reads the table's single-column PK off
 the change's ids — an extension keyed by its host's id; the columns
 the SQL references; an optional static key filter) and a pure per-tuple
 `usesOf(params)` naming the occurrences THAT tuple reads, in the `membership` or
-`value` role. `routeTableChange(TableChange)` serves routed entries; the legacy path
-serves everything else (`tableToResources` skips routed keys), so each change
-reaches each entry exactly once and resources move over one at a time. Design:
-`research/2026-09-29-global-scoped-change-routing.md`.
+`value` role. A non-keyed value declares a `ReachPlan` (`full` routes only, plus
+`relations` / `unfed`). `routeTableChange(TableChange)` is the one router: a
+view or rollup a plan reads is reached through its **relation bases** — the
+tables a view reads, transitively, and a trigger-maintained rollup's sources
+(`opts.relationBases`, injected by change-feed through server-core's
+`setRelationBases`, which re-runs `indexRelationReads()`; identity on central and
+in the DB-free harness). A DB-backed entry with neither plan is reached by
+nothing: `unroutedResourceKeys()` lists it and change-feed refuses boot (D6).
+Design: `research/2026-09-29-global-scoped-change-routing.md`;
+the deletion of the old read-set router:
+`research/2026-10-17-global-live-declared-reads-externals-session2.md`.
 
 - **Declared on a membership arm only** (`ScopePolicy`): a scoped refill never
   deletes, so only a membership drain turns a routed change into an exit. Route ids are unique (A9: an unknown id from
   `usesOf` is reported and FULLs that tuple). A `dependsOn` edge whose upstream is a
-  routed entry throws (A5, "route the table, not the resource") in either
-  registration order, and so do routes on an external resource (its truth is not
-  in Postgres). A routed entry takes no `dependsOn` of its own either (type +
+  `routes` entry throws (D32: it is a membership entry, whose drain cascades
+  nothing) in either registration order, and so do routes on an external
+  resource (its truth is not in Postgres). A `reach` EXTERNAL upstream may
+  cascade (a DB-backed one is refused by T15), in either registration order:
+  a downstream's edge onto an upstream not registered yet waits for it. A routed entry takes no `dependsOn` of its own either (type +
   throw): it routes the tables it reads, and a cascade would serve it a second
   time, a FULL overriding a scoped routed refill.
 - **`recomputeOn` — a routed entry's non-table input.** A routed entry may name
@@ -504,8 +504,19 @@ reaches each entry exactly once and resources move over one at a time. Design:
   query-resource's `compiledValueReach`). Unlike `routes` it may sit beside
   `dependsOn` (a served value's `recomputeOn`): with no scoped refill, a
   cascade and a routed change merge into the tuple's one FULL pending. A keyed
-  entry, a non-`full` route, `routes` beside it or an external resource
-  throws in `createResource`. **`unfed`** (`UnfedRead`): tables the loader
+  entry, a non-`full` route or `routes` beside it throws in `createResource`.
+  A NON-keyed EXTERNAL entry may declare one (D1): the Postgres reads its
+  loader makes beside its own `notify()`, which merges into the same pending.
+  **`relations`** (`RelationRead`): views / rollups read whole — no route
+  names one; `indexRelationReads()` (server-core's `setRelationBases` calls
+  it; later registrations expand their own) indexes each under its relation
+  bases, a write to a base recomputes FULL, the drift guard accepts the
+  relation's name, `_debug` lists them as `relationReads`, and change-feed's
+  boot holds every base to a change source (`relationResourceReads()`, A1′).
+  `resetRelationReads()` (server-core's `clearRelationBases`) drops them until
+  the next index. An entry with downstream edges whose `{}` passes its params
+  gate is also targeted at `{}` while nobody is subscribed, so its drain still
+  cascades. **`unfed`** (`UnfedRead`): tables the loader
   reads that the feed skips by declaration — never routed, accepted by the
   drift guard, listed by `unfedResourceTables()` (change-feed's boot check
   refuses one the feed covers) and in `_debug` as `unfedReads`.
@@ -515,23 +526,19 @@ reaches each entry exactly once and resources move over one at a time. Design:
 - **The read-set debug pane** (`/api/resources/_debug`, A7) gives every entry a
   `policy` from a closed set, decided in this order (`debugPolicyOf`):
   `unbound` (a deferred placeholder not bound yet), `external`, `routed`, else
-  `legacy-full`. The policy is what an entry is, not all that reaches it:
-  `tableToResources` indexes every non-routed entry, so an external or unbound
-  entry with a captured DB read-set is also recomputed FULL by its bases.
-  `legacyReach` is that delivery truth — the bases the legacy router indexes
-  the entry under, from the router's own predicate (`legacyRouted`); `[]` for a
-  routed entry. Beside it: `routes` (id, table, map kind, a `full` route's
+  `unrouted` (reached by nothing — refused at change-feed boot, so only a
+  DB-free harness shows one). The policy is what an entry is; `routes` is how
+  a table change reaches it — an external with a `reach` plan lists its
+  routes too. Fields: `routes` (id, table, map kind, a `full` route's
   reason; `null` when not routed), `derivedReads` and `routeDrifted` (the A8
   guard's own record, raw-table space; `[]` when not routed), `readSetBases`
   (the raw read-set expanded through the relation bases, unfiltered), `tuples`
   (`tracked.size`), `persisted` and `positionAgeMs` (now − the row's last known
   `position_at`; `null` if unknown or not persisted). On central (no read-set
-  capture, no L2) `readSet` / `readSetBases` / `legacyReach` / `routeDrifted` are `[]`,
+  capture, no L2) `readSet` / `readSetBases` / `routeDrifted` are `[]`,
   `persisted` is false and `positionAgeMs` null. `debug/read-set` renders the ceiling from
-  these alone — every entry the legacy router reaches with its bases, every
-  routed `full` route, routed drift, and the routed, pure-external and unbound
-  keys. Pinned by `runtime-debug-policy.test.ts` (A26, including that
-  `legacyReach` names exactly who a base write loads).
+  these alone — every `full` route, routed drift, and the routed, pure-external
+  and unbound keys. Pinned by `runtime-debug-policy.test.ts` (A26).
 - **The drift guard (A8).** A routed entry is reached ONLY through its routes, so
   after each loader run the key's per-run capture (`lastReadSet`) must be a subset
   of its route tables — a table outside them is one whose writes it never sees —
@@ -544,11 +551,28 @@ reaches each entry exactly once and resources move over one at a time. Design:
   names only base tables) join `routedByTable` for the entry, and each later
   change to one recomputes every target FULL (`routeEntryChange`) — so a plan
   missing a relation is never staler than a whole-table read of it. It lives
-  in memory: a restart forgets it until the next load drifts again. A reach plan's `unfed` tables pass. With no capture
-  wired (central, the DB-free harness) the guard is off; routing never depends
-  on it.
+  in memory; `seedRouteDrift(persisted)` (D7, live-state-snapshot's boot
+  init) re-judges each persisted `tables_read` by the same predicate
+  (`readCovered`: routes ∪ derived ∪ unfed ∪ relations ∪ drifted) and fails
+  open again on what it does not cover — unreported and not counted as
+  covered (`_debug.routeDriftSeeded`), since the row may predate a
+  declaration change: the next load that still reads one reports it (and
+  moves it to `routeDrifted`), and one that does not drops it and its bases
+  stop routing to the entry (`dropUnreadSeeds`). A reach
+  plan's `unfed` tables pass.
+  **D5 — the undeclared-read guard:** the same check arms on every external
+  that declared a `reach` plan and on every external whose freshness is
+  `notified` (or undeclared) — snapshot / fixed / immutable ones claim no
+  push — whether or not it declared reads; an uncovered capture is reported
+  (thrown under `strictRoutes`) and fails open through a drift-only routing
+  record (a keyed external window / point set re-reads FULL). **D6:**
+  `unroutedResourceKeys()` lists the bound DB-backed entries with no plan;
+  change-feed refuses boot on any.
+  With no capture wired (central, the DB-free harness) the guard is off;
+  routing never depends on it.
 - **Targets** are the subscribed tuples (`entry.tracked`, pk → params, maintained
-  with `subCounts` — no socket scan), plus `{}` for a persisted entry; a param'd
+  with `subCounts` — no socket scan), plus `{}` for a persisted entry (and, with
+  nothing subscribed, for one with downstream edges); a param'd
   window or point set with no subscriber gets nothing.
 - **Per tuple**, each route it reads goes through the gate (a `U` whose
   `unchanged` set lists every one of the route's `columns` skips it —
@@ -611,6 +635,13 @@ on an undeclared column, and a key-changing identity UPDATE) and
 
 ## Deferred resources (`defineDeferredResource` / `bindDeferredResources`)
 
+A third arm (D4) defers an EXTERNAL value — one whose reads are computed from
+contributions: `defineDeferredResource(contract, bind, { mode, freshness })`
+registers the placeholder external, with its mode and freshness, at
+definition (so `_debug`, the read-set-gap warning and the D5 guard read them
+before the bind), returns a handle with `notify`, and refuses a bind that
+restates another freshness.
+
 A resource whose server half can only be compiled once the plugin graph's
 contributions are known — a `network/live` collection whose fields other
 plugins contribute: exposed extension fields (`LiveColumns.Expose`), scoped
@@ -621,7 +652,7 @@ contract is keyed; a non-keyed deferred resource is a push value), schema,
 snapshot's key set see it — with a loader that throws ("deferred and not bound
 yet"). `bindDeferredResources()` calls each `bind()` and runs its options through
 `buildEntry` — the SAME validation and normalization `createResource` applies
-(scope policy, membership, routes, A5, the minted-plan check) — then gives the
+(scope policy, membership, routes, D32 / T15, the minted-plan check) — then gives the
 registered entry its loader, scope policy, membership and routes and indexes
 them for `routeTableChange`. The facade's boot sequence runs it right after
 contributions are collected, before anything serves and before the ready
@@ -669,6 +700,22 @@ than the value it still holds: the permanent stale pin the `2026-07-09`
 co-production doc exists to kill.) Etag-AFTER-value is safe here because the frame
 carries the value and self-heals via `flushAgain` — see the comment on `sendUpdate`
 and `research/2026-07-10-global-push-etag-rides-the-update-frame.md`.
+
+**D8 — a recompute that changed nothing sends nothing.** A non-keyed drain of
+a pushed, non-persisted entry that declares `revalidate` (`skipsUnchanged` —
+the memo-backed loaders, which hand back their cached object while the
+signature stands) loads BEFORE it mints. If the loader's RAW return (before
+the schema parse, which copies — `FlightValue.raw`) is the very object
+(`===`) every holder holds (`lastSent`), it sends no frame and mints no
+version; it only acks. Equal content in a new object is a change — nothing is
+hashed, so the rule needs no signature probe and cannot pin a stale value
+whatever order notifies arrive in: values are immutable, so the same object
+is the same content. `lastSent` is set by the update frame (synchronously
+with its subscriber set) and by the sub-ack that opened the span to its sole
+holder while no drain has minted since; any other read handing a holder
+another object (or an `up-to-date`, a 304, an error), a failed load, and N→0
+drop it. `invalidate` mode, keyed and persisted entries never skip; the
+cascade still runs on a skip. Pinned by `runtime-revalidate.test.ts` §D8.
 
 `sendUpdate` sends the frame ITSELF rather than returning it, so the no-`revalidate`
 path (almost every resource) builds and broadcasts with **NO await before the
@@ -791,7 +838,7 @@ I am draining". No adoption rule makes an older SELECT satisfy it, so the defenc
   version, which the client drops. This is why the read path passes NO floor and its
   coalescing (and the gate-after-dedup replay-storm fix) is untouched.
 - A **push** frame *mints* one, so the two FULL drain sites
-  (`drainMembershipFull` and the legacy non-keyed FULL drain in `drainPendings`)
+  (`drainMembershipFull` and the non-keyed FULL drain in `drainPendings`)
   pass `notBefore: pendingEntry.lastNotifyAt`. A flight that started earlier is
   superseded, not joined, and the drain runs its own.
 
@@ -1018,7 +1065,7 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   `makeClientView()` (a client simulator applying frames through the REAL WS
   version guard + a mirror of `mergeKeyedDelta`, so tests assert "converges to
   server truth"), and the `rng` mulberry32 PRNG.
-- `runtime.test.ts` (level-parallel flush, `applyLegacyFullChange` routing,
+- `runtime.test.ts` (level-parallel flush, reach routing and relation reads,
   revalidate, `authorize`, the D37 / D31 / D32 / T15 refusals — D31: a keyed
   entry is a membership entry, routed or an external window), `keyed-diff.test.ts` (all three diffs, scenario + property, under
   BOTH encoders), `runtime-h5.test.ts` (notify-vs-fresh-sub race),
@@ -1037,9 +1084,11 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   a joined sub-ack nor a drain outliving its span sets an older snapshot), `runtime-optional-params.test.ts` (one
   tuple per spelling of an absent optional param), `runtime-table-routing.test.ts`
   (the routed-entry matrix, the named routing scenarios, the `reach` arm and the
-  A5 / A8 / A22 guards, and the reverse resolve's `cascade` origin),
+  D32 / A8 / A22 guards, and the reverse resolve's `cascade` origin),
   `runtime-debug-policy.test.ts` (A26: every key in `_debug` under one policy,
   before and after a deferred bind, and the central-shaped degradation),
+  `runtime-declared-reads.test.ts` (reach on an external, relation reads, a
+  deferred external, the D5 guard, `unroutedResourceKeys`, `seedRouteDrift`),
   `runtime-derive.test.ts` (seeded derivation: the derived ack, every refusal's
   fallback, and convergence under random interleavings — over a routed window
   and an external one).
@@ -1050,9 +1099,9 @@ Each suite's `describe`/`test` names state what it pins; read them there.
   `compileWindowQuery` emits), `defineRoutedTable(h, { key, table, membership,
   loader, … })` (a keyed entry on it, `alias` / `window` / `point`; refuses a
   key the harness answers a read-set for, so a migrated suite cannot carry a
-  dead `readSet`), `feedChange(h, change)` (both routers, as change-feed's
-  `routeChange` calls them) and `legacyFull(h, table, o)` (the legacy router
-  alone). `createHarness` / `Harness` are re-exported for cross-plugin suites.
+  dead `readSet`), `wholeReach(tables)` (a non-keyed value's reach plan reading
+  each table whole) and `feedChange(h, change)` (one change, as change-feed's
+  `routeChange` delivers it). `createHarness` / `Harness` are re-exported for cross-plugin suites.
   Note `controllable()` resolves at RELEASE time, so it structurally cannot model
   a SELECT that already ran; any test about stale-flight joins must use
   `snapshotControllable()`, which captures at INVOCATION time.
@@ -1139,6 +1188,7 @@ and those plugins' `CLAUDE.md`.
     - `PersistedValueCheck`
     - `PersistMeta`
     - `ReachPlan`
+    - `RelationRead`
     - `Resource`
     - `ResourceContract`
     - `ResourceDefinition`
@@ -1188,11 +1238,11 @@ and those plugins' `CLAUDE.md`.
     - `defineRoutedTable` — Register a keyed resource over `spec.table` the way a compiled collection is.
     - `diffKeyedFull` — Full diff: compare the new array `value` against `prev` (the prior snapshot, or `undefined` on first notify).
     - `diffKeyedScoped` — Scoped diff (Layer 2): `scopedRows` is a PARTIAL array — only the recomputed affected rows.
-    - `feedChange` — One base-table change as the change feed delivers it (`routeChange`): to the routed router, then the legacy one.
+    - `feedChange` — One base-table change as the change feed delivers it (`routeChange`).
     - `hashSnapEncoder` — The portable 64-bit hash encoder: the runtime's default `snapHash`.
     - `identityPlan` — The plan `compileWindowQuery` emits for a single-table window / point set / alias: one identity route `base` on `table`, gating on `cols`, read by every tuple in the membership role.
-    - `legacyFull` — The legacy router alone: every non-routed reader of `table` recomputes FULL.
     - `makeClientView`
+    - `wholeReach` — The reach plan of a non-keyed value reading each of `tables` whole: one `full` route per table, read by every tuple — so a change to any of them recomputes each tracked tuple (and a param-less persisted / cascading entry's `{}`) FULL.
     - Types: `ClientView`, `DeriveFrame`, `DeriveSourceFrame`, `FedChange`, `Harness`, `KeyedSnapshot`, `RecordedFrame`, `RoutedTable`, `RoutedTableSpec`
 
 <!-- AUTOGENERATED:END -->

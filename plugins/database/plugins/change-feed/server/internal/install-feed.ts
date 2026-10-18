@@ -6,14 +6,18 @@ import {
   type TriggerExclusions,
 } from "./triggers";
 import {
+  assertNoUnroutedResources,
   assertRouteTablesCovered,
   assertUnfedTablesOptedOut,
+  relationReadTables,
+  type RelationResourceRead,
   type ScopedResourceTable,
   type UnfedResourceTable,
 } from "./route-coverage";
 import { assertRouteLayoutsInstalled } from "./route-layout";
 import {
   assertRelationBasesSourced,
+  createRelationBases,
   type RelationGraph,
 } from "./relation-bases";
 import {
@@ -31,6 +35,10 @@ export interface FeedInstallInputs {
   scoped: readonly ScopedResourceTable[];
   /** Every table a reach plan reads outside the feed (`unfedResourceTables()`). */
   unfed: readonly UnfedResourceTable[];
+  /** Every relation a reach plan reads whole (`relationResourceReads()`). */
+  relationReads: readonly RelationResourceRead[];
+  /** Every DB-backed resource declaring no reads (`unroutedResourceKeys()`). */
+  unrouted: readonly string[];
   /** The views' and rollups' read graph, which relation bases expand through. */
   relations: RelationGraph;
 }
@@ -42,14 +50,15 @@ export interface FeedInstallInputs {
  * registry sets (which only a booted process can read), so a suite runs it
  * against a throwaway database with its own declarations.
  *
+ *  0. D6: every DB-backed resource declares its reads (none is unrouted).
  *  1. A2′ (declarations) + A3p: a produced table is neither opted out nor a
  *     rollup, and no route on it needs a carried column.
  *  2. The trigger rebuild (`rebuildTriggers`), produced tables denylisted.
  *  3. A2′ (catalog): no `live_state_*` trigger survived on a produced table.
  *  4. A1′: every route table of a routed resource has a change source — a
- *     trigger the rebuild installed, or a mounted change producer — and every
- *     table a reach plan reads outside the feed is one the feed was told to
- *     skip.
+ *     trigger the rebuild installed, or a mounted change producer — and so
+ *     does every base of a relation a reach plan reads whole; every table a
+ *     reach plan reads outside the feed is one the feed was told to skip.
  *  5. D35: every base table a view or rollup reaches has a change source, or
  *     is opted out.
  *  6. A3: every routed table's installed triggers carry what its routes read.
@@ -58,7 +67,16 @@ export async function installFeed(
   db: NodePgDatabase,
   inputs: FeedInstallInputs,
 ): Promise<void> {
-  const { exclusions, layouts, scoped, unfed, relations } = inputs;
+  const {
+    exclusions,
+    layouts,
+    scoped,
+    unfed,
+    relationReads,
+    unrouted,
+    relations,
+  } = inputs;
+  assertNoUnroutedResources(unrouted);
   assertProducedTablesDeclared(
     exclusions.produced,
     exclusions.optedOut,
@@ -76,19 +94,23 @@ export async function installFeed(
   // tables; the exclusion + exempt sets only classify the reason for the
   // diagnostic. Throws loudly (blocks boot) rather than warning: it is always a
   // definite bug, never transient drift. A legitimate base table is present in
-  // the covered set by construction, so a miss is never a false positive. See
-  // ./route-coverage.
+  // the covered set by construction, so a miss is never a false positive. A
+  // reach plan's relation reads join it through their bases — a write to any
+  // is what reaches the value. See ./route-coverage.
   assertRouteTablesCovered(
-    scoped,
+    [
+      ...scoped,
+      ...relationReadTables(relationReads, createRelationBases(relations)),
+    ],
     new Set([...getCoveredTables(), ...exclusions.produced]),
     exclusions.optedOut,
     exclusions.feedExempt,
   );
   assertUnfedTablesOptedOut(unfed, exclusions.optedOut);
-  // D35: a legacy loader reading a view or rollup is reached through the
-  // relation's bases (the legacy router expands its read-set through them), so
-  // each base must itself produce changes: a trigger, a producer — or an
-  // explicit opt-out, whose readers accept hydrate-on-mount by declaration.
+  // D35: a reader of a view or rollup is reached through the relation's bases
+  // (a reach plan's relation reads, the drift guard's fail-open), so each base
+  // must itself produce changes: a trigger, a producer — or an explicit
+  // opt-out, whose readers accept hydrate-on-mount by declaration.
   assertRelationBasesSourced(
     relations,
     new Set([

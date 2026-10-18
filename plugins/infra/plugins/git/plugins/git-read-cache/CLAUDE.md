@@ -65,6 +65,13 @@ See `research/2026-07-09-global-etag-value-coproduction.md`.
 `set` is the writer's responsibility for correctness: it must only store a value
 it knows matches the signature it passes. The 3-arg `get` signature is unchanged.
 
+**Same signature, same object.** A `set` under the signature already cached keeps
+the held object, and a compute that finds its signature already cached when it
+lands (a prime, or a fresher compute, landed meanwhile) hands its callers that
+held object instead of its own. A reader comparing by identity
+— the live runtime skips a recompute whose loader returns the object it last sent
+(resource-runtime D8) — then sees an unchanged answer as unchanged.
+
 ### Embedded single-flight + worktree-keyed coalescing
 
 An embedded `createInflight` (`@plugins/packages/plugins/inflight/core`), keyed by
@@ -181,6 +188,7 @@ primitive and Stage 2.1).
     - `build/deployment`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `plugin-meta/plugin-tree`
     - `release`

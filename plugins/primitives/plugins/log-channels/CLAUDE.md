@@ -210,7 +210,7 @@ count accumulates across drops.
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×12
     - `apps` ×11
     - `infra` ×8
@@ -225,7 +225,6 @@ count accumulates across drops.
     - `primitives/live-state`
     - `release`
     - `reports/render-loop`
-    - `shell/notifications`
     - `stats/cost`
     - `upstream`
 

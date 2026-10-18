@@ -312,7 +312,7 @@ installBackgroundLaneRuntime({
 });
 
 // …and the loader read-set lands in server-core's runtime-owned index, as wired
-// at boot. It is routing state, so `resetRuntimeProfile` leaves it alone: the
+// at boot. It is runtime state, so `resetRuntimeProfile` leaves it alone: the
 // read-set assertions below use keys only these tests' loaders write.
 installLoaderReadSetSink(recordLoaderReadSet);
 

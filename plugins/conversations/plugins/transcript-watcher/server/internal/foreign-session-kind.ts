@@ -9,7 +9,7 @@ import {
 // It is a standing data-loss condition — `rewindLastUserTurn` targets the chain
 // tail, so a foreign tail makes the Stop button truncate a stranger's live
 // transcript — so it should resurface periodically without spamming. Matches the
-// session-divergence / read-set-shrink 6h re-arm.
+// session-divergence 6h re-arm.
 const FOREIGN_SESSION_NOTIF_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 /**

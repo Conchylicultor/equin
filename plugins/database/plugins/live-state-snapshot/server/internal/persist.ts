@@ -6,13 +6,9 @@ import {
   executeOne,
   executeRows,
 } from "@plugins/database/plugins/sql-rows/core";
-import {
-  Resource,
-  removeReadSetTable,
-} from "@plugins/framework/plugins/server-core/core";
+import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { PersistMeta } from "@plugins/framework/plugins/server-core/core";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
-import { emitReadSetShrink } from "./read-set-shrink-hook";
 
 // The set of resource keys L2 persists: preloaded (with ONE default tuple) AND
 // DB-backed. `preload` is read GENERICALLY from the shared Resource.Declare
@@ -102,14 +98,6 @@ export async function captureWatermark(db: NodePgDatabase): Promise<string> {
   return row.xmin;
 }
 
-// `tables_read` is a real `text[]` (see tables-ddl.ts), which pg DOES decode to a
-// JS `string[]` — unlike the `name[]` an uncast `array_agg` over a catalog column
-// produces. `old_tables` is the pre-upsert value, absent on a first INSERT.
-const ReadSetDiffRowSchema = z.object({
-  old_tables: z.array(z.string()).nullable(),
-  new_tables: z.array(z.string()),
-});
-
 // Persist a value under (resource_key, params_key) — the runtime's persist hook,
 // called only on a whole value (never a loader's failure path) and serialized
 // per (key, params). `meta.mode` (see `PersistMeta`):
@@ -117,10 +105,7 @@ const ReadSetDiffRowSchema = z.object({
 //  - `replace` — a FULL recompute: value, position (the flight's watermark),
 //    `position_at`, `tables_read` (`meta.guardTables`, the run's read-set,
 //    written atomically with the value it describes) and the definition are all
-//    replaced. Also reads its own pre-upsert `tables_read` back (a
-//    data-modifying CTE) to detect a read-set SHED and emit it on the
-//    read-set-shrink seam — pure observability, a synchronous in-memory hand-off
-//    that never throws into the persist path;
+//    replaced;
 //  - `floor` — a persisted alias's snapshot after scoped refills: the value, and
 //    the position only ever LOWERED to the snapshot's base floor (`LEAST`); its
 //    `position_at` and `tables_read` are kept, because neither a replace nor a
@@ -181,67 +166,30 @@ export async function persistSnapshot(
     `);
     return;
   }
-  // Single-statement upsert that ALSO returns the PRE-upsert `tables_read` (the
-  // `prev` SELECT sees the row as of statement start, before the ON CONFLICT
-  // update takes effect) alongside the freshly-written set — a SHED with zero
-  // extra round-trip. On a first INSERT `prev` is empty → old_tables is NULL →
-  // "no shed".
-  const rows = await executeRows(db, {
-    query: drizzleSql`
-      WITH prev AS (
-        SELECT tables_read AS old_tables
-        FROM ${table}
-        WHERE resource_key = ${key} AND params_key = ${paramsKey}
-      )
-      INSERT INTO ${table}
-        (resource_key, params_key, value, position, tables_read, persisted_at,
-         position_at, definition, definition_at)
-      VALUES (
-        ${key},
-        ${paramsKey},
-        ${JSON.stringify(value)}::jsonb,
-        ${watermark}::numeric,
-        ${tablesArray},
-        now(),
-        now(),
-        ${meta.definition}::text,
-        now()
-      )
-      ON CONFLICT (resource_key, params_key) DO UPDATE
-        SET value = EXCLUDED.value,
-            position = EXCLUDED.position,
-            tables_read = EXCLUDED.tables_read,
-            persisted_at = EXCLUDED.persisted_at,
-            position_at = EXCLUDED.position_at,
-            definition = EXCLUDED.definition,
-            definition_at = EXCLUDED.definition_at
-      RETURNING
-        (SELECT old_tables FROM prev) AS old_tables,
-        tables_read AS new_tables
-    `,
-    row: ReadSetDiffRowSchema,
-    label: "persistSnapshot",
-  });
-  // Read-set shrink detection: every persisted resource is boot-critical, so a
-  // dropped dependency in its durable read-set is the ambiguous shed described in
-  // research/2026-07-08-global-read-set-shrink-guard.md — safe if a code change
-  // removed the dependency, unsafe if a data-dependent conditional query didn't
-  // fire. Indistinguishable here, so we SURFACE it (debug/read-set-shrink monitor)
-  // for human confirmation instead of changing behaviour. Emit is a pure in-memory
-  // hand-off (no I/O, never throws on the persist path).
-  const row = rows[0];
-  if (row?.old_tables) {
-    const newSet = new Set(row.new_tables);
-    const dropped = row.old_tables.filter((t) => !newSet.has(t));
-    if (dropped.length > 0) {
-      emitReadSetShrink({
-        resourceKey: key,
-        droppedTables: dropped,
-        oldTables: row.old_tables,
-        newTables: row.new_tables,
-      });
-    }
-  }
+  await db.execute(drizzleSql`
+    INSERT INTO ${table}
+      (resource_key, params_key, value, position, tables_read, persisted_at,
+       position_at, definition, definition_at)
+    VALUES (
+      ${key},
+      ${paramsKey},
+      ${JSON.stringify(value)}::jsonb,
+      ${watermark}::numeric,
+      ${tablesArray},
+      now(),
+      now(),
+      ${meta.definition}::text,
+      now()
+    )
+    ON CONFLICT (resource_key, params_key) DO UPDATE
+      SET value = EXCLUDED.value,
+          position = EXCLUDED.position,
+          tables_read = EXCLUDED.tables_read,
+          persisted_at = EXCLUDED.persisted_at,
+          position_at = EXCLUDED.position_at,
+          definition = EXCLUDED.definition,
+          definition_at = EXCLUDED.definition_at
+  `);
 }
 
 const PersistedReadSetRowSchema = z.object({
@@ -250,7 +198,7 @@ const PersistedReadSetRowSchema = z.object({
 });
 
 // Read the persisted read-sets of the USABLE param-less ("{}") rows in ONE
-// query, for the boot seed and the onReady usable check. Returns resource_key →
+// query, for the boot drift seed and the onReady usable check. Returns resource_key →
 // string[] (the pg driver returns a text[] column as a JS string[]). A key with
 // no usable row, or an empty `tables_read`, is "no usable read-set" — the caller
 // (boot init) force-FULL recomputes it.
@@ -274,52 +222,8 @@ export async function readPersistedReadSets(
   return out;
 }
 
-// `RETURNING resource_key` — the three row-counting mutations below share it.
+// `RETURNING resource_key` — the row-counting mutations below share it.
 const ResourceKeyRowSchema = z.object({ resource_key: z.string() });
-
-/**
- * Reconcile a single table out of the persisted read-set: remove `table` from
- * `tables_read` for every snapshot row whose `resource_key` is NOT in `keepKeys`,
- * and mirror the removal into the in-memory index (`removeReadSetTable`) so the
- * live `_debug` view is corrected without waiting for a restart. Used by a table's
- * owner to assert its reader-set invariant and evict a historical mis-attribution
- * (the read-set index is append-only + persisted + re-seeded, so a stale edge
- * otherwise survives forever). Safe: only drops edges to a table the resource does
- * not read. Returns the number of persisted rows changed.
- *
- * `keepKeys` binds as a Postgres text[] the same way `persistSnapshot` binds
- * `tables_read`: an explicit `ARRAY[…]::text[]` constructor (drizzle expands a JS
- * array into a comma-separated bound-param list, not a single array value). An
- * empty `keepKeys` yields `ARRAY[]::text[]`, and `resource_key <> ALL(ARRAY[]…)`
- * is vacuously true → the table is removed from every row. `RETURNING` makes the
- * changed-row count robust regardless of the driver's `rowCount` typing (matches
- * `clearPersistedSnapshots`).
- */
-export async function reconcileReadSetTable(
-  db: NodePgDatabase,
-  table: string,
-  keepKeys: readonly string[],
-): Promise<number> {
-  const keepArray = drizzleSql`ARRAY[${drizzleSql.join(
-    keepKeys.map((k) => drizzleSql`${k}`),
-    drizzleSql`, `,
-  )}]::text[]`;
-  const changed = await executeRows(db, {
-    query: drizzleSql`
-      UPDATE ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
-        SET tables_read = array_remove(tables_read, ${table})
-      WHERE resource_key <> ALL(${keepArray})
-        AND ${table} = ANY(tables_read)
-      RETURNING resource_key
-    `,
-    row: ResourceKeyRowSchema,
-    label: "reconcileReadSetTable",
-  });
-  // Mirror the removal into the live in-memory index so `_debug` is corrected
-  // immediately (no restart wait). Returns the keys it changed — ignored here.
-  removeReadSetTable(table, keepKeys);
-  return changed.length;
-}
 
 // `value` is the loader's own output round-tripped through `jsonb` — genuinely
 // caller-shaped, so `z.unknown()` is the honest assertion and the only one.

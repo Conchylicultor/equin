@@ -79,6 +79,7 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `network/live.serveValue`
+  - DB schema: `plugins/infra/plugins/background/plugins/catalog/server/internal/provider-tables.ts`
   - Exports (types):
     - `BackgroundKind`
     - `BackgroundKindSpec`

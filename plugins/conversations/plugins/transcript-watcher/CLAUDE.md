@@ -86,6 +86,7 @@ memo degrades to a full chain re-read on every push.
 - Server:
   - Contributes: `report-kind` "conversation-foreign-session"
   - Uses:
+    - `conversations/session-chain._conversationSessions`
     - `conversations/session-chain.listSessionChain`
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
@@ -93,6 +94,7 @@ memo degrades to a full chain re-read on every push.
     - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
     - `reports.recordReportDebounced`
     - `reports.ReportKind`
+    - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.getConversationClaudeSessionId`
   - Exports (types):
     - `AnchoredChain`
@@ -112,6 +114,7 @@ memo degrades to a full chain re-read on every push.
     - `refreshConversationChain`
     - `resolveAnchoredChain`
     - `resolveConversationTranscriptPaths`
+    - `transcriptChainReads`
     - `transcriptChainSignature`
     - `watchPaths`
     - `watchTranscript`

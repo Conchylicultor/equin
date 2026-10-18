@@ -65,8 +65,8 @@ installBackgroundLaneRuntime({
 });
 
 // Each finished loader entry hands its captured tables to server-core's
-// runtime-owned read-set — routing state the live-state change router inverts,
-// so it lives with the runtime rather than in this recorder (whose profile data
+// runtime-owned read-set — what the route drift guard (A8 / D5) and the persisted
+// `tables_read` read, so it lives with the runtime rather than in this recorder (whose profile data
 // a reset clears and whose kill-switch drops spans). This plugin owns only the
 // capture scope: the ambient loader entry installed above.
 installLoaderReadSetSink(recordLoaderReadSet);

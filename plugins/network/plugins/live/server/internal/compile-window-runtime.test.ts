@@ -1,8 +1,7 @@
 /**
  * End-to-end: a `compileWindowQuery`-compiled window / point resource wired
- * into a real `createResourceRuntime`, driven through the L4 change-feed's two
- * routers (`routeTableChange`, which serves these routed resources, and the
- * legacy `applyLegacyFullChange`, which must skip them). The deep membership semantics are pinned by
+ * into a real `createResourceRuntime`, driven through the L4 change-feed's
+ * router (`routeTableChange`). The deep membership semantics are pinned by
  * `resource-runtime/core/runtime-window-membership.test.ts`; THIS suite pins
  * that the compiled artifacts (params-decoded windowed loader, `windowIdsOf`,
  * the codec-derived `idsOf`) wire those semantics correctly. The fake `db`
@@ -186,8 +185,8 @@ interface SentFrame {
   order?: string[];
 }
 
-function harness(table = "rows") {
-  const runtime = createResourceRuntime({ readSet: () => [table] });
+function harness() {
+  const runtime = createResourceRuntime();
   const frames: SentFrame[] = [];
   const ws = {
     send(raw: string) {
@@ -208,10 +207,7 @@ function harness(table = "rows") {
     deltas(key: string) {
       return frames.filter((f) => f.key === key && f.kind === "delta");
     },
-    // One base-table change as the change feed delivers it (`routeChange`): to
-    // BOTH routers — the compiled resources are routed, so `routeTableChange`
-    // serves them and the legacy `applyLegacyFullChange` must skip them (a double
-    // delivery would show as a second delta).
+    // One base-table change as the change feed delivers it (`routeChange`).
     feed(changed: string, op: "I" | "U" | "D", ids: string[]) {
       runtime.routeTableChange({
         source: "feed",
@@ -220,10 +216,6 @@ function harness(table = "rows") {
         ids,
         keys: null,
         unchanged: null,
-      });
-      runtime.applyLegacyFullChange({
-        source: "feed",
-        table: changed,
       });
     },
   };
@@ -367,7 +359,7 @@ describe("compiled window resource — per-params orderBy, end-to-end", () => {
       rowKey: ROW_KEY,
       db,
     });
-    const h = harness("sorted");
+    const h = harness();
     h.runtime.defineResource(descriptor, serverOpts);
 
     table.set("a", { n: 1, m: 3 });

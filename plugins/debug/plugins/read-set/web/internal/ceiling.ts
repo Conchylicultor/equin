@@ -1,38 +1,20 @@
 import type { ResourceDebug, ResourcePolicy } from "../../core";
 
 // The read-set ceiling (A7): what a change costs each entry, read off the
-// runtime's own fields — `policy` (what the entry is) and `legacyReach` (the
-// bases its legacy router indexes it under) — never re-derived here from routes
-// or read-sets, so the pane cannot disagree with the router about who a write
-// reaches, or how.
+// runtime's own fields — `policy` (what the entry is), `routes` /
+// `relationReads` (what
+// its plan declares, a routed entry's or an external one's) and `routeDrifted`
+// (what its drift guard caught) — never re-derived here from read-sets, so the
+// pane cannot disagree with the router about who a write reaches, or how.
 
 /**
- * An entry the legacy router reaches: a write to ANY of its bases recomputes
- * it FULL. Every `legacy-full` entry, plus every external or unbound entry
- * whose captured read-set gives it a non-empty `legacyReach`.
+ * One `full` route of an entry's plan — a routed entry's, or an external
+ * one's declared reads: a declared FULL, with its reason.
  */
-export interface LegacyFullEntry {
-  key: string;
-  /** `legacy-full`, or the `external` / `unbound` entry the router reaches beside its own notify. */
-  policy: ResourcePolicy;
-  /** Its `legacyReach`, sorted (base-table space); `[]` = no loader run captured yet. */
-  bases: string[];
-  /** Subscribed params-tuples. */
-  tuples: number;
-  persisted: boolean;
-  /** Age of the persisted row's position (ms); `null` when unknown or not persisted. */
-  positionAgeMs: number | null;
-  /**
-   * FULL loads one base write costs: one per subscribed tuple, or — with none
-   * subscribed — the `{}` tuple a persisted entry keeps current (an
-   * unpersisted entry with no subscriber loads nothing).
-   */
-  loadsPerWrite: number;
-}
-
-/** One `full` route of a routed entry: a declared FULL, with its reason. */
 export interface RoutedFullEntry {
   key: string;
+  /** `routed`, or the `external` entry whose declared reads reach it beside its notify. */
+  policy: ResourcePolicy;
   /** The route's id. */
   route: string;
   /** The table it is reached through. */
@@ -40,17 +22,31 @@ export interface RoutedFullEntry {
   reason: string;
 }
 
-/** A routed entry's A8 drift: captured tables no route names (raw-table space). */
+/** A view (or rollup) an entry's plan reads whole, reached through its bases. */
+export interface RelationReadEntry {
+  key: string;
+  policy: ResourcePolicy;
+  relation: string;
+  /** Its relation bases, sorted: a write to any recomputes the entry FULL. */
+  bases: string[];
+  reason: string;
+}
+
+/** An entry's drift (A8 routed, D5 external): captured tables its plan does not cover (raw-table space). */
 export interface DriftEntry {
   key: string;
+  policy: ResourcePolicy;
   tables: string[];
 }
 
 export interface Ceiling {
-  legacyFull: LegacyFullEntry[];
   routedFull: RoutedFullEntry[];
+  relationReads: RelationReadEntry[];
   drift: DriftEntry[];
-  /** External entries the legacy router does NOT reach: only their own `notify()` does. */
+  /**
+   * External entries no change to Postgres reaches: no declared route or
+   * relation read, no drift — only their own `notify()`.
+   */
   pureExternal: string[];
   /** Every entry's key, by policy — each key under exactly one. */
   keys: Record<ResourcePolicy, string[]>;
@@ -62,71 +58,78 @@ const byKey = (a: { key: string }, b: { key: string }): number =>
 /**
  * Classify every `_debug` entry:
  *
- * - `legacyFull` — every entry with `policy === "legacy-full"` (listed even
- *   before its loader ran, with no bases) or a non-empty `legacyReach` (an
- *   external entry whose loader read the DB — `automations.catalog`,
- *   `edited-files` — is recomputed FULL by its bases, beside its own notify).
- *   Bases are transitive, rollups expanded: `edited-files` lists `attempts,
- *   conversations, tasks`, not the `conversations_v` it read.
- * - `routedFull` — each `full` route of a routed entry, with its reason.
- * - `drift` — a routed entry's non-empty `routeDrifted`, as the runtime's guard
- *   recorded it (raw-table space — NOT recomputed from the bases, which would
- *   flag a view's rollup sources that the plan reaches as derived reads).
- * - `pureExternal` — external entries with no legacy reach.
+ * - `routedFull` — each `full` route of any entry's plan, with its reason —
+ *   a routed entry's, or an external one's declared reads (D1).
+ * - `relationReads` — each view / rollup a plan reads whole, with its bases.
+ * - `drift` — any entry's non-empty `routeDrifted`, as the runtime's guard
+ *   recorded it (A8 routed, D5 external; raw-table space — NOT recomputed from
+ *   the bases, which would flag a view's rollup sources that the plan reaches
+ *   as derived reads).
+ * - `pureExternal` — external entries no table change reaches (see `Ceiling`).
  * - `keys` — every key under its policy.
  */
 export function computeCeiling(resources: readonly ResourceDebug[]): Ceiling {
-  const legacyFull: LegacyFullEntry[] = [];
   const routedFull: RoutedFullEntry[] = [];
+  const relationReads: RelationReadEntry[] = [];
   const drift: DriftEntry[] = [];
   const pureExternal: string[] = [];
   const keys: Record<ResourcePolicy, string[]> = {
     routed: [],
-    "legacy-full": [],
     external: [],
+    unrouted: [],
     unbound: [],
   };
 
   for (const r of resources) {
     keys[r.policy].push(r.key);
-    if (r.policy === "legacy-full" || r.legacyReach.length > 0) {
-      legacyFull.push({
-        key: r.key,
-        policy: r.policy,
-        bases: [...r.legacyReach].sort(),
-        tuples: r.tuples,
-        persisted: r.persisted,
-        positionAgeMs: r.positionAgeMs,
-        loadsPerWrite: Math.max(r.tuples, r.persisted ? 1 : 0),
-      });
-    } else if (r.policy === "external") {
+    if (
+      r.policy === "external" &&
+      !r.routes?.length &&
+      r.relationReads.length === 0 &&
+      r.routeDrifted.length === 0
+    ) {
       pureExternal.push(r.key);
     }
-    if (r.policy === "routed") {
-      for (const route of r.routes ?? []) {
-        if (route.map !== "full") continue;
-        routedFull.push({
-          key: r.key,
-          route: route.id,
-          table: route.table,
-          reason: route.reason,
-        });
-      }
-      if (r.routeDrifted.length > 0) {
-        drift.push({ key: r.key, tables: [...r.routeDrifted].sort() });
-      }
+    // Whatever the policy: an external entry's declared reads are routes too.
+    for (const route of r.routes ?? []) {
+      if (route.map !== "full") continue;
+      routedFull.push({
+        key: r.key,
+        policy: r.policy,
+        route: route.id,
+        table: route.table,
+        reason: route.reason,
+      });
+    }
+    for (const read of r.relationReads) {
+      relationReads.push({
+        key: r.key,
+        policy: r.policy,
+        relation: read.relation,
+        bases: [...read.bases].sort(),
+        reason: read.reason,
+      });
+    }
+    if (r.routeDrifted.length > 0) {
+      drift.push({
+        key: r.key,
+        policy: r.policy,
+        tables: [...r.routeDrifted].sort(),
+      });
     }
   }
 
-  legacyFull.sort(byKey);
   routedFull.sort(
     (a, b) =>
       byKey(a, b) ||
       a.table.localeCompare(b.table) ||
       a.route.localeCompare(b.route),
   );
+  relationReads.sort(
+    (a, b) => byKey(a, b) || a.relation.localeCompare(b.relation),
+  );
   drift.sort(byKey);
   pureExternal.sort();
   for (const list of Object.values(keys)) list.sort();
-  return { legacyFull, routedFull, drift, pureExternal, keys };
+  return { routedFull, relationReads, drift, pureExternal, keys };
 }

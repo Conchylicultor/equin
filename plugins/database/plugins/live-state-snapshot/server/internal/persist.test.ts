@@ -21,13 +21,8 @@ import {
   readPersistedSnapshots,
   clearPersistedSnapshots,
   sweepUnusableSnapshots,
-  reconcileReadSetTable,
   type L2Expectation,
 } from "./persist";
-import {
-  onReadSetShrink,
-  type ReadSetShrinkEvent,
-} from "./read-set-shrink-hook";
 
 // Real-DB invariant suite for the L2 persist SQL: xid8 watermark monotonicity,
 // the ON CONFLICT upsert, the text[] `tables_read` round-trip (incl. the empty
@@ -462,78 +457,6 @@ describe("sweepUnusableSnapshots (boot sweep)", () => {
     const deleted = await sweepUnusableSnapshots(t.db, exp([]));
     expect(deleted).toBe(0);
     expect(await countRows()).toBe(1);
-  });
-});
-
-describe("read-set shrink detection", () => {
-  // Capture emitted shrink events via the seam. The handler is process-global
-  // (last-writer-wins), so we install a spy for this block and restore a no-op at
-  // the end. `captured` is reset between assertions.
-  const captured: ReadSetShrinkEvent[] = [];
-
-  test("emits ONCE on a shed, never on fresh insert / grow / unchanged / a floor persist", async () => {
-    onReadSetShrink((e) => captured.push(e));
-
-    // Fresh insert (no prior row) → NO emit.
-    captured.length = 0;
-    await replace("k", "{}", {}, "1", ["a", "b"]);
-    expect(captured).toHaveLength(0);
-
-    // Shrink ["a","b"] → ["a"] drops "b" → emit ONCE.
-    captured.length = 0;
-    await replace("k", "{}", {}, "2", ["a"]);
-    expect(captured).toHaveLength(1);
-    expect(captured[0]).toEqual({
-      resourceKey: "k",
-      droppedTables: ["b"],
-      oldTables: ["a", "b"],
-      newTables: ["a"],
-    });
-
-    // Grow ["a"] → ["a","c"] (no dropped table) → NO emit.
-    captured.length = 0;
-    await replace("k", "{}", {}, "3", ["a", "c"]);
-    expect(captured).toHaveLength(0);
-
-    // Unchanged ["a","c"] → ["a","c"] → NO emit.
-    captured.length = 0;
-    await replace("k", "{}", {}, "4", ["a", "c"]);
-    expect(captured).toHaveLength(0);
-
-    // A floor persist never writes `tables_read`, so it never sheds.
-    captured.length = 0;
-    await floor("k", {}, "1", []);
-    expect(captured).toHaveLength(0);
-
-    // Restore the no-op handler so no later suite inherits this spy.
-    onReadSetShrink(() => {});
-  });
-});
-
-describe("reconcileReadSetTable", () => {
-  test("removes the table from non-kept rows, returns changed count, leaves kept rows intact", async () => {
-    // `attempts` carries a stale `notifications` edge; the owner row keeps it.
-    await replace("attempts", "{}", {}, "1", [
-      "attempts_v",
-      "conversations_v",
-      "notifications",
-    ]);
-    await replace("notifications", "{}", {}, "1", ["notifications"]);
-
-    const changed = await reconcileReadSetTable(t.db, "notifications", [
-      "notifications",
-    ]);
-    expect(changed).toBe(1);
-
-    // The stale edge is evicted from `attempts`, order otherwise preserved.
-    expect((await selectRow("attempts", "{}"))!.tables_read).toEqual([
-      "attempts_v",
-      "conversations_v",
-    ]);
-    // The sole legitimate reader row is untouched.
-    expect((await selectRow("notifications", "{}"))!.tables_read).toEqual([
-      "notifications",
-    ]);
   });
 });
 

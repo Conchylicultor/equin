@@ -1,7 +1,7 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   setLiveStateSnapshotHooks,
-  seedReadSetIndex,
+  seedRouteDrift,
   unboundedWindowKeys,
   validatePersistedValue,
 } from "@plugins/framework/plugins/server-core/core";
@@ -29,9 +29,9 @@ import { producedPersistReports } from "./produced-reports";
 
 // Install the L2 snapshot subsystem during the `onReadyBlocking` barrier: create
 // the snapshot table, inject the persist hooks into the resource runtime, and seed
-// the read-set index from the durable `tables_read` column — all before the
+// the drift guard from the durable `tables_read` column — all before the
 // readiness flag flips (so a persist can never fire with the hooks unset, and
-// catch-up's first `applyLegacyFullChange` sees a non-empty table→resource inversion).
+// catch-up's first replay reaches a drifted read).
 //
 // This is a GRACEFUL-DEGRADATION hook. The snapshot layer is a cold-boot
 // *accelerator*, not a correctness prerequisite: if it can't initialize, the
@@ -94,7 +94,7 @@ export async function initSnapshotSubsystem(
       },
     });
     const exp = l2Expectation();
-    // Sweep every row that is not USABLE before seeding the read-set index or
+    // Sweep every row that is not USABLE before seeding the route drift bases or
     // serving a boot snapshot: a key no longer persisted (migrated to a bounded
     // window / point, external, its `preload` dropped), a row another
     // definition wrote, or one an older writer left (C22). Every read refuses
@@ -109,7 +109,7 @@ export async function initSnapshotSubsystem(
       );
     }
     // A6 (stale rows): a persisted value over a produced table may predate the
-    // code that stopped persisting it — delete it (before the read-set seed
+    // code that stopped persisting it — delete it (before the route drift seed
     // below can index it), and say so once.
     const sweptProduced = await sweepProducedSnapshots(
       db,
@@ -144,14 +144,23 @@ export async function initSnapshotSubsystem(
         "stderr",
       );
     }
-    // Only non-empty read-sets of usable rows are seeded; an empty one means
-    // "no usable read-set" → force-FULL in onReady.
     const persistedReadSets = await readPersistedReadSets(db, exp);
-    const seed: Record<string, string[]> = {};
-    for (const [key, tables] of persistedReadSets) {
-      if (tables.length > 0) seed[key] = tables;
+    // D7: a persisted entry's drift survives the restart — each `tables_read`
+    // relation its declaration does not cover (the drift guard's own
+    // predicate: a declared rollup or view is covered) fails open again, so
+    // catch-up's replay and every later write to it reach the entry. Not an
+    // error: the row may predate a declaration change (or carry an edge the
+    // code no longer reads), so the runtime reports a drift only when a load
+    // reads the relation again — this line just says what was routed.
+    const drifted = seedRouteDrift(
+      [...persistedReadSets].map(([key, tablesRead]) => ({ key, tablesRead })),
+    );
+    for (const { key, tables } of drifted) {
+      log.publish(
+        `[live-state-snapshot] "${key}" last read ${tables.join(", ")} outside its declared reads — routed FULL on them until its next load: still read → reported as drift, else un-routed`,
+        "stdout",
+      );
     }
-    seedReadSetIndex(seed);
   } catch (err) {
     // Uninstalled: a half-initialized L2 persists nothing, exactly as if the
     // hooks had never been installed.

@@ -14,8 +14,13 @@
 
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
-import { createHarness, tick, type RecordedFrame } from "./test-support";
-import { defineRoutedTable } from "./testing/routed-fixture";
+import {
+  createHarness,
+  tick,
+  type Harness,
+  type RecordedFrame,
+} from "./test-support";
+import { defineRoutedTable, wholeReach } from "./testing/routed-fixture";
 import type { ResourceDelivery } from "./runtime";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
@@ -26,28 +31,34 @@ function pushedSince(h: { frames: RecordedFrame[] }, before: number) {
     .filter((f) => f.kind === "update" || f.kind === "delta");
 }
 
+// A push value reading table `t` whole (a reach plan), as a served db value is.
+function defineR(h: Harness): void {
+  h.runtime.defineResource(
+    { key: "r", schema: z.number(), validateParams: () => {} },
+    { mode: "push", reach: wholeReach(["t"]), loader: async () => 1 },
+  );
+}
+
 describe("timing on pushed frames", () => {
   test("a feed-driven update carries the earliest change time of the changes it coalesced", async () => {
     const delivered: ResourceDelivery[] = [];
     const h = createHarness({
-      readSet: () => ["t"],
       onDelivered: (_key, info) => delivered.push(info),
     });
-    h.runtime.defineResource({
-      key: "r",
-      mode: "push",
-      schema: z.number(),
-      loader: async () => 1,
-    });
+    defineR(h);
     await h.subscribe("r");
     const before = h.frames.length;
     const t0 = Date.now();
 
     // Two changes land in one pending before the flush: later first, earlier second.
     for (const changedAt of [2_000, 1_000]) {
-      h.runtime.applyLegacyFullChange({
+      h.runtime.routeTableChange({
         source: "feed",
         table: "t",
+        op: "U",
+        ids: null,
+        keys: null,
+        unchanged: null,
         changedAt,
       });
     }
@@ -67,13 +78,8 @@ describe("timing on pushed frames", () => {
   });
 
   test("the sub-ack that answers a subscribe carries no timing", async () => {
-    const h = createHarness({ readSet: () => ["t"] });
-    h.runtime.defineResource({
-      key: "r",
-      mode: "push",
-      schema: z.number(),
-      loader: async () => 1,
-    });
+    const h = createHarness();
+    defineR(h);
     await h.subscribe("r");
     const acks = h.frames.filter((f) => f.kind === "sub-ack");
     expect(acks).toHaveLength(1);
@@ -103,18 +109,19 @@ describe("timing on pushed frames", () => {
   test("a change with no time (catch-up replay, pre-upgrade NOTIFY) ships a frame without timing", async () => {
     const delivered: ResourceDelivery[] = [];
     const h = createHarness({
-      readSet: () => ["t"],
       onDelivered: (_key, info) => delivered.push(info),
     });
-    h.runtime.defineResource({
-      key: "r",
-      mode: "push",
-      schema: z.number(),
-      loader: async () => 1,
-    });
+    defineR(h);
     await h.subscribe("r");
     const before = h.frames.length;
-    h.runtime.applyLegacyFullChange({ source: "feed", table: "t" });
+    h.runtime.routeTableChange({
+      source: "feed",
+      table: "t",
+      op: "U",
+      ids: null,
+      keys: null,
+      unchanged: null,
+    });
     await tick();
     const update = pushedSince(h, before)[0];
     expect(update?.kind).toBe("update");

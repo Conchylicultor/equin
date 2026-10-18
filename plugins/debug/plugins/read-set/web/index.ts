@@ -8,7 +8,7 @@ export { readSetPane } from "./panes";
 
 export default {
   description:
-    "Read-set debug pane: the captured loader→table index and the read-set ceiling — every live-state resource under its change policy (routed, legacy-full, external, unbound), with legacy-full relation bases, routed full routes and route drift.",
+    "Read-set debug pane: the captured loader→table index and the read-set ceiling — every live-state resource under its change policy (routed, external, unrouted, unbound), with its full routes, relation reads and route drift.",
   contributions: [
     Pane.Register({ pane: readSetPane }),
     DebugApp.Sidebar({

@@ -1627,12 +1627,14 @@ describe("named scenarios", () => {
   });
 });
 
-// --- Registration and the legacy path ---------------------------------------
+// --- Registration -----------------------------------------------------------
 
-describe("registration and the legacy path", () => {
+describe("registration", () => {
   const plan = mintRoutePlan({ routes: [], usesOf: () => new Map() });
 
-  test("A5: a dependsOn edge whose upstream is a routed entry throws — route the table, not the resource", () => {
+  // A `routes` entry is a membership entry, so D32 refuses it as a cascade
+  // upstream (the old A5 was its redundant twin, and is gone).
+  test("D32: a dependsOn edge whose upstream is a `routes` entry throws", () => {
     const f = routed();
     expect(() =>
       f.h.runtime.defineResource({
@@ -1642,10 +1644,12 @@ describe("registration and the legacy path", () => {
         dependsOn: [{ resource: { key: "win" } as never }],
         loader: () => 1,
       }),
-    ).toThrow(/route the table, not the resource/);
+    ).toThrow(
+      /cascades from the keyed window "win" — a membership drain cascades nothing \(D32\)/,
+    );
   });
 
-  test("A5 in the other registration order: a routed entry registered after a downstream naming it throws", () => {
+  test("D32 in the other registration order: a `routes` entry registered after a downstream naming it throws", () => {
     const h = createHarness();
     h.runtime.defineResource({
       key: "downstream",
@@ -1673,7 +1677,80 @@ describe("registration and the legacy path", () => {
           loader: () => [],
         },
       ),
-    ).toThrow(/"downstream" dependsOn the routed resource "win"/);
+    ).toThrow(
+      /"downstream" cascades from the keyed window "win" — a membership drain cascades nothing \(D32\)/,
+    );
+  });
+
+  // A reach EXTERNAL upstream may cascade (`edited-files` →
+  // `review.plugin-changes`): its cascade carries its own changes, and the
+  // downstream declares its own reads. A table change to the upstream's reads
+  // reaches the downstream through the cascade.
+  function reachUpstreamCascade(order: "upstream-first" | "downstream-first") {
+    const h = createHarness();
+    const downLoads: ResourceParams[] = [];
+    const defineUp = () =>
+      h.runtime.defineExternalResource(
+        { key: "edits", schema: z.number(), validateParams: () => {} },
+        {
+          mode: "push",
+          reach: mintReachPlan({
+            routes: [
+              {
+                id: "c",
+                table: "conversations",
+                map: { kind: "full", reason: "resolves the worktree" },
+                columns: ["id"],
+              },
+            ],
+            usesOf: () => new Map([["c", { role: "membership" as const }]]),
+          }),
+          loader: () => 1,
+        },
+      );
+    const defineDown = () =>
+      h.runtime.defineExternalResource(
+        { key: "changes", schema: z.number(), validateParams: () => {} },
+        {
+          mode: "push",
+          dependsOn: [
+            { resource: { key: "edits" } as never, toSubscribed: true },
+          ],
+          loader: (p) => {
+            downLoads.push(p);
+            return downLoads.length;
+          },
+        },
+      );
+    if (order === "upstream-first") {
+      defineUp();
+      defineDown();
+    } else {
+      defineDown();
+      defineUp();
+    }
+    return { h, downLoads };
+  }
+
+  test("a reach external upstream may cascade: a change to its reads reaches the downstream", async () => {
+    const { h, downLoads } = reachUpstreamCascade("upstream-first");
+    await h.subscribe("edits", {});
+    await h.subscribe("changes", { id: "a" });
+    downLoads.length = 0;
+    h.runtime.routeTableChange({
+      source: "feed",
+      table: "conversations",
+      op: "U",
+      ids: ["x"],
+      keys: null,
+      unchanged: null,
+    });
+    await settle();
+    expect(downLoads).toEqual([{ id: "a" }]);
+  });
+
+  test("a reach external upstream registered after a downstream naming it is accepted", () => {
+    expect(() => reachUpstreamCascade("downstream-first")).not.toThrow();
   });
 
   test("routes need a membership, refuse a legacy scope key, and have unique ids", () => {
@@ -1712,16 +1789,17 @@ describe("registration and the legacy path", () => {
         loader: () => [],
       }),
     ).toThrow(/duplicate route id "r"/);
-    // An external resource's truth is outside Postgres: no table routes into it.
+    // An external resource's truth is outside Postgres: no keyed route plan
+    // routes into it.
     expect(() =>
-      // An external resource is never ROUTED (D31) — the cast stands in for
-      // the type, which has no `routes` on the external window arm.
+      // An external resource is never keyed-ROUTED (D31) — the cast stands in
+      // for the type, which has no `routes` on the external window arm.
       h.runtime.defineExternalResource(contract("d"), {
         routes: plan,
         membership: { kind: "point", idsOf: () => [] },
         loader: () => [],
       } as never),
-    ).toThrow(/no table change may route into it/);
+    ).toThrow(/an external resource's truth lives outside Postgres/);
   });
 
   test("a plan is minted, never written: an unminted plan an `as` cast let through throws", () => {
@@ -1793,57 +1871,6 @@ describe("registration and the legacy path", () => {
         } as never,
       ),
     ).toThrow(/"routes" and "dependsOn" are exclusive/);
-  });
-
-  test("a routed entry is served by routeTableChange only — the legacy read-set path never reaches it", async () => {
-    const f = await seeded({ runtime: { readSet: () => ["hosts"] } });
-    const at = f.loads.length;
-    f.h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "hosts",
-    });
-    await settle();
-    expect(f.loadsSince(at)).toEqual([]);
-    f.change("hosts", "U", { ids: ["h1"] });
-    await settle();
-    expect(f.loadsSince(at)).toEqual([{ params: W3, ids: ["h1"] }]);
-  });
-
-  test("the legacy table → resource inversion is memoized on the read-set version, so a same-size swap is seen once the version moves", async () => {
-    const readSets = new Map<string, string[]>([["legacy", ["t1"]]]);
-    let version = 1;
-    let loads = 0;
-    const h = createHarness({
-      readSet: (key) => readSets.get(key) ?? [],
-      readSetVersion: () => version,
-    });
-    h.runtime.defineResource({
-      key: "legacy",
-      mode: "push",
-      schema: z.number(),
-      loader: () => ++loads,
-    });
-    await h.subscribe("legacy");
-    const feed = (table: string) =>
-      h.runtime.applyLegacyFullChange({
-        source: "feed",
-        table,
-      });
-    const at = loads;
-    feed("t1");
-    await settle();
-    expect(loads).toBe(at + 1);
-    readSets.set("legacy", ["t2"]); // same total size as before
-    feed("t2");
-    await settle();
-    expect(loads).toBe(at + 1); // the memo still holds: the version did not move
-    version++;
-    feed("t2");
-    await settle();
-    expect(loads).toBe(at + 2);
-    feed("t1");
-    await settle();
-    expect(loads).toBe(at + 2);
   });
 });
 
@@ -1922,18 +1949,6 @@ describe("reach — a non-keyed entry routed by full routes", () => {
     g.change("other");
     await settle();
     expect(g.loads).toEqual([JOINED]);
-  });
-
-  test("the legacy read-set path never reaches a reach entry, whatever it captured", async () => {
-    const g = grouping({ readSet: () => ["hosts", "other"] });
-    await g.h.subscribe("groups", PLAIN);
-    g.loads.length = 0;
-    g.h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "other",
-    });
-    await settle();
-    expect(g.loads).toEqual([]);
   });
 
   test("a tuple the change skips owes only its ack — no load", async () => {
@@ -2043,16 +2058,18 @@ describe("reach — a non-keyed entry routed by full routes", () => {
         } as never,
       ),
     ).toThrow(/"identityTable" on key "k3" — the legacy scope policy is gone/);
+    // A non-keyed EXTERNAL entry may declare reach (D1) — the type allows it.
     expect(() =>
       h.runtime.defineExternalResource(
         { key: "k4", schema: z.number(), validateParams: () => {} },
-        {
-          mode: "push",
-          reach,
-          loader: () => 1,
-        } as never,
+        { mode: "push", reach, loader: () => 1 },
       ),
-    ).toThrow(/no table change may route into it/);
+    ).not.toThrow();
+    expect(h.runtime.scopedResourceTables()).toContainEqual({
+      key: "k4",
+      table: "t",
+      via: 'route "r"',
+    });
   });
 });
 

@@ -20,12 +20,13 @@ export type {
 } from "../test-support";
 // The shared routed fixture (P8 step 23b): a keyed resource declared the way a
 // compiled collection is — a minted identity route and a membership — plus the
-// change feed's delivery to both routers, and the runtime harness itself.
+// change feed's delivery, a non-keyed value's whole-table reach plan, and the
+// runtime harness itself.
 export {
   defineRoutedTable,
   feedChange,
   identityPlan,
-  legacyFull,
+  wholeReach,
 } from "./routed-fixture";
 export type { FedChange, RoutedTable, RoutedTableSpec } from "./routed-fixture";
 export { createHarness } from "../test-support";

@@ -42,6 +42,9 @@ export { onSessionTranscriptWritten } from "./internal/session-writes";
 // totals) hears about a sub-agent's append.
 export { onTranscriptWritten } from "./internal/session-writes";
 export { resolveConversationTranscriptPaths } from "./internal/resolve-chain";
+// What `resolveConversationTranscriptPaths` reads from Postgres, as a live value's
+// declared `reads` — every value whose loader resolves the chain passes it.
+export { transcriptChainReads } from "./internal/chain-reads";
 // The ownership partition itself, for consumers that need the rejected half —
 // a monitor auditing chains, or the status reconciler's adoption gate — rather than just
 // the files to read.

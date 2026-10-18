@@ -6,9 +6,8 @@
 // per-tuple decision, so it names no contributor and touches no registry.
 //
 // See research/2026-09-29-global-scoped-change-routing.md (§Runtime contract,
-// §Algorithm). The legacy read-set path (`applyLegacyFullChange`) serves every
-// entry that declares no routes or reach (a non-keyed DB-backed entry), FULL,
-// through its read-set expanded to relation bases.
+// §Algorithm). Every DB-backed entry declares routes or a reach plan — one
+// with neither is reached by no change, and change-feed refuses it at boot.
 
 /**
  * Where a change came from. `feed` — the Postgres change feed (a trigger's
@@ -281,6 +280,23 @@ export type FullRoute = Route & {
 };
 
 /**
+ * A relation (a view, or a trigger-maintained rollup) a non-keyed entry's
+ * loader reads WHOLE, named as the loader's SQL names it (a served value's
+ * `reads.tables` naming a view). No route names it — a change names only base
+ * tables, and a view has no trigger — so the runtime expands it to its relation
+ * bases (`ResourceRuntimeOptions.relationBases`) once they are known
+ * (`ResourceRuntime.indexRelationReads`), and a write to any base recomputes
+ * every target FULL. The drift guard (A8) accepts the relation's own name in a
+ * capture, which records relations as the SQL read them.
+ */
+export interface RelationRead {
+  /** The relation's name, as a captured read-set records it. */
+  relation: string;
+  /** Why the value reads it whole — shown with its bases in `_debug`. */
+  reason: string;
+}
+
+/**
  * A table a non-keyed entry's loader reads that has NO change source by
  * declaration — opted out of the feed (`ExcludeFromChangeFeed`): a bulk cache
  * the value reads through a memo keyed on something it does route (a served
@@ -304,7 +320,9 @@ export interface ReachPlanInput<
   /**
    * No L2 fingerprint: a hand-written loader (a served value) has no compiled
    * SQL to fingerprint, and a `:groups` aggregate is never persisted. A
-   * persisted reach value's rows carry a NULL definition, as a legacy one's did.
+   * persisted reach value (`notifications.unread`, `icons.saved-sprites`) keeps
+   * rows with a NULL definition, which the L2 usable-row predicate matches
+   * against the NULL it expects (NULL matches NULL).
    */
   definition?: never;
   /**
@@ -316,6 +334,8 @@ export interface ReachPlanInput<
   derivedReads?: never;
   /** Tables read outside the change feed by declaration — see `UnfedRead`. */
   unfed?: readonly UnfedRead[];
+  /** Views / rollups read whole, reached through their bases — see `RelationRead`. */
+  relations?: readonly RelationRead[];
 }
 
 /**
@@ -333,6 +353,7 @@ export interface ReachPlan<
   definition?: never;
   derivedReads?: never;
   unfed?: readonly UnfedRead[];
+  relations?: readonly RelationRead[];
 }
 
 /**
@@ -405,7 +426,8 @@ export function mintRoutePlan<P extends Record<string, string>>(
 /**
  * Mint a non-keyed entry's reach plan (see `mintRoutePlan`). Throws on an
  * `unfed` table a route names (it is either routed or read outside the feed),
- * listed twice, or with no reason.
+ * listed twice, or with no reason — and on a relation read that is also a
+ * route or unfed table, listed twice, or with no reason.
  */
 export function mintReachPlan<P extends Record<string, string>>(
   plan: ReachPlanInput<P>,
@@ -426,10 +448,33 @@ export function mintReachPlan<P extends Record<string, string>>(
     }
     seen.add(u.table);
   }
+  const relations = plan.relations ?? [];
+  const relationSeen = new Set<string>();
+  for (const r of relations) {
+    if (routed.has(r.relation) || seen.has(r.relation)) {
+      throw new Error(
+        `mintReachPlan: "${r.relation}" is both a relation read and ${routed.has(r.relation) ? "a route table" : "read outside the feed"} — a relation read is a view or rollup reached through its bases, never a routed or unfed table.`,
+      );
+    }
+    if (relationSeen.has(r.relation)) {
+      throw new Error(
+        `mintReachPlan: relation "${r.relation}" is listed twice — one entry per relation.`,
+      );
+    }
+    if (r.reason.trim() === "") {
+      throw new Error(
+        `mintReachPlan: relation "${r.relation}" is read with no reason.`,
+      );
+    }
+    relationSeen.add(r.relation);
+  }
   return {
     routes: plan.routes,
     usesOf: plan.usesOf,
     ...(unfed.length > 0 ? { unfed } : {}),
+    // Only when non-empty, like `unfed`: a plan reading no relation is the
+    // shape it always was.
+    ...(relations.length > 0 ? { relations } : {}),
     [MINTED]: true,
   };
 }

@@ -26,10 +26,12 @@ The value is the `allowFiles` live value (`allow-files`, params `{ id }` — the
 - Server:
   - Contributes: `resource.declare` "allow-files"
   - Uses:
+    - `conversations/workspace.findWorkspaceOfConversation`
     - `infra/file-watcher.acquireDirWatch`
     - `infra/file-watcher.DirWatchRelease`
     - `network/live.serveValue`
-    - `tasks/tasks-core.getConversation`
+    - `tasks/tasks-core._attempts`
+    - `tasks/tasks-core._conversations`
   - Resources: `allow-files` (push, notified)
 - Cross-plugin:
   - Uses tokens:
@@ -37,8 +39,6 @@ The value is the `allowFiles` live value (`allow-files`, params `{ id }` — the
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
-- Exemptions:
-  - Exempts itself from: `no-db-backed-notify` — `server/internal/allow-files-resource.ts` (debt)
 - Shared:
   - Exports (types): `AllowFiles`
   - Exports (values): `allowFiles`

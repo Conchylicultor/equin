@@ -21,8 +21,8 @@
  *   - a persisted sm snapshot survives the N→0 sub transition.
  *
  * The alias is routed (its identity route, `routeTableChange`): since P8 steps
- * 23–24 (23a) the legacy router recomputes FULL only, so the downstream-cascade
- * and default-off cases it served went with it.
+ * 23–24 (23a) a non-membership entry recomputes FULL only, so the
+ * downstream-cascade and default-off cases went with it.
  *
  * The pure membership DIFF (all the id-set edge cases + the property fuzz vs the
  * FULL oracle) lives in `keyed-diff.test.ts`; this file is the runtime wiring.
@@ -915,13 +915,14 @@ describe("scopedMembership — registration guards", () => {
   });
 });
 
-// W5 / D32: a membership entry never cascades. A5 refuses a dependsOn onto the
+// W5 / D32: a membership entry never cascades. D32 refuses a dependsOn onto the
 // routed alias in both registration orders, so its drains have no downstream to
 // reach — the runtime asserts that over the whole graph at every DAG rebuild.
-// The D32 assert itself is unreachable through the API (A5 is the only way in),
-// so this pins the refusal, the empty `downstream`, and that a flush running
-// that assert passes over a membership entry without misfiring.
-describe("scopedMembership — no cascade out of a membership entry (A5 / D32)", () => {
+// The DAG assert itself is unreachable through the API (the registration
+// refusal is the only way in), so this pins the refusal, the empty
+// `downstream`, and that a flush running that assert passes over a membership
+// entry without misfiring.
+describe("scopedMembership — no cascade out of a membership entry (D32)", () => {
   test("a dependsOn onto the alias throws; the alias has no downstream and its I / U / D drains flush cleanly", async () => {
     const m = membershipHarness();
     expect(() =>
@@ -932,7 +933,9 @@ describe("scopedMembership — no cascade out of a membership entry (A5 / D32)",
         loader: () => 1,
         dependsOn: [{ resource: { key: "rows" } as never }],
       }),
-    ).toThrow(/dependsOn the routed resource "rows"/);
+    ).toThrow(
+      /cascades from the keyed window "rows" — a membership drain cascades nothing \(D32\)/,
+    );
     m.table.set("a", { n: 1, where: true });
     await m.h.subscribe("rows");
     const debug = async () =>

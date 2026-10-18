@@ -3,6 +3,7 @@ import {
   PgTable,
   PgView,
   getTableConfig,
+  getViewConfig,
   type PgColumn,
 } from "drizzle-orm/pg-core";
 import {
@@ -12,6 +13,7 @@ import {
   type FullRoute,
   type HostMap,
   type ReachPlan,
+  type RelationRead,
   type ResourceParams,
   type Route,
   type RoutePlan,
@@ -270,8 +272,14 @@ function encodedMap(
  * (a collection).
  */
 export interface ValueReads {
-  /** Every table the loader reads — base tables or entities, never a view (A1). */
-  tables: readonly RoutedSource[];
+  /**
+   * Every relation the loader reads — base tables, entities, or views. A view
+   * has no trigger, so it is no route: it is a relation read (`RelationRead`)
+   * the runtime reaches through its base tables once they are known, and the
+   * drift guard accepts under its own name. Empty when everything the loader
+   * reads is `outsideFeed`.
+   */
+  tables: readonly (RoutedSource | PgView)[];
   /** Why a write to any row of them may change any tuple (the pane shows it). */
   reason: string;
   /**
@@ -286,9 +294,10 @@ export interface ValueReads {
 /**
  * A served value's plan from its declared `reads`: one `full` route per table,
  * reading every column (so no update is skipped by the gate — a hand-written
- * loader's columns are unknown), read by every tuple. The drift guard (A8)
- * holds the loader to it: a captured table outside it is reported and, in a
- * running server, routed FULL from then on.
+ * loader's columns are unknown), read by every tuple; one relation read per
+ * view, with the same reason. The drift guard (A8) holds the loader to it: a
+ * captured table outside it is reported and, in a running server, routed FULL
+ * from then on.
  */
 export function compiledValueReach<P extends ResourceParams>(
   reads: ValueReads,
@@ -301,11 +310,23 @@ export function compiledValueReach<P extends ResourceParams>(
     );
   }
   const routes: FullRoute[] = [];
-  for (const source of reads.tables) {
-    const base = routedBase(source, label);
-    if (routes.some((r) => r.table === base.name)) {
-      throw new Error(`${where}.tables lists "${base.name}" twice.`);
+  const relations: RelationRead[] = [];
+  const listed = new Set<string>();
+  const once = (name: string) => {
+    if (listed.has(name)) {
+      throw new Error(`${where}.tables lists "${name}" twice.`);
     }
+    listed.add(name);
+  };
+  for (const source of reads.tables) {
+    if (is(source, PgView)) {
+      const relation = getViewConfig(source).name;
+      once(relation);
+      relations.push({ relation, reason: reads.reason });
+      continue;
+    }
+    const base = routedBase(source, label);
+    once(base.name);
     routes.push({
       id: base.name,
       table: base.name,
@@ -326,7 +347,7 @@ export function compiledValueReach<P extends ResourceParams>(
   const uses: ReadonlyMap<string, TupleUse> = new Map(
     routes.map((r) => [r.id, { role: "membership" as const }]),
   );
-  return mintReachPlan<P>({ routes, usesOf: () => uses, unfed });
+  return mintReachPlan<P>({ routes, usesOf: () => uses, unfed, relations });
 }
 
 /**

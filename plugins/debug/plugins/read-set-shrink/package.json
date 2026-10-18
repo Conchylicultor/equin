@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-debug-read-set-shrink",
-  "description": "Read-set shrink monitor: files a deduped Debug → Reports signal when a boot-critical resource's persisted read-set sheds a dependency table, so a human can confirm it is a legitimate code-change shed rather than a data-dependent conditional query that didn't fire. Includes the read-set-shrink report-kind renderer and the enabled config.",
-  "private": true,
-  "version": "0.0.1"
-}

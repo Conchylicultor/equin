@@ -40,6 +40,7 @@ import {
   type ReverseRoute,
   type Route,
   type RoutePlan,
+  type RoutePlanInput,
   type TableChange,
   type TableLayoutRequirement,
   type TupleRouting,
@@ -351,9 +352,7 @@ export interface ResourceDefinition<
   /**
    * Scoped change routing (see `RoutePlan` in `./routing`): every table
    * occurrence this resource's compiled query may read, and how each tuple reads
-   * them. Present ⇒ the entry is ROUTED: `routeTableChange` serves it and the
-   * legacy read-set path (`applyLegacyFullChange`) never does, so each change reaches it
-   * exactly once. Only on a membership entry (`membership` / `scopedMembership`)
+   * them. Present ⇒ the entry is ROUTED: `routeTableChange` serves it. Only on a membership entry (`membership` / `scopedMembership`)
    * — enforced by `ScopePolicy` and, for an untyped caller, by a loud throw in
    * `createResource`. Exclusive with `dependsOn`: a routed entry
    * takes no cascade (it routes the tables it reads). Written by a compiler,
@@ -367,14 +366,16 @@ export interface ResourceDefinition<
    * The routed spelling for a NON-keyed (`push` / `invalidate`) entry — a
    * collection's `:groups` aggregate: which tables each tuple reads, with only
    * `full` routes (see `ReachPlan`). Present ⇒ the entry is ROUTED exactly like
-   * one declaring `routes` (served by `routeTableChange`, never by the legacy
-   * read-set path): a change to a table a tuple reads recomputes that tuple,
+   * one declaring `routes` (served by `routeTableChange`): a change to a table a tuple reads recomputes that tuple,
    * and a change to any other table reaches nothing. Exclusive with
-   * `routes`; refused on a keyed or external entry (a throw in
-   * `createResource`). Unlike `routes` it may sit beside `dependsOn`: every
-   * reach route is `full`, so a cascade's FULL has no scoped refill to
-   * override — both land in the tuple's one pending (a served value's
-   * `recomputeOn`). Compiler-minted (`mintReachPlan`), like `routes`.
+   * `routes`; refused on a keyed entry (a throw in `createResource`). Allowed
+   * on a NON-keyed EXTERNAL entry (D1): an external value whose loader reads
+   * Postgres declares those reads, a table write FULL-recomputes its tuples,
+   * and its own `notify()` merges into the same pending. Unlike `routes` it
+   * may sit beside `dependsOn`: every reach route is `full`, so a cascade's
+   * FULL has no scoped refill to override — both land in the tuple's one
+   * pending (a served value's `recomputeOn`). Compiler-minted
+   * (`mintReachPlan`), like `routes`.
    */
   reach?: ReachPlan<P>;
   /**
@@ -386,7 +387,7 @@ export interface ResourceDefinition<
    * and drops their memoized read-sets (`usesOf`), which may name the old
    * vocabulary. Only on a routed entry (`routes`), and only external upstreams:
    * a table-backed upstream's writes are the entry's own routes to name, and a
-   * cascade from one would serve the entry twice (A5). Both throw in
+   * cascade from one would serve the entry twice (T15). Both throw in
    * `createResource`.
    */
   recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
@@ -813,7 +814,7 @@ function refuseLegacyScopeKeys(where: string, key: string, obj: object): void {
   const found = LEGACY_SCOPE_KEYS.filter((k) => k in obj);
   if (found.length > 0) {
     throw new Error(
-      `${where}: "${found.join('", "')}" on key "${key}" — the legacy scope policy is gone: a keyed entry routes through a compiler-minted "routes" plan and a membership, and a non-keyed one is reached through its read-set (or "reach")`,
+      `${where}: "${found.join('", "')}" on key "${key}" — the legacy scope policy is gone: a keyed entry routes through a compiler-minted "routes" plan and a membership, and a non-keyed one through a "reach" plan`,
     );
   }
 }
@@ -919,6 +920,16 @@ export interface ExternalResource<
   notify(params?: P): void;
 }
 
+/**
+ * What a deferred EXTERNAL value fixes at definition (see
+ * `ResourceRuntime.defineDeferredResource`): its delivery mode and its
+ * declared freshness — both read before its bind.
+ */
+export interface DeferredExternal {
+  mode: "push" | "invalidate";
+  freshness?: ResourceFreshness;
+}
+
 interface DownstreamEdge {
   downstreamKey: string;
   map?: (
@@ -948,7 +959,7 @@ interface PendingNotify {
    * be refilled), so `deleted` is the separate channel that drives the membership
    * diff's exit path. Absorbed/dropped by a FULL contributor exactly like
    * `affected` (see `mergePending`). Undefined for every non-membership pending
-   * (the legacy drain is FULL-only).
+   * (the non-membership drain is FULL-only).
    */
   deleted?: Set<string>;
   /**
@@ -1040,6 +1051,11 @@ interface PendingReverse {
  */
 interface FlightValue {
   value: unknown;
+  /**
+   * The loader's own return, before the schema parse (which copies): what D8
+   * compares by identity (`RegistryEntry.lastSent`). Never sent.
+   */
+  raw: unknown;
   etag: string | undefined;
   watermark: string | undefined;
   ackTx: readonly string[] | undefined;
@@ -1062,10 +1078,13 @@ interface PendingAck {
 
 /**
  * A routed entry's plan, indexed for the router (see `ResourceDefinition.routes`
- * and, for a non-keyed entry, `ResourceDefinition.reach`).
+ * and, for a non-keyed entry, `ResourceDefinition.reach`) — or, for a guarded
+ * external that declared no reads, the drift guard's own record (D5: `plan`
+ * routes nothing, and only `drifted` is ever filled).
  */
 interface RoutingRecord {
-  plan: RoutePlan<ResourceParams>;
+  /** The validated plan (minted — checked at registration; `NO_ROUTES` for a drift-only record). */
+  plan: RoutePlanInput<ResourceParams>;
   /** The entry's routes on each table (a self-join puts several on one). */
   byTable: Map<string, Route[]>;
   routeIds: Set<string>;
@@ -1086,11 +1105,37 @@ interface RoutingRecord {
    */
   unfed: ReadonlySet<string>;
   /**
+   * The relations (views, rollups) a reach plan reads whole
+   * (`ReachPlan.relations`), relation → reason. No route names one: each is
+   * expanded to its relation bases and indexed for the router by
+   * `indexRelationReads` (once the bases are known), and the drift guard
+   * accepts the relation's own name in a capture.
+   */
+  relations: ReadonlyMap<string, string>;
+  /**
    * A8: the tables a loader run read that no route names, each reported once
    * and — in a running server — indexed for the router as a FULL read of the
    * entry (see `checkRouteDrift`).
    */
   drifted: Set<string>;
+  /**
+   * The bases this entry is indexed under in `routedByTable` for each reason
+   * no route gives: a relation read's (`indexEntryRelations`, dropped and
+   * re-taken whenever the relation bases are reset) and a drifted relation's
+   * (`failOpenDrift`, kept for the process). A base in both stays indexed
+   * when the relation reads are reset.
+   */
+  relationBases: Set<string>;
+  driftBases: Set<string>;
+  /**
+   * D7: the relations a persisted `tables_read` named that the declaration
+   * does not cover (`seedRouteDrift`) — failed open on their bases like a
+   * drifted read, but NOT counted as covered: the row may predate a
+   * declaration change, so only a load that reads one again reports it (and
+   * moves it to `drifted`); a load that does not read it drops it and
+   * un-indexes its bases (`dropUnreadSeeds`).
+   */
+  seededDrift: Set<string>;
   /**
    * Memoized `usesOf` per tracked pk. `null` = the answer was unusable (it threw
    * or named an unknown route id) — reported once, and that tuple recomputes FULL
@@ -1098,6 +1143,12 @@ interface RoutingRecord {
    */
   uses: Map<string, ReadonlyMap<string, TupleUse> | null>;
 }
+
+/** A drift-only routing record's plan (see `RoutingRecord`): it routes nothing. */
+const NO_ROUTES: RoutePlanInput<ResourceParams> = {
+  routes: [],
+  usesOf: () => new Map(),
+};
 
 /**
  * A `TupleRouting` after the runtime shaped it (`shapeForTuple`): a point tuple's
@@ -1228,6 +1279,19 @@ interface RegistryEntry {
    * already have read the side table before the write committed.
    */
   draining: Set<string>;
+  /**
+   * D8 — per tracked pk of an entry that skips unchanged recomputes
+   * (`skipsUnchanged`): the loader's RAW return (before the schema parse, which
+   * copies) that every holder of the tuple holds. Set by a non-keyed drain as
+   * it sends its `update` (synchronously with the subscriber set the frame goes
+   * to), and by the sub-ack that opened the tuple's span to its sole holder
+   * while no drain has minted since. Dropped whenever a read hands a holder
+   * anything else — another value, an `up-to-date`, an error — when a drain's
+   * load fails, and at N→0. A drain whose load returns this very object
+   * (`===`; values are immutable) changed nothing a holder lacks: no frame, no
+   * version, only the ack it owes.
+   */
+  lastSent: Map<string, unknown>;
   /** Present ⇒ a routed entry (see `ResourceDefinition.routes`). */
   routing?: RoutingRecord;
   /**
@@ -1537,22 +1601,15 @@ export interface ResourceRuntimeOptions {
   onPush?(key: string, info: { subscribers: number; changed: boolean }): void;
   /**
    * Per-key automatic table read-set: the tables this resource's loader actually
-   * read (captured at the DB pool chokepoint), unioned over every run. It is the
-   * legacy router's table → resource inversion (`applyLegacyFullChange`, for every entry
-   * that declares no `routes`), and the `_debug` endpoint shows it with its
-   * relation bases — the read-set ceiling of every `legacy-full` entry.
+   * read (captured at the DB pool chokepoint), unioned over every run. Display
+   * only — no change is routed through it: the `_debug` endpoint shows it with
+   * its relation bases. (`floorGuardTables` falls back to it for an UNROUTED
+   * persisted entry, which only a DB-free harness has: central persists
+   * nothing, and change-feed refuses an unrouted DB-backed resource, D6.)
    * server: server-core's runtime-owned read-set sink (captured whatever the
    * profiler's kill-switch says); central: omit (field absent, nothing routes).
    */
   readSet?: (key: string) => string[];
-  /**
-   * A counter that moves whenever any key's `readSet` answer may have changed
-   * (a table gained, seeded or removed). The legacy router memoizes its
-   * table → resource inversion on it. Absent ⇒ the inversion is rebuilt on every
-   * change (the DB-free harness, whose injected `readSet` has no counter).
-   * server: the read-set sink's version; central: omit.
-   */
-  readSetVersion?: () => number;
   /**
    * The tables the resource's MOST RECENT loader run read (per-run capture,
    * REPLACED each run — not the append-only union `readSet` returns), or
@@ -1565,11 +1622,10 @@ export interface ResourceRuntimeOptions {
    * conditional queries among persisted resources — the safety basis; see
    * research/2026-07-07-global-read-set-self-heal-on-full-recompute.md).
    *
-   * Deliberately does NOT feed `applyLegacyFullChange`'s live routing — that keeps using
-   * the union `readSet`, an over-approximation, so a stale extra edge only causes a
-   * wasteful recompute, never a missed live delivery. server: the read-set sink's
-   * per-run capture;
-   * central: omitted (undefined → the persist falls back to `readSet`).
+   * It also feeds the route drift guard (A8 / D5): a captured relation no
+   * route, relation read or unfed declaration covers is drift. server: the
+   * read-set sink's per-run capture;
+   * central: omitted (central persists nothing).
    */
   lastReadSet?: (key: string) => string[] | undefined;
   /**
@@ -1582,10 +1638,10 @@ export interface ResourceRuntimeOptions {
   /**
    * The base tables a read of `relation` depends on (C30): a base table is its
    * own base, a view expands to the tables it reads (transitively), and a
-   * trigger-maintained rollup to its sources. The legacy router indexes each
-   * read-set relation under its bases (`applyLegacyFullChange`), so a reader of
-   * a view is reached by a write to any table feeding it; `_debug` shows the
-   * expansion as `readSetBases`. server: injected at boot by change-feed (the
+   * trigger-maintained rollup to its sources. A reach plan's relation reads are
+   * indexed under their bases (`indexRelationReads`), the drift guard expands a
+   * captured relation through it, and `_debug` shows the expansion as
+   * `readSetBases`. server: injected at boot by change-feed (the
    * server-core holder throws if read before); central / DB-free harness:
    * omitted (identity).
    */
@@ -1692,6 +1748,12 @@ export interface UnfedResourceTable {
   table: string;
 }
 
+/** One relation a reach plan reads whole (see `relationResourceReads`). */
+export interface RelationResourceRead {
+  key: string;
+  relation: string;
+}
+
 /**
  * One resource key's notify provenance (the `_debug` payload's `notifyStats`):
  * hand-`notify()` calls, change-feed deliveries, and in-process change-producer
@@ -1706,9 +1768,9 @@ export interface NotifyCounts {
 /**
  * How a change reaches one entry (the `_debug` payload's `policy`; A7, D40) —
  * a closed set: a deferred placeholder not bound yet, truth outside Postgres,
- * compiler-emitted routes, or the legacy router's FULL recompute.
+ * compiler-emitted routes, or — refused at change-feed boot (D6) — none.
  */
-type DebugPolicy = "unbound" | "external" | "routed" | "legacy-full";
+type DebugPolicy = "unbound" | "external" | "routed" | "unrouted";
 
 export interface ResourceRuntime {
   /**
@@ -1747,6 +1809,14 @@ export interface ResourceRuntime {
    * options, checked exactly as `defineResource`'s two-arg form checks them. A
    * non-keyed deferred resource is a push value. Serving it before it is bound
    * throws, and so does defining one after the bind ran.
+   *
+   * The third arm (D4) is a deferred EXTERNAL value — one whose declared reads
+   * are computed from contributions (a provider registry): `external` fixes,
+   * at definition, its externality, its mode and its freshness, so the
+   * placeholder is external from the start (`_debug`, the read-set-gap
+   * warning, the D5 guard) and returns a handle with `notify`; its bind
+   * supplies the loader and the `reach` plan, and may not restate another
+   * freshness.
    */
   defineDeferredResource: {
     <T, P extends ResourceParams = ResourceParams>(
@@ -1757,6 +1827,11 @@ export interface ResourceRuntime {
       contract: ResourceContract<T, P> & { keyed?: never },
       bind: () => ServerResourceOptions<T, P>,
     ): Resource<T, P>;
+    <T, P extends ResourceParams = ResourceParams>(
+      contract: ResourceContract<T, P> & { keyed?: never },
+      bind: () => ServerResourceOptions<T, P>,
+      external: DeferredExternal,
+    ): ExternalResource<T, P>;
   };
   /**
    * Bind every deferred resource (`defineDeferredResource`): compile its server
@@ -1783,15 +1858,19 @@ export interface ResourceRuntime {
    *   its keyed diff, and a window's sub may be seeded from tuples of the
    *   same family.
    *
-   * Never ROUTED (D31): an external resource's truth is outside Postgres, so
-   * no table change routes into it — its own `notify` is how a change arrives.
+   * Never keyed-ROUTED (D31): an external resource's truth is outside
+   * Postgres, so no `routes` plan routes into it — its own `notify` is how a
+   * change arrives. A non-keyed one whose loader ALSO reads Postgres declares
+   * those reads as a `reach` plan (D1): a write to one FULL-recomputes its
+   * subscribed tuples, merged with its notifies. A keyed external (window /
+   * point) takes no `reach`.
    */
   defineExternalResource: {
     // No `optionalParams` on the flat form: the spelling rule must come from the
     // shared client descriptor (the two-arg form), or the client would key
-    // tuples the server's echoes never match. No `routes` / `reach` either: an
-    // external resource's truth is outside Postgres, so no table change may
-    // route into it.
+    // tuples the server's echoes never match. No `routes` / `reach` either: the
+    // flat form has no production caller, and a declared read is the two-arg
+    // non-keyed form's.
     <T, P extends ResourceParams = ResourceParams>(
       def: ExternalDefinition<T, P>,
     ): ExternalResource<T, P>;
@@ -1801,7 +1880,7 @@ export interface ResourceRuntime {
     ): ExternalResource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
       contract: ResourceContract<T, P> & { keyed?: never },
-      opts: ServerResourceOptions<T, P> & { reach?: never },
+      opts: ServerResourceOptions<T, P>,
     ): ExternalResource<T, P>;
   };
   notificationsWsHandler: WsHandler;
@@ -1846,33 +1925,14 @@ export interface ResourceRuntime {
    */
   triggerResourcePush: (key: string, params?: ResourceParams) => number;
   /**
-   * Route one DB change (from the L4 change-feed) to every LEGACY (non-routed)
-   * entry whose read-set reaches `table` through its relation bases: a FULL
-   * recompute of each of its tracked tuples (param-less → `{}`), through
-   * `scheduleNotify` tagged with the change's `source`. It carries no ids, op or
-   * origin: a legacy entry has no scope to apply them to. DB-agnostic and
-   * defensive: an unread table is a no-op, and it never throws. See
-   * research/2026-10-08-global-scoped-change-routing-p8-steps-23-24.md (D36).
-   */
-  applyLegacyFullChange: (change: {
-    /** The base table that changed. */
-    table: string;
-    /** Which producer made the change (see `TableChange.source`). */
-    source: ChangeSource;
-    /** Source transaction id (xid8 text) — mutation-ack attribution (`ackTx`). */
-    xid?: string;
-    /** Wall-clock epoch ms of the change (live NOTIFY only; see `PendingNotify.changedAt`). */
-    changedAt?: number;
-  }) => void;
-  /**
    * Route one base-table change to the ROUTED entries (those declaring `routes`)
    * that read the table: per subscribed tuple, only the route occurrences that
    * tuple's `usesOf` names, mapped to host ids by each route's `HostMap` — so a
    * side-table write costs O(changed) and reaches only the tuples whose query
    * reads that table. A tuple the change skips owes at most an ack. Synchronous,
    * SQL-free and producer-agnostic (every producer calls it; reverse routes
-   * resolve later, in the drain). Never throws. Entries without routes are served
-   * by `applyLegacyFullChange` instead — each entry is reached by exactly one of the two.
+   * resolve later, in the drain). Never throws. An entry with no plan is reached
+   * by no table change (D6: change-feed refuses one at boot).
    * See research/2026-09-29-global-scoped-change-routing.md.
    */
   routeTableChange: (change: TableChange) => void;
@@ -1902,8 +1962,7 @@ export interface ResourceRuntime {
   /**
    * Every table a registered resource's routed delivery depends on: one row per
    * route of a ROUTED entry (`routes` / `reach` — every table it may read, since
-   * only a change to one of them can reach it); a legacy entry, reached through
-   * its read-set, has none. The change-feed cross-checks these against the tables it installed
+   * only a change to one of them can reach it). The change-feed cross-checks these against the tables it installed
    * triggers on at boot (A1): a table with no trigger can NEVER produce the
    * change the resource waits for, so the declaration is dead config that
    * silently degrades the resource to hydrate-on-mount with zero signal. The
@@ -1919,6 +1978,54 @@ export interface ResourceRuntime {
    * away). Call after `bindDeferredResources()`.
    */
   unfedResourceTables: () => UnfedResourceTable[];
+  /**
+   * Every relation a reach plan reads whole (`ReachPlan.relations`), by key —
+   * for change-feed's boot check, which expands each through the relation
+   * graph and holds every base to the same rule as a route table (a change
+   * source: a trigger or a producer). Readable before the relation bases are
+   * set. Call after `bindDeferredResources()`.
+   */
+  relationResourceReads: () => RelationResourceRead[];
+  /**
+   * Every registered DB-backed (non-external) entry that declares no plan —
+   * neither `routes` nor `reach` — so no table change reaches it, sorted.
+   * Deferred placeholders not bound yet are left out (call after
+   * `bindDeferredResources()`). A keyed DB-backed entry is always routed
+   * (`buildEntry`), so every key here is a non-keyed value. D6: change-feed
+   * refuses boot on a non-empty answer (not `createResource`, since a DB-free
+   * test resource is legitimately unrouted).
+   */
+  unroutedResourceKeys: () => string[];
+  /**
+   * Index every routed entry's relation reads (`ReachPlan.relations`) under
+   * their relation bases, so a write to any base recomputes the entry FULL;
+   * every entry registered or bound later expands its own. A re-index (the
+   * bases an earlier call indexed are dropped first), so idempotent over one
+   * graph. Call once the relation bases are set (server-core's
+   * `setRelationBases` does).
+   */
+  indexRelationReads: () => void;
+  /**
+   * Undo `indexRelationReads`: drop every relation read's bases from the
+   * router's index (a drifted read's stay), until the next call. server-core's
+   * `clearRelationBases` (test support) calls it, so a suite that cleared the
+   * bases never leaves the next one expanding through them — or throwing on
+   * the cleared holder.
+   */
+  resetRelationReads: () => void;
+  /**
+   * D7: seed the drift guard from each persisted entry's durable
+   * `tables_read` — every relation its declaration does not cover (the same
+   * predicate a load is judged by: routes, derived reads, unfed tables,
+   * relation reads) fails open on its bases, unreported and not counted as
+   * covered, so the next load re-judges it (`_debug.routeDriftSeeded`).
+   * Returns the seeded relations per key. Call at boot after
+   * `bindDeferredResources()` and once the relation bases are set, before
+   * catch-up replays.
+   */
+  seedRouteDrift: (
+    persisted: ReadonlyArray<{ key: string; tablesRead: readonly string[] }>,
+  ) => Array<{ key: string; tables: string[] }>;
   /**
    * The change-feed trigger layout every ROUTED table needs, derived from the
    * routes of every bound routed entry (`tableLayoutRequirements`): the key
@@ -2214,23 +2321,14 @@ export function createResourceRuntime(
     return false;
   }
 
-  // Memoized `table → resourceKey[]` inverse of the L3 read-set hook — the legacy
-  // router's index. Keyed on the read-set sink's version counter (it moves on
-  // every table gained, seeded or removed) plus the registry size (a new entry),
-  // so a removal that happens to keep the total size cannot serve a stale
-  // inversion, and a hit costs nothing per change. With no counter injected the
-  // inversion is rebuilt on every change. ROUTED entries are skipped: they are
-  // served by `routeTableChange`, so each change reaches each entry exactly once.
-  //
-  // The inversion is in BASE-table space: each read-set relation is indexed
-  // under its relation bases (`opts.relationBases`, identity when absent), and
-  // installing those bases moves the read-set version too (server-core's
-  // `setRelationBases`), so the memo can never serve an inversion built
-  // through older bases.
+  // The base tables a read of `relation` depends on (C30, `opts.relationBases`;
+  // identity on central and in the DB-free harness). Read by the routed
+  // router's relation reads (`indexRelationReads`), the drift guard's fail-open
+  // (`driftBasesOf`) and `_debug`. Server-core's holder throws until change-feed installs
+  // the graph at boot.
   const relationBasesOf =
     opts.relationBases ?? ((relation: string): readonly string[] => [relation]);
-  let tableToResourcesCache: Map<string, string[]> | null = null;
-  let tableToResourcesSig: string | null = null;
+
   // The relation bases of `key`'s captured read-set, sorted and distinct: each
   // relation the loader read expanded to its bases (a view or rollup to the
   // tables that feed it). Identity on central and in the DB-free harness.
@@ -2240,37 +2338,6 @@ export function createResourceRuntime(
       for (const base of relationBasesOf(relation)) bases.add(base);
     }
     return [...bases].sort();
-  }
-  // Does the legacy router (`applyLegacyFullChange`) index this entry under its
-  // read-set bases? Every entry that is not routed — external entries and
-  // unbound deferred placeholders included: a routed entry is reached only
-  // through `routeTableChange`. The ONE predicate `tableToResources` and
-  // `_debug`'s `legacyReach` both read, so the pane cannot disagree with the
-  // router about who a base write reaches.
-  function legacyRouted(entry: RegistryEntry): boolean {
-    return !entry.routing;
-  }
-  function tableToResources(): Map<string, string[]> {
-    const version = opts.readSetVersion?.();
-    const sig =
-      version === undefined ? null : `${registry.size}:${String(version)}`;
-    if (tableToResourcesCache && sig !== null && sig === tableToResourcesSig) {
-      return tableToResourcesCache;
-    }
-    const inverse = new Map<string, string[]>();
-    for (const entry of registry.values()) {
-      if (!legacyRouted(entry)) continue;
-      // Two relations sharing a base list the entry under it once, so one
-      // change is one notify per tuple.
-      for (const base of readSetBasesOf(entry.key)) {
-        const list = inverse.get(base);
-        if (list) list.push(entry.key);
-        else inverse.set(base, [entry.key]);
-      }
-    }
-    tableToResourcesCache = inverse;
-    tableToResourcesSig = sig;
-    return inverse;
   }
 
   // The routed entries reading each table — the router's static index, filled at
@@ -2452,17 +2519,18 @@ export function createResourceRuntime(
 
   // The read-set to persist alongside a FULL value: the tables the loader read on
   // its LAST run (authoritative + self-healing — sheds an edge a code change
-  // removed or a historical mis-attribution left behind), falling back to the
-  // accumulated union when the per-run capture is unavailable (central runtime, or
-  // a scoped-membership persist whose cycle ran no loader). REPLACE semantics: the
+  // removed or a historical mis-attribution left behind), falling back, when no
+  // run captured a table, to what `floorGuardTables` judges: a routed entry's
+  // route tables (its reads by declaration — an empty `tables_read` would force
+  // a FULL recompute at the next boot), else the accumulated union (an unrouted
+  // entry: a DB-free harness only — see `floorGuardTables`). REPLACE semantics: the
   // persist SQL sets `tables_read = EXCLUDED`, so feeding it the per-run set here is
   // what makes the durable seed converge. The in-memory union (`opts.readSet`) is
-  // deliberately left untouched — it stays an over-approximation so live
-  // `applyLegacyFullChange` routing never under-delivers. Must be read SYNCHRONOUSLY right
+  // left untouched (display). Must be read SYNCHRONOUSLY right
   // after awaiting the loader; every persisted resource is param-less (single pk),
   // so no concurrent same-key run can clobber the per-run capture in between.
-  function persistReadSet(key: string): string[] {
-    return opts.lastReadSet?.(key) ?? opts.readSet?.(key) ?? [];
+  function persistReadSet(entry: RegistryEntry): string[] {
+    return opts.lastReadSet?.(entry.key) ?? floorGuardTables(entry);
   }
 
   // Internal refill primitive — the ONLY place `entry.loader` runs. The loader
@@ -2475,13 +2543,20 @@ export function createResourceRuntime(
   // establishes the ambient parent context so DB queries issued inside the loader
   // attribute to it. Private to `getResourceValue` + the keyed reseed below; all
   // read call sites go through `getResourceValue`.
+  // `sink`, when given, receives the loader's raw return (before the parse) —
+  // set synchronously before the parsed value resolves, so a caller reads it
+  // right after its await with no extra hop.
   function timedLoad(
     entry: RegistryEntry,
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
+    sink?: { raw: unknown },
   ): Promise<unknown> {
-    const run = async () =>
-      entry.schema.parse(await declaredLoad(entry, params, ctx));
+    const run = async () => {
+      const raw = await declaredLoad(entry, params, ctx);
+      if (sink) sink.raw = raw;
+      return entry.schema.parse(raw);
+    };
     let load: Promise<unknown>;
     if (opts.wrapLoad) {
       const info: LoadInfo = {};
@@ -2491,9 +2566,7 @@ export function createResourceRuntime(
     } else {
       load = run();
     }
-    return entry.routing && opts.lastReadSet
-      ? load.then(checkRouteDrift(entry))
-      : load;
+    return driftGuarded(entry) ? load.then(checkRouteDrift(entry)) : load;
   }
 
   // The loader, with one rule on what it may throw: a `ResourceRefusal` must
@@ -2528,43 +2601,200 @@ export function createResourceRuntime(
   // table its loader reads that no route names is a table whose writes it never
   // sees: a stale value nothing would reveal. After each loader run, the key's
   // per-run capture (the read-set sink's, flushed when the wrapped load settles)
-  // must be a subset of its route tables — plus its derived reads (A22): a
-  // rollup no route may name (A1), whose every source the plan routes
-  // (`mintRoutePlan` asserted it), so a write moving its rows reaches the entry.
-  // A miss is reported once per table — or thrown, under `strictRoutes`
-  // (tests). In a running server it also FAILS OPEN: the relation's bases (a
-  // table is its own; a view or rollup the tables that feed it — the capture
-  // records relations, a change names only base tables) join the router's
-  // index for this entry, and every later change to one recomputes every
-  // target FULL (`routeEntryChange`), so a plan missing a relation is never
-  // staler than a whole-table read of it. With no capture wired (central, the
-  // DB-free harness) the guard is off; routing never depends on it.
+  // must be covered by its declaration (`readCovered`): its route tables, its
+  // derived reads (A22: a rollup no route may name (A1), whose every source the
+  // plan routes — `mintRoutePlan` asserted it — so a write moving its rows
+  // reaches the entry), its unfed tables, its relation reads, or a relation
+  // already found drifted. A miss is reported once per table — or thrown,
+  // under `strictRoutes` (tests). In a running server it also FAILS OPEN
+  // (`failOpenDrift`): the relation's bases (a table is its own; a view or
+  // rollup the tables that feed it — the capture records relations, a change
+  // names only base tables) join the router's index for this entry, and every
+  // later change to one recomputes every target FULL (`routeEntryChange`), so a
+  // plan missing a relation is never staler than a whole-table read of it.
+  //
+  // D5 — the undeclared-read guard: the same check arms EAGERLY on every
+  // external entry that claims to be told of its changes (`driftGuarded`),
+  // whether or not it declared reads. An external is reached only by its own
+  // notify and its declared reads, so a captured relation it did not declare is
+  // a write it never sees — loud (reported, `_debug.routeDrifted`), thrown
+  // under `strictRoutes`, and failed open: the entry gets a drift-only routing
+  // record (`NO_ROUTES`) if it had none, so a non-keyed one recomputes FULL and
+  // a keyed window / point set re-reads the tuple whole (`drainMembershipFull`).
+  //
+  // With no capture wired (central, the DB-free harness) the guard is off;
+  // routing never depends on it.
+  function driftGuarded(entry: RegistryEntry): boolean {
+    if (!opts.lastReadSet) return false;
+    if (entry.routing) return true;
+    return guardedExternal(entry);
+  }
+
+  // An external that claims a push (`notified`, or no declared freshness — a
+  // resource not served through `network/live`): a snapshot, fixed or
+  // immutable external is never told of a change by declaration, so an
+  // undeclared read there misses nothing it promised to see. A deferred
+  // placeholder is judged once bound.
+  function guardedExternal(entry: RegistryEntry): boolean {
+    return (
+      entry.externalSource === true &&
+      !deferred.has(entry.key) &&
+      (entry.freshness === undefined || entry.freshness.kind === "notified")
+    );
+  }
+
+  // Whether a captured `relation` is one the entry's declaration covers — the
+  // ONE predicate the drift guard (A8 / D5) and the boot drift seed
+  // (`seedRouteDrift`) judge by: routes ∪ derived ∪ unfed ∪ relation reads ∪
+  // already drifted.
+  function readCovered(
+    routing: RoutingRecord | undefined,
+    relation: string,
+  ): boolean {
+    return (
+      routing !== undefined &&
+      (routing.byTable.has(relation) ||
+        routing.derived.has(relation) ||
+        routing.unfed.has(relation) ||
+        routing.relations.has(relation) ||
+        routing.drifted.has(relation))
+    );
+  }
+
   function checkRouteDrift(entry: RegistryEntry): (value: unknown) => unknown {
     return (value) => {
-      const routing = entry.routing!;
-      const unrouted = (opts.lastReadSet!(entry.key) ?? []).filter(
-        (table) =>
-          !routing.byTable.has(table) &&
-          !routing.derived.has(table) &&
-          !routing.unfed.has(table) &&
-          !routing.drifted.has(table),
+      const captured = opts.lastReadSet!(entry.key) ?? [];
+      dropUnreadSeeds(entry, captured);
+      const unrouted = captured.filter(
+        (table) => !readCovered(entry.routing, table),
       );
       if (unrouted.length === 0) return value;
+      const tables = unrouted.map((t) => `"${t}"`).join(", ");
       const err = new Error(
-        `routed resource "${entry.key}" read ${unrouted.map((t) => `"${t}"`).join(", ")}, which none of its routes names — a write there never reaches it. Its compiler must emit a route for every table the SQL reads.`,
+        entry.routing && entry.routing.plan !== NO_ROUTES
+          ? `routed resource "${entry.key}" read ${tables}, which none of its routes names — a write there never reaches it. Its compiler must emit a route for every table the SQL reads.`
+          : `external resource "${entry.key}" read ${tables}, which it does not declare — a write there never reaches it (only its own notify does). Declare the value's reads, or its freshness if it is never told of a change.`,
       );
       if (opts.strictRoutes) throw err;
-      for (const relation of unrouted) {
-        routing.drifted.add(relation);
-        for (const base of driftBasesOf(relation)) {
-          if (!routing.byTable.has(base) && !indexedUnder(base, entry)) {
-            indexTable(base, entry);
-          }
-        }
-      }
+      failOpenDrift(entry, unrouted);
       reportLoaderError(`route drift for ${entry.key}`, err);
       return value;
     };
+  }
+
+  // The fail-open half of the drift guard: each uncovered relation is recorded
+  // as drifted, and its bases are indexed for the router as a FULL read of the
+  // entry. A guarded external with no routing gets a drift-only record first.
+  function failOpenDrift(
+    entry: RegistryEntry,
+    relations: readonly string[],
+  ): void {
+    entry.routing ??= driftOnlyRouting();
+    const routing = entry.routing;
+    for (const relation of relations) {
+      routing.drifted.add(relation);
+      routing.seededDrift.delete(relation);
+      indexDriftBases(routing, entry, relation);
+    }
+  }
+
+  // D7's other half: a relation seeded from a persisted `tables_read` that
+  // this load did not read is judged — it no longer reads it, so its bases
+  // stop routing FULL to the entry (a base a drifted or still-seeded relation,
+  // a relation read or a route also needs stays). One it did read is judged
+  // by the guard below (reported, moved to `drifted`).
+  function dropUnreadSeeds(
+    entry: RegistryEntry,
+    captured: readonly string[],
+  ): void {
+    const routing = entry.routing;
+    if (!routing || routing.seededDrift.size === 0) return;
+    const read = new Set(captured);
+    let dropped = false;
+    for (const relation of routing.seededDrift) {
+      if (read.has(relation)) continue;
+      routing.seededDrift.delete(relation);
+      dropped = true;
+    }
+    if (!dropped) return;
+    const needed = new Set<string>();
+    for (const relation of [...routing.drifted, ...routing.seededDrift]) {
+      for (const base of driftBasesOf(relation)) needed.add(base);
+    }
+    for (const base of routing.driftBases) {
+      if (needed.has(base)) continue;
+      routing.driftBases.delete(base);
+      if (!routing.relationBases.has(base) && !routing.byTable.has(base)) {
+        unindexTable(base, entry);
+      }
+    }
+  }
+
+  // Index `relation`'s bases for the router as a FULL read of the entry.
+  function indexDriftBases(
+    routing: RoutingRecord,
+    entry: RegistryEntry,
+    relation: string,
+  ): void {
+    for (const base of driftBasesOf(relation)) {
+      if (routing.byTable.has(base)) continue;
+      routing.driftBases.add(base);
+      if (!indexedUnder(base, entry)) indexTable(base, entry);
+    }
+  }
+
+  // A routing record that routes nothing — the drift guard's own, for a guarded
+  // external that declared no reads (D5). Every table it is indexed under is a
+  // drifted relation's base, served FULL by `routeEntryChange`.
+  function driftOnlyRouting(): RoutingRecord {
+    return {
+      plan: NO_ROUTES,
+      byTable: new Map(),
+      routeIds: new Set(),
+      matchOf: new Map(),
+      derived: new Set(),
+      unfed: new Set(),
+      relations: new Map(),
+      drifted: new Set(),
+      relationBases: new Set(),
+      driftBases: new Set(),
+      seededDrift: new Set(),
+      uses: new Map(),
+    };
+  }
+
+  /**
+   * D7 — drift survives a restart: judge each persisted entry's durable
+   * `tables_read` (the last FULL run's capture) by the same predicate the
+   * drift guard uses, and fail open on every relation the declaration does
+   * not cover — its bases routed FULL, as a drifted read's are — so a write
+   * there while nothing has loaded yet still reaches the entry. A rollup or
+   * view the plan declares (derived / relation reads) is covered, not drift.
+   * Not reported, and not counted as covered (`seededDrift`): the row may
+   * predate a declaration change, or carry an edge the code no longer reads,
+   * so the next load judges each one afresh — reports it, once, if it still
+   * reads it, and un-routes it if not (`dropUnreadSeeds`). An entry with no routing (not routed) is skipped.
+   * Returns what it seeded.
+   */
+  function seedRouteDrift(
+    persisted: ReadonlyArray<{ key: string; tablesRead: readonly string[] }>,
+  ): Array<{ key: string; tables: string[] }> {
+    const seeded: Array<{ key: string; tables: string[] }> = [];
+    for (const { key, tablesRead } of persisted) {
+      const entry = registry.get(key);
+      const routing = entry?.routing;
+      if (!entry || !routing) continue;
+      const tables = [...new Set(tablesRead)].filter(
+        (table) => !readCovered(routing, table),
+      );
+      if (tables.length === 0) continue;
+      for (const table of tables) {
+        routing.seededDrift.add(table);
+        indexDriftBases(routing, entry, table);
+      }
+      seeded.push({ key, tables });
+    }
+    return seeded;
   }
 
   // The bases a drifted relation fails open on. Server-core's bases holder
@@ -2699,8 +2929,10 @@ export function createResourceRuntime(
       // A scoped load bypasses the inflight entirely, so it can never join
       // anything and `notBefore` has nothing to refuse — ignored, not forgotten.
       const baseVersion = entry.versions.get(paramsKey(params)) ?? 0;
+      const sink = { raw: undefined as unknown };
       return {
-        value: await timedLoad(entry, params, ctx),
+        value: await timedLoad(entry, params, ctx, sink),
+        raw: sink.raw,
         etag: undefined,
         watermark: undefined,
         ackTx: seedAckTx,
@@ -2739,8 +2971,10 @@ export function createResourceRuntime(
       // `ackTx: seedAckTx` — the STARTER's seed; joiners adopt it wholesale
       // (like the etag/watermark), so a stamped ackTx always describes the
       // flight that produced the value it rides with.
+      const sink = { raw: undefined as unknown };
       return {
-        value: await timedLoad(entry, params),
+        value: await timedLoad(entry, params, undefined, sink),
+        raw: sink.raw,
         etag: seedEtag,
         watermark,
         ackTx: seedAckTx,
@@ -2915,6 +3149,59 @@ export function createResourceRuntime(
       return broadcast(); // sync send — no microtask before the wire (H5a)
     }
     return pushEtag(entry, params).then(broadcast);
+  }
+
+  // D8: whether a non-keyed drain of `entry` may send nothing when its load
+  // returns the very object every holder holds (`RegistryEntry.lastSent`).
+  // Only a pushed value (an `invalidate` carries no value to compare — a
+  // holder's refetch decides what it holds), never a persisted one (its value
+  // and floor are written on every recompute), and only one that declares a
+  // `revalidate` signature: those are the memo-backed loaders
+  // (`createSignedMemo`), which hand back their cached object while the
+  // signature stands. Skipping on identity relies on values being immutable:
+  // a loader that mutated a returned object in place and returned it again
+  // would be skipped — the `revalidate` gate keeps the rule to the loaders
+  // whose value is a memo's, not every pushed value's.
+  function skipsUnchanged(entry: RegistryEntry, persisted: boolean): boolean {
+    return (
+      entry.mode === "push" && entry.revalidate !== undefined && !persisted
+    );
+  }
+
+  // D8: a read handed one holder of the tuple something — `served.raw`, the
+  // loader's raw return it was served from, or `undefined` for anything else
+  // (an `up-to-date`, a 304, an error). The held object survives only if the
+  // holder now holds that very object. `sole`: the read is the sub-ack of the
+  // subscription that opened the tuple's span (the global 0→1, which minted
+  // the `version` it reports — above any version a client holds, so its holder
+  // applies it). While that holder is still the tuple's only one and no drain
+  // minted since (`version` still current: no frame reached it after this
+  // read), every holder holds `served.raw`, and it becomes the held object.
+  function noteRead(
+    entry: RegistryEntry,
+    pk: string,
+    served: { raw: unknown } | undefined,
+    sole?: { state: SocketState; version: number },
+  ): void {
+    if (!skipsUnchanged(entry, isPersisted(entry))) return;
+    if (
+      served !== undefined &&
+      sole !== undefined &&
+      entry.subCounts.get(pk) === 1 &&
+      sole.state.subs.get(entry.key)?.get(pk)?.tabs.size === 1 &&
+      (entry.versions.get(pk) ?? 0) === sole.version
+    ) {
+      entry.lastSent.set(pk, served.raw);
+      return;
+    }
+    if (
+      served !== undefined &&
+      entry.lastSent.has(pk) &&
+      entry.lastSent.get(pk) === served.raw
+    ) {
+      return;
+    }
+    entry.lastSent.delete(pk);
   }
 
   // Coalesce an incoming notify into the pending map for one pk, applying the
@@ -3094,9 +3381,11 @@ export function createResourceRuntime(
 
   // Validate and index a routed entry's plan (see `ResourceDefinition.routes` /
   // `.reach`). The types already refuse routes on an external resource, off a
-  // membership arm, a reach on a keyed entry, a non-`full` reach route, either
+  // membership arm, a reach on a keyed entry, a non-`full` reach route, routes
   // beside a `dependsOn`, and an unminted plan; these
-  // throws hold the same line for an untyped caller or an `as` cast.
+  // throws hold the same line for an untyped caller or an `as` cast. A reach
+  // plan on a non-keyed EXTERNAL entry is allowed (D1): the Postgres reads its
+  // loader makes beside its own notify.
   // A9: route ids must be unique within the resource — `usesOf` names routes by
   // id, so a duplicate would make a tuple's read-set ambiguous.
   function routingRecordFor(
@@ -3115,9 +3404,9 @@ export function createResourceRuntime(
         `defineResource: "routes" and "reach" are exclusive for key "${key}" — "routes" is the keyed membership arm, "reach" the non-keyed one`,
       );
     }
-    if (externalSource) {
+    if (externalSource && field === "routes") {
       throw new Error(
-        `defineExternalResource: "${field}" on key "${key}" — an external resource's truth lives outside Postgres, so no table change may route into it`,
+        `defineExternalResource: "routes" on key "${key}" — an external resource's truth lives outside Postgres, so no keyed route plan may route into it; a non-keyed external declares the Postgres reads its loader makes as "reach"`,
       );
     }
     // A keyed routed entry takes no cascade: it is reached only through the
@@ -3186,7 +3475,17 @@ export function createResourceRuntime(
             )
           : [],
       ),
+      relations: new Map(
+        field === "reach"
+          ? ((plan as ReachPlan<ResourceParams>).relations ?? []).map(
+              (r) => [r.relation, r.reason] as const,
+            )
+          : [],
+      ),
       drifted: new Set(),
+      relationBases: new Set(),
+      driftBases: new Set(),
+      seededDrift: new Set(),
       uses: new Map(),
     };
   }
@@ -3215,26 +3514,109 @@ export function createResourceRuntime(
   ): void {
     registry.set(entry.key, entry);
     indexRouting(entry);
-    // Wire this entry as a downstream of its upstreams. Upstreams must be
-    // defined before their downstreams — otherwise the upstream's registry
-    // entry doesn't exist yet. Warned lazily during DAG rebuild.
-    for (const { upstreamKey, edge } of ownDownstreamEdges) {
-      const upstream = registry.get(upstreamKey);
-      if (upstream) upstream.downstream.push(edge);
+    // The edges of downstreams registered before this entry, waiting for it.
+    const waiting = edgesAwaitingUpstream.get(entry.key);
+    if (waiting) {
+      edgesAwaitingUpstream.delete(entry.key);
+      entry.downstream.push(...waiting);
     }
+    wireDownstreamEdges(ownDownstreamEdges);
     dagDirty = true;
   }
 
-  /** Put a routed entry on the index `routeTableChange` reads, once per table it routes. */
+  // A downstream's edges onto upstreams not registered yet, per upstream key:
+  // wired when that upstream registers (`registerEntry`) — so a cascade works
+  // in either registration order. One still waiting at a flush names an
+  // upstream that never registered: warned at the DAG rebuild.
+  const edgesAwaitingUpstream = new Map<string, DownstreamEdge[]>();
+
+  /** Wire a downstream's edges onto its upstreams, or park each until its upstream registers. */
+  function wireDownstreamEdges(
+    edges: ReadonlyArray<{ upstreamKey: string; edge: DownstreamEdge }>,
+  ): void {
+    for (const { upstreamKey, edge } of edges) {
+      const upstream = registry.get(upstreamKey);
+      if (upstream) {
+        upstream.downstream.push(edge);
+        continue;
+      }
+      const list = edgesAwaitingUpstream.get(upstreamKey);
+      if (list) list.push(edge);
+      else edgesAwaitingUpstream.set(upstreamKey, [edge]);
+    }
+  }
+
+  /**
+   * Put a routed entry on the index `routeTableChange` reads, once per table it
+   * routes — and, once relation reads have been indexed (the bases are known),
+   * under the bases of every relation it reads too.
+   */
   function indexRouting(entry: RegistryEntry): void {
     if (!entry.routing) return;
     for (const table of entry.routing.byTable.keys()) indexTable(table, entry);
+    if (relationReadsIndexed) indexEntryRelations(entry);
+  }
+
+  // Whether `indexRelationReads` has run: from then on a registration (or a
+  // deferred bind) expands its own relation reads in `indexRouting`.
+  let relationReadsIndexed = false;
+
+  /**
+   * Index every routed entry's relation reads (`ReachPlan.relations`) under
+   * their relation bases — a write to any base recomputes the entry's targets
+   * FULL (`routeEntryChange`'s unrouted-table branch). The bases are injected
+   * at boot (server-core's `setRelationBases`, by change-feed), after every
+   * resource registered, so this runs then, and every later registration
+   * expands its own. A re-index: the bases an earlier call indexed are
+   * dropped first (`resetRelationReads`), so a new graph never leaves an old
+   * base reaching the entry; calling it twice over one graph is a no-op.
+   */
+  function indexRelationReads(): void {
+    resetRelationReads();
+    relationReadsIndexed = true;
+    for (const entry of registry.values()) indexEntryRelations(entry);
+  }
+
+  /**
+   * Back to "relation bases unknown": every base a relation read was indexed
+   * under is dropped (one a drifted read also needs stays), and a later
+   * registration expands nothing until `indexRelationReads` runs again.
+   * server-core's `clearRelationBases` (test support) calls it.
+   */
+  function resetRelationReads(): void {
+    relationReadsIndexed = false;
+    for (const entry of registry.values()) {
+      const routing = entry.routing;
+      if (!routing) continue;
+      for (const base of routing.relationBases) {
+        if (!routing.driftBases.has(base)) unindexTable(base, entry);
+      }
+      routing.relationBases.clear();
+    }
+  }
+
+  function indexEntryRelations(entry: RegistryEntry): void {
+    const routing = entry.routing;
+    if (!routing) return;
+    for (const relation of routing.relations.keys()) {
+      for (const base of relationBasesOf(relation)) {
+        if (routing.byTable.has(base)) continue;
+        routing.relationBases.add(base);
+        if (!indexedUnder(base, entry)) indexTable(base, entry);
+      }
+    }
   }
 
   function indexTable(table: string, entry: RegistryEntry): void {
     const list = routedByTable.get(table);
     if (list) list.push(entry);
     else routedByTable.set(table, [entry]);
+  }
+
+  function unindexTable(table: string, entry: RegistryEntry): void {
+    const list = routedByTable.get(table)?.filter((e) => e !== entry) ?? [];
+    if (list.length > 0) routedByTable.set(table, list);
+    else routedByTable.delete(table);
   }
 
   /** The handle `defineResource` / `defineExternalResource` return for an entry. */
@@ -3256,6 +3638,11 @@ export function createResourceRuntime(
         );
       },
       notify(params?: P): void {
+        // A deferred placeholder not bound yet (a deferred external whose
+        // watcher fired during the register phase) has nothing to recompute:
+        // nothing can be served — so nobody holds a value — before its bind,
+        // and its loader refuses until then.
+        if (deferred.has(entry.key)) return;
         scheduleNotify(entry, (params ?? {}) as ResourceParams, null);
       },
     };
@@ -3485,20 +3872,15 @@ export function createResourceRuntime(
           `defineResource: dependsOn "${dep.resource.key}" sets both "map" and "toSubscribed" for key "${def.key}" — toSubscribed IS the downstream tuple set`,
         );
       }
-      // A5 — route the table, not the resource. A cascade out of a routed entry
-      // cannot be served: the legacy router drops the downstream's own delivery
-      // of an edge-covered origin (expecting the upstream's cascade), while a
-      // routed upstream only drains the tuples a change reaches — so a
-      // subscriber-less upstream tuple would lose the update for good. The
-      // downstream routes the upstream's tables itself instead.
+      // No upstream-kind rule of its own for a routed upstream: a `routes`
+      // entry is a membership entry (D32 below refuses it), and a DB-backed
+      // `reach` entry is not external (T15). A reach EXTERNAL upstream may
+      // cascade (`edited-files` → `review.plugin-changes`): its cascade carries
+      // its own changes, and the downstream declares its own reads.
       const upstream = registry.get(dep.resource.key);
-      if (upstream?.routing) {
-        throw new Error(
-          `defineResource: "${def.key}" dependsOn the routed resource "${dep.resource.key}" — route the table, not the resource: a routed entry is never a cascade upstream`,
-        );
-      }
-      // D32, the external window: a membership drain cascades nothing, so a
-      // cascade out of one would never fire.
+      // D32: a membership drain (a routed window / point / alias, or an
+      // external window) cascades nothing, so a cascade out of one would
+      // never fire.
       if (upstream?.membership) {
         throw new Error(membershipUpstreamMessage(def.key, upstream.key));
       }
@@ -3506,8 +3888,8 @@ export function createResourceRuntime(
       // type refuses a DB-backed handle; this holds the line for a cast. An
       // upstream not registered yet is checked when it registers (below, the
       // other order) and again at the DAG rebuild; a deferred placeholder
-      // reports `externalSource: false` before its bind, so it is left to A5 /
-      // the bind.
+      // reports `externalSource: false` before its bind, so it is left to the
+      // bind.
       if (upstream && !upstream.externalSource && !deferred.has(upstream.key)) {
         throw new Error(dbBackedUpstreamMessage(def.key, upstream.key));
       }
@@ -3561,19 +3943,17 @@ export function createResourceRuntime(
         },
       });
     }
-    // A5, D32 and T15, the other registration order: a downstream registered
+    // D32 and T15, the other registration order: a downstream registered
     // first already names this entry as its upstream — refused when this
-    // entry is routed, a membership entry (an external window), or DB-backed
-    // (a deferred placeholder is checked at its bind).
-    if (routing || membership || (!externalSource && !placeholder)) {
+    // entry is a membership entry (routed, or an external window), or
+    // DB-backed (a deferred placeholder is checked at its bind).
+    if (membership || (!externalSource && !placeholder)) {
       for (const other of registry.values()) {
         if (!other.upstreamKeys.includes(def.key)) continue;
         throw new Error(
-          routing
-            ? `defineResource: "${other.key}" dependsOn the routed resource "${def.key}" — route the table, not the resource: a routed entry is never a cascade upstream`
-            : membership
-              ? membershipUpstreamMessage(other.key, def.key)
-              : dbBackedUpstreamMessage(other.key, def.key),
+          membership
+            ? membershipUpstreamMessage(other.key, def.key)
+            : dbBackedUpstreamMessage(other.key, def.key),
         );
       }
     }
@@ -3604,6 +3984,7 @@ export function createResourceRuntime(
       spans: new Map(),
       pendingAcks: new Map(),
       draining: new Set(),
+      lastSent: new Map(),
       ...(routing ? { routing } : {}),
       upstreamKeys,
       downstream: [],
@@ -3646,11 +4027,17 @@ export function createResourceRuntime(
     bind: () => ServerResourceOptions<T, P>,
   ): Resource<T, P>;
   function defineDeferredResource<T, P extends ResourceParams = ResourceParams>(
+    contract: ResourceContract<T, P> & { keyed?: never },
+    bind: () => ServerResourceOptions<T, P>,
+    external: DeferredExternal,
+  ): ExternalResource<T, P>;
+  function defineDeferredResource<T, P extends ResourceParams = ResourceParams>(
     contract: ResourceContract<T, P>,
     bind: () =>
       | ServerResourceOptions<T, P>
       | (KeyedServerResourceOptions<T, P> & ScopePolicy<P>),
-  ): Resource<T, P> {
+    external?: DeferredExternal,
+  ): ExternalResource<T, P> {
     const key = contract.key;
     if (registry.has(key)) {
       throw new Error(`defineResource: duplicate key "${key}"`);
@@ -3662,12 +4049,19 @@ export function createResourceRuntime(
     };
     // The placeholder: the contract's own identity, and a loader that refuses.
     // A non-keyed deferred resource is a push value (its bound options must
-    // say so — checked at bind).
+    // say so — checked at bind). An EXTERNAL one (D4) is external from here
+    // on, with its declared freshness: `_debug`, the read-set-gap warning and
+    // the D5 guard read both before the bind, and the bind cannot change them.
+    if (external && contract.keyed) {
+      throw new Error(
+        `defineDeferredResource: "${key}" is keyed — a deferred external is a non-keyed value`,
+      );
+    }
     const { entry } = buildEntry(
       {
         key,
         schema: contract.schema,
-        mode: contract.keyed ? "keyed" : "push",
+        mode: contract.keyed ? "keyed" : (external?.mode ?? "push"),
         keyOf: contract.keyed?.keyOf,
         preload: contract.preload,
         ...(contract.optionalParams !== undefined
@@ -3679,9 +4073,12 @@ export function createResourceRuntime(
         ...(contract.bytes === true ? { bytes: true as const } : {}),
         // The contract's gate until the bind hands the server's own.
         validateParams: contract.validateParams,
+        ...(external?.freshness !== undefined
+          ? { freshness: external.freshness }
+          : {}),
         loader: unbound,
       } as ResourceDefinition<unknown, ResourceParams>,
-      false,
+      external !== undefined,
       true,
     );
     registerEntry(entry, []);
@@ -3689,7 +4086,7 @@ export function createResourceRuntime(
       entry,
       bind: () =>
         contractToDefinition(
-          "defineResource",
+          external ? "defineExternalResource" : "defineResource",
           contract,
           bind() as ServerResourceOptions<T, P>,
         ) as unknown as ResourceDefinition<unknown, ResourceParams>,
@@ -3714,7 +4111,18 @@ export function createResourceRuntime(
           `bindDeferredResources: "${key}" was declared ${entry.mode} and bound ${def.mode}`,
         );
       }
-      const built = buildEntry(def, false);
+      // Externality (and an external's freshness) is the placeholder's, fixed
+      // at definition (D4): a bind restating another is refused, never adopted.
+      const externalSource = entry.externalSource === true;
+      if (
+        def.freshness !== undefined &&
+        JSON.stringify(def.freshness) !== JSON.stringify(entry.freshness)
+      ) {
+        throw new Error(
+          `bindDeferredResources: "${key}" was declared ${externalSource ? `external (freshness ${JSON.stringify(entry.freshness ?? null)})` : "DB-backed"} and bound with freshness ${JSON.stringify(def.freshness)} — a deferred resource's externality is fixed where it is defined`,
+        );
+      }
+      const built = buildEntry(def, externalSource);
       Object.assign(entry, {
         loader: built.entry.loader,
         membership: built.entry.membership,
@@ -3728,10 +4136,7 @@ export function createResourceRuntime(
         validateParams: built.entry.validateParams,
       } satisfies Partial<RegistryEntry>);
       indexRouting(entry);
-      for (const { upstreamKey, edge } of built.ownDownstreamEdges) {
-        const upstream = registry.get(upstreamKey);
-        if (upstream) upstream.downstream.push(edge);
-      }
+      wireDownstreamEdges(built.ownDownstreamEdges);
       dagDirty = true;
     }
   }
@@ -3776,10 +4181,11 @@ export function createResourceRuntime(
   // Two shapes mirroring `defineResource`'s non-keyed ones: the flat loose
   // `ResourceDefinition` (push / invalidate), and the `(contract, serverOpts)`
   // form that reads key/schema AND `preload` off a shared client descriptor.
-  // Never ROUTED (D31): its truth is outside Postgres, so nothing routes into
-  // it — `buildEntry` refuses routes a cast let through. Keyed only as a
-  // bounded window or a point set from a shared keyed contract
-  // (`ExternalKeyedPolicy`).
+  // Never keyed-ROUTED (D31): its truth is outside Postgres, so no `routes`
+  // plan routes into it — `buildEntry` refuses routes a cast let through; a
+  // non-keyed one may declare the Postgres reads its loader also makes as a
+  // `reach` plan (D1). Keyed only as a bounded window or a point set from a
+  // shared keyed contract (`ExternalKeyedPolicy`).
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     def: ExternalDefinition<T, P>,
   ): ExternalResource<T, P>;
@@ -3789,7 +4195,7 @@ export function createResourceRuntime(
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     contract: ResourceContract<T, P> & { keyed?: never },
-    opts: ServerResourceOptions<T, P> & { reach?: never },
+    opts: ServerResourceOptions<T, P>,
   ): ExternalResource<T, P>;
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     a: ResourceDefinition<T, P> | ResourceContract<T, P>,
@@ -3814,9 +4220,9 @@ export function createResourceRuntime(
   // Called lazily — amortised to flushNotifies and the debug endpoint. Two
   // invariants registration already holds are asserted here too, over the
   // whole graph, so a regression of either check is loud (rung 4):
-  //  - D32: a membership entry has no downstream. A5 refuses a cascade out of
-  //    a routed entry and D32 one out of an external window, in both
-  //    registration orders, so the membership drains cascade nothing.
+  //  - D32: a membership entry has no downstream. D32 refuses a cascade out
+  //    of every membership entry (a routed one or an external window), in
+  //    both registration orders, so the membership drains cascade nothing.
   //  - T15: every upstream is external — a deferred placeholder excepted, which
   //    reports `externalSource: false` until its bind (checked then).
   function rebuildDag(): void {
@@ -3827,7 +4233,7 @@ export function createResourceRuntime(
     for (const entry of registry.values()) {
       if (entry.membership && entry.downstream.length > 0) {
         throw new Error(
-          `[resources] membership entry "${entry.key}" has downstream edges (${entry.downstream.map((d) => d.downstreamKey).join(", ")}) — A5 / D32 must refuse a cascade out of a membership entry`,
+          `[resources] membership entry "${entry.key}" has downstream edges (${entry.downstream.map((d) => d.downstreamKey).join(", ")}) — D32 must refuse a cascade out of a membership entry`,
         );
       }
       for (const upKey of entry.upstreamKeys) {
@@ -4344,11 +4750,19 @@ export function createResourceRuntime(
   }
 
   // The tables a floor persist's A6 guard judges, and a first INSERT records:
-  // a routed entry's route tables (its reads, by construction), else the
-  // key's read-set union.
+  // a routed entry's route tables and relation reads (its reads, by
+  // construction), else the key's read-set union. Every persisted entry in
+  // production is routed (central persists nothing; change-feed refuses an
+  // unrouted DB-backed resource, D6), so the union arm is reached only by an
+  // unrouted entry in a DB-free harness.
   function floorGuardTables(entry: RegistryEntry): string[] {
     if (entry.routing) {
-      return [...new Set(entry.routing.plan.routes.map((r) => r.table))].sort();
+      return [
+        ...new Set([
+          ...entry.routing.plan.routes.map((r) => r.table),
+          ...entry.routing.relations.keys(),
+        ]),
+      ].sort();
     }
     return opts.readSet?.(entry.key) ?? [];
   }
@@ -4593,7 +5007,7 @@ export function createResourceRuntime(
   }
 
   // Cascade this entry's change into its downstream edges — always FULL: only
-  // a legacy (non-membership) entry has downstream (D32), and it recomputes
+  // a non-membership entry has downstream (D32), and it recomputes
   // FULL, so there are no row ids to translate. `value`/`valueComputed` feed a
   // value-aware downstream `map`. `sourceTx` (the upstream pending's
   // mutation-ack attribution, minus overflow) threads into every downstream
@@ -4757,7 +5171,7 @@ export function createResourceRuntime(
           pk,
           value,
           flightWatermark,
-          persistReadSet(entry.key),
+          persistReadSet(entry),
         );
       }
     }
@@ -5392,7 +5806,7 @@ export function createResourceRuntime(
     // L2: persisted entries (boot-critical, DB-backed) always recompute FULL and
     // persist their value to `live_state_snapshot` — even with zero subscribers —
     // so cold boot reads a fresh snapshot instead of a from-scratch rebuild. A
-    // scoped partial is never persisted (§3.6/§6.7): the legacy path below is
+    // scoped partial is never persisted (§3.6/§6.7): the non-membership path below is
     // FULL-only, and a persisted alias's scoped drains write a floor persist.
     // Gated on `!entry.externalSource` defensively (the injected `shouldPersist`
     // already excludes external sources, but a runtime check makes the invariant
@@ -5423,7 +5837,7 @@ export function createResourceRuntime(
         continue;
       }
       // A membership entry (bounded window / point / the M5 alias) runs the
-      // incremental membership path instead of the legacy FULL branch.
+      // incremental membership path instead of the non-membership FULL branch.
       // Branch 2/3 (FULL: sticky-FULL `affected === null`, or no snapshot yet)
       // vs branch 4 (incremental, snapshot present). For a window/point entry
       // the FULL branch is bounded by construction — its loader IS the
@@ -5437,7 +5851,7 @@ export function createResourceRuntime(
         }
         continue;
       }
-      // The legacy path: a push / invalidate entry, recomputed FULL (`affected`
+      // The non-membership path: a push / invalidate entry, recomputed FULL (`affected`
       // is always null here — A25). A keyed entry is always a membership entry;
       // the one exception is a deferred keyed placeholder before its
       // bind, which has no loader to run either — reported, never guessed at.
@@ -5450,9 +5864,24 @@ export function createResourceRuntime(
         );
         continue;
       }
-      const version = (entry.versions.get(pk) ?? 0) + 1;
-      entry.versions.set(pk, version);
-      const subs = subscribersFor(entry.key, pk);
+      // D8 — a recompute that changed nothing sends nothing. An entry that
+      // `skipsUnchanged`, with subscribers, loads BEFORE it mints: when the
+      // loader hands back the very object every holder holds
+      // (`lastSent`), no version, no frame — only the ack it owes. Otherwise
+      // it mints after the load, and the frame goes to the subscribers of that
+      // moment. (Minting later is safe: a read meanwhile reports the older
+      // version, and the frame — to every subscriber registered by then —
+      // supersedes it.)
+      const deferMint =
+        skipsUnchanged(entry, persisted) &&
+        subscribersFor(entry.key, pk).length > 0;
+      let version = 0;
+      let subs: SocketState[] = [];
+      if (!deferMint) {
+        version = (entry.versions.get(pk) ?? 0) + 1;
+        entry.versions.set(pk, version);
+        subs = subscribersFor(entry.key, pk);
+      }
 
       // Compute value once if either a subscriber (push mode) or any
       // value-aware downstream `map` needs it. For invalidate-mode upstreams
@@ -5464,9 +5893,11 @@ export function createResourceRuntime(
       );
       const needValue =
         persisted ||
+        deferMint ||
         (entry.mode === "push" && subs.length > 0) ||
         hasValueAwareDownstream;
       let value: unknown;
+      let raw: unknown;
       // Flight-co-produced commit watermark (Rule B′), and the L2 persist floor
       // below — one capture, because both stamps describe the same value.
       let flightWatermark: string | undefined;
@@ -5481,11 +5912,12 @@ export function createResourceRuntime(
           // Origin = the push/cascade flush: re-establishes an entry context
           // (this runs in a bare microtask with no ambient context) so the
           // loader span attributes to this `push` instead of `parent: null`.
-          // `notBefore: lastNotifyAt` — this drain minted `version` above, so a
-          // flight that started before the change it is announcing must be
-          // superseded rather than joined.
+          // `notBefore: lastNotifyAt` — this drain minted (or, deferred, will
+          // mint) a version for this change, so a flight that started before
+          // the change it is announcing must be superseded rather than joined.
           ({
             value,
+            raw,
             watermark: flightWatermark,
             ackTx: flightAckTx,
           } = await (opts.wrapOrigin
@@ -5513,7 +5945,14 @@ export function createResourceRuntime(
         } catch (err) {
           if (evictOnContractError(entry, params, err)) continue;
           reportLoaderError(`loader failed for ${entry.key}`, err);
-          broadcastRefusal(subs, entry, params, err);
+          // D8: a refused holder sits on an error, not on the held object.
+          entry.lastSent.delete(pk);
+          broadcastRefusal(
+            deferMint ? subscribersFor(entry.key, pk) : subs,
+            entry,
+            params,
+            err,
+          );
           // Skip sending and cascading on loader failure — otherwise we'd
           // invalidate downstream state based on a torn read. Never persist on
           // the failure path. No ack either — a failed recompute never proved
@@ -5542,15 +5981,29 @@ export function createResourceRuntime(
             pk,
             value,
             flightWatermark,
-            persistReadSet(entry.key),
+            persistReadSet(entry),
           );
         }
+      }
+
+      // D8: the very object every holder holds — nothing to send. The
+      // cascade still runs below, as for any recompute: an unchanged value
+      // cannot move a downstream, but a downstream's recompute is its own
+      // decision (and its own D8), so this rule stays local to the entry.
+      const unchanged =
+        deferMint && entry.lastSent.has(pk) && entry.lastSent.get(pk) === raw;
+      if (unchanged) {
+        broadcastAckOnly(entry, pendingEntry);
+      } else if (deferMint) {
+        version = (entry.versions.get(pk) ?? 0) + 1;
+        entry.versions.set(pk, version);
+        subs = subscribersFor(entry.key, pk);
       }
 
       // The delivered frame's size (0 while nothing value-carrying was sent) —
       // the `frameChars` measure of this delivery.
       let frameChars = 0;
-      if (subs.length > 0) {
+      if (!unchanged && subs.length > 0) {
         if (entry.mode === "invalidate") {
           const msg = {
             kind: "invalidate" as const,
@@ -5560,6 +6013,9 @@ export function createResourceRuntime(
           };
           frameChars = broadcastJson(subs, msg);
         } else {
+          // D8: recorded with the subscriber set the frame goes to, before
+          // any await — a read served from here on compares against it.
+          if (skipsUnchanged(entry, persisted)) entry.lastSent.set(pk, raw);
           frameChars = await sendUpdate(
             entry,
             params,
@@ -5576,7 +6032,7 @@ export function createResourceRuntime(
       // Delivery latency (enqueue → ws.send) charged to this resource under the
       // active `flush` entry (server: recordSpan("push", `deliver:<key>`)). Only
       // when a subscriber actually received a frame. Identity no-op on central.
-      if (subs.length > 0) {
+      if (!unchanged && subs.length > 0) {
         opts.onDelivered?.(
           entry.key,
           delivery(pendingEntry, subs.length, frameChars),
@@ -6052,7 +6508,7 @@ export function createResourceRuntime(
       return;
     }
 
-    await serveSub(state, entry, id, key, params, pk, clientEtag);
+    await serveSub(state, entry, id, key, params, pk, clientEtag, firstGlobal);
   }
 
   // The read/serve tail of a subscription: probe the conditional-revalidation
@@ -6067,6 +6523,7 @@ export function createResourceRuntime(
     params: ResourceParams,
     pk: string,
     clientEtag: string | undefined,
+    opensSpan: boolean,
   ): Promise<void> {
     // Report the CURRENT version without bumping: a sub-ack (or an `up-to-date`)
     // delivers existing state, it is not a state change. Bumping here made the
@@ -6126,6 +6583,8 @@ export function createResourceRuntime(
       clientEtag != null &&
       freshEtag === clientEtag
     ) {
+      // D8: the client keeps a value of its own, which no object here names.
+      noteRead(entry, pk, undefined);
       sendJson(state.ws, {
         kind: "up-to-date",
         id,
@@ -6155,6 +6614,7 @@ export function createResourceRuntime(
     }
 
     let value: unknown;
+    let raw: unknown;
     let etag: string | undefined;
     let watermark: string | undefined;
     let baseVersion: number;
@@ -6162,7 +6622,7 @@ export function createResourceRuntime(
       // Origin = the subscription: establishes an entry context so the loader
       // span (and any gate waits it charges) is attributed to this `sub` request
       // instead of running with `parent: null`. Gated by the read-admission cap.
-      ({ value, etag, watermark, baseVersion } = await gatedRead(
+      ({ value, raw, etag, watermark, baseVersion } = await gatedRead(
         entry,
         params,
         freshEtag,
@@ -6172,6 +6632,7 @@ export function createResourceRuntime(
       // tells this socket too) rather than leave every push re-failing.
       if (evictOnContractError(entry, params, err)) return;
       reportLoaderError(`loader failed for ${key}`, err);
+      noteRead(entry, pk, undefined); // D8: this holder now sits on an error
       sendJson(
         state.ws,
         err instanceof ResourceRefusal
@@ -6233,6 +6694,7 @@ export function createResourceRuntime(
     // etag, we stamp the FLIGHT's, never our own probe's — a joiner adopts the
     // starter's floor, so the watermark can never be newer than the value.
     // `up-to-date` frames deliberately carry none (they ship no value).
+    noteRead(entry, pk, { raw }, opensSpan ? { state, version } : undefined);
     sendJson(state.ws, {
       kind: "sub-ack",
       id,
@@ -6376,7 +6838,16 @@ export function createResourceRuntime(
             reportLoaderError(`onFirstSubscribe failed for ${p.key}`, err);
           }
         }
-        await serveSub(state, p.entry, p.id, p.key, p.params, p.pk, p.etag);
+        await serveSub(
+          state,
+          p.entry,
+          p.id,
+          p.key,
+          p.params,
+          p.pk,
+          p.etag,
+          p.firstGlobal,
+        );
       })();
     }
     if (upToDate.length > 0) {
@@ -6492,6 +6963,7 @@ export function createResourceRuntime(
       // The tuple leaves the router's targets, and its memoized read-set with it.
       entry.tracked.delete(pk);
       entry.spans.delete(pk);
+      entry.lastSent.delete(pk);
       entry.routing?.uses.delete(pk);
       // Bound keyed-snapshot memory to actively-observed pks. Re-subscribe
       // re-hydrates via a full sub-ack and rebuilds the snapshot.
@@ -6613,6 +7085,7 @@ export function createResourceRuntime(
       // revalidated body. Without it a restart-stable ETag lets the browser 304
       // onto a stale old-boot body it hands JS transparently — the cache-poisoning
       // wedge. See research/2026-07-15-global-live-state-http-cache-poisoning-class-fix.md.
+      noteRead(entry, paramsKey(resourceParams), undefined); // D8: no body
       return new Response(null, {
         status: 304,
         headers: { "cache-control": "no-store" },
@@ -6633,6 +7106,7 @@ export function createResourceRuntime(
     const version = entry.versions.get(pk) ?? 0;
 
     let value: unknown;
+    let raw: unknown;
     let etag: string | undefined;
     let watermark: string | undefined;
     try {
@@ -6641,7 +7115,7 @@ export function createResourceRuntime(
       // it was actually seeded with, which is the caller's own only if this call
       // started it. A joiner adopts the starter's older seed, or `undefined` when a
       // push-path caller started the flight.
-      ({ value, etag, watermark } = await gatedRead(
+      ({ value, raw, etag, watermark } = await gatedRead(
         entry,
         resourceParams,
         freshEtag,
@@ -6656,6 +7130,7 @@ export function createResourceRuntime(
         });
       }
       reportLoaderError(`loader failed for ${key}`, err);
+      noteRead(entry, pk, undefined); // D8: the reader may be a holder on an error
       if (err instanceof ResourceRefusal) {
         return httpError(422, {
           reason: "refused",
@@ -6678,6 +7153,8 @@ export function createResourceRuntime(
     // flight) → OMIT the header; the client then sends no If-None-Match next time
     // and gets a full body.
     if (etag !== undefined) headers["ETag"] = etag;
+    // D8: an HTTP reader is no identified holder — it may only clear.
+    noteRead(entry, pk, { raw });
     // A BYTES value's body IS the value (`application/octet-stream`); the rest of
     // the envelope below — version, epoch, watermark, which the client's guard
     // needs exactly as for a JSON body — rides response headers instead.
@@ -6714,16 +7191,16 @@ export function createResourceRuntime(
   // deferred placeholder not bound yet (`unbound`: no loader, no routes), truth
   // outside Postgres (`external`: declared via `defineExternalResource`, so its
   // own `notify` reaches it), compiler-emitted routes (`routed`:
-  // `routeTableChange`), and otherwise the legacy router (`legacy-full`: every
-  // change to a relation base of its captured read-set recomputes each tracked
-  // tuple FULL). The policy is not the whole delivery story: the legacy router
-  // indexes every non-routed entry, so an external or unbound entry with a
-  // captured read-set is ALSO reached FULL by its bases — `legacyReach` says so.
+  // `routeTableChange`), and otherwise `unrouted` — reached by no table change,
+  // which change-feed refuses at boot (D6, `unroutedResourceKeys`), so only a
+  // DB-free harness ever shows one. An external may ALSO be reached by its
+  // declared reads (`routes` non-null) — the policy is what it is, `routes`
+  // how a table change reaches it.
   function debugPolicyOf(entry: RegistryEntry): DebugPolicy {
     if (deferred.has(entry.key)) return "unbound";
     if (entry.externalSource) return "external";
     if (entry.routing) return "routed";
-    return "legacy-full";
+    return "unrouted";
   }
 
   function handleResourcesDebug(): Response {
@@ -6745,7 +7222,6 @@ export function createResourceRuntime(
       policy: DebugPolicy;
       readSet: string[];
       readSetBases: string[];
-      legacyReach: string[];
       routes: Array<{
         id: string;
         table: string;
@@ -6754,7 +7230,13 @@ export function createResourceRuntime(
       }> | null;
       derivedReads: string[];
       unfedReads: string[];
+      relationReads: Array<{
+        relation: string;
+        reason: string;
+        bases: string[];
+      }>;
       routeDrifted: string[];
+      routeDriftSeeded: string[];
       tuples: number;
       persisted: boolean;
       positionAgeMs: number | null;
@@ -6789,9 +7271,9 @@ export function createResourceRuntime(
       const persisted = isPersisted(entry);
       const l2PositionAt = persistStats.get(entry.key)?.l2PositionAt;
       // The raw captured read-set (the view/table names the loader actually
-      // read) and its relation bases — the base tables a change to which
-      // reaches this entry through the legacy router (views and rollups
-      // expanded). Unfiltered: a rollup shows in the raw set, its sources in
+      // read) and its relation bases (views and rollups expanded to the base
+      // tables feeding them) — display only, no change routes through them.
+      // Unfiltered: a rollup shows in the raw set, its sources in
       // the bases. Identity on central (no views there).
       const rawReadSet = opts.readSet?.(entry.key) ?? [];
       const readSetBases = readSetBasesOf(entry.key);
@@ -6814,13 +7296,8 @@ export function createResourceRuntime(
         readSet: rawReadSet,
         // The read-set expanded through the relation bases (base-table space).
         readSetBases,
-        // The bases under which the legacy router indexes this entry — a write
-        // to any of them recomputes it FULL (`applyLegacyFullChange`). Read off
-        // the router's own predicate (`legacyRouted`), not off `policy`: an
-        // EXTERNAL entry whose loader read the DB is reached here too, beside
-        // its own `notify()`. `[]` for a routed entry (and on central).
-        legacyReach: legacyRouted(entry) ? readSetBases : [],
-        // A routed entry's routes (null = the legacy read-set path serves it):
+        // A routed entry's routes (null = no table change reaches it — an
+        // external reached only by its own notify, or an unrouted entry):
         // every table it can be reached through, how its rows map, and — for a
         // `full` route — the declared reason, so a routed FULL is never silent.
         routes: entry.routing
@@ -6835,14 +7312,31 @@ export function createResourceRuntime(
         // route tables, reached through their sources' routes) and the A8 drift
         // guard's own record: the captured tables no route names, each one a
         // table whose writes never reach the entry. Raw-table space, as the
-        // guard judged them. `[]` for a legacy entry (and on central).
+        // guard judged them. `[]` for an entry with no routing (and on central).
         derivedReads: entry.routing ? [...entry.routing.derived].sort() : [],
         // A reach plan's tables read outside the change feed by declaration
         // (`ReachPlan.unfed`). `[]` otherwise.
         unfedReads: entry.routing ? [...entry.routing.unfed].sort() : [],
+        // A reach plan's relation reads (`ReachPlan.relations`): each view or
+        // rollup read whole, its reason, and the bases a write to which
+        // reaches the entry (`indexRelationReads`). `[]` otherwise.
+        relationReads: entry.routing
+          ? [...entry.routing.relations]
+              .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+              .map(([relation, reason]) => ({
+                relation,
+                reason,
+                bases: [...relationBasesOf(relation)].sort(),
+              }))
+          : [],
         routeDrifted: entry.routing ? [...entry.routing.drifted].sort() : [],
+        // D7: persisted reads seeded as drift at boot that no load has
+        // confirmed yet (`seedRouteDrift`) — routed FULL, not reported.
+        routeDriftSeeded: entry.routing
+          ? [...entry.routing.seededDrift].sort()
+          : [],
         // Tracked params-tuples (`entry.tracked`): the subscribed tuples a
-        // change recomputes — a legacy-full entry's fan-out per change.
+        // change recomputes — a FULL-routed entry's fan-out per change.
         tuples: entry.tracked.size,
         // L2-persisted, and how old its row's `position_at` is as last known
         // (null = not persisted, or no position known in this process).
@@ -6994,8 +7488,7 @@ export function createResourceRuntime(
   // Route one base-table change to every ROUTED entry reading the table (see
   // `ResourceRuntime.routeTableChange` and `./routing`). Synchronous: each tuple's
   // pending is merged in this call, so the whole change rides one flush.
-  // Defensive like `applyLegacyFullChange`: a failure is reported, never thrown at the
-  // producer — and isolated per entry (per tuple inside `routeEntryChange`), so
+  // Defensive: a failure is reported, never thrown at the producer — and isolated per entry (per tuple inside `routeEntryChange`), so
   // one failing entry cannot take the change from the others.
   function routeTableChange(change: TableChange): void {
     for (const entry of routedByTable.get(change.table) ?? []) {
@@ -7012,17 +7505,41 @@ export function createResourceRuntime(
 
   // One routed entry, every tuple it must consider: its subscribed tuples
   // (`tracked` — never an O(sockets) scan), plus `{}` for a persisted entry,
-  // which keeps its value current with nobody subscribed. A param'd window or
-  // point set with no subscriber has nobody to keep current, so it gets nothing:
-  // a fresh subscribe loads from scratch.
+  // which keeps its value current with nobody subscribed — and, with NO tuple
+  // subscribed, for an entry with downstream edges whose `{}` is a tuple of
+  // it: that drain is what cascades the change on to its downstreams. A param'd
+  // window or point set with no subscriber has nobody to keep current, so it
+  // gets nothing: a fresh subscribe loads from scratch.
   function routedTargets(
     entry: RegistryEntry,
   ): [pk: string, params: ResourceParams][] {
     const targets = [...entry.tracked];
-    if (isPersisted(entry) && !entry.tracked.has(EMPTY_PK)) {
+    if (
+      !entry.tracked.has(EMPTY_PK) &&
+      (isPersisted(entry) ||
+        (entry.tracked.size === 0 &&
+          entry.downstream.length > 0 &&
+          acceptsEmptyTuple(entry)))
+    ) {
       targets.push([EMPTY_PK, {}]);
     }
     return targets;
+  }
+
+  // Whether `{}` is a tuple of the entry — its own params gate, the one every
+  // entry point runs, accepts it. A flat-form entry with no gate
+  // (`acceptAnyParams`) accepts it. A gate
+  // throwing anything but a contract refusal is a bug in it: it escapes, and
+  // `routeTableChange` reports it for this entry — which, with nothing
+  // subscribed, has no other tuple the change could have reached.
+  function acceptsEmptyTuple(entry: RegistryEntry): boolean {
+    try {
+      entry.validateParams({});
+      return true;
+    } catch (err) {
+      if (err instanceof ResourceContractError) return false;
+      throw err;
+    }
   }
 
   function routeEntryChange(entry: RegistryEntry, change: TableChange): void {
@@ -7219,48 +7736,6 @@ export function createResourceRuntime(
 
   // --- L4 DB change-feed routing ---
 
-  // Route one DB change to the LEGACY (non-routed) readers of its table: invert
-  // the L3 read-set through the relation bases, and FULL-recompute every
-  // tracked tuple of each reader through the existing `scheduleNotify`, tagged
-  // with the change's source. Defensive: an unread table is a silent no-op, and
-  // it never throws (a lookup bug must not take down the LISTEN consumer).
-  function applyLegacyFullChange(change: {
-    table: string;
-    source: ChangeSource;
-    xid?: string;
-    changedAt?: number;
-  }): void {
-    try {
-      const affectedKeys = tableToResources().get(change.table);
-      if (!affectedKeys || affectedKeys.length === 0) return;
-      for (const key of affectedKeys) {
-        const entry = registry.get(key);
-        if (!entry) continue;
-        const subscribed = subscribedParamsFor(key);
-        // Fan out to every subscribed params tuple; with none, the `{}` tuple
-        // (a param-less resource's only one — a persisted entry recomputes it
-        // with no subscriber). A DB-backed membership entry is never legacy
-        // (it is routed); an external window whose loader read a table is,
-        // and its FULL pending re-reads the tuple (`drainMembershipFull`).
-        const targets: ResourceParams[] =
-          subscribed.length > 0 ? subscribed : [{}];
-        for (const params of targets) {
-          scheduleNotify(entry, params, null, {
-            source: change.source,
-            sourceTx: change.xid,
-            changedAt: change.changedAt,
-          });
-        }
-      }
-    } catch (err) {
-      // console.error fires (loud), plus the report hook.
-      reportLoaderError(
-        `applyLegacyFullChange failed for table "${change.table}"`,
-        err,
-      );
-    }
-  }
-
   // Force a FULL recompute of one resource by key (param-less → `{}`), through the
   // SAME `scheduleNotify(..., { source: "feed" })` path the feed router uses, so
   // the recompute is byte-identical to a feed-driven one. Used by the L2 boot init
@@ -7281,7 +7756,7 @@ export function createResourceRuntime(
 
   // Enumerate every table a routed entry's routes name. Read straight off the
   // registry — call it after `bindDeferredResources()`, so a deferred entry's
-  // routes are in. A legacy entry is reached through its read-set and names none.
+  // routes are in.
   function scopedResourceTables(): ScopedResourceTable[] {
     const out: ScopedResourceTable[] = [];
     for (const entry of registry.values()) {
@@ -7307,6 +7782,29 @@ export function createResourceRuntime(
       }
     }
     return out;
+  }
+
+  // Every reach plan's relation reads (see the interface).
+  function relationResourceReads(): RelationResourceRead[] {
+    const out: RelationResourceRead[] = [];
+    for (const entry of registry.values()) {
+      for (const relation of entry.routing?.relations.keys() ?? []) {
+        out.push({ key: entry.key, relation });
+      }
+    }
+    return out;
+  }
+
+  // Every bound DB-backed entry no change reaches (see the interface).
+  function unroutedResourceKeys(): string[] {
+    const out: string[] = [];
+    for (const entry of registry.values()) {
+      if (entry.externalSource || entry.routing || deferred.has(entry.key)) {
+        continue;
+      }
+      out.push(entry.key);
+    }
+    return out.sort();
   }
 
   // Every routed entry's routes, folded into one layout per table.
@@ -7454,12 +7952,16 @@ export function createResourceRuntime(
     loadResourceByKey,
     measureSubscribeCycle,
     triggerResourcePush,
-    applyLegacyFullChange,
     routeTableChange,
     recomputeResource,
     notifyStatsFor,
     scopedResourceTables,
     unfedResourceTables,
+    relationResourceReads,
+    unroutedResourceKeys,
+    indexRelationReads,
+    resetRelationReads,
+    seedRouteDrift,
     routedTableRequirements,
     boundedMembershipKeys,
     persistedKeys,

@@ -110,6 +110,8 @@ export const fileWatchersBackgroundKind = defineBackgroundKind({
   kind: "file-watcher",
   order: 30,
   label: "File watchers",
+  // Watcher state is the in-process registry, never Postgres.
+  tables: [],
   list: () => Promise.resolve(listFileWatcherEntries()),
   recentRuns: fileWatcherRecentRuns,
 });

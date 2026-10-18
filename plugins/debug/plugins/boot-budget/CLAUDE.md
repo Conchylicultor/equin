@@ -12,8 +12,7 @@ visibility"): a cheap per-worktree scheduled `defineJob`
 (`debug.boot-budget-monitor`) reads the post-boot profile once each tick and files
 a deduped `boot-budget` report — from which an investigation task is filed on
 demand (Debug → Reports) — for every boot hook or warmup span over its
-per-phase wall-time budget. Modeled byte-for-byte on `debug/read-set-shrink` and
-`debug/op-rate` (durable signal → `ReportKind` → deduped report via a per-worktree
+per-phase wall-time budget. Modeled on `debug/op-rate` (durable signal → `ReportKind` → deduped report via a per-worktree
 scheduled job; investigation task on demand).
 
 ## What it monitors
@@ -46,10 +45,9 @@ onto its stable fingerprint row (`boot-budget:<spanName>`) whose `count` becomes
 
 This is the **pull-signal analog of op-rate's module-level baseline maps** (which
 gate its re-fire on unchanged profiler data). boot-budget has no event stream to
-drain — unlike `read-set-shrink`, which drains an accumulator fed by a seam — so
-it has **no accumulator**: it pulls a static profile and the guard is "already
-reported this boot" rather than a delta or a drain. That is the one intentional
-structural deviation from the read-set-shrink template.
+drain — unlike a monitor that drains an accumulator fed by a seam — so it has
+**no accumulator**: it pulls a static profile and the guard is "already
+reported this boot" rather than a delta or a drain.
 
 ## Budgets (config_v2, mirroring opRateConfig)
 

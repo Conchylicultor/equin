@@ -4,7 +4,7 @@ Whole-boot monitor — the producer that makes a **slow server boot** a first-cl
 slow event: one `slow_ops` row (`operationKind: "boot"`, `operation:
 "server-boot"`) plus one coherent trace (`kind: "boot"`, section validated by
 `debug/trace/boot`) per over-budget boot. Follows the one-signal-one-plugin
-debug-monitor precedent (`stall-monitor`, `read-set-shrink`); the job copies
+debug-monitor precedent (`stall-monitor`); the job copies
 `boot-budget`'s shape (per-worktree minute cron, `dedup: "singleton"`,
 `maxAttempts: 3`, module-level per-boot dedup — process lifetime = boot epoch).
 

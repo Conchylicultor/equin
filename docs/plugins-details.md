@@ -11965,8 +11965,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 89 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×89
+    - Slot contributors: 88 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×88
     - Contributes: `Demo.Resource` "config-v2"
     - Uses:
       - `framework/browser-server/demo.Demo`
@@ -12134,11 +12134,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `withOverrideLegend`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/shape --spacing`
-    - Imported by: 111 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 110 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×31
-      - `debug` ×14
       - `backup` ×13
       - `conversations` ×13
+      - `debug` ×13
       - `ui` ×11
       - `auth` ×5
       - `tasks` ×4
@@ -13345,10 +13345,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `resource.declare` "allow-files"
             - Uses:
+              - `conversations/workspace.findWorkspaceOfConversation`
               - `infra/file-watcher.acquireDirWatch`
               - `infra/file-watcher.DirWatchRelease`
               - `network/live.serveValue`
-              - `tasks/tasks-core.getConversation`
+              - `tasks/tasks-core._attempts`
+              - `tasks/tasks-core._conversations`
             - Resources: `allow-files` (push, notified)
           - Cross-plugin:
             - Uses tokens:
@@ -13356,8 +13358,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-semibold`
-          - Exemptions:
-            - Exempts itself from: `no-db-backed-notify` — `server/internal/allow-files-resource.ts` (debt)
           - Shared:
             - Exports (types): `AllowFiles`
             - Exports (values): `allowFiles`
@@ -13515,6 +13515,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/commit-list.parseDiffNumstatZ`
               - `primitives/commit-list.runGit`
               - `primitives/commit-list.WorktreeGoneError`
+              - `tasks/tasks-core._attempts`
+              - `tasks/tasks-core._conversations`
             - Exports (values):
               - `editedFilesServed`
               - `editedFilesSignature`
@@ -13551,8 +13553,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review/code-review`
               - `review/plugin-changes`
               - `review/plugin-changes/file-changes`
-          - Exemptions:
-            - Exempts itself from: `no-db-backed-notify` — `server/internal/edited-files-resource.ts` (debt)
           - Plugins:
             - **`file-pane`** — Hosts the file-peek pane: a checkout file opened from a conversation (chat file links, review, commits), shown through primitives/file-viewer with the conversation's edited-file status as context.
               - Web:
@@ -13947,6 +13947,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `conversations/transcript-watcher.readJsonlEventsFromChain`
               - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+              - `conversations/transcript-watcher.transcriptChainReads`
               - `conversations/transcript-watcher.transcriptChainSignature`
               - `conversations/transcript-watcher.watchTranscript`
               - `infra/git/git-read-cache.createSignedMemo`
@@ -13971,7 +13972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/agent-manager/demo`
               - `tasks/outcome-report`
           - Exemptions:
-            - Exempts itself from: `no-db-backed-notify` — `server/internal/jsonl-events-resource.ts` (debt)
+            - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
           - Plugins:
             - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that changed them. Folds with the harness context around it.
               - Web:
@@ -14514,7 +14515,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `conversations/transcript-watcher.readJsonlEventsFromChain`
                   - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+                  - `conversations/transcript-watcher.transcriptChainReads`
+                  - `conversations/transcript-watcher.transcriptChainSignature`
                   - `infra/file-watcher.defineFileWatcher`
+                  - `infra/git/git-read-cache.createSignedMemo`
                   - `network/live.serveValue`
                 - Register: `defineFileWatcher('background-shells.output')`
                 - Resources: `background-shell-output` (push, notified)
@@ -14558,8 +14562,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
                   - `conversations/conversation-view/running-agents`
-              - Exemptions:
-                - Exempts itself from: `no-db-backed-notify` — `server/internal/output-resource.ts` (debt)
             - **`code-listing`** — Renders `cat -n` tool output (`CatNListing`) as a syntax-highlighted, line-numbered listing: parses the gutter off and hands the code to syntax-highlight's `CodeListing`.
               - Web:
                 - Uses: `primitives/syntax-highlight.CodeListing`
@@ -14913,6 +14915,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/transcript-watcher.readChainLines`
                   - `conversations/transcript-watcher.readJsonlEventsFromChain`
                   - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+                  - `conversations/transcript-watcher.transcriptChainReads`
                   - `conversations/transcript-watcher.transcriptChainSignature`
                   - `conversations/transcript-watcher.watchPaths`
                   - `infra/git/git-read-cache.createSignedMemo`
@@ -14999,8 +15002,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
                   - `conversations/conversation-view/running-agents`
                   - `conversations/usage`
-              - Exemptions:
-                - Exempts itself from: `no-db-backed-notify` — `server/internal/activity-resource.ts`, `server/internal/transcript-resource.ts` (debt)
             - **`summary`** — Renders summary separator events in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "summary" → `SummaryRow`
@@ -17242,6 +17243,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SessionChainEntry`
           - `SharedSessionId`
         - Exports (values):
+          - `_conversationSessions`
           - `listConversationsForSessions`
           - `listSessionChain`
           - `listSharedClaudeSessionIds`
@@ -17406,6 +17408,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `report-kind` "conversation-foreign-session"
         - Uses:
+          - `conversations/session-chain._conversationSessions`
           - `conversations/session-chain.listSessionChain`
           - `infra/file-watcher.defineFileWatcher`
           - `infra/file-watcher.FileWatcher`
@@ -17413,6 +17416,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
           - `reports.recordReportDebounced`
           - `reports.ReportKind`
+          - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.getConversationClaudeSessionId`
         - Exports (types):
           - `AnchoredChain`
@@ -17432,6 +17436,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `refreshConversationChain`
           - `resolveAnchoredChain`
           - `resolveConversationTranscriptPaths`
+          - `transcriptChainReads`
           - `transcriptChainSignature`
           - `watchPaths`
           - `watchTranscript`
@@ -17660,11 +17665,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/sonata/transcription`
           - `conversations`
+          - `conversations/conversation-view/allow-monitor`
           - `conversations/conversation-view/code`
           - `conversations/workspace/launch-option`
           - `conversations/workspace/scratch`
           - `conversations/workspace/worktree`
           - `debug/scratch-hello`
+          - `review/plugin-changes`
           - `tasks/tasks-core`
       - Test helpers:
         - Server: `@plugins/conversations/plugins/workspace/server/testing`
@@ -17942,13 +17949,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `assertRouteTablesCovered` — Throw loudly (blocking boot) if any resource depends on a table with no change source: no trigger the change-feed installed, and no change producer.
           - `buildViewDeps` — Each public view → the relations it directly reads (sorted).
           - `createChangeFeedListener`
-          - `createChangeRouter` — The routing above, into ANY runtime's two routers — `routeChange` is it bound to server-core's process-global runtime.
+          - `createChangeRouter` — The routing above, into ANY runtime's router — `routeChange` is it bound to server-core's process-global runtime.
           - `createRelationBases` — The memoized relation → bases function over `graph`.
           - `ensureChangelogTable`
           - `findCarriedProducedRoutes` — A3p: the produced tables whose routes need a carried column.
           - `flushNow` — Flush `producer`'s coalescing buffer now (a test drives the window by hand).
           - `installedLayouts` — What each table's installed triggers emit.
-          - `installRelationGraph` — Install the boot graph (change-feed's `onReadyBlocking`, D34): here, and in server-core's runtime (`setRelationBases`, which bumps the read-set version so the legacy router's memoized inversion is rebuilt through it).
+          - `installRelationGraph` — Install the boot graph (change-feed's `onReadyBlocking`, D34): here, and in server-core's runtime (`setRelationBases`, which indexes every reach plan's relation reads through it).
           - `mountProducersForTest` — Mount `producers` without a booted plugin graph: each is live (A12 passes), runs as boot mode `mode` (default `"serve"`; pass `"exec"` to see A13), and routes through `route` (default the real `routeChange`).
           - `readInstalledTriggers` — Every installed `live_state_*` trigger on the given tables.
           - `rebuildTriggers`
@@ -18219,21 +18226,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/jobs.defineJob`
           - `primitives/log-channels.defineLogSink`
         - DB schema: `plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`
-        - Exports (types): `ReadSetShrinkEvent`
         - Exports (values):
           - `clearPersistedSnapshots`
-          - `onReadSetShrink`
           - `readPersistedSnapshots`
-          - `reconcileReadSetTable`
         - Register:
           - `defineJob('database.live-state-changelog-prune')`
           - `defineJob('live-state-snapshot.compact')`
       - Cross-plugin:
         - Imported by:
           - `debug/profiling/boot-bench`
-          - `debug/read-set-shrink`
           - `infra/boot-snapshot`
-          - `shell/notifications`
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
         - Uses:
@@ -20140,8 +20142,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "queue-slot-blocked"
           - `report-kind` "queue-slot-hog"
           - `report-kind` "queue-wedged"
-        - Uses: 33 symbols — full list in [`plugins/debug/plugins/queue-health/REFERENCE.md`](../plugins/debug/plugins/queue-health/REFERENCE.md)
-          - `infra/jobs` ×24
+        - Uses: 34 symbols — full list in [`plugins/debug/plugins/queue-health/REFERENCE.md`](../plugins/debug/plugins/queue-health/REFERENCE.md)
+          - `infra/jobs` ×25
           - `config_v2` ×2
           - `reports` ×2
           - `infra/background/timer.defineTimer`
@@ -20230,10 +20232,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
       - Exemptions:
-        - Exempts itself from:
-          - `timer/no-unlisted-timer` — `server/internal/watchdog.ts` (sanctioned)
-          - `no-db-backed-notify` — `server/internal/pulse.ts` (sanctioned)
-    - **`read-set`** — Read-set debug pane: the captured loader→table index and the read-set ceiling — every live-state resource under its change policy (routed, legacy-full, external, unbound), with legacy-full relation bases, routed full routes and route drift. Serves resources.debug: the resource runtime's per-resource debug payload (policy, read-set, legacy reach, routes, drift, subscribers, loader and notify counters, declared freshness) as one snapshot value every live-state debug pane reads.
+        - Exempts itself from: `timer/no-unlisted-timer` — `server/internal/watchdog.ts` (sanctioned)
+    - **`read-set`** — Read-set debug pane: the captured loader→table index and the read-set ceiling — every live-state resource under its change policy (routed, external, unrouted, unbound), with its full routes, relation reads and route drift. Serves resources.debug: the resource runtime's per-resource debug payload (policy, read-set, routes, relation reads, drift, subscribers, loader and notify counters, declared freshness) as one snapshot value every live-state debug pane reads.
       - Web:
         - Slots: `readSetPane.Actions`
         - Slot contributors: `readSetPane.Actions` ← `primitives.pane`
@@ -20285,36 +20285,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --spacing`
-    - **`read-set-shrink`** — Read-set shrink report renderer: a one-line Debug → Reports summary for the read-set-shrink kind, plus the enabled config registration. Read-set shrink monitor: a per-backend accumulator fed (via the live-state-snapshot seam) by every persist that sheds a table from a boot-critical resource's durable read-set, plus a per-worktree scheduled job that files one deduped read-set-shrink report per shedding resource so a human can confirm it is a legitimate code-change shed rather than a conditional query that didn't fire.
-      - Web:
-        - Contributes:
-          - `ConfigV2.WebRegister` "read-set-shrink"
-          - `Reports.KindView` → `ShrinkSummary`
-        - Uses:
-          - `config_v2.ConfigV2`
-          - `primitives/css/badge.Badge`
-          - `primitives/css/inline.Inline`
-          - `reports.Reports`
-      - Server:
-        - Contributes:
-          - `ConfigV2.Register` "read-set-shrink"
-          - `report-kind` "read-set-shrink"
-        - Uses:
-          - `config_v2.ConfigV2`
-          - `config_v2.getConfig`
-          - `database/live-state-snapshot.onReadSetShrink`
-          - `infra/jobs.defineJob`
-          - `reports.recordReport`
-          - `reports.ReportKind`
-        - Register: `defineJob('debug.read-set-shrink-monitor')`
-      - Core:
-        - Uses:
-          - `config_v2.defineConfig`
-          - `fields/bool/config.boolField`
-        - Exports (types): `ReadSetShrinkPayload`
-        - Exports (values):
-          - `readSetShrinkConfig`
-          - `ReadSetShrinkPayloadSchema`
     - **`render-profiler`** — On-demand React fiber-commit profiler: when started, attributes each commit to its initiating component and the offending hook (incl. useSyncExternalStore), surfaced as the Debug → Render Profiler pane and the window.__reactRenderProfiler API.
       - Web:
         - Slots: `renderProfilerPane.Actions`
@@ -21581,8 +21551,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
-              - `debug` ×13
+            - Imported by: 30 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+              - `debug` ×12
               - `apps` ×6
               - `conversations` ×4
               - `tasks` ×2
@@ -23711,6 +23681,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PersistedValueCheck`
           - `PersistMeta`
           - `ReachPlan`
+          - `RelationRead`
           - `Resource`
           - `ResourceContract`
           - `ResourceDefinition`
@@ -23760,11 +23731,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineRoutedTable` — Register a keyed resource over `spec.table` the way a compiled collection is.
           - `diffKeyedFull` — Full diff: compare the new array `value` against `prev` (the prior snapshot, or `undefined` on first notify).
           - `diffKeyedScoped` — Scoped diff (Layer 2): `scopedRows` is a PARTIAL array — only the recomputed affected rows.
-          - `feedChange` — One base-table change as the change feed delivers it (`routeChange`): to the routed router, then the legacy one.
+          - `feedChange` — One base-table change as the change feed delivers it (`routeChange`).
           - `hashSnapEncoder` — The portable 64-bit hash encoder: the runtime's default `snapHash`.
           - `identityPlan` — The plan `compileWindowQuery` emits for a single-table window / point set / alias: one identity route `base` on `table`, gating on `cols`, read by every tuple in the membership role.
-          - `legacyFull` — The legacy router alone: every non-routed reader of `table` recomputes FULL.
           - `makeClientView`
+          - `wholeReach` — The reach plan of a non-keyed value reading each of `tables` whole: one `full` route per table, read by every tuple — so a change to any of them recomputes each tracked tuple (and a param-less persisted / cascading entry's `{}`) FULL.
           - Types: `ClientView`, `DeriveFrame`, `DeriveSourceFrame`, `FedChange`, `Harness`, `KeyedSnapshot`, `RecordedFrame`, `RoutedTable`, `RoutedTableSpec`
     - **`server-core`**
       - Core:
@@ -23811,7 +23782,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WsData`
           - `WsHandler`
         - Exports (values):
-          - `applyLegacyFullChange`
           - `assertPreloadedResourcesDeclared`
           - `bindDeferredResources`
           - `boundedMembershipKeys`
@@ -23843,7 +23813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `recordLoaderReadSet`
           - `recordMemoryCheckpoint`
           - `registeringPlugin`
-          - `removeReadSetTable`
+          - `relationResourceReads`
           - `reportServerError`
           - `reportServerFatalSync`
           - `Resource`
@@ -23851,7 +23821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `routeTableChange`
           - `scopedResourceTables`
           - `seedPersistedSnapshot`
-          - `seedReadSetIndex`
+          - `seedRouteDrift`
           - `serverCollectedDir`
           - `setClientBuildIdentity`
           - `setErrorReporter`
@@ -23862,6 +23832,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `triggerResourcePush`
           - `unboundedWindowKeys`
           - `unfedResourceTables`
+          - `unroutedResourceKeys`
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
@@ -23881,6 +23852,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Core: `@plugins/framework/plugins/server-core/core/testing`
           - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
           - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
+          - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
     - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
@@ -24093,15 +24065,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/studio/contributions/tables/indexes` (0 debt)
                   - `apps/studio/contributions/tables/row-count` (0 debt)
                   - `apps/studio/contributions/tables/sample-rows` (0 debt)
-                  - `conversations/conversation-view/allow-monitor` (1 debt)
-                  - `conversations/conversation-view/code` (1 debt)
-                  - `conversations/conversation-view/jsonl-viewer` (1 debt)
-                  - `conversations/conversation-view/jsonl-viewer/background-shells` (1 debt)
-                  - `conversations/conversation-view/jsonl-viewer/subagents` (2 debt)
-                  - `debug/queue-health` (0 debt)
                   - `infra/jobs` (0 debt)
-                  - `review/plugin-changes` (1 debt)
-                  - `tasks/automations` (1 debt)
             - **`no-disabled-flag`**
             - **`no-gitlinks`**
             - **`no-hand-built-link-to`**
@@ -24117,7 +24081,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempted by: `framework/tooling/checks/no-raw-sse` (0 debt)
             - **`no-raw-websocket`**
               - Exemptions:
-                - Exempted by: `primitives/networking` (0 debt)
+                - Exempted by:
+                  - `conversations/conversation-view/jsonl-viewer` (0 debt)
+                  - `primitives/networking` (0 debt)
             - **`no-reexport-default`**
             - **`no-relative-server-imports`**
             - **`no-use-resource-cast`**
@@ -25345,6 +25311,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `network/live.serveValue`
+            - DB schema: `plugins/infra/plugins/background/plugins/catalog/server/internal/provider-tables.ts`
             - Exports (types):
               - `BackgroundKind`
               - `BackgroundKindSpec`
@@ -26567,6 +26534,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/deployment`
               - `conversations/conversation-view/code`
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/subagents`
               - `plugin-meta/plugin-tree`
               - `release`
@@ -27090,6 +27058,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SerialSpec`
           - `WaitingJobStat`
         - Exports (values):
+          - `_deadJobs`
+          - `_jobRuns`
+          - `_jobRunStats`
           - `abortDurableRun`
           - `ALL_JOB_TASKS`
           - `ceilingMsFor`
@@ -27218,11 +27189,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 71 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 70 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×19
           - `conversations` ×14
           - `infra` ×12
-          - `debug` ×10
+          - `debug` ×9
           - `tasks` ×4
           - `database` ×3
           - `page` ×3
@@ -27248,6 +27219,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Uses:
               - `infra/background/catalog.defineBackgroundKind`
+              - `infra/jobs._jobRuns`
+              - `infra/jobs._jobRunStats`
               - `infra/jobs.cronRanges`
               - `infra/jobs.JobRunRecord`
               - `infra/jobs.JobRunStats`
@@ -34755,9 +34728,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 167 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 166 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
-              - `debug` ×37
+              - `debug` ×36
               - `conversations` ×24
               - `reports` ×12
               - `primitives` ×10
@@ -35176,9 +35149,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `Inline`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×16
-              - `debug` ×16
+              - `debug` ×15
               - `reports` ×13
               - `conversations` ×9
               - `primitives` ×9
@@ -38641,7 +38614,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `debug` ×12
           - `apps` ×11
           - `infra` ×8
@@ -38656,7 +38629,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state`
           - `release`
           - `reports/render-loop`
-          - `shell/notifications`
           - `stats/cost`
           - `upstream`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
@@ -42117,8 +42089,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 30 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×30
+    - Slot contributors: 29 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×29
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -42230,9 +42202,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:
-    - Imported by: 57 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 56 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×21
-      - `debug` ×17
+      - `debug` ×16
       - `conversations` ×7
       - `database` ×3
       - `infra` ×2
@@ -42814,6 +42786,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/code.editedFilesServed`
           - `conversations/conversation-view/code.editedFilesSignature`
           - `conversations/conversation-view/code.getEditedFiles`
+          - `conversations/workspace.findWorkspaceOfConversation`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/git/git-read-cache.createGitStateMemo`
@@ -42824,7 +42797,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/paths.REPO_ROOT`
           - `network/live.serveValue`
           - `primitives/commit-list.runGit`
-          - `tasks/tasks-core.getConversation`
+          - `tasks/tasks-core._attempts`
+          - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.listPushesByPushId`
         - Resources: `review.plugin-changes` (push, notified)
         - Routes: `GET /api/review/plugin-changes`
@@ -42868,9 +42842,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes/api-changes`
           - `review/plugin-changes/file-changes`
       - Exemptions:
-        - Exempts itself from:
-          - `no-db-backed-notify` — `server/internal/plugin-changes-resource.ts` (debt)
-          - `live/no-endpoint-read` — `web/use-plugin-changes.ts` (debt)
+        - Exempts itself from: `live/no-endpoint-read` — `web/use-plugin-changes.ts` (debt)
       - Plugins:
         - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
           - Web:
@@ -43460,7 +43432,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `database.db`
           - `database/admin.ExcludeFromFork`
-          - `database/live-state-snapshot.reconcileReadSetTable`
           - `ids.IdKinds`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
@@ -43470,7 +43441,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveCollection`
           - `network/live.serveValue`
           - `network/live/filter.filterSql`
-          - `primitives/log-channels.defineLogSink`
         - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
         - Exports (types): `RecordNotificationInput`
         - Exports (values):
@@ -44484,8 +44454,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/reports-investigation`
           - `tasks/sidequest-autopilot`
           - `upstream`
-      - Exemptions:
-        - Exempts itself from: `no-db-backed-notify` — `server/internal/live.ts` (debt)
     - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
       - Web:
         - Slots: `TaskLaunch.Option`
@@ -45770,8 +45738,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 69 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×28
+        - Imported by: 70 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×29
           - `tasks` ×16
           - `debug` ×6
           - `active-data` ×5

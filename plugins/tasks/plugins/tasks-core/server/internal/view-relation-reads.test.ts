@@ -1,12 +1,11 @@
 /**
- * Legacy readers of the task-tree VIEWS through the real feed (P8 steps 23–24,
- * 23a; C30): a non-routed loader records the view it read (`tasks_v`,
- * `attempts_v`), and the router reaches it through the view's relation bases —
- * the tables the view reads, transitively, with each rollup replaced by its
- * sources. Since step 19 `tasks_v` and `attempts_v` read `conversations` and
- * `pushes` only through the feed-exempt rollups, so before relation bases a
- * conversation or push write reached no legacy reader of them at all (the
- * `automations.catalog` silent-stale case, §2).
+ * Readers of the task-tree VIEWS through the real feed (C30, D2): a value
+ * whose reach plan reads a view whole (`relations: tasks_v` / `attempts_v`) is
+ * reached through the view's relation bases — the tables the view reads,
+ * transitively, with each rollup replaced by its sources. `tasks_v` and
+ * `attempts_v` read `conversations` and `pushes` only through the feed-exempt
+ * rollups, so without relation bases a conversation or push write would reach
+ * no reader of them at all (the `automations.catalog` silent-stale case).
  *
  * One throwaway database with the migration chain and this plugin's derived
  * layer (rollups and views), the feed's triggers, its LISTEN consumer and its
@@ -36,22 +35,41 @@ import {
   createRelationBases,
   rebuildTriggers,
 } from "@plugins/database/plugins/change-feed/server/testing";
-import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
+import {
+  createResourceRuntime,
+  mintReachPlan,
+  type ReachPlan,
+} from "@plugins/framework/plugins/resource-runtime/core";
 import { installTaskDerivedSchema, TREE_IDS, treeSeed } from "../testing";
 import { rollupSourcesOf } from "@plugins/database/plugins/derived-tables/server/testing";
 import { TASK_ROLLUPS } from "./rollup-spec";
 
-const TASKS_V = "test.legacy-forwarding.tasks_v";
-const ATTEMPTS_V = "test.legacy-forwarding.attempts_v";
-const UNRELATED = "test.legacy-forwarding.unrelated";
+const TASKS_V = "test.view-relation-reads.tasks_v";
+const ATTEMPTS_V = "test.view-relation-reads.attempts_v";
+const UNRELATED = "test.view-relation-reads.unrelated";
 const KEYS = [TASKS_V, ATTEMPTS_V, UNRELATED] as const;
 
-// What each loader records in its read-set — the relation it names, as the
-// DB pool chokepoint captures it.
-const READS: Record<string, string[]> = {
-  [TASKS_V]: ["tasks_v"],
-  [ATTEMPTS_V]: ["attempts_v"],
-  [UNRELATED]: ["lf_unrelated"],
+// Each reader's declared reads: a view read whole, or a plain table.
+const viewRead = (relation: string): ReachPlan =>
+  mintReachPlan({
+    routes: [],
+    usesOf: () => new Map(),
+    relations: [{ relation, reason: `reads ${relation} whole` }],
+  });
+const READS: Record<string, ReachPlan> = {
+  [TASKS_V]: viewRead("tasks_v"),
+  [ATTEMPTS_V]: viewRead("attempts_v"),
+  [UNRELATED]: mintReachPlan({
+    routes: [
+      {
+        id: "lf_unrelated",
+        table: "lf_unrelated",
+        map: { kind: "full", reason: "reads lf_unrelated whole" },
+        columns: ["id", "n"],
+      },
+    ],
+    usesOf: () => new Map([["lf_unrelated", { role: "membership" as const }]]),
+  }),
 };
 
 const StatusRowsSchema = z.array(
@@ -94,7 +112,7 @@ async function write(statement: string): Promise<Record<string, number>> {
 }
 
 beforeAll(async () => {
-  testDb = await createTestDb({ prefix: "tc_legacy_fwd" });
+  testDb = await createTestDb({ prefix: "tc_view_reads" });
   await runMigrations(testDb.db);
   await installTaskDerivedSchema(testDb.db);
   await testDb.db.execute(
@@ -115,7 +133,6 @@ beforeAll(async () => {
     rollups: rollupSourcesOf(TASK_ROLLUPS),
   });
   const runtime = createResourceRuntime({
-    readSet: (key) => READS[key] ?? [],
     relationBases,
     reportError: (context, err) => {
       failures.push(
@@ -146,6 +163,7 @@ beforeAll(async () => {
       { key, schema: StatusRowsSchema, validateParams: () => {} },
       {
         mode: "push",
+        reach: READS[key]!,
         loader: () => {
           loads.push(key);
           return load();
@@ -153,6 +171,8 @@ beforeAll(async () => {
       },
     );
   }
+  // What change-feed's boot does once the graph is set (`setRelationBases`).
+  runtime.indexRelationReads();
 
   // One socket subscribed to each reader's `{}` tuple.
   const handler = runtime.notificationsWsHandler as unknown as {
@@ -220,7 +240,7 @@ afterAll(async () => {
   await testDb?.drop();
 });
 
-describe("legacy readers of a view are reached through its relation bases", () => {
+describe("readers of a view are reached through its relation bases", () => {
   const [C1] = TREE_IDS.conversations;
   const [, A2] = TREE_IDS.attempts;
 

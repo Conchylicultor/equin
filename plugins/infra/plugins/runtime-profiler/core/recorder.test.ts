@@ -846,8 +846,8 @@ describe("loader read-set capture — handed to the installed sink", () => {
     expect(readSetFlushes).toEqual([]);
   });
 
-  // The read-set is routing state, not profile data: a kill-switched profiler
-  // records no span, yet the live-state router still needs every loader's tables.
+  // The read-set is runtime state, not profile data: a kill-switched profiler
+  // records no span, yet the route drift guard still needs every loader's tables.
   test("captures under the SINGULARITY_PROFILING=0 kill-switch, which drops the span itself", async () => {
     const prior = process.env.SINGULARITY_PROFILING;
     process.env.SINGULARITY_PROFILING = "0";

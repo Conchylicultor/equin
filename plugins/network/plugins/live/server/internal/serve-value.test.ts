@@ -1,18 +1,19 @@
 /**
  * `serveValue` / `compileValue`: the options a `liveValue` folds into, driven
  * through a real `createResourceRuntime` (no database — the db arm's change is
- * delivered through `applyLegacyFullChange`, exactly what the change feed calls), plus
+ * delivered through `routeTableChange`, exactly what the change feed calls), plus
  * the registering `serveValue` on the server runtime for the served shape and
  * its `Resource.Declare` payload.
  */
 
 import { describe, expect, test } from "bun:test";
-import { pgTable, text } from "drizzle-orm/pg-core";
+import { pgTable, pgView, text } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import {
   createResourceRuntime,
   type ResourceParams,
 } from "@plugins/framework/plugins/resource-runtime/core";
+import { wholeReach } from "@plugins/framework/plugins/resource-runtime/core/testing";
 import { notificationsWsHandler } from "@plugins/framework/plugins/server-core/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { compileValue, registerValue } from "../../core/internal/compile-value";
@@ -22,7 +23,45 @@ const Count = z.object({ n: z.number() });
 const counts = pgTable("test_serve_value_counts", {
   id: text("id").primaryKey(),
 });
+const countsView = pgView("test_serve_value_counts_v").as((qb) =>
+  qb.select().from(counts),
+);
 const Names = z.array(z.string());
+const PagedItem = z.object({ id: z.string(), at: z.string().nullable() });
+type PagedItem = z.output<typeof PagedItem>;
+const pagedValue = (name: string) =>
+  liveValue(key(name), {
+    query: z.object({ list: z.string() }),
+    paged: {
+      item: PagedItem,
+      id: "id",
+      key: { of: (i: PagedItem) => [i.at], order: ["desc"] },
+      limit: 2,
+      maxLimit: 4,
+    },
+  });
+
+interface DebugEntry {
+  key: string;
+  policy: string;
+  externalSource: boolean;
+  freshness: { kind: string } | null;
+  routes: Array<{ id: string; table: string }> | null;
+  relationReads: Array<{ relation: string; reason: string; bases: string[] }>;
+}
+
+/** One key's row of the runtime's `_debug` payload. */
+async function debugOf(
+  runtime: ReturnType<typeof createResourceRuntime>,
+  k: string,
+): Promise<DebugEntry> {
+  const res = await runtime.handleResourceHttp(
+    new Request("http://localhost/api/resources/_debug"),
+    { key: "_debug" },
+  );
+  const body = (await res.json()) as { resources: DebugEntry[] };
+  return body.resources.find((r) => r.key === k)!;
+}
 
 let seq = 0;
 const key = (name: string) => `test.serve-value.${name}.${seq++}`;
@@ -35,8 +74,8 @@ interface Frame {
 }
 
 /** A runtime + one open socket recording every frame it is sent. */
-function harness(readSet: string[] = []) {
-  const runtime = createResourceRuntime({ readSet: () => readSet });
+function harness() {
+  const runtime = createResourceRuntime();
   const frames: Frame[] = [];
   const handler = runtime.notificationsWsHandler as any;
   const ws = {
@@ -56,6 +95,17 @@ function harness(readSet: string[] = []) {
   return {
     runtime,
     frames,
+    /** One change to `table`, as the change feed delivers it. */
+    change(table: string) {
+      runtime.routeTableChange({
+        source: "feed",
+        table,
+        op: "U",
+        ids: null,
+        keys: null,
+        unchanged: null,
+      });
+    },
     async subscribe(k: string, params: ResourceParams = {}) {
       handler.message(ws, JSON.stringify({ op: "sub", key: k, params }));
       await until(
@@ -110,18 +160,19 @@ describe("compileValue", () => {
   test("a db value is recomputed and pushed when a table it read changes", async () => {
     const v = liveValue(key("db"), { schema: Count });
     let n = 1;
-    const h = harness(["t"]);
+    const h = harness();
     const compiled = compileValue(v, { source: "db", loader: () => ({ n }) });
     expect(compiled.external).toBe(false);
-    h.runtime.defineResource(v, compiled.options);
+    // The declared reads `serveValue` compiles into the registration.
+    h.runtime.defineResource(v, {
+      ...compiled.options,
+      reach: wholeReach(["t"]),
+    });
     await h.subscribe(v.key);
     expect(h.of("sub-ack", v.key)[0]!.value).toEqual({ n: 1 });
 
     n = 2;
-    h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "t",
-    });
+    h.change("t");
     await h.until(() => h.of("update", v.key).length > 0, "update");
     expect(h.of("update", v.key)[0]!.value).toEqual({ n: 2 });
   });
@@ -132,17 +183,14 @@ describe("compileValue", () => {
       load: "on-demand",
     });
     let n = 1;
-    const h = harness(["t"]);
-    h.runtime.defineResource(
-      v,
-      compileValue(v, { source: "db", loader: () => ({ n }) }).options,
-    );
+    const h = harness();
+    h.runtime.defineResource(v, {
+      ...compileValue(v, { source: "db", loader: () => ({ n }) }).options,
+      reach: wholeReach(["t"]),
+    });
     await h.subscribe(v.key);
     n = 2;
-    h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "t",
-    });
+    h.change("t");
     await h.until(() => h.of("invalidate", v.key).length > 0, "invalidate");
     expect(h.of("update", v.key)).toEqual([]);
   });
@@ -258,8 +306,9 @@ describe("serveValue", () => {
     expect(served.notify).toBeUndefined();
   });
 
-  test("the db arm declares what its loader reads: required (tsc and a throw), refused on the external arm", () => {
+  test("reads: required on the db arm, optional on a notified external, refused on a silent one and a paged one (tsc and a throw)", () => {
     const v = liveValue(key("served-reads"), { schema: Count });
+    const paged = pagedValue("served-reads-paged");
     // Never called — the assertions are the `@ts-expect-error`s.
     const typeOnly = () => {
       // @ts-expect-error — a db value declares its reads
@@ -268,7 +317,33 @@ describe("serveValue", () => {
         source: "external",
         changes: "notified",
         loader: () => ({ n: 1 }),
-        // @ts-expect-error — an external value is told of changes by its notify
+        reads: { tables: [counts], reason: "r" },
+      });
+      serveValue(v, {
+        source: "external",
+        changes: "notified",
+        loader: () => ({ n: 1 }),
+        reads: () => ({ tables: [counts], reason: "r" }),
+      });
+      serveValue(v, {
+        source: "external",
+        changes: { fixed: { reason: "a registry" } },
+        loader: () => ({ n: 1 }),
+        // @ts-expect-error — a fixed value claims no push: no write could tell it anything
+        reads: { tables: [counts], reason: "r" },
+      });
+      serveValue(paged, {
+        source: "external",
+        changes: "notified",
+        loader: () => [],
+      });
+      // A page is a keyed window, which no declared read reaches (the paged
+      // overload's `reads?: never`; no other overload takes a paged value).
+      // @ts-expect-error — reported on the value argument
+      serveValue(paged, {
+        source: "external",
+        changes: "notified",
+        loader: () => [],
         reads: { tables: [counts], reason: "r" },
       });
     };
@@ -281,13 +356,21 @@ describe("serveValue", () => {
       }),
     ).toThrow(/declares the tables its loader reads/);
     expect(() =>
-      untyped(liveValue(key("served-reads-external"), { schema: Count }), {
+      untyped(liveValue(key("served-reads-fixed"), { schema: Count }), {
         source: "external",
-        changes: "notified",
+        changes: { fixed: { reason: "a registry" } },
         loader: () => ({ n: 1 }),
         reads: { tables: [counts], reason: "r" },
       }),
-    ).toThrow(/`reads` is the db arm's/);
+    ).toThrow(/`reads` is a "notified" value's/);
+    expect(() =>
+      untyped(pagedValue("served-reads-paged-untyped"), {
+        source: "external",
+        changes: "notified",
+        loader: () => [],
+        reads: { tables: [counts], reason: "r" },
+      }),
+    ).toThrow(/a paged value declares no `reads`/);
     expect(() =>
       serveValue(liveValue(key("served-reads-empty"), { schema: Count }), {
         source: "db",
@@ -329,6 +412,89 @@ describe("serveValue", () => {
         via: 'route "test_serve_value_counts"',
       },
     ]);
+  });
+
+  test("an external value with reads registers routed: external, its notify kept, a write to a declared table recomputes it", async () => {
+    const v = liveValue(key("served-ext-reads"), { schema: Count });
+    const h = harness();
+    const runtime = h.runtime;
+    let n = 0;
+    const opts = {
+      source: "external" as const,
+      changes: "notified" as const,
+      reads: {
+        tables: [counts, countsView],
+        reason: "a lookup beside its files",
+      },
+      loader: () => ({ n: ++n }),
+    };
+    const { resource } = registerValue(
+      valueRuntime(v.key, opts, runtime),
+      v,
+      opts,
+    );
+    expect("notify" in resource).toBe(true);
+    const entry = await debugOf(runtime, v.key);
+    expect(entry.policy).toBe("external");
+    expect(entry.freshness).toEqual({ kind: "notified" });
+    expect(entry.routes?.map((r) => r.table)).toEqual([
+      "test_serve_value_counts",
+    ]);
+    expect(entry.relationReads.map((r) => r.relation)).toEqual([
+      "test_serve_value_counts_v",
+    ]);
+    expect(runtime.unroutedResourceKeys()).toEqual([]);
+    expect(runtime.scopedResourceTables()).toEqual([
+      {
+        key: v.key,
+        table: "test_serve_value_counts",
+        via: 'route "test_serve_value_counts"',
+      },
+    ]);
+    await h.subscribe(v.key);
+    runtime.routeTableChange({
+      source: "feed",
+      table: "test_serve_value_counts",
+      op: "U",
+      ids: ["x"],
+      keys: null,
+      unchanged: null,
+    });
+    await h.until(
+      () =>
+        h.of("update", v.key).some((f) => (f.value as { n: number }).n === 2),
+      "the routed recompute",
+    );
+  });
+
+  test("an external thunk binds deferred: external with its freshness from definition, its plan at bindDeferredResources", async () => {
+    const v = liveValue(key("served-ext-thunk"), { schema: Count });
+    // Its own runtime: a process-global bind would bind every other suite's
+    // deferred resources too.
+    const runtime = createResourceRuntime();
+    const opts = {
+      source: "external" as const,
+      changes: "notified" as const,
+      reads: () => ({ tables: [counts], reason: "a provider's tables" }),
+      loader: () => ({ n: 3 }),
+    };
+    const { resource } = registerValue(
+      valueRuntime(v.key, opts, runtime),
+      v,
+      opts,
+    );
+    expect("notify" in resource).toBe(true);
+    const unbound = await debugOf(runtime, v.key);
+    expect(unbound.policy).toBe("unbound");
+    expect(unbound.externalSource).toBe(true);
+    expect(unbound.freshness).toEqual({ kind: "notified" });
+    runtime.bindDeferredResources();
+    const bound = await debugOf(runtime, v.key);
+    expect(bound.policy).toBe("external");
+    expect(bound.routes?.map((r) => r.table)).toEqual([
+      "test_serve_value_counts",
+    ]);
+    expect(await resource.load({})).toEqual({ n: 3 });
   });
 
   test("types: a central value is not served here", () => {

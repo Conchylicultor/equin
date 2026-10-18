@@ -80,8 +80,8 @@ let current: ((relation: string) => readonly string[]) | null = null;
 
 /**
  * Install the boot graph (change-feed's `onReadyBlocking`, D34): here, and in
- * server-core's runtime (`setRelationBases`, which bumps the read-set version
- * so the legacy router's memoized inversion is rebuilt through it).
+ * server-core's runtime (`setRelationBases`, which indexes every reach plan's
+ * relation reads through it).
  */
 export function installRelationGraph(graph: RelationGraph): void {
   current = createRelationBases(graph);
@@ -104,8 +104,8 @@ export function relationBases(relation: string): readonly string[] {
 /**
  * D35: every base table a view or rollup reaches has a change source — a
  * trigger the feed installed, a mounted change producer — or is opted out of
- * the feed (`sourced`). A base outside that set would leave every legacy
- * reader of the relation silently stale. Throws (blocks boot), naming each
+ * the feed (`sourced`). A base outside that set would leave every reader of
+ * the relation silently stale. Throws (blocks boot), naming each
  * relation and the base it reaches.
  */
 export function assertRelationBasesSourced(
@@ -125,7 +125,7 @@ export function assertRelationBasesSourced(
   }
   if (misses.length === 0) return;
   throw new Error(
-    `[change-feed] ${misses.length} relation base(s) with no change source (D35) — a write to the base reaches no legacy reader of the relation, which serves it stale:\n` +
+    `[change-feed] ${misses.length} relation base(s) with no change source (D35) — a write to the base reaches no reader of the relation, which serves it stale:\n` +
       misses.join("\n") +
       "\nFix: the base needs a change source (drop its exclusion, or give it a change producer), an explicit `ExcludeFromChangeFeed` opt-out, or the relation must stop reading it.",
   );

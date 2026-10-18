@@ -1,23 +1,19 @@
 // The runtime-owned loader → table read-set: which tables each resource's loader
-// has read, as captured at the DB pool chokepoint. It is ROUTING state — the
-// legacy change router (`applyLegacyFullChange`) inverts it into table → resource — so it
-// lives here, beside the runtime it feeds, and not in the profiler.
-//
-// When the profiler owned it, routing inherited the profiler's switches:
-// `SINGULARITY_PROFILING=0` stopped the capture (`recordReadTables` returned
-// early), so nothing routed, and a Debug → Profiling reset wiped it, so nothing
-// routed until each loader happened to run again. The capture itself still rides
+// has read, as captured at the DB pool chokepoint. No change is routed through
+// it (every DB-backed resource declares its reads); the per-run capture feeds
+// the runtime's drift guard (A8 / D5) and the persisted `tables_read`, and the
+// union is shown by `_debug`. It lives here,
+// beside the runtime it feeds, and not in the profiler, so the profiler's
+// switches (`SINGULARITY_PROFILING=0`, a Debug → Profiling reset) never blind
+// the drift guard. The capture itself still rides
 // the profiler's ambient loader entry — the same context the DB gate reads —
 // but its flush lands here, whatever the profiler records: runtime-profiler's
 // install wires `installLoaderReadSetSink(recordLoaderReadSet)`.
 // See research/2026-09-29-global-scoped-change-routing.md (P0).
 
-// APPEND-ONLY (union): a table once read stays a dependency. That makes it a
-// safe over-approximation for live routing — a stale extra edge only
-// over-recomputes, never misses — which is why it is never shed on a run that
-// happened not to read a table (a data-dependent conditional query would
-// otherwise drop a real live dependency). The self-healing counterpart is
-// `lastLoaderReadSet`, used only on the persisted seam. See
+// APPEND-ONLY (union): a table once read stays listed — never shed on a run
+// that happened not to read it. The self-healing counterpart is
+// `lastLoaderReadSet`, the per-run capture. See
 // research/2026-07-07-global-read-set-self-heal-on-full-recompute.md.
 const readSetIndex = new Map<string, Set<string>>();
 
@@ -27,11 +23,6 @@ const readSetIndex = new Map<string, Set<string>>();
 // change removed. Written only for a run that read ≥1 table, so a run reading
 // nothing never replaces a real set with an empty one.
 const lastLoaderReadSet = new Map<string, Set<string>>();
-
-// Moves whenever the union index gains or loses a (key, table) edge, or the
-// relation bases the edges expand through are set — the key the router
-// memoizes its table → resource inversion on.
-let version = 0;
 
 /**
  * Record one completed loader run's tables for `key`: unioned into the index,
@@ -51,20 +42,6 @@ export function recordLoaderReadSet(
 export function readSetOf(key: string): string[] {
   const set = readSetIndex.get(key);
   return set ? [...set].sort() : [];
-}
-
-/** The router's memo key: moves on every edge gained, seeded or removed, and on `setRelationBases`. */
-export function readSetVersion(): number {
-  return version;
-}
-
-/**
- * Move the version without an edge change: the router's inversion is also a
- * function of the relation bases its read-sets expand through, so installing
- * them (`setRelationBases`, D33) must invalidate the memo exactly like an edge.
- */
-export function bumpReadSetVersion(): void {
-  version++;
 }
 
 /**
@@ -87,37 +64,20 @@ export function getLastLoaderReadSet(key: string): string[] | undefined {
   return set ? [...set].sort() : undefined;
 }
 
-/**
- * Seed the index from a persisted snapshot of it (the durable `tables_read`
- * column): each key's tables are UNIONED in, exactly like a loader run. Called
- * once at boot, before the readiness barrier, so catch-up's first change routes
- * without any loader having run.
- */
-export function seedReadSetIndex(
-  seed: Record<string, readonly string[]>,
-): void {
-  for (const key in seed) {
-    const tables = seed[key]!;
-    if (tables.length > 0) recordUnion(key, tables);
-  }
-}
-
 function recordUnion(key: string, tables: Iterable<string>): void {
   let set = readSetIndex.get(key);
   if (!set) {
     set = new Set();
     readSetIndex.set(key, set);
   }
-  const before = set.size;
   for (const table of tables) set.add(table);
-  if (set.size !== before) version++;
 }
 
 /**
  * Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the
- * one eviction path of an append-only index, for a table's owner to evict a
- * historical mis-attribution. Safe: dropping a table a resource does not read
- * only removes a spurious recompute trigger. Returns the keys it changed.
+ * one eviction path of an append-only index (a suite isolating its own keys
+ * from another's captures). Display state only: no change routes through it.
+ * Returns the keys it changed.
  */
 export function removeReadSetTable(
   table: string,
@@ -131,6 +91,5 @@ export function removeReadSetTable(
     // still listed, with []).
     if (set.delete(table)) changed.push(key);
   }
-  if (changed.length > 0) version++;
   return changed;
 }

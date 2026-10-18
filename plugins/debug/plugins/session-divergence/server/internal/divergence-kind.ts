@@ -8,7 +8,7 @@ import {
 // Re-alert the bell at most once per ~6h while a conversation stays diverged.
 // A standing divergence is a live data-loss condition (turns are being written
 // where the UI cannot read them), so it should resurface periodically without
-// spamming — matching the read-set-shrink / live-state-noop 6h re-arm.
+// spamming — matching the live-state-noop 6h re-arm.
 const DIVERGENCE_NOTIF_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 // The `conversation-session-divergence` report kind. Dedups per conversation

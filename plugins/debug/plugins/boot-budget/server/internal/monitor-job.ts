@@ -20,7 +20,7 @@ type Budgets = ConfigValues<(typeof bootBudgetConfig)["fields"]>;
 // chronically-slow hook re-files, collapsing onto its stable fingerprint row
 // (`count` = number of boots it was slow). This is the pull-signal analog of
 // op-rate's module-level baseline maps (which gate its re-fire on unchanged
-// data); boot-budget has no event stream to drain (read-set-shrink's model), it
+// data); boot-budget has no event stream to drain, it
 // pulls a static profile, so the guard is "already reported" rather than a delta.
 const reported = new Set<string>();
 

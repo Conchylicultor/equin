@@ -55,6 +55,8 @@ function inputs(
     layouts: [identityLayout],
     scoped: [{ key: "items.list", table: "pb_items", via: 'route "items"' }],
     unfed: [],
+    relationReads: [],
+    unrouted: [],
     relations: { views: new Map(), rollups: new Map() },
     ...rest,
   };
@@ -118,6 +120,15 @@ describe("installFeed with a produced table", () => {
         installFeed(t.db, inputs({ feedExempt: new Set(["pb_items"]) })),
       ),
     ).toContain("AND is a derived-table rollup");
+  });
+
+  test("D6: a DB-backed resource that declares no reads blocks boot", async () => {
+    const err = await rejection(
+      installFeed(t.db, inputs({}, { unrouted: ["a.value", "b.value"] })),
+    );
+    expect(err).toContain("declare no reads");
+    expect(err).toContain("a.value");
+    expect(err).toContain("b.value");
   });
 
   test("D35: a view's bases must each have a change source or be opted out", async () => {

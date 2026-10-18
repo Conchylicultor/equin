@@ -1,15 +1,16 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { z } from "zod";
+import { mintReachPlan } from "@plugins/framework/plugins/resource-runtime/core";
 import { collectContributions } from "./contributions";
 import {
   Resource,
   assertPreloadedResourcesDeclared,
   clearRelationBases,
   defineResource,
+  handleResourceHttp,
   setRelationBases,
   undeclaredPreloadedKeys,
 } from "./resources";
-import { readSetVersion } from "./read-set";
 
 describe("undeclaredPreloadedKeys", () => {
   test("names each preloaded key no Declare carries, sorted", () => {
@@ -102,16 +103,48 @@ describe("Resource.Declare reads", () => {
 describe("setRelationBases", () => {
   // The holder is process-global: leave it unset for the next suite.
   afterAll(clearRelationBases);
-  // D33: the router memoizes its inversion on the read-set version, so new
-  // bases must move it — or the memo would keep serving the old expansion.
-  test("moves the read-set version", () => {
-    const before = readSetVersion();
-    setRelationBases((r) => [r]);
-    expect(readSetVersion()).toBe(before + 1);
-  });
-  test("clearRelationBases moves the version too", () => {
-    const before = readSetVersion();
-    clearRelationBases();
-    expect(readSetVersion()).toBe(before + 1);
+  // D2: a reach plan's relation reads expand through the bases once set.
+  test("a reach plan's relation reads expand through the new bases", async () => {
+    defineResource(
+      {
+        key: "set-relation-bases-probe",
+        schema: z.number(),
+        validateParams: () => {},
+      },
+      {
+        mode: "push",
+        reach: mintReachPlan({
+          routes: [],
+          usesOf: () => new Map(),
+          relations: [{ relation: "probe_v", reason: "reads probe_v whole" }],
+        }),
+        loader: () => 1,
+      },
+    );
+    setRelationBases((r) => (r === "probe_v" ? ["probe_a", "probe_b"] : [r]));
+    const res = await handleResourceHttp(
+      new Request("http://localhost/api/resources/_debug"),
+      { key: "_debug" },
+    );
+    const body = (await res.json()) as {
+      resources: Array<{
+        key: string;
+        relationReads: Array<{
+          relation: string;
+          reason: string;
+          bases: string[];
+        }>;
+      }>;
+    };
+    expect(
+      body.resources.find((r) => r.key === "set-relation-bases-probe")
+        ?.relationReads,
+    ).toEqual([
+      {
+        relation: "probe_v",
+        reason: "reads probe_v whole",
+        bases: ["probe_a", "probe_b"],
+      },
+    ]);
   });
 });

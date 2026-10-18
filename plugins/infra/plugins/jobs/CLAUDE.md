@@ -581,6 +581,9 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `SerialSpec`
     - `WaitingJobStat`
   - Exports (values):
+    - `_deadJobs`
+    - `_jobRuns`
+    - `_jobRunStats`
     - `abortDurableRun`
     - `ALL_JOB_TASKS`
     - `ceilingMsFor`
@@ -709,11 +712,11 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
 - Cross-plugin:
-  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×19
     - `conversations` ×14
     - `infra` ×12
-    - `debug` ×10
+    - `debug` ×9
     - `tasks` ×4
     - `database` ×3
     - `page` ×3

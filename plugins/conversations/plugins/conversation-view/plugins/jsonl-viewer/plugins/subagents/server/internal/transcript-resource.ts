@@ -1,6 +1,7 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   conversationChainTag,
+  transcriptChainReads,
   watchPaths,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { SubagentRef, SubagentTranscript } from "../../core";
@@ -27,6 +28,8 @@ function refOf({ by, key }: { by: string; key: string }): SubagentRef {
 export const subagentTranscriptServed = serveValue(subagentTranscript, {
   source: "external",
   changes: "notified",
+  // The loader resolves the transcript chain from Postgres before reading files.
+  reads: transcriptChainReads,
   loader: ({ id, ...ref }) =>
     subagentTranscriptMemo.get(transcriptMemoKey(id, refOf(ref))),
   revalidate: ({ id, ...ref }) =>

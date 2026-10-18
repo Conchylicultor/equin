@@ -5,7 +5,11 @@ import {
   editedFilesServed,
   getEditedFiles,
 } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
-import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
+import { findWorkspaceOfConversation } from "@plugins/conversations/plugins/workspace/server";
+import {
+  _attempts,
+  _conversations,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import type { PluginChangesResponse } from "../../core/protocol";
 import { pluginChanges } from "../../shared/resources";
 import { computePluginChanges } from "./compute-plugin-diff";
@@ -15,21 +19,22 @@ import { getMainPluginTree, getWorktreePluginTree } from "./plugin-tree-cache";
 async function computeWorktreePluginChanges(
   conversationId: string,
 ): Promise<PluginChangesResponse> {
-  const conversation = await getConversation(conversationId);
-  if (!conversation?.worktreePath) return { plugins: [] };
+  const found = await findWorkspaceOfConversation(conversationId);
+  if (!found.found || !found.workspace.path) return { plugins: [] };
+  const worktreePath = found.workspace.path;
 
   const [editedFiles, mainPluginsDir] = await Promise.all([
-    getEditedFiles(conversation.worktreePath),
+    getEditedFiles(worktreePath),
     getMainPluginsDir(),
   ]);
 
-  const worktreePluginsDir = join(conversation.worktreePath, "plugins");
+  const worktreePluginsDir = join(worktreePath, "plugins");
   // Each side is memoized on its own cheap signature (main → main sha, worktree
   // → edited-files content signature) and owns its withHeavyReadSlot internally, so an
   // unchanged side is a pure hit that takes no slot. Steady-state recomputes
   // rebuild at most one tree.
   const [worktreeTree, mainTree] = await Promise.all([
-    getWorktreePluginTree(conversation.worktreePath, worktreePluginsDir),
+    getWorktreePluginTree(worktreePath, worktreePluginsDir),
     getMainPluginTree(mainPluginsDir),
   ]);
   const plugins = computePluginChanges(worktreeTree, mainTree, editedFiles);
@@ -50,6 +55,14 @@ async function computeWorktreePluginChanges(
 export const pluginChangesServed = serveValue(pluginChanges, {
   source: "external",
   changes: "notified",
+  // Its own reads, not only the edited-files edge: that cascade reaches only
+  // the edited-files tuples someone holds, so a tuple subscribed here with
+  // edited-files unsubscribed would miss a write that moves its worktree.
+  reads: {
+    tables: [_conversations, _attempts],
+    reason:
+      "each tuple resolves its conversation's worktree path (conversations → attempts) before diffing its plugin tree against main's; a write to any conversation or attempt row may move which worktree a tuple diffs — whole-table until the path is a param or a db-served value",
+  },
   loader: ({ conversationId }) => computeWorktreePluginChanges(conversationId),
   // Coalesce rapid-fire git changes (frequent agent commits): at most one
   // recompute per 3 s window — a trailing window a later change does not

@@ -133,7 +133,7 @@ the rows into the banner and rail dot.
   raw reason is already recorded on `mail_sync_state.lastError`.
 - **`POST /api/mail/hydrate`** (`handlers.ts` → `hydrate.ts`) — on-demand body
   fetch, the "fetch only when opened" half of the model. Body `{ messageId }`. If
-  the message is already hydrated (or is a legacy full-backfilled row —
+  the message is already hydrated (or is a full-backfilled row from before on-demand sync —
   `isMessageHydrated`), it is returned straight from Postgres with **no Gmail
   round-trip** (a pure cache hit). On a cache miss it fetches `format=full`,
   `upsertMessageFull` (body + attachments + `body_fetched_at`), and returns the

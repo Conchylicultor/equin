@@ -104,10 +104,9 @@ param (`1h` / `24h` / `7d`). Its tables are feed-blind by declaration, so it is
 served external (`server/internal/summary-resource.ts`) and the minute flush is
 its change source: `noteFlushedMinute` keeps a monotonic guard and notifies only
 the windows a tab is subscribed to (tracked with `whileSubscribed`; the rules
-live in the pure `server/internal/flush-notifier.ts`, unit-tested). The
-no-db-backed-notify check allows a DB-reading external value here only over a
-table this plugin names in its own `ExcludeFromChangeFeed({ table: … })` calls —
-derived, not allowlisted.
+live in the pure `server/internal/flush-notifier.ts`, unit-tested). The value
+declares the four tables it reads as `reads.outsideFeed` (accepted by the
+read-set drift guard, never routed; change-feed refuses one it does cover).
 
 It is `load: "on-demand"`: the 7-day histogram sum alone (one of the loader's
 queries, a lower bound on the load) measured ~340 ms on main

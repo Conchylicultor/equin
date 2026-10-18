@@ -115,8 +115,9 @@ describe("createSignedMemo", () => {
     expect(await memo.get("k")).toBe("V1");
     expect(await memo.get("k")).toBe("V1");
     expect(state.computeCalls).toBe(1);
-    // The cheap probe, by contrast, runs on every read.
-    expect(state.signatureCalls).toBe(3);
+    // The cheap probe, by contrast, runs on every read (and once more after
+    // the compute, confirming the signature it caches under).
+    expect(state.signatureCalls).toBe(4);
   });
 
   test("a primed entry is a hit under a matching signature", async () => {
@@ -150,9 +151,9 @@ describe("createSignedMemo", () => {
     await Bun.sleep(0);
     expect(state.computeCalls).toBe(1);
 
-    // The input moves; the caller knows the instant and moves the signature.
+    // An input moves that the caller knows the instant of (the signature
+    // itself has not caught up yet — the case only the floor can see).
     const changedAt = performance.now();
-    state.sig = "S2";
     state.value = "V2";
     state.gate = null;
 
@@ -161,16 +162,17 @@ describe("createSignedMemo", () => {
     expect(await fresh).toBe("V2");
     expect(state.computeCalls).toBe(2);
 
+    // The superseded compute settles under the signature the fresh one
+    // already cached: its callers get that held answer (at least as new).
     first.release();
-    expect(await stale).toBe("V1");
-
-    // The superseded flight settled last, caching V1 under S1 — the probe (S2)
-    // misses rather than serving it: over-invalidation, never a torn hit.
-    expect(await memo.get("k")).toBe("V2");
-    expect(state.computeCalls).toBe(3);
+    expect(await stale).toBe("V2");
   });
 
-  test("without notBefore a mid-flight miss joins the running compute", async () => {
+  test("a mid-flight miss at ANOTHER signature never joins the running compute", async () => {
+    // The joiner probed S2; joining the compute that started at S1 would hand
+    // it V1, which its caller stamps S2 (a resource's ETag, D8's held
+    // signature) — a stale value under a current signature, which every later
+    // probe of S2 answers "unchanged".
     const { state, memo } = createFakeAuthority();
     const gate = openGate();
     state.gate = gate;
@@ -180,13 +182,37 @@ describe("createSignedMemo", () => {
     expect(state.computeCalls).toBe(1);
     state.sig = "S2";
     state.value = "V2";
+    state.gate = null;
     const b = memo.get("k");
     gate.release();
 
-    // The documented ≤1-event staleness-sharing default.
     expect(await a).toBe("V1");
-    expect(await b).toBe("V1");
-    expect(state.computeCalls).toBe(1);
+    expect(await b).toBe("V2");
+    expect(state.computeCalls).toBe(2);
+    // The S1 compute settled at S2: not cached under S1 — S2's entry stands.
+    expect(await memo.get("k")).toBe("V2");
+    expect(state.computeCalls).toBe(2);
+  });
+
+  test("a compute that read a state its signature then left is not cached — an undone edit is never a hit", async () => {
+    const { state, memo } = createFakeAuthority();
+    // Probed at S1; by the time the compute reads, an edit (B) has landed.
+    state.gate = openGate();
+    const gate = state.gate;
+    state.value = "VB";
+    const read = memo.get("k");
+    await Bun.sleep(0);
+    state.sig = "SB"; // the edit, as the signature sees it
+    state.gate = null;
+    gate.release();
+    expect(await read).toBe("VB");
+
+    // The edit is undone: the signature is S1 again. A cached {S1, VB} would
+    // be a hit serving the reverted-away value for good.
+    state.sig = "S1";
+    state.value = "V1";
+    expect(await memo.get("k")).toBe("V1");
+    expect(state.computeCalls).toBe(2);
   });
 
   test("concurrent misses on distinct keys each compute", async () => {
@@ -244,5 +270,25 @@ describe("createSignedMemo", () => {
     state.computeThrows = false;
     expect(await memo.get("k")).toBe("V1");
     expect(state.computeCalls).toBe(2);
+  });
+
+  test("an answer under an unchanged signature keeps the cached object's identity", async () => {
+    let sig = "S1";
+    let computed = 0;
+    const memo = createSignedMemo<{ v: string }>({
+      name: "identity",
+      signature: async () => sig,
+      compute: async () => ({ v: `c${++computed}` }),
+    });
+    const first = await memo.get("k");
+    // A prime under the held signature (a watcher's first read) keeps it.
+    memo.prime("k", "S1", { v: "primed" });
+    expect(await memo.get("k")).toBe(first);
+    // A moved signature replaces it.
+    sig = "S2";
+    const second = await memo.get("k");
+    expect(second).not.toBe(first);
+    memo.prime("k", "S2", { v: "primed" });
+    expect(await memo.get("k")).toBe(second);
   });
 });

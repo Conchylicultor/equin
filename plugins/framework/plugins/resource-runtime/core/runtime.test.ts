@@ -25,8 +25,14 @@ import { type ExternalResource, type ResourceParams } from "./runtime";
 // fakes). `createHarness()` subsumes the old bespoke `harness()` (default 1
 // socket), `feedHarness()` (a `readSet` option), and `revalHarness()` (subscribe
 // takes an `etag`) with byte-identical behavior.
-import { createHarness, controllable, tick } from "./test-support";
-import { feedChange, identityPlan } from "./testing/routed-fixture";
+import { mintReachPlan } from "./routing";
+import {
+  createHarness,
+  controllable,
+  tick,
+  type Harness,
+} from "./test-support";
+import { feedChange, identityPlan, wholeReach } from "./testing/routed-fixture";
 
 describe("flushNotifies — level-parallel", () => {
   test("a slow loader does not head-of-line-block an unrelated fast node", async () => {
@@ -98,7 +104,7 @@ describe("flushNotifies — level-parallel", () => {
     expect(up[0]!.seq).toBeLessThan(down[0]!.seq);
   });
 
-  // A cascade is FULL (its downstream is a legacy entry): it translates no row
+  // A cascade is FULL (its downstream is a non-membership entry): it translates no row
   // ids, so it runs no edge query and opens no `cascade` origin — only a
   // routed entry's reverse resolve does (`runtime-table-routing.test.ts`).
   test("a cascade opens no `cascade` origin; the downstream reloads FULL under `push`", async () => {
@@ -204,30 +210,24 @@ describe("flushNotifies — level-parallel", () => {
   });
 });
 
-/**
- * A harness whose runtime is built with an injected L3 read-set hook so
- * `applyLegacyFullChange` can invert table→resource. `readSet` is a static map for the
- * test; in production it is `getReadSetIndex()[key]`. `createHarness` folds this
- * into its `ResourceRuntimeOptions` — no bespoke harness needed.
- */
-const feedHarness = (readSetMap: Record<string, string[]>) =>
-  createHarness({ readSet: (key) => readSetMap[key] ?? [] });
+/** One feed change to `table`, FULL (no ids) — as the change feed delivers it. */
+const feed = (h: Harness, table: string) =>
+  feedChange(h, { table, op: "U", ids: null });
 
-describe("applyLegacyFullChange — L4 DB change-feed routing", () => {
+describe("reach — L4 DB change-feed routing of a non-keyed value", () => {
+  // A non-keyed value reading `tables` whole, as a served db value declares it.
+  const defineReached = (h: Harness, key: string, tables: readonly string[]) =>
+    h.runtime.defineResource(
+      { key, schema: z.number(), validateParams: () => {} },
+      { mode: "invalidate", reach: wholeReach(tables), loader: async () => 1 },
+    );
+
   test("routes a table change to a subscribed param-less resource (full recompute on INSERT)", async () => {
-    const h = feedHarness({ tasks: ["tasks"] });
-    h.runtime.defineResource({
-      key: "tasks",
-      mode: "invalidate",
-      schema: z.number(),
-      loader: async () => 1,
-    });
+    const h = createHarness();
+    defineReached(h, "tasks", ["tasks"]);
     await h.subscribe("tasks");
 
-    h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "tasks",
-    });
+    feed(h, "tasks");
     await tick();
 
     expect(h.pushesFor("tasks")).toHaveLength(1);
@@ -235,86 +235,43 @@ describe("applyLegacyFullChange — L4 DB change-feed routing", () => {
   });
 
   test("unknown/unread table is a silent no-op", async () => {
-    const h = feedHarness({ tasks: ["tasks"] });
-    h.runtime.defineResource({
-      key: "tasks",
-      mode: "invalidate",
-      schema: z.number(),
-      loader: async () => 1,
-    });
+    const h = createHarness();
+    defineReached(h, "tasks", ["tasks"]);
     await h.subscribe("tasks");
 
-    h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "unrelated_table",
-    });
+    feed(h, "unrelated_table");
     await tick();
 
     expect(h.pushesFor("tasks")).toHaveLength(0);
   });
 
   test("fans out to every subscribed params tuple", async () => {
-    const h = feedHarness({ doc: ["docs"] });
-    h.runtime.defineResource({
-      key: "doc",
-      mode: "invalidate",
-      schema: z.number(),
-      loader: async () => 1,
-    });
+    const h = createHarness();
+    defineReached(h, "doc", ["docs"]);
     await h.subscribe("doc", { id: "1" });
     await h.subscribe("doc", { id: "2" });
 
-    h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "docs",
-    });
+    feed(h, "docs");
     await tick();
 
     // Two distinct subscribed params → two invalidate frames.
     expect(h.pushesFor("doc")).toHaveLength(2);
   });
 
-  test("never throws: a failing lookup is reported, not thrown at the feed", () => {
-    const reported: string[] = [];
-    const h = createHarness({
-      readSet: () => ["x_v"],
-      relationBases: () => {
-        throw new Error("bases not set");
-      },
-      reportError: (context) => reported.push(context),
-    });
-    h.runtime.defineResource({
-      key: "x",
-      mode: "push",
-      schema: z.number(),
-      loader: async () => 1,
-    });
-    const error = spyOn(console, "error").mockImplementation(() => {});
-    try {
-      expect(() =>
-        h.runtime.applyLegacyFullChange({ source: "feed", table: "x" }),
-      ).not.toThrow();
-    } finally {
-      error.mockRestore();
-    }
-    expect(reported).toEqual(['applyLegacyFullChange failed for table "x"']);
-  });
-
   test("notifyStatsFor counts hand vs feed sources", async () => {
-    const h = feedHarness({ tasks: ["tasks"] });
-    const r = h.runtime.defineExternalResource({
-      key: "tasks",
-      mode: "invalidate",
-      schema: z.number(),
-      loader: async () => 1,
-    });
+    const h = createHarness();
+    const r = h.runtime.defineExternalResource(
+      { key: "tasks", schema: z.number(), validateParams: () => {} },
+      {
+        mode: "invalidate",
+        reach: wholeReach(["tasks"]),
+        loader: async () => 1,
+      },
+    );
     await h.subscribe("tasks");
 
     r.notify(); // hand
-    h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "tasks",
-    }); // feed
+    feed(h, "tasks"); // feed
     await tick();
 
     const stats = h.runtime.notifyStatsFor("tasks");
@@ -777,13 +734,12 @@ describe("preloadedKeys — the registry's half of the preload-declare boot asse
   });
 });
 
-describe("applyLegacyFullChange — relation bases (C30) and the inversion memo (C38)", () => {
-  // A legacy entry reading a VIEW is indexed under the view's bases, so a
-  // write to a table feeding the view reaches it — once, however many of its
-  // relations share that base.
+describe("relation reads (C30) — a reach plan reading views", () => {
+  // A value reading two VIEWS is indexed under their bases, so a write to a
+  // table feeding either reaches it — once, however many of its relations
+  // share that base.
   test("a reader of a view is reached by a write to each of its bases, once", async () => {
     const h = createHarness({
-      readSet: (key) => (key === "v" ? ["tasks_v", "attempts_v"] : []),
       relationBases: (r) =>
         r === "tasks_v"
           ? ["attempts", "conversations", "tasks"]
@@ -792,76 +748,38 @@ describe("applyLegacyFullChange — relation bases (C30) and the inversion memo 
             : [r],
     });
     let loads = 0;
-    h.runtime.defineResource({
-      key: "v",
-      mode: "push",
-      schema: z.number(),
-      loader: async () => ++loads,
-    });
+    h.runtime.defineResource(
+      { key: "v", schema: z.number(), validateParams: () => {} },
+      {
+        mode: "push",
+        reach: mintReachPlan({
+          routes: [],
+          usesOf: () => new Map(),
+          relations: [
+            { relation: "tasks_v", reason: "reads tasks_v whole" },
+            { relation: "attempts_v", reason: "reads attempts_v whole" },
+          ],
+        }),
+        loader: async () => ++loads,
+      },
+    );
+    h.runtime.indexRelationReads();
     await h.subscribe("v");
     const at = loads;
 
-    h.runtime.applyLegacyFullChange({ source: "feed", table: "conversations" });
+    feed(h, "conversations");
     await tick();
     expect(loads - at).toBe(1);
 
-    h.runtime.applyLegacyFullChange({ source: "feed", table: "tasks" });
+    feed(h, "tasks");
     await tick();
     expect(loads - at).toBe(2);
 
     // The view's own name and an unrelated table reach nothing.
-    h.runtime.applyLegacyFullChange({ source: "feed", table: "tasks_v" });
-    h.runtime.applyLegacyFullChange({ source: "feed", table: "pushes" });
+    feed(h, "tasks_v");
+    feed(h, "pushes");
     await tick();
     expect(loads - at).toBe(2);
-  });
-
-  // The inversion is memoized on the read-set version: an unchanged version
-  // reuses it (no relation is re-expanded), and installing new bases — which
-  // moves the version (server-core's `setRelationBases`, D33) — rebuilds it
-  // through them.
-  test("the memo hits on an unchanged version and misses after the bases change", async () => {
-    let version = 0;
-    let expansions = 0;
-    let bases: (r: string) => readonly string[] = (r) => [r];
-    const h = createHarness({
-      readSet: (key) => (key === "v" ? ["tasks_v"] : []),
-      readSetVersion: () => version,
-      relationBases: (r) => {
-        expansions++;
-        return bases(r);
-      },
-    });
-    let loads = 0;
-    h.runtime.defineResource({
-      key: "v",
-      mode: "push",
-      schema: z.number(),
-      loader: async () => ++loads,
-    });
-    await h.subscribe("v");
-    const at = loads;
-
-    // Identity bases: a `tasks` write does not reach the reader of `tasks_v`.
-    h.runtime.applyLegacyFullChange({ source: "feed", table: "tasks" });
-    await tick();
-    expect(loads - at).toBe(0);
-    const built = expansions;
-    expect(built).toBe(1);
-
-    // Unchanged version: the memo serves, nothing is re-expanded.
-    h.runtime.applyLegacyFullChange({ source: "feed", table: "tasks" });
-    h.runtime.applyLegacyFullChange({ source: "feed", table: "attempts" });
-    await tick();
-    expect(expansions).toBe(built);
-
-    // `setRelationBases`: new bases AND a moved version.
-    bases = (r) => (r === "tasks_v" ? ["attempts", "tasks"] : [r]);
-    version++;
-    h.runtime.applyLegacyFullChange({ source: "feed", table: "tasks" });
-    await tick();
-    expect(expansions).toBe(built + 1);
-    expect(loads - at).toBe(1);
   });
 });
 

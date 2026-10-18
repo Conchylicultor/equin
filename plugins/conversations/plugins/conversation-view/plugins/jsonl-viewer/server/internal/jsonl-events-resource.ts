@@ -1,5 +1,8 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { watchTranscript } from "@plugins/conversations/plugins/transcript-watcher/server";
+import {
+  transcriptChainReads,
+  watchTranscript,
+} from "@plugins/conversations/plugins/transcript-watcher/server";
 import { jsonlEvents } from "../../core";
 import {
   evictJsonlEvents,
@@ -16,6 +19,8 @@ import {
 export const jsonlEventsServed = serveValue(jsonlEvents, {
   source: "external",
   changes: "notified",
+  // The loader resolves the transcript chain from Postgres before reading files.
+  reads: transcriptChainReads,
   // The ETag and the value are produced by ONE authority: `jsonlEventsMemo` is a
   // `createSignedMemo` binding `transcriptChainSignature` to `readJsonlEventsFromChain`
   // at its single declaration site, both over the chain `resolveConversationTranscriptPaths`

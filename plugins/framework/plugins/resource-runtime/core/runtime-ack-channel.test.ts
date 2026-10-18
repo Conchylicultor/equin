@@ -40,7 +40,7 @@ import {
   defineRoutedTable,
   feedChange,
   identityPlan,
-  legacyFull,
+  wholeReach,
 } from "./testing/routed-fixture";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
@@ -108,21 +108,19 @@ describe("ackTx — value frames", () => {
   });
 
   test("a push-mode update frame from the feed carries ackTx; hand-notify and synthetic pushes never do", async () => {
-    const h = createHarness({ readSet: () => ["p_table"] });
+    const h = createHarness();
     let n = 0;
-    const r = h.runtime.defineExternalResource({
-      key: "p",
-      mode: "push",
-      schema: z.number(),
-      loader: async () => ++n,
-    });
+    const r = h.runtime.defineExternalResource(
+      { key: "p", schema: z.number(), validateParams: () => {} },
+      {
+        mode: "push",
+        reach: wholeReach(["p_table"]),
+        loader: async () => ++n,
+      },
+    );
     await h.subscribe("p");
 
-    h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "p_table",
-      xid: "600",
-    });
+    feedChange(h, { table: "p_table", op: "U", ids: null, xid: "600" });
     await tick();
     const feedUpdate = h
       .pushesFor("p")
@@ -154,17 +152,17 @@ describe("ackTx — value frames", () => {
   // acks them too (`cascadeSourceTx` → `cascadeDownstream`'s merge). An
   // overflowed upstream forwards nothing — a torn set is worse than none.
   function cascadeHarness() {
-    const h = createHarness({
-      readSet: (k) => (k === "up" ? ["up_table"] : []),
-    });
+    const h = createHarness();
     let u = 0;
     let d = 0;
-    const up = h.runtime.defineExternalResource({
-      key: "up",
-      mode: "push",
-      schema: z.number(),
-      loader: async () => ++u,
-    });
+    const up = h.runtime.defineExternalResource(
+      { key: "up", schema: z.number(), validateParams: () => {} },
+      {
+        mode: "push",
+        reach: wholeReach(["up_table"]),
+        loader: async () => ++u,
+      },
+    );
     h.runtime.defineResource({
       key: "down",
       mode: "push",
@@ -184,7 +182,7 @@ describe("ackTx — value frames", () => {
     const h = cascadeHarness();
     await h.subscribe("up");
     await h.subscribe("down");
-    legacyFull(h, "up_table", { xid: "42" });
+    feedChange(h, { table: "up_table", op: "U", ids: null, xid: "42" });
     await tick();
     expect(lastUpdate(h, "up")?.ackTx).toEqual(["42"]);
     expect(lastUpdate(h, "down")?.ackTx).toEqual(["42"]);
@@ -195,7 +193,12 @@ describe("ackTx — value frames", () => {
     await h.subscribe("up");
     await h.subscribe("down");
     for (let i = 0; i < 65; i++)
-      legacyFull(h, "up_table", { xid: `${3000 + i}` });
+      feedChange(h, {
+        table: "up_table",
+        op: "U",
+        ids: null,
+        xid: `${3000 + i}`,
+      });
     await tick();
     // Both frames ship (the cascade ran); neither carries a torn set.
     const upFrame = lastUpdate(h, "up");
@@ -207,19 +210,17 @@ describe("ackTx — value frames", () => {
   });
 
   test("invalidate frames NEVER carry ackTx (the base does not yet reflect the tx)", async () => {
-    const h = createHarness({ readSet: () => ["i_table"] });
-    h.runtime.defineExternalResource({
-      key: "i",
-      mode: "invalidate",
-      schema: z.number(),
-      loader: async () => 1,
-    });
+    const h = createHarness();
+    h.runtime.defineExternalResource(
+      { key: "i", schema: z.number(), validateParams: () => {} },
+      {
+        mode: "invalidate",
+        reach: wholeReach(["i_table"]),
+        loader: async () => 1,
+      },
+    );
     await h.subscribe("i");
-    h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "i_table",
-      xid: "700",
-    });
+    feedChange(h, { table: "i_table", op: "U", ids: null, xid: "700" });
     await tick();
     const inv = h
       .pushesFor("i")

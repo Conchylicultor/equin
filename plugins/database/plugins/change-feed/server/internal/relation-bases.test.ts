@@ -8,11 +8,13 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { z } from "zod";
 import {
-  applyLegacyFullChange,
   defineResource,
+  notificationsWsHandler,
   notifyStatsFor,
-  recordLoaderReadSet,
+  routeTableChange,
+  type TableChange,
 } from "@plugins/framework/plugins/server-core/core";
+import { mintReachPlan } from "@plugins/framework/plugins/resource-runtime/core";
 import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/testing";
 import {
   assertRelationBasesSourced,
@@ -132,24 +134,57 @@ describe("relationBases (the boot graph)", () => {
     ]);
   });
 
-  test("the boot install reaches server-core's legacy router: a reader of tasks_v is reached by a conversations write, and not by an unrelated one", () => {
+  test("the boot install reaches server-core's router: a reader of tasks_v is reached by a conversations write, and not by an unrelated one", async () => {
     // The production wiring (D34): change-feed's `onReadyBlocking` calls
-    // `installRelationGraph`, which installs the bases in server-core's runtime.
+    // `installRelationGraph`, which installs the bases in server-core's
+    // runtime and indexes every reach plan's relation reads through them.
     installRelationGraph(TREE);
     const key = "test.relation-bases.wiring";
-    defineResource({
-      key,
-      mode: "push",
-      schema: z.number(),
-      loader: () => 0,
+    defineResource(
+      { key, schema: z.number(), validateParams: () => {} },
+      {
+        mode: "push",
+        reach: mintReachPlan({
+          routes: [],
+          usesOf: () => new Map(),
+          relations: [{ relation: "tasks_v", reason: "reads tasks_v whole" }],
+        }),
+        loader: () => 0,
+      },
+    );
+    // A subscriber: a change reaches the tuples someone holds.
+    const handler = notificationsWsHandler as unknown as {
+      open(ws: unknown): void;
+      message(ws: unknown, raw: string): void;
+      close(ws: unknown, code: number, reason: string): void;
+    };
+    // Resolved by the socket itself when the sub-ack frame is sent.
+    let ack!: () => void;
+    const acked = new Promise<void>((resolve) => (ack = resolve));
+    const ws = {
+      send(raw: string) {
+        const frame = JSON.parse(raw) as { kind: string; key?: string };
+        if (frame.kind === "sub-ack" && frame.key === key) ack();
+      },
+    };
+    handler.open(ws);
+    handler.message(ws, JSON.stringify({ op: "sub", key, params: {} }));
+    await acked;
+    const change = (table: string): TableChange => ({
+      source: "feed",
+      table,
+      op: "U",
+      ids: null,
+      keys: null,
+      unchanged: null,
     });
-    recordLoaderReadSet(key, new Set(["tasks_v"]));
-    applyLegacyFullChange({ source: "feed", table: "lf_unrelated" });
+    routeTableChange(change("lf_unrelated"));
     expect(notifyStatsFor(key).feed).toBe(0);
     // `conversations` reaches `tasks_v` only through the attempt_conv_agg
     // rollup (tasks_v → attempt_conv_agg → conversations).
-    applyLegacyFullChange({ source: "feed", table: "conversations" });
+    routeTableChange(change("conversations"));
     expect(notifyStatsFor(key).feed).toBe(1);
+    handler.close(ws, 1000, "test");
   });
 });
 

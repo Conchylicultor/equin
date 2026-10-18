@@ -3,6 +3,7 @@ import {
   assertRouteTablesCovered,
   assertUnfedTablesOptedOut,
   findUncoveredRouteTables,
+  relationReadTables,
   formatUncoveredRouteError,
   type ScopedResourceTable,
   type RouteCoverageViolation,
@@ -343,5 +344,40 @@ describe("assertUnfedTablesOptedOut — tables read outside the feed by declarat
         new Set(["chord_sections"]),
       ),
     ).toThrow(/chord\.catalog: "chord_index_state"/);
+  });
+});
+
+describe("relationReadTables — a relation read's bases are held to A1′", () => {
+  const bases = (r: string): readonly string[] =>
+    r === "tasks_v" ? ["attempts", "tasks"] : [r];
+
+  test("each relation read expands to one row per base, naming the relation", () => {
+    expect(
+      relationReadTables(
+        [{ key: "automations.catalog", relation: "tasks_v" }],
+        bases,
+      ),
+    ).toEqual([
+      {
+        key: "automations.catalog",
+        table: "attempts",
+        via: 'relation "tasks_v"',
+      },
+      { key: "automations.catalog", table: "tasks", via: 'relation "tasks_v"' },
+    ]);
+  });
+
+  test("a relation over a table the feed skips blocks boot", () => {
+    expect(() =>
+      assertRouteTablesCovered(
+        relationReadTables(
+          [{ key: "automations.catalog", relation: "tasks_v" }],
+          bases,
+        ),
+        new Set(["tasks"]),
+        new Set(["attempts"]),
+        new Set(),
+      ),
+    ).toThrow(/automations\.catalog {2}→ {2}relation "tasks_v" "attempts"/);
   });
 });

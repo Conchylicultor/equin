@@ -733,10 +733,11 @@ let sinceMs = now();
 
 // Loader → table read-set sink. Each loader entry's captured `tables` (built up
 // via `recordReadTables` mid-load) is handed to it once, when the entry finishes.
-// The index it feeds is ROUTING state owned by the resource runtime
+// The index it feeds is runtime state owned by the resource runtime
 // (server-core's read-set) — not profile data: it survives
 // `resetRuntimeProfile`, and it is fed whatever the SINGULARITY_PROFILING
-// kill-switch says, because live-state routing depends on it. This module only
+// kill-switch says, because the route drift guard (A8 / D5) and the persisted
+// `tables_read` depend on it. This module only
 // owns the capture scope (the ambient loader entry). The server installs the
 // sink at boot (install.ts); none installed (the web, a bare test) = nothing
 // captured. See research/2026-09-29-global-scoped-change-routing.md (P0).
@@ -1357,9 +1358,9 @@ export function chargeWait(layer: string, ms: number): void {
  * nothing: a read-set only makes sense inside an entry. Read+charge
  * synchronously, before any await, so the ambient context is still active.
  *
- * NOT gated on the SINGULARITY_PROFILING kill-switch: the read-set is routing
+ * NOT gated on the SINGULARITY_PROFILING kill-switch: the read-set is runtime
  * state (see `installLoaderReadSetSink`), and a kill-switched profiler must not
- * silently stop live-state routing.
+ * silently blind the route drift guard or the persisted `tables_read`.
  *
  * Honors `runWithoutProfiling` suppression for the same reason `record` does:
  * the observability subsystem (reports, slow-ops) issues its own DB writes

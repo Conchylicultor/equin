@@ -180,7 +180,7 @@ Each served resource gets `GET /api/resources/<key>/...` (HTTP fallback for WS-d
 - **`mode` is required** on a non-keyed resource — `push` (the value rides the WS) or `invalidate` (a version stamp; each tab refetches over HTTP). It is what `liveValue`'s `load` compiles to, and there is no default.
 - The two-arg form `defineResource(descriptor, serverOpts)` reads `key`, `schema` and keyed-ness (`mode: "keyed"` + `keyOf`) from the client descriptor; a keyed descriptor takes `KeyedServerResourceOptions` plus a `ScopePolicy` (a compiler-minted `routes` plan and a membership — a keyed entry is always routed), which has no `mode`, and `ServerResourceOptions.mode` excludes `"keyed"`, so a keyed resource cannot drift from its client. The flat one-arg form is push/invalidate only.
 - A DB-backed resource has no `notify()` (the change feed routes commits by the loader's read-set); `defineExternalResource` is the only way to get one.
-- **The loader read-set is runtime-owned** (`core/read-set.ts`): the tables each loader read, captured at the DB pool chokepoint inside the profiler's ambient loader entry and handed here by the sink runtime-profiler's install wires (`recordLoaderReadSet`). It is ROUTING state — the legacy router (`applyLegacyFullChange`) inverts it through the relation bases change-feed installs (`setRelationBases`, which throws-until-set), memoized on its version counter — so the profiler's `SINGULARITY_PROFILING=0` kill-switch and its profile reset leave it alone. `seedReadSetIndex` / `removeReadSetTable` are its boot seed and eviction; tests read it through `core/testing`. Its per-run capture also feeds the runtime's route drift guard (A8, `lastReadSet`): a ROUTED resource (`routes` / `reach`) whose loader reads a table none of its routes names is reported once per table — and fails the load under a test runner (`strictRoutes`, on when `NODE_ENV === "test"`, which bun:test sets).
+- **The loader read-set is runtime-owned** (`core/read-set.ts`): the tables each loader read, captured at the DB pool chokepoint inside the profiler's ambient loader entry and handed here by the sink runtime-profiler's install wires (`recordLoaderReadSet`). No change is routed through it — every DB-backed resource declares its reads (`routes` / `reach`), and change-feed refuses one that declares none (D6); the union is display (`_debug`), and the per-run capture is what the drift guard and the persisted `tables_read` use — so the profiler's `SINGULARITY_PROFILING=0` kill-switch and its profile reset leave it alone. The relation bases change-feed installs (`setRelationBases`, which throws-until-set) index every reach plan's relation reads (`indexRelationReads`). Tests read it (`getReadSetIndex`) and evict from it (`removeReadSetTable`) through `core/testing`. Its per-run capture also feeds the runtime's route drift guard (A8, `lastReadSet`): a ROUTED resource (`routes` / `reach`) whose loader reads a table none of its routes names is reported once per table — and fails the load under a test runner (`strictRoutes`, on when `NODE_ENV === "test"`, which bun:test sets).
 - **`Resource.Declare`'s payload** is `{ key, mode, preload?, preloadTuples? }`. `preloadTuples` is set only by `network/live`'s `serveValue`, for a PARAMETERIZED value declared `preload`: it names and loads the tuples the boot snapshot ships (`tuples[key]`). A Declare carrying it is an enumerated preload — the boot snapshot loads it through that function, and L2 (`live-state-snapshot`) neither persists nor force-recomputes the key.
 
 ### Handlers
@@ -306,7 +306,6 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `WsData`
     - `WsHandler`
   - Exports (values):
-    - `applyLegacyFullChange`
     - `assertPreloadedResourcesDeclared`
     - `bindDeferredResources`
     - `boundedMembershipKeys`
@@ -338,7 +337,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `recordLoaderReadSet`
     - `recordMemoryCheckpoint`
     - `registeringPlugin`
-    - `removeReadSetTable`
+    - `relationResourceReads`
     - `reportServerError`
     - `reportServerFatalSync`
     - `Resource`
@@ -346,7 +345,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `routeTableChange`
     - `scopedResourceTables`
     - `seedPersistedSnapshot`
-    - `seedReadSetIndex`
+    - `seedRouteDrift`
     - `serverCollectedDir`
     - `setClientBuildIdentity`
     - `setErrorReporter`
@@ -357,6 +356,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `triggerResourcePush`
     - `unboundedWindowKeys`
     - `unfedResourceTables`
+    - `unroutedResourceKeys`
     - `validatePersistedValue`
     - `withNotifyBatch`
 - Cross-plugin:
@@ -376,5 +376,6 @@ The server itself is spawned and supervised by the gateway; never start it manua
   - Core: `@plugins/framework/plugins/server-core/core/testing`
     - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
     - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
+    - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
 
 <!-- AUTOGENERATED:END -->

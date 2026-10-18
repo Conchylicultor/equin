@@ -5,8 +5,7 @@ import type { ReportRow } from "@plugins/reports/server";
 // Re-alert the bell at most once per ~4h while a target keeps failing to reap.
 // A reap failure is a persistent condition — the hourly sweep retries the same
 // target every tick — so the cooldown re-surfaces it periodically without
-// filing a fresh alert every hour, matching the read-set-shrink / render-loop
-// re-arm shape.
+// filing a fresh alert every hour, matching the render-loop re-arm shape.
 const REAP_FAILED_NOTIF_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 
 // The jsonb payload for a `worktree-reap-failed` report. `timedOut` is the whole
@@ -14,8 +13,8 @@ const REAP_FAILED_NOTIF_COOLDOWN_MS = 4 * 60 * 60 * 1000;
 // so a killed git child is classified at the throw site rather than guessed from
 // the message here. `command` / `timeoutMs` are present only on that arm.
 //
-// Declared here rather than in a `core/` barrel (where read-set-shrink keeps its
-// twin) because this kind has no web renderer: the payload has exactly one
+// Declared here rather than in a `core/` barrel (where a kind with a web
+// renderer keeps its twin) because this kind has no web renderer: the payload has exactly one
 // reader, the renderTask below, and nothing in the browser needs its type.
 const ReapFailedPayloadSchema = z.object({
   targetId: z.string(),

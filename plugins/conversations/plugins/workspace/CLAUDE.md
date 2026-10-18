@@ -98,11 +98,13 @@ Orthogonal to the runtime (tmux | api): a runtime sees only the cwd and the
   - Imported by:
     - `apps/sonata/transcription`
     - `conversations`
+    - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/code`
     - `conversations/workspace/launch-option`
     - `conversations/workspace/scratch`
     - `conversations/workspace/worktree`
     - `debug/scratch-hello`
+    - `review/plugin-changes`
     - `tasks/tasks-core`
 - Test helpers:
   - Server: `@plugins/conversations/plugins/workspace/server/testing`

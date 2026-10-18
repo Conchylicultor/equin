@@ -349,9 +349,10 @@ export type PagedChanges = Exclude<LiveValueChanges, { snapshot: unknown }>;
 
 /**
  * A value's two-arg runtime options. This compilation never sets `reach`: a
- * db value's plan comes from its declared `reads`, which only the Bun host can
+ * value's plan comes from its declared `reads` (required on a db value,
+ * optional on a `"notified"` external one), which only the Bun host can
  * compile (query-resource reads drizzle tables) — its `serveValue` adds it at
- * registration. An external value's own `notify` reaches it.
+ * registration. An external value's own `notify` reaches it besides.
  */
 type ValueOptions<T, P extends Record<string, string>> = ServerResourceOptions<
   T,

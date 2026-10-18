@@ -1,5 +1,0 @@
-// @hash 293a7e80a4ef
-{
-  // When off, the monitor drains and drops read-set shrink events without filing reports.
-  "enabled": true
-}

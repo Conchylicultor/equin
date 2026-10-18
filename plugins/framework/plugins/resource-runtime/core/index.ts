@@ -45,6 +45,7 @@ export type {
   FullRoute,
   HostMap,
   ReachPlan,
+  RelationRead,
   Route,
   RoutePlan,
   TableChange,

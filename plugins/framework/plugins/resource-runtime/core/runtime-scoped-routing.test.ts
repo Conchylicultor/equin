@@ -13,7 +13,7 @@
  *   - scoped∪scoped union: two scoped changes coalesce their id sets.
  *
  * The entry is a routed alias (its identity route), the shape every scoped
- * change reaches since the legacy router went FULL-only (P8 steps 23–24, 23a).
+ * change reaches (P8 steps 23–24, 23a).
  */
 
 import { test, expect, describe } from "bun:test";

@@ -1,12 +1,10 @@
 /**
  * A26 — the `_debug` payload's `policy` (A7, D40): every registry key appears,
  * each with exactly one policy from the closed set `routed | external |
- * legacy-full | unbound`, and the ceiling fields the read-set pane reads
- * (`readSetBases`, `legacyReach`, `derivedReads`, `routeDrifted`, `tuples`,
- * `persisted`, `positionAgeMs`) are emitted for every entry — degrading to
- * `[]` / `null` on a central-shaped runtime that wires no read-set.
- * `legacyReach` is pinned against the legacy router itself: every entry it
- * names is loaded by a write to each of its bases, and no other entry is. Run with
+ * unrouted | unbound`, and the ceiling fields the read-set pane reads
+ * (`readSetBases`, `derivedReads`, `routeDrifted`, `tuples`, `persisted`,
+ * `positionAgeMs`) are emitted for every entry — degrading to `[]` / `null`
+ * on a central-shaped runtime that wires no read-set. Run with
  * `./singularity test plugins/framework/plugins/resource-runtime`.
  */
 
@@ -14,16 +12,15 @@ import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { mintRoutePlan } from "./routing";
 import { createHarness, tick, type Harness } from "./test-support";
-import { defineRoutedTable, legacyFull } from "./testing/routed-fixture";
+import { defineRoutedTable } from "./testing/routed-fixture";
 
-const POLICIES = ["routed", "external", "legacy-full", "unbound"] as const;
+const POLICIES = ["routed", "external", "unrouted", "unbound"] as const;
 
 interface DebugEntry {
   key: string;
   policy: (typeof POLICIES)[number];
   readSet: string[];
   readSetBases: string[];
-  legacyReach: string[];
   routes: unknown[] | null;
   derivedReads: string[];
   routeDrifted: string[];
@@ -151,13 +148,13 @@ describe("_debug policy (A26)", () => {
     expect(policyOf(before)).toEqual({
       hosts: "routed",
       "automations.catalog": "external",
-      agents: "legacy-full",
-      "edited-files": "legacy-full",
+      agents: "unrouted",
+      "edited-files": "unrouted",
       "deferred.rows": "unbound",
       "deferred.value": "unbound",
     });
 
-    // The legacy-full bases are the read-set expanded transitively.
+    // The displayed bases are the read-set expanded transitively.
     expect(before.get("agents")!.readSet).toEqual(["agents_v"]);
     expect(before.get("agents")!.readSetBases).toEqual(["agents"]);
     expect(before.get("edited-files")!.readSetBases).toEqual([
@@ -165,28 +162,16 @@ describe("_debug policy (A26)", () => {
       "conversations",
       "tasks",
     ]);
-    // The external entry still shows what it read (its read-set is routed
-    // like any legacy one), under its own policy.
+    // The external entry still shows what it read, under its own policy.
     expect(before.get("automations.catalog")!.readSetBases).toEqual([
       "attempts",
       "tasks",
     ]);
     expect(before.get("automations.catalog")!.externalSource).toBe(true);
-    // ...and the legacy router reaches it through them: an external entry
-    // with a DB read-set is legacy-FULL on its bases, beside its own notify.
-    expect(before.get("automations.catalog")!.legacyReach).toEqual([
-      "attempts",
-      "tasks",
-    ]);
-    expect(before.get("edited-files")!.legacyReach).toEqual([
-      "attempts",
-      "conversations",
-      "tasks",
-    ]);
-    // A routed entry is never in the legacy index, whatever it read.
-    expect(before.get("hosts")!.legacyReach).toEqual([]);
+    // Its read-set routes nothing: no declared reads, no routes.
+    expect(before.get("automations.catalog")!.routes).toBeNull();
 
-    // The dropped legacy fields are gone.
+    // The dropped fields are gone.
     for (const e of before.values()) {
       expect(e).not.toHaveProperty("coveredOrigins");
       expect(e).not.toHaveProperty("identityTable");
@@ -199,7 +184,7 @@ describe("_debug policy (A26)", () => {
     expect(policyOf(after)).toEqual({
       ...policyOf(before),
       "deferred.rows": "routed",
-      "deferred.value": "legacy-full",
+      "deferred.value": "unrouted",
     });
     expect(after.get("deferred.value")!.readSetBases).toEqual(["notes"]);
     expect(after.get("deferred.rows")!.routes).toHaveLength(1);
@@ -289,79 +274,6 @@ describe("_debug policy (A26)", () => {
     ]);
   });
 
-  test("legacyReach is exactly who the legacy router loads on a base write", async () => {
-    // The real server captures a routed entry's reads too; the fixture
-    // refuses a read-set at registration (it would be dead there), so it is
-    // switched on after — the routed entry must stay out of the legacy index.
-    let routedReads = false;
-    const readSets: Record<string, string[]> = {
-      catalog: ["tasks_v"],
-      agents: ["agents_v"],
-      pure: [],
-    };
-    const bases: Record<string, string[]> = {
-      tasks_v: ["attempts", "tasks"],
-      agents_v: ["agents"],
-    };
-    const h = createHarness({
-      readSet: (key) =>
-        key === "hosts"
-          ? routedReads
-            ? ["hosts"]
-            : []
-          : (readSets[key] ?? []),
-      relationBases: (r) => bases[r] ?? [r],
-    });
-    const loads: string[] = [];
-    defineRoutedTable(h, {
-      key: "hosts",
-      table: "hosts",
-      membership: "window",
-      loader: () => {
-        loads.push("hosts");
-        return [];
-      },
-    });
-    const value = (key: string) => ({
-      key,
-      mode: "push" as const,
-      schema: z.number(),
-      loader: () => {
-        loads.push(key);
-        return 1;
-      },
-    });
-    routedReads = true;
-    h.runtime.defineExternalResource(value("catalog"));
-    h.runtime.defineExternalResource(value("pure"));
-    h.runtime.defineResource(value("agents"));
-    await h.subscribe("hosts", { limit: "10" });
-    await h.subscribe("catalog");
-    await h.subscribe("pure");
-    await h.subscribe("agents");
-    await settle();
-
-    const d = await debugOf(h);
-    for (const table of ["attempts", "tasks", "agents", "hosts"]) {
-      loads.length = 0;
-      legacyFull(h, table);
-      await settle();
-      const expected = [...d.values()]
-        .filter((e) => e.legacyReach.includes(table))
-        .map((e) => e.key)
-        .sort();
-      expect({ table, loaded: [...loads].sort() }).toEqual({
-        table,
-        loaded: expected,
-      });
-    }
-    // Positive control: the external catalog IS reached by its bases.
-    expect(d.get("catalog")!.legacyReach).toEqual(["attempts", "tasks"]);
-    expect(d.get("pure")!.legacyReach).toEqual([]);
-    expect(d.get("hosts")!.readSetBases).toEqual(["hosts"]);
-    expect(d.get("hosts")!.legacyReach).toEqual([]);
-  });
-
   test("a central-shaped runtime (no read-set, no bases, no L2) degrades every field to [] / null", async () => {
     const h = createHarness();
     defineRoutedTable(h, {
@@ -386,11 +298,10 @@ describe("_debug policy (A26)", () => {
     const d = await debugOf(h);
     expect(d.get("rows")!.policy).toBe("routed");
     expect(d.get("ext")!.policy).toBe("external");
-    expect(d.get("plain")!.policy).toBe("legacy-full");
+    expect(d.get("plain")!.policy).toBe("unrouted");
     for (const e of d.values()) {
       expect(e.readSet).toEqual([]);
       expect(e.readSetBases).toEqual([]);
-      expect(e.legacyReach).toEqual([]);
       expect(e.routeDrifted).toEqual([]);
       expect(e.persisted).toBe(false);
       expect(e.positionAgeMs).toBeNull();

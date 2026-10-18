@@ -7,6 +7,10 @@ import {
 } from "@plugins/primitives/plugins/live-state/core";
 import { assertCapability } from "@plugins/conversations/plugins/workspace/core";
 import { findWorkspaceOfConversation } from "@plugins/conversations/plugins/workspace/server";
+import {
+  _attempts,
+  _conversations,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { editedFiles } from "../../core";
 import type { EditedFile } from "../../core/protocol";
 import { editedFilesMemo, evictEditedFiles } from "./edited-files-cache";
@@ -78,6 +82,11 @@ export function editedFilesSignatureFor(
 export const editedFilesServed = serveValue(editedFiles, {
   source: "external",
   changes: "notified",
+  reads: {
+    tables: [_conversations, _attempts],
+    reason:
+      "each tuple resolves its conversation's worktree (conversations → attempts) before reading git, and the same lookup runs in revalidate and whileSubscribed; a write to any conversation or attempt row may move which worktree a tuple reads — whole-table until the path is a param or a db-served value",
+  },
   loader: ({ id }) => loadEditedFilesFor(id),
   // The ETag and the value are produced by ONE authority: `editedFilesMemo` is a
   // `createSignedMemo` binding `editedFilesSignature` (here) to `computeEditedFiles`

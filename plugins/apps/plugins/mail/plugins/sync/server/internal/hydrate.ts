@@ -18,12 +18,12 @@ import { isMessageHydrated, upsertMessageFull } from "./store";
 // the "fetch only when opened" half of the on-demand sync model — the backfill
 // mirrors only envelopes, so a message's body is null until this runs.
 //
-// Cache-first: an already-hydrated message (or a legacy full-backfilled row) is
-// returned straight from Postgres with no Gmail round-trip. A cache miss fetches
-// `format=full`, upserts the body + attachments (stamping `bodyFetchedAt`), then
-// re-reads. The message must already exist as an envelope stub in the mirror —
-// hydrating an unknown id is a 404 (older-than-window mail arrives via on-demand
-// search, a later phase).
+// Cache-first: an already-hydrated message (or a full-backfilled row from before
+// on-demand sync) is returned straight from Postgres with no Gmail round-trip.
+// A cache miss fetches `format=full`, upserts the body + attachments (stamping
+// `bodyFetchedAt`), then re-reads. The message must already exist as an
+// envelope stub in the mirror — hydrating an unknown id is a 404
+// (older-than-window mail arrives via on-demand search, a later phase).
 
 export async function hydrateMessage(messageId: string): Promise<{
   message: MailMessage;

@@ -8,7 +8,7 @@
  *   - `createHarness(opts?)` — `createResourceRuntime(opts)` wrapped with N fake
  *     sockets that record the FULL parsed frame (value / upserts / deletes /
  *     order / etag), not just `{seq,key,kind,version}`. Subsumes the old
- *     `harness()` + `feedHarness()` (a `readSet` option folds them into one) and
+ *     `harness()` + `feedHarness()` and
  *     the reval-only `revalHarness()` (subscribe takes an `etag`).
  *   - `makeClientView(keyOf?)` — a faithful client simulator that applies frames
  *     through the REAL WS version guard + keyed-delta merge, so a test can assert

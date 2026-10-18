@@ -9,7 +9,10 @@ import {
   type ResourceParams,
 } from "@plugins/framework/plugins/server-core/core";
 import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/testing";
-import { mintRoutePlan } from "@plugins/framework/plugins/resource-runtime/core";
+import {
+  mintReachPlan,
+  mintRoutePlan,
+} from "@plugins/framework/plugins/resource-runtime/core";
 import {
   createTestDb,
   type TestDb,
@@ -20,14 +23,14 @@ import { rebuildTriggers } from "./triggers";
 
 // `routeChange` is the ONLY production path from a table change into the live
 // runtime: the LISTEN consumer, the L2 catch-up and the reconnect sweep all call
-// it. It feeds two routers — `routeTableChange` serves the ROUTED entries (every
-// collection window, `:rows` and `:groups`), `applyLegacyFullChange` every
-// other one (a FULL recompute of each tracked tuple) —
-// and each entry must be reached through exactly one of them. The runtime suites
-// drive the two routers by hand, so this suite drives the real `routeChange`
-// into the real server-core runtime: with it, a `routeChange` that stopped
-// calling a router, or passed a name no route states, fails here instead of
-// silently freezing every collection at its hydrated value.
+// it. It feeds `routeTableChange`, which serves every DB-backed entry through
+// its declared reads: a collection's routes (a scoped refill) and a value's
+// reach plan (a FULL recompute of each tracked tuple), each entry reached
+// exactly once. The runtime suites drive the router by hand, so this suite
+// drives the real `routeChange` into the real server-core runtime: with it, a
+// `routeChange` that stopped calling the router, or passed a name no route
+// states, fails here instead of silently freezing every collection at its
+// hydrated value.
 //
 // The second half runs the whole feed on a throwaway database: a real trigger,
 // the real listener, `routeChange`, and a delta on the wire.
@@ -98,11 +101,13 @@ function routedResource(
 }
 
 /**
- * One LEGACY resource reading `table` whole: a non-keyed push value, reached
- * through the read-set inversion — every change it reads is one FULL load.
+ * One REACHED resource reading `table` whole: a non-keyed push value with a
+ * reach plan (as a served db value declares it) — every change to the table
+ * is one FULL load.
  */
-function legacyResource(
+function reachedResource(
   key: string,
+  table: string,
   readAll: () => Promise<Row[]> | Row[],
   loads: Load[],
 ): void {
@@ -110,6 +115,17 @@ function legacyResource(
     { key, schema: z.array(RowSchema), validateParams: () => {} },
     {
       mode: "push",
+      reach: mintReachPlan({
+        routes: [
+          {
+            id: "all",
+            table,
+            map: { kind: "full", reason: "reads the table whole" },
+            columns: ["id", "n"],
+          },
+        ],
+        usesOf: () => new Map([["all", { role: "membership" as const }]]),
+      }),
       loader: () => {
         loads.push({ key, ids: "FULL" });
         return readAll();
@@ -164,10 +180,10 @@ const settle = async () => {
   for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
 };
 
-describe("routeChange — one change, both routers, each entry reached once", () => {
+describe("routeChange — one change, each entry reached once", () => {
   const TABLE = "rc_unit_items";
   const ROUTED = "test.route-change.unit.routed";
-  const LEGACY = "test.route-change.unit.legacy";
+  const REACHED = "test.route-change.unit.reached";
   const store = new Map<string, number>([["a", 1]]);
   const loads: Load[] = [];
   const read = (ids: readonly string[]): Row[] =>
@@ -179,18 +195,18 @@ describe("routeChange — one change, both routers, each entry reached once", ()
     // No views or rollups here: every relation is its own base.
     setRelationBases((r) => [r]);
     routedResource(ROUTED, TABLE, read, loads);
-    legacyResource(LEGACY, readAll, loads);
+    reachedResource(REACHED, TABLE, readAll, loads);
     // The captured read-sets, as a real loader run records them at the DB pool
-    // chokepoint. The routed key's must NOT make the legacy inversion reach it.
+    // chokepoint (each covered by its declaration, so the drift guard passes).
     recordLoaderReadSet(ROUTED, new Set([TABLE]));
-    recordLoaderReadSet(LEGACY, new Set([TABLE]));
+    recordLoaderReadSet(REACHED, new Set([TABLE]));
     await socket.subscribe(ROUTED, { ids: "a" });
-    await socket.subscribe(LEGACY, {});
+    await socket.subscribe(REACHED, {});
   });
 
   afterAll(() => socket.close());
 
-  test("an UPDATE refills the routed entry once, scoped, reloads the legacy one once, FULL, and both ack its transaction", async () => {
+  test("an UPDATE refills the routed entry once, scoped, reloads the reached one once, FULL, and both ack its transaction", async () => {
     const at = loads.length;
     store.set("a", 2);
     routeChange({
@@ -204,18 +220,18 @@ describe("routeChange — one change, both routers, each entry reached once", ()
     });
     await until(
       () =>
-        socket.deltas(ROUTED).length > 0 && socket.updates(LEGACY).length > 0,
+        socket.deltas(ROUTED).length > 0 && socket.updates(REACHED).length > 0,
       "the delta and the update",
     );
     await settle();
     expect(loads.slice(at)).toEqual([
       { key: ROUTED, ids: ["a"] },
-      { key: LEGACY, ids: "FULL" },
+      { key: REACHED, ids: "FULL" },
     ]);
     expect(socket.deltas(ROUTED).map((d) => [d.upserts, d.ackTx])).toEqual([
       [[["a", { id: "a", n: 2 }]], ["7001"]],
     ]);
-    expect(socket.updates(LEGACY).map((u) => [u.value, u.ackTx])).toEqual([
+    expect(socket.updates(REACHED).map((u) => [u.value, u.ackTx])).toEqual([
       [[{ id: "a", n: 2 }], ["7001"]],
     ]);
   });
@@ -240,7 +256,7 @@ describe("routeChange — one change, both routers, each entry reached once", ()
 describe("the feed end to end — trigger → listener → routeChange → delta", () => {
   const TABLE = "rc_feed_items";
   const ROUTED = "test.route-change.feed.routed";
-  const LEGACY = "test.route-change.feed.legacy";
+  const REACHED = "test.route-change.feed.reached";
   let testDb: TestDb;
   let listener: ReturnType<typeof createChangeFeedListener>;
   const loads: Load[] = [];
@@ -311,33 +327,33 @@ describe("the feed end to end — trigger → listener → routeChange → delta
     await testDb?.drop();
   });
 
-  test("an UPDATE statement reaches the routed entry once as a scoped delta, and the legacy one as one FULL reload", async () => {
+  test("an UPDATE statement reaches the routed entry once as a scoped delta, and the reached one as one FULL reload", async () => {
     setRelationBases((r) => [r]);
     routedResource(ROUTED, TABLE, read, loads);
-    legacyResource(LEGACY, readAll, loads);
+    reachedResource(REACHED, TABLE, readAll, loads);
     recordLoaderReadSet(ROUTED, new Set([TABLE]));
-    recordLoaderReadSet(LEGACY, new Set([TABLE]));
+    recordLoaderReadSet(REACHED, new Set([TABLE]));
     socket = attach();
     await socket.subscribe(ROUTED, { ids: "a" });
-    await socket.subscribe(LEGACY, {});
+    await socket.subscribe(REACHED, {});
 
     const at = loads.length;
     await testDb.db.execute(sql`UPDATE rc_feed_items SET n = 2 WHERE id = 'a'`);
     await until(
       () =>
-        socket.deltas(ROUTED).length > 0 && socket.updates(LEGACY).length > 0,
+        socket.deltas(ROUTED).length > 0 && socket.updates(REACHED).length > 0,
       "the delta and the update",
     );
     await settle();
     expect(loads.slice(at)).toEqual([
       { key: ROUTED, ids: ["a"] },
-      { key: LEGACY, ids: "FULL" },
+      { key: REACHED, ids: "FULL" },
     ]);
     const deltas = socket.deltas(ROUTED);
     expect(deltas.map((d) => d.upserts)).toEqual([[["a", { id: "a", n: 2 }]]]);
     // The statement's transaction id rides the trigger to the ack.
     expect(deltas[0]!.ackTx).toHaveLength(1);
-    const updates = socket.updates(LEGACY);
+    const updates = socket.updates(REACHED);
     expect(updates.map((u) => u.value)).toEqual([[{ id: "a", n: 2 }]]);
     expect(updates[0]!.ackTx).toEqual(deltas[0]!.ackTx);
   }, 20_000);

@@ -2,8 +2,7 @@
  * `compileCollection` end-to-end: a `liveCollection`'s window and `:rows`
  * specs compiled by `compileWindowQuery`, wired into a real
  * `createResourceRuntime`, reading a real Postgres table (a throwaway database)
- * and driven through the change feed's two routers (`routeTableChange` serves
- * these routed resources; `applyLegacyFullChange` must skip them). The membership
+ * and driven through the change feed's router (`routeTableChange`). The membership
  * semantics themselves are pinned by `resource-runtime`'s
  * `runtime-window-membership` suite; THIS suite pins that the decoded
  * where / order / limit reach the SQL each subscription tuple runs.
@@ -179,9 +178,7 @@ function serve(c: ReturnType<typeof collection>, opts: { where?: SQL } = {}) {
     db: db as unknown as QueryDb,
     ...opts,
   });
-  // Every key reads the one table — the read-set a real server captures
-  // automatically at the DB pool chokepoint on the first load.
-  const runtime = createResourceRuntime({ readSet: () => [TABLE] });
+  const runtime = createResourceRuntime();
   runtime.defineResource(
     c.window,
     compileWindowQuery(c.window, specs.window).serverOpts,
@@ -234,9 +231,8 @@ function attach(
           f.kind === "update" && f.key === key && sameParams(f.params, params),
       );
     },
-    // One change as the change feed delivers it (`routeChange`): to BOTH
-    // routers. Every served resource is routed, so `routeTableChange` serves
-    // it and the legacy `applyLegacyFullChange` must skip it.
+    // One change as the change feed delivers it (`routeChange`): every
+    // served resource is routed, so `routeTableChange` serves it.
     change(op: "I" | "U" | "D", ids: string[]) {
       this.changeOn(table, op, ids);
     },
@@ -248,10 +244,6 @@ function attach(
         ids,
         keys: null,
         unchanged: null,
-      });
-      runtime.applyLegacyFullChange({
-        source: "feed",
-        table: changed,
       });
     },
   };
@@ -656,7 +648,7 @@ describe("serveCollection — :count", () => {
     expect(specs.count!.reach.routes.map((r) => [r.table, r.map.kind])).toEqual(
       [[TABLE, "full"]],
     );
-    const runtime = createResourceRuntime({ readSet: () => [TABLE] });
+    const runtime = createResourceRuntime();
     runtime.defineResource(c.count, specs.count!);
     const h = attach(runtime, TABLE);
     await put(row("a", 1), row("b", 2));
@@ -753,7 +745,7 @@ describe("serveCollection — lookup-only", () => {
     const compiled = compileWindowQuery(c.rows, specs.rows).serverOpts;
     // Every point read, by the tuple it ran for.
     const reads: string[] = [];
-    const runtime = createResourceRuntime({ readSet: () => [TABLE] });
+    const runtime = createResourceRuntime();
     runtime.defineResource(c.rows, {
       ...compiled,
       loader: (params, ctx) => {

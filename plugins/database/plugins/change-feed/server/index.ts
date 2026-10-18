@@ -1,6 +1,8 @@
 import {
   scopedResourceTables,
   unfedResourceTables,
+  relationResourceReads,
+  unroutedResourceKeys,
   routedTableRequirements,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
@@ -118,6 +120,8 @@ export default {
       layouts: routedTableRequirements(),
       scoped: scopedResourceTables(),
       unfed: unfedResourceTables(),
+      relationReads: relationResourceReads(),
+      unrouted: unroutedResourceKeys(),
     };
     // The trigger rebuild and the boot invariants it is checked against (A1′,
     // A2′, A3, A3p, D35 — see ./internal/install-feed). Per-table DROP+CREATE
@@ -139,14 +143,14 @@ export default {
     // runs after the barrier lifts, when the gateway may already be routing
     // traffic, and a loader running in that window would capture nothing.
     await loadKnownRelations(db);
-    // Relation bases (C30, D34): the legacy router expands every read-set
-    // relation through them, so a reader of `tasks_v` is reached by a write to
-    // `conversations` (through the `attempt_conv_agg` rollup). Set here, in the
-    // barrier, so live-state-snapshot's A6 guard and boot sweep (a dependsOn
+    // Relation bases (C30, D34): a reach plan's relation reads are indexed
+    // under them (server-core's `setRelationBases` → `indexRelationReads`), so
+    // a reader of `tasks_v` is reached by a write to `conversations` (through
+    // the `attempt_conv_agg` rollup), and the drift guard fails open through
+    // them. Set here, in the barrier, so
+    // live-state-snapshot's A6 guard, boot sweep and drift seed (a dependsOn
     // child, whose `onReadyBlocking` runs after this one) and the L2 catch-up
     // read them; server-core's holder throws if anything reads them earlier.
-    // Setting them bumps the read-set version, so the router's memoized
-    // inversion is rebuilt through them.
     installRelationGraph(relations);
   },
   // The LISTEN consumer is a background watcher, so it starts after the ready

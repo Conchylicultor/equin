@@ -28,7 +28,7 @@ import {
   computeCeiling,
   type Ceiling,
   type DriftEntry,
-  type LegacyFullEntry,
+  type RelationReadEntry,
   type RoutedFullEntry,
 } from "../internal/ceiling";
 
@@ -37,22 +37,19 @@ import {
 // purely client-side from the payload: `resources[].notifyStats`,
 // `resources[].readSet` (the captured loader→table index the server records, in
 // view / table / rollup space), `resources[].policy` (what the entry is:
-// routed, legacy-full, external or unbound — the runtime's own
-// classification), `resources[].legacyReach` (the bases the runtime's legacy
-// router indexes the entry under — external and unbound entries included —
-// expanded through the relation bases: views transitively, rollups to their
-// sources), and `resources[].routes` / `routeDrifted` (a routed entry's routes
-// and the A8 drift guard's record). Three sections, in render order:
+// routed, external, unrouted or unbound — the runtime's own
+// classification), and `resources[].routes` / `relationReads` / `routeDrifted` (an
+// entry's plan — a routed entry's, or an external one's declared reads — and
+// its drift guard's record). Three sections, in render order:
 //   A — notify provenance: per-resource hand / feed / producer counts during
 //       the L4 parallel run, flagging read-set-gap candidates (hand > 0 and no
 //       feed or producer delivery).
 //   B — the captured index, inverted to table → [resource keys] (raw read-set,
 //       rollups included).
 //   C — the read-set ceiling (A7, `computeCeiling` in `../internal/ceiling`):
-//       per-policy counts; every entry the legacy router reaches with its
-//       bases, FULL loads per base write and persistence (external ones
-//       tagged); every routed `full` route with its reason; routed drift; the
-//       routed, pure-external and unbound keys.
+//       per-policy counts; every declared `full` route and relation read
+//       with its reason (external ones tagged); drift; the routed,
+//       pure-external, unrouted and unbound keys.
 //   D — declared freshness (`resources[].freshness`): every external value's
 //       `changes` — notified, or immutable / fixed / snapshot with its reason.
 
@@ -104,7 +101,12 @@ function buildNotifyEntries(resources: ResourceDebug[]): NotifyEntry[] {
       hand: r.notifyStats.hand,
       feed: r.notifyStats.feed,
       producer: r.notifyStats.producer,
+      // A declared route or relation read IS a change source: a routed change
+      // reaches only subscribed tuples, so `feed` stays 0 while nobody holds
+      // one — that is not a gap.
       gap:
+        !r.routes?.length &&
+        r.relationReads.length === 0 &&
         r.notifyStats.hand > 0 &&
         r.notifyStats.feed === 0 &&
         r.notifyStats.producer === 0,
@@ -213,9 +215,9 @@ function ReadSetBody({
 function Caveat(): ReactElement {
   return (
     <Placeholder tone="muted">
-      Read-sets cover only loaders that have run since boot (or were seeded from
-      a persisted row): a legacy-full entry with no bases has not loaded yet, so
-      the ceiling is a lower bound. Direct notify() sites are not modeled.
+      Read-sets and drift cover only loaders that have run since boot (or, for
+      drift, were seeded from a persisted row), so the drift list is a lower
+      bound. Direct notify() sites are not modeled.
     </Placeholder>
   );
 }
@@ -387,7 +389,7 @@ function NotifyRow({ entry }: { entry: NotifyEntry }): ReactElement {
 
 // ── Section C: read-set ceiling — what a change costs each entry ───────────
 
-const POLICY_ORDER = ["routed", "legacy-full", "external", "unbound"] as const;
+const POLICY_ORDER = ["routed", "external", "unrouted", "unbound"] as const;
 
 function CeilingSection({ ceiling }: { ceiling: Ceiling }): ReactElement {
   return (
@@ -402,8 +404,8 @@ function CeilingSection({ ceiling }: { ceiling: Ceiling }): ReactElement {
           ))}
         </Cluster>
       </Stack>
-      <LegacyFullSection entries={ceiling.legacyFull} />
       <RoutedFullSection entries={ceiling.routedFull} />
+      <RelationReadsSection entries={ceiling.relationReads} />
       <DriftSection entries={ceiling.drift} />
       <KeyListSection
         title="Routed — reached only through their routes"
@@ -414,7 +416,12 @@ function CeilingSection({ ceiling }: { ceiling: Ceiling }): ReactElement {
       <KeyListSection
         title="External — reached only by their own notify()"
         keys={ceiling.pureExternal}
-        empty="No external resource without a captured DB read."
+        empty="No external resource without a declared read or drift."
+      />
+      <KeyListSection
+        title="Unrouted — DB-backed, reached by no change (refused at boot)"
+        keys={ceiling.keys.unrouted}
+        empty="Every DB-backed resource declares its reads."
       />
       <KeyListSection
         title="Unbound — deferred, not bound yet"
@@ -425,70 +432,10 @@ function CeilingSection({ ceiling }: { ceiling: Ceiling }): ReactElement {
   );
 }
 
-/** "3 s", "4 min", "2 h" — a coarse age for a debug aside. */
-function formatAge(ms: number): string {
-  const s = Math.round(ms / 1000);
-  if (s < 60) return `${s} s`;
-  const m = Math.round(s / 60);
-  if (m < 60) return `${m} min`;
-  return `${Math.round(m / 60)} h`;
-}
-
-function costAside(e: LegacyFullEntry): string {
-  const parts = [
-    `${e.loadsPerWrite} load${e.loadsPerWrite === 1 ? "" : "s"}/write`,
-    `${e.tuples} tuple${e.tuples === 1 ? "" : "s"}`,
-  ];
-  if (e.persisted) {
-    parts.push(
-      e.positionAgeMs === null
-        ? "persisted"
-        : `persisted · ${formatAge(e.positionAgeMs)} old`,
-    );
-  }
-  return parts.join(" · ");
-}
-
 /**
- * Every entry the legacy router reaches, with its relation bases: a write to
- * ANY of them recomputes it FULL. An external (or unbound) entry is here when
- * its loader read the DB — the router reaches it beside its own notify().
+ * Every declared `full` route with its reason — a routed entry's, or an
+ * external one's declared reads (tagged) — so a routed FULL is never silent.
  */
-function LegacyFullSection({
-  entries,
-}: {
-  entries: LegacyFullEntry[];
-}): ReactElement {
-  return (
-    <Stack gap="sm">
-      <SectionLabel>
-        Legacy FULL — any base write recomputes every tuple{" "}
-        <span className="opacity-60">{entries.length}</span>
-      </SectionLabel>
-      {entries.length === 0 ? (
-        <Text variant="caption" tone="muted">
-          Nothing is reached by the legacy router — every DB-backed resource is
-          routed.
-        </Text>
-      ) : (
-        <Stack gap="sm">
-          {entries.map((e) => (
-            <ChipRow
-              key={e.key}
-              label={e.key}
-              tag={e.policy === "legacy-full" ? undefined : e.policy}
-              aside={costAside(e)}
-              chips={e.bases.map((t) => ({ key: t, text: t }))}
-              empty="No reads captured yet — its loader has not run."
-            />
-          ))}
-        </Stack>
-      )}
-    </Stack>
-  );
-}
-
-/** Every routed `full` route with its declared reason — a routed FULL is never silent. */
 function RoutedFullSection({
   entries,
 }: {
@@ -502,7 +449,7 @@ function RoutedFullSection({
       </SectionLabel>
       {entries.length === 0 ? (
         <Text variant="caption" tone="muted">
-          No routed resource declares a full route.
+          No resource declares a full route.
         </Text>
       ) : (
         <Stack gap="2xs">
@@ -514,9 +461,16 @@ function RoutedFullSection({
               align="baseline"
               justify="between"
             >
-              <Text variant="caption" className="font-mono">
-                {`${e.key} ← ${e.table}`}
-              </Text>
+              <Cluster gap="2xs">
+                <Text variant="caption" className="font-mono">
+                  {`${e.key} ← ${e.table}`}
+                </Text>
+                {e.policy === "routed" ? null : (
+                  <Badge variant="muted" mono>
+                    {e.policy}
+                  </Badge>
+                )}
+              </Cluster>
               <Text as="span" variant="caption" tone="muted">
                 {e.reason}
               </Text>
@@ -529,19 +483,57 @@ function RoutedFullSection({
 }
 
 /**
- * Routed drift (A8), as the runtime's guard recorded it: tables a routed
- * entry's loader read that no route names — writes to them never reach it.
+ * Every view (or rollup) a plan reads whole, with its relation bases: a write
+ * to any base recomputes the entry FULL, for the declared reason.
+ */
+function RelationReadsSection({
+  entries,
+}: {
+  entries: RelationReadEntry[];
+}): ReactElement {
+  return (
+    <Stack gap="sm">
+      <SectionLabel>
+        Relation reads — views reached through their bases{" "}
+        <span className="opacity-60">{entries.length}</span>
+      </SectionLabel>
+      {entries.length === 0 ? (
+        <Text variant="caption" tone="muted">
+          No resource declares a view read.
+        </Text>
+      ) : (
+        <Stack gap="sm">
+          {entries.map((e) => (
+            <ChipRow
+              key={`${e.key} ${e.relation}`}
+              label={`${e.key} ← ${e.relation}`}
+              tag={e.policy === "routed" ? undefined : e.policy}
+              aside={e.reason}
+              chips={e.bases.map((t) => ({ key: t, text: t }))}
+              empty="No bases known yet — the relation bases are injected at boot."
+            />
+          ))}
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
+/**
+ * Drift, as the runtime's guard recorded it (A8 for a routed entry, D5 for a
+ * notified external one): tables a loader read that its plan does not cover —
+ * each now recomputes the entry FULL, until a restart re-seeds it.
  */
 function DriftSection({ entries }: { entries: DriftEntry[] }): ReactElement {
   return (
     <Stack gap="sm">
       <SectionLabel>
-        Route drift — read but never routed{" "}
+        Route drift — read but never declared{" "}
         <span className="opacity-60">{entries.length}</span>
       </SectionLabel>
       {entries.length === 0 ? (
         <Text variant="caption" tone="muted">
-          No drift — every routed resource reads only tables its routes name.
+          No drift — every guarded resource reads only what its plan declares.
         </Text>
       ) : (
         <Stack gap="sm">
@@ -549,6 +541,7 @@ function DriftSection({ entries }: { entries: DriftEntry[] }): ReactElement {
             <ChipRow
               key={d.key}
               label={d.key}
+              tag={d.policy === "routed" ? undefined : d.policy}
               aside={d.tables.length}
               variant="warning"
               chips={d.tables.map((t) => ({ key: t, text: t }))}

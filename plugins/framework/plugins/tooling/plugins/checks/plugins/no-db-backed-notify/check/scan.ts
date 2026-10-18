@@ -19,7 +19,10 @@ import type { Definition, ModuleIndex } from "./resolve";
  * The two spellings of a resource with a hand-`notify`: the old
  * `defineExternalResource(…)`, and network/live's
  * `serveValue(value, { source: "external", … })`. Only serveValue's external
- * arm has `notify`, so a `source: "db"` call is not a candidate.
+ * arm has `notify`, so a `source: "db"` call is not a candidate — and neither
+ * is an external one that declares its Postgres reads (`reads`): the change
+ * feed reaches it through them, and the runtime's drift guard holds its loader
+ * to them.
  */
 export const NOTIFY_MARKERS = ["defineExternalResource", "serveValue"] as const;
 export type NotifyMarker = (typeof NOTIFY_MARKERS)[number];
@@ -162,7 +165,7 @@ export async function scanDbBackedNotify(
       for (const span of markerCallSpans(module.masked, marker)) {
         if (
           marker === "serveValue" &&
-          !servesExternal(src, module.masked, span)
+          !servesUndeclaredExternal(src, module.masked, span)
         ) {
           continue;
         }
@@ -390,18 +393,22 @@ function executesDml(masked: string, src: string, from: number): boolean {
 }
 
 /**
- * Is this `serveValue(value, { … })` call the external arm? Its second argument
- * must be an inline options object whose OWN `source:` (depth 0 of that object,
- * so an object literal inside the loader never answers) is the literal
- * `"external"`. Anything else — the db arm, or a call whose options are not an
- * inline object, like `serveValue`'s own declaration `(value: …, opts: …)` —
- * is not a candidate. A computed `source: expr` is not read either: the
- * resources facet already throws on one, so it never gets past a build. A
- * `source` the facet cannot see — shorthand `{ source }`, one inside a spread,
- * or options passed as a variable — is not read here either (a false negative,
- * like a loader passed by reference, whose `db.` sits outside the call).
+ * Is this `serveValue(value, { … })` call the external arm, declaring no
+ * reads? Its second argument must be an inline options object whose OWN
+ * `source:` (depth 0 of that object, so an object literal inside the loader
+ * never answers) is the literal `"external"`, and which has no OWN `reads:`
+ * key (a declared read — static or a thunk — routes the value from the change
+ * feed, and the runtime's drift guard holds the loader to it). Anything else —
+ * the db arm, or a call whose options are not an inline object, like
+ * `serveValue`'s own declaration `(value: …, opts: …)` — is not a candidate. A
+ * computed `source: expr` is not read either: the resources facet already
+ * throws on one, so it never gets past a build. A `source` the facet cannot
+ * see — shorthand `{ source }`, one inside a spread, or options passed as a
+ * variable — is not read here either (a false negative, like a loader passed
+ * by reference, whose `db.` sits outside the call). A shorthand `{ reads }` is
+ * not seen as a declaration (a false positive: spell it `reads: …`).
  */
-function servesExternal(
+function servesUndeclaredExternal(
   src: string,
   masked: string,
   span: MarkerCallSpan,
@@ -413,10 +420,10 @@ function servesExternal(
   if (masked[open] !== "{") return false;
   const close = matchBracket(masked, open, "{", "}");
   if (close < 0 || close > span.close) return false;
-  const source = parseStringField(src.slice(open + 1, close), "source", {
-    depth0: true,
-  });
-  return source.kind === "value" && source.value === "external";
+  const options = src.slice(open + 1, close);
+  const source = parseStringField(options, "source", { depth0: true });
+  if (source.kind !== "value" || source.value !== "external") return false;
+  return parseStringField(options, "reads", { depth0: true }).kind === "absent";
 }
 
 /** Does masked `text` name any of `identifiers` as a whole word? */

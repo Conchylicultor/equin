@@ -5,7 +5,7 @@ import { BootBudgetPayloadSchema, type BootBudgetPayload } from "../../core";
 // Re-alert the bell at most once per ~6h while a boot span keeps blowing its
 // budget across restarts. A hook that is slow on every boot is a persistent
 // condition, so the cooldown re-surfaces it periodically without spamming —
-// matching the read-set-shrink / live-state-noop / render-loop 6h re-arm.
+// matching the live-state-noop / render-loop 6h re-arm.
 const BOOT_BUDGET_NOTIF_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 // The `boot-budget` report kind. Dedups per distinct boot span (fingerprint

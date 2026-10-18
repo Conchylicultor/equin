@@ -289,7 +289,48 @@ describe("compiledValueReach — a served value's declared whole-table reads", (
     );
   });
 
-  test("refuses an empty reason, a duplicate, a view, and a table both routed and unfed", () => {
+  test("a view compiles to a relation read — no route names it, its reason is the declaration's", () => {
+    const plan = compiledValueReach(
+      { tables: [notes, view], reason: "filters on the view's derived column" },
+      "v",
+    );
+    expect(plan.routes.map((r) => r.table)).toEqual(["vr_notes"]);
+    expect(plan.relations).toEqual([
+      {
+        relation: "vr_notes_v",
+        reason: "filters on the view's derived column",
+      },
+    ]);
+    expect([...plan.usesOf({}).keys()]).toEqual(["vr_notes"]);
+    // A view alone: zero routes, reached only through its bases.
+    const only = compiledValueReach({ tables: [view], reason: "r" }, "v");
+    expect(only.routes).toEqual([]);
+    expect(only.relations).toEqual([{ relation: "vr_notes_v", reason: "r" }]);
+    // No view, no field: the shape a table-only plan always had.
+    expect(
+      compiledValueReach({ tables: [notes], reason: "r" }, "v").relations,
+    ).toBeUndefined();
+  });
+
+  test("zero routes with only outsideFeed reads — a feed-excluded cache", () => {
+    const plan = compiledValueReach(
+      {
+        tables: [],
+        reason: "r",
+        outsideFeed: {
+          tables: [cache],
+          reason: "flushed by a timer that notifies",
+        },
+      },
+      "v",
+    );
+    expect(plan.routes).toEqual([]);
+    expect(plan.unfed).toEqual([
+      { table: "vr_cache", reason: "flushed by a timer that notifies" },
+    ]);
+  });
+
+  test("refuses an empty reason, a duplicate (table or view), a view outside the feed, and a table both routed and unfed", () => {
     expect(() =>
       compiledValueReach({ tables: [notes], reason: " " }, "v"),
     ).toThrow(/reason is empty/);
@@ -297,8 +338,18 @@ describe("compiledValueReach — a served value's declared whole-table reads", (
       compiledValueReach({ tables: [notes, notes], reason: "r" }, "v"),
     ).toThrow(/lists "vr_notes" twice/);
     expect(() =>
+      compiledValueReach({ tables: [view, view], reason: "r" }, "v"),
+    ).toThrow(/lists "vr_notes_v" twice/);
+    expect(() =>
       compiledValueReach(
-        { tables: [view as unknown as typeof notes], reason: "r" },
+        {
+          tables: [],
+          reason: "r",
+          outsideFeed: {
+            tables: [view as unknown as typeof notes],
+            reason: "x",
+          },
+        },
         "v",
       ),
     ).toThrow(/never a view/);

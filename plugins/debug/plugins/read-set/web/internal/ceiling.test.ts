@@ -15,8 +15,8 @@ function entry(
     subscribers: 0,
     subCounts: {},
     readSet: [],
-    legacyReach: [],
     routes: null,
+    relationReads: [],
     routeDrifted: [],
     tuples: 0,
     persisted: false,
@@ -48,17 +48,17 @@ describe("computeCeiling", () => {
     expect(c.routedFull).toEqual([
       {
         key: "tasks",
+        policy: "routed",
         route: "categories",
         table: "task_categories",
         reason: "a category rename moves every row",
       },
     ]);
-    expect(c.legacyFull).toEqual([]);
     expect(c.drift).toEqual([]);
     expect(c.keys).toEqual({
       routed: ["tasks"],
-      "legacy-full": [],
       external: [],
+      unrouted: [],
       unbound: [],
     });
   });
@@ -80,131 +80,103 @@ describe("computeCeiling", () => {
         readSet: ["tasks_v"],
       }),
     ]);
-    expect(c.drift).toEqual([{ key: "drifting", tables: ["notes"] }]);
+    expect(c.drift).toEqual([
+      { key: "drifting", policy: "routed", tables: ["notes"] },
+    ]);
   });
 
-  test("a legacy-full entry carries its transitive bases, tuples, persistence and cost", () => {
+  test("an external entry's declared reads are listed as full routes and relation reads, tagged external — it is not pure external", () => {
     const c = computeCeiling([
-      entry({
-        key: "attempt-work",
-        policy: "legacy-full",
-        readSet: ["attempts_v", "pushes"],
-        legacyReach: ["pushes", "conversations", "attempts"],
-        tuples: 3,
-      }),
-      entry({
-        key: "agents",
-        policy: "legacy-full",
-        readSet: ["agents_v"],
-        legacyReach: ["agents"],
-        tuples: 1,
-        persisted: true,
-        positionAgeMs: 1200,
-      }),
-    ]);
-    expect(c.legacyFull).toEqual([
-      {
-        key: "agents",
-        policy: "legacy-full",
-        bases: ["agents"],
-        tuples: 1,
-        persisted: true,
-        positionAgeMs: 1200,
-        loadsPerWrite: 1,
-      },
-      {
-        key: "attempt-work",
-        policy: "legacy-full",
-        bases: ["attempts", "conversations", "pushes"],
-        tuples: 3,
-        persisted: false,
-        positionAgeMs: null,
-        loadsPerWrite: 3,
-      },
-    ]);
-    expect(c.keys["legacy-full"]).toEqual(["agents", "attempt-work"]);
-  });
-
-  test("a persisted entry with no subscriber still costs one FULL load per base write; an unpersisted one none", () => {
-    const c = computeCeiling([
-      entry({
-        key: "kept",
-        policy: "legacy-full",
-        legacyReach: ["agents"],
-        persisted: true,
-      }),
-      entry({ key: "idle", policy: "legacy-full", legacyReach: ["agents"] }),
-    ]);
-    expect(
-      Object.fromEntries(c.legacyFull.map((e) => [e.key, e.loadsPerWrite])),
-    ).toEqual({ idle: 0, kept: 1 });
-  });
-
-  test("a legacy-full entry whose loader never ran is still listed, with empty bases", () => {
-    const c = computeCeiling([entry({ key: "pages", policy: "legacy-full" })]);
-    expect(c.legacyFull).toEqual([
-      {
-        key: "pages",
-        policy: "legacy-full",
-        bases: [],
-        tuples: 0,
-        persisted: false,
-        positionAgeMs: null,
-        loadsPerWrite: 0,
-      },
-    ]);
-  });
-
-  test("an external entry the legacy router reaches is in the ceiling with its bases, tagged external", () => {
-    const c = computeCeiling([
-      entry({
-        key: "edited-files",
-        policy: "external",
-        readSet: ["conversations_v"],
-        legacyReach: ["tasks", "conversations", "attempts"],
-        tuples: 2,
-      }),
       entry({
         key: "automations.catalog",
         policy: "external",
-        readSet: ["tasks_v"],
-        legacyReach: ["attempts", "tasks"],
+        freshness: { kind: "notified" },
+        routes: [
+          {
+            id: "automation_launch_batches",
+            table: "automation_launch_batches",
+            map: "full",
+            reason: "filters on the derived status",
+          },
+        ],
+        relationReads: [
+          {
+            relation: "tasks_v",
+            reason: "filters on the derived status",
+            bases: ["tasks", "attempts"],
+          },
+        ],
       }),
     ]);
-    expect(c.legacyFull.map((e) => [e.key, e.policy, e.bases])).toEqual([
-      ["automations.catalog", "external", ["attempts", "tasks"]],
-      ["edited-files", "external", ["attempts", "conversations", "tasks"]],
+    expect(c.routedFull).toEqual([
+      {
+        key: "automations.catalog",
+        policy: "external",
+        route: "automation_launch_batches",
+        table: "automation_launch_batches",
+        reason: "filters on the derived status",
+      },
     ]);
-    // Not "reached only by its own notify()": absent from the pure list.
+    expect(c.relationReads).toEqual([
+      {
+        key: "automations.catalog",
+        policy: "external",
+        relation: "tasks_v",
+        bases: ["attempts", "tasks"],
+        reason: "filters on the derived status",
+      },
+    ]);
     expect(c.pureExternal).toEqual([]);
-    expect(c.keys.external).toEqual(["automations.catalog", "edited-files"]);
+    expect(c.keys.external).toEqual(["automations.catalog"]);
   });
 
-  test("an external entry with no legacy reach is pure external, outside the ceiling", () => {
+  test("an external entry with only relation reads, or only drift (D5), is not pure external", () => {
+    const c = computeCeiling([
+      entry({
+        key: "views-only",
+        policy: "external",
+        routes: [],
+        relationReads: [{ relation: "tasks_v", reason: "r", bases: ["tasks"] }],
+      }),
+      entry({
+        key: "drifted",
+        policy: "external",
+        // The drift-only record the guard gives an external with no plan.
+        routes: [],
+        routeDrifted: ["job_runs"],
+      }),
+    ]);
+    expect(c.pureExternal).toEqual([]);
+    expect(c.drift).toEqual([
+      { key: "drifted", policy: "external", tables: ["job_runs"] },
+    ]);
+  });
+
+  test("an external entry with no declared read and no drift is pure external, outside the ceiling", () => {
     const c = computeCeiling([
       entry({ key: "git.status", policy: "external" }),
+      // Reads only tables outside the feed: a routing record with no route.
+      entry({ key: "latency.summary", policy: "external", routes: [] }),
     ]);
-    expect(c.pureExternal).toEqual(["git.status"]);
-    expect(c.legacyFull).toEqual([]);
+    expect(c.pureExternal).toEqual(["git.status", "latency.summary"]);
     expect(c.routedFull).toEqual([]);
   });
 
-  test("an unbound entry is listed under its policy, and in the ceiling only when the router reaches it", () => {
+  test("an unbound or unrouted entry is listed under its policy, outside the pure-external list", () => {
     const c = computeCeiling([
       entry({ key: "b.deferred", policy: "unbound" }),
-      entry({ key: "a.deferred", policy: "unbound", legacyReach: ["notes"] }),
+      entry({ key: "a.deferred", policy: "unbound" }),
+      entry({ key: "bare", policy: "unrouted" }),
     ]);
     expect(c.keys.unbound).toEqual(["a.deferred", "b.deferred"]);
-    expect(c.legacyFull.map((e) => [e.key, e.policy])).toEqual([
-      ["a.deferred", "unbound"],
-    ]);
+    expect(c.keys.unrouted).toEqual(["bare"]);
     expect(c.pureExternal).toEqual([]);
   });
 
   test("every entry is keyed under exactly one policy", () => {
     const resources = [
       entry({ key: "r", policy: "routed", routes: [] }),
-      entry({ key: "l", policy: "legacy-full" }),
+      entry({ key: "l", policy: "unrouted" }),
       entry({ key: "e", policy: "external" }),
       entry({ key: "u", policy: "unbound" }),
     ];

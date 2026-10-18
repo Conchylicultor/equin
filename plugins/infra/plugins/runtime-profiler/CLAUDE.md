@@ -211,12 +211,14 @@ though every one of its spans is suppressed.
 Each `loader` entry captures the tables its DB queries read (`recordReadTables`, from the
 pool chokepoint, matching only `FROM`/`JOIN`) and, in `recordEntrySpan`'s `finally`, hands
 them once to the **installed loader read-set sink** (`installLoaderReadSetSink`). The index
-it feeds — the append-only union the change router inverts, and the per-run capture the L2
-persist seam stores — is ROUTING state owned by `server-core/core/read-set.ts`, not profile
-data: `server/internal/install.ts` wires the sink to server-core's `recordLoaderReadSet`,
-`resetRuntimeProfile()` does not touch it, and the capture is **not** gated on the
-`SINGULARITY_PROFILING=0` kill-switch (a kill-switched profiler used to stop live-state
-routing). It still honours `runWithoutProfiling` suppression, which is an attribution rule —
+it feeds — the per-run capture the runtime's route drift guard (A8 / D5) judges and the L2
+persist seam stores as `tables_read`, plus the append-only union `_debug` shows — is runtime
+state owned by `server-core/core/read-set.ts`, not profile data: no change is routed through
+it (every DB-backed resource declares its reads), but the drift guard and the persisted seed
+depend on it. `server/internal/install.ts` wires the sink to server-core's
+`recordLoaderReadSet`, `resetRuntimeProfile()` does not touch it, and the capture is **not**
+gated on the `SINGULARITY_PROFILING=0` kill-switch (a kill-switched profiler would blind the
+drift guard). It still honours `runWithoutProfiling` suppression, which is an attribution rule —
 observability writes inside a loader's context are not that loader's dependencies. No sink
 installed (the web, a bare test) = nothing captured. The per-run capture is also the input
 of the runtime's route drift guard (A8): a ROUTED resource's loader reading a table none of

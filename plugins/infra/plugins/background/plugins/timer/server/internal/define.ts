@@ -17,6 +17,8 @@ export const timersBackgroundKind = defineBackgroundKind({
   kind: "timer",
   order: 20,
   label: "Timers",
+  // Timer state is the in-process registry, never Postgres.
+  tables: [],
   list: () => Promise.resolve(listTimerEntries()),
   recentRuns: timerRecentRuns,
 });

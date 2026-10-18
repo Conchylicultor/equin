@@ -34,7 +34,10 @@ import {
   resetRuntimeProfile,
   type EntryContext,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { getReadSetIndex } from "@plugins/framework/plugins/server-core/core/testing";
+import {
+  getReadSetIndex,
+  removeReadSetTable,
+} from "@plugins/framework/plugins/server-core/core/testing";
 import { compileCollection } from "@plugins/network/plugins/live/server/testing";
 import { pagesTree } from "../../core/resources";
 import {
@@ -47,7 +50,6 @@ import { recordTrashEntry } from "@plugins/infra/plugins/trash/server";
 import {
   collectContributions,
   recordLoaderReadSet,
-  removeReadSetTable,
 } from "@plugins/framework/plugins/server-core/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { defineBlock } from "../../core";
@@ -363,10 +365,9 @@ describe("read-set (Hole A)", () => {
     resetRuntimeProfile();
   });
 
-  // The read-set index is process-global ROUTING state: a later suite in the
-  // same bun process that routes a change through server-core's legacy router
-  // would otherwise invert these keys' tables (and, with no relation bases set,
-  // report on every change). Remove what this describe recorded.
+  // The read-set index is process-global state: a later suite in the same bun
+  // process reading it (`_debug`, a capture assert) would otherwise see these
+  // keys' tables. Remove what this describe recorded.
   afterAll(() => {
     const index = getReadSetIndex();
     const mine = ["doc-order-paths-probe"];

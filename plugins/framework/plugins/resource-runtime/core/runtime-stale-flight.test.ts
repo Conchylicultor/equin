@@ -35,7 +35,11 @@ import {
   tick,
   makeClientView,
 } from "./test-support";
-import { defineRoutedTable, legacyFull } from "./testing/routed-fixture";
+import {
+  defineRoutedTable,
+  feedChange,
+  wholeReach,
+} from "./testing/routed-fixture";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
 const keyOf = (r: unknown) => (r as { id: string }).id;
@@ -251,20 +255,19 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
     // The cascade reads the drained value directly, so a joined pre-commit value
     // would propagate the stale state into every downstream tuple selection —
     // the same bug one hop further out, and invisible on the wire. A cascade
-    // upstream is external (T15) and non-keyed; here one the legacy router
-    // still reaches through its read-set.
+    // upstream is external (T15) and non-keyed; here one declaring its
+    // table read (a reach plan).
     const ctl = snapshotControllable<Rows>(PRE);
     const seen: Rows[] = [];
-    const h = createHarness({
-      readSet: (k) => (k === "s" ? ["s_table"] : []),
-      sockets: 2,
-    });
-    const up = h.runtime.defineExternalResource({
-      key: "s",
-      mode: "push",
-      schema: rowsSchema,
-      loader: () => ctl.loader(),
-    });
+    const h = createHarness({ sockets: 2 });
+    const up = h.runtime.defineExternalResource(
+      { key: "s", schema: rowsSchema, validateParams: () => {} },
+      {
+        mode: "push",
+        reach: wholeReach(["s_table"]),
+        loader: () => ctl.loader(),
+      },
+    );
     h.runtime.defineResource({
       key: "down",
       mode: "push",
@@ -290,7 +293,7 @@ describe("stale-flight refusal — the 2026-08-08 revert", () => {
     // against the UNFIXED runtime.
     await tick();
     ctl.setValue(POST);
-    legacyFull(h, "s_table");
+    feedChange(h, { table: "s_table", op: "U", ids: null });
     await tick();
     ctl.release();
     await parked;

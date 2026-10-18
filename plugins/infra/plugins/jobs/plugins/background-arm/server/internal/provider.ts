@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import {
+  _jobRunStats,
+  _jobRuns,
   cronRanges,
   listRegisteredJobs,
   nextScheduledRun,
@@ -233,6 +235,8 @@ export const jobsBackgroundKind = defineBackgroundKind({
   kind: "job",
   order: 0,
   label: "Jobs",
+  // `list` reads each job's latest run, `recentRuns` its ring.
+  tables: [_jobRunStats, _jobRuns],
   list: () => listJobEntries(),
   recentRuns: jobRecentRuns,
   runNow: runJobNow,

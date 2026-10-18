@@ -60,8 +60,7 @@ import type {
 //
 // Both kinds are ROUTED (research/2026-09-29-global-scoped-change-routing.md):
 // the scope policy is `routes` — an `identity` route on the base table plus one
-// route per declared join (`./joins`) — so `routeTableChange` serves them and
-// the legacy read-set path never does.
+// route per declared join (`./joins`) — so `routeTableChange` serves them.
 // Every shape of one tuple (full, scoped, ids, point) joins exactly the
 // relations its `usesOf` names (`routedReads`), read off the SQL it renders.
 // Hence a base table, never a view (A1: a view has no trigger and no route can

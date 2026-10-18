@@ -21,7 +21,12 @@ import { pendingApprovalCounts } from "./decisions";
 import { launchedInOpenBatches } from "./launch-batch";
 import { registeredAutomations, type AutomationSpec } from "./registry";
 import { automationCron, automationSettings } from "./settings";
-import { tasksLaunchDecision, tasksOrigin } from "./tables";
+import { tasksView } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  _automationLaunchBatches,
+  tasksLaunchDecision,
+  tasksOrigin,
+} from "./tables";
 
 function triggerOf(
   spec: AutomationSpec,
@@ -86,16 +91,27 @@ async function loadCatalog(): Promise<AutomationEntry[]> {
 }
 
 /**
- * The catalog, pushed. External: the declarations are process state, the
+ * The catalog, pushed. External: the declarations are process state, and the
  * installed schedule and the concurrency move when an automation's config
- * changes, and the DB-derived fields (`openTaskId`, `runningTaskIds`,
- * `launchedInBatch`, `approvedCount`) move only when an automation files,
- * launches or releases a task, one of its tasks changes status, a batch opens
- * or closes, or a person decides on a launch — each says so (`notify`). Bounded by the declared set.
+ * changes (`notify` in watch.ts). The DB-derived fields (`openTaskId`,
+ * `runningTaskIds`, `launchedInBatch`, `approvedCount`) are declared `reads`,
+ * so the change feed recomputes the catalog on any write to them — `tasks_v`
+ * as a view (the loader filters on its derived `status`), reached through its
+ * base tables. Bounded by the declared set.
  */
 export const automationsCatalogServed = serveValue(automationsCatalog, {
   source: "external",
   changes: "notified",
+  reads: {
+    tables: [
+      tasksView,
+      tasksOrigin.table,
+      tasksLaunchDecision.table,
+      _automationLaunchBatches,
+    ],
+    reason:
+      "The catalog is one singleton listing every automation: its open task, occupied slots, launches in the open batch and approved count join the origin, launch-decision and launch-batch tables over each task's derived status, so a write to any row of them may change any entry.",
+  },
   loader: loadCatalog,
   throttleMs: 1000,
 });

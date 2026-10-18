@@ -48,6 +48,8 @@ that settles would stop retrying and would render as a permanent answer.
     - `primitives/commit-list.parseDiffNumstatZ`
     - `primitives/commit-list.runGit`
     - `primitives/commit-list.WorktreeGoneError`
+    - `tasks/tasks-core._attempts`
+    - `tasks/tasks-core._conversations`
   - Exports (values):
     - `editedFilesServed`
     - `editedFilesSignature`
@@ -84,8 +86,6 @@ that settles would stop retrying and would render as a permanent answer.
     - `review/code-review`
     - `review/plugin-changes`
     - `review/plugin-changes/file-changes`
-- Exemptions:
-  - Exempts itself from: `no-db-backed-notify` — `server/internal/edited-files-resource.ts` (debt)
 - Sub-plugins:
   - **`file-pane`** — Hosts the file-peek pane: a checkout file opened from a conversation (chat file links, review, commits), shown through primitives/file-viewer with the conversation's edited-file status as context.
 

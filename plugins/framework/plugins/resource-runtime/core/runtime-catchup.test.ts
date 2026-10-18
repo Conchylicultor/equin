@@ -20,7 +20,11 @@
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
 import { createHarness, tick, makeClientView } from "./test-support";
-import { defineRoutedTable } from "./testing/routed-fixture";
+import {
+  defineRoutedTable,
+  feedChange,
+  wholeReach,
+} from "./testing/routed-fixture";
 import type { PersistMeta } from "./runtime";
 
 const rowsSchema = z.array(z.object({ id: z.string(), n: z.number() }));
@@ -214,11 +218,13 @@ describe("recomputeResource", () => {
 });
 
 describe("L2 persist-hook calling contract", () => {
-  // A persisted legacy (non-routed) push value + injected fakes recording into a
-  // shared ordered call-log — the legacy FULL drain's persist contract (a routed
+  // A persisted non-keyed push value (a whole-table reach plan) + injected fakes
+  // recording into a shared ordered call-log — the non-membership FULL drain's
+  // persist contract (a membership
   // alias's is pinned in runtime-scoped-membership / -table-routing).
   // `shouldPersist` selects the key; `lastReadSet` (the per-run capture)
-  // supplies `tablesRead`, falling back to the `readSet` union when absent.
+  // supplies `tablesRead`, falling back to the reach plan's route tables when
+  // absent.
   function persistHarness(overrides: {
     captureWatermark?: () => Promise<string>;
     persistSnapshot?: (
@@ -241,7 +247,6 @@ describe("L2 persist-hook calling contract", () => {
       mode: PersistMeta["mode"];
     }> = [];
     const h = createHarness({
-      readSet: (k) => (k === "p" ? ["p_table"] : []),
       lastReadSet: overrides.lastReadSet,
       shouldPersist: (k) => k === "p",
       captureWatermark:
@@ -268,6 +273,7 @@ describe("L2 persist-hook calling contract", () => {
       { key: "p", schema: rowsSchema, validateParams: () => {} },
       {
         mode: "push",
+        reach: wholeReach(["p_table"]),
         loader: (_p) => {
           log.push("load:FULL");
           return overrides.loader ? overrides.loader() : [{ id: "a", n: 1 }];
@@ -303,7 +309,7 @@ describe("L2 persist-hook calling contract", () => {
     expect(persistArgs).toHaveLength(1);
     expect(persistArgs[0]!.value).toEqual([{ id: "a", n: 1 }]); // the FULL value
     expect(persistArgs[0]!.wm).toBe("xmin-7"); // the captured watermark
-    expect(persistArgs[0]!.tables).toEqual(["p_table"]); // fallback to opts.readSet (no lastReadSet)
+    expect(persistArgs[0]!.tables).toEqual(["p_table"]); // fallback to the route tables (no lastReadSet)
     expect(persistArgs[0]!.pk).toBe(JSON.stringify({})); // param-less pk
     expect(persistArgs[0]!.mode).toBe("replace"); // a FULL recompute replaces the row
 
@@ -357,10 +363,7 @@ describe("L2 persist-hook calling contract", () => {
       },
     });
     await h.subscribe("p");
-    h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "p_table",
-    });
+    feedChange(h, { table: "p_table", op: "U", ids: null });
     await tick();
     // The persist rejected, but the subscriber still received its push.
     expect(h.pushesFor("p")).toHaveLength(1);
@@ -377,10 +380,7 @@ describe("L2 persist-hook calling contract", () => {
       },
     });
     await h.subscribe("p");
-    h.runtime.applyLegacyFullChange({
-      source: "feed",
-      table: "p_table",
-    });
+    feedChange(h, { table: "p_table", op: "U", ids: null });
     await tick();
     // Frame delivered; persist skipped (no watermark to stamp).
     expect(h.pushesFor("p")).toHaveLength(1);

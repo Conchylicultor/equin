@@ -1458,11 +1458,14 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
       says why a write to any row may change any tuple (a singleton, a total,
       "whole-table until it reads through a collection"); the read-set pane
       lists it under Routed FULL.
-    - `tables` are drizzle tables or entities — never a view (a throw):
-      every table the loader can read on ANY path (helpers, branches, memo
-      misses). Compiled by query-resource's `compiledValueReach` (in the Bun
+    - `tables` are drizzle tables, entities or views: every relation the
+      loader can read on ANY path (helpers, branches, memo misses).
+      Compiled by query-resource's `compiledValueReach` (in the Bun
       wrapper — core has no drizzle) into the value's `reach` plan: one
-      `full` route per table, every column (no update is skipped).
+      `full` route per table, every column (no update is skipped); a view is
+      a relation read (`RelationRead`), reached through its base tables.
+      `tables: []` is allowed when everything the loader reads is
+      `outsideFeed`.
     - `outsideFeed: { tables, reason }` — tables the loader reads that the
       change feed skips by declaration (`ExcludeFromChangeFeed`; a bulk cache
       read through a memo keyed on a routed table). Never routed; the drift
@@ -1477,14 +1480,24 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
       captured table outside `reads` fails the load under a test runner, and
       in a running server is reported once and routed FULL from then on (a
       view or rollup through its base tables) — a missing table is never
-      staler than a whole-table read of it, until a restart forgets it.
+      staler than a whole-table read of it (a persisted value's drift is
+      re-seeded from its `tables_read` at boot, D7). No change ever reaches a
+      value through its captured read-set — only through what it declares.
   - `"external"`: truth outside Postgres. It must declare **`changes`** — how
     its answer changes (`LiveValueChanges`, tsc; a throw for an untyped
     caller), so a value nobody tells of a change cannot be written without
     saying why that is honest:
     - `"notified"` — something calls `served.notify(params?)`, or
       `whileSubscribed` / a `recomputeOn` upstream does. The ONLY arm with
-      `notify`, `whileSubscribed`, `recomputeOn` and `throttleMs`.
+      `notify`, `whileSubscribed`, `recomputeOn` and `throttleMs` — and with
+      `reads`: a loader that ALSO reads Postgres (a lookup beside its files)
+      declares those reads exactly as the db arm does (tables, views,
+      `outsideFeed`, a thunk — bound through the runtime's deferred-external
+      arm, so the value is external with its freshness from definition). A
+      write to one recomputes every subscribed tuple, merged with its
+      notifies. An undeclared read is caught by the runtime's D5 guard
+      (reported and routed FULL from then on; thrown under a test runner). Never on a paged value (tsc,
+      and a throw): its pages are keyed windows.
     - `{ immutable: { reason } }` — a tuple's answer can never change
       (sha-keyed, a terminal run's artifact).
     - `{ fixed: { reason } }` — constant for the process lifetime (a

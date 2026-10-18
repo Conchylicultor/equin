@@ -1,6 +1,7 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   conversationChainTag,
+  transcriptChainReads,
   watchPaths,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { SubagentActivityRow } from "../../core";
@@ -21,6 +22,8 @@ import { resolveActivityTargets, scanActivity } from "./activity-scan";
 export const subagentActivityServed = serveValue(subagentActivity, {
   source: "external",
   changes: "notified",
+  // The loader resolves the transcript chain from Postgres before reading files.
+  reads: transcriptChainReads,
   loader: ({ id }) => subagentActivityMemo.get(id),
   revalidate: ({ id }) => subagentActivityMemo.signature(id),
   // Watch the conversation's `subagents/` directories while a card is on

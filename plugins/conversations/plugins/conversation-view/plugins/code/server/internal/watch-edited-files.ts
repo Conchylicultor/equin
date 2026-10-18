@@ -103,10 +103,17 @@ async function recompute(room: Room, emit: () => void): Promise<void> {
     // The prime stays BEFORE the unchanged-JSON early return, so the memo
     // always holds the freshly-confirmed list under the freshly-probed
     // signature; the early return only skips the notify.
+    //
+    // And prime only if the signature, re-probed after the compute, is still
+    // the one captured before it: a working tree can come back to an earlier
+    // signature (`git checkout -- f`), and a value that read the edit in
+    // between, primed under the earlier signature, would be a hit for good.
     const signature = await editedFilesSignature(room.worktreePath);
     const files = await computeEditedFiles(room.worktreePath);
     serialized = JSON.stringify(files);
-    primeEditedFiles(room.worktreePath, signature, files);
+    if ((await editedFilesSignature(room.worktreePath)) === signature) {
+      primeEditedFiles(room.worktreePath, signature, files);
+    }
   } catch (err) {
     if (!(err instanceof WorktreeGoneError)) throw err;
     // Reaped while watched: the readers refetch and get `unresolved`.

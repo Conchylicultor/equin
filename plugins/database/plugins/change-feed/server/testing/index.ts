@@ -39,5 +39,5 @@ export { assertRouteLayoutsInstalled } from "../internal/route-layout";
 export { buildViewDeps } from "../internal/view-deps";
 export { createRelationBases } from "../internal/relation-bases";
 // The boot install itself (change-feed's graph AND server-core's holder), for
-// a suite proving the wiring reaches server-core's legacy router.
+// a suite proving the wiring reaches server-core's router.
 export { installRelationGraph } from "../internal/relation-bases";
