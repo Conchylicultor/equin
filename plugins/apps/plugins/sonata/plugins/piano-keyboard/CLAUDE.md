@@ -15,6 +15,7 @@
     - `apps/sonata/primitives/keyboard.Keyboard`
     - `apps/sonata/primitives/keyboard.LabelTone`
     - `apps/sonata/primitives/keyboard.useSonataKeySkin`
+    - `apps/sonata/rich/swing.usePerformedScore`
     - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`

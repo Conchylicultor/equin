@@ -6679,6 +6679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Web:
                 - Contributes: `Sonata.TransportOverlay` "pedal" → `PedalLane`
                 - Uses:
+                  - `apps/sonata/rich/swing.usePerformedScore`
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
                   - `primitives/css/coords.Placed`
@@ -6698,6 +6699,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/primitives/keyboard.Keyboard`
               - `apps/sonata/primitives/keyboard.LabelTone`
               - `apps/sonata/primitives/keyboard.useSonataKeySkin`
+              - `apps/sonata/rich/swing.usePerformedScore`
               - `apps/sonata/session.useCursorSelector`
               - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
@@ -6729,7 +6731,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sonataPlayerPane.Actions` "spread" → `SpreadWheel`
               - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "piano-roll"
-            - Uses: 35 symbols — full list in [`plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md)
+            - Uses: 36 symbols — full list in [`plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md)
               - `apps/sonata/track-mixer` ×3
               - `config_v2` ×3
               - `apps/sonata/player` ×2
@@ -6740,6 +6742,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/library.sonataPlayerPane`
               - `apps/sonata/primitives/inertial-drag.useInertialDrag`
               - `apps/sonata/primitives/jog-wheel.JogWheel`
+              - `apps/sonata/rich/swing.usePerformedScore`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
               - `primitives/css/coords.Placed`
@@ -7722,14 +7725,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/shape --spacing`
                 - Imported by: `apps/sonata/rich/accompaniment`
-            - **`swing`** — Per-song swing feel: persists the song's swing override (straight, or a chosen 8ths/16ths feel) and registers it with the song document's score pipeline (SonataDocument.SongSetting, settled by a headless observer). Sonata Section: Feel — on/off in the header, a picture of the swung beats, the unit, the ratio and where the feel comes from. Sonata Hud: a swing chip while the song plays swung. Owns the sonata_songs_ext_swing side-table: a song's swing override (straight, or a chosen 8ths/16ths feel; no row = the song's own). Serves it as a per-song lookup collection.
+            - **`swing`** — Per-song swing feel: persists the song's swing override (straight, or a chosen 8ths/16ths feel) and registers it with the song document's score pipeline (SonataDocument.SongSetting, settled by a headless observer). Sonata Section: Feel — on/off in the header, a picture of the swung beats, the unit, the ratio and where the feel comes from. Sonata Hud: a swing chip while the song plays swung. usePerformedScore: the score the falling-note views draw — swung like the audio unless the user turns off "Swing the falling notes" (a per-user config, toggled in the Feel section); notation stays straight. Owns the sonata_songs_ext_swing side-table: a song's swing override (straight, or a chosen 8ths/16ths feel; no row = the song's own). Serves it as a per-song lookup collection. Server registration of the swing display config (swing the falling notes).
               - Web:
                 - Contributes:
+                  - `ConfigV2.WebRegister` "config"
                   - `SonataDocument.SongSetting` "swing-sync" → `SwingObserver`
                   - `Sonata.Section` "Feel" → `FeelSection`
                   - `Sonata.Hud` "swing-chip" → `SwingChip`
-                - Uses: 23 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/swing/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/swing/REFERENCE.md)
+                - Uses: 26 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/swing/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/swing/REFERENCE.md)
                   - `apps/sonata/document` ×8
+                  - `config_v2` ×3
                   - `primitives/css/ui-kit` ×3
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
@@ -7743,10 +7748,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
+                - Exports (values): `usePerformedScore`
               - Server:
-                - Contributes: `resource.declare` "sonata-swing:rows"
+                - Contributes:
+                  - `resource.declare` "sonata-swing:rows"
+                  - `ConfigV2.Register` "config"
                 - Uses:
                   - `apps/sonata/library._songs`
+                  - `config_v2.ConfigV2`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
                   - `network/live.serveCollection`
@@ -7770,6 +7779,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-size-2xs`
                   - `ui/tokens/type-scale --font-weight-semibold`
                   - `ui/tokens/type-scale --line-height-2xs`
+                - Imported by:
+                  - `apps/sonata/pedal/lane`
+                  - `apps/sonata/piano-keyboard`
+                  - `apps/sonata/piano-roll`
               - Exemptions:
                 - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
               - Core:
@@ -11938,8 +11951,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 87 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×87
+    - Slot contributors: 88 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×88
     - Contributes: `Demo.Resource` "config-v2"
     - Uses:
       - `framework/browser-server/demo.Demo`
@@ -12107,8 +12120,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `withOverrideLegend`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/shape --spacing`
-    - Imported by: 109 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×29
+    - Imported by: 110 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×30
       - `debug` ×14
       - `backup` ×13
       - `conversations` ×13

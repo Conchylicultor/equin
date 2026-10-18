@@ -1,0 +1,5 @@
+// @hash 83a0f55d3a53
+{
+  // Draw the falling notes, key lights and effects where the swung playback sounds them. The notation stays straight.
+  "swingFallingNotes": true
+}

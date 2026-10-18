@@ -1,4 +1,6 @@
+import { useId } from "react";
 import type { Swing } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -22,6 +24,7 @@ import {
   swingStopAt,
   swingUnitLabel,
 } from "../../core";
+import { swingDisplayConfig } from "../../shared/config";
 import { useSwing } from "../use-swing";
 import { SwingPicture } from "./swing-picture";
 
@@ -177,10 +180,45 @@ export function FeelSection() {
             </Button>
           )}
         </Stack>
-        <Text variant="caption" tone="faint">
-          Only the playback swings — the notation stays straight.
-        </Text>
       </Stack>
+      {on ? (
+        <SwingFallingNotesRow />
+      ) : (
+        <Text variant="caption" tone="faint">
+          The notation stays straight.
+        </Text>
+      )}
+    </Stack>
+  );
+}
+
+/**
+ * Whether the falling notes (and the key lights, effects and pedal lane with
+ * them) draw the swung timing the audio plays, or the straight grid. A per-user
+ * view preference, not part of the song's feel — so it is config, not the
+ * song's swing row. Shown only while the song swings: off, both draw the same.
+ */
+function SwingFallingNotesRow() {
+  const labelId = useId();
+  const { swingFallingNotes } = useConfig(swingDisplayConfig);
+  const setConfig = useSetConfig(swingDisplayConfig);
+  return (
+    <Stack direction="row" gap="sm" align="center">
+      <Fill>
+        <Stack gap="2xs">
+          <Text id={labelId} variant="body">
+            Swing the falling notes
+          </Text>
+          <Text variant="caption" tone="faint">
+            The notation stays straight.
+          </Text>
+        </Stack>
+      </Fill>
+      <Switch
+        checked={swingFallingNotes}
+        onCheckedChange={(next) => setConfig("swingFallingNotes", next)}
+        aria-labelledby={labelId}
+      />
     </Stack>
   );
 }

@@ -33,7 +33,7 @@ bar).
     - `sonataPlayerPane.Actions` "spread" → `SpreadWheel`
     - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "piano-roll"
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/track-mixer` ×3
     - `config_v2` ×3
     - `apps/sonata/player` ×2
@@ -44,6 +44,7 @@ bar).
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/primitives/inertial-drag.useInertialDrag`
     - `apps/sonata/primitives/jog-wheel.JogWheel`
+    - `apps/sonata/rich/swing.usePerformedScore`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/coords.Placed`

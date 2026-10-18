@@ -35,6 +35,7 @@ import {
   useCursorApi,
   useSession,
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { usePerformedScore } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/swing/web";
 import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { usePlayerView } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import {
@@ -231,12 +232,18 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // AXIS beat (`axis.timeline.axisBeat`), so no renderer special-cases a loop;
   // seeks map an axis beat back to the play position shown there
   // (`axis.timeline.at`). See `unrollLoop` in score/core.
+  //
+  // The notes fall where they SOUND: swung like the audio (unless the user
+  // turned that off in Feel), before the unroll so every repeat swings as the
+  // song does. Swing moves beats, never the tempo map, so the straight cursor
+  // meets each swung note at the beat the scheduler plays it.
+  const performed = usePerformedScore(score);
   const axis = useMemo(
     () =>
       loopCycle && loopOptions.ahead
-        ? unrollLoop(score, loopCycle)
-        : songAxis(score),
-    [score, loopCycle, loopOptions.ahead],
+        ? unrollLoop(performed, loopCycle)
+        : songAxis(performed),
+    [performed, loopCycle, loopOptions.ahead],
   );
   const axisScore = axis.score;
   const timeline = axis.timeline;

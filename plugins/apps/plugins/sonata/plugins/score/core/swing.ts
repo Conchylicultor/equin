@@ -2,11 +2,13 @@
  * Swing — the off-beat delay that turns straight notation into a swung
  * performance.
  *
- * Like sustain pedal (`pedal.ts`), swing is an **audio-only** transform: the
- * Score's notes stay straight (what the staff engraves and the roll draws), and
- * the playback boundary (`audio/engine`'s `startScheduling`) plays
- * `swingScore(score)` instead. One place applies it, so every scheduled sound —
- * the song's notes and the metronome's clicks alike — swings the same way.
+ * Like sustain pedal (`pedal.ts`), swing is a **performance** transform: the
+ * Score's notes stay straight (what the staff engraves, the cursor and the loop
+ * bounds measure), and what renders the performance applies
+ * `swingScore(score)` itself — the audio engine and metronome before
+ * `startScheduling`, so every scheduled sound swings the same way, and the
+ * falling-note views (roll, key lights, pedal lane) through the swing plugin's
+ * `usePerformedScore`, so a note lands on the now-line when it sounds.
  *
  * ## Model
  *

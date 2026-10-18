@@ -20,6 +20,7 @@ import {
   useCursorSelector,
   useSession,
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
+import { usePerformedScore } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/swing/web";
 import { useLivePlay } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/live-play/web";
 import {
   accidentalColor,
@@ -143,9 +144,13 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
   // polyphony), so the per-frame work no longer scales with the score size (a
   // dense 22-track score has thousands of notes but only a handful sounding at
   // once).
+  //
+  // Built from the notes as performed (swung like the audio, unless turned off
+  // in Feel), so a key lights when its note sounds and the falling bar lands.
+  const performed = usePerformedScore(score);
   const noteIndex = useMemo(
-    () => buildActiveNoteIndex(score.notes),
-    [score.notes],
+    () => buildActiveNoteIndex(performed.notes),
+    [performed.notes],
   );
 
   // Pitches sounding at the cursor → the color to light each with. A key lights

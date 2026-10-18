@@ -8,6 +8,7 @@
 - Web:
   - Contributes: `Sonata.TransportOverlay` "pedal" → `PedalLane`
   - Uses:
+    - `apps/sonata/rich/swing.usePerformedScore`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `primitives/css/coords.Placed`

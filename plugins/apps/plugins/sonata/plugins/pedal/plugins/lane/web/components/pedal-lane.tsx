@@ -5,6 +5,7 @@ import {
   type PedalEvent,
   type Projection,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { usePerformedScore } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/swing/web";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 
 /**
@@ -47,10 +48,15 @@ function mergedDownIntervals(
  */
 export function PedalLane({ projection }: { projection: Projection }) {
   const { score } = useSession();
+  // Swung like the audio (and the falling notes beside it) unless turned off.
+  const performed = usePerformedScore(score);
   const beatToY = projection.beatToY;
   if (!beatToY) return null;
 
-  const intervals = mergedDownIntervals(score.pedalEvents, scoreEndBeat(score));
+  const intervals = mergedDownIntervals(
+    performed.pedalEvents,
+    scoreEndBeat(performed),
+  );
   if (intervals.length === 0) return null;
 
   return (

@@ -4,14 +4,16 @@
 
 ## Plugin reference
 
-- Description: Per-song swing feel: persists the song's swing override (straight, or a chosen 8ths/16ths feel) and registers it with the song document's score pipeline (SonataDocument.SongSetting, settled by a headless observer). Sonata Section: Feel — on/off in the header, a picture of the swung beats, the unit, the ratio and where the feel comes from. Sonata Hud: a swing chip while the song plays swung. Owns the sonata_songs_ext_swing side-table: a song's swing override (straight, or a chosen 8ths/16ths feel; no row = the song's own). Serves it as a per-song lookup collection.
+- Description: Per-song swing feel: persists the song's swing override (straight, or a chosen 8ths/16ths feel) and registers it with the song document's score pipeline (SonataDocument.SongSetting, settled by a headless observer). Sonata Section: Feel — on/off in the header, a picture of the swung beats, the unit, the ratio and where the feel comes from. Sonata Hud: a swing chip while the song plays swung. usePerformedScore: the score the falling-note views draw — swung like the audio unless the user turns off "Swing the falling notes" (a per-user config, toggled in the Feel section); notation stays straight. Owns the sonata_songs_ext_swing side-table: a song's swing override (straight, or a chosen 8ths/16ths feel; no row = the song's own). Serves it as a per-song lookup collection. Server registration of the swing display config (swing the falling notes).
 - Web:
   - Contributes:
+    - `ConfigV2.WebRegister` "config"
     - `SonataDocument.SongSetting` "swing-sync" → `SwingObserver`
     - `Sonata.Section` "Feel" → `FeelSection`
     - `Sonata.Hud` "swing-chip" → `SwingChip`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/document` ×8
+    - `config_v2` ×3
     - `primitives/css/ui-kit` ×3
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
@@ -25,10 +27,14 @@
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
+  - Exports (values): `usePerformedScore`
 - Server:
-  - Contributes: `resource.declare` "sonata-swing:rows"
+  - Contributes:
+    - `resource.declare` "sonata-swing:rows"
+    - `ConfigV2.Register` "config"
   - Uses:
     - `apps/sonata/library._songs`
+    - `config_v2.ConfigV2`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`
@@ -52,6 +58,10 @@
     - `ui/tokens/type-scale --font-size-2xs`
     - `ui/tokens/type-scale --font-weight-semibold`
     - `ui/tokens/type-scale --line-height-2xs`
+  - Imported by:
+    - `apps/sonata/pedal/lane`
+    - `apps/sonata/piano-keyboard`
+    - `apps/sonata/piano-roll`
 - Exemptions:
   - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
 - Core:
