@@ -334,6 +334,20 @@ function sameParams(
   );
 }
 
+/**
+ * A fresh empty-surface store (see `TabsProvider`): background, based at the
+ * home app when it is registered.
+ */
+function makeEmptySurfaceStore(
+  apps: AppList,
+  homeId: string | null,
+): PaneStore {
+  const home = registeredHome(apps, homeId);
+  return home
+    ? makeBackgroundStore(home.id, apps)
+    : createPaneStore({ live: false });
+}
+
 /** The composition's home app when it is registered, else undefined. */
 function registeredHome(apps: AppList, homeId: string | null) {
   const home = homeApp(apps, homeId);
@@ -550,6 +564,29 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     savePersistedTabs(tabsRef.current, focusedRef.current, modeRef.current);
   }, []);
 
+  // The empty-surface store: what the live-store pointer holds while the
+  // surface holds no tab. Every open from outside a surface (`useOpenPane` in
+  // global chrome, the imperative `openPane` / `restoreRoute`) targets the live
+  // store, so without it they would land in the closed tab's dead store — or,
+  // on a boot into an empty surface, in the pane primitive's orphaned default
+  // store — and the click would do nothing (the dead store is based at the
+  // closed tab's app, so an open of that app's pane stayed in it). Based at the
+  // home app; a home-app route it receives becomes a new focused tab (the
+  // adoption effect below). A route homed in another app never reaches it: the
+  // opener hands that one to `navigate()`, which opens its own tab. `null`
+  // whenever a tab is focused.
+  const [bootEmptyStore] = useState(() =>
+    initialFocus === undefined ? makeEmptySurfaceStore(apps, homeId) : null,
+  );
+  const emptyStoreRef = useRef<PaneStore | null>(bootEmptyStore);
+
+  const enterEmptySurface = useCallback(() => {
+    const store = makeEmptySurfaceStore(appsRef.current, homeId);
+    emptyStoreRef.current = store;
+    setLiveStore(store);
+    surfaceEmpty = true;
+  }, [appsRef, homeId]);
+
   // One-time: point the imperative live store at the initially-focused tab's
   // store. (bootTabs already created it `live`; this wires the module pointer.)
   const wiredRef = useRef(false);
@@ -558,6 +595,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     wiredRef.current = true;
     const focused = initialTabs.find((t) => t.tabId === initialFocus);
     if (focused) setLiveStore(focused.store);
+    else if (bootEmptyStore) setLiveStore(bootEmptyStore);
   }
 
   // Subscribe to each store's route changes to persist on navigation. Re-wired
@@ -589,6 +627,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   const activate = useCallback(
     (next: Tab, target?: ActivateTarget, mode: "push" | "replace" = "push") => {
       surfaceEmpty = false;
+      emptyStoreRef.current = null;
       const current = tabsRef.current.find(
         (t) => t.tabId === focusedRef.current,
       );
@@ -629,6 +668,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // of the snapshot, never a new entry.
   const activateWithoutMirror = useCallback((next: Tab) => {
     surfaceEmpty = false;
+    emptyStoreRef.current = null;
     const current = tabsRef.current.find((t) => t.tabId === focusedRef.current);
     if (current && current.tabId !== next.tabId) current.store.live = false;
     next.store.setBasePath(appPathFor(next.appId, appsRef.current));
@@ -660,12 +700,13 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
    * stray entry at the bare app root followed by the real one.
    *
    * The single tab-minting path: both the `+` button (`openTab`) and
-   * `navigate(url, { newTab: true })` come through here.
+   * `navigate(url, { newTab: true })` come through here, and so does the
+   * empty-surface store's adoption, which passes that store as `adopt`.
    */
   const openTabWith = useCallback(
-    (appId: string, target?: ActivateTarget): string => {
+    (appId: string, target?: ActivateTarget, adopt?: PaneStore): string => {
       const tabId = crypto.randomUUID();
-      const store = makeBackgroundStore(appId, appsRef.current);
+      const store = adopt ?? makeBackgroundStore(appId, appsRef.current);
       const tab: Tab = { tabId, appId, store };
       const nextTabs = [...tabsRef.current, tab];
       tabsRef.current = nextTabs;
@@ -969,13 +1010,13 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
         }
         // The mode allows an empty surface (the desktop): nothing is focused,
         // no store is live, and the address bar shows the empty surface's bare
-        // root.
+        // root. The live-store pointer moves to the empty-surface store.
         prev[idx]!.store.live = false;
         tabsRef.current = [];
         setTabs([]);
         focusedRef.current = undefined;
         setFocusedTabId(undefined);
-        surfaceEmpty = true;
+        enterEmptySurface();
         // Replace, like every close-tab correction: the top entry named the
         // tab just closed. With nothing focused the entry carries no tab.
         adapterRef.current?.commit({
@@ -1002,7 +1043,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       }
       persist();
     },
-    [activate, persist, setTabTitle, seedHome],
+    [activate, persist, setTabTitle, seedHome, enterEmptySurface],
   );
 
   // Reorder the open-tab set: move `activeId` to `overId`'s position. Pure array
@@ -1060,6 +1101,42 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   useEffect(() => {
     surfaceEmpty = tabs.length === 0;
   }, [tabs.length]);
+
+  // Adopt the empty-surface store as a new focused tab the moment it receives
+  // a route — a pane opened from outside every surface while none is open
+  // (on the desktop: a new window). On the home app, which the store is based
+  // at; `activate` re-seeds the route and pushes its URL, so the open is a Back
+  // target like any `navigate()`. Re-entry is guarded by identity: `activate`
+  // clears the ref before it writes the route back into the same store.
+  const surfaceIsEmpty = tabs.length === 0;
+  useEffect(() => {
+    const store = emptyStoreRef.current;
+    if (!surfaceIsEmpty || !store) return;
+    const adopt = () => {
+      if (emptyStoreRef.current !== store) return;
+      const state = store.getRouteState();
+      if (state.kind === "resolved" && state.slots.length === 0) return;
+      const home = registeredHome(appsRef.current, homeId);
+      if (!home) {
+        throw new Error(
+          "A pane was opened on an empty surface, but the composition's home app is not registered — there is no app to open it in.",
+        );
+      }
+      openTabWith(
+        home.id,
+        state.kind === "resolved"
+          ? { kind: "route", route: state.slots }
+          : { kind: "pending", rawPath: state.rawPath },
+        store,
+      );
+    };
+    const unsubscribe = store.subscribeRoute(adopt);
+    // An open that landed between entering the empty state and this effect.
+    adopt();
+    return () => {
+      unsubscribe();
+    };
+  }, [surfaceIsEmpty, openTabWith, appsRef, homeId]);
 
   // Return to the mode in effect before the current one (solo's exit). Falls
   // back to another registered mode if the previous one is unknown or equals

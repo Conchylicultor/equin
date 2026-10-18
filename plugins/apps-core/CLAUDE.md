@@ -52,7 +52,11 @@ is live and the address bar is bare `/` (which the apps layout's home
 canonicalization leaves alone while `peekSurfaceEmpty()`). Every other mode keeps
 at least one tab: closing the last one, or switching to such a mode from an
 empty surface, seeds the composition's home app. With no tab, `navigate()` and an
-app pick open a new tab instead of re-routing one. Picking a surface-mode app
+app pick open a new tab instead of re-routing one. Opens that go through the
+live pane store (`useOpenPane` in global chrome, `openPane`, `restoreRoute`)
+work too: while the surface is empty the live store is an **empty-surface
+store** based at the home app, and the first route it receives becomes a new
+focused tab (a pane homed in another app goes through `navigate()` instead). Picking a surface-mode app
 from the home app consumes the home tab (`useActivateApp`), so the gallery's
 Desktop tile opens a clear desktop.
 
