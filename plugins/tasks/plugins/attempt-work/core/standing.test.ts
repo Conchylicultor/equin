@@ -22,6 +22,7 @@ function work(over: Partial<AttemptWork> = {}): AttemptWork {
     landedCommits: 0,
     landedPushes: 0,
     ledgerPushes: 0,
+    delivered: false,
     ...over,
   };
 }
@@ -90,4 +91,10 @@ test("behind-only is none: main moving is not this attempt's work", () => {
       }),
     ),
   ).toBe("none");
+});
+
+test("a scratch attempt's recorded delivery is landed; without one, none", () => {
+  const scratch = { pending: { kind: "no-branch" } } as const;
+  expect(standingOf(work({ ...scratch, delivered: true }))).toBe("landed");
+  expect(standingOf(work(scratch))).toBe("none");
 });

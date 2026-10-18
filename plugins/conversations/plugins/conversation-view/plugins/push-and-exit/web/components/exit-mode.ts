@@ -23,6 +23,10 @@ export type Mode =
   | "restore"
   | "stop";
 
+/** The attempt-standing payload: measured, or an explicit non-value. */
+type WorkPayload =
+  { resolved: true; value: AttemptWork } | { resolved: false; reason: string };
+
 /**
  * The `useCombinedResources({ work, hasSibling, files })` result. Imported
  * type-only, so the derivation (and its test) stay pure — no React, no
@@ -48,9 +52,7 @@ export type Mode =
  *   array here whose emptiness can be misread.
  */
 export type ExitDecision = CombinedResources<{
-  work: ResourceResult<
-    { resolved: true; value: AttemptWork } | { resolved: false; reason: string }
-  >;
+  work: ResourceResult<WorkPayload>;
   hasSibling: ResourceResult<boolean>;
   files: ResourceResult<
     | { resolved: true; value: readonly { path: string }[] }
@@ -58,30 +60,46 @@ export type ExitDecision = CombinedResources<{
   >;
 }>;
 
+/**
+ * The exit decision of a workspace with no git (scratch): no edited files to
+ * read, only the attempt's standing — which, there, is its recorded delivery.
+ */
+export type NoGitExitDecision = CombinedResources<{
+  work: ResourceResult<WorkPayload>;
+  hasSibling: ResourceResult<boolean>;
+}>;
+
+/**
+ * Which exit reads apply, by the conversation's workspace. Restore / Send /
+ * Queue / Stop need none of them, so they are offered in every workspace; only
+ * the exit decision differs: a git workspace weighs its edited files and branch,
+ * one without git only its delivery.
+ */
+export type ExitReads =
+  | { workspace: "unknown" }
+  | { workspace: "git"; decision: ExitDecision }
+  | { workspace: "no-git"; decision: NoGitExitDecision };
+
 export type ExitModeInput = {
   conversation: { attemptId: string } | null;
   live: { status: ConversationStatus } | null;
   draftEmpty: boolean;
-  /**
-   * The conversation's workspace. Restore / Send / Queue / Stop need none of
-   * git, so they are offered in every workspace; only the Push-vs-Drop exit
-   * decision reads git, and a workspace without it (scratch) just closes.
-   */
-  workspace: WorkspaceKindState;
-  exitDecision: ExitDecision;
+  exit: ExitReads;
 };
 
 /**
- * Whether the exit decision's git reads apply to this workspace: `unknown`
- * while the workspace kind is still loading. The button skips those reads
- * unless this is `yes`, so they never run against a workspace with no git.
+ * Whether the conversation's workspace has git: `unknown` while its kind is
+ * still loading. The button skips the edited-files read unless this is `git`,
+ * so it never runs against a workspace with no git.
  */
-export function exitDecisionUsesGit(
+export function exitWorkspace(
   workspace: WorkspaceKindState,
-): "yes" | "no" | "unknown" {
+): ExitReads["workspace"] {
   if (!workspace.known) return "unknown";
-  return satisfiesCapabilities(workspace.kind, ["git"]) ? "yes" : "no";
+  return satisfiesCapabilities(workspace.kind, ["git"]) ? "git" : "no-git";
 }
+
+type ModeResult = { mode: Mode; provisional: boolean };
 
 /**
  * The button's whole decision, as a pure function. `provisional` means "we do
@@ -91,9 +109,8 @@ export function deriveExitMode({
   conversation,
   live,
   draftEmpty,
-  workspace,
-  exitDecision,
-}: ExitModeInput): { mode: Mode; provisional: boolean } {
+  exit,
+}: ExitModeInput): ModeResult {
   if (!conversation || !live) return { mode: "exit", provisional: false };
   if (live.status === "gone" || live.status === "done")
     return { mode: "restore", provisional: false };
@@ -105,55 +122,68 @@ export function deriveExitMode({
       provisional: false,
     };
   if (live.status === "working") return { mode: "stop", provisional: false };
-  // No git (a scratch workspace): nothing to push or drop, so closing is the
-  // whole decision.
-  switch (exitDecisionUsesGit(workspace)) {
+  switch (exit.workspace) {
     case "unknown":
       return { mode: "exit", provisional: true };
-    case "no":
-      return { mode: "exit", provisional: false };
-    case "yes":
-      break;
+    case "git": {
+      const d = exit.decision;
+      if (d.status !== "ready") return unsettled(d.status);
+      const { work, hasSibling, files } = d.data;
+      // The edited-file set is a `Resolvable`: the loader returns a first-class
+      // "no trustworthy worktree" non-value rather than lying with `[]`. An
+      // unresolved set is as undecidable as an errored resource — surface the
+      // same non-destructive "Close (state unknown)" BEFORE
+      // `files.value.length` is even expressible, so the destructive "Drop &
+      // Close" default is unreachable by construction, not by a remembered guard.
+      if (!files.resolved) return { mode: "exit-error", provisional: false };
+      if (files.value.length > 0) {
+        if (files.value.every((f) => f.path.startsWith("research/")))
+          return { mode: "go", provisional: false };
+        return { mode: "push-and-exit", provisional: false };
+      }
+      // The standing is only consulted once the worktree is known to be clean.
+      // That order is deliberate: uncommitted edits already decide the mode
+      // above, so an unmeasurable standing degrades only the cases that
+      // actually depend on it, rather than turning every dirty worktree into
+      // "Close (state unknown)".
+      return fromStanding(work, hasSibling);
+    }
+    // No git, so nothing to push: the standing (its delivery) alone decides
+    // Close vs Drop & Close — a scratch task closed without delivering must
+    // drop, or it would stay `attempted` forever.
+    case "no-git": {
+      const d = exit.decision;
+      if (d.status !== "ready") return unsettled(d.status);
+      return fromStanding(d.data.work, d.data.hasSibling);
+    }
   }
-  // Still loading ⇒ neutral provisional Close. Any of the three resources
-  // FAILING makes the decision undecidable, so the mode is a generic,
-  // non-destructive, still-clickable "Close (state unknown)" — never the
-  // destructive default on a failure, and never stuck provisional (disabled)
-  // on a read that will not load.
-  if (exitDecision.status === "loading")
-    return { mode: "exit", provisional: true };
-  if (exitDecision.status === "error")
-    return { mode: "exit-error", provisional: false };
-  const { work, hasSibling, files } = exitDecision.data;
-  // The edited-file set is a `Resolvable`: the loader returns a first-class
-  // "no trustworthy worktree" non-value rather than lying with `[]`. An
-  // unresolved set is as undecidable as an errored resource — surface the same
-  // non-destructive "Close (state unknown)" BEFORE `files.value.length` is even
-  // expressible, so the destructive "Drop & Close" default is unreachable by
-  // construction, not by a remembered guard.
-  if (!files.resolved) return { mode: "exit-error", provisional: false };
-  if (files.value.length > 0) {
-    if (files.value.every((f) => f.path.startsWith("research/")))
-      return { mode: "go", provisional: false };
-    return { mode: "push-and-exit", provisional: false };
-  }
-  // The standing is only consulted once the worktree is known to be clean. That
-  // order is deliberate: uncommitted edits already decide the mode above, so an
-  // unmeasurable standing degrades only the cases that actually depend on it,
-  // rather than turning every dirty worktree into "Close (state unknown)".
+}
+
+// Still loading ⇒ neutral provisional Close. Any of the resources FAILING makes
+// the decision undecidable, so the mode is a generic, non-destructive,
+// still-clickable "Close (state unknown)" — never the destructive default on a
+// failure, and never stuck provisional (disabled) on a read that will not load.
+function unsettled(status: "loading" | "error"): ModeResult {
+  return status === "loading"
+    ? { mode: "exit", provisional: true }
+    : { mode: "exit-error", provisional: false };
+}
+
+function fromStanding(work: WorkPayload, hasSibling: boolean): ModeResult {
   if (!work.resolved) return { mode: "exit-error", provisional: false };
   // Exhaustive on purpose, with no `default`: a future standing arm becomes a
   // tsc error here instead of quietly falling into one of these branches. Note
   // what is NOT written anywhere below — no count compared to zero. The
-  // destructive "Drop & Close" is now reachable only from a `"none"` that git
+  // destructive "Drop & Close" is now reachable only from a `"none"` that was
   // measured, never from an absence of knowledge.
   switch (standingOf(work.value)) {
     // Committed but never pushed: the worktree is clean, yet real commits sit on
     // the branch ahead of `main`. This used to read as droppable.
     case "pending":
       return { mode: "push-and-exit", provisional: false };
-    // Already merged into `main` (or corroborated by a push row). Closing is the
-    // only correct action; dropping the task would discard landed work.
+    // Already merged into `main` (or corroborated by a push row, or a scratch
+    // attempt's recorded delivery). Closing is the only correct action;
+    // dropping the task would discard landed work.
     case "landed":
       return { mode: "exit", provisional: false };
     // Nothing at stake, measured. An active sibling in the same worktree still

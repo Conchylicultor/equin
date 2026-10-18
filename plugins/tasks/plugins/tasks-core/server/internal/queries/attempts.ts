@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { _attempts } from "../tables";
+import { _attemptDeliveries, _attempts } from "../tables";
 import { attempts } from "../views";
 import type { Attempt } from "../schema";
 import type { DbExecutor } from "../status-batch";
@@ -48,4 +48,18 @@ export async function listAttemptsForTask(
     .from(attempts)
     .where(eq(attempts.taskId, taskId))
     .orderBy(asc(attempts.createdAt));
+}
+
+/**
+ * Whether a scratch attempt recorded its delivery (`recordScratchDelivery`) —
+ * the "landed" fact of a workspace with no git. Reads the `attempt_deliveries`
+ * TABLE alone, so a live loader's read-set stays that table.
+ */
+export async function hasAttemptDelivery(attemptId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ attemptId: _attemptDeliveries.attemptId })
+    .from(_attemptDeliveries)
+    .where(eq(_attemptDeliveries.attemptId, attemptId))
+    .limit(1);
+  return row !== undefined;
 }

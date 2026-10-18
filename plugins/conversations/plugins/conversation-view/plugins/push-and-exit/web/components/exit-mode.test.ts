@@ -53,6 +53,7 @@ const resolvedWork = (
     landedCommits: 0,
     landedPushes: 0,
     ledgerPushes: 0,
+    delivered: false,
     ...work,
   },
 });
@@ -72,8 +73,7 @@ const input = (exitDecision: ExitDecision): ExitModeInput => ({
   conversation,
   live,
   draftEmpty: true,
-  workspace: { known: true, kind: "worktree" },
-  exitDecision,
+  exit: { workspace: "git", decision: exitDecision },
 });
 
 describe("deriveExitMode", () => {
@@ -255,17 +255,36 @@ describe("deriveExitMode", () => {
     ).toBe("exit");
   });
 
-  test("a workspace without git closes — no git read is consulted", () => {
-    const scratch = { known: true, kind: "scratch" } as const;
-    expect(deriveExitMode({ ...input(loading), workspace: scratch })).toEqual({
-      mode: "exit",
-      provisional: false,
+  test("no git: the delivery decides Drop & Close vs Close — no edited files read", () => {
+    const noGit = (
+      work: SettledData["work"],
+      hasSibling = false,
+    ): ExitModeInput["exit"] => ({
+      workspace: "no-git",
+      decision: { status: "ready", refetch, data: { work, hasSibling } },
     });
+    const undelivered = resolvedWork({ pending: { kind: "no-branch" } });
+    // Closed without delivering: drop, or the task stays attempted forever.
+    expect(
+      deriveExitMode({ ...input(loading), exit: noGit(undelivered) }),
+    ).toEqual({ mode: "drop-and-exit", provisional: false });
+    expect(
+      deriveExitMode({
+        ...input(loading),
+        exit: noGit(
+          resolvedWork({ pending: { kind: "no-branch" }, delivered: true }),
+        ),
+      }),
+    ).toEqual({ mode: "exit", provisional: false });
+    expect(
+      deriveExitMode({ ...input(loading), exit: noGit(undelivered, true) })
+        .mode,
+    ).toBe("exit");
     // Restore needs no git: a done scratch conversation can still be resumed.
     expect(
       deriveExitMode({
         ...input(loading),
-        workspace: scratch,
+        exit: noGit(undelivered),
         live: { status: "done" },
       }).mode,
     ).toBe("restore");
@@ -273,7 +292,7 @@ describe("deriveExitMode", () => {
 
   test("workspace still loading: neutral provisional Close", () => {
     expect(
-      deriveExitMode({ ...input(settled()), workspace: { known: false } }),
+      deriveExitMode({ ...input(settled()), exit: { workspace: "unknown" } }),
     ).toEqual({ mode: "exit", provisional: true });
   });
 });

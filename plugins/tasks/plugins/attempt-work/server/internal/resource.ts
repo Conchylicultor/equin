@@ -1,4 +1,5 @@
 import {
+  _attemptDeliveries,
   _attempts,
   _conversations,
   pushes,
@@ -26,9 +27,10 @@ export const attemptWorkServed = serveValue(attemptWork, {
   reads: {
     // The memo's inputs and the push-ledger freshness reconcile: the attempt
     // row, its conversation ids (the signature folds them in), the ledger count.
-    tables: [_attempts, _conversations, pushes],
+    // A scratch attempt's standing is its delivery row instead.
+    tables: [_attempts, _conversations, pushes, _attemptDeliveries],
     reason:
-      "an attempt's standing reads its attempt row, conversation set and push ledger; any write to them may move any subscribed attempt, whole-table until it reads through a collection",
+      "an attempt's standing reads its attempt row, conversation set and push ledger (a scratch attempt's: its delivery); any write to them may move any subscribed attempt, whole-table until it reads through a collection",
   },
   recomputeOn: [refHeadServed],
   // A missing worktree is NOT automatically unresolved here, unlike

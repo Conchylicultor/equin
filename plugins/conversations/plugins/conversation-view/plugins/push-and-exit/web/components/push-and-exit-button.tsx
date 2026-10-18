@@ -36,7 +36,12 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
-import { deriveExitMode, exitDecisionUsesGit, type Mode } from "./exit-mode";
+import {
+  deriveExitMode,
+  exitWorkspace,
+  type ExitReads,
+  type Mode,
+} from "./exit-mode";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 
 const deleteForeverIcon = symbol("delete-forever");
@@ -158,12 +163,13 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // the request has landed.
   const sendInFlight = useTurnSendInFlight(convId);
 
-  // Restore / Send / Stop work in every workspace; the git reads below feed
-  // only the Push-vs-Drop decision, so they run only where there is git.
-  const workspace = useAttemptWorkspaceKind(conversation?.attemptId ?? null);
-  const usesGit = exitDecisionUsesGit(workspace) === "yes";
+  // Restore / Send / Stop work in every workspace; the edited-files read feeds
+  // only a git workspace's exit decision, so it runs only where there is git.
+  const workspace = exitWorkspace(
+    useAttemptWorkspaceKind(conversation?.attemptId ?? null),
+  );
 
-  const filesResult = useEditedFiles(usesGit ? convId : null);
+  const filesResult = useEditedFiles(workspace === "git" ? convId : null);
   // Where this attempt stands relative to `main`, measured from git rather than
   // read off the push ledger — so the destructive Drop-vs-Push default can never
   // be decided by how far a background ingest job happens to have got. The
@@ -173,9 +179,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // id — has loaded; the gate below keeps the neutral "Exit" meanwhile.
   const workResult = useLive(
     attemptWork,
-    usesGit && conversation?.attemptId
-      ? { attemptId: conversation.attemptId }
-      : null,
+    conversation?.attemptId ? { attemptId: conversation.attemptId } : null,
   );
   // Derived slice: only re-renders when this worktree's sibling-active answer
   // flips, not on every conversations push. `conversation` may be null on first
@@ -189,11 +193,26 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // on all together: while any is loading the button shows a neutral disabled
   // "Exit" instead of falling through to the destructive "Drop & Exit" default —
   // or flashing it before edited-files settle into "Push & Exit".
-  const exitDecision = useCombinedResources({
+  const gitDecision = useCombinedResources({
     work: workResult,
     hasSibling: siblingResult,
     files: filesResult,
   });
+  // A workspace without git has no edited files: its standing (the recorded
+  // delivery) and the sibling check decide alone.
+  const noGitDecision = useCombinedResources({
+    work: workResult,
+    hasSibling: siblingResult,
+  });
+  const exit = useMemo(
+    (): ExitReads =>
+      workspace === "git"
+        ? { workspace, decision: gitDecision }
+        : workspace === "no-git"
+          ? { workspace, decision: noGitDecision }
+          : { workspace },
+    [workspace, gitDecision, noGitDecision],
+  );
 
   const { mode, provisional } = useMemo(
     () =>
@@ -201,10 +220,9 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         conversation,
         live,
         draftEmpty: isDraftEmpty(draft),
-        workspace,
-        exitDecision,
+        exit,
       }),
-    [draft, workspace, exitDecision, conversation, live],
+    [draft, exit, conversation, live],
   );
 
   if (!conversation || !live) return null;

@@ -232,6 +232,7 @@ export default definePack(({ ago }) => {
           landedCommits: 0,
           landedPushes: 0,
           ledgerPushes: 0,
+          delivered: false,
         },
       },
     ),

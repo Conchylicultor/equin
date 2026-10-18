@@ -121,6 +121,7 @@ function standing(
     landedCommits: landed.shas.length,
     landedPushes: landed.pushIds.length,
     ledgerPushes: 0,
+    delivered: false,
   });
 }
 

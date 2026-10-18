@@ -329,6 +329,7 @@ serves them.
     - `UpdateConversationPatch`
     - `UpdateTaskPatch`
   - Exports (values):
+    - `_attemptDeliveries`
     - `_attempts`
     - `_conversations`
     - `_conversationStatusChangedTriggers`
@@ -362,6 +363,7 @@ serves them.
     - `getConversationRuntime`
     - `getTask`
     - `getTaskDependencyIds`
+    - `hasAttemptDelivery`
     - `hasBlockingDep`
     - `insertConversation`
     - `insertConversationOnConflictDoNothing`

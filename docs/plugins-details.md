@@ -43620,9 +43620,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/commit-list.runGit`
           - `primitives/commit-list.tryRunGit`
           - `primitives/commit-list.WorktreeGoneError`
+          - `tasks/tasks-core._attemptDeliveries`
           - `tasks/tasks-core._attempts`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.getAttemptRow`
+          - `tasks/tasks-core.hasAttemptDelivery`
           - `tasks/tasks-core.listConversationIdsForAttempt`
           - `tasks/tasks-core.listPushesForAttempt`
           - `tasks/tasks-core.pushes`
@@ -45069,6 +45071,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UpdateConversationPatch`
           - `UpdateTaskPatch`
         - Exports (values):
+          - `_attemptDeliveries`
           - `_attempts`
           - `_conversations`
           - `_conversationStatusChangedTriggers`
@@ -45102,6 +45105,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getConversationRuntime`
           - `getTask`
           - `getTaskDependencyIds`
+          - `hasAttemptDelivery`
           - `hasBlockingDep`
           - `insertConversation`
           - `insertConversationOnConflictDoNothing`

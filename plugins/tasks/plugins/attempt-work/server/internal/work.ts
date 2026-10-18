@@ -20,6 +20,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/core";
 import {
   getAttemptRow,
+  hasAttemptDelivery,
   listConversationIdsForAttempt,
   listPushesForAttempt,
 } from "@plugins/tasks/plugins/tasks-core/server";
@@ -62,11 +63,15 @@ interface WorkContext {
 // view's: this is a live loader doing git work, and a view's read-set would
 // make every task or conversation write recompute it (C36).
 //
-// An attempt whose workspace has no git (a scratch dir) is unmeasurable by
-// construction — no branch, no trailers — the same determinate non-value as a
-// gone row: consumers route it to the non-destructive action.
+// An attempt whose workspace has no git (a scratch dir) has no branch and no
+// trailers to measure: its standing is its recorded delivery alone
+// (`attempt_deliveries`), the fact a scratch agent writes instead of pushing.
+// Without that answer a scratch task could never be dropped on close, and would
+// stay `attempted` forever.
 type ContextRead =
-  { kind: "ok"; ctx: WorkContext } | { kind: "unmeasurable"; reason: string };
+  | { kind: "ok"; ctx: WorkContext }
+  | { kind: "no-git"; delivered: boolean }
+  | { kind: "unmeasurable"; reason: string };
 
 async function readContext(attemptId: string): Promise<ContextRead> {
   const attempt = await getAttemptRow(attemptId);
@@ -74,10 +79,7 @@ async function readContext(attemptId: string): Promise<ContextRead> {
     return { kind: "unmeasurable", reason: "attempt no longer exists" };
   }
   if (!hasCapability(attempt.workspace.kind, "git")) {
-    return {
-      kind: "unmeasurable",
-      reason: `a ${attempt.workspace.kind} workspace has no git`,
-    };
+    return { kind: "no-git", delivered: await hasAttemptDelivery(attemptId) };
   }
   const [mainRepoRoot, convIds, pushes] = await Promise.all([
     ensureMainWorktreeRoot(),
@@ -156,14 +158,25 @@ const workMemo = createSignedMemo<Resolvable<MeasuredWork>>({
   name: "attempt-work",
   signature: async (attemptId) => {
     const read = await readContext(attemptId);
-    if (read.kind !== "ok") return `unmeasurable:${read.reason}`;
+    if (read.kind === "unmeasurable") return `unmeasurable:${read.reason}`;
+    if (read.kind === "no-git") return `no-git:${read.delivered}`;
     const { ctx } = read;
     const { headSha, mainSha } = await probeTips(ctx);
     return attemptWorkEtag(headSha, mainSha, ctx.convIds, ctx.ledgerPushes);
   },
   compute: async (attemptId) => {
     const read = await readContext(attemptId);
-    if (read.kind !== "ok") return unresolved(read.reason);
+    if (read.kind === "unmeasurable") return unresolved(read.reason);
+    if (read.kind === "no-git") {
+      return resolved({
+        pending: { kind: "no-branch" },
+        landedCommits: 0,
+        landedPushes: 0,
+        ledgerPushes: 0,
+        delivered: read.delivered,
+        landedShas: [],
+      });
+    }
     const { ctx } = read;
     // ONE heavy slot for the whole logical job: the pending counts and the landed
     // grep together. The probe above was fully ungated.
@@ -177,6 +190,7 @@ const workMemo = createSignedMemo<Resolvable<MeasuredWork>>({
         landedCommits: landed.shas.length,
         landedPushes: landed.pushIds.length,
         ledgerPushes: ctx.ledgerPushes,
+        delivered: false,
         landedShas: landed.shas,
       });
     });
@@ -201,8 +215,15 @@ export async function getAttemptWork(
 ): Promise<Resolvable<AttemptWork>> {
   const m = await workMemo.get(attemptId);
   if (!m.resolved) return m;
-  const { pending, landedCommits, landedPushes, ledgerPushes } = m.value;
-  return resolved({ pending, landedCommits, landedPushes, ledgerPushes });
+  const { pending, landedCommits, landedPushes, ledgerPushes, delivered } =
+    m.value;
+  return resolved({
+    pending,
+    landedCommits,
+    landedPushes,
+    ledgerPushes,
+    delivered,
+  });
 }
 
 /**

@@ -21,9 +21,12 @@ export type Standing = "none" | "pending" | "landed";
  * happened (invariant I3), which is what keeps a pre-trailer-era attempt — whose
  * commits carry no `Singularity-Conversation` trailer to grep for — from reading
  * as droppable. Its absence is not evidence of anything.
+ *
+ * `delivered` is a scratch workspace's whole landed fact: it has no git to
+ * measure, so a recorded delivery is what "landed" means there.
  */
 export function standingOf(w: AttemptWork): Standing {
   if (w.pending.kind === "measured" && w.pending.ahead > 0) return "pending";
-  if (w.landedCommits > 0 || w.ledgerPushes > 0) return "landed";
+  if (w.landedCommits > 0 || w.ledgerPushes > 0 || w.delivered) return "landed";
   return "none";
 }

@@ -37,7 +37,13 @@ export {
   taskAttachments,
   conversationAttachments,
 } from "./internal/schema-attachments";
-export { _tasks, _attempts, _conversations, pushes } from "./internal/tables";
+export {
+  _tasks,
+  _attempts,
+  _attemptDeliveries,
+  _conversations,
+  pushes,
+} from "./internal/tables";
 // A conversation's owner joins (attempt → task) and the owner columns bound over
 // them — the one spelling every routed conversation collection reads.
 export {
@@ -101,6 +107,7 @@ export {
   getAttempt,
   getAttemptRow,
   listAttemptsForTask,
+  hasAttemptDelivery,
 } from "./internal/queries/attempts";
 
 export {

@@ -139,9 +139,11 @@ Everything that could make the standing merely *unknown* is kept out of that arm
     - `primitives/commit-list.runGit`
     - `primitives/commit-list.tryRunGit`
     - `primitives/commit-list.WorktreeGoneError`
+    - `tasks/tasks-core._attemptDeliveries`
     - `tasks/tasks-core._attempts`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.getAttemptRow`
+    - `tasks/tasks-core.hasAttemptDelivery`
     - `tasks/tasks-core.listConversationIdsForAttempt`
     - `tasks/tasks-core.listPushesForAttempt`
     - `tasks/tasks-core.pushes`

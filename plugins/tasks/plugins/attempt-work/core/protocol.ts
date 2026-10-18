@@ -29,6 +29,10 @@ export const AttemptWorkSchema = z.object({
    *  nothing. Only ORed into "landed", never used to conclude "nothing landed" —
    *  this is what keeps pre-trailer-era attempts from reading as droppable. */
   ledgerPushes: z.number().int().nonnegative(),
+  /** A scratch attempt recorded its delivery — the landed fact of a workspace
+   *  with no git (no branch, no trailers). Always false for a git workspace,
+   *  which lands by pushing. */
+  delivered: z.boolean(),
 });
 export type AttemptWork = z.infer<typeof AttemptWorkSchema>;
 
