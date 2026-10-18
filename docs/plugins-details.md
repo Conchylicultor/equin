@@ -12422,9 +12422,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "held-turn-undelivered"
-    - Uses: 75 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 78 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
-      - `conversations/turn-ledger` ×10
+      - `conversations/turn-ledger` ×13
       - `conversations/transcript-watcher` ×7
       - `conversations/workspace` ×3
       - `infra/claude-cli/availability` ×3
@@ -16008,6 +16008,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.foldResource`
               - `primitives/live-state.mapResource`
               - `primitives/live-state.ResourceResult`
+              - `primitives/live-state.useCombinedResources`
               - `primitives/persistent-draft.writeDraft`
               - `primitives/sync-status.useReportSync`
               - `shell/toast.showToast`
@@ -17520,11 +17521,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hasHeldTurns`
           - `hasPromptHook`
           - `holdIfStarting`
+          - `latestSubmitAt`
           - `listHeldTurns`
+          - `onTurnSubmitted`
           - `promptSubmitHookEntry`
           - `recordPromptHookLaunch`
           - `reportInputNotEmpty`
           - `returnTurnByText`
+          - `returnTurnsSince`
           - `userTurnSent`
         - Register:
           - `defineFileWatcher('turn-ledger.prompt-submits')`
