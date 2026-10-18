@@ -24,7 +24,12 @@ const ColumnConfig = defineSlot<{
   match: string;
   component: ComponentType<ColumnConfigProps>;
   derive?: ColumnConfigDerive;
-}>({ docLabel: (c) => c.match });
+}>({
+  docLabel: (c) => c.match,
+  // A companion here ships only in bundles that use its field type (see
+  // `KeySpace`): the data-view primitive plus a plugin referencing the type.
+  companions: { key: "match", space: "field-type" },
+});
 
 /**
  * Returns a renderer that resolves a field type's config editor (honoring

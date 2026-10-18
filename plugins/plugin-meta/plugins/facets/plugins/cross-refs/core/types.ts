@@ -3,6 +3,7 @@ import type {
   PluginId,
   RuntimeFolder,
 } from "@plugins/framework/plugins/plugin-id/core";
+import type { KeySpace } from "@plugins/framework/plugins/slot-declaration/core";
 
 /** One cross-plugin import: the target plugin id, plus the imported symbol for
  *  named imports (absent for namespace/default/side-effect imports). */
@@ -38,6 +39,16 @@ export interface TokenUse {
   vars: string[];
 }
 
+/**
+ * One key of a {@link KeySpace} — a field type's id, a DataView view type —
+ * that a plugin defines or references. What decides whether a KEYED companion
+ * ships (the date cell, the map view renderer): see `SlotCompanions`.
+ */
+export interface KeyRef {
+  space: KeySpace;
+  key: string;
+}
+
 export interface CrossRefsData {
   apiUses: Record<RuntimeFolder, ApiUse[]>;
   importedBy: PluginId[];
@@ -49,6 +60,19 @@ export interface CrossRefsData {
   /** Transient: every var this plugin's shipped source reads, set by
    *  prepareRelate(); relate() resolves the token-group ones and clears it. */
   rawVars?: string[];
+  /** The keys this plugin DEFINES (`defineFieldType("date")` in its `core/`). */
+  keyDefs: KeyRef[];
+  /**
+   * The keys this plugin's shipped code USES, sorted: the field types it
+   * defines or spells (`type: "date"`, kept only when some plugin defines that
+   * type), and the view types its DataViews author (`config/<plugin>/<id>.jsonc`
+   * rows) or whitelist (`views={["map"]}`). A keyed companion serving one of
+   * them ships in every bundle holding this plugin and the companion's owner.
+   */
+  keyRefs: KeyRef[];
+  /** Transient: this plugin's `defineDataView("<id>")` ids, set by extract();
+   *  relate() reads their authored config rows into `keyRefs` and clears it. */
+  rawDataViews?: string[];
 }
 
 export const crossRefsFacetDef = defineFacet<CrossRefsData>("cross-refs");

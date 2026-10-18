@@ -4,6 +4,7 @@ import type {
   InclusionPath,
   InclusionStep,
   MembershipState,
+  UsageRule,
 } from "./types";
 
 /**
@@ -65,13 +66,38 @@ export function inclusionPathWithin(
   const visited = new Set<PluginId>([target]);
   const queue: PluginId[] = [target];
 
+  // A usage rule is a backward hop too: `then` is in because a bundled user
+  // references its key (and its owner is bundled). Only rules that held in this
+  // bundle count.
+  const usageInto = new Map<PluginId, { user: PluginId; rule: UsageRule }[]>();
+  for (const rule of graph.rules) {
+    if (!ctx.bundle.has(rule.then) || !ctx.bundle.has(rule.owner)) continue;
+    for (const user of rule.users) {
+      if (!ctx.bundle.has(user)) continue;
+      const list = usageInto.get(rule.then) ?? [];
+      list.push({ user, rule });
+      usageInto.set(rule.then, list);
+    }
+  }
+  const viaRule = new Map<PluginId, UsageRule>();
+
   const buildPath = (seed: PluginId): InclusionPath => {
     // Reconstruct forward hard steps seed → … → target.
     const steps: InclusionStep[] = [];
     let cur = seed;
     while (cur !== target) {
       const next = predecessor.get(cur)!;
-      steps.push({ from: cur, to: next, kind: "hard" });
+      const rule = viaRule.get(cur);
+      steps.push(
+        rule
+          ? {
+              from: cur,
+              to: next,
+              kind: "hard",
+              usage: { owner: rule.owner, space: rule.space, key: rule.key },
+            }
+          : { from: cur, to: next, kind: "hard" },
+      );
       cur = next;
     }
     const originIsEntry = entrySet.has(seed);
@@ -105,6 +131,13 @@ export function inclusionPathWithin(
       visited.add(p);
       predecessor.set(p, x);
       queue.push(p);
+    }
+    for (const { user, rule } of usageInto.get(x) ?? []) {
+      if (visited.has(user)) continue;
+      visited.add(user);
+      predecessor.set(user, x);
+      viaRule.set(user, rule);
+      queue.push(user);
     }
   }
 

@@ -39,6 +39,9 @@ function tinyGraph(): EdgeGraph {
       { from: a, to: b, kind: "hard" },
       { from: c, to: b, kind: "soft" },
     ],
+    rules: [
+      { then: c, owner: a, users: [b], space: "field-type", key: "date" },
+    ],
   };
 }
 
@@ -51,6 +54,7 @@ describe("serializeEdgeGraph / deserializeEdgeGraph", () => {
       expect([...restored[key].entries()].sort()).toEqual([...graph[key].entries()].sort());
     }
     expect(restored.edges).toEqual(graph.edges);
+    expect(restored.rules).toEqual(graph.rules);
   });
 
   test("serialized form is JSON-safe (survives JSON stringify/parse)", () => {

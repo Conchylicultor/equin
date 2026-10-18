@@ -8,6 +8,7 @@ export default {
   contributions: [
     DataViewSlots.Cell({
       match: "enum",
+      companion: true,
       component: EnumCell,
       // This type presents as a chip, so the list's subtitle run separates it by
       // spacing rather than stringing it on a middot.

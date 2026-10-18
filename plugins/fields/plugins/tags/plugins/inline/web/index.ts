@@ -5,5 +5,11 @@ import { TagsEditor } from "./components/tags-editor";
 export default {
   description:
     "Tags (multi-value) field type: data-view inline cell editor (multi-select chip popover).",
-  contributions: [DataViewSlots.CellEditor({ match: "tags", component: TagsEditor })],
+  contributions: [
+    DataViewSlots.CellEditor({
+      match: "tags",
+      companion: true,
+      component: TagsEditor,
+    }),
+  ],
 } satisfies PluginDefinition;

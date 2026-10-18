@@ -23498,9 +23498,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/tooling/codegen`
           - `framework/web-sdk`
+          - `plugin-meta/composition`
           - `plugin-meta/plugin-tree`
       - Core:
         - Exports (types):
+          - `KeyedCompanions`
+          - `KeySpace`
+          - `SlotCompanions`
           - `SlotDeclaration`
           - `SlotDeclarationListener`
           - `SlotDeclaringPlugin`
@@ -23517,7 +23521,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `declarePluginSlots`
           - `findUndeclaredSlots`
           - `getCreatedSlots`
+          - `isKeySpace`
           - `isSlot`
+          - `KEY_SPACES`
           - `recordCreatedSlot`
           - `seg`
           - `slotIdFor`
@@ -32344,6 +32350,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ParsedPattern`
           - `SerializedEdgeGraph`
           - `UnsatisfiedExclusion`
+          - `UsageRule`
         - Exports (values):
           - `classifyEdges`
           - `deserializeEdgeGraph`
@@ -32421,6 +32428,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/list/config.listField`
           - `fields/string-list/config.stringListField`
           - `fields/text/config.textField`
+          - `framework/slot-declaration.KEY_SPACES`
           - `infra/namespace.BASE_EXCLUSIONS_ID`
           - `infra/namespace.MAIN_COMPOSITION_ID`
           - `infra/namespace.NAMESPACE_LABEL_RE`
@@ -32678,6 +32686,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ApiUse`
               - `CrossRefsData`
               - `DeclaredTokenGroup`
+              - `KeyRef`
               - `RawUse`
               - `TokenUse`
             - Exports (values):

@@ -2,8 +2,9 @@ import type { FilterOperatorSet } from "@plugins/primitives/plugins/data-view/we
 import { EnumSingleInput, EnumMultiInput } from "./components/enum-filter";
 import { enumLower } from "./internal/enum-lower";
 
-export const enumOperatorSet: FilterOperatorSet = {
-  match: "enum",
+// The type key (`match`) is written at the contribution, where the closure
+// engine reads it.
+export const enumOperatorSet: Omit<FilterOperatorSet, "match"> = {
   domain: "text",
   defaultOperator: "is",
   operators: [

@@ -5,5 +5,11 @@ import { enumOperatorSet } from "./operator-set";
 export default {
   description:
     "Enum (select) field type: data-view filter operator set (is / is-any-of / is-empty …).",
-  contributions: [DataViewSlots.Filter(enumOperatorSet)],
+  contributions: [
+    DataViewSlots.Filter({
+      match: "enum",
+      companion: true,
+      ...enumOperatorSet,
+    }),
+  ],
 } satisfies PluginDefinition;

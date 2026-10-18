@@ -22,3 +22,9 @@ export type {
   SlotDeclaringPlugin,
   SlotDeclarationListener,
 } from "./declaration";
+export { KEY_SPACES, isKeySpace } from "./companion-keys";
+export type {
+  KeySpace,
+  KeyedCompanions,
+  SlotCompanions,
+} from "./companion-keys";

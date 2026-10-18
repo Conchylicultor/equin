@@ -282,6 +282,9 @@ export function collectionItemActionKey(
 export const DataViewSlots = {
   View: defineSlot<DataViewContribution>({
     docLabel: (p) => p.title,
+    // A renderer ships only in bundles that use its view type (see `KeySpace`):
+    // the data-view primitive plus a DataView authoring or whitelisting it.
+    companions: { key: "type", space: "view-type" },
   }),
   /**
    * Global, always-on field-extension slot: the global-registered instance of the

@@ -2,8 +2,9 @@ import type { FilterOperatorSet } from "@plugins/primitives/plugins/data-view/we
 import { NumberValueInput, NumberRangeInput } from "./components/number-filter";
 import { numberLower } from "./internal/number-lower";
 
-export const numberOperatorSet: FilterOperatorSet = {
-  match: "number",
+// The type key (`match`) is written at the contribution, where the closure
+// engine reads it.
+export const numberOperatorSet: Omit<FilterOperatorSet, "match"> = {
   domain: "number",
   defaultOperator: "=",
   operators: [

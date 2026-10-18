@@ -8,6 +8,7 @@ export default {
   contributions: [
     DataViewSlots.Grouping({
       match: "enum",
+      companion: true,
       label: "Group by",
       groupings: enumGroupings,
     }),

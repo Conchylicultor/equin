@@ -12,6 +12,11 @@ export default {
   description:
     "Avatar field type: data-view table cell (icon + color disc) plus the avatarFieldDef authoring helper.",
   contributions: [
-    DataViewSlots.Cell({ match: "avatar", component: AvatarCell, chip: true }),
+    DataViewSlots.Cell({
+      match: "avatar",
+      companion: true,
+      component: AvatarCell,
+      chip: true,
+    }),
   ],
 } satisfies PluginDefinition;

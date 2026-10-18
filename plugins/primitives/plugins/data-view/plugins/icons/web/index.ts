@@ -9,6 +9,7 @@ export default {
   contributions: [
     DataViewSlots.View({
       type: "icons",
+      companion: true,
       title: "Icons",
       icon: symbol("apps"),
       order: 5,

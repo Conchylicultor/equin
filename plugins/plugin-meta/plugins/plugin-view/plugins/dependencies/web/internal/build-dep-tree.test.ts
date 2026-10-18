@@ -38,7 +38,15 @@ function makeGraph(spec: {
     edges.push({ from: id(from), to: id(to), kind: "soft" });
   }
 
-  return { hardForward, hardReverse, softForward, softReverse, subtree, edges };
+  return {
+    hardForward,
+    hardReverse,
+    softForward,
+    softReverse,
+    subtree,
+    edges,
+    rules: [],
+  };
 }
 
 describe("buildDepTree", () => {

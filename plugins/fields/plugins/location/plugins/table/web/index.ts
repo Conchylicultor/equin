@@ -6,6 +6,10 @@ export default {
   description:
     "Location field type: data-view table cell (address, else lat, lng).",
   contributions: [
-    DataViewSlots.Cell({ match: "location", component: LocationCell }),
+    DataViewSlots.Cell({
+      match: "location",
+      companion: true,
+      component: LocationCell,
+    }),
   ],
 } satisfies PluginDefinition;

@@ -5,5 +5,11 @@ import { locationOperatorSet } from "./operator-set";
 export default {
   description:
     "Location field type: data-view filter operator set (is set / is not set).",
-  contributions: [DataViewSlots.Filter(locationOperatorSet)],
+  contributions: [
+    DataViewSlots.Filter({
+      match: "location",
+      companion: true,
+      ...locationOperatorSet,
+    }),
+  ],
 } satisfies PluginDefinition;

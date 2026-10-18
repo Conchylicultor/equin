@@ -26,6 +26,7 @@ import {
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { companionsVisible } from "./companions-visible";
+import { keysDefined } from "./keys-defined";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -566,4 +567,4 @@ const check: Check = {
   },
 };
 
-export default [check, companionsVisible];
+export default [check, companionsVisible, keysDefined];

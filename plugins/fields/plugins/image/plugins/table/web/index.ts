@@ -4,5 +4,11 @@ import { ImageCell } from "./components/image-cell";
 
 export default {
   description: "Image field type: data-view table cell (read-only thumbnail).",
-  contributions: [DataViewSlots.Cell({ match: "image", component: ImageCell })],
+  contributions: [
+    DataViewSlots.Cell({
+      match: "image",
+      companion: true,
+      component: ImageCell,
+    }),
+  ],
 } satisfies PluginDefinition;

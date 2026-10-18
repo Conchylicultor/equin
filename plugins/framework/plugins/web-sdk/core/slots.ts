@@ -6,7 +6,10 @@ import {
 import type { Contribution } from "./types";
 import type { ComponentType } from "react";
 import type { SealContributions } from "./sealed-component";
-import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
+import type {
+  SlotCompanions,
+  SlotHandle,
+} from "@plugins/framework/plugins/slot-declaration/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 
 export interface Slot<P> extends SlotHandle {
@@ -51,15 +54,16 @@ export interface SlotOptions<P> {
  * no registry to keep in sync. Each richer constructor overwrites `meta.kind`
  * (and `reorderable`) with its own.
  *
- * `companions: true` opts the slot into companion contributions
- * ({@link CompanionFlag}).
+ * `companions` opts the slot into companion contributions
+ * ({@link CompanionFlag}): `true` ships every companion with the owner, a keyed
+ * `{ key, space }` only the ones whose key the bundle uses (`SlotCompanions`).
  */
 export function defineSlot<P>(
-  opts: SlotOptions<P> & { companions: true },
+  opts: SlotOptions<P> & { companions: SlotCompanions },
 ): Slot<P & CompanionFlag>;
 export function defineSlot<P>(opts?: SlotOptions<P>): Slot<P>;
 export function defineSlot<P>(
-  opts?: SlotOptions<P> & { companions?: true },
+  opts?: SlotOptions<P> & { companions?: SlotCompanions },
 ): Slot<P> {
   const slot = ((props: P) => ({
     _slot: slot,
@@ -67,7 +71,7 @@ export function defineSlot<P>(
     ...props,
   })) as unknown as Slot<P>;
   slot.meta = opts?.companions
-    ? { kind: "slot", reorderable: false, companions: true }
+    ? { kind: "slot", reorderable: false, companions: opts.companions }
     : { kind: "slot", reorderable: false };
   // DERIVED, never given. There is no id parameter, so a computed id — the
   // `` `pane.${paneId}.actions` `` that build-time scanners could not read, and

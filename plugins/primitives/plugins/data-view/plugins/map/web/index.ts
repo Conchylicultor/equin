@@ -12,6 +12,7 @@ export default {
   contributions: [
     DataViewSlots.View({
       type: "map",
+      companion: true,
       title: "Map",
       icon: symbol("map"),
       // A map has no section axis, no fold line and no rank order: its

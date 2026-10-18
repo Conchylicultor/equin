@@ -1,4 +1,5 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type { KeySpace } from "@plugins/framework/plugins/slot-declaration/core";
 import type { EntryPattern } from "./entry-pattern";
 
 export type { EntryPattern } from "./entry-pattern";
@@ -22,6 +23,23 @@ export interface Edge {
   kind: EdgeKind;
   /** Set on hard edges. */
   via?: HardEdgeVia;
+}
+
+/**
+ * A KEYED companion: `then` contributes `companion: true` to a slot `owner`
+ * declared `companions: { key, space }`, serving one key (the date cell serves
+ * field type `date`). Not an edge — it needs two things at once: `then` ships
+ * once `owner` ships AND any of `users` (the plugins referencing `key` in
+ * `space`, the cross-refs facet's `keyRefs`) ships. A bundle with the data-view
+ * primitive but no date field carries no date cell.
+ */
+export interface UsageRule {
+  then: PluginId;
+  owner: PluginId;
+  /** Sorted; may be empty (nothing references the key — the rule never fires). */
+  users: PluginId[];
+  space: KeySpace;
+  key: string;
 }
 
 /**
@@ -51,6 +69,9 @@ export interface EdgeGraph {
   subtree: Map<PluginId, PluginId[]>;
   /** Flat derived list of every edge (hard then soft). */
   edges: Edge[];
+  /** Required-if-used companions — conditions, not edges; {@link hardClosure}
+   *  fires each once its owner and one of its users are in. */
+  rules: UsageRule[];
 }
 
 /**
@@ -165,6 +186,9 @@ export interface InclusionStep {
   from: PluginId;
   to: PluginId;
   kind: EdgeKind;
+  /** Set when the hop is a {@link UsageRule}: `from` uses the key `to` serves
+   *  (and the rule's owner is bundled too). */
+  usage?: { owner: PluginId; space: KeySpace; key: string };
 }
 
 /** Why a given target plugin is in the bundle: the seed it originates from and

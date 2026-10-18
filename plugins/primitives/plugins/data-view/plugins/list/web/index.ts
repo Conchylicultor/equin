@@ -11,6 +11,7 @@ export default {
   contributions: [
     DataViewSlots.View({
       type: "list",
+      companion: true,
       title: "List",
       icon: symbol("view-list"),
       order: 3,

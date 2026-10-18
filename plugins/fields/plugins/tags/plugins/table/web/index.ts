@@ -8,6 +8,7 @@ export default {
   contributions: [
     DataViewSlots.Cell({
       match: "tags",
+      companion: true,
       component: TagsCell,
       // This type presents as a chip, so the list's subtitle run separates it by
       // spacing rather than stringing it on a middot.

@@ -5,5 +5,11 @@ import { textOperatorSet } from "./operator-set";
 export default {
   description:
     "Text field type: data-view filter operator set (contains / is / is-empty …).",
-  contributions: [DataViewSlots.Filter(textOperatorSet)],
+  contributions: [
+    DataViewSlots.Filter({
+      match: "text",
+      companion: true,
+      ...textOperatorSet,
+    }),
+  ],
 } satisfies PluginDefinition;

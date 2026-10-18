@@ -5,5 +5,11 @@ import { dateOperatorSet } from "./operator-set";
 export default {
   description:
     "Date field type: data-view filter operator set (is / before / after / between …).",
-  contributions: [DataViewSlots.Filter(dateOperatorSet)],
+  contributions: [
+    DataViewSlots.Filter({
+      match: "date",
+      companion: true,
+      ...dateOperatorSet,
+    }),
+  ],
 } satisfies PluginDefinition;

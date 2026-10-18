@@ -316,6 +316,7 @@ Run with `./singularity test plugins/plugin-meta/plugins/composition`.
     - `fields/list/config.listField`
     - `fields/string-list/config.stringListField`
     - `fields/text/config.textField`
+    - `framework/slot-declaration.KEY_SPACES`
     - `infra/namespace.BASE_EXCLUSIONS_ID`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/namespace.NAMESPACE_LABEL_RE`
