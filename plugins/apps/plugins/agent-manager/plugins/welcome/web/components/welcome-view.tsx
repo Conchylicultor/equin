@@ -42,11 +42,14 @@ export function WelcomeView() {
   // are known — a loading read shows nothing, never a zero it would then take
   // back; a failed one says so, where the counts would be.
   return (
-    <Scroll className="h-full">
+    // A size container, so the column's offset is a share of the PANE's height
+    // (`cqh`), not the browser viewport's — in a small window (a desktop
+    // window, a split) a `vh` offset would push the prompt to the pane's foot.
+    <Scroll className="h-full [container-type:size]">
       <Stack
         gap="xl"
         // eslint-disable-next-line spacing/no-adhoc-spacing -- the column sits a little above the middle of the pane, where the eye lands, and stays put while the prompt grows
-        className="mx-auto w-full max-w-2xl px-xl pt-[28vh] pb-2xl"
+        className="mx-auto w-full max-w-2xl px-xl pt-[28cqh] pb-2xl"
       >
         <Stack gap="xs">
           <Text as="div" variant="caption" tone="faint">
