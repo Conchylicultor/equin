@@ -9,13 +9,12 @@ import {
   profilerStart,
   recordMemoryCheckpoint,
   notificationsWsHandler,
-  handleResourceHttp,
+  hostHttpRoutes,
   reportServerError,
   markServerReady,
 } from "@plugins/framework/plugins/server-core/core";
 import type {
   WsData,
-  HttpHandler,
   WsHandler,
   LoadedServerPlugin,
 } from "@plugins/framework/plugins/server-core/core";
@@ -39,7 +38,6 @@ import {
 } from "@plugins/infra/plugins/runtime-identity/core";
 import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
-import { RESOURCE_HTTP_ROUTE } from "@plugins/packages/plugins/resource-protocol/core";
 
 // ── QoS boost (main backend only) ───────────────────────────────
 // Raise the event-loop thread to user-interactive QoS BEFORE any boot work, so
@@ -81,19 +79,16 @@ function populateRoutes(
     "routePopulation",
     "Route Population",
   );
-  const httpRoutes: Array<[string, HttpHandler]> = [];
   for (const plugin of ordered) {
-    if (plugin.httpRoutes)
-      httpRoutes.push(...Object.entries(plugin.httpRoutes));
     if (plugin.wsRoutes) Object.assign(wsRoutes, plugin.wsRoutes);
   }
 
-  // Core-owned routes for the live-state primitive.
+  // Core-owned socket for the live-state primitive.
   wsRoutes["/ws/notifications"] = notificationsWsHandler;
-  httpRoutes.push([RESOURCE_HTTP_ROUTE, handleResourceHttp]);
 
   const handle = createRequestHandler({
-    routes: httpRoutes,
+    // Plugin routes + the live-state read: the table the browser host mounts too.
+    routes: hostHttpRoutes(ordered),
     onError: (errObj, req, pathname) => {
       // Fail loudly: always emit a durable log line (captured by the gateway into
       // the per-worktree backend log) BEFORE returning a generic 500. The crash

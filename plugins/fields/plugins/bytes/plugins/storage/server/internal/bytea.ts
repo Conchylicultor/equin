@@ -21,7 +21,13 @@ const byteaType = customType<{ data: Uint8Array; driverData: Uint8Array }>({
  * 76 chars.
  */
 export function bytesToBase64(bytes: Uint8Array): string {
-  return Buffer.from(bytes).toString("base64");
+  // Portable (no `Buffer`): binary string in chunks, so a large value never
+  // overflows `fromCharCode`'s argument list, then the platform `btoa`.
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
 }
 
 /**

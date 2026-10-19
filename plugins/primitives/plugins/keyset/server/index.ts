@@ -16,6 +16,7 @@ export {
 } from "./internal/seek";
 
 export default {
+  portable: true,
   description:
     "Field-agnostic keyset pagination machinery: the sort-rule types (core) and a null-aware keyset seek / at-or-before / order-by compiler over drizzle SQL (server). No data-view dependency, so any server-delegated windowed query can reuse it.",
 } satisfies ServerPluginDefinition;

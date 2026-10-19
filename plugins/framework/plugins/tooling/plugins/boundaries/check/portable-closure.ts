@@ -6,11 +6,12 @@ import { importClosure } from "@plugins/framework/plugins/tooling/plugins/import
 import {
   defaultExportObjectBody,
   findImports,
+  maskSource,
   parseBoolField,
   type ImportRef,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { isPlatformApi } from "../core/platform-apis";
+import { isPlatformApi, platformGlobalsIn } from "../core/platform-apis";
 
 const PORTABLE_CLOSURE = "boundaries:portable-closure";
 
@@ -34,9 +35,10 @@ function loadsAtRuntime(ref: ImportRef): boolean {
   return bindings.length === 0 || !bindings.every((b) => /^type\s/.test(b));
 }
 
-/** One closure module that imports a platform API, with the chain to it. */
+/** One closure module that imports a platform API or reads a host global, with the chain to it. */
 interface Offender {
   module: string;
+  /** Platform modules it imports, and host globals it reads (`global Buffer`). */
   specifiers: string[];
   chain: string[];
 }
@@ -66,6 +68,8 @@ async function platformOffenders(
           .filter((ref) => loadsAtRuntime(ref) && isPlatformApi(ref.specifier))
           .map((ref) => ref.specifier),
       ),
+      // An import-clean module can still read a host global the browser lacks.
+      ...platformGlobalsIn(maskSource(src)).map((g) => `global ${g}`),
     ];
     if (specifiers.length === 0) continue;
     offenders.push({ module, specifiers, chain: closure.importChain(module) });
@@ -90,7 +94,7 @@ async function platformOffenders(
 export const portableClosureCheck: Check = {
   id: PORTABLE_CLOSURE,
   description:
-    "every server barrel declaring `portable: true` statically loads no module that imports a platform API (Node builtins, bun, pg, graphile-worker, @parcel/watcher, …) — its whole closure runs on every host",
+    "every server barrel declaring `portable: true` statically loads no module that imports a platform API (Node builtins, bun, pg, graphile-worker, @parcel/watcher, …) or reads a host global (Buffer, process, Bun, …) — its whole closure runs on every host",
   exemptable: {
     [PORTABLE_CLOSURE]:
       "declares `portable: true` while its server closure still reaches a platform API (the split into server/ + machine/ is in progress)",

@@ -99,6 +99,9 @@ export type BootSpec = {
       ) => void | Promise<void>;
     }
   | { mode: "exec" }
+  // A Web Worker in the page (`./browser-host.ts`): the portable graph only,
+  // no socket — the page reaches it over a MessagePort.
+  | { mode: "browser" }
 );
 
 /**

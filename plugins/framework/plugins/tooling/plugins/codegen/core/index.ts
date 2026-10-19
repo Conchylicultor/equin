@@ -248,3 +248,9 @@ export {
   generateExemptRuleIds,
   renderExemptRuleIds,
 } from "./exempt-rule-ids-gen";
+export {
+  discoverBrowserHosts,
+  generateBrowserHosts,
+  renderBrowserHost,
+} from "./browser-host-gen";
+export type { BrowserHostDecl } from "./browser-host-gen";

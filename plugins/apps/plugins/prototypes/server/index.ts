@@ -5,6 +5,7 @@ import { PROTOTYPES_CATEGORY_ID } from "../core/task-category";
 export default {
   description:
     "The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.",
+  portable: true,
   contributions: [
     TaskCategory({ id: PROTOTYPES_CATEGORY_ID, label: "Prototypes", order: 9 }),
   ],

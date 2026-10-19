@@ -181,7 +181,7 @@ export function compileDerivedUpdatedAt(
 ): DerivedUpdatedAtSpec {
   const { table, updatedAtColumn, columns } = input;
   const triggerName = `${table}${SUFFIX}`;
-  if (Buffer.byteLength(triggerName) > MAX_IDENT_BYTES) {
+  if (new TextEncoder().encode(triggerName).byteLength > MAX_IDENT_BYTES) {
     throw new Error(
       `derived updatedAt on "${table}": trigger name "${triggerName}" exceeds ` +
         `Postgres's ${MAX_IDENT_BYTES}-byte identifier limit.`,

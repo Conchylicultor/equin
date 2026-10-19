@@ -16,6 +16,7 @@ export { BackgroundTriggerSource } from "./internal/trigger-source";
 export type { BackgroundTriggerSourceSpec } from "./internal/trigger-source";
 
 export default {
+  portable: true,
   description:
     "Background activity catalog: defineBackgroundKind registers a provider (a mechanism that runs things on its own: jobs, warm-ups, timers) that lists its entries with trigger, scope and latest run, its recent runs and an optional Run now; the catalog merges every provider into the pushed background.catalog value (throttled), serves background.recent-runs per entry and POST /api/background/run-now, fills event-triggered entries' event names from contributed BackgroundTriggerSource annotations, and names no provider.",
   httpRoutes: {

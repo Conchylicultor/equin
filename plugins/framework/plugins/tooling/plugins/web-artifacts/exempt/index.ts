@@ -12,6 +12,7 @@ export default [
     rule: "boundaries/no-platform-api",
     paths: [
       "core/hash.ts",
+      "core/internal/browser-hosts.ts",
       "core/internal/compose.ts",
       "core/internal/expected.ts",
       "core/internal/global-css.ts",

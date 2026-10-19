@@ -106,6 +106,21 @@ Key invariants:
   only); `scanStagedModules` still re-lexes them. Being inside the artifact's
   content-addressed dir, a worker's URL changes exactly when its plugin's code
   does — so a SharedWorker instance is per plugin version by construction.
+- **A browser host is the one whole-graph artifact** (`core/internal/browser-hosts.ts`).
+  A fleet plugin with a `bin/browser-host.ts` (a Web Worker booting a portable
+  server graph — `server-core`'s `bootBrowserHost`) is built, in its own stage
+  (`artifacts:browser-hosts`), through a stub entry `host.js`
+  (`export function start(): Worker`) whose `new Worker(new URL(…))` makes
+  vite's worker pass bundle the graph whole: no externals (import maps do not
+  reach workers), no page preload helper, PGlite's wasm and data as assets. It
+  is served as `@browser-host/<pluginPath>` (external to every artifact build,
+  never a vendor). Its address cannot be "its own plugin's files": it is the
+  content of every repo file the LAST build loaded (vite's module list, `?raw`
+  SQL included), every such file's directory listing (a new migration
+  re-addresses it), `bun.lock` and the builder identity, the list recorded per
+  host under the store's `browser-hosts/`. The build fails when repo code in the
+  bundle imports a Node builtin. Its graph is the plugin's
+  `bin/browser-host.generated.ts` (codegen's `browser-host-gen.ts`).
 - **An artifact's address covers exactly what its bytes inline.** The store
   reuses an artifact whenever its address matches, so any source file whose
   content reaches the bundle but not the hash fossilises the artifact: it is
@@ -238,7 +253,7 @@ Key invariants:
 - Exemptions:
   - Exempts itself from:
     - `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
+    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
 - Cli:
   - Exports (types): `CarryForwardResult`
   - Exports (values): `carryForwardServedEntries`

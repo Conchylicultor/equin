@@ -39,6 +39,8 @@ never import this plugin back.
   - Exports (values):
     - `importClosure`
     - `loadTypescript`
+- Cross-plugin:
+  - Imported by: `framework/tooling/codegen`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/import-closure.ts` (debt)
 

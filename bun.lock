@@ -2249,6 +2249,10 @@
         "drizzle-kit": "^0.28.0",
       },
     },
+    "plugins/database/plugins/migrations/plugins/bundled-source": {
+      "name": "@singularity/plugin-database-migrations-bundled-source",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/pgbouncer": {
       "name": "@singularity/plugin-database-pgbouncer",
       "version": "0.0.1",
@@ -7909,6 +7913,8 @@
     "@singularity/plugin-database-live-state-snapshot": ["@singularity/plugin-database-live-state-snapshot@workspace:plugins/database/plugins/live-state-snapshot"],
 
     "@singularity/plugin-database-migrations": ["@singularity/plugin-database-migrations@workspace:plugins/database/plugins/migrations"],
+
+    "@singularity/plugin-database-migrations-bundled-source": ["@singularity/plugin-database-migrations-bundled-source@workspace:plugins/database/plugins/migrations/plugins/bundled-source"],
 
     "@singularity/plugin-database-pgbouncer": ["@singularity/plugin-database-pgbouncer@workspace:plugins/database/plugins/pgbouncer"],
 

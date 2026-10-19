@@ -49,6 +49,7 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
       ],
       registryDirName: "composition-web-registry.registry.999",
       vendorMeta,
+      hosts: [],
     });
     const map = buildImportMap(entries).imports;
     expect(map).toEqual({
@@ -79,6 +80,7 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
         targets: [web],
         registryDirName: "composition-web-registry.registry.999",
         vendorMeta,
+        hosts: [],
       }),
     ).imports;
     expect(map["@plugins/tasks/web"]).toBe("/artifacts/tasks.web.abc/index.js");
@@ -99,6 +101,7 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
           ],
           registryDirName: "composition-web-registry.registry.2",
           vendorMeta,
+          hosts: [],
         }),
       ).imports;
     expect(make()).toEqual(make());

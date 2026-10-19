@@ -10,9 +10,9 @@ See the top-level [`CLAUDE.md`](../../../../CLAUDE.md) for overall architecture 
 2. Each plugin declares its routes via a `ServerPluginDefinition` (`core/types.ts`). At startup the entry point flattens them into two lookup tables: `httpRoutes` (`"METHOD /path"` → handler) and `wsRoutes` (`"/path"` → `WsHandler`).
 3. Plugins also serve live state (see "Live state" below). Append-only firehoses (terminal, log tails) use a dedicated WS route. There is no SSE path — raw `text/event-stream` in TS is forbidden (`./singularity check no-raw-sse`).
 
-## Boot modes: `serve` and `exec`
+## Boot modes: `serve`, `exec` and `browser`
 
-A backend process boots in one of two modes. Both run the ONE sequence in
+A backend process boots in one of three modes. Both run the ONE sequence in
 `core/boot-stages.ts` — a second copy is the thing that rots, so add a phase
 there, not in a composition root, unless it is genuinely serve-only.
 
@@ -24,17 +24,28 @@ there, not in a composition root, unless it is genuinely serve-only.
   `@plugins/framework/plugins/server-core/cli`). Runs load waves,
   `collectContributions`, the host-service assert, `register`, the deferred-resource bind, the preload-declare assert
   and the `onReadyBlocking` barrier, and nothing else.
+- **`browser`** — the portable graph in a page's Web Worker
+  (`core/browser-host.ts`, `bootBrowserHost({ entries, seed? })`, called from a
+  plugin's `bin/browser-host.ts`). The same phases as `exec` — no socket, no
+  post-ready phases yet (job runners and schedules are the next slice's) — then
+  it asserts every booted plugin declares `portable: true` (plugins' own
+  `wsRoutes` are not served — the page's transport opens any socket but
+  `/ws/notifications` inert), runs `seed`, and hands back the request router
+  (`hostHttpRoutes`, the one route table `bin/index.ts` mounts too), the
+  live-state socket handler and the served keys. `framework/browser-server`'s
+  `serveOverPort` carries them to the page. Hosts install no probes: no heap
+  reader means no memory checkpoints, no wyhash means the portable `hash64`.
 
-| phase                                          | `serve` | `exec` |
-| ---------------------------------------------- | ------- | ------ |
-| load waves, `collectContributions`, host-service assert, `register` | yes | yes |
-| `bindDeferredResources`                        | yes     | yes    |
-| preload-declare assert                         | yes     | yes    |
-| socket bind                                    | yes     | no     |
-| `onReadyBlocking`                              | yes     | yes    |
-| `markServerReady()`                            | yes     | no     |
-| `onReady` / `onAllReady` / `drainWarmups`      | yes     | no     |
-| QoS boost, signal handlers, orphan-exit poll   | yes     | no     |
+| phase                                          | `serve` | `exec` | `browser` |
+| ---------------------------------------------- | ------- | ------ | --------- |
+| load waves, `collectContributions`, host-service assert, `register` | yes | yes | yes |
+| `bindDeferredResources`                        | yes     | yes    | yes       |
+| preload-declare assert                         | yes     | yes    | yes       |
+| socket bind                                    | yes     | no     | no        |
+| `onReadyBlocking`                              | yes     | yes    | yes       |
+| `markServerReady()`                            | yes     | no     | no        |
+| `onReady` / `onAllReady` / `drainWarmups`      | yes     | no     | no        |
+| QoS boost, signal handlers, orphan-exit poll   | yes     | no     | no        |
 
 The **preload-declare assert** (`assertPreloadedResourcesDeclared`,
 `core/resources.ts`) throws when a resource registered with `preload` has no
@@ -170,9 +181,11 @@ composition boots two. Today's services: `database.driver`,
   `core/testing` (`bootPluginGraph`, `serverEntries`, `serverEntryFor`).
 - **Host probes.** `core` runs on every host, so the macOS memory probe (bun:ffi,
   `bin/phys-footprint.ts`) and the native snapshot hash (`Bun.hash`) are installed
-  by `bin/host-probes.ts` (`installMemoryProbe`, `installSnapHash`), loaded by
-  `bin/active-runtime.ts` in both boot modes; uninstalled, `procMemory()` answers
-  `null` and the snapshot hash is the portable `hash64`.
+  by `bin/host-probes.ts` (`installMemoryProbe`, `installHeapReader` —
+  `process.memoryUsage` —, `installSnapHash`), loaded by
+  `bin/active-runtime.ts` in both desktop boot modes; uninstalled (the browser
+  host), `procMemory()` / `heapMemory()` answer `null` (the profiler then records
+  no memory, never a made-up zero) and the snapshot hash is the portable `hash64`.
 
 ## ServerPluginDefinition
 
@@ -295,6 +308,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
 
 - Core:
   - Uses:
+    - `framework/http-router.createRequestHandler`
     - `framework/plugin-id.asPluginId`
     - `framework/plugin-id.isMachineNode`
     - `framework/plugin-id.machineNode`
@@ -303,12 +317,16 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `framework/plugin-loader.topoSortPlugins`
     - `framework/resource-runtime.createResourceRuntime`
     - `framework/tooling/collected-dir.defineCollectedDir`
+    - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
     - `packages/string-hash.hash64`
   - Exports (types):
     - `BootMode`
+    - `BrowserHost`
+    - `BrowserHostOptions`
     - `ChangeSource`
     - `DependsOnEntry`
     - `ExternalResource`
+    - `HeapMemory`
     - `HostService`
     - `HttpHandler`
     - `KeyedServerResourceOptions`
@@ -341,6 +359,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ServerContributionToken`
     - `ServerFatalReport`
     - `ServerPluginDefinition`
+    - `ServerRegistryEntry`
     - `ServerResourceOptions`
     - `Span`
     - `TableChange`
@@ -350,6 +369,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
   - Exports (values):
     - `assertPreloadedResourcesDeclared`
     - `bindDeferredResources`
+    - `bootBrowserHost`
     - `boundedMembershipKeys`
     - `collectContributions`
     - `defineDeferredResource`
@@ -361,6 +381,9 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `getBootMode`
     - `getProfilingData`
     - `handleResourceHttp`
+    - `heapMemory`
+    - `hostHttpRoutes`
+    - `installHeapReader`
     - `installMemoryProbe`
     - `installSnapHash`
     - `isServerReady`

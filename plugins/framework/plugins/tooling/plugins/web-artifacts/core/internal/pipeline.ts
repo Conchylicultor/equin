@@ -54,6 +54,7 @@ import {
   hasGlobalCssCache,
   pruneGlobalCssCache,
 } from "./global-css";
+import { ensureBrowserHost } from "./browser-hosts";
 import { composeDist } from "./compose";
 import { scanStagedModules } from "./staged-verify";
 
@@ -220,6 +221,27 @@ export async function runWebArtifactsPipeline(
     },
   );
 
+  // ── Stage 2b: browser hosts (whole-graph worker bundles) ────────────
+  const hosts = await opts.onStage(
+    "artifacts:browser-hosts",
+    `browser hosts (${plan.hosts.filter((h) => h.needsBuild).length} stale)`,
+    async () => {
+      const out: Array<{ specifier: string; dirName: string }> = [];
+      // One at a time: each is a whole-graph vite build.
+      for (const host of plan.hosts) {
+        const dirName = await ensureBrowserHost({
+          root,
+          plan: host,
+          identityHash: plan.identity.identityHash,
+          minify: opts.minify,
+          log,
+        });
+        out.push({ specifier: host.specifier, dirName });
+      }
+      return out;
+    },
+  );
+
   // ── Stage 3: vendors ────────────────────────────────────────────────
   const allTargets: PlannedTarget[] = [
     ...plan.webTargets,
@@ -348,7 +370,14 @@ export async function runWebArtifactsPipeline(
         targets: allTargets,
         registryDirName: plan.registryTarget.dirName,
         vendorMeta: vendors,
+        hosts,
       });
+      for (const host of hosts) {
+        links.push({
+          linkName: host.dirName,
+          storePath: artifactStorePath(host.dirName),
+        });
+      }
 
       // Vendor set: one symlink; per-file imports feed the preload closure.
       const vendorLink = vendorSetDirName(vendors.setHash);

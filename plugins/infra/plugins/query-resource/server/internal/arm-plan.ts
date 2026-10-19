@@ -1,3 +1,4 @@
+import { utf8ByteLength } from "./utf8";
 import { and, inArray, is, sql, SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type {
@@ -699,7 +700,7 @@ export function planArm<Row, P extends ResourceParams>(
       }
       const json = JSON.stringify(parts);
       row[rowKey.keyField] =
-        Buffer.byteLength(json, "utf8") > rowKey.maxKeyBytes ? null : json;
+        utf8ByteLength(json) > rowKey.maxKeyBytes ? null : json;
       if (plan.members.length > 0) {
         const values: Record<string, unknown> = {};
         for (const [part, alias] of plan.members) {

@@ -485,29 +485,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`demo`** — The Agent Manager's demo scenario (core: agentManagerDemo — the app, the route /c/conv-demo-dark-mode and its pack: a queue of agents and one conversation fixing a bug, every id carrying `demo`) and its exhibit, the app rendered in-process on that pack.
           - Core:
-            - Uses:
+            - Uses: 22 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/demo/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/demo/REFERENCE.md)
+              - `tasks/tasks-core` ×8
+              - `framework/browser-server/demo` ×5
+              - `apps/deploy.DEPLOY_CATEGORY_ID`
+              - `apps/home.APPS_CATEGORY_ID`
+              - `apps/prototypes.PROTOTYPES_CATEGORY_ID`
               - `conversations/conversation-view/jsonl-viewer.jsonlEvents`
               - `conversations/conversations-view/queue.queueRanks`
               - `conversations/model-provider.ConversationModelSchema`
-              - `framework/browser-server/demo.definePack`
-              - `framework/browser-server/demo.packAll`
-              - `framework/browser-server/demo.packRows`
-              - `framework/browser-server/demo.packValue`
-              - `framework/browser-server/demo.packWindow`
               - `primitives/rank.Rank`
               - `tasks/attempt-work.attemptWork`
               - `tasks/task-source-url.attemptSourceUrl`
-              - `tasks/tasks-core.attemptRows`
-              - `tasks/tasks-core.attemptWorkspaces`
-              - `tasks/tasks-core.conversationsActive`
-              - `tasks/tasks-core.conversationsById`
-              - `tasks/tasks-core.conversationsGone`
-              - `tasks/tasks-core.conversationsSystem`
-              - `tasks/tasks-core.pushRows`
-              - `tasks/tasks-core.taskRows`
+            - Exports (types): `DemoStory`
             - Exports (values):
               - `agentManagerDemo`
               - `DEMO_CONVERSATION_ID`
+              - `DEMO_STORIES`
+              - `demoTaskId`
         - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
           - Web:
             - Contributes: `Conversation.ActionBar` → `PagesTreeButton`
@@ -1620,6 +1615,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `taskCategory` "deploy"
         - Uses: `tasks/task-category.TaskCategory`
+      - Cross-plugin:
+        - Imported by: `apps/agent-manager/demo`
       - Core:
         - Exports (values): `DEPLOY_CATEGORY_ID`
       - Plugins:
@@ -4016,6 +4013,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `taskCategory` "apps"
         - Uses: `tasks/task-category.TaskCategory`
+      - Cross-plugin:
+        - Imported by: `apps/agent-manager/demo`
       - Core:
         - Exports (values): `APPS_CATEGORY_ID`
       - Plugins:
@@ -5516,6 +5515,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `taskCategory` "prototypes"
         - Uses: `tasks/task-category.TaskCategory`
+      - Cross-plugin:
+        - Imported by: `apps/agent-manager/demo`
       - Core:
         - Exports (values): `PROTOTYPES_CATEGORY_ID`
       - Plugins:
@@ -18519,7 +18520,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stageDrizzleOut`
           - `UnjoinedSnapshotTipsError`
       - Cross-plugin:
-        - Imported by: `database`
+        - Imported by:
+          - `database`
+          - `database/migrations/bundled-source`
       - Exemptions:
         - Exempts itself from:
           - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
@@ -18534,6 +18537,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Test helpers:
         - Server: `@plugins/database/plugins/migrations/server/testing`
           - `runMigrations` — Every migration this host's `MigrationSource` lists, applied to `db` in one transaction, with no derived layer — for a throwaway test database.
+      - Plugins:
+        - **`bundled-source`** (excluded) — The migration history bundled as text: provides the MigrationSource host service from the committed data/*.sql inlined at build time, for a host without the repo on disk (a browser worker host). Never booted by the desktop, which reads the files off disk (migrations#machine).
+          - Server:
+            - Contributes: `host-service:database.migration-source` "database.migration-source"
+            - Uses:
+              - `database/migrations.Migration`
+              - `database/migrations.migrationsFrom`
+              - `database/migrations.MigrationSource`
     - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
       - Cross-plugin:
         - Imported by:
@@ -23379,7 +23390,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/http-router.RouteHandler`
           - `framework/resource-runtime.createResourceRuntime`
           - `framework/resource-runtime.KeyedResourceContract`
-          - `framework/resource-runtime.RuntimeSocket`
+          - `infra/endpoints.isUnsupportedEndpointRefusal`
           - `infra/endpoints.unsupportedEndpointResponse`
           - `network/live.bindExternalServe`
           - `network/live.LiveExternalServe`
@@ -23394,7 +23405,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrowserServerOptions`
           - `BrowserServerPeer`
           - `BrowserServerSocket`
-        - Exports (values): `createBrowserServer`
+          - `ComposedServer`
+          - `PortEnd`
+          - `PortServer`
+        - Exports (values):
+          - `composeBrowserServers`
+          - `createBrowserServer`
+          - `portBrowserServer`
+          - `PortHostBootError`
+          - `runtimeBrowserServer`
+          - `serveOverPort`
       - Cross-plugin:
         - Imported by: `framework/browser-server/demo/scope`
       - Plugins:
@@ -23823,7 +23843,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `Hook`
     - **`http-router`** — The one HTTP request router every host mounts: createRequestHandler turns "METHOD /path/:param" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in registration order, a default cache-control: no-store, and a logged generic 500 on a throw. A duplicate route key throws at construction.
       - Cross-plugin:
-        - Imported by: `framework/browser-server`
+        - Imported by:
+          - `framework/browser-server`
+          - `framework/server-core`
       - Core:
         - Exports (types):
           - `RequestHandlerOptions`
@@ -23984,6 +24006,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`server-core`**
       - Core:
         - Uses:
+          - `framework/http-router.createRequestHandler`
           - `framework/plugin-id.asPluginId`
           - `framework/plugin-id.isMachineNode`
           - `framework/plugin-id.machineNode`
@@ -23992,12 +24015,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/plugin-loader.topoSortPlugins`
           - `framework/resource-runtime.createResourceRuntime`
           - `framework/tooling/collected-dir.defineCollectedDir`
+          - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
           - `packages/string-hash.hash64`
         - Exports (types):
           - `BootMode`
+          - `BrowserHost`
+          - `BrowserHostOptions`
           - `ChangeSource`
           - `DependsOnEntry`
           - `ExternalResource`
+          - `HeapMemory`
           - `HostService`
           - `HttpHandler`
           - `KeyedServerResourceOptions`
@@ -24030,6 +24057,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServerContributionToken`
           - `ServerFatalReport`
           - `ServerPluginDefinition`
+          - `ServerRegistryEntry`
           - `ServerResourceOptions`
           - `Span`
           - `TableChange`
@@ -24039,6 +24067,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `assertPreloadedResourcesDeclared`
           - `bindDeferredResources`
+          - `bootBrowserHost`
           - `boundedMembershipKeys`
           - `collectContributions`
           - `defineDeferredResource`
@@ -24050,6 +24079,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getBootMode`
           - `getProfilingData`
           - `handleResourceHttp`
+          - `heapMemory`
+          - `hostHttpRoutes`
+          - `installHeapReader`
           - `installMemoryProbe`
           - `installSnapHash`
           - `isServerReady`
@@ -24316,7 +24348,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/guards` (10 debt)
               - `framework/tooling/import-closure` (1 debt)
               - `framework/tooling/lint` (2 debt)
-              - `framework/tooling/web-artifacts` (13 debt)
+              - `framework/tooling/web-artifacts` (14 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror` (3 debt)
               - `infra/audio-analysis` (4 debt)
@@ -24570,7 +24602,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/contract-refs.ts`, `shared/pass-set.ts`, `shared/type-fingerprint.ts`, `shared/worker.ts` (debt)
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 91 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 92 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `config_v2` ×14
               - `framework/plugin-id` ×13
               - `plugin-meta/parse-utils` ×12
@@ -24587,6 +24619,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling` ×2
               - `packages/macrotask-yield` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
+              - `framework/tooling/import-closure.importClosure`
               - `framework/tooling/lint.loadLintContributions`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/semaphore.createSemaphore`
@@ -24597,6 +24630,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.isIconRefModule`
             - Exports (types):
               - `AuthoredOverrideSeedResult`
+              - `BrowserHostDecl`
               - `CodegenStep`
               - `CollectedRawEntry`
               - `DeclaredApp`
@@ -24645,6 +24679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `customUtilitiesManifestPath`
               - `dataViewsManifestPath`
               - `declareSlotsFromBarrels`
+              - `discoverBrowserHosts`
               - `discoverCollectedDirs`
               - `discoverCollectedDirsIn`
               - `eagerTierManifestPath`
@@ -24655,6 +24690,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fileConfigProxy`
               - `formatGenerated`
               - `generateBarrelStubs`
+              - `generateBrowserHosts`
               - `generateCompositionRegistry`
               - `generateConfigGitLayer`
               - `generateConfigOrigins`
@@ -24693,6 +24729,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `regenerateManifestCodegen`
               - `regenerateRegistryCodegen`
               - `renderBarrelStubs`
+              - `renderBrowserHost`
               - `renderCollectedDirRegistry`
               - `renderCompactDoc`
               - `renderCompanionManifest`
@@ -24928,6 +24965,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `importClosure`
               - `loadTypescript`
+          - Cross-plugin:
+            - Imported by: `framework/tooling/codegen`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/import-closure.ts` (debt)
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
@@ -25193,7 +25232,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
-              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
+              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
           - Cli:
             - Exports (types): `CarryForwardResult`
             - Exports (values): `carryForwardServedEntries`
@@ -30416,6 +30455,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/browser-server`
           - `framework/resource-runtime`
+          - `framework/server-core`
           - `network/live`
     - **`retry`**
       - Core:

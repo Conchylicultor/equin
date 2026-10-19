@@ -4,6 +4,7 @@ import { floatFieldType } from "@plugins/fields/plugins/float/core";
 import { build } from "./internal/storage";
 
 export default {
+  portable: true,
   description:
     "Float field type: DB storage capability — maps to a Postgres double precision column.",
   contributions: [Fields.Storage({ type: floatFieldType, build })],

@@ -1,5 +1,6 @@
 // Shared constants of the per-plugin web-artifact engine.
 
+import { isBrowserHostSpecifier } from "./browser-host-specifier";
 import { COMPOSITION_SPECIFIERS } from "./composition-modules";
 
 /**
@@ -78,7 +79,8 @@ export function isBareSpecifier(id: string): boolean {
     !id.startsWith("/") &&
     !id.startsWith("\0") &&
     !id.startsWith("@plugins/") &&
-    !COMPOSITION_SPECIFIERS.has(id)
+    !COMPOSITION_SPECIFIERS.has(id) &&
+    !isBrowserHostSpecifier(id)
   );
 }
 

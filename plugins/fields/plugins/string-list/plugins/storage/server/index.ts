@@ -4,6 +4,7 @@ import { stringListFieldType } from "@plugins/fields/plugins/string-list/core";
 import { build } from "./internal/storage";
 
 export default {
+  portable: true,
   description:
     "String-list field type: DB storage capability — maps to a Postgres text[] column.",
   contributions: [Fields.Storage({ type: stringListFieldType, build })],

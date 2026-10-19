@@ -1,3 +1,4 @@
+import { utf8ByteLength } from "./utf8";
 import { sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
@@ -505,7 +506,7 @@ export function compileUnionCollection<
         values.push(r[`__p${i}`] as string | null);
       const json = JSON.stringify(values);
       out[spec.rowKey.keyField] =
-        Buffer.byteLength(json, "utf8") > spec.rowKey.maxKeyBytes ? null : json;
+        utf8ByteLength(json) > spec.rowKey.maxKeyBytes ? null : json;
     }
     return out;
   };

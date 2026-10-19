@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { builtinModules } from "node:module";
-import { isPlatformApi, NODE_BUILTIN_ROOTS } from "./platform-apis";
+import {
+  isPlatformApi,
+  NODE_BUILTIN_ROOTS,
+  platformGlobalsIn,
+} from "./platform-apis";
 
 describe("isPlatformApi", () => {
   test("NODE_BUILTIN_ROOTS is the runtime's own bare builtin set", () => {
@@ -55,5 +59,29 @@ describe("isPlatformApi", () => {
     "./internal/x",
   ])("%s is portable", (spec) => {
     expect(isPlatformApi(spec)).toBe(false);
+  });
+});
+
+describe("platformGlobalsIn", () => {
+  test.each([
+    ["Buffer.byteLength(s)", ["Buffer"]],
+    ["Buffer.from(bytes)", ["Buffer"]],
+    ["const m = process.memoryUsage();", ["process"]],
+    ["Bun.hash(json)", ["Bun"]],
+    ["join(__dirname, 'x')", ["__dirname"]],
+    ["setImmediate(fn)", ["setImmediate"]],
+    ["const x = require('fs');", ["require"]],
+  ])("%s reads %p", (src, expected) => {
+    expect(platformGlobalsIn(src)).toEqual(expected);
+  });
+
+  test.each([
+    "const dev = process.env.NODE_ENV === 'test';",
+    "function f(msg: string | Buffer) {}",
+    "opts.process.run()",
+    "const { process } = deps;",
+    "new TextEncoder().encode(s).byteLength",
+  ])("%s reads none", (src) => {
+    expect(platformGlobalsIn(src)).toEqual([]);
   });
 });

@@ -4,6 +4,7 @@ import { rankFieldType } from "@plugins/fields/plugins/rank/core";
 import { build } from "./internal/storage";
 
 export default {
+  portable: true,
   description:
     "Rank field type: DB storage capability — maps to the rank_text (C-collation) Postgres domain column.",
   contributions: [Fields.Storage({ type: rankFieldType, build })],

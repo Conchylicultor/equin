@@ -84,7 +84,12 @@ async function buildPage(outDir: string): Promise<void> {
     build: {
       outDir,
       emptyOutDir: true,
-      rollupOptions: { input: join(HERE, "entry.html") },
+      rollupOptions: {
+        input: join(HERE, "entry.html"),
+        // A demo scenario names its browser host (`@browser-host/<plugin>`), a
+        // module only a composed dist maps; the page never starts one.
+        external: (id) => id.startsWith("@browser-host/"),
+      },
     },
     logLevel: "error",
   });

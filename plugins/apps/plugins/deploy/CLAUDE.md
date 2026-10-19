@@ -8,6 +8,8 @@
 - Server:
   - Contributes: `taskCategory` "deploy"
   - Uses: `tasks/task-category.TaskCategory`
+- Cross-plugin:
+  - Imported by: `apps/agent-manager/demo`
 - Core:
   - Exports (values): `DEPLOY_CATEGORY_ID`
 - Sub-plugins:

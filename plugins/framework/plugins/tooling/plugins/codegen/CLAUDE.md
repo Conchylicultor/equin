@@ -28,7 +28,7 @@ rather than reading as "not preloaded". A factory's own declaration
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 91 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 92 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×14
     - `framework/plugin-id` ×13
     - `plugin-meta/parse-utils` ×12
@@ -45,6 +45,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `framework/tooling` ×2
     - `packages/macrotask-yield` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
+    - `framework/tooling/import-closure.importClosure`
     - `framework/tooling/lint.loadLintContributions`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `packages/semaphore.createSemaphore`
@@ -55,6 +56,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `ui/icons.isIconRefModule`
   - Exports (types):
     - `AuthoredOverrideSeedResult`
+    - `BrowserHostDecl`
     - `CodegenStep`
     - `CollectedRawEntry`
     - `DeclaredApp`
@@ -103,6 +105,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `customUtilitiesManifestPath`
     - `dataViewsManifestPath`
     - `declareSlotsFromBarrels`
+    - `discoverBrowserHosts`
     - `discoverCollectedDirs`
     - `discoverCollectedDirsIn`
     - `eagerTierManifestPath`
@@ -113,6 +116,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `fileConfigProxy`
     - `formatGenerated`
     - `generateBarrelStubs`
+    - `generateBrowserHosts`
     - `generateCompositionRegistry`
     - `generateConfigGitLayer`
     - `generateConfigOrigins`
@@ -151,6 +155,7 @@ rather than reading as "not preloaded". A factory's own declaration
     - `regenerateManifestCodegen`
     - `regenerateRegistryCodegen`
     - `renderBarrelStubs`
+    - `renderBrowserHost`
     - `renderCollectedDirRegistry`
     - `renderCompactDoc`
     - `renderCompanionManifest`

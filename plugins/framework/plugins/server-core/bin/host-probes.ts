@@ -1,4 +1,5 @@
 import {
+  installHeapReader,
   installMemoryProbe,
   installSnapHash,
 } from "@plugins/framework/plugins/server-core/core";
@@ -14,6 +15,7 @@ import { macProcMemory } from "./phys-footprint";
 // without them.
 
 installMemoryProbe(macProcMemory);
+installHeapReader(() => process.memoryUsage());
 // Native wyhash on the keyed-delta hot path (the runtime's portable default is
 // plain-JS `hash64`); the length fold kills every different-length collision.
 installSnapHash((json) => Bun.hash.wyhash(json) ^ BigInt(json.length));

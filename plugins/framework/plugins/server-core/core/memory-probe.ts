@@ -51,3 +51,30 @@ export function procMemory(pid?: number): ProcMemory | null {
 export function physFootprintBytes(pid?: number): number | null {
   return procMemory(pid)?.physFootprintBytes ?? null;
 }
+
+/** The JS engine's view of this process's memory — `process.memoryUsage()`'s shape. */
+export interface HeapMemory {
+  rss: number;
+  heapUsed: number;
+  external: number;
+  arrayBuffers: number;
+}
+
+let heapReader: (() => HeapMemory) | null = null;
+
+/**
+ * Install this host's heap reader (`process.memoryUsage` on the desktop). Once
+ * per process, before boot. A host without one (the browser worker) records no
+ * memory checkpoints and no span footprints — absent, never a made-up zero.
+ */
+export function installHeapReader(fn: () => HeapMemory): void {
+  if (heapReader !== null) {
+    throw new Error("[memory-probe] a heap reader is already installed.");
+  }
+  heapReader = fn;
+}
+
+/** This process's heap reading, or `null` when the host installed no reader. */
+export function heapMemory(): HeapMemory | null {
+  return heapReader === null ? null : heapReader();
+}

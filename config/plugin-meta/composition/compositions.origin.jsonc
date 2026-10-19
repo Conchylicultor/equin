@@ -1,4 +1,4 @@
-// @hash 0963446ee0ec
+// @hash dd5ffde1f2de
 {
   "manifests": [
     {
@@ -24,7 +24,8 @@
         "!infra.jobs.in-process.**",
         "!infra.attachments.memory-blobs.**",
         "!primitives.log-channels.memory-persistence.**",
-        "!tasks.tasks-core.seeded-push-ledger.**"
+        "!tasks.tasks-core.seeded-push-ledger.**",
+        "!database.migrations.bundled-source.**"
       ],
       "selectedContributors": [],
       "extends": [],

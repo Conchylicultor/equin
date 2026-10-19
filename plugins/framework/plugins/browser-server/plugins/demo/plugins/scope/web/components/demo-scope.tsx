@@ -8,7 +8,9 @@ import {
   type ReactNode,
 } from "react";
 import {
+  composeBrowserServers,
   createBrowserServer,
+  portBrowserServer,
   type BrowserServe,
   type BrowserServed,
   type BrowserServer,
@@ -199,16 +201,23 @@ function scopeRoutes(
   return out;
 }
 
+/** The page's server, and the keys the pack and the backends serve on it. */
+interface PageServer {
+  server: BrowserServer;
+  keys: ReadonlySet<string>;
+}
+
 function buildServer(
   scenario: DemoScenario,
   packServe: DemoServe,
   backends: readonly ContributedBackend[],
   routes: readonly DemoRoute[],
   lastToastAt: { current: number | null },
-): BrowserServer {
-  return createBrowserServer({
+): PageServer {
+  const owners = new Map<string, string>();
+  const keys = new Set<string>();
+  const server = createBrowserServer({
     serve: (s) => {
-      const owners = new Map<string, string>();
       const all: BrowserServed[] = [];
       for (const { source, serve } of [
         { source: `the pack of "${scenario.id}"`, serve: packServe },
@@ -216,6 +225,8 @@ function buildServer(
       ]) {
         all.push(...serve(claiming(s, source, owners, scenario.id)));
       }
+      // Every key a serve minted (a collection's `:rows`, `:count`… too).
+      for (const served of all) for (const key of served.keys) keys.add(key);
       return all;
     },
     routes: scopeRoutes(scenario.id, routes, backends),
@@ -244,6 +255,46 @@ function buildServer(
       });
     },
   });
+  return { server, keys };
+}
+
+/**
+ * The scope's server once the scenario's host (if any) has booted: the page
+ * server alone, or — with a host — the page's served keys first, then every
+ * key the worker serves, then the page again (its `unserved` errors). Calls
+ * `onReady` with it, or `onFailed` with a host that could not boot; returns the
+ * teardown (the server disposed, the worker ended).
+ */
+function startScopeServer(
+  scenario: DemoScenario,
+  page: PageServer,
+  onReady: (server: BrowserServer) => void,
+  onFailed: (err: unknown) => void,
+): () => void {
+  const host = scenario.host;
+  if (host === undefined) {
+    onReady(page.server);
+    return () => page.server.dispose();
+  }
+  let ended = false;
+  let worker: Worker | null = null;
+  let served: BrowserServer = page.server;
+  void (async () => {
+    const { start } = await host();
+    if (ended) return;
+    worker = start();
+    const hosted = await portBrowserServer(worker);
+    if (ended) return;
+    served = composeBrowserServers([page, hosted], page.server);
+    onReady(served);
+  })().catch((err: unknown) => {
+    if (!ended) onFailed(err);
+  });
+  return () => {
+    ended = true;
+    served.dispose();
+    worker?.terminate();
+  };
 }
 
 function ScopeServer({
@@ -260,6 +311,7 @@ function ScopeServer({
   const packServe = use(loadPack(scenario));
   const lastToastAt = useRef<number | null>(null);
   const [server, setServer] = useState<BrowserServer | null>(null);
+  const [failure, setFailure] = useState<{ error: unknown } | null>(null);
   useEffect(() => {
     // A throw here (a key served twice, a contributed serve failing) reaches
     // the error boundary like a render error.
@@ -267,16 +319,24 @@ function ScopeServer({
     // resource owned by this mount, so StrictMode's mount → unmount → mount
     // disposes the first and keeps the second (an initialiser would build one
     // a discarded render never disposes).
-    const built = buildServer(
+    const page = buildServer(
       scenario,
       packServe,
       backends,
       routes,
       lastToastAt,
     );
-    setServer(built);
-    return () => built.dispose();
+    const stop = startScopeServer(scenario, page, setServer, (error) =>
+      setFailure({ error }),
+    );
+    return () => {
+      stop();
+      // The next server (a host still booting) is not this one.
+      setServer(null);
+    };
   }, [scenario, packServe, backends, routes]);
+  // A host that could not boot reaches the error boundary, never an empty app.
+  if (failure !== null) throw failure.error;
   const transport = useMemo(
     () => (server === null ? null : browserServerTransport(server)),
     [server],

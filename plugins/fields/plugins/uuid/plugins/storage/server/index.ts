@@ -4,6 +4,7 @@ import { uuidFieldType } from "@plugins/fields/plugins/uuid/core";
 import { build } from "./internal/storage";
 
 export default {
+  portable: true,
   description:
     "UUID field type: DB storage capability — maps to a Postgres uuid column.",
   contributions: [Fields.Storage({ type: uuidFieldType, build })],

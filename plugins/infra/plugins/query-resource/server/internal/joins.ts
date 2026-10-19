@@ -1,3 +1,4 @@
+import { utf8ByteLength } from "./utf8";
 import {
   and,
   Column,
@@ -958,7 +959,7 @@ function compilePlan(
       }
       return cached;
     }
-    if (Buffer.byteLength(alias, "utf8") > 63) {
+    if (utf8ByteLength(alias) > 63) {
       fail(
         `join family "${family.id}": member "${member}" makes the alias "${alias}", longer than Postgres's 63-byte identifier limit.`,
       );

@@ -557,6 +557,13 @@ export interface DemoScenario {
   /** The app-relative route it opens at (`/c/<id>`). */
   route: string;
   pack: () => Promise<{ default: DemoPack }>;
+  /**
+   * The scenario's browser host: a Web Worker running real server code on an
+   * in-browser database (`import("@browser-host/<plugin path>")`). The keys it
+   * serves are answered by it; every other key by the pack and the
+   * `Demo.Resource` backends. Absent: the page answers everything.
+   */
+  host?: () => Promise<{ start(): Worker }>;
 }
 
 export interface ServePackOptions {

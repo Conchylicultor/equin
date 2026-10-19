@@ -447,6 +447,22 @@ export async function buildRegistryGenContext(
 }
 
 /**
+ * Every `<dir>` entry in the repo — no composition filter — with the raw
+ * cross-plugin `dependsOn` of each. What a generator that picks its own plugin
+ * set reads (a browser host's graph, `./browser-host-gen.ts`).
+ */
+export async function scanCollectedDir(
+  ctx: RegistryGenContext,
+  dir: string,
+): Promise<{
+  entries: CollectedRawEntry[];
+  deps: ReadonlyMap<string, string[]>;
+}> {
+  const { allEntries, rawDeps } = await scanDir(ctx, dir);
+  return { entries: allEntries, deps: rawDeps };
+}
+
+/**
  * The `<dir>` scan for this context, computed on first ask and reused after.
  * See `RegistryGenContext.dirScans` for why a ctx is the right lifetime.
  */

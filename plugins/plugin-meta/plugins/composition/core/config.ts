@@ -165,9 +165,10 @@ export const compositionsConfig = defineConfig({
         // exactly as the disabled closure did. One mechanism decides membership now,
         // and it is this one.
         //
-        // The other five are the HOST-SERVICE PROVIDERS of a host without the
-        // computer — the PGlite database driver, the in-process job queue, and the
-        // memory stores for attachment bytes, logs and the push ledger. A desktop
+        // The other six are the HOST-SERVICE PROVIDERS of a host without the
+        // computer — the PGlite database driver, the in-process job queue, the
+        // memory stores for attachment bytes, logs and the push ledger, and the
+        // migration history bundled as text. A desktop
         // backend provides each of those services from a machine half
         // (`database#machine`, `jobs#machine`, …), and a host booting two
         // providers of one service fails boot (`assertHostServices`), so no app
@@ -184,6 +185,7 @@ export const compositionsConfig = defineConfig({
             "!infra.attachments.memory-blobs.**",
             "!primitives.log-channels.memory-persistence.**",
             "!tasks.tasks-core.seeded-push-ledger.**",
+            "!database.migrations.bundled-source.**",
           ],
           selectedContributors: [] as string[],
           extends: [] as string[],

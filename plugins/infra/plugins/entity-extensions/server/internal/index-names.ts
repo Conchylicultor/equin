@@ -26,7 +26,7 @@ export function extensionIndexName(tableName: string, suffix: string): string {
   }
 
   const name = `${tableName}_${suffix}_idx`;
-  const bytes = Buffer.byteLength(name, "utf8");
+  const bytes = new TextEncoder().encode(name).byteLength;
   if (bytes > MAX_IDENTIFIER_BYTES) {
     throw new Error(
       `defineExtension("${tableName}"): index name "${name}" is ${bytes} bytes, ` +

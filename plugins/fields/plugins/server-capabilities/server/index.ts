@@ -17,6 +17,7 @@ export type {
 } from "./internal/value-cast";
 
 export default {
+  portable: true,
   description:
     "Server-owned field-capability library: the Fields.Storage / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldValueTextCast — the latter answering a TEXT-stored value's cast AND the filter-language domain it reads in), and the storage eager self-registering index. A graph sink — never imports a capability barrel.",
 } satisfies ServerPluginDefinition;

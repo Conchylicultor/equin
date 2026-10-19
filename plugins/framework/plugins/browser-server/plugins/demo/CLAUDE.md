@@ -53,9 +53,11 @@ const server = createBrowserServer({ serve: servePack(pack), unserved: (k) => ne
   which the client sees as `loader-failed`.
 - **One serve call per declaration**, `changes: { fixed: { reason: "demo pack" } }`
   (`{ snapshot }` for a `load: "snapshot"` value).
-- **`DemoScenario`** = `{ id, app, route, pack: () => import("./pack") }` —
+- **`DemoScenario`** = `{ id, app, route, pack: () => import("./pack"), host? }` —
   the `Apps.App` id and app-relative route an `<AppEmbed>` opens, declared by
-  the app's owner (`apps/<app>/plugins/demo`).
+  the app's owner (`apps/<app>/plugins/demo`). `host` is
+  `() => import("@browser-host/<plugin path>")`: real server code in a worker
+  answering the keys its graph serves (see `demo/scope`).
 
 ## web/: the `Demo` slots
 

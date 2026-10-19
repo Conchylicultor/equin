@@ -4,6 +4,7 @@ import { textFieldType } from "@plugins/fields/plugins/text/core";
 import { decode } from "./internal/storage";
 
 export default {
+  portable: true,
   description:
     "Text field type: DB storage capability — a Postgres text column, decoded by the field's own schema so a narrowed text column (enumTextField) is derived rather than asserted.",
   contributions: [Fields.Storage({ type: textFieldType, decode })],

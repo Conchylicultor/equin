@@ -4,6 +4,7 @@ import { boolFieldType } from "@plugins/fields/plugins/bool/core";
 import { build } from "./internal/storage";
 
 export default {
+  portable: true,
   description:
     "Boolean field type: DB storage capability — maps to a Postgres boolean column.",
   contributions: [Fields.Storage({ type: boolFieldType, build })],

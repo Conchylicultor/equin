@@ -1,4 +1,4 @@
-import { relative } from "path";
+import { join, relative } from "path";
 import type {
   Check,
   CheckContext,
@@ -10,7 +10,9 @@ import {
   committedRegistryBundle,
   collectEntriesWithDeps,
   buildRegistryGenContext,
+  discoverBrowserHosts,
   formatGenerated,
+  renderBrowserHost,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
@@ -121,6 +123,25 @@ const check: Check = {
         ok: false,
         message: `${rel} is out of sync with what the "${MAIN_COMPOSITION_ID}" composition renders${detail}`,
         hint: `Run \`./singularity build\` and commit the regenerated file. If a listed plugin is one you did NOT expect to move: the committed registries are exactly "${MAIN_COMPOSITION_ID}"'s closure, so a plugin leaves them by being negated out of a manifest — check the \`base-exclusions\` row (whose negatives every composition inherits) and "${MAIN_COMPOSITION_ID}"'s own entry points \`["**"]\` in plugins/plugin-meta/plugins/composition/core/config.ts.`,
+      };
+    }
+
+    // A browser host's graph (`bin/browser-host.generated.ts`): the server
+    // barrels its declared plugins load, rendered from the same source.
+    for (const host of discoverBrowserHosts(repo)) {
+      const actual = await repo.read(host.generated);
+      const expected = await formatGenerated({
+        file: join(root, host.generated),
+        content: await renderBrowserHost(ctx, host),
+      });
+      if (actual === expected) continue;
+      return {
+        ok: false,
+        message:
+          actual === null
+            ? `${host.generated} is missing`
+            : `${host.generated} is out of sync with the server barrels ${host.declaration}'s plugins load`,
+        hint: "Run `./singularity build` and commit the regenerated file.",
       };
     }
     return { ok: true };

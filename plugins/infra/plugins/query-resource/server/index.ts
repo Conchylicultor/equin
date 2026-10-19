@@ -40,6 +40,7 @@ export type {
 } from "./internal/spec";
 
 export default {
+  portable: true,
   description:
     "Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, scope policy (the routes the change router serves it by, for a bounded window / point set, a whole ordered set declared `all` — compileAllCollection, grouped CTEs over rollup / children / closure joins — and a grouping), and client keyOf for live-state resources.",
 } satisfies ServerPluginDefinition;

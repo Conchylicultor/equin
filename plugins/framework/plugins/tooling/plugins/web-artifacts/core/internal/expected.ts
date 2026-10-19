@@ -47,6 +47,7 @@ export async function planExpectedFleet(opts: {
   targets: PlannedTarget[];
   registryDirName: string;
   entryDirName: string;
+  hosts: Array<{ specifier: string; dirName: string }>;
   metas: Map<string, ArtifactMeta>;
   missing: string[];
   builderSource: string;
@@ -74,6 +75,14 @@ export async function planExpectedFleet(opts: {
 
   for (const t of [...plan.webTargets, plan.entryTarget]) read(t.dirName);
   read(plan.registryTarget.dirName);
+  // A host whose recorded inputs no longer describe this tree has no address
+  // yet: it is missing until a build records one.
+  const hosts: Array<{ specifier: string; dirName: string }> = [];
+  for (const host of plan.hosts) {
+    if (host.dirName === null) missing.push(`browser host ${host.pluginPath}`);
+    else if (read(host.dirName) !== null)
+      hosts.push({ specifier: host.specifier, dirName: host.dirName });
+  }
 
   const barrelTargets = await resolveBarrelClosure({
     pluginsRoot,
@@ -91,6 +100,7 @@ export async function planExpectedFleet(opts: {
     targets: [...plan.webTargets, ...barrelTargets.values(), plan.entryTarget],
     registryDirName: plan.registryTarget.dirName,
     entryDirName: plan.entryTarget.dirName,
+    hosts,
     metas,
     missing: [...missing].sort(),
     builderSource: plan.identity.sourceDigest,
@@ -129,6 +139,7 @@ export async function computeExpectedComposition(opts: {
     targets: fleet.targets,
     registryDirName: fleet.registryDirName,
     vendorMeta,
+    hosts: fleet.hosts,
   });
   return {
     kind: "computed",

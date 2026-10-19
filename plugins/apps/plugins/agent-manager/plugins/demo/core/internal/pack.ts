@@ -19,100 +19,20 @@ import { queueRanks } from "@plugins/conversations/plugins/conversations-view/pl
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
 import { attemptSourceUrl } from "@plugins/tasks/plugins/task-source-url/core";
-import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { DEMO_CONVERSATION_ID } from "./scenario";
+import {
+  attemptId,
+  conversationId,
+  MIN,
+  STORIES,
+  taskId,
+  worktreePath,
+  type Story,
+} from "./stories";
 
-// The Agent Manager demo's story: a small notes app ("Lumen") with a handful of
-// agents at work. The open conversation is an agent that tracked down why dark
-// mode resets on reload, fixed it, tested it, and is waiting for review. The
-// queue holds three other agents mid-task; the Done list two finished ones.
-// Every id carries `demo`, so a request that leaked to the real server is
-// findable in its logs.
-
-const MIN = 60_000;
-const HOUR = 60 * MIN;
-
-const OPUS = ConversationModelSchema.parse("opus-5-5");
-const SONNET = ConversationModelSchema.parse("sonnet-5-5");
-
-type Status = "starting" | "working" | "waiting" | "gone" | "done";
-
-interface Story {
-  key: string;
-  task: string;
-  title: string;
-  status: Status;
-  model: typeof OPUS;
-  startedAgo: number;
-  updatedAgo: number;
-  endedAgo?: number;
-}
-
-/** One agent per task: conversation `conv-demo-<key>`, attempt `att-demo-<key>`, task `task-demo-<key>`. */
-const STORIES: readonly Story[] = [
-  {
-    key: "dark-mode",
-    task: "Dark mode resets after a reload",
-    title: "Persist the theme choice across reloads",
-    status: "waiting",
-    model: OPUS,
-    startedAgo: 38 * MIN,
-    updatedAgo: 2 * MIN,
-  },
-  {
-    key: "csv-export",
-    task: "Export a notebook as CSV",
-    title: "Add CSV export to the notebook menu",
-    status: "working",
-    model: OPUS,
-    startedAgo: 25 * MIN,
-    updatedAgo: 0.3 * MIN,
-  },
-  {
-    key: "flaky-picker",
-    task: "Date picker test fails on CI once a week",
-    title: "Pin the clock in the date picker test",
-    status: "working",
-    model: SONNET,
-    startedAgo: 12 * MIN,
-    updatedAgo: 1 * MIN,
-  },
-  {
-    key: "offline",
-    task: "Queue edits while offline",
-    title: "Design an offline edit queue",
-    status: "waiting",
-    model: OPUS,
-    startedAgo: 2 * HOUR,
-    updatedAgo: 40 * MIN,
-  },
-  {
-    key: "typo",
-    task: "Typo in the welcome email",
-    title: "Fix the welcome email typo",
-    status: "done",
-    model: SONNET,
-    startedAgo: 5 * HOUR,
-    updatedAgo: 4.8 * HOUR,
-    endedAgo: 4.8 * HOUR,
-  },
-  {
-    key: "search-speed",
-    task: "Search takes 2 s on large notebooks",
-    title: "Index note titles for search",
-    status: "done",
-    model: OPUS,
-    startedAgo: 26 * HOUR,
-    updatedAgo: 23 * HOUR,
-    endedAgo: 23 * HOUR,
-  },
-];
-
-const conversationId = (s: Story) => `conv-demo-${s.key}`;
-const attemptId = (s: Story) => `att-demo-${s.key}`;
-const taskId = (s: Story) => `task-demo-${s.key}`;
-const worktreePath = (s: Story) => `/home/demo/lumen/.worktrees/${s.key}`;
+// The Agent Manager demo's recorded answers, built from its stories
+// (`./stories`).
 
 export default definePack(({ ago }) => {
   const at = (ms: number) => new Date(ago(ms));

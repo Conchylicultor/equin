@@ -9,6 +9,7 @@ export type {
 export { EntityExtensions } from "./internal/entity-extensions";
 
 export default {
+  portable: true,
   description:
     "Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.",
   loadBearing: true,

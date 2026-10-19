@@ -1,4 +1,5 @@
 import { hash64 } from "@plugins/packages/plugins/string-hash/core";
+import { getBootMode } from "./boot-mode";
 import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
 import type {
   Resource as RtResource,
@@ -391,9 +392,11 @@ const runtime = createResourceRuntime({
   shouldPersist: (key) => liveStateSnapshotHooks?.shouldPersist(key) ?? false,
   captureWatermark: () => {
     if (!liveStateSnapshotHooks) {
-      // Unreachable: the runtime only calls this when shouldPersist returned true,
-      // which requires the hooks to be installed. Fail loudly if that invariant
-      // is ever violated rather than persisting a value with no watermark.
+      // A browser host boots no L2 (live-state-snapshot is desktop-only): its
+      // frames ship without a commit watermark, as central's do.
+      if (getBootMode() === "browser") return Promise.resolve(undefined);
+      // The desktop installs the hooks before anything is served; a read here
+      // without them is a boot-order bug, never "no watermark".
       throw new Error(
         "captureWatermark called before live-state-snapshot hooks installed",
       );

@@ -6,6 +6,11 @@
 // how a target's meta is obtained: the pipeline builds-or-reads, the check
 // reads-or-bails — injected via `ensure`.
 
+import {
+  BROWSER_HOST_FILE,
+  planBrowserHosts,
+  type BrowserHostPlan,
+} from "./browser-hosts";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -188,6 +193,8 @@ export interface RegistryTargetPlan {
 
 export interface FleetPlan {
   webEntries: RegistryEntryRecord[];
+  /** The fleet's browser hosts (`./browser-hosts.ts`). */
+  hosts: BrowserHostPlan[];
   deferredPaths: ReadonlySet<string>;
   identity: BuilderIdentity;
   webTargets: PlannedTarget[];
@@ -356,6 +363,11 @@ export async function planFleet(opts: {
 
   return {
     webEntries,
+    hosts: planBrowserHosts({
+      root,
+      pluginPaths: webEntries.map((e) => e.pluginPath),
+      identityHash: identity.identityHash,
+    }),
     deferredPaths: source.deferredPaths,
     identity,
     webTargets,
@@ -565,6 +577,8 @@ export function composeMapEntries(opts: {
   targets: PlannedTarget[];
   registryDirName: string;
   vendorMeta: VendorSetMeta;
+  /** The fleet's browser hosts, each at its store dir. */
+  hosts: readonly { specifier: string; dirName: string }[];
 }): ImportMapEntry[] {
   const entries: ImportMapEntry[] = [];
   for (const t of opts.targets) {
@@ -587,6 +601,12 @@ export function composeMapEntries(opts: {
     specifier: COMPOSITION_CONFIG_LAYER_SPECIFIER,
     url: `/artifacts/${opts.registryDirName}/${CONFIG_LAYER_ARTIFACT_FILE}`,
   });
+  for (const host of opts.hosts) {
+    entries.push({
+      specifier: host.specifier,
+      url: `/artifacts/${host.dirName}/${BROWSER_HOST_FILE}`,
+    });
+  }
   const vendorLink = vendorSetDirName(opts.vendorMeta.setHash);
   for (const [spec, file] of Object.entries(opts.vendorMeta.entries)) {
     entries.push({ specifier: spec, url: `/artifacts/${vendorLink}/${file}` });

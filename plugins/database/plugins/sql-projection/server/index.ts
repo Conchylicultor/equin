@@ -15,6 +15,7 @@ export {
 } from "./internal/errors";
 
 export default {
+  portable: true,
   description:
     "Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.",
 } satisfies ServerPluginDefinition;

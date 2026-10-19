@@ -107,3 +107,27 @@ export function isPlatformApi(specifier: string): boolean {
   }
   return PLATFORM_PACKAGE_PREFIXES.some((p) => specifier.startsWith(p));
 }
+
+/**
+ * Host-process globals a portable module may not READ: they exist under Bun
+ * and Node and are undefined in a browser realm, so an import-clean module
+ * using one still throws there at run time — `Buffer.byteLength(…)`,
+ * `process.memoryUsage()`, `Bun.hash(…)`. Matched as value uses only (a
+ * member access or a call; a type annotation naming `Buffer` is not one), and
+ * never as a property of something else (`x.process`). `process.env.NODE_ENV`
+ * is allowed: every bundler replaces it at build time.
+ */
+const PLATFORM_GLOBAL_RE =
+  /(?<![.\w$])(?:(Buffer)\s*[.(]|(Bun)\s*\.|(process)\s*\.(?!env\.NODE_ENV\b)|(__dirname|__filename)\b|(setImmediate)\s*\(|(require)\s*\()/g;
+
+/**
+ * The host-process globals `maskedSource` reads, by name, in first-use order.
+ * Pass source with comments and strings masked (parse-utils' `maskSource`).
+ */
+export function platformGlobalsIn(maskedSource: string): string[] {
+  const found = new Set<string>();
+  for (const m of maskedSource.matchAll(PLATFORM_GLOBAL_RE)) {
+    found.add(m.slice(1).find((g) => g !== undefined)!);
+  }
+  return [...found];
+}

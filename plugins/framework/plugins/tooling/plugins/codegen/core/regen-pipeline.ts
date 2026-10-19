@@ -1,5 +1,6 @@
 import { setPreBarrelImportGuard } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { generateBarrelStubs } from "./barrel-stubs-gen";
+import { generateBrowserHosts } from "./browser-host-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
 import { stampOverrideLegends } from "./override-legend-stamp";
 import { generatePluginDocs } from "./docgen";
@@ -121,6 +122,9 @@ export async function regenerateRegistryCodegen({
   );
   await onStep("eagerTier", "eager-tier manifest", () =>
     generateEagerTier({ root, ctx }),
+  );
+  await onStep("browserHosts", "browser host graphs", () =>
+    generateBrowserHosts(ctx),
   );
   return { renamedPackages };
 }

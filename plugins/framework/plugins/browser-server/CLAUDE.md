@@ -67,6 +67,37 @@ const server = createBrowserServer({
   peer's `closed(code, reason)` is told, as a real socket's close event — and
   stops following late descriptors.
 
+## core/: a server in a Web Worker (`port.ts`, `compose.ts`)
+
+- **`serveOverPort(port, boot)`** (worker side, `port` = the worker's `self`):
+  serves the `{ server, keys }` `boot` resolves to over the port — `ready`
+  with its keys, or `failed` with the error (rethrown in the worker too).
+  Requests and responses cross as plain data (bodies as transferred
+  `ArrayBuffer`s), notifications sockets as numbered connections carrying the
+  protocol frames verbatim.
+- **`portBrowserServer(worker)`** (page side) → `Promise<{ server, keys }>`:
+  a `BrowserServer` over that port, so `browserServerTransport` and the whole
+  app path are unchanged. Rejects with `PortHostBootError` when the worker
+  reports `failed`.
+- **`runtimeBrowserServer({ request, notifications })`** — a `BrowserServer`
+  over a resource runtime a host booted in this realm (server-core's
+  `bootBrowserHost`); `createBrowserServer` shares its socket wiring
+  (`runtime-socket.ts`).
+- **`composeBrowserServers(parts, fallback)`** — several servers behind ONE
+  transport, routed by key (every frame names its key): a key belongs to the
+  first part whose `keys` hold it, else to `fallback`. A `sub-batch` is split
+  per server (a `complete` one reaches every server); `unsub-tab` reaches all;
+  pings come from `fallback` only; a non-resource request tries `fallback` and
+  then each part while the answer is an unsupported refusal. A server may be
+  both a part and the fallback.
+
+The worker itself is a plugin's `bin/browser-host.ts`, built by web-artifacts
+(`browser-hosts.ts`) and imported by the page as `@browser-host/<pluginPath>`
+(typed by `core/browser-host.d.ts`: `start(): Worker`).
+
+Tests: `core/internal/port.test.ts` (a real `MessageChannel`: read, sub-ack, a
+boot failure on both ends, a composition routing a split `sub-batch`).
+
 ## web/: `browserServerTransport(server)`
 
 A `Transport` (`primitives/networking`). Make ONE per server: the scoped
@@ -104,7 +135,7 @@ Tests: `web/__tests__/browser-server.test.tsx` drives the real
     - `framework/http-router.RouteHandler`
     - `framework/resource-runtime.createResourceRuntime`
     - `framework/resource-runtime.KeyedResourceContract`
-    - `framework/resource-runtime.RuntimeSocket`
+    - `infra/endpoints.isUnsupportedEndpointRefusal`
     - `infra/endpoints.unsupportedEndpointResponse`
     - `network/live.bindExternalServe`
     - `network/live.LiveExternalServe`
@@ -119,7 +150,16 @@ Tests: `web/__tests__/browser-server.test.tsx` drives the real
     - `BrowserServerOptions`
     - `BrowserServerPeer`
     - `BrowserServerSocket`
-  - Exports (values): `createBrowserServer`
+    - `ComposedServer`
+    - `PortEnd`
+    - `PortServer`
+  - Exports (values):
+    - `composeBrowserServers`
+    - `createBrowserServer`
+    - `portBrowserServer`
+    - `PortHostBootError`
+    - `runtimeBrowserServer`
+    - `serveOverPort`
 - Cross-plugin:
   - Imported by: `framework/browser-server/demo/scope`
 - Sub-plugins:

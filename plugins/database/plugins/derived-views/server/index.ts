@@ -5,6 +5,7 @@ export type { DeclaredView } from "./internal/rebuild";
 export { View } from "./internal/contribution";
 
 export default {
+  portable: true,
   description:
     "Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.",
 } satisfies ServerPluginDefinition;

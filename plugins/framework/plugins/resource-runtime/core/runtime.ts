@@ -1683,8 +1683,10 @@ export interface ResourceRuntimeOptions {
    * alias's floor persists use the snapshot's BASE floor instead — the
    * watermark of the FULL read the snapshot was rebuilt from (C19).
    * Absent (central) ⇒ frames ship tokenless and nothing is persisted.
+   * Resolving `undefined` says the same for one host booted without the
+   * capability (a browser worker host has no L2): tokenless, not a failure.
    */
-  captureWatermark?: () => Promise<string>;
+  captureWatermark?: () => Promise<string | undefined>;
   /**
    * Persist a value to `live_state_snapshot` under (key, paramsKey) with its
    * catch-up floor. Called only for a value that is whole (never on a loader's

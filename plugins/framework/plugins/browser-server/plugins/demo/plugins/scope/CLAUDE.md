@@ -36,6 +36,12 @@ Demo.Route({ route: [markViewed.route, implement(markViewed, () => ({ kind: "not
   StrictMode's remount disposes the first) and disposed on unmount; one
   `browserServerTransport` per server; `<TransportProvider>` +
   `<NotificationsProvider>` around the children.
+- **A browser host** (`scenario.host`, a `@browser-host/…` import): the scope
+  starts its worker once the page server is built, shows `<Loading/>` until it
+  reports ready, then serves through `composeBrowserServers` — the keys the
+  pack and the backends serve first (the page), every other key the worker
+  serves, the page's `unserved` errors last. A host that fails to boot throws
+  to the error boundary; unmount disposes the server and terminates the worker.
 - **A key served twice** (pack and a contribution, or two contributions)
   throws naming both sources, before the runtime sees it.
 - **Unserved keys** fail `loader-failed` (`DemoMissingError`), never as skew.

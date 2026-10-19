@@ -5,7 +5,6 @@ import {
 import {
   createResourceRuntime,
   type KeyedResourceContract,
-  type RuntimeSocket,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   bindExternalServe,
@@ -18,6 +17,7 @@ import {
   onResourceDescriptorRegistered,
   type ResourceDescriptor,
 } from "@plugins/primitives/plugins/live-state/core";
+import { connectRuntimeSocket, type OpenSockets } from "./runtime-socket";
 
 // A server that runs in the page: the third host of the unified live API,
 // beside the Bun server and central. It contributes only what a host does —
@@ -165,44 +165,13 @@ export function createBrowserServer(opts: BrowserServerOptions): BrowserServer {
   });
 
   /** Every open socket, with how the server closes it from its side. */
-  const open = new Map<
-    BrowserServerSocket,
-    (code: number, reason: string) => void
-  >();
-  const ws = rt.notificationsWsHandler;
+  const open: OpenSockets = new Map();
 
   return {
     id: globalThis.crypto.randomUUID(),
     request,
-    connect(peer) {
-      let closed = false;
-      // One stable object per connection: the runtime keys its socket state by it.
-      const socket: RuntimeSocket = {
-        send: (frame) => {
-          if (!closed) peer.deliver(frame);
-        },
-      };
-      const end: BrowserServerSocket = {
-        send(frame) {
-          if (closed) {
-            throw new Error("browser-server: send on a closed socket");
-          }
-          ws.message(socket, frame);
-        },
-        close(code = 1000, reason = "") {
-          if (closed) return;
-          closed = true;
-          open.delete(end);
-          ws.close(socket, code, reason);
-        },
-      };
-      ws.open(socket);
-      open.set(end, (code, reason) => {
-        end.close(code, reason);
-        peer.closed(code, reason);
-      });
-      return end;
-    },
+    connect: (peer) =>
+      connectRuntimeSocket(rt.notificationsWsHandler, peer, open),
     dispose() {
       stopFollowing();
       for (const closeFromServer of [...open.values()]) {

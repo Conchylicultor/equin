@@ -43,6 +43,7 @@ export type { TriggerSpec, UnsafeTriggerByNameSpec } from "./internal/trigger";
 export { Trigger } from "./internal/trigger-contributions";
 
 export default {
+  portable: true,
   description:
     "Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger(). Contributes a BackgroundTriggerSource so the Background activity catalog names the events that start each job.",
   loadBearing: true,

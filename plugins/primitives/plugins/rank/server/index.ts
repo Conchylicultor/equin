@@ -16,6 +16,7 @@ export { rankText, withRank } from "@plugins/primitives/plugins/rank/core";
 export type { Ranked } from "@plugins/primitives/plugins/rank/core";
 
 export default {
+  portable: true,
   description:
     "Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.",
 } satisfies ServerPluginDefinition;

@@ -1,4 +1,4 @@
-import { physFootprintBytes } from "./memory-probe";
+import { heapMemory, physFootprintBytes } from "./memory-probe";
 
 export type PhaseId =
   | "register"
@@ -56,10 +56,16 @@ function toMb(bytes: number): number {
 /**
  * Real macOS phys_footprint in bytes, falling back to rss off-darwin (where
  * proc_pid_rusage has no equivalent). The host is the user's Mac, so this is
- * effectively always the true footprint.
+ * effectively always the true footprint. `null` on a host that installed
+ * neither probe (the browser worker).
  */
-function footprintBytes(): number {
-  return physFootprintBytes() ?? process.memoryUsage().rss;
+function footprintBytes(): number | null {
+  return physFootprintBytes() ?? heapMemory()?.rss ?? null;
+}
+
+function footprintMb(): number | undefined {
+  const bytes = footprintBytes();
+  return bytes === null ? undefined : toMb(bytes);
 }
 
 export function profilerStart(
@@ -72,7 +78,7 @@ export function profilerStart(
   idCounts.set(id, count + 1);
   const uniqueId = count === 0 ? id : `${id}:${count}`;
   const t0 = performance.now();
-  const physFootprintStartMb = toMb(footprintBytes());
+  const physFootprintStartMb = footprintMb();
   return () => {
     spans.push({
       id: uniqueId,
@@ -82,7 +88,7 @@ export function profilerStart(
       startMs: Math.round(t0 - bootStart),
       durationMs: Math.round(performance.now() - t0),
       physFootprintStartMb,
-      physFootprintEndMb: toMb(footprintBytes()),
+      physFootprintEndMb: footprintMb(),
     });
   };
 }
@@ -93,11 +99,13 @@ export function profilerStart(
  * (per-span deltas inside parallel phases overlap and are only directional).
  */
 export function recordMemoryCheckpoint(label: string): void {
-  const mem = process.memoryUsage();
+  // A host with no heap reader has nothing to record.
+  const mem = heapMemory();
+  if (mem === null) return;
   memoryCheckpoints.push({
     label,
     atMs: Math.round(performance.now() - bootStart),
-    physFootprintMb: toMb(footprintBytes()),
+    physFootprintMb: toMb(physFootprintBytes() ?? mem.rss),
     heapUsedMb: toMb(mem.heapUsed),
     externalMb: toMb(mem.external),
     arrayBuffersMb: toMb(mem.arrayBuffers),

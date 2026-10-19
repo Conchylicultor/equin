@@ -12,6 +12,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import "./internal/eager.generated";
 
 export default {
+  portable: true,
   description:
     "Eagerly evaluates every fields storage capability barrel via a generated side-effect manifest, so each self-registers into the server-capabilities eager index. Eval-time consumers import this for side-effect.",
 } satisfies ServerPluginDefinition;

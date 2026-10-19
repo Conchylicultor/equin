@@ -67,6 +67,8 @@ whose app surface still stands).
 - Server:
   - Contributes: `taskCategory` "prototypes"
   - Uses: `tasks/task-category.TaskCategory`
+- Cross-plugin:
+  - Imported by: `apps/agent-manager/demo`
 - Core:
   - Exports (values): `PROTOTYPES_CATEGORY_ID`
 - Sub-plugins:

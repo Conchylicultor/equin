@@ -9,6 +9,7 @@ import { bytea } from "./internal/bytea";
 export { bytea, bytesToBase64 } from "./internal/bytea";
 
 export default {
+  portable: true,
   description:
     "Bytes field type: DB storage capability — a Postgres bytea column whose wire form is unfolded base64 (bytesToBase64, declared once through sql-column's withWire).",
   contributions: [Fields.Storage({ type: bytesFieldType, stored: bytea })],

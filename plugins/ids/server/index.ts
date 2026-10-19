@@ -11,6 +11,7 @@ export {
 export type { IdColumnDeclaration } from "./internal/columns";
 
 export default {
+  portable: true,
   description:
     "The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).",
 } satisfies ServerPluginDefinition;

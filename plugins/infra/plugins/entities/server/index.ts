@@ -33,6 +33,7 @@ export type {
 } from "./internal/types";
 
 export default {
+  portable: true,
   description:
     "Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.",
 } satisfies ServerPluginDefinition;
