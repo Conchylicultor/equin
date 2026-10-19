@@ -13,7 +13,6 @@
     - `apps-core/tabs.usePlacementCapabilities`
     - `apps-core/tabs.useSurfaceMode`
     - `primitives/css/theme-boundary.useEnclosingAppThemeScope`
-    - `primitives/css/ui-kit.appThemeScope`
   - Exports (values):
     - `useAppSettingsScope`
     - `useRootThemeScope`

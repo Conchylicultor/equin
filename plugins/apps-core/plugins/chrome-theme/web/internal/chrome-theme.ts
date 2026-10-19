@@ -1,5 +1,5 @@
 import { both, defineFixedTheme } from "@plugins/ui/plugins/theme-engine/core";
-import { fixedThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { fixedThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-palette/core";
 import { sidebarPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/sidebar-palette/core";
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";

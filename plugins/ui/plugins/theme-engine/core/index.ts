@@ -9,10 +9,11 @@ export type {
   TokenGroupField,
   TokenGroupSchema,
   TokenGroupDescriptor,
+  TokenGroupSpec,
   TokenGroupFragment,
   TokenValues,
 } from "./define-token-group";
-export { themeSelectionConfig } from "./config";
+export { COLOR_MODE_SCOPE_ID, themeSelectionConfig } from "./config";
 export {
   ColorAdjustmentSchema,
   DEFAULT_THEME_ID,
@@ -35,3 +36,15 @@ export type {
   SkippedThemeValue,
   ThemeResolution,
 } from "./resolve-theme";
+export { transformValues } from "./transform";
+export {
+  THEME_STYLE_ID_PREFIXES,
+  assertUniqueFixedThemes,
+  fixedThemeGroupValues,
+  paintThemeStyles,
+  renderSubThemeBlock,
+  renderThemeGroupBlock,
+  subThemeBlocks,
+  themeStyleId,
+} from "./paint";
+export type { ThemePaintSelection, ThemePaintSources } from "./paint";

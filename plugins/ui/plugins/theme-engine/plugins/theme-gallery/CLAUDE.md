@@ -54,10 +54,10 @@ draws `ThemeCard`, `list` draws `ThemeSwatch`.
     - `QuickTheme.Section` "Theme" → `QuickThemePicker`
     - `item-actions` "rename" → `RenameThemeAction`
     - `item-actions` "delete" → `DeleteThemeAction`
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/theme-engine` ×8
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7
-    - `primitives/css/ui-kit` ×5
+    - `ui/theme-engine` ×7
+    - `primitives/css/ui-kit` ×4
     - `infra/endpoints` ×3
     - `primitives/live-state` ×3
     - `config_v2` ×2

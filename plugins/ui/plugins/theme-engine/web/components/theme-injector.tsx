@@ -1,19 +1,14 @@
 import { useEffect, useInsertionEffect, useMemo } from "react";
 import { useScopeMembership } from "@plugins/config_v2/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
-import { useActiveApp, Apps } from "@plugins/apps-core/web";
+import { Apps } from "@plugins/apps-core/web";
 import { useRootThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import {
   appThemeScope,
   fixedThemeScope,
   subThemeScope,
-  themeScopeSelectors,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  useConfiguredColorMode,
-  useResolvedColorMode,
-  type ColorMode,
-} from "../use-color-mode";
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { useResolvedColorMode, type ColorMode } from "../use-color-mode";
 import { ThemeEngine } from "../slots";
 import type { TokenGroupContribution } from "../slots";
 import {
@@ -21,54 +16,29 @@ import {
   type ResolvedThemeState,
 } from "../use-resolved-theme";
 import {
-  resolveFixedTheme,
-  subThemeBlockValues,
+  assertUniqueFixedThemes,
+  fixedThemeGroupValues,
+  renderSubThemeBlock,
+  renderThemeGroupBlock,
+  subThemeBlocks,
   themeSelectionConfig,
+  themeStyleId,
   type ColorAdjustment,
   type FixedTheme,
   type GroupValues,
   type SkippedThemeValue,
   type SubTheme,
   type TokenGroupFragment,
-  type TokenValues,
+  type TokenGroupSpec,
 } from "../../core";
-import { transformValues } from "../internal/transform";
-import { renderGroupBlock } from "../internal/serialize-vars";
 import {
   themeResolutionReportSink,
   type ThemeResolutionFault,
 } from "../internal/resolution-report-sink";
 import {
-  claimPaintStyle,
-  releasePaintStyle,
-  reportPaintStyle,
-  setPaintContext,
-} from "../internal/paint-cache-aggregator";
-
-// styleId for a token group's <style>, shared by the runtime injector, the
-// localStorage cache, and the pre-paint replay script (web-core/index.html).
-const styleIdFor = (groupId: string) => `theme-engine-${groupId}`;
-
-function assertComplete(
-  group: TokenGroupContribution,
-  light: Record<string, string>,
-  dark: Record<string, string>,
-): void {
-  const keys = Object.keys(group.descriptor.schema);
-  const missingIn = (values: Record<string, string>) =>
-    keys.filter((k) => values[k] === undefined || values[k] === "");
-  const missingLight = missingIn(light);
-  const missingDark = missingIn(dark);
-  if (missingLight.length === 0 && missingDark.length === 0) return;
-  const parts: string[] = [];
-  if (missingLight.length) parts.push(`light: ${missingLight.join(", ")}`);
-  if (missingDark.length) parts.push(`dark: ${missingDark.join(", ")}`);
-  throw new Error(
-    `Token group "${group.id}" produced incomplete values after merge — ` +
-      `missing/empty schema keys (${parts.join("; ")}). Every declared token ` +
-      `must resolve in both modes; check the group's schema defaults.`,
-  );
-}
+  claimPaintedStyle,
+  releasePaintedStyle,
+} from "../internal/painted-style-claims";
 
 function GroupStyle({
   group,
@@ -76,17 +46,14 @@ function GroupStyle({
   colorAdjust,
   scopeToken,
 }: {
-  group: TokenGroupContribution;
+  group: TokenGroupSpec;
   // This group's resolved values, or null while the scope's theme is still
   // pending (a resident theme source or the selection loading).
   values: GroupValues | null;
   colorAdjust: ColorAdjustment | null;
   // When set, this GroupStyle emits a *scoped* override block targeting
   // `[data-theme-scope="<scopeToken>"]` instead of global `:root`/`.dark` (e.g.
-  // `"app:home"` for one app with its own theme). Scoped blocks use a distinct
-  // `theme-scope-` style id; both scoped and unscoped blocks feed the pre-paint
-  // cache aggregator so a warm reload paints every visible surface (the desktop
-  // `:root` + each such app's scope) on frame 0.
+  // `"app:home"` for one app with its own theme), under a `theme-scope-` id.
   scopeToken?: string;
 }) {
   // Resolve straight to the final CSS text (null while the theme is pending).
@@ -97,40 +64,22 @@ function GroupStyle({
   // recalcs observe a theme-less document, which retriggered `transition-*` on
   // themed elements over and over: the visible "flicker until boot settles"
   // bug. A string dep makes no-op re-renders structurally unable to touch the DOM.
-  const text = useMemo(() => {
-    if (values === null || colorAdjust === null) return null;
-    // Loud completeness backstop: every declared token var must resolve in
-    // both modes. With schema defaults as the resolver's base this never fires
-    // for a sparse theme (by construction) — it catches developer bugs: an
-    // empty schema `default`.
-    assertComplete(group, values.light, values.dark);
-    return renderGroupBlock(
-      group.descriptor,
-      transformValues(values.light, colorAdjust),
-      transformValues(values.dark, colorAdjust),
-      scopeToken ? themeScopeSelectors(scopeToken) : undefined,
-    );
-  }, [values, colorAdjust, group, scopeToken]);
-
-  // Scoped overrides get a distinct `theme-scope-` id; the global path keeps the
-  // `theme-engine-` id the pre-paint replay and cache rely on. Both id families
-  // feed the aggregator and the claim-based prune set.
-  usePaintedStyle(
-    scopeToken ? scopedStyleIdFor(scopeToken, group.id) : styleIdFor(group.id),
-    text,
+  const text = useMemo(
+    () =>
+      values === null || colorAdjust === null
+        ? null
+        : renderThemeGroupBlock(group, values, colorAdjust, scopeToken),
+    [values, colorAdjust, group, scopeToken],
   );
+
+  usePaintedStyle(themeStyleId(group.id, scopeToken), text);
   return null;
 }
 
-// styleId for a scoped block — an app scope's or a sub-theme's. The
-// `theme-scope-` prefix is what the prune pass and the pre-paint replay match.
-const scopedStyleIdFor = (scopeToken: string, groupId: string) =>
-  `theme-scope-${scopeToken}-${groupId}`;
-
 /**
- * One painted `<style>` element: `text` in the document and in the pre-paint
- * cache, under `id`. `null` text (a theme still loading) leaves whatever is
- * there — the CSS replayed before first paint — untouched.
+ * One painted `<style>` element: `text` in the document, under `id`. `null` text
+ * (a theme still loading) leaves whatever is there — the CSS the server painted
+ * into the HTML for the first frame — untouched.
  *
  * Written in INSERTION effects, not layout effects: React runs every insertion
  * effect of a commit before any layout effect. A layout effect elsewhere in the
@@ -144,11 +93,11 @@ const scopedStyleIdFor = (scopeToken: string, groupId: string) =>
  */
 function usePaintedStyle(id: string, text: string | null): void {
   // Element lifecycle — runs once per id, NOT on theme changes. Adopts the
-  // replay-injected element in place (by id) or creates it, and claims the id
+  // server-painted element in place (by id) or creates it, and claims the id
   // so the prune pass keeps it. Claiming here (even while the theme is still
-  // pending) also protects the replayed pre-paint CSS from a prune triggered by
-  // an already-resolved sibling. The element is only removed on unmount —
-  // never as part of a content update.
+  // pending) also protects the server-painted CSS from a prune triggered by an
+  // already-resolved sibling. The element is only removed on unmount — never
+  // as part of a content update.
   useInsertionEffect(() => {
     let el = document.getElementById(id) as HTMLStyleElement | null;
     if (!el) {
@@ -156,25 +105,23 @@ function usePaintedStyle(id: string, text: string | null): void {
       el.id = id;
       document.head.appendChild(el);
     }
-    claimPaintStyle(id);
+    claimPaintedStyle(id);
     return () => {
       el.remove();
-      releasePaintStyle(id);
-      reportPaintStyle(id, null);
+      releasePaintedStyle(id);
     };
   }, [id]);
 
   // Content update — writes textContent in place only when the rendered CSS
-  // actually changed, and feeds the pre-paint cache. Runs after the lifecycle
-  // effect above (same commit, declaration order), so the element exists. While
-  // `text` is null (theme pending) it leaves the replayed pre-paint CSS
-  // untouched — painting a guess here would overwrite it with wrong values for
-  // one window.
+  // actually changed (the server painted the same bytes, so an adopted element
+  // is usually left alone). Runs after the lifecycle effect above (same commit,
+  // declaration order), so the element exists. While `text` is null (theme
+  // pending) it leaves the server-painted CSS untouched — painting a guess here
+  // would overwrite it with wrong values for one window.
   useInsertionEffect(() => {
     if (text === null) return;
     const el = document.getElementById(id);
     if (el && el.textContent !== text) el.textContent = text;
-    reportPaintStyle(id, text);
   }, [id, text]);
 }
 
@@ -199,7 +146,7 @@ function ScopeStyles({
       {groups.map((g) => (
         <GroupStyle
           key={g.id}
-          group={g}
+          group={g.descriptor}
           values={state.pending ? null : state.theme.groups[g.id]!}
           colorAdjust={state.pending ? null : state.theme.colorAdjust}
           scopeToken={scopeToken}
@@ -278,36 +225,10 @@ export function ThemeInjector() {
   // NOT follow it: it wears its own fixed theme (see FixedThemeStyles), so it
   // stays the same while the focused app changes underneath it.
   const rootScopeId = useRootThemeScope();
-  const rootIsGlobal = rootScopeId === undefined;
-
-  // The active app's path — the pre-paint cache key (one app is loaded per page).
-  const appPath = useActiveApp()?.app.basePath;
-
-  // Color mode is NOT scoped like the token values are: the `:root` tokens follow
-  // `rootScopeId` (the focused app), but `<html>.dark` is a single global class.
-  // Both reads below therefore go through use-color-mode, which names the owning
-  // scope once — neither takes one. That is load-bearing here: the cache is a
-  // PREDICTION of the class, replayed before React can apply it, so a cached mode
-  // read at a different scope than `resolved` paints the wrong scheme for the
-  // whole load. (It did: an app configured `light` under a global `dark` gave a
-  // white first frame that flipped to dark on mount.)
+  // `<html>.dark` is a single global class, owned by use-color-mode — the
+  // `:root` tokens follow `rootScopeId`, the class does not.
   const resolved = useResolvedColorMode();
-  // The CONFIGURED mode (not the resolved light/dark) is what the cache stores, so
-  // the pre-paint script can re-resolve "system" against live matchMedia each
-  // load — an OS appearance flip between sessions still paints the right scheme.
-  const colorMode = useConfiguredColorMode();
-
-  // Feed the active paint context to the module-level aggregator, which collects
-  // EVERY GroupStyle's CSS text (the `:root`/`.dark` blocks plus every other
-  // visible app's scope) and writes the per-app-path localStorage envelope the
-  // pre-paint script in web-core/index.html replays before first paint — so a
-  // warm reload paints every visible surface themed on frame 0. The aggregator
-  // owns the debounced microtask flush and the claim-based stale-element prune
-  // (both global and scoped ids). The context is set in the render body (not an
-  // effect) so it is current before the flush microtask. `rootIsGlobal` keys the
-  // `""` (global) cache entry: only a global focus owns it; a full-surface app
-  // focus writes only its own app-path key. See paint-cache-aggregator/theme-cache.
-  setPaintContext({ appPath, mode: colorMode, rootIsGlobal });
+  useDropRetiredThemeCache();
 
   // The `:root`/`.dark` blocks paint the FOCUSED full-surface app's theme
   // (`rootScopeId`) — the base layer, always emitted. A root scope without its
@@ -339,10 +260,9 @@ export function ThemeInjector() {
 //
 // It reuses the same resolution, color adjustment and completeness backstop as
 // the `:root` path (all live in ScopeStyles / GroupStyle) — only the selector and
-// style id differ (via `scopeToken`). Its GroupStyles feed the pre-paint cache
-// aggregator (under their `theme-scope-app:<id>-<group>` ids) just like the
-// `:root` path, so a warm reload paints this app's scope on frame 0. Deliberately
-// omits ColorModeApplier (light/dark stays global).
+// style id differ (via `scopeToken`). The server paints the same blocks into the
+// first frame's HTML for every app with its own theme. Deliberately omits
+// ColorModeApplier (light/dark stays global).
 //
 // Mounted centrally (one per registered app via AppScopeThemes at Core.Root),
 // not per open surface — so the degraded `AppTabsBody` fallback and the real
@@ -407,47 +327,11 @@ export function AppScopeThemes() {
 export function SubThemeStyles() {
   const subThemes = ThemeEngine.SubTheme.useContributions();
   const groups = ThemeEngine.TokenGroup.useContributions();
-  const groupsById = new Map(groups.map((g) => [g.id, g]));
-
-  const seen = new Set<string>();
-  const faults: ThemeResolutionFault[] = [];
-  const blocks: {
-    subTheme: SubTheme;
-    group: TokenGroupContribution;
-    fragment: TokenGroupFragment;
-  }[] = [];
-  for (const subTheme of subThemes) {
-    if (seen.has(subTheme.id)) {
-      throw new Error(
-        `[theme-engine] two sub-themes claim the id "${subTheme.id}" — sub-theme ids must be unique.`,
-      );
-    }
-    seen.add(subTheme.id);
-    for (const fragment of subTheme.fragments) {
-      const group = groupsById.get(fragment.groupId);
-      if (!group) {
-        faults.push({
-          kind: "unregistered-group",
-          themeId: subTheme.id,
-          groupId: fragment.groupId,
-        });
-        continue;
-      }
-      const unknown = Object.keys(fragment.light).filter(
-        (token) => !Object.hasOwn(group.descriptor.schema, token),
-      );
-      if (unknown.length > 0) {
-        faults.push({
-          kind: "unknown-tokens",
-          themeId: subTheme.id,
-          groupId: group.id,
-          tokens: unknown,
-        });
-      }
-      blocks.push({ subTheme, group, fragment });
-    }
-  }
-  useReportFaults(faults);
+  const { blocks, skipped } = subThemeBlocks(
+    subThemes,
+    groups.map((g) => g.descriptor),
+  );
+  useReportFaults(skippedFaults(skipped));
 
   return (
     <>
@@ -469,29 +353,14 @@ function SubThemeFragmentStyle({
   fragment,
 }: {
   subTheme: SubTheme;
-  group: TokenGroupContribution;
+  group: TokenGroupSpec;
   fragment: TokenGroupFragment;
 }) {
-  const scopeToken = subThemeScope(subTheme);
   const text = useMemo(
-    () =>
-      renderGroupBlock(
-        group.descriptor,
-        subThemeBlockValues(
-          group.descriptor,
-          definedValues(fragment.light),
-          "light",
-        ),
-        subThemeBlockValues(
-          group.descriptor,
-          definedValues(fragment.dark),
-          "dark",
-        ),
-        themeScopeSelectors(scopeToken),
-      ),
-    [group, fragment, scopeToken],
+    () => renderSubThemeBlock(group, fragment, subTheme),
+    [group, fragment, subTheme],
   );
-  usePaintedStyle(scopedStyleIdFor(scopeToken, group.id), text);
+  usePaintedStyle(themeStyleId(group.id, subThemeScope(subTheme)), text);
   return null;
 }
 
@@ -511,16 +380,7 @@ function SubThemeFragmentStyle({
 export function FixedThemeStyles() {
   const fixedThemes = ThemeEngine.FixedTheme.useContributions();
   const groups = ThemeEngine.TokenGroup.useContributions();
-
-  const seen = new Set<string>();
-  for (const fixed of fixedThemes) {
-    if (seen.has(fixed.id)) {
-      throw new Error(
-        `[theme-engine] two fixed themes claim the id "${fixed.id}" — fixed theme ids must be unique.`,
-      );
-    }
-    seen.add(fixed.id);
-  }
+  assertUniqueFixedThemes(fixedThemes);
 
   return (
     <>
@@ -538,9 +398,9 @@ function FixedThemeScopeStyles({
   fixed: FixedTheme;
   groups: readonly TokenGroupContribution[];
 }) {
-  const { theme, skipped } = useMemo(
+  const { values, colorAdjust, skipped } = useMemo(
     () =>
-      resolveFixedTheme(
+      fixedThemeGroupValues(
         fixed,
         groups.map((g) => g.descriptor),
       ),
@@ -551,26 +411,33 @@ function FixedThemeScopeStyles({
 
   return (
     <>
-      {groups.map((g) => {
-        const painted = theme.groups[g.id]![fixed.scheme];
-        return (
-          <GroupStyle
-            key={g.id}
-            group={g}
-            values={{ light: painted, dark: painted }}
-            colorAdjust={theme.colorAdjust}
-            scopeToken={scopeToken}
-          />
-        );
-      })}
+      {groups.map((g) => (
+        <GroupStyle
+          key={g.id}
+          group={g.descriptor}
+          values={values[g.id]!}
+          colorAdjust={colorAdjust}
+          scopeToken={scopeToken}
+        />
+      ))}
     </>
   );
 }
 
-function definedValues(values: TokenValues): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [token, value] of Object.entries(values)) {
-    if (value !== undefined) out[token] = value;
-  }
-  return out;
+/**
+ * The browser used to keep a copy of the painted theme CSS in localStorage, to
+ * replay before the first frame; the server now paints that frame. Removes the
+ * retired copy (up to ~1 MB of the origin's shared quota) once per load;
+ * delete once every browser has loaded a build with this.
+ */
+function useDropRetiredThemeCache(): void {
+  useEffect(() => {
+    try {
+      localStorage.removeItem("theme-engine:critical-css");
+    } catch (err) {
+      // Storage blocked (a sandboxed frame, disabled site data): nothing to drop.
+      if (err instanceof DOMException && err.name === "SecurityError") return;
+      throw err;
+    }
+  }, []);
 }

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Saved themes (tweakcn imports and custom themes) as a resident theme source, hydrated before first paint, plus useEditTheme — the one place theme edits land, copying a read-only theme into a custom one on first edit. Stores tweakcn imports and custom themes in one table, with the create / edit / rename / delete endpoints. A delete refuses while any scope still selects the theme unless asked to reassign those scopes to Default.
+- Description: Saved themes (tweakcn imports and custom themes) as a resident theme source, hydrated before first paint, plus useEditTheme — the one place theme edits land, copying a read-only theme into a custom one on first edit. Stores tweakcn imports and custom themes in one table, with the create / edit / rename / delete endpoints, and serves them to the server's first-frame theme painter (ThemeEngine.Source). A delete refuses while any scope still selects the theme unless asked to reassign those scopes to Default.
 - Web:
   - Contributes:
     - `Core.Boot`
@@ -30,6 +30,7 @@
     - `removeSavedTheme`
     - `useEditTheme`
 - Server:
+  - Contributes: `ThemeEngine.Source` "saved-themes"
   - Uses:
     - `config_v2.getConfig`
     - `config_v2.getConfigScopeIds`
@@ -40,6 +41,7 @@
     - `database/sql-column.parsedText`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `ui/theme-engine.ThemeEngine`
   - DB schema: `plugins/ui/plugins/theme-engine/plugins/saved-themes/server/internal/tables.ts`
   - Exports (values): `saveTheme`
   - Routes:

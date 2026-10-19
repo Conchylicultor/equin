@@ -1,8 +1,6 @@
 import type { CSSProperties, Ref } from "react";
-import {
-  appThemeScope,
-  PortalForwardProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { PortalForwardProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import type { PaneInternal } from "../pane";
 import { PaneResolveGuard } from "./pane-resolve-guard";

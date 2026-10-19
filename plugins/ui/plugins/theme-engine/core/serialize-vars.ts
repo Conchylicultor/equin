@@ -1,8 +1,9 @@
 // Pure serialization of a token group's resolved values into the
-// `:root{…}.dark{…}` CSS text that ThemeInjector injects per group. Extracted so
-// the runtime injector and the localStorage critical-css cache (replayed verbatim
-// by the pre-paint script before first paint) produce byte-identical text from
-// ONE function — the warm-reload no-flash guarantee depends on that identity.
+// `:root{…}.dark{…}` CSS text painted per group. One function for both painters
+// — the browser's ThemeInjector and the server that renders the first frame's
+// CSS into the HTML (see paint.ts) — so the browser adopts the server's
+// elements without rewriting them: the no-flash first frame depends on that
+// identity.
 
 type VarsDescriptor = { vars: Record<string, string> };
 
@@ -24,10 +25,7 @@ export function buildVarsBlock(
 /**
  * The full `<light>{…}<dark>{…}` block for one token group, given resolved values.
  *
- * `selectors` defaults to the global `:root` / `.dark` pair so the global injector
- * (and the localStorage cache that must stay byte-identical to it) keeps emitting
- * exactly the same text — the warm-reload no-flash guarantee depends on that
- * identity. Scoped callers (per-window desktop overrides) pass a `[data-theme-scope]`
+ * `selectors` defaults to the global `:root` / `.dark` pair. Scoped callers (per-window desktop overrides) pass a `[data-theme-scope]`
  * pair instead, e.g. `{ light: '[data-theme-scope="app:x"]', dark: '.dark [data-theme-scope="app:x"]' }`.
  */
 export function renderGroupBlock(

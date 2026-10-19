@@ -30,6 +30,7 @@ export default [
       "core/slot-declaration-guard.ts",
       "core/space-ramp-gen.ts",
       "core/test-helpers-doc.ts",
+      "core/theme-declarations-gen.ts",
       "core/token-group-vars-gen.ts",
       "core/write-generated.ts",
     ],

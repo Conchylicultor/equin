@@ -48,9 +48,6 @@ primitive.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/ui-kit.appThemeScope`
-    - `primitives/css/ui-kit.fixedThemeScope`
-    - `primitives/css/ui-kit.subThemeScope`
     - `primitives/live-state.foldResource`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`

@@ -1,7 +1,4 @@
-import type {
-  TokenGroupDescriptor,
-  TokenGroupFragment,
-} from "./define-token-group";
+import type { TokenGroupSpec, TokenGroupFragment } from "./define-token-group";
 import { duplicateGroupId } from "./theme";
 
 /**
@@ -105,7 +102,7 @@ function assertSameTokensInBothModes(
  * Within one group only: a derivation that crosses groups is not re-declared.
  */
 export function subThemeBlockValues(
-  group: TokenGroupDescriptor,
+  group: TokenGroupSpec,
   named: Record<string, string>,
   mode: "light" | "dark",
 ): Record<string, string> {

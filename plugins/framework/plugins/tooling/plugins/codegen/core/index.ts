@@ -126,6 +126,11 @@ export {
 } from "./reorderable-slots-gen";
 
 export {
+  renderThemeDeclarationsManifest,
+  themeDeclarationsManifestPath,
+} from "./theme-declarations-gen";
+
+export {
   companionManifestPath,
   renderCompanionManifest,
 } from "./companion-manifest-gen";

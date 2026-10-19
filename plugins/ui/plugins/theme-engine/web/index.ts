@@ -43,7 +43,6 @@ export {
   useSetColorMode,
 } from "./use-color-mode";
 export type { ColorMode, ConfiguredColorMode } from "./use-color-mode";
-export { transformValues } from "./internal/transform";
 
 export default {
   description:

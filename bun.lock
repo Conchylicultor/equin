@@ -3300,6 +3300,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-theme-bridge-reads",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/theme-declarations-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-theme-declarations-in-sync",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/token-group-vars-in-sync": {
       "name": "@singularity/plugin-framework-tooling-checks-token-group-vars-in-sync",
       "version": "0.0.1",
@@ -5759,6 +5763,10 @@
     },
     "plugins/shell/plugins/action-bar": {
       "name": "@singularity/plugin-shell-action-bar",
+      "version": "0.0.1",
+    },
+    "plugins/shell/plugins/document-head": {
+      "name": "@singularity/plugin-shell-document-head",
       "version": "0.0.1",
     },
     "plugins/shell/plugins/global-action-bar": {
@@ -8400,6 +8408,8 @@
 
     "@singularity/plugin-framework-tooling-checks-theme-bridge-reads": ["@singularity/plugin-framework-tooling-checks-theme-bridge-reads@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/theme-bridge-reads"],
 
+    "@singularity/plugin-framework-tooling-checks-theme-declarations-in-sync": ["@singularity/plugin-framework-tooling-checks-theme-declarations-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/theme-declarations-in-sync"],
+
     "@singularity/plugin-framework-tooling-checks-token-group-vars-in-sync": ["@singularity/plugin-framework-tooling-checks-token-group-vars-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/token-group-vars-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-tsconfig-alias-single-owner": ["@singularity/plugin-framework-tooling-checks-tsconfig-alias-single-owner@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/tsconfig-alias-single-owner"],
@@ -9531,6 +9541,8 @@
     "@singularity/plugin-shell": ["@singularity/plugin-shell@workspace:plugins/shell"],
 
     "@singularity/plugin-shell-action-bar": ["@singularity/plugin-shell-action-bar@workspace:plugins/shell/plugins/action-bar"],
+
+    "@singularity/plugin-shell-document-head": ["@singularity/plugin-shell-document-head@workspace:plugins/shell/plugins/document-head"],
 
     "@singularity/plugin-shell-global-action-bar": ["@singularity/plugin-shell-global-action-bar@workspace:plugins/shell/plugins/global-action-bar"],
 

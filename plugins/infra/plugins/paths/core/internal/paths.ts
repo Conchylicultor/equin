@@ -357,6 +357,17 @@ export const worktreeArtifacts = {
    */
   spec: (name: Namespace): string =>
     join(worktreeDataDir(name), WORKTREE_SPEC_FILE),
+  /**
+   * The SPA shell's server-rendered `<head>` fragments, per app path:
+   * `document-head.json`, `{ v: 1, entries: { "<basePath>" | "": html } }`.
+   * Written by the backend (`shell/document-head`'s machine half, atomically,
+   * whenever a source's answer changes); read by the Go gateway on every shell
+   * request, which splices the longest-matching entry into `index.html` — so a
+   * cold backend never delays the page. Like `spec`, the gateway spells the
+   * name again in Go. No `<id>` variant: one live answer per namespace.
+   */
+  documentHead: (name: Namespace): string =>
+    join(worktreeDataDir(name), "document-head.json"),
   /** Build profiler spans. `build-profile.json` or `build-profile-<id>.json`. */
   buildProfile: (name: Namespace, buildId?: string): string =>
     join(

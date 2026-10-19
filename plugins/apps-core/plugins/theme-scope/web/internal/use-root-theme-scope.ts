@@ -1,4 +1,4 @@
-import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { useActiveApp } from "@plugins/apps-core/web";
 import {
   useSurfaceMode,

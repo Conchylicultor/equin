@@ -35,8 +35,8 @@ export type ResolvedThemeState =
  * A scope without its own theme document reads the desktop's selection — the
  * inheritance is config_v2's, so this and the painter's membership gate agree.
  * Pending while the selection or any resident theme source is still loading:
- * the painter injects nothing then, so the pre-paint replayed CSS stays on
- * screen instead of being overwritten by a guess.
+ * the painter injects nothing then, so the server-painted first-frame CSS stays
+ * on screen instead of being overwritten by a guess.
  *
  * A FAILED selection read is never pending: theme resolution runs before first
  * paint, and an error that blanked it would blank the app. It folds to the last

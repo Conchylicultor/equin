@@ -78,12 +78,6 @@ export { Textarea } from "./components/ui/textarea";
 export {
   PortalThemeScopeProvider,
   usePortalThemeScope,
-  appThemeScope,
-  subThemeScope,
-  fixedThemeScope,
-  isAppThemeScope,
-  isSubThemeScope,
-  themeScopeSelectors,
 } from "./components/portal-theme-scope";
 export {
   PortalForwardProvider,

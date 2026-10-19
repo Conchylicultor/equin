@@ -10,8 +10,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   cn,
   ControlSizeProvider,
-  subThemeScope,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";

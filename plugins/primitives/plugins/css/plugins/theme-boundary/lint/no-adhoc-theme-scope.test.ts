@@ -46,7 +46,7 @@ ruleTester.run(
       // Reading the scope is not declaring a boundary.
       {
         code: `
-          import { usePortalThemeScope, appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+          import { usePortalThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
           const scope = usePortalThemeScope();
         `,
       },

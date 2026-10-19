@@ -1,4 +1,4 @@
-import type { ColorAdjustment } from "../../core";
+import type { ColorAdjustment } from "./theme";
 
 const OKLCH_RE =
   /oklch\(([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)((?:\s*\/\s*[^)]+)?)\)/g;

@@ -16,23 +16,22 @@ where its `var()` is substituted once, so a scoped app theme
 runtime var (`var(--x)`); Tailwind's own utilities already do. Enforced by the
 `theme-bridge-reads` check.
 
-There's no SSR, so the first painted frame is themed by two pre-paint mechanisms
-instead of by `ThemeInjector` (which only runs after React mounts + a config
-round-trip):
+The first painted frame is themed by the server, not by `ThemeInjector` (which
+only runs after React mounts + a config round-trip), and no browser storage is
+involved:
 
-- **Warm path (≈every load):** `ThemeInjector` writes the full resolved CSS for
-  every group to `localStorage` (`theme-engine`'s `theme-cache.ts`); a generic
-  inline replay script in `index.html` re-injects it as `<style id="theme-engine-*">`
-  before first paint. `ThemeInjector` then adopts those same elements by id, so
-  there is no flash and no duplicate styles. The envelope is keyed by app path
-  (a forked app's reload replays its own theme; the script longest-prefix matches
-  the pathname and falls back to the `""` global entry) and stores the *configured*
-  color mode, so the script re-resolves a `"system"` setting against the live OS
-  scheme each load.
-- **Cold path (first-ever visit, incognito, cleared storage):** no cache, so the
-  inline script only sets `color-scheme` from the OS preference and the page shows
-  the neutral `html { background: Canvas }` loading floor below (the app is blank
-  until boot completes anyway); `ThemeInjector` fills real values on mount.
+- **Every load:** the backend renders the theme CSS of every app path
+  (`theme-engine/server`, through `shell/document-head`'s `DocumentHead.Fragment`)
+  into `document-head.json`; the gateway splices the entry matching the requested
+  path into `index.html` before `</head>` as `<style id="theme-engine-*">` /
+  `theme-scope-*` elements plus a one-line `.dark` script (the *configured* mode,
+  so `"system"` resolves against the live OS scheme). `ThemeInjector` then adopts
+  those same elements by id — one renderer in `theme-engine/core` (`paint.ts`)
+  serves both, so there is no flash and no duplicate styles.
+- **No fragment (a backend that has never booted):** the inline script in
+  `index.html` only sets `.dark` from the OS preference and the page shows the
+  neutral `html { background: Canvas }` loading floor below; `ThemeInjector` fills
+  real values on mount.
 
 No static token values are reintroduced — the token group remains the single
 owner of every `--token`.

@@ -90,9 +90,7 @@ layout, graphite tone, underline tabs).
 - Description: The app chrome's fixed theme (graphite): the rail, tab bar, action bar and toasts wear it whichever app is focused, so the frame stays the same while the app inside changes.
 - Web:
   - Contributes: `ThemeEngine.FixedTheme` "Chrome"
-  - Uses:
-    - `primitives/css/ui-kit.fixedThemeScope`
-    - `ui/theme-engine.ThemeEngine`
+  - Uses: `ui/theme-engine.ThemeEngine`
   - Exports (values):
     - `chromeTheme`
     - `chromeThemeScope`

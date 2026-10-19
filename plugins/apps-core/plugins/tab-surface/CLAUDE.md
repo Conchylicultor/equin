@@ -24,16 +24,27 @@ indicator's `Pin` anchors to this surface's corner, and the app render fills it.
 
 - Description: Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
 - Web:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×7
-    - `apps-core/tabs` ×4
-    - `apps-core` ×2
-    - `primitives/sync-status` ×2
-    - `primitives/undo-redo` ×2
+  - Uses:
+    - `apps-core.Apps`
+    - `apps-core.isTabApp`
+    - `apps-core/tabs.appPathFor`
+    - `apps-core/tabs.loadScopePrefixFor`
+    - `apps-core/tabs.Tab`
+    - `apps-core/tabs.useTabs`
     - `primitives/css/theme-boundary.Theme`
-    - `primitives/css/ui-kit.appThemeScope`
     - `primitives/overlay/surface-overlay.SurfaceOverlayHost`
+    - `primitives/pane.PaneBasePathContext`
+    - `primitives/pane.PaneStore`
+    - `primitives/pane.PaneSurfaceProvider`
+    - `primitives/pane.useIndexMatch`
+    - `primitives/pane.usePaneTitle`
+    - `primitives/pane.useRoute`
+    - `primitives/pane.useRouteState`
     - `primitives/slot-render.renderIsolated`
+    - `primitives/sync-status.SyncStatusIndicator`
+    - `primitives/sync-status.SyncStatusProvider`
+    - `primitives/undo-redo.UndoRedoProvider`
+    - `primitives/undo-redo.useUndoRedoShortcuts`
   - Exports (values):
     - `AppTabsBody`
     - `SurfaceCore`

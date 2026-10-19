@@ -7,8 +7,8 @@ import { refreshSavedThemes } from "./refresh-saved-themes";
 // styles are injected until it resolves. Hydrating here makes the first
 // injection the correct one. Failure degrades gracefully (`ifUnavailable:
 // "continue"`): boot proceeds without it, the source stays pending, and the
-// pre-paint cached CSS (see theme-engine's paint-cache) keeps painting until the
-// endpoint resolves.
+// first-frame CSS the server painted into the HTML (theme-engine/server) keeps
+// painting until the endpoint resolves.
 export const savedThemesBootTask = Core.Boot({
   label: "Saved themes",
   ifUnavailable: "continue",

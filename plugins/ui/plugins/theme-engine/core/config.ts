@@ -25,3 +25,15 @@ export const themeSelectionConfig = defineConfig({
     }),
   },
 });
+
+/**
+ * THE config scope that owns light/dark: the desktop's (the base document,
+ * `undefined`). Per-scope dark mode is DEFERRED — `<html>.dark` is one global
+ * class — so every reader of color mode resolves here: the browser's class
+ * applier and color-mode hooks (`web/use-color-mode.ts`, which explains how
+ * readers at different scopes once painted a white frame under a dark page)
+ * and the server painting the first frame's class into the HTML. Named once,
+ * in core, so neither runtime can read another scope. When per-scope dark
+ * lands, this is the one place that changes.
+ */
+export const COLOR_MODE_SCOPE_ID: string | undefined = undefined;

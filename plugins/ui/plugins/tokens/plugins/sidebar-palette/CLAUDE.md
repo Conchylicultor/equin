@@ -17,7 +17,6 @@
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/theme-engine.ThemeEngine`
-    - `ui/theme-engine.transformValues`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`
     - `ui/theme-engine/theme-customizer.TokenRows`
     - `ui/theme-engine/theme-customizer.useTokenGroupEditor`

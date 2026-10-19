@@ -487,6 +487,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`table-defs-in-schema-glob`**
   - **`tailwind-scan-covers-classes`**
   - **`theme-bridge-reads`**
+  - **`theme-declarations-in-sync`**
   - **`token-group-vars-in-sync`**
   - **`tsconfig-alias-single-owner`**
   - **`type-check`** [exempt] — spawnTypeCheckWorker: the one way to start a repo-program type-check worker — admitted through the laned host-wide type-check-worker pool (background may hold one slot, the interactive lane the…

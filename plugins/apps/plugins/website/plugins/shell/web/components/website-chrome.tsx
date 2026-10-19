@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { PaneChrome, type AnyPane } from "@plugins/primitives/plugins/pane/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
-import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { SubTheme } from "@plugins/ui/plugins/theme-engine/core";
 import { equinDocumentTheme } from "../internal/theme";
 import { WebsitePage } from "./website-page";

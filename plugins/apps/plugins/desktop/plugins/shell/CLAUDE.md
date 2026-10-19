@@ -19,7 +19,6 @@
     - `primitives/css/center.Center`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/theme-boundary.Theme`
-    - `primitives/css/ui-kit.appThemeScope`
     - `primitives/css/ui-kit.cn`
     - `ui/theme-engine.ThemeEngine`
   - Exports (values):

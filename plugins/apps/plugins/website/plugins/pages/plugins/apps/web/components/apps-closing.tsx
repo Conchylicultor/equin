@@ -13,8 +13,8 @@ import {
   Button,
   ControlSizeProvider,
   Input,
-  subThemeScope,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { downloadPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/download/web";
 import { visionPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/vision/web";
 import { foundationsPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/foundations/web";

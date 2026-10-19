@@ -38,7 +38,6 @@ Tests: `web/__tests__/app-embed.test.tsx`.
     - `apps-core/tab-surface.SurfaceCore`
     - `apps-core/tabs.appPathFor`
     - `primitives/css/theme-boundary.Theme`
-    - `primitives/css/ui-kit.appThemeScope`
     - `primitives/css/ui-kit.cn`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/pane.AppNavBoundary`

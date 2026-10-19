@@ -9,3 +9,11 @@
  */
 export type { ClassName } from "./class-name";
 export { APP_STYLESHEET_PATH } from "./app-stylesheet";
+export {
+  appThemeScope,
+  fixedThemeScope,
+  isAppThemeScope,
+  isSubThemeScope,
+  subThemeScope,
+  themeScopeSelectors,
+} from "./theme-scope";

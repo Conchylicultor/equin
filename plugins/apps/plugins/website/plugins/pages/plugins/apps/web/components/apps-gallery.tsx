@@ -3,7 +3,7 @@ import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
-import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   APPS,
   CATEGORIES,

@@ -17,8 +17,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  appThemeScope,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { ExhibitView } from "./exhibit-view";
 import { ExhibitBadges, widthsOf } from "./exhibit-meta";

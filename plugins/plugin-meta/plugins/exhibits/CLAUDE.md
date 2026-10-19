@@ -144,8 +144,8 @@ the `Specimens.Specimen` dispatch slot — so there is one id namespace for both
     - `Pane.Register` "exhibit"
     - `Pane.Register` "exhibits"
     - `DebugApp.Sidebar` "Exhibits"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×6
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×5
     - `primitives/pane` ×4
     - `primitives/data-view` ×3
     - `primitives/css/badge` ×2

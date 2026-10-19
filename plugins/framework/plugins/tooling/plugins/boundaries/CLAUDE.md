@@ -219,7 +219,7 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
     - `framework/tooling/boundaries` (2 debt)
     - `framework/tooling/checks` (13 debt)
     - `framework/tooling/checks/type-check` (5 debt)
-    - `framework/tooling/codegen` (28 debt)
+    - `framework/tooling/codegen` (29 debt)
     - `framework/tooling/format` (5 debt)
     - `framework/tooling/guards` (10 debt)
     - `framework/tooling/import-closure` (1 debt)

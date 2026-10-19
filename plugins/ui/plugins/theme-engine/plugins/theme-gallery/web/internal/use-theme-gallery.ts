@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { Apps } from "@plugins/apps-core/web";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
-import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   combineResources,
   type GateInput,
@@ -11,12 +11,12 @@ import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/c
 import {
   resolveTheme,
   themeSelectionConfig,
+  transformValues,
   type Theme,
   type ThemeId,
 } from "@plugins/ui/plugins/theme-engine/core";
 import {
   ThemeEngine,
-  transformValues,
   useThemes,
   useThemeScopeId,
   useThemeSelections,

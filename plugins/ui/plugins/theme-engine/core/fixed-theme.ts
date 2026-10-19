@@ -1,7 +1,4 @@
-import type {
-  TokenGroupDescriptor,
-  TokenGroupFragment,
-} from "./define-token-group";
+import type { TokenGroupSpec, TokenGroupFragment } from "./define-token-group";
 import { resolveTheme, type ThemeResolution } from "./resolve-theme";
 import { duplicateGroupId, type ColorAdjustment, type Theme } from "./theme";
 
@@ -74,7 +71,7 @@ export function defineFixedTheme(def: {
  */
 export function resolveFixedTheme(
   fixed: FixedTheme,
-  groups: readonly TokenGroupDescriptor[],
+  groups: readonly TokenGroupSpec[],
 ): ThemeResolution {
   const theme: Theme = {
     id: fixed.id,

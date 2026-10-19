@@ -1,4 +1,4 @@
-import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { TabSurface } from "./tab-surface";

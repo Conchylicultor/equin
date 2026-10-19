@@ -1,8 +1,6 @@
 import { useCallback, useId, useState, type ReactNode } from "react";
-import {
-  appThemeScope,
-  cn,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import {
   AppNavBoundary,

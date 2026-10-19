@@ -93,11 +93,11 @@ hover.
     - `ThemeEngine.Theme` "equin"
     - `ThemeEngine.SubTheme` "equin document"
     - `ThemeEngine.SubTheme` "equin page heading"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×6
     - `primitives/css/spacing` ×3
-    - `primitives/css/ui-kit` ×3
     - `primitives/css/text` ×2
+    - `primitives/css/ui-kit` ×2
     - `apps-core.Apps`
     - `apps/deploy/analytics/collect.AnalyticsTracker`
     - `layouts/full-pane.FullPane`

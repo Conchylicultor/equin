@@ -1,7 +1,4 @@
-import type {
-  TokenGroupDescriptor,
-  TokenGroupFragment,
-} from "./define-token-group";
+import type { TokenGroupSpec, TokenGroupFragment } from "./define-token-group";
 import { mergeGroupValues } from "./merge-group-values";
 import {
   NEUTRAL_COLOR_ADJUSTMENT,
@@ -58,7 +55,7 @@ export interface ThemeResolution {
 export function resolveTheme(
   id: ThemeId,
   themesById: ReadonlyMap<ThemeId, Theme>,
-  groups: readonly TokenGroupDescriptor[],
+  groups: readonly TokenGroupSpec[],
 ): ThemeResolution {
   const chain = extendsChain(id, themesById);
   const groupsById = indexGroups(groups);
@@ -139,9 +136,9 @@ function extendsChain(
 }
 
 function indexGroups(
-  groups: readonly TokenGroupDescriptor[],
-): Map<string, TokenGroupDescriptor> {
-  const byId = new Map<string, TokenGroupDescriptor>();
+  groups: readonly TokenGroupSpec[],
+): Map<string, TokenGroupSpec> {
+  const byId = new Map<string, TokenGroupSpec>();
   for (const group of groups) {
     if (byId.has(group.id)) {
       throw new Error(
@@ -155,7 +152,7 @@ function indexGroups(
 
 /** The fragment's values for tokens the group declares, and the names of those it does not. */
 function splitBySchema(
-  group: TokenGroupDescriptor,
+  group: TokenGroupSpec,
   fragment: TokenGroupFragment,
 ): {
   known: { light: Record<string, string>; dark: Record<string, string> };

@@ -2663,7 +2663,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/center.Center`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/theme-boundary.Theme`
-              - `primitives/css/ui-kit.appThemeScope`
               - `primitives/css/ui-kit.cn`
               - `ui/theme-engine.ThemeEngine`
             - Exports (values):
@@ -3797,9 +3796,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 62 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
-              - `primitives/css/ui-kit` ×9
+            - Uses: 61 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×9
+              - `primitives/css/ui-kit` ×8
               - `infra/endpoints` ×6
               - `primitives/file-viewer` ×5
               - `primitives/pane` ×4
@@ -5758,7 +5757,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `plugin-meta/exhibits.useExhibit`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/theme-boundary.Theme`
-                  - `primitives/css/ui-kit.appThemeScope`
             - **`route`** — The route: and app: counterpart kinds for the prototype canvas's Real app frame: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
               - Web:
                 - Contributes:
@@ -9776,9 +9774,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `WebsiteHeader` "apps" → `AppsNavItem`
                   - `ThemeEngine.SubTheme` "equin closing"
                   - `ThemeEngine.SubTheme` "equin gallery"
-                - Uses: 32 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md)
+                - Uses: 31 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md)
                   - `apps/website/shell` ×5
-                  - `primitives/css/ui-kit` ×5
+                  - `primitives/css/ui-kit` ×4
                   - `primitives/pane` ×4
                   - `primitives/avatar` ×2
                   - `apps/website/pages/download.downloadPane`
@@ -9978,11 +9976,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThemeEngine.Theme` "equin"
               - `ThemeEngine.SubTheme` "equin document"
               - `ThemeEngine.SubTheme` "equin page heading"
-            - Uses: 26 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
               - `primitives/pane` ×6
               - `primitives/css/spacing` ×3
-              - `primitives/css/ui-kit` ×3
               - `primitives/css/text` ×2
+              - `primitives/css/ui-kit` ×2
               - `apps-core.Apps`
               - `apps/deploy/analytics/collect.AnalyticsTracker`
               - `layouts/full-pane.FullPane`
@@ -10120,7 +10118,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/tab-surface.SurfaceCore`
           - `apps-core/tabs.appPathFor`
           - `primitives/css/theme-boundary.Theme`
-          - `primitives/css/ui-kit.appThemeScope`
           - `primitives/css/ui-kit.cn`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/pane.AppNavBoundary`
@@ -10325,9 +10322,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`chrome-theme`** — The app chrome's fixed theme (graphite): the rail, tab bar, action bar and toasts wear it whichever app is focused, so the frame stays the same while the app inside changes.
       - Web:
         - Contributes: `ThemeEngine.FixedTheme` "Chrome"
-        - Uses:
-          - `primitives/css/ui-kit.fixedThemeScope`
-          - `ui/theme-engine.ThemeEngine`
+        - Uses: `ui/theme-engine.ThemeEngine`
         - Exports (values):
           - `chromeTheme`
           - `chromeThemeScope`
@@ -10452,16 +10447,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
     - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
       - Web:
-        - Uses: 21 symbols — full list in [`plugins/apps-core/plugins/tab-surface/REFERENCE.md`](../plugins/apps-core/plugins/tab-surface/REFERENCE.md)
-          - `primitives/pane` ×7
-          - `apps-core/tabs` ×4
-          - `apps-core` ×2
-          - `primitives/sync-status` ×2
-          - `primitives/undo-redo` ×2
+        - Uses:
+          - `apps-core.Apps`
+          - `apps-core.isTabApp`
+          - `apps-core/tabs.appPathFor`
+          - `apps-core/tabs.loadScopePrefixFor`
+          - `apps-core/tabs.Tab`
+          - `apps-core/tabs.useTabs`
           - `primitives/css/theme-boundary.Theme`
-          - `primitives/css/ui-kit.appThemeScope`
           - `primitives/overlay/surface-overlay.SurfaceOverlayHost`
+          - `primitives/pane.PaneBasePathContext`
+          - `primitives/pane.PaneStore`
+          - `primitives/pane.PaneSurfaceProvider`
+          - `primitives/pane.useIndexMatch`
+          - `primitives/pane.usePaneTitle`
+          - `primitives/pane.useRoute`
+          - `primitives/pane.useRouteState`
           - `primitives/slot-render.renderIsolated`
+          - `primitives/sync-status.SyncStatusIndicator`
+          - `primitives/sync-status.SyncStatusProvider`
+          - `primitives/undo-redo.UndoRedoProvider`
+          - `primitives/undo-redo.useUndoRedoShortcuts`
         - Exports (values):
           - `AppTabsBody`
           - `SurfaceCore`
@@ -10536,7 +10542,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/tabs.usePlacementCapabilities`
           - `apps-core/tabs.useSurfaceMode`
           - `primitives/css/theme-boundary.useEnclosingAppThemeScope`
-          - `primitives/css/ui-kit.appThemeScope`
         - Exports (values):
           - `useAppSettingsScope`
           - `useRootThemeScope`
@@ -24427,7 +24432,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (13 debt)
               - `framework/tooling/checks/type-check` (5 debt)
-              - `framework/tooling/codegen` (28 debt)
+              - `framework/tooling/codegen` (29 debt)
               - `framework/tooling/format` (5 debt)
               - `framework/tooling/guards` (10 debt)
               - `framework/tooling/import-closure` (1 debt)
@@ -24657,6 +24662,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`table-defs-in-schema-glob`**
             - **`tailwind-scan-covers-classes`**
             - **`theme-bridge-reads`**
+            - **`theme-declarations-in-sync`**
             - **`token-group-vars-in-sync`**
             - **`tsconfig-alias-single-owner`**
             - **`type-check`** — spawnTypeCheckWorker: the one way to start a repo-program type-check worker — admitted through the laned host-wide type-check-worker pool (background may hold one slot, the interactive lane the other) and the holder's grant, demoted only for a background-lane holder.
@@ -24829,6 +24835,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderPluginReferenceMd`
               - `renderReorderableSlotsManifest`
               - `renderSpaceRamp`
+              - `renderThemeDeclarationsManifest`
               - `renderTokenGroupVarsManifest`
               - `reorderableSlotsManifestPath`
               - `resolveImportSpecifier`
@@ -24845,6 +24852,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `standardPluginDirs`
               - `standardPluginDirsFromSnapshot`
               - `standardPluginDirsIn`
+              - `themeDeclarationsManifestPath`
               - `tokenGroupVarsManifestPath`
               - `withPackageName`
               - `writeGenerated`
@@ -24860,7 +24868,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shape --spacing`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `core/app-css-utilities.ts`, `core/authored-override-seed.ts`, `core/barrel-free-tree.ts`, `core/barrel-stubs-gen.ts`, `core/companion-manifest-gen.ts`, `core/config-git-layer-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/enriched-tree.ts`, `core/exempt-rule-ids-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/reorderable-slots-gen.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `core/app-css-utilities.ts`, `core/authored-override-seed.ts`, `core/barrel-free-tree.ts`, `core/barrel-stubs-gen.ts`, `core/companion-manifest-gen.ts`, `core/config-git-layer-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/enriched-tree.ts`, `core/exempt-rule-ids-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/reorderable-slots-gen.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/theme-declarations-gen.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
@@ -33637,8 +33645,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "exhibit"
           - `Pane.Register` "exhibits"
           - `DebugApp.Sidebar` "Exhibits"
-        - Uses: 28 symbols — full list in [`plugins/plugin-meta/plugins/exhibits/REFERENCE.md`](../plugins/plugin-meta/plugins/exhibits/REFERENCE.md)
-          - `primitives/css/ui-kit` ×6
+        - Uses: 27 symbols — full list in [`plugins/plugin-meta/plugins/exhibits/REFERENCE.md`](../plugins/plugin-meta/plugins/exhibits/REFERENCE.md)
+          - `primitives/css/ui-kit` ×5
           - `primitives/pane` ×4
           - `primitives/data-view` ×3
           - `primitives/css/badge` ×2
@@ -36585,7 +36593,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
-              - `primitives/css/ui-kit.isAppThemeScope`
               - `primitives/css/ui-kit.PortalThemeScopeProvider`
               - `primitives/css/ui-kit.SURFACE_LEVELS`
               - `ui/icons.IconScopeProvider`
@@ -36694,7 +36701,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TooltipSide`
               - `WithTooltipProps`
             - Exports (values):
-              - `appThemeScope`
               - `Button`
               - `ButtonGroup`
               - `buttonTextClassFor`
@@ -36726,11 +36732,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DropdownMenuSubContent`
               - `DropdownMenuSubTrigger`
               - `DropdownMenuTrigger`
-              - `fixedThemeScope`
               - `iconSizeFor`
               - `Input`
-              - `isAppThemeScope`
-              - `isSubThemeScope`
               - `MENU_LABEL`
               - `MENU_LABEL_PAINT`
               - `MENU_ROW`
@@ -36797,12 +36800,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SidebarTrigger`
               - `SidewaysScrollProvider`
               - `SingleLineProvider`
-              - `subThemeScope`
               - `SURFACE_LEVELS`
               - `Textarea`
               - `textSizeFor`
               - `textStepFor`
-              - `themeScopeSelectors`
               - `Tooltip`
               - `TooltipCardContent`
               - `TooltipContent`
@@ -36832,17 +36833,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 417 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 412 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×105
-              - `apps` ×92
+              - `apps` ×91
               - `conversations` ×55
               - `page` ×25
               - `debug` ×22
-              - `ui` ×21
+              - `ui` ×20
               - `tasks` ×15
               - `fields` ×11
-              - `apps-core` ×10
               - `plugin-meta` ×10
+              - `apps-core` ×7
               - `reorder` ×6
               - `build` ×5
               - `review` ×5
@@ -36869,7 +36870,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `viewport-overlay/no-adhoc-viewport-overlay` — `web/components/ui` (sanctioned)
           - Core:
             - Exports (types): `ClassName`
-            - Exports (values): `APP_STYLESHEET_PATH`
+            - Exports (values):
+              - `APP_STYLESHEET_PATH`
+              - `appThemeScope`
+              - `fixedThemeScope`
+              - `isAppThemeScope`
+              - `isSubThemeScope`
+              - `subThemeScope`
+              - `themeScopeSelectors`
         - **`viewport-overlay`** — Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor. Also owns the runtime auditor for the same invariant — the containing-block + stacking-context ancestor walk (assertViewportEscape / useViewportEscape), which reports the two ways a fixed box silently stops being viewport-relative.
           - Web:
             - Uses:
@@ -40498,8 +40506,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `welcomePane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-        - Uses: 32 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `primitives/css/ui-kit` ×4
+        - Uses: 31 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `primitives/css/ui-kit` ×3
           - `primitives/live-state` ×3
           - `primitives/slot-render` ×3
           - `primitives/css/scroll` ×2
@@ -44025,6 +44033,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/global-action-bar`
           - `shell/notifications`
           - `ui/theme-engine/quick-theme`
+    - **`document-head`** — What the SPA shell's <head> must carry before the first frame, per app path: the DocumentHead.Fragment contribution a server plugin renders its head HTML through (the theme's CSS), and the merge of every source into one fragment per path.
+      - Cross-plugin:
+        - Imported by: `ui/theme-engine`
+      - Server:
+        - Exports (types):
+          - `HeadFragments`
+          - `HeadFragmentSource`
+        - Exports (values):
+          - `DocumentHead`
+          - `matchHeadFragment`
+          - `mergeHeadFragments`
     - **`global-action-bar`** — Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the surface mode: a docked right-aligned strip in the tab bar (Apps.TabBarActions) in desktop and tab modes, and a floating top-right overlay (Core.Root) in fullscreen (solo), where the tab bar is hidden. Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.
       - Web:
         - Contributes:
@@ -47269,7 +47288,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-    - **`theme-engine`** — Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, and the injector that resolves one theme per scope into CSS variables.
+    - **`theme-engine`** — Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, and the injector that resolves one theme per scope into CSS variables. Registers the theme selection config, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes and the selections, re-rendered when any of them changes.
       - Web:
         - Slots:
           - `ThemeEngine.VariantGroup`
@@ -47296,7 +47315,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.Theme` "Default"
         - Uses:
           - `apps-core.Apps`
-          - `apps-core.useActiveApp`
           - `apps-core/theme-scope.useRootThemeScope`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
@@ -47304,10 +47322,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.useScopeMembership`
           - `config_v2.useSetConfig`
           - `fields/dynamic-enum/config.DynamicEnum`
-          - `primitives/css/ui-kit.appThemeScope`
-          - `primitives/css/ui-kit.fixedThemeScope`
-          - `primitives/css/ui-kit.subThemeScope`
-          - `primitives/css/ui-kit.themeScopeSelectors`
           - `primitives/live-state.foldResource`
           - `primitives/slot-render.defineRenderSlot`
         - Exports (types):
@@ -47329,7 +47343,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `themeResolutionReportSink`
           - `ThemeScope`
           - `ThemeScopeProvider`
-          - `transformValues`
           - `useColorMode`
           - `useResolvedColorMode`
           - `useResolvedTheme`
@@ -47339,13 +47352,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useThemeSelections`
           - `whenNoScopeSelects`
       - Server:
-        - Contributes: `ConfigV2.Register` "theme"
-        - Uses: `config_v2.ConfigV2`
+        - Contributes:
+          - `ConfigV2.Register` "theme"
+          - `DocumentHead.Fragment` "theme-engine"
+        - Uses:
+          - `config_v2.ConfigV2`
+          - `config_v2.getConfig`
+          - `config_v2.getConfigScopeIds`
+          - `config_v2.onConfigDirChange`
+          - `shell/document-head.DocumentHead`
+          - `shell/document-head.HeadFragments`
+        - Exports (types): `ServerThemeSource`
+        - Exports (values): `ThemeEngine`
       - Core:
         - Uses:
           - `config_v2.defineConfig`
           - `fields/dynamic-enum/config.dynamicEnumField`
           - `fields/enum/config.enumField`
+          - `primitives/css/ui-kit.appThemeScope`
+          - `primitives/css/ui-kit.fixedThemeScope`
+          - `primitives/css/ui-kit.subThemeScope`
+          - `primitives/css/ui-kit.themeScopeSelectors`
         - Exports (types):
           - `ColorAdjustment`
           - `FixedTheme`
@@ -47355,38 +47382,53 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SubTheme`
           - `Theme`
           - `ThemeId`
+          - `ThemePaintSelection`
+          - `ThemePaintSources`
           - `ThemeResolution`
           - `ThemeSource`
           - `TokenGroupDescriptor`
           - `TokenGroupField`
           - `TokenGroupFragment`
           - `TokenGroupSchema`
+          - `TokenGroupSpec`
           - `TokenValues`
         - Exports (values):
+          - `assertUniqueFixedThemes`
           - `both`
+          - `COLOR_MODE_SCOPE_ID`
           - `ColorAdjustmentSchema`
           - `DEFAULT_THEME_ID`
           - `defineFixedTheme`
           - `defineSubTheme`
           - `defineTheme`
           - `defineTokenGroup`
+          - `fixedThemeGroupValues`
           - `isBuiltInThemeId`
           - `lightOnly`
           - `mergeGroupValues`
           - `NEUTRAL_COLOR_ADJUSTMENT`
+          - `paintThemeStyles`
+          - `renderSubThemeBlock`
+          - `renderThemeGroupBlock`
           - `resolveFixedTheme`
           - `resolveTheme`
+          - `subThemeBlocks`
           - `subThemeBlockValues`
+          - `THEME_STYLE_ID_PREFIXES`
           - `themeSelectionConfig`
+          - `themeStyleId`
           - `TokenGroupFragmentSchema`
           - `TokenGroupFragmentsSchema`
           - `tokenGroupMatchesSearch`
           - `tokenVarName`
+          - `transformValues`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/density --chrome-pad-x`
-          - `ui/tokens/shadow --shadow`
-          - `ui/tokens/shape --spacing`
+        - Uses tokens: 44 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+          - `ui/tokens/color-palette` ×19
+          - `ui/tokens/density` ×18
+          - `ui/tokens/type-scale` ×4
+          - `ui/tokens/shadow` ×2
+          - `ui/tokens/shape --radius`
         - Imported by: 41 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×27
           - `apps` ×11
@@ -47426,7 +47468,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `ui/theme-engine/theme-gallery`
               - `ui/theme-toggle`
-        - **`saved-themes`** — Saved themes (tweakcn imports and custom themes) as a resident theme source, hydrated before first paint, plus useEditTheme — the one place theme edits land, copying a read-only theme into a custom one on first edit. Stores tweakcn imports and custom themes in one table, with the create / edit / rename / delete endpoints. A delete refuses while any scope still selects the theme unless asked to reassign those scopes to Default.
+        - **`saved-themes`** — Saved themes (tweakcn imports and custom themes) as a resident theme source, hydrated before first paint, plus useEditTheme — the one place theme edits land, copying a read-only theme into a custom one on first edit. Stores tweakcn imports and custom themes in one table, with the create / edit / rename / delete endpoints, and serves them to the server's first-frame theme painter (ThemeEngine.Source). A delete refuses while any scope still selects the theme unless asked to reassign those scopes to Default.
           - Web:
             - Contributes:
               - `Core.Boot`
@@ -47452,6 +47494,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `removeSavedTheme`
               - `useEditTheme`
           - Server:
+            - Contributes: `ThemeEngine.Source` "saved-themes"
             - Uses:
               - `config_v2.getConfig`
               - `config_v2.getConfigScopeIds`
@@ -47462,6 +47505,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/sql-column.parsedText`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
+              - `ui/theme-engine.ThemeEngine`
             - DB schema: `plugins/ui/plugins/theme-engine/plugins/saved-themes/server/internal/tables.ts`
             - Exports (values): `saveTheme`
             - Routes:
@@ -47591,10 +47635,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `QuickTheme.Section` "Theme" → `QuickThemePicker`
               - `item-actions` "rename" → `RenameThemeAction`
               - `item-actions` "delete" → `DeleteThemeAction`
-            - Uses: 42 symbols — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md)
-              - `ui/theme-engine` ×8
+            - Uses: 40 symbols — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md)
               - `primitives/data-view` ×7
-              - `primitives/css/ui-kit` ×5
+              - `ui/theme-engine` ×7
+              - `primitives/css/ui-kit` ×4
               - `infra/endpoints` ×3
               - `primitives/live-state` ×3
               - `config_v2` ×2
@@ -47738,7 +47782,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine.transformValues`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
               - `ui/theme-engine/theme-customizer.TokenRows`
               - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
@@ -47748,14 +47791,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 486 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 487 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×107
               - `conversations` ×85
               - `primitives` ×75
               - `debug` ×34
               - `page` ×32
               - `plugin-meta` ×26
-              - `ui` ×22
+              - `ui` ×23
               - `tasks` ×14
               - `fields` ×12
               - `reports` ×12
@@ -47929,9 +47972,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.SegmentedControl`
-              - `primitives/css/ui-kit.appThemeScope`
-              - `primitives/css/ui-kit.fixedThemeScope`
-              - `primitives/css/ui-kit.subThemeScope`
               - `primitives/live-state.foldResource`
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
@@ -48222,7 +48262,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine.transformValues`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
               - `ui/theme-engine/theme-customizer.TokenRows`
               - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
@@ -48266,15 +48305,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 228 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 229 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×59
               - `primitives` ×38
               - `conversations` ×37
               - `debug` ×16
               - `plugin-meta` ×15
               - `page` ×12
+              - `ui` ×9
               - `tasks` ×8
-              - `ui` ×8
               - `fields` ×4
               - `review` ×4
               - `auth` ×3

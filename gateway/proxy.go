@@ -128,9 +128,17 @@ func serveArtifact(w http.ResponseWriter, r *http.Request, file string) {
 
 // serveShell serves the SPA shell, and on a document load starts the backend
 // alongside it (prestartBackend). The only place handleStatic serves the shell,
-// so the direct hit and the SPA fallback cannot disagree about prestarting.
+// so the direct hit and the SPA fallback cannot disagree about prestarting or
+// about the head the backend rendered for the first frame (document_head.go:
+// the theme's CSS for this path, spliced in before </head>).
 func serveShell(w http.ResponseWriter, r *http.Request, wt *Worktree, indexPath string) {
 	prestartBackend(r, wt)
+	w.Header().Set("Cache-Control", "no-cache")
+	// An explicit /index.html is redirected to the directory form by the plain
+	// serve (http.ServeFile); the document itself is only ever served at a path.
+	if !strings.HasSuffix(r.URL.Path, indexURL) && serveShellWithHead(w, r, wt, indexPath) {
+		return
+	}
 	serveIndex(w, r, indexPath)
 }
 

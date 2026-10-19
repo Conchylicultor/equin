@@ -60,6 +60,15 @@ export interface TokenGroupDescriptor<
   }): TokenGroupFragment<T>;
 }
 
+/**
+ * A token group as data: what resolving and painting a theme reads (its id, the
+ * schema defaults and the CSS variable per token), without the typed
+ * `fragment` builder authors use. Every `TokenGroupDescriptor` is one; the
+ * server, which receives the groups as generated data, holds only this.
+ */
+export type TokenGroupSpec<T extends TokenGroupSchema = TokenGroupSchema> =
+  Pick<TokenGroupDescriptor<T>, "id" | "schema" | "vars">;
+
 /** The CSS custom property a token-group schema key paints: `--` + its kebab case. */
 export function tokenVarName(key: string): string {
   return `--${key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`;

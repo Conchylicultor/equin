@@ -9,7 +9,7 @@ import {
   resolveAppForPath,
   type ActiveApp,
 } from "@plugins/apps-core/web";
-import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type {

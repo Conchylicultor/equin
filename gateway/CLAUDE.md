@@ -34,6 +34,15 @@ everything else  → static file from web/dist (SPA fallback for extensionless p
                    serving the shell to a document navigation also starts the backend in the background
 ```
 
+**The shell carries a server-rendered head.** `serveShell` splices the entry of
+`<registry-dir>/<name>/document-head.json` (written by the backend —
+`shell/document-head`) whose key is the longest app path the request is in
+(`""` otherwise) before `</head>`: the theme's CSS for the first frame
+(`document_head.go`). The bytes then vary by path and theme, so the response
+carries an ETag hashed from them (still `no-cache`: unchanged → 304). No file,
+or one this gateway cannot read (logged at error) → the plain shell. An
+explicit `/index.html` still gets `http.ServeFile`'s redirect.
+
 `/api/*` and `/ws/*` are the same prefixes as the Vite dev proxy in `web/vite.config.ts`.
 
 ## Worktree Registry
@@ -97,6 +106,7 @@ gateway/
 ├── worktree.go    # Worktree state machine (Idle→Starting→Running→Restarting→Stopping), spawn, lifecycle
 ├── registry.go    # Map of worktrees: dir-level fsnotify watch + lazy Resolve + periodic Reconcile, idle sweeper, stale-socket sweep
 ├── supervisor.go  # Generic service supervisor: start commands, readiness probes, watchdog
+├── document_head.go # The backend-rendered <head> fragment spliced into the SPA shell
 └── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```
 

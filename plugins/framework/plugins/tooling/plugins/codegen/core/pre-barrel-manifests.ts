@@ -18,6 +18,10 @@ import {
 } from "./fields-eager-gen";
 import { iconManifestPath, renderIconManifest } from "./icon-manifest-gen";
 import {
+  renderThemeDeclarationsManifest,
+  themeDeclarationsManifestPath,
+} from "./theme-declarations-gen";
+import {
   companionManifestPath,
   renderCompanionManifest,
 } from "./companion-manifest-gen";
@@ -138,16 +142,26 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
  * later. `pre-barrel-manifests-complete` enforces both halves: reachable from a
  * barrel ⇒ registered somewhere, and registered here ⇒ unreachable from web.
  *
- * The one entry: `reorderableSlots`, whose set is each plugin's own `slots`
- * declaration plus `meta.reorderable` — facts that exist only once the web
- * barrels have evaluated. Only `reorder/server` reads it (the server cannot see
- * web slots); the web runtime derives the same set from the slot objects.
+ * The entries:
+ *   - `reorderableSlots`, whose set is each plugin's own `slots` declaration
+ *     plus `meta.reorderable` — facts that exist only once the web barrels have
+ *     evaluated. Only `reorder/server` reads it (the server cannot see web
+ *     slots); the web runtime derives the same set from the slot objects.
+ *   - `themeDeclarations`, the token groups, themes and apps contributed to
+ *     theme-engine's and apps-core's web slots, as data. Only
+ *     `ui/theme-engine/server` reads it (to paint the first frame's theme CSS
+ *     into the HTML); the web runtime reads the contributions themselves.
  */
 export const postWebManifests: readonly PreBarrelManifest[] = [
   {
     id: "reorderableSlots",
     path: reorderableSlotsManifestPath,
     render: renderReorderableSlotsManifest,
+  },
+  {
+    id: "themeDeclarations",
+    path: themeDeclarationsManifestPath,
+    render: renderThemeDeclarationsManifest,
   },
 ];
 

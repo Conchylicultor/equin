@@ -7,7 +7,7 @@ import {
   appThemeScope,
   fixedThemeScope,
   subThemeScope,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   resolveFixedTheme,
   themeSelectionConfig,

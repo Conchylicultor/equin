@@ -39,9 +39,9 @@ shell never names this page. The homepage's applications layer opens it.
     - `WebsiteHeader` "apps" → `AppsNavItem`
     - `ThemeEngine.SubTheme` "equin closing"
     - `ThemeEngine.SubTheme` "equin gallery"
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/website/shell` ×5
-    - `primitives/css/ui-kit` ×5
+    - `primitives/css/ui-kit` ×4
     - `primitives/pane` ×4
     - `primitives/avatar` ×2
     - `apps/website/pages/download.downloadPane`

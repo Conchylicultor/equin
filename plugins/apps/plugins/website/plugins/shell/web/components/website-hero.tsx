@@ -3,10 +3,8 @@ import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
-import {
-  cn,
-  subThemeScope,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { equinPageHeroTheme } from "../internal/theme";
 import { WebsiteBand } from "./website-band";
 import "./website-hero.css";

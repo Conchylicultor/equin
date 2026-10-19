@@ -17,7 +17,6 @@
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `ui/theme-engine.ThemeEngine`
-    - `ui/theme-engine.transformValues`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`
     - `ui/theme-engine/theme-customizer.TokenRows`
     - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
@@ -27,14 +26,14 @@
   - Exports (values): `colorPaletteGroup`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Tokens used by: 486 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 487 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×107
     - `conversations` ×85
     - `primitives` ×75
     - `debug` ×34
     - `page` ×32
     - `plugin-meta` ×26
-    - `ui` ×22
+    - `ui` ×23
     - `tasks` ×14
     - `fields` ×12
     - `reports` ×12

@@ -1,5 +1,5 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { transformValues } from "@plugins/ui/plugins/theme-engine/web";
+import { transformValues } from "@plugins/ui/plugins/theme-engine/core";
 import { useTokenGroupEditor } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { sidebarPaletteGroup } from "../../core";
 

@@ -1,4 +1,4 @@
-import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { useEnclosingAppThemeScope } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { useCurrentAppId } from "@plugins/apps-core/web";
 

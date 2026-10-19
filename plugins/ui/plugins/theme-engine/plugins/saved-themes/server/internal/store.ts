@@ -41,6 +41,24 @@ function idFor(input: SaveThemeInput): string {
     : `custom:${crypto.randomUUID()}`;
 }
 
+const changeListeners = new Set<() => void>();
+
+/**
+ * Hear every committed change to the saved themes (a save, an edit, a rename, a
+ * delete) — every write goes through this module, so it is the one place that
+ * knows. Returns the unsubscribe.
+ */
+export function onSavedThemesChange(listener: () => void): () => void {
+  changeListeners.add(listener);
+  return () => {
+    changeListeners.delete(listener);
+  };
+}
+
+function notifyChanged(): void {
+  for (const listener of [...changeListeners]) listener();
+}
+
 export async function listSavedThemes(): Promise<SavedTheme[]> {
   const rows = await db
     .select()
@@ -57,7 +75,7 @@ export async function listSavedThemes(): Promise<SavedTheme[]> {
  */
 export async function saveTheme(input: SaveThemeInput): Promise<SavedTheme> {
   const id = idFor(input);
-  return db.transaction(async (tx) => {
+  const saved = await db.transaction(async (tx) => {
     if (input.extends !== undefined) {
       const parents = await tx
         .select({ id: _savedThemes.id, extends: _savedThemes.extends })
@@ -93,6 +111,8 @@ export async function saveTheme(input: SaveThemeInput): Promise<SavedTheme> {
     if (!row) throw new Error(`[saved-themes] saving "${id}" returned no row`);
     return toSavedTheme(row);
   });
+  notifyChanged();
+  return saved;
 }
 
 /**
@@ -106,7 +126,7 @@ async function updateCustomTheme(
     theme: SavedTheme,
   ) => Partial<Pick<Row, "label" | "fragments" | "colorAdjust">>,
 ): Promise<SavedTheme> {
-  return db.transaction(async (tx) => {
+  const theme = await db.transaction(async (tx) => {
     const [row] = await tx
       .select()
       .from(_savedThemes)
@@ -128,6 +148,8 @@ async function updateCustomTheme(
       throw new Error(`[saved-themes] updating "${id}" returned no row`);
     return toSavedTheme(updated);
   });
+  notifyChanged();
+  return theme;
 }
 
 export function editThemeFragment(
@@ -206,6 +228,7 @@ export async function deleteTheme(
     }
     await tx.delete(_savedThemes).where(eq(_savedThemes.id, id));
   });
+  notifyChanged();
 
   return { reassigned: plan.reassign };
 }

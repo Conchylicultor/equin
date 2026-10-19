@@ -3,81 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Pre-paint theme replay. Generic DOM replay of the localStorage cache
-         written by ThemeInjector (key + envelope shape owned by theme-engine's
-         theme-cache.ts) so a warm reload paints the correct theme on frame 0.
-         No token/group/preset knowledge here — it just replays <style> elements
-         by id (which ThemeInjector then adopts) and sets the .dark class.
-         The cache is keyed by app path: it longest-prefix matches the current
-         pathname (mirroring apps' appMatchesPath) and falls back to the ""
-         (global) entry, so a full-surface app's reload replays its own theme.
-         Entries reference their CSS by hash into env.css (stored once).
-         No structural change was needed here for the "base layer owns `:root`"
-         model: ThemeInjector now renders the FOCUSED app's theme into its
-         `theme-engine-*` `:root` blocks, so the per-app-path entry already
-         carries the right `:root` block — replaying it by id paints the focused
-         app at frame 0 with no `data-theme-scope` dependency. The "" entry holds
-         the desktop/global theme (written only on a global focus). The entry
-         stores the CONFIGURED color mode, re-resolved against the OS here so a
-         "system" setting tracks an OS scheme flip between sessions. On a
-         cold cache it only picks the color scheme from the OS so the neutral
-         loading floor (app.css: html { background: Canvas }) paints in the right
-         shade; ThemeInjector supplies real values once React mounts. -->
+    <!-- First-frame color scheme floor. The theme itself arrives with this
+         document: the gateway splices the server-rendered theme CSS (and the
+         configured `.dark` class) in at the end of the head — see
+         shell/document-head and theme-engine/server — so nothing here reads
+         browser storage. This only covers a shell served without that
+         fragment (a backend that has never booted): it picks the scheme from
+         the OS so the neutral loading floor (app.css: html { background:
+         Canvas }) paints in the right shade until ThemeInjector mounts. -->
     <script>
       (function () {
-        var prefersDark = false;
         try {
-          prefersDark =
-            !!window.matchMedia &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+            document.documentElement.classList.add("dark");
+          }
         } catch (e) {
           /* matchMedia unavailable → default light floor */
         }
-        try {
-          var env = JSON.parse(
-            localStorage.getItem("theme-engine:critical-css"),
-          );
-          if (env && env.v === 4 && env.css && env.entries) {
-            // Same canonicalization as `normalizeRoutePath` (pane/core): a
-            // hand-typed `//agents/x` must prefix-match `/agents` here exactly
-            // as it does in the app, or the pre-paint replay picks the global
-            // entry and the app repaints its own theme after first frame.
-            var path = location.pathname.replace(/\/{2,}/g, "/");
-            var keys = [];
-            for (var k in env.entries) {
-              if (k !== "" && (path === k || path.indexOf(k + "/") === 0)) {
-                keys.push(k);
-              }
-            }
-            keys.sort(function (a, b) {
-              return b.length - a.length; // longest prefix wins
-            });
-            var entry = (keys[0] && env.entries[keys[0]]) || env.entries[""];
-            if (entry && entry.styles) {
-              for (var id in entry.styles) {
-                if (!Object.prototype.hasOwnProperty.call(entry.styles, id))
-                  continue;
-                // Entries name their CSS by hash (each distinct text is
-                // stored once in env.css); a dangling hash is just skipped.
-                var css = env.css[entry.styles[id]];
-                if (typeof css !== "string") continue;
-                var el = document.createElement("style");
-                el.id = id;
-                el.textContent = css;
-                document.head.appendChild(el);
-              }
-              var m = entry.mode;
-              document.documentElement.classList.toggle(
-                "dark",
-                m === "dark" || (m !== "light" && prefersDark),
-              );
-              return;
-            }
-          }
-        } catch (e) {
-          /* corrupt / pre-v4 / unavailable cache → fall through to the cold floor */
-        }
-        if (prefersDark) document.documentElement.classList.add("dark");
       })();
     </script>
     <!-- React commit bridge. Generic, passive — NO profiler logic here.

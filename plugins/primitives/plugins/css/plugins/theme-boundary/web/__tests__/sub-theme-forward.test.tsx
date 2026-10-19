@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import {
-  appThemeScope,
-  subThemeScope,
   usePortalForwardedAttrs,
   useRegionForwardedAttrs,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  appThemeScope,
+  subThemeScope,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "../internal/theme";
 
 /**

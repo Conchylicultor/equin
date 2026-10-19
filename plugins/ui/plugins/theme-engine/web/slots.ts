@@ -205,14 +205,14 @@ export const ThemeEngine = {
   Theme: defineSlot<Theme>({ docLabel: (p) => p.label }),
   /**
    * Sub-themes (`defineSubTheme`): painted for as long as they are
-   * contributed, whether or not a region wears one yet, so the pre-paint cache
-   * holds them and a region that mounts later never repaints.
+   * contributed, whether or not a region wears one yet, so the server paints
+   * them into the first frame too and a region that mounts later never repaints.
    */
   SubTheme: defineSlot<SubTheme>({ docLabel: (p) => p.label }),
   /**
    * Fixed themes (`defineFixedTheme`): whole themes a region always wears,
    * whatever its scope selects (the app chrome). Painted for as long as they
-   * are contributed, like sub-themes, so they are in the pre-paint cache.
+   * are contributed, like sub-themes, so they are in the first frame too.
    */
   FixedTheme: defineSlot<FixedTheme>({ docLabel: (p) => p.label }),
   ThemeSource: defineSlot<ThemeSourceContribution>({ docLabel: (p) => p.id }),

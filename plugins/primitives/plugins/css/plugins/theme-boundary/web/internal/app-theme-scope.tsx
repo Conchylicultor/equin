@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from "react";
-import { isAppThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { isAppThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 
 // The `app:<id>` token of the nearest APP theme boundary, or undefined outside
 // every one. Fixed (`fixed:`) and sub-theme (`sub:`) boundaries do not move it:
