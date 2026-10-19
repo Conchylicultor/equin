@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
-import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  defineDispatchSlot,
+  defineWrapperSlot,
+} from "@plugins/primitives/plugins/slot-render/web";
 import type {
   PrototypeMeta,
   PrototypeVersion,
@@ -84,3 +87,12 @@ export const PrototypeFrameActions = defineItemActions<FrameActionRow>();
  * version.
  */
 export const PrototypeVersionActions = defineItemActions<PrototypeVersion>();
+
+/**
+ * Wrappers folded around everything under a `PrototypeDetailProvider` — the
+ * pane's header and canvas, or a page's own canvas — inside the provider, so
+ * they read the canvas. For state that must outlive one frame's subtree, which
+ * a layout change remounts: the `present` plugin holds the open presentation
+ * here, so adding a frame from it keeps it open.
+ */
+export const PrototypeDetailWrap = defineWrapperSlot();

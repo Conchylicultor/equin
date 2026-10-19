@@ -4,7 +4,7 @@ import { Apps, resolveAppForPath } from "@plugins/apps-core/web";
 import { parseUrl } from "@plugins/primitives/plugins/pane/web";
 import {
   embedUrl,
-  isEmbeddedDocument,
+  isFramedDocument,
 } from "@plugins/primitives/plugins/embed/web";
 import type { EmbedMode } from "@plugins/primitives/plugins/embed/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -60,8 +60,10 @@ function resolve(
   // Framing stops at depth one. This document being a framed app screen means
   // the path in some prototype led back to a prototype canvas — its own
   // (`route:/prototypes/proto/<id>`) or another one that leads back —
-  // and framing again from here would nest app inside app with no floor.
-  if (isEmbeddedDocument()) {
+  // and framing again from here would nest app inside app with no floor. A
+  // chromeless page in a browser tab of its own (Present's pages) carries the
+  // embed flag but is no frame, so it frames the app — once.
+  if (isFramedDocument()) {
     return {
       status: "unresolved",
       title: "Not framing the app again inside a framed app screen.",

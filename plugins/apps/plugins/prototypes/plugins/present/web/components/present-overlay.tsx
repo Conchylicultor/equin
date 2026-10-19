@@ -6,10 +6,12 @@ import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surf
 import { useSurfaceFocused } from "@plugins/apps-core/plugins/tabs/web";
 import {
   usePrototypeDetail,
+  type CanvasAddAction,
   type FrameId,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
+import { CanvasStage } from "./canvas-stage";
 import { PresentBox } from "./present-box";
-import { PresentStage } from "./present-stage";
+import { ExitButton, PresentStage } from "./present-stage";
 
 /**
  * How much of the screen the presentation covers, smallest first:
@@ -26,6 +28,10 @@ export type PresentPlacement = "surface" | "viewport" | "screen";
  * the canvas shows (so an agent's edit still reloads it), at the canvas's size
  * and zoom fitted to the space it now has. ← / → flip through the canvas's
  * frames in place.
+ *
+ * `+` / Compare add the frame to the live canvas — the pane's own, so it is
+ * still there on leaving — and the overlay then presents the whole canvas, in
+ * the same box (so full screen stays full screen).
  *
  * Escape leaves from any placement: in `surface`/`viewport` our own key handler
  * closes; in `screen` the browser exits fullscreen first and the resulting
@@ -48,6 +54,7 @@ export function PresentOverlay({
   const surfaceFocused = useSurfaceFocused();
   const { canvas, dispatch } = usePrototypeDetail();
   const [shown, setShown] = useState<FrameId>(frameId);
+  const [wholeCanvas, setWholeCanvas] = useState(false);
 
   // Leaving selects the frame last on show, so the canvas comes back on it
   // (and `F` presents it again). Stable, like `onClose`.
@@ -66,24 +73,33 @@ export function PresentOverlay({
     const next = canvas.frames[(i + delta + n) % n];
     if (next) setShown(next.id);
   });
+  const extend = useEventCallback((action: CanvasAddAction) => {
+    dispatch(action);
+    setWholeCanvas(true);
+  });
+
+  // The whole canvas has no one frame on show to flip.
   const flipKeys = useMemo(
-    () => [
-      {
-        id: "prototypes.present-previous",
-        keys: "arrowleft",
-        label: "Present the previous frame",
-        group: "Prototypes",
-        handler: () => flip(-1),
-      },
-      {
-        id: "prototypes.present-next",
-        keys: "arrowright",
-        label: "Present the next frame",
-        group: "Prototypes",
-        handler: () => flip(1),
-      },
-    ],
-    [flip],
+    () =>
+      wholeCanvas
+        ? []
+        : [
+            {
+              id: "prototypes.present-previous",
+              keys: "arrowleft",
+              label: "Present the previous frame",
+              group: "Prototypes",
+              handler: () => flip(-1),
+            },
+            {
+              id: "prototypes.present-next",
+              keys: "arrowright",
+              label: "Present the next frame",
+              group: "Prototypes",
+              handler: () => flip(1),
+            },
+          ],
+    [flip, wholeCanvas],
   );
   useSurfaceShortcuts(flipKeys);
 
@@ -127,14 +143,19 @@ export function PresentOverlay({
           the app's own floating chrome (the global action bar) sits at the
           top-right and is portaled above us. Covering the viewport puts it
           underneath, so the top-right corner is free again. */}
-      <PresentStage
-        name={name}
-        frameId={shown}
-        exit={{
-          onExit: exit,
-          side: placement === "surface" ? "left" : "right",
-        }}
-      />
+      {wholeCanvas ? (
+        <CanvasStage exit={<ExitButton onExit={exit} />} />
+      ) : (
+        <PresentStage
+          name={name}
+          frameId={shown}
+          exit={{
+            onExit: exit,
+            side: placement === "surface" ? "left" : "right",
+          }}
+          onExtend={extend}
+        />
+      )}
     </PresentBox>
   );
 

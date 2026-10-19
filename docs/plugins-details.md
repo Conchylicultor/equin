@@ -5526,6 +5526,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `prototypeDetailPane.Actions`
               - `PrototypeFrameActions`
               - `FrameSource`
+              - `PrototypeDetailWrap`
               - `PrototypeVersionActions`
             - Slot contributors:
               - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`
@@ -5536,6 +5537,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` ← `apps.prototypes.canvas`
               - `PrototypeFrameActions` ← `apps.prototypes.present`
               - `FrameSource` ← `apps.prototypes.compare`
+              - `PrototypeDetailWrap` ← `apps.prototypes.present`
               - `PrototypeVersionActions` ← `apps.prototypes.canvas`
             - Contributes:
               - `Pane.Register` "prototypes-detail"
@@ -5546,7 +5548,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 78 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 79 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
@@ -5563,6 +5565,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state` ×2
               - `primitives/optimistic-mutation` ×2
               - `primitives/pane` ×2
+              - `primitives/slot-render` ×2
               - `apps-core/tabs.appLinkProps`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLive`
@@ -5591,11 +5594,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/overlay/portal-host.PortalHost`
               - `primitives/relative-time.RelativeTime`
               - `primitives/shortcuts.useSurfaceShortcuts`
-              - `primitives/slot-render.defineDispatchSlot`
               - `shell/toast.showToast`
               - `ui/icons.Icon`
             - Exports (types):
               - `CanvasAction`
+              - `CanvasAddAction`
               - `CanvasFrame`
               - `CanvasFrameViewProps`
               - `CanvasLayout`
@@ -5618,6 +5621,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `VersionStepperProps`
             - Exports (values):
               - `CanvasFrameView`
+              - `canvasWith`
               - `decodeCanvas`
               - `documentOptions`
               - `encodeCanvas`
@@ -5630,6 +5634,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeCanvas`
               - `prototypeDetailPane`
               - `PrototypeDetailProvider`
+              - `PrototypeDetailWrap`
               - `prototypeDocumentSrc`
               - `PrototypeFrameActions`
               - `prototypeFrames`
@@ -5739,7 +5744,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/prototypes/compare.Counterpart`
                   - `primitives/css/badge.Badge`
                   - `primitives/embed.embedUrl`
-                  - `primitives/embed.isEmbeddedDocument`
+                  - `primitives/embed.isFramedDocument`
                   - `primitives/pane.parseUrl`
         - **`copy-id`** — Copy prototype ID button in the prototype detail header: copies the open prototype's id (its minted folder name) to the clipboard.
           - Web:
@@ -5933,7 +5938,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/color-palette --success`
             - Imported by: `apps/home/app-cards`
-        - **`present`** — Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays), In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame); beside it, an Open responsive in a new tab button (the chromeless present page at the Responsive size, filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks. In the canvas header, Open the canvas in a new tab opens the whole canvas (frames, versions, picks, size, zoom, layout, encoded in present-canvas/<id>/<canvas>) chromeless in a new browser tab, so the frames get the whole screen to compare.
+        - **`present`** — Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays), In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame); beside it, an Open responsive in a new tab button (the chromeless present page at the Responsive size, filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both turning the presentation into the whole canvas, full screen — and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas. In the canvas header, Open the canvas in a new tab opens the whole canvas (frames, versions, picks, size, zoom, layout, encoded in present-canvas/<id>/<canvas>) chromeless in a new browser tab, so the frames get the whole screen to compare, with the same Exit.
           - Web:
             - Slots:
               - `prototypes-present.actions`
@@ -5945,16 +5950,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "prototypes-present"
               - `Pane.Register` "prototypes-present-canvas"
               - `prototypeDetailPane.Actions` "open-canvas" → `OpenCanvasAction`
+              - `PrototypeDetailWrap` → `PresentationHost`
               - `PrototypeFrameActions` "present" → `PresentMenu`
               - `PrototypeFrameActions` "open-responsive" → `OpenResponsiveAction`
-            - Uses: 61 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
-              - `apps/prototypes/canvas` ×25
+            - Uses: 66 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
+              - `apps/prototypes/canvas` ×28
               - `primitives/css/ui-kit` ×8
+              - `apps-core/tabs` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/latest-ref` ×2
               - `primitives/link-gesture/new-tab` ×2
               - `primitives/pane` ×2
-              - `apps-core/tabs.useSurfaceFocused`
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/fill.fillClasses`
@@ -5966,6 +5972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-size.useElementSize`
               - `primitives/dom/movable.Movable`
               - `primitives/embed.embedUrl`
+              - `primitives/icon-button.IconButton`
               - `primitives/live-state.matchResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/popup-open.PopupOpenScope`
@@ -38153,6 +38160,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `embedUrl`
           - `isChromelessDocument`
           - `isEmbeddedDocument`
+          - `isFramedDocument`
       - Core:
         - Exports (types): `EmbedMode`
         - Exports (values):
@@ -38616,8 +38624,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 118 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×39
+        - Imported by: 119 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×40
           - `conversations` ×21
           - `primitives` ×21
           - `page` ×7

@@ -43,6 +43,9 @@ is about:
   mode says no.
 - `isEmbeddedDocument()` — "am I hosted by another page on this origin?" Both
   modes say yes.
+- `isFramedDocument()` — "am I inside a frame?" (`window.parent !== window`),
+  read live, not from the flag: a chromeless page opened in a browser tab of
+  its own carries the flag yet is the top of its window.
 
 | Reader | Asks | Branch |
 | --- | --- | --- |
@@ -52,7 +55,7 @@ is about:
 | `apps-core/tabs` (tabs-store) | embedded | loads and saves no persisted tab set; boots one tab from the URL at the default placement |
 | `apps-core/tabs` (shell history adapter) | `embedMode()` | re-stamps the flag in the same mode onto every URL it writes |
 | the build's experimental-deploy stamp (`cli/build/internal/experimental-marker.ts`) | embedded (either flag value) | draws no red worktree frame: the host page on this same deploy already wears it, and the band would land in every capture of the embedded app |
-| `apps/prototypes/compare/route` | embedded | refuses to frame the app again from inside a framed app |
+| `apps/prototypes/compare/route` | framed | refuses to frame the app again from inside a frame (a chromeless page in its own browser tab — Present's pages — still frames it, once) |
 
 The storage guards are a **hazard guard**, not tidiness, and they hold in both
 modes. A same-origin iframe shares
@@ -77,6 +80,7 @@ flag that swallowed error surfaces would be worse than one that shows a toast.
   query gains `&embed=…`, and a flag it already carries is overwritten, not
   duplicated.
 - `web`: `embedMode()`, `isEmbeddedDocument()`, `isChromelessDocument()`,
+  `isFramedDocument()`,
   `embedUrl(path, mode)`. Test code resets the memo with `resetEmbedForTests()`
   from `web/testing`.
 
@@ -101,6 +105,7 @@ flag that swallowed error surfaces would be worse than one that shows a toast.
     - `embedUrl`
     - `isChromelessDocument`
     - `isEmbeddedDocument`
+    - `isFramedDocument`
 - Core:
   - Exports (types): `EmbedMode`
   - Exports (values):

@@ -73,6 +73,15 @@ while a popup opened from it (the version list, the size menu) is showing.
 shortcuts). Leaving selects the frame last on show, so the canvas comes back on
 it.
 
+**On the right edge, `+` and Compare** (`ExtendActions`): `+` adds a frame
+beside this one, and there is one **Compare with <addLabel>** per frame source
+this prototype resolves (the real app, swiped over it — `addSource` switches to
+Swipe). An overlay dispatches the action to the live canvas — the pane's own,
+so the frame is still there on leaving — and then presents the whole canvas
+(`CanvasStage`: `PrototypeCanvas` with Exit pinned bottom-left) in the same
+box, so full screen stays full screen. The new-tab page navigates instead
+(below).
+
 **Escape is gated on `useSurfaceFocused()`.** Tabs are keep-alive — a background
 tab is still mounted, and under the floating placement still on screen — so an
 ungated `window` keydown would close a presentation the user is not looking at.
@@ -83,9 +92,14 @@ is drawn inside the box instead of under `body`. Under the Fullscreen API only
 the fullscreened subtree is painted, and a viewport presentation sits above the
 popup layer, so without it those popups would be invisible.
 
-The overlay is rendered with `key={placement}`, so switching destination is an
-explicit remount rather than a portal-container swap React would reconcile into
-a half-move.
+**The open presentation is held above the frames** (`PresentationHost`, a
+`PrototypeDetailWrap` contribution — inside every `PrototypeDetailProvider`):
+the menu only asks for it (`usePresentation`). The menu lives in its frame's
+header, which a layout change remounts (`+` leaving Swipe, Compare entering
+it), and that must not close the presentation that made the change. Each
+request remounts the overlay (keyed by a counter), so switching destination is
+an explicit remount rather than a portal-container swap React would reconcile
+into a half-move.
 
 ## The present page
 
@@ -104,8 +118,21 @@ the Prototypes app, so opened alone it is the only column and fills the tab):
   Any other frame's link carries its own variant.
 
 The page mounts a one-frame canvas (`PrototypeDetailProvider` with
-`initialVersion` and `initialPicks`) and draws the same `PresentStage`, minus
-Exit: closing the tab is how you leave.
+`initialVersion` and `initialPicks`) and draws the same `PresentStage`, with
+page chrome of its own instead of the overlays' Exit:
+
+- **Exit** (an icon at the start of the tag's pill, top-left) goes back to the
+  prototype's canvas (`proto/<id>`) in the full app — a document load, since
+  this document was opened chromeless and stays so (`embedMode` is read once);
+- the right edge's `+` / Compare each compute the canvas the action leads to
+  (`canvasWith`, the reducer without its effects) and navigate this tab to its
+  canvas page (below), so the presentation becomes a full-screen comparison.
+  Only a page reading the shared picks (frame A's link) offers them: one
+  carrying a variant of its own would, as frame A of a canvas, have to write
+  that variant to the shared record, so they are disabled there.
+
+The routes live in `internal/routes.ts`, apart from the panes, so a page's
+components can link to the other page without an import cycle.
 
 ## The whole canvas in a new tab
 
@@ -120,8 +147,9 @@ root route), where `canvas` is the canvas's own url encoding (`encodeCanvas` /
 `decodeCanvas` from `canvas`, base64url of the same JSON the pane saves, held
 to the same rules). Frame A carries `"shared"`, so the page reads the shared
 picks record like the pane. It mounts `PrototypeDetailProvider` with
-`initialCanvas` and draws `PrototypeCanvas` — the pane's own body, minus the
-pane header — so it stays a working canvas (options pills, version steppers,
+`initialCanvas` and draws `CanvasStage` in a `PresentBox` — `PrototypeCanvas`,
+the pane's own body minus the pane header, with the same Exit as the one-frame
+page pinned bottom-left on hover — so it stays a working canvas (options pills, version steppers,
 frame actions, the size & zoom chip). Nothing is remembered there (it is an
 embedded document): a reload reopens the canvas the link carries.
 
@@ -129,7 +157,7 @@ embedded document): a reload reopens the canvas the link carries.
 
 ## Plugin reference
 
-- Description: Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays), In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame); beside it, an Open responsive in a new tab button (the chromeless present page at the Responsive size, filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks. In the canvas header, Open the canvas in a new tab opens the whole canvas (frames, versions, picks, size, zoom, layout, encoded in present-canvas/<id>/<canvas>) chromeless in a new browser tab, so the frames get the whole screen to compare.
+- Description: Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays), In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame); beside it, an Open responsive in a new tab button (the chromeless present page at the Responsive size, filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both turning the presentation into the whole canvas, full screen — and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas. In the canvas header, Open the canvas in a new tab opens the whole canvas (frames, versions, picks, size, zoom, layout, encoded in present-canvas/<id>/<canvas>) chromeless in a new browser tab, so the frames get the whole screen to compare, with the same Exit.
 - Web:
   - Slots:
     - `prototypes-present.actions`
@@ -141,16 +169,17 @@ embedded document): a reload reopens the canvas the link carries.
     - `Pane.Register` "prototypes-present"
     - `Pane.Register` "prototypes-present-canvas"
     - `prototypeDetailPane.Actions` "open-canvas" → `OpenCanvasAction`
+    - `PrototypeDetailWrap` → `PresentationHost`
     - `PrototypeFrameActions` "present" → `PresentMenu`
     - `PrototypeFrameActions` "open-responsive" → `OpenResponsiveAction`
-  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/prototypes/canvas` ×25
+  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/prototypes/canvas` ×28
     - `primitives/css/ui-kit` ×8
+    - `apps-core/tabs` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/latest-ref` ×2
     - `primitives/link-gesture/new-tab` ×2
     - `primitives/pane` ×2
-    - `apps-core/tabs.useSurfaceFocused`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.fillClasses`
@@ -162,6 +191,7 @@ embedded document): a reload reopens the canvas the link carries.
     - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/movable.Movable`
     - `primitives/embed.embedUrl`
+    - `primitives/icon-button.IconButton`
     - `primitives/live-state.matchResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/popup-open.PopupOpenScope`

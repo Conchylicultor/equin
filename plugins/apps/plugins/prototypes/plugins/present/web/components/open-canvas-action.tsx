@@ -5,7 +5,7 @@ import {
   encodeCanvas,
   usePrototypeDetail,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
-import { presentCanvasPath } from "../panes";
+import { presentCanvasPath } from "../internal/routes";
 
 /**
  * "Open the canvas in a new tab" — a header action: the canvas as it is now

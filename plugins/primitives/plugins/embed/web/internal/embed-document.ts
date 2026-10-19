@@ -39,6 +39,16 @@ export function isChromelessDocument(): boolean {
   return embedMode() === "chromeless";
 }
 
+/**
+ * Is THIS document loaded inside a frame (an iframe of another page)? Not the
+ * same question as {@link isEmbeddedDocument}: a chromeless page opened in a
+ * browser tab of its own carries the flag but is the top of its window. The
+ * question for anything that must not nest the app inside itself.
+ */
+export function isFramedDocument(): boolean {
+  return typeof window !== "undefined" && window.parent !== window;
+}
+
 /** An in-app URL (`/agents/c/1`, query allowed) that opens embedded in `mode`. */
 export function embedUrl(path: string, mode: EmbedMode): string {
   return withEmbedFlag(path, window.location.origin, mode);

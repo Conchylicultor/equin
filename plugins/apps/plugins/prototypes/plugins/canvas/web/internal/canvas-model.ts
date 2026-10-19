@@ -559,6 +559,34 @@ function transition(
   }
 }
 
+/** The actions that add a frame — the ones {@link canvasWith} takes. */
+export type CanvasAddAction = Extract<
+  CanvasAction,
+  { type: "addPrototype" | "addSource" }
+>;
+
+/**
+ * The canvas `action` leads to, computed rather than dispatched — for a
+ * surface that opens it on another page (Present's one-frame page → the canvas
+ * page). Adding a frame never rewrites the shared record while frame A holds
+ * it; a canvas whose first prototype frame holds picks of its own would hand
+ * them to the record (`promoteA`), which only a dispatch may do — so that
+ * throws.
+ */
+export function canvasWith(
+  state: CanvasState,
+  action: CanvasAddAction,
+  shared: StoredPicks,
+): CanvasState {
+  const { state: next, effects } = canvasReducer(state, action, shared);
+  if (effects.length > 0) {
+    throw new Error(
+      `canvasWith(${action.type}) would rewrite the shared picks record: frame A must hold "shared"`,
+    );
+  }
+  return next;
+}
+
 function unchanged(state: CanvasState): CanvasTransition {
   return { state, effects: [] };
 }

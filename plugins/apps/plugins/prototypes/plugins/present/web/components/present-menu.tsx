@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   Button,
   DropdownMenu,
@@ -21,7 +21,8 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { BrowserTabOpener } from "./frame-link";
-import { PresentOverlay, type PresentPlacement } from "./present-overlay";
+import type { PresentPlacement } from "./present-overlay";
+import { usePresentation } from "./presentation";
 import { type IconRef, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { NewTabMenuItem } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
@@ -42,18 +43,15 @@ const webAssetIcon = symbol("web-asset");
 export function PresentMenu({ row }: ItemActionProps<FrameActionRow>) {
   const { frame, meta } = row;
   const { canvas, dispatch } = usePrototypeDetail();
-  const [placement, setPlacement] = useState<PresentPlacement | null>(null);
-  // Stable: the overlay's fullscreen effect keys on this callback, and a fresh
-  // identity each render would re-run it (exit + re-request every render).
-  const close = useCallback(() => setPlacement(null), []);
+  const { presenting, present: open } = usePresentation();
   // Presenting selects the frame, as clicking it would — so while this frame
   // is on show, this menu is the one holding `F` (and it stands down, below).
   const present = useEventCallback((where: PresentPlacement) => {
     dispatch({ type: "select", id: frame.id });
-    setPlacement(where);
+    open(frame.id, where);
   });
 
-  const holdsF = canvas.selected === frame.id && placement === null;
+  const holdsF = canvas.selected === frame.id && presenting === null;
   const fullScreenKey = useMemo(
     () =>
       holdsF
@@ -110,18 +108,6 @@ export function PresentMenu({ row }: ItemActionProps<FrameActionRow>) {
           </DropdownMenuSection>
         </DropdownMenuContent>
       </DropdownMenu>
-      {placement !== null && (
-        // Keyed by placement: changing destination remounts the stage rather
-        // than swapping one overlay's portal container under it, which React
-        // would reconcile into a half-move (and reload the iframe anyway).
-        <PresentOverlay
-          key={placement}
-          name={meta.name}
-          frameId={frame.id}
-          placement={placement}
-          onClose={close}
-        />
-      )}
     </>
   );
 }

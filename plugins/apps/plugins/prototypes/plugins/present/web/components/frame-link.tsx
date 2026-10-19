@@ -10,7 +10,7 @@ import type {
   PrototypeMeta,
   PrototypeViewport,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { presentPath } from "../panes";
+import { presentPath } from "../internal/routes";
 
 /** What a prototype frame's page shows: its version, and its own picks (not A's). */
 function frameTarget(frame: PrototypeFrame, meta: PrototypeMeta) {

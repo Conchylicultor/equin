@@ -4,6 +4,7 @@ export {
   embedMode,
   isEmbeddedDocument,
   isChromelessDocument,
+  isFramedDocument,
   embedUrl,
 } from "./internal/embed-document";
 

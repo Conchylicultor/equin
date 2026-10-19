@@ -7,6 +7,7 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   canvasReducer,
+  canvasWith,
   frameA,
   initialCanvasState as openCanvas,
   isTransientAction,
@@ -165,6 +166,39 @@ describe("addSource", () => {
     s = run(s, { type: "addSource", source: "real-app" }).state;
     expect(s.frames).toHaveLength(3);
     expect(s.layout).toBe("side");
+  });
+});
+
+describe("canvasWith", () => {
+  it("adds a frame beside a frame A holding the shared record", () => {
+    const s = canvasWith(
+      initialCanvasState(),
+      { type: "addPrototype" },
+      { design: "slate" },
+    );
+    expect(s.frames).toHaveLength(2);
+    expect(proto(s, 0).picks).toBe("shared");
+    expect(proto(s, 1).picks).toEqual({ design: "slate" });
+  });
+
+  it("swipes a source over frame A", () => {
+    const s = canvasWith(
+      initialCanvasState(),
+      { type: "addSource", source: "real-app" },
+      {},
+    );
+    expect(s.layout).toBe("swipe");
+    expect(s.frames.map((f) => f.kind)).toEqual(["prototype", "source"]);
+  });
+
+  it("throws rather than hand frame A's own picks to the shared record", () => {
+    expect(() =>
+      canvasWith(
+        initialCanvasState({ picks: { design: "paper" } }),
+        { type: "addPrototype" },
+        {},
+      ),
+    ).toThrow(/shared picks record/);
   });
 });
 

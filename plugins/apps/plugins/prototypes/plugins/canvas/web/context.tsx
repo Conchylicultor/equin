@@ -54,7 +54,7 @@ import {
   type PrototypeFrame,
 } from "./internal/canvas-model";
 import { restoreCanvas, serializeCanvas } from "./internal/saved-canvas";
-import { FrameSource } from "./slots";
+import { FrameSource, PrototypeDetailWrap } from "./slots";
 
 /** A frame source as the header lists it. */
 export interface CanvasSourceEntry {
@@ -382,7 +382,7 @@ function DetailProvider({
   );
   return (
     <PrototypeDetailContext.Provider value={value}>
-      {children}
+      <PrototypeDetailWrap.Wrap>{children}</PrototypeDetailWrap.Wrap>
     </PrototypeDetailContext.Provider>
   );
 }

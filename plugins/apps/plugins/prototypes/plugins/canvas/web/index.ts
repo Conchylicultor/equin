@@ -3,6 +3,7 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { prototypeDetailPane } from "./panes";
 import {
   FrameSource,
+  PrototypeDetailWrap,
   PrototypeFrameActions,
   PrototypeVersionActions,
 } from "./slots";
@@ -20,6 +21,7 @@ import {
 export { prototypeDetailPane } from "./panes";
 export {
   FrameSource,
+  PrototypeDetailWrap,
   PrototypeFrameActions,
   PrototypeVersionActions,
 } from "./slots";
@@ -38,9 +40,10 @@ export {
   usePrototypeDetail,
 } from "./context";
 export type { CanvasSourceEntry, PrototypeDetailContextValue } from "./context";
-export { frameA, prototypeFrames } from "./internal/canvas-model";
+export { canvasWith, frameA, prototypeFrames } from "./internal/canvas-model";
 export type {
   CanvasAction,
+  CanvasAddAction,
   CanvasFrame,
   CanvasLayout,
   CanvasSize,
@@ -92,6 +95,7 @@ export default {
     "prototypes-detail": prototypeDetailPane,
     "frame-actions": PrototypeFrameActions,
     "frame-source": FrameSource,
+    "detail-wrap": PrototypeDetailWrap,
     "version-actions": PrototypeVersionActions,
   },
 } satisfies PluginDefinition;

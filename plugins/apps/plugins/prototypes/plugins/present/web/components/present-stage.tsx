@@ -14,14 +14,22 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { Movable } from "@plugins/primitives/plugins/dom/plugins/movable/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { embedUrl } from "@plugins/primitives/plugins/embed/web";
+import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import {
+  prototypeDetailRoute,
+  prototypesApp,
+} from "@plugins/apps/plugins/prototypes/plugins/shell/core";
 import {
   prototypesList,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   CanvasFrameView,
+  FrameSource,
   OptionsPill,
   SizeChip,
   VersionStepper,
@@ -31,6 +39,9 @@ import {
   letterOf,
   useFrameNames,
   usePrototypeDetail,
+  canvasWith,
+  encodeCanvas,
+  type CanvasAddAction,
   type CanvasFrame,
   type FrameId,
   type FrameResolution,
@@ -38,8 +49,8 @@ import {
   sameExtent,
   type PageExtent,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
-import { PRESENT_CHROME_ATTR } from "../internal/use-pointer-idle";
-import { useChromeIdle, usePresentRoot } from "./present-box";
+import { presentCanvasPath } from "../internal/routes";
+import { usePresentChrome, usePresentRoot } from "./present-box";
 
 /** The Exit button, and which top corner it takes. */
 export interface PresentExit {
@@ -67,12 +78,22 @@ export function PresentStage({
   name,
   frameId,
   exit,
+  onExtend,
 }: {
   name: string;
   /** The frame on show — frame A when absent or gone. */
   frameId?: FrameId;
-  /** Absent on the new-tab page: closing the tab is how you leave. */
+  /**
+   * Absent on the new-tab page, which instead offers Exit back to the
+   * prototype's canvas (at the start of the tag's pill).
+   */
   exit?: PresentExit;
+  /**
+   * What the right edge's `+` / Compare do. Absent on the new-tab page, where
+   * each opens the canvas page on the canvas the action leads to; an overlay
+   * applies the action to the live canvas and shows the whole of it instead.
+   */
+  onExtend?: (action: CanvasAddAction) => void;
 }): ReactNode {
   return matchResource(useLive(prototypesList), {
     loading: () => <Loading variant="block" />,
@@ -85,7 +106,14 @@ export function PresentStage({
           </Text>
         );
       }
-      return <PresentedFrame meta={meta} frameId={frameId} exit={exit} />;
+      return (
+        <PresentedFrame
+          meta={meta}
+          frameId={frameId}
+          exit={exit}
+          onExtend={onExtend}
+        />
+      );
     },
   });
 }
@@ -94,13 +122,15 @@ function PresentedFrame({
   meta,
   frameId,
   exit,
+  onExtend,
 }: {
   meta: PrototypeMeta;
   frameId: FrameId | undefined;
   exit: PresentExit | undefined;
+  onExtend: ((action: CanvasAddAction) => void) | undefined;
 }): ReactElement {
   const { canvas } = usePrototypeDetail();
-  const idle = useChromeIdle();
+  const chrome = usePresentChrome();
   const root = usePresentRoot();
   const [roomRef, room] = useElementSize<HTMLDivElement>();
   const browserWindow = useWindowSize();
@@ -119,12 +149,6 @@ function PresentedFrame({
     );
   }
   const index = canvas.frames.indexOf(frame);
-  // Every piece of chrome: revealed by hovering the box, and hidden again while
-  // the pointer rests over the frame (see `PresentBox`).
-  const chrome = {
-    [PRESENT_CHROME_ATTR]: "",
-    className: idle ? CHROME_RESTING : hoverRevealTarget,
-  };
   const extent = page?.id === frame.id ? page.extent : null;
   const pageHeight = pageHeightOf(extent);
   const noWholePage = canvas.wholePage && extent?.kind === "window-sized";
@@ -171,20 +195,30 @@ function PresentedFrame({
           </Scroll>
           <Pin to="top-left" offset="md" {...chrome}>
             <Movable bounds={root}>
-            <Stack direction="row" gap="sm" align="center">
-              <FrameTag
-                frame={frame}
-                index={index}
-                count={canvas.frames.length}
-                meta={meta}
-                resolution={resolution}
-              />
-              {exit?.side === "left" ? (
-                <ExitButton onExit={exit.onExit} />
-              ) : null}
-            </Stack>
+              <Stack direction="row" gap="sm" align="center">
+                <FrameTag
+                  frame={frame}
+                  index={index}
+                  count={canvas.frames.length}
+                  meta={meta}
+                  resolution={resolution}
+                  leading={
+                    exit === undefined ? (
+                      <LeaveToCanvasButton name={meta.name} />
+                    ) : undefined
+                  }
+                />
+                {exit?.side === "left" ? (
+                  <ExitButton onExit={exit.onExit} />
+                ) : null}
+              </Stack>
             </Movable>
           </Pin>
+          {frame.kind === "prototype" ? (
+            <Pin to="right" offset="md" {...chrome}>
+              <ExtendActions meta={meta} onExtend={onExtend} />
+            </Pin>
+          ) : null}
           {exit?.side === "right" ? (
             <Pin to="top-right" offset="md" {...chrome}>
               <Movable bounds={root}>
@@ -210,14 +244,7 @@ function PresentedFrame({
   );
 }
 
-/**
- * Chrome resting out of sight: faded out, and never a live click-target while
- * hidden — the same coupling `hoverRevealTarget` keeps.
- */
-const CHROME_RESTING =
-  "opacity-0 pointer-events-none select-none transition-opacity duration-400";
-
-/** The frame tag's card look (the Exit button beside it is `variant="floating"`). */
+/** The frame tag's card look (the overlays' Exit button beside it is `variant="floating"`). */
 const CHROME = "rounded-md border border-border bg-background shadow-md";
 
 /**
@@ -231,12 +258,15 @@ function FrameTag({
   count,
   meta,
   resolution,
+  leading,
 }: {
   frame: CanvasFrame;
   index: number;
   count: number;
   meta: PrototypeMeta;
   resolution: FrameResolution | null;
+  /** A control at the pill's start (the present page's Exit). */
+  leading?: ReactNode;
 }): ReactElement {
   const { dispatch } = usePrototypeDetail();
   const names = useFrameNames(meta);
@@ -246,8 +276,9 @@ function FrameTag({
         direction="row"
         gap="sm"
         align="center"
-        className={cn(CHROME, "h-8 pl-xs pr-2xs")}
+        className={cn(CHROME, "h-8 pr-2xs", leading ? "pl-2xs" : "pl-xs")}
       >
+        {leading}
         <Text variant="label" className="whitespace-nowrap">
           {names(frame)}
         </Text>
@@ -276,7 +307,7 @@ function FrameTag({
   );
 }
 
-function ExitButton({ onExit }: { onExit: () => void }): ReactElement {
+export function ExitButton({ onExit }: { onExit: () => void }): ReactElement {
   return (
     <Button
       variant="floating"
@@ -287,5 +318,107 @@ function ExitButton({ onExit }: { onExit: () => void }): ReactElement {
       Exit
       <Kbd>Esc</Kbd>
     </Button>
+  );
+}
+
+const exitIcon = symbol("fullscreen-exit");
+const addIcon = symbol("add");
+const compareIcon = symbol("compare");
+
+/**
+ * The new-tab page's Exit: back to the prototype's canvas in the full app — a
+ * document load, not an in-app navigation, because this document was opened
+ * chromeless and stays so for its lifetime (`embedMode` is read once).
+ */
+export function LeaveToCanvasButton({
+  name,
+  variant,
+}: {
+  name: string;
+  /** `floating` standing alone; the default sits inside a pill. */
+  variant?: "floating";
+}): ReactElement {
+  return (
+    <IconButton
+      {...(variant === undefined ? {} : { variant })}
+      icon={exitIcon}
+      label="Exit to the prototype's canvas"
+      onClick={() =>
+        window.location.assign(
+          prototypeDetailRoute.link(prototypesApp, { name }),
+        )
+      }
+    />
+  );
+}
+
+/**
+ * The right-edge actions: `+` (another frame beside this one) and one Compare
+ * per contributed frame source this prototype resolves (the real app, swiped
+ * over it) — the presentation becomes a full-screen comparison. Names no
+ * source.
+ *
+ * With `onExtend` (an overlay) each hands the action over. Without it (the
+ * new-tab page) each opens the canvas page on the frame plus the new one, in
+ * this tab — and only a page reading the shared picks record (frame A's link)
+ * can: one carrying a variant of its own would, as frame A of a canvas, have to
+ * write that variant to the record.
+ */
+function ExtendActions({
+  meta,
+  onExtend,
+}: {
+  meta: PrototypeMeta;
+  onExtend: ((action: CanvasAddAction) => void) | undefined;
+}): ReactElement {
+  const { canvas, shared, sources } = usePrototypeDetail();
+  const ownPicks =
+    onExtend === undefined && frameA(canvas.frames)?.picks !== "shared";
+  const reason = ownPicks
+    ? "This page shows a variant of its own — open frame A to compare"
+    : undefined;
+  const extend = (action: CanvasAddAction) =>
+    onExtend !== undefined
+      ? { onClick: () => onExtend(action) }
+      : appLinkProps(
+          embedUrl(
+            presentCanvasPath(
+              meta.name,
+              encodeCanvas(canvasWith(canvas, action, shared)),
+            ),
+            "chromeless",
+          ),
+        );
+  return (
+    <ControlSizeProvider size="sm">
+      <Stack direction="col" gap="xs" align="center">
+        <IconButton
+          variant="floating"
+          icon={addIcon}
+          label="Add a frame to compare"
+          tooltip={reason}
+          disabled={ownPicks}
+          {...(ownPicks ? {} : extend({ type: "addPrototype" }))}
+        />
+        {sources.map((source) => (
+          <FrameSource.Dispatch key={source.id} source={source.id} meta={meta}>
+            {(resolution: FrameResolution) =>
+              resolution.status === "found" ? (
+                <IconButton
+                  variant="floating"
+                  icon={compareIcon}
+                  label={`Compare with ${source.addLabel}`}
+                  tooltip={reason}
+                  disabled={ownPicks}
+                  {...(ownPicks
+                    ? {}
+                    : extend({ type: "addSource", source: source.id }))}
+                />
+              ) : null
+            }
+          </FrameSource.Dispatch>
+        ))}
+      </Stack>
+    </ControlSizeProvider>
   );
 }

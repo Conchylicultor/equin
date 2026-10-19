@@ -8,17 +8,46 @@ import {
   type RefObject,
 } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
-import { usePointerIdle } from "../internal/use-pointer-idle";
+import {
+  PRESENT_CHROME_ATTR,
+  usePointerIdle,
+} from "../internal/use-pointer-idle";
 
 const ChromeIdleContext = createContext(false);
 const PresentRootContext = createContext<HTMLElement | null>(null);
 
 /** Whether the presentation's chrome is resting out of sight (see `PresentBox`). */
-export function useChromeIdle(): boolean {
+function useChromeIdle(): boolean {
   return useContext(ChromeIdleContext);
+}
+
+/**
+ * Chrome resting out of sight: faded out, and never a live click-target while
+ * hidden — the same coupling `hoverRevealTarget` keeps.
+ */
+const CHROME_RESTING =
+  "opacity-0 pointer-events-none select-none transition-opacity duration-400";
+
+/**
+ * The props every piece of a presentation's chrome spreads on its pinned box:
+ * revealed by hovering the box, and hidden again while the pointer rests over
+ * the frame (see `PresentBox`).
+ */
+export function usePresentChrome(): {
+  [PRESENT_CHROME_ATTR]: "";
+  className: string;
+} {
+  const idle = useChromeIdle();
+  return {
+    [PRESENT_CHROME_ATTR]: "",
+    className: idle ? CHROME_RESTING : hoverRevealTarget,
+  };
 }
 
 /**

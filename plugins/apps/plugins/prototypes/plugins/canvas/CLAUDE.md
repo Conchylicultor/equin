@@ -337,6 +337,7 @@ navigation, so it starts from nothing remembered.
     - `prototypeDetailPane.Actions`
     - `PrototypeFrameActions`
     - `FrameSource`
+    - `PrototypeDetailWrap`
     - `PrototypeVersionActions`
   - Slot contributors:
     - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`
@@ -347,6 +348,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` ← `apps.prototypes.canvas`
     - `PrototypeFrameActions` ← `apps.prototypes.present`
     - `FrameSource` ← `apps.prototypes.compare`
+    - `PrototypeDetailWrap` ← `apps.prototypes.present`
     - `PrototypeVersionActions` ← `apps.prototypes.canvas`
   - Contributes:
     - `Pane.Register` "prototypes-detail"
@@ -357,7 +359,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 78 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 79 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `primitives/data-view` ×6
     - `primitives/collapsible` ×5
@@ -374,6 +376,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/live-state` ×2
     - `primitives/optimistic-mutation` ×2
     - `primitives/pane` ×2
+    - `primitives/slot-render` ×2
     - `apps-core/tabs.appLinkProps`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
@@ -402,11 +405,11 @@ navigation, so it starts from nothing remembered.
     - `primitives/overlay/portal-host.PortalHost`
     - `primitives/relative-time.RelativeTime`
     - `primitives/shortcuts.useSurfaceShortcuts`
-    - `primitives/slot-render.defineDispatchSlot`
     - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `CanvasAction`
+    - `CanvasAddAction`
     - `CanvasFrame`
     - `CanvasFrameViewProps`
     - `CanvasLayout`
@@ -429,6 +432,7 @@ navigation, so it starts from nothing remembered.
     - `VersionStepperProps`
   - Exports (values):
     - `CanvasFrameView`
+    - `canvasWith`
     - `decodeCanvas`
     - `documentOptions`
     - `encodeCanvas`
@@ -441,6 +445,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeCanvas`
     - `prototypeDetailPane`
     - `PrototypeDetailProvider`
+    - `PrototypeDetailWrap`
     - `prototypeDocumentSrc`
     - `PrototypeFrameActions`
     - `prototypeFrames`

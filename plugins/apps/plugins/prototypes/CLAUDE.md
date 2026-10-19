@@ -40,7 +40,7 @@ other content lives in sub-plugins:
   frames (A, B, C…), each with its own version stepper and options pill (frame
   A reads and writes the shared picks, the others hold their own), one
   canvas-wide size & zoom chip, link / spread / keep only, swipe — all
-  remembered per pane for the tab's session. Owns the `FrameSource` and frame-actions slots.
+  remembered per pane for the tab's session. Owns the `FrameSource`, frame-actions and detail-wrap slots.
 - **`compare`** — the canvas's **Real app** frame: the real thing the
   prototype declares it mocks (`<meta name="mocks" content="<kind>:<ref>">`),
   contributed as a `FrameSource`. Owns the dispatch; each kind of counterpart
