@@ -19,8 +19,9 @@ for the other:
   the Maps JavaScript API, which needs a key in the page. Such a key is public
   by design: it is restricted to HTTP referrers (`http://*.localhost:9000/*`
   plus any published domain) and to the Maps JavaScript API only, and its
-  spend is bounded by a daily quota. Setup: this plugin's **Live map** pane
-  (`settings/accounts/google-maps/live-map`).
+  spend is bounded by a daily quota. Setup: this plugin's **Live map** Accounts
+  row, whose account pane (`settings/accounts/account/google-maps-live-map`)
+  renders `LiveMapSetupBody`.
 
 The same split holds for a hosted deployment: one operator browser key
 restricted to the hosted domain, and the expensive Places calls kept proxied
@@ -38,7 +39,7 @@ and rate-limitable on the server.
   is the whole difference (`research/2026-10-16-map-zoom-smoothness.md`).
 
 The user creates the style and the Map ID in the Cloud Console, guided by the
-**Smooth zoom** part of the Live map pane:
+**Smooth zoom** part of the Live map setup:
 
 1. Import `BASEMAP_STYLE_JSON` (the same rule the raster map passes inline, so
    the two cannot drift) as a map style, and publish it.
@@ -53,7 +54,7 @@ broad `cloud-platform` scope, which the user declined
 (`research/2026-10-16-global-google-vector-map-id.md`). Only the id string is
 stored.
 
-Nothing verifies the Map ID on write. The pane checks it live instead: step 3
+Nothing verifies the Map ID on write. The setup checks it live instead: step 3
 draws a **preview map** with the Map ID being set up (the valid draft, else the
 saved one) and the stored key, centred on central Paris so Google's shops and
 museums are visible if the style is not attached yet. It reads
@@ -62,7 +63,7 @@ again** remounts it (Google can take minutes to serve a changed Map ID or
 style). The map is drawn by `map/google`, contributed into the
 `LiveMapSetup.MapIdPreview` slot (props `{ browserKey, mapId, onResult }`):
 `map/google` imports this plugin, so this plugin cannot import it back, and
-with no contribution installed the pane says so loudly. No automatic signal
+with no contribution installed the setup says so loudly. No automatic signal
 exists for hidden places; step 3 asks the user to look at the same preview. A
 Map ID that Google draws as raster also shows `MapIdRasterNotice` on the real
 map, local to the renderer. There is no page-global report store.
@@ -124,9 +125,10 @@ Google adapter, the live map renderer) go through it and **never** import
     `set { browserKey, mapId }`, for the renderer.
   - `LiveMapSetup.MapIdPreview` — the slot a map renderer fills with the
     Map ID preview map. `MapIdRasterNotice` — the map's
-    "this Map ID isn't a vector map" affordance (opens the Live map pane).
-  - `MapsAccessAction` — opens the Places setup wizard, or `null` when Places
-    is ready. `MapsMapAccessAction` — opens the Live map pane, or `null` when
+    "this Map ID isn't a vector map" affordance (opens the Live map account pane).
+  - `MapsAccessAction` — opens the Places key's account pane (`auth`'s
+    `accountPane`), or `null` when Places is ready. `MapsMapAccessAction` —
+    opens the Live map's account pane, or `null` when
     the map is ready. A Maps surface that cannot work renders the matching one
     **in place**, rather than telling the user to go find Settings.
   - `MAPS_BLOCKER_BODY` — the shared per-blocker explanation copy.
@@ -152,30 +154,23 @@ over:
 
 ## Plugin reference
 
-- Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane — listed in Settings → Accounts as the Google Maps 'Live map' row — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the pane's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
+- Description: Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup — the Google Maps 'Live map' row of Settings → Accounts, rendered inline in its account pane — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the setup's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
 - Web:
-  - Slots:
-    - `google-maps-live-map-setup.actions`
-    - `LiveMapSetup.MapIdPreview`
-  - Slot contributors:
-    - `google-maps-live-map-setup.actions` ← `primitives.pane`
-    - `LiveMapSetup.MapIdPreview` ← `map.google`
-  - Contributes:
-    - `Pane.Register` "google-maps-live-map-setup"
-    - `Auth.Integration` "Live map"
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slots: `LiveMapSetup.MapIdPreview`
+  - Slot contributors: `LiveMapSetup.MapIdPreview` ← `map.google`
+  - Contributes: `Auth.Integration` "Live map"
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/setup-steps` ×10
     - `primitives/live-state` ×5
-    - `primitives/pane` ×4
     - `auth` ×3
     - `infra/endpoints` ×2
     - `primitives/css/ui-kit` ×2
-    - `auth/google-maps/setup-wizard.googleMapsSetupPane`
     - `network/live.useLive`
     - `primitives/css/clip.Clip`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/loading.Loading`
+    - `primitives/pane.useOpenPane`
     - `primitives/slot-render.defineDispatchSlot`
   - Exports (types):
     - `MapIdPreviewProps`
@@ -235,7 +230,6 @@ over:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --space-lg`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
   - Imported by:

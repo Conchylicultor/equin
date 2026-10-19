@@ -16,7 +16,6 @@ import {
   PaneChrome,
   usePaneMatch,
   useOpenPane,
-  type PaneObject,
 } from "@plugins/primitives/plugins/pane/web";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -28,7 +27,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { Auth, type IntegrationStatus } from "../slots";
 import { useAuthState } from "../hooks";
-import { accountsPane, providerPane } from "../panes";
+import { accountsPane, accountPane } from "../panes";
 import { useProviderStatus } from "./provider-status";
 import { IntegrationStatusBadge } from "./integration-presentation";
 
@@ -40,8 +39,8 @@ const MAIN_URL = namespaceUrl(asNamespace(MAIN_COMPOSITION_ID));
 
 /**
  * One Accounts row: an auth provider or an integration, presented alike. Every
- * row opens one pane to the right of the list — the provider pane, or the
- * integration's own — so there is one way in to each of them.
+ * row opens the same account pane to the right of the list, which renders its
+ * status, account and setup — so there is one way in to each of them.
  */
 interface AccountRow {
   id: string;
@@ -50,11 +49,6 @@ interface AccountRow {
   service: string;
   description: string;
   useStatus: Hook<() => ResourceResult<IntegrationStatus>>;
-  opens:
-    | { kind: "provider"; providerId: string }
-    | { kind: "integration"; pane: PaneObject };
-  /** The panes that, open beside the list, mean this row is the selected one. */
-  paneIds: readonly string[];
 }
 
 export function AccountsPane(): ReactElement {
@@ -73,10 +67,6 @@ export function AccountsPane(): ReactElement {
         service: p.service ?? p.name,
         description: p.description ?? "",
         useStatus: () => useProviderStatus(p.id),
-        opens: { kind: "provider" as const, providerId: p.id },
-        // The provider's setup wizard opens from its pane (pushed to the
-        // right) or straight from a link; either way it is this row's.
-        paneIds: p.credentialsPane ? [p.credentialsPane.id] : [],
       })),
       ...integrations.map((i) => ({
         id: i.id,
@@ -85,8 +75,6 @@ export function AccountsPane(): ReactElement {
         service: i.service,
         description: i.description,
         useStatus: i.useStatus,
-        opens: { kind: "integration" as const, pane: i.pane },
-        paneIds: [i.pane.id],
       })),
     ],
     [providers, integrations],
@@ -96,11 +84,8 @@ export function AccountsPane(): ReactElement {
   const panes = match?.panes ?? [];
   const child =
     panes[panes.findIndex((e) => e.pane.id === accountsPane.id) + 1];
-  const selectedId = !child
-    ? undefined
-    : child.pane.id === providerPane.id
-      ? child.params.providerId
-      : rows.find((r) => r.paneIds.includes(child.pane.id))?.id;
+  const selectedId =
+    child?.pane.id === accountPane.id ? child.params.accountId : undefined;
 
   const fields = useMemo<FieldDef<AccountRow>[]>(() => {
     const services = [...new Set(rows.map((r) => r.service))].sort();
@@ -181,13 +166,7 @@ export function AccountsPane(): ReactElement {
           storageKey={ACCOUNTS_VIEW}
           selectedRowId={selectedId}
           rowActivation={(r) =>
-            r.opens.kind === "provider"
-              ? openPane.to(
-                  providerPane,
-                  { providerId: r.opens.providerId },
-                  { mode: "push" },
-                )
-              : openPane.to(r.opens.pane, {}, { mode: "push" })
+            openPane.to(accountPane, { accountId: r.id }, { mode: "push" })
           }
           searchAccessor={(r) => `${r.name} ${r.service} ${r.description}`}
           searchPlaceholder="Search accounts…"

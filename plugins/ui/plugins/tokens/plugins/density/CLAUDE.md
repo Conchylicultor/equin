@@ -29,7 +29,7 @@
   - Uses tokens:
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Tokens used by: 318 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 314 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×66
     - `primitives` ×65
     - `conversations` ×47
@@ -41,7 +41,6 @@
     - `reorder` ×7
     - `tasks` ×6
     - `review` ×5
-    - `auth` ×4
     - `apps-core` ×3
     - `build` ×3
     - `infra` ×3
@@ -52,10 +51,11 @@
     - `code-explorer` ×2
     - `config_v2` ×2
     - `framework` ×2
-    - `integrations` ×2
     - `map` ×2
     - `screenshot` ×2
+    - `auth`
     - `history/dialog`
+    - `integrations/youtube`
     - `layouts/miller`
     - `reports/launch-fix`
     - `search/quick-find`

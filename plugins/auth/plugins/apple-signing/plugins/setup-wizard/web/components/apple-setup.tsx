@@ -28,7 +28,8 @@ async function fileToBase64(file: File): Promise<string> {
   return btoa(String.fromCharCode(...new Uint8Array(await file.arrayBuffer())));
 }
 
-export function AppleSetupPane() {
+/** Apple signing's setup, the body of its Accounts pane (the integration's `setup`). */
+export function AppleSetup() {
   const [password, setPassword] = useState("");
   const [p12Base64, setP12Base64] = useState("");
   const [p12FileName, setP12FileName] = useState("");
@@ -163,7 +164,7 @@ export function AppleSetupPane() {
   }
 
   return (
-    <Stack gap="xl" className="p-lg max-w-lg">
+    <Stack gap="xl">
       <Text as="p" variant="caption" className="text-muted-foreground">
         Configure Developer ID signing so the next Desktop (Tauri) release is
         signed and notarized. Credentials are stored encrypted on this machine.

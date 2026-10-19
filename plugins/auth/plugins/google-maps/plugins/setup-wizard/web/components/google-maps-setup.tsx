@@ -36,7 +36,8 @@ function extractProjectId(raw: string): string {
   return match?.[1] ?? raw.trim();
 }
 
-export function GoogleMapsSetupPane() {
+/** The Places key setup, rendered inline in its Accounts pane (`setup: { kind: "steps" }`). */
+export function GoogleMapsSetup() {
   const [projectId, setProjectId] = useState("");
   const [apiKey, setApiKeyInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -74,8 +75,7 @@ export function GoogleMapsSetupPane() {
   }
 
   return (
-    <>
-    <Stack gap="xl" className="p-lg max-w-lg">
+    <Stack gap="xl">
       <Stack gap="xs">
         <Text as="label" variant="label">
           Google Cloud project ID
@@ -194,6 +194,5 @@ export function GoogleMapsSetupPane() {
         </Step>
       </Steps>
     </Stack>
-    </>
   );
 }

@@ -7,8 +7,8 @@
       "parent": null
     },
     {
-      "paneId": "accounts-provider",
-      "segment": "provider/:providerId",
+      "paneId": "accounts-account",
+      "segment": "account/:accountId",
       "appIndex": false,
       "parent": "accounts"
     },
@@ -53,12 +53,6 @@
       "segment": "app/:attemptId/:path?",
       "appIndex": false,
       "parent": null
-    },
-    {
-      "paneId": "apple-setup",
-      "segment": "apple/setup",
-      "appIndex": false,
-      "parent": "accounts"
     },
     {
       "paneId": "attachment-preview",
@@ -419,24 +413,6 @@
       "segment": "",
       "appIndex": true,
       "parent": null
-    },
-    {
-      "paneId": "google-maps-live-map-setup",
-      "segment": "google-maps/live-map",
-      "appIndex": false,
-      "parent": "accounts"
-    },
-    {
-      "paneId": "google-maps-setup",
-      "segment": "google-maps/setup",
-      "appIndex": false,
-      "parent": "accounts"
-    },
-    {
-      "paneId": "google-setup",
-      "segment": "google/setup",
-      "appIndex": false,
-      "parent": "accounts"
     },
     {
       "paneId": "graph",

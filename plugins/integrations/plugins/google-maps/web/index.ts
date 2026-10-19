@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { liveMapSetupPane } from "./panes";
 import { LiveMapSetup } from "./slots";
 import { Auth } from "@plugins/auth/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { useLiveMapStatus } from "./internal/use-live-map-status";
+import { LIVE_MAP_ACCOUNT_ID } from "./internal/live-map-account";
+import { LiveMapSetupBody } from "./components/live-map-setup";
 
 export {
   useMapsAccess,
@@ -31,21 +31,19 @@ export {
 
 export default {
   description:
-    "Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane — listed in Settings → Accounts as the Google Maps 'Live map' row — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the pane's LiveMapSetup.MapIdPreview slot).",
+    "Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup — the Google Maps 'Live map' row of Settings → Accounts, rendered inline in its account pane — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the setup's LiveMapSetup.MapIdPreview slot).",
   contributions: [
-    Pane.Register({ pane: liveMapSetupPane }),
     Auth.Integration({
-      id: "google-maps-live-map",
+      id: LIVE_MAP_ACCOUNT_ID,
       name: "Live map",
       icon: symbol("map"),
       service: "Google Maps",
       description: "Browser key for the interactive map.",
-      pane: liveMapSetupPane,
+      setup: LiveMapSetupBody,
       useStatus: useLiveMapStatus,
     }),
   ],
   slots: {
-    "google-maps-live-map-setup": liveMapSetupPane,
     liveMapSetup: LiveMapSetup,
   },
 } satisfies PluginDefinition;

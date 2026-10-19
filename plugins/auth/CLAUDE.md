@@ -7,8 +7,8 @@ Centralized OAuth 2.0 / API key / password sign-in infrastructure for third-part
 The closed list is `AUTH_PROVIDER_KINDS` in `core/internal/lib.ts`; everything that branches on a kind (the descriptor check, the token read, the Accounts row) is exhaustive — a `switch` with a `never` default, or a `Record` over every kind — so a new kind is a type error wherever it is unhandled.
 
 - **`oauth2`** — popup consent flow, refresh loop. `descriptor.oauth`.
-- **`apikey`** — the user pastes a key (usually through a setup pane the provider registers as `credentialsPane`); `descriptor.apiKey.verify` probes it before it is stored.
-- **`password`** — the user types a username + password once, in the generic sign-in dialog the Accounts row opens (`web/components/password-sign-in-dialog.tsx`). `POST /api/auth/sign-in/:provider` hands them to `descriptor.password.exchange`, which trades them for the provider's long-lived token and throws the provider's own message on a rejection. Central stores **only the token** (in the same `apiKey` field an API key uses) and drops the password — never persisted, never logged; a stored password would be a strictly worse secret to hold. The web contribution's `passwordSignIn` carries the dialog's wording (username label, sign-up link). Example: `auth/plugins/hooktheory`.
+- **`apikey`** — the user pastes a key (through the provider's own `steps` setup, e.g. `google-maps`); `descriptor.apiKey.verify` probes it before it is stored.
+- **`password`** — the user types a username + password once, in the generic sign-in form of its Accounts pane (`setup: { kind: "password" }`, `web/components/password-sign-in-form.tsx`). `POST /api/auth/sign-in/:provider` hands them to `descriptor.password.exchange`, which trades them for the provider's long-lived token and throws the provider's own message on a rejection. Central stores **only the token** (in the same `apiKey` field an API key uses) and drops the password — never persisted, never logged; a stored password would be a strictly worse secret to hold. The `password` setup carries the form's wording (username label, sign-up link). Example: `auth/plugins/hooktheory`.
 
 `apikey` and `password` accounts are both *static credentials*: `getAccessToken` / `getTokenFromCentral` return the stored value with `expiresAt: MAX_SAFE_INTEGER` and no scopes. Nothing marks one stale (the refresh loop walks only oauth2), and Disconnect deletes it locally without revoking it upstream — when the provider revokes it, the next call fails and the user signs in again.
 
@@ -24,10 +24,15 @@ The closed list is `AUTH_PROVIDER_KINDS` in `core/internal/lib.ts`; everything t
 
 Settings → Accounts is a DataView (`auth.accounts`, grouped by service) over two slots, presented alike:
 
-- **`Auth.Provider`** — an account central holds a credential for. Its row opens the generic provider pane (`accounts/provider/:providerId`: status, identity, scopes, Connect / Disconnect); its `credentialsPane` (a setup wizard) opens from there, pushed to the right.
-- **`Auth.Integration`** — a setup surface that is not a provider (a second key of a service, like the Google Maps live map; Apple signing's config). Its row opens its own `pane`, and its `useStatus` hook answers the row's badge as a read.
+- **`Auth.Provider`** — an account central holds a credential for. Its required `setup` (`ProviderSetup`) says how it is set up, one arm per way a credential is obtained:
+  - `steps` — the provider's own guided setup component (`google`, `google-maps`), which owns every write, connect included;
+  - `oauth-client` — the generic OAuth steps (open the console, copy the redirect URI, paste the client id + secret into the provider's `config`, connect) — `notion`;
+  - `password` — the generic sign-in form — `hooktheory`.
+- **`Auth.Integration`** — a setup surface that is not a provider (a second key of a service, like the Google Maps live map; Apple signing's config). Its `setup` component is its pane's body, and its `useStatus` hook answers the row's badge as a read.
 
-Every row opens exactly one pane to the right of the list, so a setup pane is reachable from Accounts only by contributing one of the two — a pane chained off `accountsRoute` with neither has no way in. Each such pane wraps its body in `PaneChrome` (title, ×). Group a row with its siblings through `service`.
+**One pane per row, owned by auth.** Every row opens `accountPane` (`accounts/account/:accountId`) to the right of the list: the shared header (icon, name, service, status, description), then — for a connected provider — its account (who, scopes, missing grants, the last refresh failure, Reconnect / Disconnect), then the setup inline: open while not connected, folded into a "Setup" / "Sign in" card once it is (where a key is replaced or a sign-in redone). An integration's pane is the header over its setup. No setup ever opens a second pane, and no row detours through Settings → Config.
+
+`accountsRoute` is not exported, and a contribution carries a component, not a pane — so a setup pane chained off Accounts that the list does not show cannot be written. A consumer that sends the user to set something up links to `accountPane` with the row's id (`integrations/google-maps`'s "Set up Google Maps"). Group a row with its siblings through `service`.
 
 ## How a consumer plugin uses it
 
@@ -69,14 +74,14 @@ plugins/auth/plugins/<id>/
 │       ├── descriptor.ts  # defineAuthProvider(...) — resolveCredentials uses readSecretConfig()
 │       └── register.ts    # registerAuthProvider(descriptor) at module top-level
 └── web/
-    └── index.ts        # Auth.Provider({ id, name, icon }) + ConfigV2.WebRegister({ descriptor })
+    └── index.ts        # Auth.Provider({ id, name, icon, setup: { kind: "oauth-client", config, consoleUrl } }) + ConfigV2.WebRegister({ descriptor })
 ```
 
 The provider's `central/internal/register.ts` runs at module init and calls `registerAuthProvider`. Module init order in `central/src/plugins.ts` puts the auth root plugin before its providers, so the registry is populated before any provider's first OAuth request. The worktree-side `server/index.ts` registers the config descriptor with config_v2 so the Settings UI renders the fields.
 
 ## Credentials
 
-OAuth client credentials (`clientId`, `clientSecret`) are user-supplied via the Settings pane. Both use `secretField()` from config_v2, which stores values in the central secrets store under `{ namespace: "config-fields", key: "auth-<provider>.<field>" }`. Provider descriptors read them via `readSecretConfig()` from `@plugins/fields/plugins/secret/plugins/config/central`.
+OAuth client credentials (`clientId`, `clientSecret`) are user-supplied in the provider's Accounts pane (its setup writes the config fields; Settings → Config shows them too). Both use `secretField()` from config_v2, which stores values in the central secrets store under `{ namespace: "config-fields", key: "auth-<provider>.<field>" }`. Provider descriptors read them via `readSecretConfig()` from `@plugins/fields/plugins/secret/plugins/config/central`.
 
 Env-var overrides for developers:
 - `SINGULARITY_AUTH_<PROVIDER>_CLIENT_ID`
@@ -100,7 +105,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 
 ## Plugin reference
 
-- Description: Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening its pane to the right (the provider pane, or the integration's own) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- Description: Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening one account pane to the right (header, account, and the row's setup inline — a provider's setup wizard, OAuth client steps or sign-in form; an integration's own setup) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 - Load-bearing: yes
 - Web:
   - Slots:
@@ -108,7 +113,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `Auth.Integration`
     - `Auth.ScopeRequirement`
     - `accountsPane.Actions`
-    - `providerPane.Actions`
+    - `accountPane.Actions`
   - Slot contributors:
     - `Auth.Provider` ← `auth.google`
     - `Auth.Provider` ← `auth.google-maps.setup-wizard`
@@ -119,15 +124,16 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `Auth.ScopeRequirement` ← `backup.targets.google-drive`
     - `Auth.ScopeRequirement` ← `integrations.gmail`
     - `accountsPane.Actions` ← `primitives.pane`
-    - `providerPane.Actions` ← `primitives.pane`
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×7
-    - `primitives/css/ui-kit` ×5
+    - `accountPane.Actions` ← `primitives.pane`
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×6
+    - `primitives/setup-steps` ×6
     - `infra/endpoints` ×4
     - `primitives/collapsible` ×4
     - `primitives/live-state` ×4
+    - `primitives/css/ui-kit` ×3
     - `primitives/data-view` ×3
-    - `config_v2/settings.configNavPane`
+    - `config_v2.useConfigRegistrations`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -135,9 +141,8 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/link-gesture.activationProps`
     - `primitives/loading.Loading`
-    - `primitives/overlay/imperative-dialog.openDialog`
+    - `primitives/section-card.SectionCard`
     - `shell/notifications.toast`
     - `ui/icons.Icon`
   - Exports (types):
@@ -149,15 +154,14 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `ConnectResult`
     - `IntegrationStatus`
   - Exports (values):
+    - `accountPane`
     - `accountsPane`
-    - `accountsRoute`
     - `Auth`
     - `ConnectButton`
     - `currentWorktreeName`
     - `disconnect`
     - `GrantAccessButton`
     - `missingScopes`
-    - `providerPane`
     - `startConnectFlow`
     - `useAccountStatus`
     - `useAuthState`
@@ -267,6 +271,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-caption`
+    - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
@@ -299,14 +304,14 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Sub-plugins:
   - **`apple-signing`** [exempt] — Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload +…
     - Plugins:
-      - **`setup-wizard`** — Apple code-signing UI: the Accounts 'Apple Developer' integration row (opening the wizard) plus the guided certificate + App Store Connect API key setup wizard pane.
+      - **`setup-wizard`** — Apple code-signing UI: the Accounts 'Apple Developer' integration row and its guided certificate + App Store Connect API key setup, rendered inline in the row's Accounts pane.
   - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental…
     - Plugins:
-      - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
+      - **`setup-wizard`** — Guided setup steps for Google OAuth credentials (project → Drive API → consent screen → OAuth client → paste → connect), rendered inline in the Google Accounts pane.
   - **`google-maps`** — Google Maps Platform API-key provider. The key is stored in the central auth token store (encrypted, shared across worktrees) and verified against the Places API before it is accepted.
     - Plugins:
-      - **`setup-wizard`** — Guided setup pane for the Google Maps Platform API key: project → Places API → billing → key → paste. Also contributes the Accounts provider row.
-  - **`hooktheory`** — Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared password sign-in dialog. Hooktheory (TheoryTab) username/password provider. The password is traded once…
-  - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Surfaces in Accounts pane; end-to-end smoke not yet validated.
+      - **`setup-wizard`** — Guided setup steps for the Google Maps Platform API key (project → Places API → billing → key → paste), rendered inline in its Accounts pane; contributes the Accounts provider row.
+  - **`hooktheory`** — Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared sign-in form, inline in its Accounts pane. Hooktheory (TheoryTab) username/password provider. The…
+  - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane, set up there with the generic OAuth client steps (console → redirect URI → client id + secret → connect), and registers…
 
 <!-- AUTOGENERATED:END -->

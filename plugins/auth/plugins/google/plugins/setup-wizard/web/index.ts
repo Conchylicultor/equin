@@ -1,12 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { googleSetupPane } from "./panes";
 
-export { googleSetupPane } from "./panes";
+export { GoogleSetup } from "./components/google-setup";
 
 export default {
   description:
-    "Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.",
-  contributions: [Pane.Register({ pane: googleSetupPane })],
-  slots: { "google-setup": googleSetupPane },
+    "Guided setup steps for Google OAuth credentials (project → Drive API → consent screen → OAuth client → paste → connect), rendered inline in the Google Accounts pane.",
+  contributions: [],
 } satisfies PluginDefinition;

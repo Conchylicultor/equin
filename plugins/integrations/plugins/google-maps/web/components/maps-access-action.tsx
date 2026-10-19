@@ -2,7 +2,8 @@ import type { ReactElement } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { googleMapsSetupPane } from "@plugins/auth/plugins/google-maps/plugins/setup-wizard/web";
+import { accountPane } from "@plugins/auth/web";
+import { GOOGLE_MAPS_PROVIDER_ID } from "@plugins/auth/plugins/google-maps/core";
 import {
   useMapsAccess,
   type MapsAccessBlocker,
@@ -51,7 +52,11 @@ export function MapsAccessAction(): ReactElement | null {
   return (
     <Button
       variant="outline"
-      {...openPane.link(googleMapsSetupPane, {}, { mode: "root" })}
+      {...openPane.link(
+        accountPane,
+        { accountId: GOOGLE_MAPS_PROVIDER_ID },
+        { mode: "root" },
+      )}
     >
       Set up Google Maps
     </Button>

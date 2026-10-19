@@ -6,21 +6,16 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
 import { AccountsPane } from "./components/accounts-pane";
-import { ProviderDetail } from "./components/provider-detail";
+import { AccountDetail } from "./components/account-detail";
 import { Auth } from "./slots";
 
 /**
- * Exported because every pane an Accounts row opens — the provider pane here,
- * an integration's own pane, the setup wizards (Google, Google Maps, Apple
- * signing) — chains off this route.
- *
- * It stays in `web/` rather than moving to `core/`, even though `auth/core`
- * exists: `auth/plugins/google/web` already imports its own setup wizard, and a
- * `core`-tagged edge back from that wizard to `auth` is folded into the server
- * and central cycle graphs where a `web`-tagged one is not. Nothing server-side
- * needs to build this link, so there is nothing to buy by promoting it.
+ * Deliberately NOT exported. The only pane chained off Accounts is
+ * `accountPane` below, which renders whatever a row contributes (a provider's
+ * setup, an integration's) — so a setup pane reachable from a link but missing
+ * from the list cannot be spelled: there is no route to hang it off.
  */
-export const accountsRoute = defineRoute({
+const accountsRoute = defineRoute({
   id: "accounts",
   segment: "accounts",
 });
@@ -34,47 +29,55 @@ export const accountsPane = Pane.define({
   width: 420,
 });
 
-/** The provider's name, from its web contribution. */
-function useProviderTitle({
-  providerId,
+/** The row's name, from its provider or integration contribution. */
+function useAccountTitle({
+  accountId,
 }: {
-  providerId: string;
+  accountId: string;
 }): string | undefined {
-  return Auth.Provider.useContributions().find((p) => p.id === providerId)
-    ?.name;
+  const providers = Auth.Provider.useContributions();
+  const integrations = Auth.Integration.useContributions();
+  return (
+    providers.find((p) => p.id === accountId)?.name ??
+    integrations.find((i) => i.id === accountId)?.name
+  );
 }
 
-/** A provider exists when a plugin contributes it — plugin contributions are known synchronously. */
-function useResolveProvider({
-  providerId,
+/** An account exists when a plugin contributes it — plugin contributions are known synchronously. */
+function useResolveAccount({
+  accountId,
 }: {
-  providerId: string;
+  accountId: string;
 }): ResolveResult {
-  return Auth.Provider.useContributions().some((p) => p.id === providerId)
+  const providers = Auth.Provider.useContributions();
+  const integrations = Auth.Integration.useContributions();
+  return providers.some((p) => p.id === accountId) ||
+    integrations.some((i) => i.id === accountId)
     ? { status: "found" }
     : { status: "missing" };
 }
 
-// /settings/accounts/provider/<id>: one auth provider — its account and the
-// buttons that connect, set up or disconnect it.
-export const providerPane = Pane.define({
+// /settings/accounts/account/<id>: one Accounts row — a provider or an
+// integration — with its status, its account and its setup, in one pane.
+// Consumers that send the user to set something up link here by id.
+export const accountPane = Pane.define({
   route: defineRoute({
-    id: "accounts-provider",
-    segment: "provider/:providerId",
+    id: "accounts-account",
+    segment: "account/:accountId",
     parent: accountsRoute,
   }),
   app: settingsApp,
-  component: ProviderBody,
-  useResolve: useResolveProvider,
-  title: { useText: useProviderTitle, fallback: "Account" },
-  width: 520,
+  component: AccountBody,
+  useResolve: useResolveAccount,
+  title: { useText: useAccountTitle, fallback: "Account" },
+  width: 560,
 });
 
-function ProviderBody() {
-  const { providerId } = providerPane.useParams();
+function AccountBody() {
+  const { accountId } = accountPane.useParams();
   return (
-    <PaneChrome pane={providerPane}>
-      <ProviderDetail providerId={providerId} />
+    <PaneChrome pane={accountPane}>
+      <AccountDetail accountId={accountId} />
     </PaneChrome>
   );
 }

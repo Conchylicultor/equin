@@ -180,7 +180,6 @@ renderer, which only the running app has.
     - `ui/tokens/type-scale --line-height-3xs`
   - Imported by:
     - `apps/settings/config`
-    - `auth`
     - `config_v2/config-link`
     - `config_v2/settings/conflict-agent`
     - `debug/config-orphans`

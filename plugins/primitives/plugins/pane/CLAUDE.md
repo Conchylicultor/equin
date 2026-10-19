@@ -862,11 +862,12 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 93 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×93
-  - Contributes: 120 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 89 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×89
+  - Contributes: 116 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ItemMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
+    - `accountPane.Actions` "title" → `PaneTitleItem`
     - `accountsPane.Actions` "title" → `PaneTitleItem`
     - `agentDetailPane.Actions` "title" → `PaneTitleItem`
     - `agentReportPane.Actions` "title" → `PaneTitleItem`
@@ -874,7 +875,6 @@ See "Open questions" in the design doc.
     - `agentsRootPane.Actions` "title" → `PaneTitleItem`
     - `allConversationsPane.Actions` "title" → `PaneTitleItem`
     - `app-preview.actions` "title" → `PaneTitleItem`
-    - `appleSetupPane.Actions` "title" → `PaneTitleItem`
     - `attachmentPreviewPane.Actions` "title" → `PaneTitleItem`
     - `attemptPane.Actions` "title" → `PaneTitleItem`
     - `automation-detail.actions` "title" → `PaneTitleItem`
@@ -923,9 +923,6 @@ See "Open questions" in the design doc.
     - `filePeekPane.Actions` "title" → `PaneTitleItem`
     - `filesAtPane.Actions` "title" → `PaneTitleItem`
     - `filesHomePane.Actions` "title" → `PaneTitleItem`
-    - `google-maps-live-map-setup.actions` "title" → `PaneTitleItem`
-    - `googleMapsSetupPane.Actions` "title" → `PaneTitleItem`
-    - `googleSetupPane.Actions` "title" → `PaneTitleItem`
     - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
     - `healthMonitorPane.Actions` "title" → `PaneTitleItem`
     - `heapSnapshotPane.Actions` "title" → `PaneTitleItem`
@@ -953,7 +950,6 @@ See "Open questions" in the design doc.
     - `prototypes-present-canvas.actions` "title" → `PaneTitleItem`
     - `prototypes-present.actions` "title" → `PaneTitleItem`
     - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
-    - `providerPane.Actions` "title" → `PaneTitleItem`
     - `queue-dead.actions` "title" → `PaneTitleItem`
     - `queue-emission.actions` "title" → `PaneTitleItem`
     - `queue-job.actions` "title" → `PaneTitleItem`
@@ -1103,7 +1099,7 @@ See "Open questions" in the design doc.
     - `ui/tokens/color-palette --background`
     - `ui/tokens/density --chrome-pane-pad-end`
     - `ui/tokens/shape --spacing`
-  - Imported by: 175 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 172 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×62
     - `conversations` ×30
     - `debug` ×26
@@ -1111,11 +1107,11 @@ See "Open questions" in the design doc.
     - `tasks` ×9
     - `apps-core` ×6
     - `plugin-meta` ×6
-    - `auth` ×4
     - `layouts` ×4
     - `primitives` ×3
     - `infra` ×2
     - `stats` ×2
+    - `auth`
     - `backup`
     - `build`
     - `code-explorer/commit-detail`

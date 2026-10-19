@@ -42,6 +42,7 @@ for the pane's declared `chrome`. Exhibits: `section-card/region`,
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
   - Imported by:
+    - `auth`
     - `debug/mcp-tools`
     - `primitives/detail-sections`
 

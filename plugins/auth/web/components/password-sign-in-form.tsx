@@ -1,11 +1,8 @@
 import { useState, type FormEvent, type ReactElement } from "react";
 import {
   Button,
-  DialogDescription,
-  DialogTitle,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -16,29 +13,28 @@ import { signIn } from "@plugins/auth/core";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 
 /**
- * The sign-in dialog of any `kind: "password"` provider (opened through
- * `openDialog`, which owns the panel). Central trades the username + password
- * for the provider's token and keeps only the token.
+ * The sign-in form of any `kind: "password"` provider, inline in its Accounts
+ * pane (the `password` setup). Central trades the username + password for the
+ * provider's token and keeps only the token. Signing in again over a connected
+ * account replaces its token.
  */
-export function PasswordSignInDialog({
+export function PasswordSignInForm({
   providerId,
   providerName,
   usernameLabel = "Username",
   signUpUrl,
-  close,
 }: {
   providerId: string;
   providerName: string;
   usernameLabel?: string;
   signUpUrl?: string;
-  close: () => void;
 }): ReactElement {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   // `suppressError` + an inline message: a rejection is the provider's own
   // verdict on these credentials ("There are no accounts with this username."),
-  // so it belongs beside the fields, and the still-open dialog is the retry.
+  // so it belongs beside the fields, which stay filled for the retry.
   const submit = useEndpointMutation(signIn, {
     meta: { suppressError: true },
     onSuccess: ({ identity }) => {
@@ -49,7 +45,8 @@ export function PasswordSignInDialog({
         description: who ? `${providerName} (${who})` : providerName,
         variant: "success",
       });
-      close();
+      setUsername("");
+      setPassword("");
     },
   });
 
@@ -67,20 +64,16 @@ export function PasswordSignInDialog({
 
   return (
     <Stack as="form" onSubmit={onSubmit} gap="md">
-      <Stack gap="xs">
-        <DialogTitle>Sign in to {providerName}</DialogTitle>
-        <DialogDescription>
-          Your password is sent to {providerName} once, to get a sign-in token.
-          Only the token is stored.
-        </DialogDescription>
-      </Stack>
+      <Text as="p" variant="caption" tone="muted">
+        Your password is sent to {providerName} once, to get a sign-in token.
+        Only the token is stored.
+      </Text>
 
       <Stack as="label" gap="2xs">
         <Text variant="label">{usernameLabel}</Text>
         <Input
           name="username"
           autoComplete="username"
-          autoFocus
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
@@ -118,15 +111,6 @@ export function PasswordSignInDialog({
       )}
 
       <Stack direction="row" align="center" gap="sm">
-        <Fill />
-        <Button
-          variant="ghost"
-          type="button"
-          onClick={close}
-          disabled={submit.isPending}
-        >
-          Cancel
-        </Button>
         <Button type="submit" disabled={!canSubmit} loading={submit.isPending}>
           Sign in
         </Button>

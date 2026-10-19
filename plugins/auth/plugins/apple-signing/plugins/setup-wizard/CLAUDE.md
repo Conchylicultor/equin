@@ -4,31 +4,32 @@
 
 ## Plugin reference
 
-- Description: Apple code-signing UI: the Accounts 'Apple Developer' integration row (opening the wizard) plus the guided certificate + App Store Connect API key setup wizard pane.
+- Description: Apple code-signing UI: the Accounts 'Apple Developer' integration row and its guided certificate + App Store Connect API key setup, rendered inline in the row's Accounts pane.
 - Web:
-  - Slots: `appleSetupPane.Actions`
-  - Slot contributors: `appleSetupPane.Actions` ← `primitives.pane`
-  - Contributes:
-    - `Pane.Register` "apple-setup"
-    - `Auth.Integration` "Apple Developer"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/setup-steps` ×5
-    - `primitives/live-state` ×4
-    - `primitives/pane` ×3
-    - `auth` ×2
-    - `primitives/css/ui-kit` ×2
+  - Contributes: `Auth.Integration` "Apple Developer"
+  - Uses:
+    - `auth.Auth`
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.Input`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
-  - Exports (values): `appleSetupPane`
+    - `primitives/setup-steps.Step`
+    - `primitives/setup-steps.StepDone`
+    - `primitives/setup-steps.StepLink`
+    - `primitives/setup-steps.StepNote`
+    - `primitives/setup-steps.Steps`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --warning`
-    - `ui/tokens/density --space-lg`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-caption`

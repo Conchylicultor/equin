@@ -3,7 +3,8 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useMapsAccess } from "../internal/use-maps-access";
-import { liveMapSetupPane } from "../panes";
+import { accountPane } from "@plugins/auth/web";
+import { LIVE_MAP_ACCOUNT_ID } from "../internal/live-map-account";
 
 /**
  * The "set up the live map" affordance for the `"map"` capability: opens the
@@ -34,7 +35,11 @@ export function MapsMapAccessAction(): ReactElement | null {
   return (
     <Button
       variant="outline"
-      {...openPane.link(liveMapSetupPane, {}, { mode: "root" })}
+      {...openPane.link(
+        accountPane,
+        { accountId: LIVE_MAP_ACCOUNT_ID },
+        { mode: "root" },
+      )}
     >
       Set up the live map
     </Button>

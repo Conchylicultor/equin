@@ -49,10 +49,10 @@ const LOCAL_REFERRER = "http://*.localhost:9000/*";
  * Separate from the Places key wizard on purpose: that key is
  * server-only and must never be restricted to referrers, this one must be.
  */
-export function LiveMapSetupPane() {
+export function LiveMapSetupBody() {
   const config = useMapsBrowserConfig();
   if (config.kind === "loading") {
-    return <Loading variant="rows" count={4} className="p-lg max-w-lg" />;
+    return <Loading variant="rows" count={4} />;
   }
   if (config.kind === "error") {
     return (
@@ -113,7 +113,7 @@ function LiveMapSetupSteps({
   // run past a laptop screen.
   return (
     <>
-      <Stack gap="xl" className="p-lg max-w-lg">
+      <Stack gap="xl">
         <Stack gap="xs">
           {saved ? (
             <StepDone>Browser key saved</StepDone>

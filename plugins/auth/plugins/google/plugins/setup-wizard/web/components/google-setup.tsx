@@ -36,7 +36,8 @@ function extractProjectId(raw: string): string {
   return match?.[1] ?? raw.trim();
 }
 
-export function GoogleSetupPane() {
+/** Google's setup, rendered inline in the Google Accounts pane (`setup: { kind: "steps" }`). */
+export function GoogleSetup() {
   const [projectId, setProjectId] = useState("");
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -128,7 +129,7 @@ export function GoogleSetupPane() {
   const hasProject = projectId.length > 0;
 
   return (
-    <Stack gap="xl" className="p-lg max-w-lg">
+    <Stack gap="xl">
       <div>
         <Text as="label" variant="label">
           GCP Project ID

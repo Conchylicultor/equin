@@ -6076,16 +6076,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cache.ts`, `server/internal/hash-dir.ts`, `server/internal/render.ts` (debt)
     - **`settings`** — Settings app.
       - Plugins:
-        - **`accounts`** — Account settings surface: registers the accounts and provider panes and the Settings sidebar entry.
+        - **`accounts`** — Account settings surface: registers the accounts and account panes and the Settings sidebar entry.
           - Web:
             - Contributes:
               - `Pane.Register` "accounts"
-              - `Pane.Register` "accounts-provider"
+              - `Pane.Register` "accounts-account"
               - `Settings.Sidebar` "Accounts"
             - Uses:
               - `apps/settings/shell.Settings`
+              - `auth.accountPane`
               - `auth.accountsPane`
-              - `auth.providerPane`
               - `primitives/pane.Pane`
         - **`appearance`** — Appearance settings surface: opens the theme customizer (presets, variants, tokens) as a Settings sidebar entry. The same customizer is also reachable from the floating action bar.
           - Web:
@@ -10552,14 +10552,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/icons`
           - `ui/variant-region`
 
-- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening its pane to the right (the provider pane, or the integration's own) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening one account pane to the right (header, account, and the row's setup inline — a provider's setup wizard, OAuth client steps or sign-in form; an integration's own setup) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Web:
     - Slots:
       - `Auth.Provider`
       - `Auth.Integration`
       - `Auth.ScopeRequirement`
       - `accountsPane.Actions`
-      - `providerPane.Actions`
+      - `accountPane.Actions`
     - Slot contributors:
       - `Auth.Provider` ← `auth.google`
       - `Auth.Provider` ← `auth.google-maps.setup-wizard`
@@ -10570,15 +10570,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Auth.ScopeRequirement` ← `backup.targets.google-drive`
       - `Auth.ScopeRequirement` ← `integrations.gmail`
       - `accountsPane.Actions` ← `primitives.pane`
-      - `providerPane.Actions` ← `primitives.pane`
-    - Uses: 40 symbols — full list in [`plugins/auth/REFERENCE.md`](../plugins/auth/REFERENCE.md)
-      - `primitives/pane` ×7
-      - `primitives/css/ui-kit` ×5
+      - `accountPane.Actions` ← `primitives.pane`
+    - Uses: 42 symbols — full list in [`plugins/auth/REFERENCE.md`](../plugins/auth/REFERENCE.md)
+      - `primitives/pane` ×6
+      - `primitives/setup-steps` ×6
       - `infra/endpoints` ×4
       - `primitives/collapsible` ×4
       - `primitives/live-state` ×4
+      - `primitives/css/ui-kit` ×3
       - `primitives/data-view` ×3
-      - `config_v2/settings.configNavPane`
+      - `config_v2.useConfigRegistrations`
       - `network/live.useLive`
       - `primitives/css/badge.Badge`
       - `primitives/css/fill.Fill`
@@ -10586,9 +10587,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/spacing.Stack`
       - `primitives/css/text.Text`
-      - `primitives/link-gesture.activationProps`
       - `primitives/loading.Loading`
-      - `primitives/overlay/imperative-dialog.openDialog`
+      - `primitives/section-card.SectionCard`
       - `shell/notifications.toast`
       - `ui/icons.Icon`
     - Exports (types):
@@ -10600,15 +10600,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ConnectResult`
       - `IntegrationStatus`
     - Exports (values):
+      - `accountPane`
       - `accountsPane`
-      - `accountsRoute`
       - `Auth`
       - `ConnectButton`
       - `currentWorktreeName`
       - `disconnect`
       - `GrantAccessButton`
       - `missingScopes`
-      - `providerPane`
       - `startConnectFlow`
       - `useAccountStatus`
       - `useAuthState`
@@ -10718,6 +10717,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/shape --spacing`
       - `ui/tokens/type-scale --font-scale`
       - `ui/tokens/type-scale --font-size-caption`
+      - `ui/tokens/type-scale --font-weight-medium`
       - `ui/tokens/type-scale --font-weight-normal`
       - `ui/tokens/type-scale --line-height-caption`
     - Imported by:
@@ -10774,31 +10774,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Shared:
         - Exports (values): `appleSigningConfig`
       - Plugins:
-        - **`setup-wizard`** — Apple code-signing UI: the Accounts 'Apple Developer' integration row (opening the wizard) plus the guided certificate + App Store Connect API key setup wizard pane.
+        - **`setup-wizard`** — Apple code-signing UI: the Accounts 'Apple Developer' integration row and its guided certificate + App Store Connect API key setup, rendered inline in the row's Accounts pane.
           - Web:
-            - Slots: `appleSetupPane.Actions`
-            - Slot contributors: `appleSetupPane.Actions` ← `primitives.pane`
-            - Contributes:
-              - `Pane.Register` "apple-setup"
-              - `Auth.Integration` "Apple Developer"
-            - Uses: 22 symbols — full list in [`plugins/auth/plugins/apple-signing/plugins/setup-wizard/REFERENCE.md`](../plugins/auth/plugins/apple-signing/plugins/setup-wizard/REFERENCE.md)
-              - `primitives/setup-steps` ×5
-              - `primitives/live-state` ×4
-              - `primitives/pane` ×3
-              - `auth` ×2
-              - `primitives/css/ui-kit` ×2
+            - Contributes: `Auth.Integration` "Apple Developer"
+            - Uses:
+              - `auth.Auth`
               - `config_v2.useConfigRegistrations`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLive`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.Input`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/live-state.ResourceResult`
+              - `primitives/live-state.useCombinedResources`
               - `primitives/loading.Loading`
-            - Exports (values): `appleSetupPane`
+              - `primitives/setup-steps.Step`
+              - `primitives/setup-steps.StepDone`
+              - `primitives/setup-steps.StepLink`
+              - `primitives/setup-steps.StepNote`
+              - `primitives/setup-steps.Steps`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --warning`
-              - `ui/tokens/density --space-lg`
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-caption`
@@ -10811,7 +10812,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "auth-google"
         - Uses:
           - `auth.Auth`
-          - `auth/google/setup-wizard.googleSetupPane`
+          - `auth/google/setup-wizard.GoogleSetup`
           - `config_v2.ConfigV2`
       - Server:
         - Contributes: `ConfigV2.Register` "auth-google"
@@ -10825,29 +10826,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GOOGLE_DEFAULT_SCOPES`
           - `googleAuthConfig`
       - Plugins:
-        - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
+        - **`setup-wizard`** — Guided setup steps for Google OAuth credentials (project → Drive API → consent screen → OAuth client → paste → connect), rendered inline in the Google Accounts pane.
           - Web:
-            - Slots: `googleSetupPane.Actions`
-            - Slot contributors: `googleSetupPane.Actions` ← `primitives.pane`
-            - Contributes: `Pane.Register` "google-setup"
-            - Uses: 23 symbols — full list in [`plugins/auth/plugins/google/plugins/setup-wizard/REFERENCE.md`](../plugins/auth/plugins/google/plugins/setup-wizard/REFERENCE.md)
-              - `primitives/setup-steps` ×6
-              - `auth` ×4
-              - `primitives/pane` ×3
-              - `primitives/css/ui-kit` ×2
-              - `primitives/live-state` ×2
+            - Uses:
+              - `auth.currentWorktreeName`
+              - `auth.startConnectFlow`
+              - `auth.useAccountStatus`
               - `config_v2.useConfigRegistrations`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLive`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.Input`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/live-state.useCombinedResources`
               - `primitives/loading.Loading`
-            - Exports (values): `googleSetupPane`
+              - `primitives/setup-steps.Step`
+              - `primitives/setup-steps.StepCommand`
+              - `primitives/setup-steps.StepDone`
+              - `primitives/setup-steps.StepLink`
+              - `primitives/setup-steps.StepNote`
+              - `primitives/setup-steps.Steps`
+            - Exports (values): `GoogleSetup`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/density --space-lg`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-medium`
             - Imported by: `auth/google`
@@ -10857,15 +10862,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (values): `GOOGLE_MAPS_PROVIDER_ID`
       - Plugins:
-        - **`setup-wizard`** — Guided setup pane for the Google Maps Platform API key: project → Places API → billing → key → paste. Also contributes the Accounts provider row.
+        - **`setup-wizard`** — Guided setup steps for the Google Maps Platform API key (project → Places API → billing → key → paste), rendered inline in its Accounts pane; contributes the Accounts provider row.
           - Web:
-            - Slots: `googleMapsSetupPane.Actions`
-            - Slot contributors: `googleMapsSetupPane.Actions` ← `primitives.pane`
-            - Contributes:
-              - `Pane.Register` "google-maps-setup"
-              - `Auth.Provider` "Places API key"
+            - Contributes: `Auth.Provider` "Places API key"
             - Uses:
-              - `auth.accountsRoute`
               - `auth.Auth`
               - `auth.useAccountStatus`
               - `infra/endpoints.fetchEndpoint`
@@ -10876,22 +10876,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.Input`
               - `primitives/live-state.foldResource`
               - `primitives/live-state.ResourceErrorInline`
-              - `primitives/pane.defineRoute`
-              - `primitives/pane.Pane`
-              - `primitives/pane.PaneChrome`
               - `primitives/setup-steps.Step`
               - `primitives/setup-steps.StepDone`
               - `primitives/setup-steps.StepLink`
               - `primitives/setup-steps.StepNote`
               - `primitives/setup-steps.Steps`
-            - Exports (values): `googleMapsSetupPane`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/density --space-lg`
-            - Imported by: `integrations/google-maps`
-    - **`hooktheory`** — Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared password sign-in dialog. Hooktheory (TheoryTab) username/password provider. The password is traded once for Hooktheory's long-lived API token; only the token is stored, in the central auth token store (encrypted, shared across worktrees).
+    - **`hooktheory`** — Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared sign-in form, inline in its Accounts pane. Hooktheory (TheoryTab) username/password provider. The password is traded once for Hooktheory's long-lived API token; only the token is stored, in the central auth token store (encrypted, shared across worktrees).
       - Web:
         - Contributes: `Auth.Provider` "Hooktheory"
         - Uses: `auth.Auth`
@@ -10902,7 +10896,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HOOKTHEORY_API_BASE`
           - `HOOKTHEORY_PROVIDER_ID`
           - `HOOKTHEORY_SIGN_UP_URL`
-    - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Surfaces in Accounts pane; end-to-end smoke not yet validated.
+    - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane, set up there with the generic OAuth client steps (console → redirect URI → client id + secret → connect), and registers the credentials config. Surfaces in Accounts pane; end-to-end smoke not yet validated.
       - Web:
         - Contributes:
           - `Auth.Provider` "Notion"
@@ -12224,13 +12218,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `withOverrideLegend`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/shape --spacing`
-    - Imported by: 110 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 111 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×31
       - `backup` ×13
       - `conversations` ×13
       - `debug` ×13
       - `ui` ×11
-      - `auth` ×5
+      - `auth` ×6
       - `tasks` ×4
       - `config_v2` ×3
       - `primitives` ×3
@@ -12473,7 +12467,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-3xs`
         - Imported by:
           - `apps/settings/config`
-          - `auth`
           - `config_v2/config-link`
           - `config_v2/settings/conflict-agent`
           - `debug/config-orphans`
@@ -29247,30 +29240,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `GMAIL_SCOPES`
           - `GOOGLE_PROVIDER_ID`
-    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup pane — listed in Settings → Accounts as the Google Maps 'Live map' row — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the pane's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
+    - **`google-maps`** — Google Maps Platform access broker (web): per-capability readiness (Places lookups vs the live map), the public browser config read, the 'set up Google Maps' / 'set up the live map' affordances consumers render in place of routing the user to Settings, and the Live map setup — the Google Maps 'Live map' row of Settings → Accounts, rendered inline in its account pane — (browser key, plus the optional vector-map Map ID, checked live by a preview map the renderer plugin draws into the setup's LiveMapSetup.MapIdPreview slot). Google Maps Platform access broker (server): getMapsKey() reads the stored Places API key via the shared auth/central store, so consumers never import @plugins/auth; serves the host-global public browser config (Maps JavaScript API key) as a live value, with its write/clear endpoints for the key and the vector map's Map ID.
       - Web:
-        - Slots:
-          - `google-maps-live-map-setup.actions`
-          - `LiveMapSetup.MapIdPreview`
-        - Slot contributors:
-          - `google-maps-live-map-setup.actions` ← `primitives.pane`
-          - `LiveMapSetup.MapIdPreview` ← `map.google`
-        - Contributes:
-          - `Pane.Register` "google-maps-live-map-setup"
-          - `Auth.Integration` "Live map"
-        - Uses: 33 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
+        - Slots: `LiveMapSetup.MapIdPreview`
+        - Slot contributors: `LiveMapSetup.MapIdPreview` ← `map.google`
+        - Contributes: `Auth.Integration` "Live map"
+        - Uses: 29 symbols — full list in [`plugins/integrations/plugins/google-maps/REFERENCE.md`](../plugins/integrations/plugins/google-maps/REFERENCE.md)
           - `primitives/setup-steps` ×10
           - `primitives/live-state` ×5
-          - `primitives/pane` ×4
           - `auth` ×3
           - `infra/endpoints` ×2
           - `primitives/css/ui-kit` ×2
-          - `auth/google-maps/setup-wizard.googleMapsSetupPane`
           - `network/live.useLive`
           - `primitives/css/clip.Clip`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/loading.Loading`
+          - `primitives/pane.useOpenPane`
           - `primitives/slot-render.defineDispatchSlot`
         - Exports (types):
           - `MapIdPreviewProps`
@@ -29330,7 +29316,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/density --space-lg`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
         - Imported by:
@@ -38974,7 +38959,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
           - `conversations` ×11
           - `apps-core` ×3
@@ -38982,7 +38967,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×3
           - `debug` ×2
           - `tasks` ×2
-          - `auth`
           - `build`
           - `code-explorer/file-resolve`
           - `config_v2/config-link`
@@ -40227,7 +40211,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/home/app-cards`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/transcription`
-              - `auth`
               - `conversations/conversation-view/jsonl-viewer`
               - `primitives/overlay/imperative-dialog/confirm`
               - `ui/theme-engine/theme-gallery`
@@ -40383,11 +40366,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 93 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×93
-        - Contributes: 120 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 89 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×89
+        - Contributes: 116 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ItemMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
+          - `accountPane.Actions` "title" → `PaneTitleItem`
           - `accountsPane.Actions` "title" → `PaneTitleItem`
           - `agentDetailPane.Actions` "title" → `PaneTitleItem`
           - `agentReportPane.Actions` "title" → `PaneTitleItem`
@@ -40395,7 +40379,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `agentsRootPane.Actions` "title" → `PaneTitleItem`
           - `allConversationsPane.Actions` "title" → `PaneTitleItem`
           - `app-preview.actions` "title" → `PaneTitleItem`
-          - `appleSetupPane.Actions` "title" → `PaneTitleItem`
           - `attachmentPreviewPane.Actions` "title" → `PaneTitleItem`
           - `attemptPane.Actions` "title" → `PaneTitleItem`
           - `automation-detail.actions` "title" → `PaneTitleItem`
@@ -40444,9 +40427,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `filePeekPane.Actions` "title" → `PaneTitleItem`
           - `filesAtPane.Actions` "title" → `PaneTitleItem`
           - `filesHomePane.Actions` "title" → `PaneTitleItem`
-          - `google-maps-live-map-setup.actions` "title" → `PaneTitleItem`
-          - `googleMapsSetupPane.Actions` "title" → `PaneTitleItem`
-          - `googleSetupPane.Actions` "title" → `PaneTitleItem`
           - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
           - `healthMonitorPane.Actions` "title" → `PaneTitleItem`
           - `heapSnapshotPane.Actions` "title" → `PaneTitleItem`
@@ -40474,7 +40454,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `prototypes-present-canvas.actions` "title" → `PaneTitleItem`
           - `prototypes-present.actions` "title" → `PaneTitleItem`
           - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
-          - `providerPane.Actions` "title" → `PaneTitleItem`
           - `queue-dead.actions` "title" → `PaneTitleItem`
           - `queue-emission.actions` "title" → `PaneTitleItem`
           - `queue-job.actions` "title" → `PaneTitleItem`
@@ -40624,7 +40603,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --background`
           - `ui/tokens/density --chrome-pane-pad-end`
           - `ui/tokens/shape --spacing`
-        - Imported by: 175 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 172 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×62
           - `conversations` ×30
           - `debug` ×26
@@ -40632,11 +40611,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×9
           - `apps-core` ×6
           - `plugin-meta` ×6
-          - `auth` ×4
           - `layouts` ×4
           - `primitives` ×3
           - `infra` ×2
           - `stats` ×2
+          - `auth`
           - `backup`
           - `build`
           - `code-explorer/commit-detail`
@@ -41184,6 +41163,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
         - Imported by:
+          - `auth`
           - `debug/mcp-tools`
           - `primitives/detail-sections`
     - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.
@@ -41250,6 +41230,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/deploy/remote-deploy`
           - `apps/deploy/ssh-setup`
           - `apps/deploy/ssh-setup/hetzner`
+          - `auth`
           - `auth/apple-signing/setup-wizard`
           - `auth/google-maps/setup-wizard`
           - `auth/google/setup-wizard`
@@ -42567,8 +42548,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Slots: `ReorderSlots.AreaEditor`
     - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
-    - Contributes: 245 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×245
+    - Contributes: 241 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×241
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -42603,8 +42584,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderSlots`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 244 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×244
+    - Contributes: 240 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×240
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -47850,7 +47831,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 318 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 314 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×66
               - `primitives` ×65
               - `conversations` ×47
@@ -47862,7 +47843,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reorder` ×7
               - `tasks` ×6
               - `review` ×5
-              - `auth` ×4
               - `apps-core` ×3
               - `build` ×3
               - `infra` ×3
@@ -47873,10 +47853,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `code-explorer` ×2
               - `config_v2` ×2
               - `framework` ×2
-              - `integrations` ×2
               - `map` ×2
               - `screenshot` ×2
+              - `auth`
               - `history/dialog`
+              - `integrations/youtube`
               - `layouts/miller`
               - `reports/launch-fix`
               - `search/quick-find`

@@ -97,7 +97,6 @@ owns only the content + a `DialogTitle` (for a11y). Never wrap your own
     - `apps/home/app-cards`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/transcription`
-    - `auth`
     - `conversations/conversation-view/jsonl-viewer`
     - `primitives/overlay/imperative-dialog/confirm`
     - `ui/theme-engine/theme-gallery`

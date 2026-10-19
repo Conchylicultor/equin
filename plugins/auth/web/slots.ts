@@ -1,7 +1,8 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
-import type { PaneObject } from "@plugins/primitives/plugins/pane/web";
+import type { ComponentType } from "react";
+import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";
 
@@ -17,27 +18,55 @@ export interface AuthProviderContribution {
   service?: string;
   /** One line on what connecting it unlocks — the row's subtitle until an identity is known. */
   description?: string;
-  /** Optional setup help text shown when credentials are missing. */
-  helpUrl?: string;
   /**
-   * The setup pane the provider pane's "Configure credentials" / "Add key"
-   * button opens (a param-less pane, pushed to the right of the provider
-   * pane); Settings → Config when absent. A pane rather than a callback, so the
-   * button can hand it out as a link — ⌘/middle-click opens it in a browser tab.
+   * How the account is set up, rendered inline in its Accounts pane — there is
+   * no second pane to open. Required: an account with no way to set it up is
+   * an account the user cannot use.
    */
-  credentialsPane?: PaneObject;
-  /**
-   * Wording for the sign-in dialog of a `kind: "password"` provider. Optional —
-   * the dialog works without it. Presentational, like `helpUrl`: the exchange
-   * itself lives in the central descriptor.
-   */
-  passwordSignIn?: {
-    /** Label of the username field. Defaults to "Username". */
-    usernameLabel?: string;
-    /** When set, the dialog offers a "Create an account" link to it. */
-    signUpUrl?: string;
-  };
+  setup: ProviderSetup;
 }
+
+/** An OAuth client config: it declares `clientId` and `clientSecret`, under these names. */
+export type OAuthClientConfig = ConfigDescriptor & {
+  readonly fields: Record<"clientId" | "clientSecret", unknown>;
+};
+
+/**
+ * How a provider's account is set up. Each arm is rendered by the provider's
+ * Accounts pane, under its header — one arm per way a credential is obtained:
+ *
+ * - `steps` — the provider's own guided setup (a `setup-steps` wizard), for a
+ *   setup the generic arms cannot express (Google's OAuth client, the Google
+ *   Maps key). It owns every write, connect included.
+ * - `oauth-client` — the generic OAuth setup: open the console, copy the
+ *   redirect URI, paste the client id + secret into `config`, connect.
+ * - `password` — the generic username + password sign-in form; central trades
+ *   them for a token and keeps only the token.
+ *
+ * The arm must match the central descriptor's kind (`oauth-client` an
+ * `oauth2` provider, `password` a `password` one); the pane throws on a
+ * mismatch, since the web side cannot read the descriptor at build time.
+ */
+export type ProviderSetup =
+  | { kind: "steps"; component: ComponentType }
+  | {
+      kind: "oauth-client";
+      /** The provider's client-credentials config (`clientId`, `clientSecret`). */
+      config: OAuthClientConfig;
+      /** Where the user creates the OAuth app ("https://www.notion.so/my-integrations"). */
+      consoleUrl: string;
+      /** What the console calls the app ("Notion integration"); "OAuth app" when absent. */
+      appNoun?: string;
+      /** One line on what to pick when creating it ("Type: Public"). */
+      consoleNote?: string;
+    }
+  | {
+      kind: "password";
+      /** Label of the username field. Defaults to "Username". */
+      usernameLabel?: string;
+      /** When set, the form offers a "Create an account" link to it. */
+      signUpUrl?: string;
+    };
 
 /** What an Accounts row says about its integration: a badge, and optionally the row's subtitle. */
 export interface IntegrationStatus {
@@ -51,7 +80,7 @@ export interface IntegrationStatus {
 /**
  * A setup surface listed in the Accounts pane that is not an auth provider of
  * its own — a second key of a service (the Google Maps live map), a signing
- * identity. Its row opens `pane`, pushed to the right of the Accounts list.
+ * identity. Its row opens the account pane, which renders `setup`.
  */
 export interface AuthIntegrationContribution {
   /** Unique among providers and integrations. */
@@ -62,8 +91,12 @@ export interface AuthIntegrationContribution {
   service: string;
   /** One line on what it unlocks. */
   description: string;
-  /** The param-less pane the row opens, declared with `parent: accountsRoute`. */
-  pane: PaneObject;
+  /**
+   * The integration's setup, rendered inline in its Accounts pane under the
+   * shared header — the whole of the pane's body, where it is also managed once
+   * set up.
+   */
+  setup: ComponentType;
   /** The row's status, as a read — loading and failure are states, never a guessed badge. */
   useStatus: Hook<() => ResourceResult<IntegrationStatus>>;
 }

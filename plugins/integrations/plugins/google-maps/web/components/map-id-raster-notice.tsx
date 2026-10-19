@@ -1,7 +1,8 @@
 import type { ReactElement } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { liveMapSetupPane } from "../panes";
+import { accountPane } from "@plugins/auth/web";
+import { LIVE_MAP_ACCOUNT_ID } from "../internal/live-map-account";
 
 /**
  * Shown on a map whose stored Map ID Google drew as a RASTER map (a Map ID of
@@ -14,7 +15,11 @@ export function MapIdRasterNotice(): ReactElement {
   return (
     <Button
       variant="outline"
-      {...openPane.link(liveMapSetupPane, {}, { mode: "root" })}
+      {...openPane.link(
+        accountPane,
+        { accountId: LIVE_MAP_ACCOUNT_ID },
+        { mode: "root" },
+      )}
     >
       Map ID isn't a vector map — fix in setup
     </Button>

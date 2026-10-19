@@ -4,29 +4,33 @@
 
 ## Plugin reference
 
-- Description: Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
+- Description: Guided setup steps for Google OAuth credentials (project → Drive API → consent screen → OAuth client → paste → connect), rendered inline in the Google Accounts pane.
 - Web:
-  - Slots: `googleSetupPane.Actions`
-  - Slot contributors: `googleSetupPane.Actions` ← `primitives.pane`
-  - Contributes: `Pane.Register` "google-setup"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/setup-steps` ×6
-    - `auth` ×4
-    - `primitives/pane` ×3
-    - `primitives/css/ui-kit` ×2
-    - `primitives/live-state` ×2
+  - Uses:
+    - `auth.currentWorktreeName`
+    - `auth.startConnectFlow`
+    - `auth.useAccountStatus`
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.Input`
+    - `primitives/live-state.ResourceErrorInline`
+    - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
-  - Exports (values): `googleSetupPane`
+    - `primitives/setup-steps.Step`
+    - `primitives/setup-steps.StepCommand`
+    - `primitives/setup-steps.StepDone`
+    - `primitives/setup-steps.StepLink`
+    - `primitives/setup-steps.StepNote`
+    - `primitives/setup-steps.Steps`
+  - Exports (values): `GoogleSetup`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --space-lg`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by: `auth/google`

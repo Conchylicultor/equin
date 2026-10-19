@@ -5,15 +5,15 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
-    "Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared password sign-in dialog.",
+    "Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared sign-in form, inline in its Accounts pane.",
   contributions: [
     Auth.Provider({
       id: HOOKTHEORY_PROVIDER_ID,
       name: "Hooktheory",
       description: "TheoryTab chord progressions for songs.",
       icon: symbol("music-note"),
-      helpUrl: "https://www.hooktheory.com",
-      passwordSignIn: {
+      setup: {
+        kind: "password",
         usernameLabel: "Username",
         signUpUrl: HOOKTHEORY_SIGN_UP_URL,
       },

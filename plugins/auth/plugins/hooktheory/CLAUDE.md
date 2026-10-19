@@ -9,7 +9,7 @@ Every later call reads the token with `getTokenFromCentral({ providerId: "hookth
 and sends it as `Authorization: Bearer <activkey>`.
 
 - A wrong username or password shows Hooktheory's own message in the sign-in
-  dialog (for example "There are no accounts with this username.").
+  form of its Accounts pane (for example "There are no accounts with this username.").
 - Nothing marks the token stale. If Hooktheory revokes it, the account still
   reads Connected until a call fails; the user then signs in again.
 - The Hooktheory API calls themselves (trends, TheoryTab sections) live in
@@ -19,7 +19,7 @@ and sends it as `Authorization: Bearer <activkey>`.
 
 ## Plugin reference
 
-- Description: Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared password sign-in dialog. Hooktheory (TheoryTab) username/password provider. The password is traded once for Hooktheory's long-lived API token; only the token is stored, in the central auth token store (encrypted, shared across worktrees).
+- Description: Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared sign-in form, inline in its Accounts pane. Hooktheory (TheoryTab) username/password provider. The password is traded once for Hooktheory's long-lived API token; only the token is stored, in the central auth token store (encrypted, shared across worktrees).
 - Web:
   - Contributes: `Auth.Provider` "Hooktheory"
   - Uses: `auth.Auth`
