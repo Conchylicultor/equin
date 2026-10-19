@@ -1173,8 +1173,8 @@
  *     starts its prefix cell on the panel's own content inset.
  *   - `cp-setting` — the VALUE row's grid: label | value | status | actions,
  *     with the two LEADING tracks stated as PADDING rather than tracks (a
- *     `Setting` has no handle and no icon, so those cells could only ever be
- *     spacers) and the three trailing ones derived per panel exactly as
+ *     `Setting` has no icon and hangs its optional handle absolutely, so those
+ *     cells could only ever be spacers) and the three trailing ones derived per panel exactly as
  *     `cp-row`'s leading pair is. Its label cell lands on the same computed x as
  *     `cp-row`'s, which is invariant #1 across the two grids.
  *   - `cp-group` — the NESTED region an inline group opens: it re-declares the
@@ -1587,9 +1587,9 @@
      honest axis — who is the click target.
 
      THE LEADING TRACKS ARE PADDING HERE, NOT TRACKS, and that is the one thing
-     to understand about this utility. `Setting` has no `handle` and no `icon` in
-     its type, so its gutter and icon cells could only ever be empty spacers —
-     and a spacer is padding. Stating them as padding collapses what would
+     to understand about this utility. `Setting` has no `icon` in its type and
+     its optional drag handle is hung absolutely (below), so its gutter and icon
+     cells could only ever be empty spacers — and a spacer is padding. Stating them as padding collapses what would
      otherwise be a 4x multiplier over the trailing cases (32 templates) into ONE
      extra declaration, because `--cp-rail-icon` already carries the gutter case:
      the panel redeclares it when nothing hangs a drag handle, so the two
@@ -1700,6 +1700,17 @@
   & > [data-cp-cell="value"][data-cp-fit="field"] {
     width: var(--cp-value-col);
     max-width: 100%;
+  }
+
+  /* The drag handle, hung in the leading PADDING (this grid has no gutter
+     track — see above). `--cp-row-pad-start` from the box's start is exactly
+     where a `cp-row` begins its gutter cell, so a Setting's handle and a Row's
+     share one x at any nesting depth. */
+  & > [data-cp-handle] {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--cp-row-pad-start);
+    width: var(--cp-gutter);
   }
 
   /* The stripe. A STATE, never a `gutter?: ReactNode` slot — the slot reopens

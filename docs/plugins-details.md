@@ -12243,14 +12243,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/cluster.Cluster`
           - `primitives/css/control-panel.ControlPanel`
+          - `primitives/css/control-panel.ControlPanelHandleProps`
           - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/control-panel.useControlPanelHost`
           - `primitives/css/control-panel.usePanelStack`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/switch.Switch`
           - `primitives/css/toggle-chip.ToggleChip`
+          - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
           - `primitives/slot-render.defineDispatchSlot`
+          - `primitives/sortable-list.SortableItem`
+          - `primitives/sortable-list.SortableList`
         - Exports (types):
           - `ConfigFieldAdornments`
           - `FieldRendererProps`
@@ -35536,6 +35540,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ControlPanelFit`
               - `ControlPanelFooterProps`
               - `ControlPanelGroupProps`
+              - `ControlPanelHandleProps`
               - `ControlPanelHost`
               - `ControlPanelMark`
               - `ControlPanelPaneProps`
@@ -36664,7 +36669,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 415 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 416 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×106
               - `apps` ×93
               - `conversations` ×55
@@ -36679,8 +36684,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×5
               - `review` ×5
               - `auth` ×4
+              - `config_v2` ×4
               - `shell` ×4
-              - `config_v2` ×3
               - `infra` ×3
               - `integrations` ×3
               - `active-data` ×2
@@ -41194,6 +41199,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps-core/tab-bar`
           - `apps/sonata/rich/rhythm-controls`
+          - `config_v2/fields`
           - `fields/list/config`
           - `layouts/miller`
           - `primitives/data-view`

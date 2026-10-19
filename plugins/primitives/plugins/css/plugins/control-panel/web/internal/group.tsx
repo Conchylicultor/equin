@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 
 import { ControlPanelSection } from "./control-panel";
 import { ControlPanelRow } from "./control-panel-row";
+import type { ControlPanelHandleProps } from "./handle";
 import { GroupDepthProvider, useControlPanelHost, useGroupDepth } from "./host";
 import { usePanelStack } from "./stack-context";
 import {
@@ -41,6 +42,15 @@ export interface ControlPanelGroupProps {
   mark?: ControlPanelMark;
   /** A line under the header, on the rail. Same host rule as `actions`. */
   note?: React.ReactNode;
+  /**
+   * Shows the drag handle in the gutter (revealed on row hover/focus) — a group
+   * that is one member of a reorderable list. Unlike `actions`, honoured by
+   * BOTH presentations: the handle is a sibling cell of the drill row's label
+   * (`Row handle`), and hung in the inline header's leading padding.
+   */
+  handle?: boolean;
+  /** dnd-kit listeners/attributes (and an activator `ref`) for that handle. */
+  handleProps?: ControlPanelHandleProps;
   children: React.ReactNode;
   className?: string;
   // NO `mode` prop. The presentation belongs to the HOST, not to the field: a
@@ -79,6 +89,8 @@ export function ControlPanelGroup({
   actions,
   mark,
   note,
+  handle,
+  handleProps,
   children,
   className,
 }: ControlPanelGroupProps) {
@@ -123,6 +135,8 @@ export function ControlPanelGroup({
               {summary}
             </>
           }
+          handle={handle}
+          handleProps={handleProps}
           className={className}
         >
           {label}
@@ -149,6 +163,8 @@ export function ControlPanelGroup({
         status={status}
         actions={actions}
         mark={mark}
+        handle={handle}
+        handleProps={handleProps}
       />
       {description != null ? (
         <SettingDescription>{description}</SettingDescription>

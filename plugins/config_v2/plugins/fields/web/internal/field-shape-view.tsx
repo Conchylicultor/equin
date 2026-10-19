@@ -9,7 +9,13 @@ import {
   ControlPanelPopover,
   useControlPanelHost,
   usePanelStack,
+  type ControlPanelHandleProps,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  SortableItem,
+  SortableList,
+} from "@plugins/primitives/plugins/sortable-list/web";
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -44,6 +50,13 @@ const CHOICE_ROWS_MAX = 6;
 type ChoiceShape = Extract<FieldShape, { kind: "choice" }>;
 type GroupShape = Extract<FieldShape, { kind: "group" }>;
 type ListShape = Extract<FieldShape, { kind: "list" }>;
+
+/** The shapes that render as ONE row, and so can hang a list item's handle. */
+const HANDLED_KINDS: ReadonlySet<FieldShape["kind"]> = new Set([
+  "toggle",
+  "value",
+  "group",
+]);
 
 /** Nothing to adorn — the ordinary case, and the whole of every popover. */
 const NO_ADORNMENTS: ConfigFieldAdornments = {};
@@ -122,6 +135,11 @@ interface ShapeMemberProps {
    * a list item's Remove. It is merged into the host's own `actions`.
    */
   actions?: React.ReactNode;
+  /**
+   * The drag handle of a reorderable list's item — present only when the item
+   * is one. Hung on whichever member the shape renders as.
+   */
+  handleProps?: ControlPanelHandleProps;
   shape: FieldShape;
 }
 
@@ -132,9 +150,11 @@ function ShapeMember({
   description,
   adornments,
   actions,
+  handleProps,
   shape,
 }: ShapeMemberProps) {
   const host = adornments ?? NO_ADORNMENTS;
+  const handle = handleProps !== undefined;
   const { mark, status, note } = host;
   const rowActions = mergeActions(host.actions, actions);
   // WHICH MEMBER CAN HOLD WHAT THE HOST HAS TO SAY.
@@ -151,6 +171,12 @@ function ShapeMember({
   // something to say — a toggle that turned into a different control the moment
   // it was edited would be the worst of both.
   const labelledRow = adornments != null;
+  if (handle && !HANDLED_KINDS.has(shape.kind)) {
+    throw new Error(
+      `ShapeMember: a "${shape.kind}" shape cannot be a reorderable list item ` +
+        "— it renders as no single row to hang the drag handle on.",
+    );
+  }
   switch (shape.kind) {
     case "toggle":
       if (labelledRow) {
@@ -171,6 +197,8 @@ function ShapeMember({
               actions={rowActions}
               mark={mark}
               note={note}
+              handle={handle}
+              handleProps={handleProps}
             />
           </Banded>
         );
@@ -182,6 +210,8 @@ function ShapeMember({
             checked={shape.checked}
             hint={hint}
             onSelect={shape.onToggle}
+            handle={handle}
+            handleProps={handleProps}
           >
             {label}
           </ControlPanel.Row>
@@ -199,6 +229,8 @@ function ShapeMember({
             actions={rowActions}
             mark={mark}
             note={note}
+            handle={handle}
+            handleProps={handleProps}
           />
         </Banded>
       );
@@ -239,6 +271,8 @@ function ShapeMember({
           actions={rowActions}
           mark={mark}
           note={note}
+          handle={handle}
+          handleProps={handleProps}
         >
           <GroupFields shape={shape} />
         </ControlPanel.Group>
@@ -512,10 +546,9 @@ function GroupFields({ shape }: { shape: GroupShape }) {
  * ITS own shape says — so a list of records and a list of scalars are one code
  * path here, and `string-list` stops being its own layout.
  *
- * NOTE — `onMove` is carried by the shape and is NOT rendered yet: no member of
- * the vocabulary exposes a drag handle on a `Setting` or a `Group` (only
- * `ControlPanel.Row` has one), so there is nowhere honest to hang the gesture.
- * Adding it is a change to the primitive, not to this file.
+ * With `onMove` the items are a sortable list: each item hangs a drag handle in
+ * the gutter of the row it renders as (`Row`, `Setting` and `Group` all take
+ * one), so the gesture is the panel's own rather than a card drawn around it.
  */
 function ListMember({
   label,
@@ -543,14 +576,42 @@ function ListMember({
       mark={host.mark}
       note={host.note}
     >
-      {shape.items.map((item, index) => (
-        <ListItemMember
-          key={item.id}
-          item={item}
-          index={index}
-          onRemove={shape.onRemove}
-        />
-      ))}
+      {shape.onMove ? (
+        <SortableList
+          items={shape.items.map((item) => item.id)}
+          orientation="vertical"
+          onMove={shape.onMove}
+        >
+          {shape.items.map((item, index) => (
+            <SortableItem
+              key={item.id}
+              id={item.id}
+              handle
+              className={({ isDragging }) => cn(isDragging && "opacity-40")}
+            >
+              {(state) => (
+                <ListItemMember
+                  item={item}
+                  index={index}
+                  onRemove={shape.onRemove}
+                  // dnd-kit hands back an open bag of listeners + aria
+                  // attributes; the handle cell spreads it as-is.
+                  handleProps={state.handleProps as ControlPanelHandleProps}
+                />
+              )}
+            </SortableItem>
+          ))}
+        </SortableList>
+      ) : (
+        shape.items.map((item, index) => (
+          <ListItemMember
+            key={item.id}
+            item={item}
+            index={index}
+            onRemove={shape.onRemove}
+          />
+        ))
+      )}
       {shape.onAdd ? (
         // A ROW, not a `Footer`: a footer is a band, so one inside a group would
         // draw a hairline through the middle of it — and invariant #4's leading
@@ -567,10 +628,12 @@ function ListItemMember({
   item,
   index,
   onRemove,
+  handleProps,
 }: {
   item: ListShape["items"][number];
   index: number;
   onRemove?: (id: string) => void;
+  handleProps?: ControlPanelHandleProps;
 }) {
   const label = itemLabel(item.shape, index);
 
@@ -580,7 +643,11 @@ function ListItemMember({
     // the group CONTAINS.
     const groupShape = item.shape;
     return (
-      <ControlPanel.Group label={label}>
+      <ControlPanel.Group
+        label={label}
+        handle={handleProps !== undefined}
+        handleProps={handleProps}
+      >
         <GroupFields shape={groupShape} />
         {onRemove ? (
           <ControlPanel.Row
@@ -599,6 +666,7 @@ function ListItemMember({
     <ShapeMember
       label={label}
       shape={item.shape}
+      handleProps={handleProps}
       actions={
         onRemove ? (
           <IconButton

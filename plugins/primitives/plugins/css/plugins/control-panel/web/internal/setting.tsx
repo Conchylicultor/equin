@@ -1,5 +1,6 @@
 import type React from "react";
 
+import type { ControlPanelHandleProps } from "./handle";
 import {
   SettingNote,
   SettingRow,
@@ -40,6 +41,14 @@ export interface ControlPanelSettingProps {
   mark?: ControlPanelMark;
   /** A line under the row, on the rail — a conflict line, a validation message. */
   note?: React.ReactNode;
+  /**
+   * Shows the drag handle in the gutter (revealed on row hover/focus) — a
+   * member of a reorderable list. Like `Row`'s, it opens the panel's gutter
+   * track, so every label in the panel moves with it (invariant #1).
+   */
+  handle?: boolean;
+  /** dnd-kit listeners/attributes (and an activator `ref`) for that handle. */
+  handleProps?: ControlPanelHandleProps;
   disabled?: boolean;
   className?: string;
 }
@@ -76,6 +85,8 @@ export function ControlPanelSetting({
   actions,
   mark,
   note,
+  handle,
+  handleProps,
   disabled,
   className,
 }: ControlPanelSettingProps) {
@@ -89,6 +100,8 @@ export function ControlPanelSetting({
         status={status}
         actions={actions}
         mark={mark}
+        handle={handle}
+        handleProps={handleProps}
         disabled={disabled}
         className={className}
       />

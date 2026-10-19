@@ -239,6 +239,15 @@ trigger would live in another plugin's descriptor: the quick-theme footer-glyph
 failure documented under invariant #4, with a longer fuse. Excluded at the type
 level, the same way `icon` is already excluded from the check/radio arm.
 
+**`Setting` and `Group` take a drag `handle`, like `Row`** — a member of a
+reorderable list (config lists) whatever row it renders as. A `Setting` (and a
+`Group`'s inline header) has no gutter *track* — its leading tracks are padding
+— so the handle is hung absolutely in that padding at `--cp-row-pad-start`,
+exactly where a `cp-row` starts its gutter cell. It stamps the same
+`data-cp-handle`, so the panel reserves the gutter (and moves every label in it)
+exactly as it does for a `Row`'s handle. A pushing `Group` forwards it to its
+drill row. The bag is `ControlPanelHandleProps`, shared by all three.
+
 **`fit` is required, and it sizes the CONTROL, not the track.** Each row is its
 own grid, so an `auto` value track is as wide as that row's own control — right
 for `fit="inline"` (a swatch, an avatar, a stepper sizes to itself) and useless
@@ -685,6 +694,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `ControlPanelFit`
     - `ControlPanelFooterProps`
     - `ControlPanelGroupProps`
+    - `ControlPanelHandleProps`
     - `ControlPanelHost`
     - `ControlPanelMark`
     - `ControlPanelPaneProps`

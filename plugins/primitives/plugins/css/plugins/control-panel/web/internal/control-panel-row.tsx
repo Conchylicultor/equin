@@ -13,6 +13,11 @@ import {
 import type React from "react";
 import { useCallback, useContext, useId } from "react";
 
+import {
+  dragIndicatorIcon,
+  HANDLE_REVEAL,
+  type ControlPanelHandleProps,
+} from "./handle";
 import { HintedLabelCell } from "./hint";
 import { PanelStackContext, type PanelStackEntry } from "./stack-context";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -20,7 +25,6 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const checkIcon = symbol("check");
 const chevronRightIcon = symbol("chevron-right");
-const dragIndicatorIcon = symbol("drag-indicator");
 
 /** The three selection languages, one per meaning. There is no fourth. */
 export type ControlPanelRowSelect = "check" | "radio" | "switch";
@@ -59,9 +63,7 @@ interface ControlPanelRowCommon {
   /** Shows the drag handle in the gutter track (revealed on row hover/focus). */
   handle?: boolean;
   /** dnd-kit listeners/attributes (and an activator `ref`) for that handle. */
-  handleProps?: React.HTMLAttributes<HTMLElement> & {
-    ref?: React.Ref<HTMLElement>;
-  };
+  handleProps?: ControlPanelHandleProps;
   /**
    * Trailing cell content — a count, a type name, a chip. PRESENTATIONAL: it
    * carries no click target of its own. On a row with no `actions` that is a
@@ -220,16 +222,6 @@ export type ControlPanelRowProps = ControlPanelRowExplanation &
  * and the mark centre on the title, not on the title and its description.
  */
 const TITLE_LINE_CELL = "self-start box-content h-lh py-xs text-body";
-
-/**
- * The hover-reveal recipe for the drag handle. Opacity and pointer-events are
- * coupled in both directions, so a hidden handle is never a live hit-target
- * sitting invisibly over the row's left edge.
- */
-const HANDLE_REVEAL =
-  "opacity-0 pointer-events-none " +
-  "group-hover/cp-row:opacity-100 group-hover/cp-row:pointer-events-auto " +
-  "group-focus-within/cp-row:opacity-100 group-focus-within/cp-row:pointer-events-auto";
 
 /**
  * THE panel row. Four grid tracks — gutter | icon/indicator | label | trailing —

@@ -76,14 +76,18 @@ the config-only templates to mirror.
   - Uses:
     - `primitives/css/cluster.Cluster`
     - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.ControlPanelHandleProps`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/control-panel.useControlPanelHost`
     - `primitives/css/control-panel.usePanelStack`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/switch.Switch`
     - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/slot-render.defineDispatchSlot`
+    - `primitives/sortable-list.SortableItem`
+    - `primitives/sortable-list.SortableList`
   - Exports (types):
     - `ConfigFieldAdornments`
     - `FieldRendererProps`

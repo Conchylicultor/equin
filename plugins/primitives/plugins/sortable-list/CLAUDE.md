@@ -72,6 +72,7 @@ items. Importing this barrel for an item would pull dnd-kit into that bundle.
   - Imported by:
     - `apps-core/tab-bar`
     - `apps/sonata/rich/rhythm-controls`
+    - `config_v2/fields`
     - `fields/list/config`
     - `layouts/miller`
     - `primitives/data-view`

@@ -7,6 +7,13 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type React from "react";
 import { useId } from "react";
 
+import { Icon } from "@plugins/ui/plugins/icons/web";
+
+import {
+  dragIndicatorIcon,
+  HANDLE_REVEAL,
+  type ControlPanelHandleProps,
+} from "./handle";
 import { HintedLabelCell } from "./hint";
 
 /**
@@ -33,6 +40,10 @@ interface SettingRowProps {
   status?: React.ReactNode;
   actions?: React.ReactNode;
   mark?: ControlPanelMark;
+  /** Shows the drag handle in the gutter (revealed on row hover/focus). */
+  handle?: boolean;
+  /** dnd-kit listeners/attributes (and an activator `ref`) for that handle. */
+  handleProps?: ControlPanelHandleProps;
   disabled?: boolean;
   className?: string;
 }
@@ -64,6 +75,8 @@ export function SettingRow({
   status,
   actions,
   mark,
+  handle,
+  handleProps,
   disabled,
   className,
 }: SettingRowProps) {
@@ -78,10 +91,28 @@ export function SettingRow({
         // The actions cluster brings its OWN hover group rather than
         // piggybacking on this row's, so it reveals only for the row it is in.
         rowActionsAnchor,
+        handle && "group/cp-row",
         disabled && "pointer-events-none opacity-50",
         className,
       )}
     >
+      {/* The gutter is PADDING on this grid (see `cp-setting`), so the handle is
+          hung in it absolutely — at exactly the x a `cp-row`'s gutter cell sits
+          at. `data-cp-handle` is the same occupancy mark a `Row` stamps, so the
+          panel reserves the gutter for every row in it either way. */}
+      {handle ? (
+        <span
+          {...handleProps}
+          data-cp-handle=""
+          className={cn(
+            "flex cursor-grab items-center justify-center text-muted-foreground",
+            HANDLE_REVEAL,
+            handleProps?.className,
+          )}
+        >
+          <Icon icon={dragIndicatorIcon} />
+        </span>
+      ) : null}
       <HintedLabelCell hint={hint} descriptionId={hintId}>
         {label}
       </HintedLabelCell>

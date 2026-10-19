@@ -35,6 +35,7 @@ export { type ControlPanelSettingProps } from "./internal/setting";
 export { type ControlPanelBlockProps } from "./internal/block";
 export { type ControlPanelSubheadProps } from "./internal/subhead";
 export { type ControlPanelGroupProps } from "./internal/group";
+export { type ControlPanelHandleProps } from "./internal/handle";
 export {
   type ControlPanelFit,
   type ControlPanelMark,
