@@ -6,6 +6,7 @@ import { spawnAtTier } from "@plugins/packages/plugins/spawn-priority/core";
 import { childEnv } from "./child-env";
 import { trackLiveChild } from "./live-children";
 import { readResourceUsage } from "./resource-usage";
+import { signalName } from "./signal-code";
 import type { SpawnPassthroughOptions, SpawnPassthroughResult } from "./types";
 
 /**
@@ -44,7 +45,7 @@ export async function spawnPassthrough(
         const exitCode = await proc.exited;
         return {
           exitCode,
-          signalCode: proc.signalCode,
+          signalCode: signalName(proc.signalCode),
           resourceUsage: readResourceUsage(proc),
         };
       } finally {

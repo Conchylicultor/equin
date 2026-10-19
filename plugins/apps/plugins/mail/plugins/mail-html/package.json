@@ -4,6 +4,6 @@
   "version": "0.0.1",
   "description": "Privacy-safe email HTML renderer: DOMPurify sanitize + remote-image gating + cid resolution + quoted-history collapse.",
   "dependencies": {
-    "dompurify": "^3.2.0"
+    "dompurify": "^3.4.17"
   }
 }

@@ -13,6 +13,7 @@ import { spawnAtTier } from "@plugins/packages/plugins/spawn-priority/core";
 import { childEnv } from "./child-env";
 import { trackLiveChild } from "./live-children";
 import { readResourceUsage } from "./resource-usage";
+import { signalName } from "./signal-code";
 import type { ChildResourceUsage, SpawnOptions, SpawnResult } from "./types";
 
 /**
@@ -234,7 +235,7 @@ export async function spawnCaptured(
     // rusage is only populated once the child has exited.
     return makeResult(
       exitCode,
-      proc.signalCode,
+      signalName(proc.signalCode),
       timedOut,
       stdoutBytes,
       stderrBytes,

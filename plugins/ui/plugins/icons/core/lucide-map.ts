@@ -227,7 +227,7 @@ export const LUCIDE_MAP = {
   "more-horiz": "ellipsis",
   movie: "clapperboard",
   museum: "landmark",
-  "music-note": "music",
+  "music-note": "eighth-note",
   "music-off": MATERIAL_ONLY,
   "music-video": "monitor-play",
   "my-location": "locate-fixed",

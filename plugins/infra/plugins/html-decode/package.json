@@ -4,6 +4,6 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "entities": "^8.0.0"
+    "entities": "^8.1.0"
   }
 }
