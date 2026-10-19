@@ -31,6 +31,7 @@ renders as a pending-turn card in the transcript, never as a restored draft.
     - `setConversationPromptDraft`
 - Cross-plugin:
   - Imported by:
+    - `conversations/agent-thread`
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversation-view/rewind`
 

@@ -125,6 +125,7 @@ registry readers are headless.
     - `active-data/go`
     - `active-data/task`
     - `apps/website/improve`
+    - `conversations/agent-thread`
     - `conversations/agents`
     - `primitives/prompt-editor`
     - `primitives/text-editor/composer`

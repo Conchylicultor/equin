@@ -1509,6 +1509,10 @@
       "name": "@singularity/plugin-conversations",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/agent-thread": {
+      "name": "@singularity/plugin-conversations-agent-thread",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/agents": {
       "name": "@singularity/plugin-conversations-agents",
       "version": "0.0.1",
@@ -7525,6 +7529,8 @@
     "@singularity/plugin-config_v2-settings-conflict-agent": ["@singularity/plugin-config_v2-settings-conflict-agent@workspace:plugins/config_v2/plugins/settings/plugins/conflict-agent"],
 
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
+
+    "@singularity/plugin-conversations-agent-thread": ["@singularity/plugin-conversations-agent-thread@workspace:plugins/conversations/plugins/agent-thread"],
 
     "@singularity/plugin-conversations-agents": ["@singularity/plugin-conversations-agents@workspace:plugins/conversations/plugins/agents"],
 

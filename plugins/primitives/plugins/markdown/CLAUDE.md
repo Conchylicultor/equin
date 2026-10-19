@@ -75,6 +75,7 @@ Design rationale lives in:
   - Imported by:
     - `active-data`
     - `active-data/go`
+    - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
     - `conversations/conversation-view/jsonl-viewer/compaction`
     - `conversations/conversation-view/jsonl-viewer/request-shape`

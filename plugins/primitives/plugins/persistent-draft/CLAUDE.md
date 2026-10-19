@@ -32,10 +32,10 @@ tab's own — the prototype canvas, keyed by its pane instance.
     - `useDraft`
     - `writeDraft`
 - Cross-plugin:
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×9
     - `primitives` ×9
-    - `conversations` ×6
+    - `conversations` ×7
     - `map`
     - `page/editor`
     - `tasks/task-draft-form`

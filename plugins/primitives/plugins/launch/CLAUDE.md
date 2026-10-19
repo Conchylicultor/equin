@@ -106,6 +106,7 @@ started" notification confirms it), so its props are the form's minus
     - `apps/prototypes/gallery`
     - `apps/sonata/transcription`
     - `config_v2/settings/conflict-agent`
+    - `conversations/agent-thread`
     - `conversations/conversation-view/fork-conversation`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `conversations/conversation-view/rewind`

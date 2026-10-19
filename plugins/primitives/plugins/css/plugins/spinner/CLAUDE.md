@@ -22,6 +22,7 @@
     - `apps/sonata/transcription`
     - `apps/website/improve`
     - `build`
+    - `conversations/agent-thread`
     - `conversations/conversation-view/op-status`
     - `debug/worktree-cleanup`
     - `page/place`

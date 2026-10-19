@@ -57,6 +57,7 @@ needs an axis, because `min-width: 0` and `min-height: 0` are two properties.
     - `active-data/go`
     - `apps/pages/page-tree`
     - `apps/sonata/sources/ultimate-guitar`
+    - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/compaction`

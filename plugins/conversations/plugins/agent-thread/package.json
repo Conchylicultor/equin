@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-conversations-agent-thread",
+  "description": "The embedded conversation view: a conversation an app started, shown inside the app's own surface as a thread (user bubbles, a live step list, the answer, the host's own result cards, a composer), plus the hooks and the recent-runs collection a host reads beside it.",
+  "private": true,
+  "version": "0.0.1"
+}

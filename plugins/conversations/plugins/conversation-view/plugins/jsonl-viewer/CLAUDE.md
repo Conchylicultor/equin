@@ -236,8 +236,8 @@ back.
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×41
+  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×42
     - `apps/agent-manager/demo`
     - `tasks/outcome-report`
 - Exemptions:

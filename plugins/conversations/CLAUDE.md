@@ -184,8 +184,8 @@
     - `withdrawConversationTurn`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×49
+  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×50
     - `tasks` ×4
     - `apps` ×3
     - `review` ×3
@@ -201,6 +201,7 @@
     - `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
     - `boundaries/no-platform-api` — `server/internal/lifecycle.ts`, `server/internal/locate-cut.ts`, `server/internal/status-reconciler.ts` (debt)
 - Sub-plugins:
+  - **`agent-thread`** — Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the…
   - **`agents`** — Named agent definitions that launch conversations.
   - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the…
   - **`commit-conversation`** — The commit row action that opens the conversation which wrote a commit (its Singularity-Conversation trailer) in a new browser tab.

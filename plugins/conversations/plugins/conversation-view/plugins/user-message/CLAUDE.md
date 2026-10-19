@@ -22,6 +22,7 @@
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --radius-card`
   - Imported by:
+    - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `conversations/conversation-view/pending-turn`
 

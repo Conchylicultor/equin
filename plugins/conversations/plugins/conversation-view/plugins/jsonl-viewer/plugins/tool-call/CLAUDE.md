@@ -74,6 +74,7 @@
     - `ui/tokens/type-scale --font-weight-tag-strong`
     - `ui/tokens/type-scale --line-height-tag`
   - Imported by:
+    - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
