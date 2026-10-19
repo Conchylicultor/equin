@@ -58,6 +58,7 @@ relative specifier inside this leaf would resolve against the wrong module.
     - `framework/server-core`
     - `framework/tooling/checks`
     - `framework/tooling/exempt`
+    - `framework/tooling/guards`
     - `framework/tooling/lint`
     - `framework/tooling/provision`
     - `framework/web-sdk`

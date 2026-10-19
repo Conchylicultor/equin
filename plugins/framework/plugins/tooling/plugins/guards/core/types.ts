@@ -132,13 +132,12 @@ export interface Guard<I = unknown> {
   matcher: ToolMatcher | ToolMatcher[];
   /** File at the worktree root whose presence lets this guard's calls through. */
   bypassToken?: string;
+  /**
+   * Tell each agent (the main conversation, every subagent) this guard's
+   * `inform` at most once per session — for a long message, such as a whole
+   * guide, that would otherwise repeat on every call.
+   */
+  once?: boolean;
   check(input: I, ctx: GuardContext): Verdict | Promise<Verdict>;
 }
 
-export interface FileHint {
-  name: string;
-  match(filePath: string): boolean;
-  message: string;
-  /** Tools this hint fires on. Omit for every file tool (incl. Read). */
-  tools?: ToolMatcher[];
-}

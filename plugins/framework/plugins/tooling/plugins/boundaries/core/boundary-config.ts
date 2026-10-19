@@ -131,6 +131,9 @@ export default defineBoundaries({
     // An exemption manifest (`tooling/exempt`): plain data that names its own
     // plugin's files, typed by the exempt primitive's `core`.
     exempt: ["core"],
+    // Contributed hook guards (`tooling/guards`): loaded by the PreToolUse hook,
+    // a host process, so a guard may read its owner's data-dir declaration.
+    guard: ["core", "data-dirs"],
   },
 
   // Which folders may import a platform API (a Node builtin, `bun`, `pg`,
@@ -165,6 +168,7 @@ export default defineBoundaries({
     prewarm: "allowed",
     python: "allowed",
     exempt: "allowed",
+    guard: "allowed",
   },
 
   runtimeExceptions: [

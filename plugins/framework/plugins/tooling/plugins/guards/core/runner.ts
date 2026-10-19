@@ -1,6 +1,5 @@
-import { resolve } from "node:path";
-import { GUARDS } from "./index";
-import { HINTS } from "./hints";
+import { loadGuards } from "./load-guards";
+import { recordInformed, wasInformed } from "./informed-once";
 import { createContext } from "./context";
 import { withRefusalBanner } from "./refusal";
 import type { Guard, ToolMatcher } from "./types";
@@ -44,23 +43,6 @@ function matches(g: Guard["matcher"], tool: string): boolean {
   return Array.isArray(g) ? g.includes(tool as ToolMatcher) : g === tool;
 }
 
-const FILE_TOOLS = new Set(["Write", "Edit", "NotebookEdit", "Read"]);
-
-function collectHints(
-  tool: string,
-  toolInput: Record<string, unknown>,
-  cwd: string,
-): string[] {
-  if (!FILE_TOOLS.has(tool)) return [];
-  let filePath = toolInput.file_path as string | undefined;
-  if (!filePath) return [];
-  if (!filePath.startsWith("/")) filePath = resolve(cwd, filePath);
-  return HINTS.filter(
-    (h) =>
-      (!h.tools || h.tools.includes(tool as ToolMatcher)) && h.match(filePath!),
-  ).map((h) => h.message);
-}
-
 /**
  * What the entry point must tell the runner, over and above the hook payload.
  *
@@ -94,10 +76,16 @@ export async function runHook(
   );
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
 
-  const guards = GUARDS.filter((g) => matches(g.matcher, tool));
+  const agent = ctx.agent?.id ?? "main";
+  const guards = (await loadGuards()).filter(
+    (g) =>
+      matches(g.matcher, tool) &&
+      !(g.once && wasInformed(ctx.sessionId, agent, g.name)),
+  );
   // Facts contributed by guards that let the call through. Collected rather than
   // returned early, so one guard's answer never suppresses another's denial.
   const informs: string[] = [];
+  const informedOnce: string[] = [];
   // The input as rewritten so far. Every guard after a rewrite judges THIS —
   // what will actually run — and a later denial still wins over the rewrite.
   let current = toolInput;
@@ -106,6 +94,7 @@ export async function runHook(
     const verdict = await guard.check(current as never, ctx);
     if (verdict.kind === "inform") {
       informs.push(verdict.context);
+      if (guard.once) informedOnce.push(guard.name);
       continue;
     }
     if (verdict.kind === "rewrite") {
@@ -131,8 +120,7 @@ export async function runHook(
     }
   }
 
-  const extra = [...informs, ...collectHints(tool, current, cwd)];
-  if (extra.length > 0 || rewritten) {
+  if (informs.length > 0 || rewritten) {
     process.stdout.write(
       JSON.stringify({
         hookSpecificOutput: {
@@ -141,11 +129,14 @@ export async function runHook(
           // and still defers to the permission system — a rewrite never
           // approves a call on its own.
           ...(rewritten ? { updatedInput: current } : {}),
-          ...(extra.length > 0
-            ? { additionalContext: extra.join("\n\n") }
+          ...(informs.length > 0
+            ? { additionalContext: informs.join("\n\n") }
             : {}),
         },
       }),
     );
   }
+  // Recorded only once written: a denial above returns without telling the
+  // agent anything, so a `once` inform must still be pending for its retry.
+  recordInformed(ctx.sessionId, agent, informedOnce);
 }

@@ -9,12 +9,13 @@ export type {
   GuardContext,
   Verdict,
   ToolMatcher,
-  FileHint,
   TranscriptRead,
 } from "./types";
 export { readTaskReport } from "./task-reports";
 export type { TaskReport } from "./task-reports";
 export { defineGuard } from "./define-guard";
+export { fileHint } from "./file-hint";
+export type { FileHintSpec } from "./file-hint";
 export { MODULE_EXTENSION } from "./module-extension";
 export { parseShell } from "./parse-shell";
 export { TOOL_USE_ID_ENV, TOOL_USE_ID_RE, toolUseIdFrom } from "./tool-use-id";

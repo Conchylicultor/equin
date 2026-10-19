@@ -24801,6 +24801,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/server-core`
               - `framework/tooling/checks`
               - `framework/tooling/exempt`
+              - `framework/tooling/guards`
               - `framework/tooling/lint`
               - `framework/tooling/provision`
               - `framework/web-sdk`
@@ -24917,6 +24918,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
             - Uses:
+              - `framework/tooling/collected-dir.defineCollectedDir`
+              - `framework/tooling/collected-dir.loadCollectedDir`
               - `infra/namespace.asNamespace`
               - `infra/namespace.isNamespace`
               - `infra/paths.HOME_DIR`
@@ -24925,7 +24928,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AllowVerdict`
               - `CommandClass`
               - `DenyVerdict`
-              - `FileHint`
+              - `FileHintSpec`
               - `FileOperand`
               - `Guard`
               - `GuardContext`
@@ -24946,6 +24949,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `createContext`
               - `defineGuard`
               - `detectPoll`
+              - `fileHint`
               - `GUARDS`
               - `MODULE_EXTENSION`
               - `parseArgv`
@@ -24967,7 +24971,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts` (sanctioned)
               - `python/no-system-python` — `core` (sanctioned)
-              - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/runner.ts`, `core/stop-guard.ts` (debt)
+              - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts` (debt)
         - **`import-closure`** — Static import-closure measurement (importClosure): the exact repo modules an entrypoint loads, the tree-shaken live subset, the npm specifiers it reaches, and the import chain to any one module — measured with Bun.build so it cannot drift from what actually loads.
           - Core:
             - Uses: `framework/cli.defineCliCommand`

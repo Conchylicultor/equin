@@ -1,6 +1,6 @@
-import type { FileHint } from "../types";
+import { fileHint } from "../file-hint";
 
-export const claudeMdHint: FileHint = {
+export const claudeMdHint = fileHint({
   name: "claude-md-terse",
   match: (p) => p.endsWith("/CLAUDE.md") || p.endsWith("/AGENTS.md"),
   tools: ["Write", "Edit"],
@@ -11,4 +11,4 @@ export const claudeMdHint: FileHint = {
     '- Keep the WHY when a rule looks wrong, so nobody "fixes" it back.',
     "- Don't document a bug you fixed structurally — if agents can't hit it anymore, the line only burns context.",
   ].join("\n"),
-};
+});

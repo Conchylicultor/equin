@@ -86,7 +86,9 @@ export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
  *  are run by path; `python/` holds one uv project (`pyproject.toml`, `uv.lock`)
  *  that `infra/deps`' python kind installs and runs, and holds no TypeScript;
  *  `exempt/` holds the plugin's exemption manifest (which of its own files may
- *  violate which rule, and why), collected by `tooling/exempt`.
+ *  violate which rule, and why), collected by `tooling/exempt`; `guard/` holds
+ *  the Claude Code hook guards a plugin adds for its own files, collected by
+ *  `tooling/guards`.
  *
  *  Together with `RUNTIME_FOLDERS` this is the whole folder vocabulary a
  *  plugin may contain (plus `plugins/`, which holds child plugins, not code).
@@ -103,6 +105,7 @@ export const LEAF_FOLDERS = [
   "prewarm",
   "python",
   "exempt",
+  "guard",
 ] as const;
 export type LeafFolder = (typeof LEAF_FOLDERS)[number];
 
