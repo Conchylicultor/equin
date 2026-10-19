@@ -2232,6 +2232,15 @@ export function createResourceRuntime(
   // load, by reason. Monotonic; surfaced in the `_debug` payload — a high
   // fallback count under one reason is where a paged read pays full loads.
   const derivedSubs = new Map<string, number>();
+  // Per-key drained tuple-cycles whose ack was suppressed because their
+  // sourceTx union crossed `SOURCE_TX_CAP` (a pending's `sourceTxOverflow`, or
+  // a standalone owed ack's `overflow`). Monotonic; surfaced in the `_debug`
+  // payload — non-zero means an optimistic op on that key waited for the
+  // watermark backstop instead of its exact ack.
+  const ackOverflows = new Map<string, number>();
+  function recordAckOverflow(key: string): void {
+    ackOverflows.set(key, (ackOverflows.get(key) ?? 0) + 1);
+  }
   const deriveFallbacks = new Map<string, Map<DeriveRefusal, number>>();
   function recordDeriveFallback(key: string, reason: DeriveRefusal): void {
     let byReason = deriveFallbacks.get(key);
@@ -5619,6 +5628,7 @@ export function createResourceRuntime(
     for (const owed of owedAcks) {
       const real = byPk.get(paramsKey(owed.params));
       if (!real) {
+        if (owed.overflow) recordAckOverflow(entry.key);
         broadcastAck(
           entry,
           owed.params,
@@ -5630,6 +5640,9 @@ export function createResourceRuntime(
       } else {
         unionSourceTx(real, owed.xids);
       }
+    }
+    for (const p of pending) {
+      if (p.sourceTxOverflow) recordAckOverflow(entry.key);
     }
     if (pending.length === 0) return;
     // Mark the taken pks as draining until the whole drain settles (see
@@ -7246,6 +7259,7 @@ export function createResourceRuntime(
       notifyStats: NotifyCounts;
       subShortCircuits: number;
       staleFlightSupersedes: number;
+      ackOverflows: number;
       derivedSubs: number;
       deriveFallbacks: Partial<Record<DeriveRefusal, number>>;
       subTabs: Record<string, number>;
@@ -7364,6 +7378,9 @@ export function createResourceRuntime(
         // revert is still reachable under load — and is now refused instead of
         // broadcast under a fresh version.
         staleFlightSupersedes: staleFlightSupersedes.get(entry.key) ?? 0,
+        // Drained tuple-cycles whose ackTx was suppressed by the sourceTx cap
+        // (see `recordAckOverflow`).
+        ackOverflows: ackOverflows.get(entry.key) ?? 0,
         // Seeded derivations for this key (see `deriveSub`): subs answered
         // from rows the client held, and the ones that fell back to a load —
         // by reason.

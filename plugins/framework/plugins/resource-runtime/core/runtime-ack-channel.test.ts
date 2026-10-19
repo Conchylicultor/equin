@@ -655,4 +655,30 @@ describe("ackTx — failure and overflow", () => {
     expect("ackTx" in frame).toBe(false); // a torn set is worse than none
     expect(acks(k.h, "rows")).toHaveLength(0); // suppression covers the ack frame too
   });
+
+  test("_debug counts each suppressed cycle per key (ackOverflows)", async () => {
+    const k = keyedHarness();
+    k.table.set("a", 1);
+    await k.h.subscribe("rows", {}, { acks: true });
+    const overflows = async () => {
+      const res = await k.h.runtime.handleResourceHttp(
+        new Request("http://localhost/api/resources/_debug"),
+        { key: "_debug" },
+      );
+      const body = (await res.json()) as {
+        resources: Array<{ key: string; ackOverflows: number }>;
+      };
+      return body.resources.find((r) => r.key === "rows")!.ackOverflows;
+    };
+    // Under the cap: acked, nothing counted.
+    k.table.set("a", 2);
+    for (let i = 0; i < 64; i++) k.feed("U", ["a"], `${3000 + i}`);
+    await tick();
+    expect(await overflows()).toBe(0);
+    // Over the cap: one suppressed cycle.
+    k.table.set("a", 3);
+    for (let i = 0; i < 65; i++) k.feed("U", ["a"], `${4000 + i}`);
+    await tick();
+    expect(await overflows()).toBe(1);
+  });
 });

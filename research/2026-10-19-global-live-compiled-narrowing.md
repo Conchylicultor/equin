@@ -401,8 +401,10 @@ instead (pinned by `page-blocks-oracle.test.ts` and
 | `viewed` on other conversations | jsonl-events / subagent-activity | 10 loads, 0 frames | unchanged — session 2 |
 | another task's title | all | 0 | 0 |
 
-**Not done in session 1:** the `ackOverflow` `_debug` counter (resource-runtime
-is framework; needs approval); per-kind counters for the burst router (it
+**Follow-up (approved):** `_debug.ackOverflows` per key in resource-runtime —
+one count per drained tuple-cycle whose ack the 64-xid cap suppressed.
+
+**Not done in session 1:** per-kind counters for the burst router (it
 reports, nothing reads a count); a skip state for a scoped read whose scope is
 not known yet (`useLive(c, null)` is the count kind's skip today); `withWire`
 fields on a scoped set; the commit-latency bench for the marker. Found, not

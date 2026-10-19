@@ -770,7 +770,8 @@ NOTIFY carries its source transaction id (`x`, `pg_current_xact_id()::text`);
 the pending coalesces those into `sourceTx` (unioned on every merge branch,
 INCLUDING the FULL absorb/degrade — a FULL recompute reads post-commit, so the
 claim survives; contrast `deleted`, which FULL drops; capped at 64 with
-overflow suppressing the whole cycle), threads them through the FULL
+overflow suppressing the whole cycle, each suppressed tuple-cycle counted per
+key as `_debug`'s `ackOverflows`), threads them through the FULL
 `dependsOn` cascade into every downstream pending (a downstream recompute also
 reads post-commit), and the drain stamps `ackTx` on the `update`/`delta`
 frames the recompute produces. The claim is
