@@ -421,7 +421,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 - Exemptions:
   - Exempts itself from:
     - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `core/buildinfo.ts`, `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/warm-base.ts` (debt)
+    - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts` (debt)
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
     - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.

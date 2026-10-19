@@ -11,7 +11,6 @@ export default [
   {
     rule: "boundaries/no-platform-api",
     paths: [
-      "core/buildinfo.ts",
       "core/cache.ts",
       "core/content-hash.ts",
       "core/discover.ts",
@@ -23,7 +22,6 @@ export default [
       "core/thrown-outcome.ts",
       "core/transcript.ts",
       "core/tree-hash.ts",
-      "core/warm-base.ts",
     ],
     kind: "debt",
     task: "task-1792338443-riwqev",

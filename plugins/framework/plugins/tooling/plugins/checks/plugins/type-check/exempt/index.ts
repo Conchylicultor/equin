@@ -6,7 +6,11 @@ export default [
     paths: [
       "server/internal/spawn-worker.ts",
       "shared/contract-refs.ts",
+      "shared/keyed-check.ts",
+      "shared/lockfile.ts",
       "shared/pass-set.ts",
+      "shared/program-graph.ts",
+      "shared/program-manifest.ts",
       "shared/type-fingerprint.ts",
       "shared/worker.ts",
     ],

@@ -24341,8 +24341,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/test` (1 debt)
               - `framework/tooling` (1 debt)
               - `framework/tooling/boundaries` (2 debt)
-              - `framework/tooling/checks` (13 debt)
-              - `framework/tooling/checks/type-check` (5 debt)
+              - `framework/tooling/checks` (11 debt)
+              - `framework/tooling/checks/type-check` (9 debt)
               - `framework/tooling/codegen` (29 debt)
               - `framework/tooling/format` (5 debt)
               - `framework/tooling/guards` (10 debt)
@@ -24443,12 +24443,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DirFact`
               - `FileFact`
               - `FileSystemView`
-              - `GitFactResult`
               - `GlobFact`
               - `ImportMatch`
               - `ListCandidateSourcesOptions`
               - `OutstandingCheck`
-              - `ProgramFileList`
               - `ProgressRecord`
               - `QueryFact`
               - `RunChecksOptions`
@@ -24456,9 +24454,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TscProgram`
               - `ValidateOptions`
               - `ValidateResult`
-              - `WarmBaseGitFacts`
-              - `WarmBaseOutcome`
-              - `WarmBasePublish`
             - Exports (values):
               - `checkCollectedDir`
               - `computeCheckSourceHash`
@@ -24476,24 +24471,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `listCandidateSources`
               - `listRepoFiles`
               - `markBuildInProgress`
-              - `materializeWarmBase`
               - `openCheckCache`
-              - `publishWarmBase`
+              - `programManifestPath`
               - `readCheckProgress`
-              - `readProgramFileList`
               - `readTranscriptVerdict`
-              - `realGitFacts`
               - `repoProgram`
               - `requestedJobs`
               - `runChecks`
               - `scopeOf`
-              - `tsBuildInfoPath`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
           - Exemptions:
             - Exempts itself from:
               - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
-              - `boundaries/no-platform-api` — `core/buildinfo.ts`, `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/warm-base.ts` (debt)
+              - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts` (debt)
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
               - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.
@@ -24585,6 +24576,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `LintFileJob`
                   - `LintFileResult`
                   - `RawLintMessage`
+                  - `TscDivergence`
+                  - `TscMode`
                   - `TypeCheckWorkerJob`
                   - `TypeCheckWorkerResult`
                   - `TypedDecision`
@@ -24597,9 +24590,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `TYPE_CHECK_WORKER_PEAK_BYTES`
                   - `TYPE_CHECK_WORKER_UNITS`
               - Cross-plugin:
-                - Uses tokens: `ui/tokens/shadow --shadow`
+                - Imported by: `framework/tooling/checks/type-check/backstop`
               - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/contract-refs.ts`, `shared/pass-set.ts`, `shared/type-fingerprint.ts`, `shared/worker.ts` (debt)
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/contract-refs.ts`, `shared/keyed-check.ts`, `shared/lockfile.ts`, `shared/pass-set.ts`, `shared/program-graph.ts`, `shared/program-manifest.ts`, `shared/type-fingerprint.ts`, `shared/worker.ts` (debt)
+              - Plugins:
+                - **`backstop`** — The keyed type check's backstop: a daily main-only job runs the type-check worker in dual mode (the keyed check beside a full check of a fresh program, compared file by file) and files a type-check-divergence report for every file whose keyed result differs.
+                  - Server:
+                    - Contributes: `report-kind` "type-check-divergence"
+                    - Uses:
+                      - `framework/tooling/checks/type-check.spawnTypeCheckWorker`
+                      - `infra/host/host-admission.inheritedGrant`
+                      - `infra/host/host-admission.withHostGrant`
+                      - `infra/jobs/supervised-job.defineSupervisedJob`
+                      - `primitives/log-channels.defineLogSink`
+                      - `reports.ReportKind`
+                    - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses: 92 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
@@ -27282,6 +27287,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/admin`
               - `debug/profiling/boot-bench`
               - `framework/tooling/checks/type-check`
+              - `framework/tooling/checks/type-check/backstop`
               - `infra/host/host-read-pool`
               - `infra/jobs/supervised-job`
               - `infra/safe-fetch/browser-fetch`
@@ -27892,6 +27898,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/release`
               - `framework/cli/serve-app`
               - `framework/cli/start`
+              - `framework/tooling/checks/type-check/backstop`
               - `infra/audio-analysis`
               - `infra/deps`
               - `infra/events-test`
@@ -39205,7 +39212,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×11
           - `debug` ×9
           - `database` ×7
@@ -39215,6 +39222,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×2
           - `tasks` ×2
           - `backup`
+          - `framework/tooling/checks/type-check/backstop`
           - `integrations/youtube/audio-fetch`
           - `network/live`
           - `page/annotations/agent-access`
@@ -42817,15 +42825,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:
-    - Imported by: 56 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 57 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×21
       - `debug` ×16
       - `conversations` ×7
       - `database` ×3
+      - `framework` ×2
       - `infra` ×2
       - `active-data/report`
       - `backup`
-      - `framework/web-core`
       - `page/place/google`
       - `stats/cost`
       - `tasks/reports-investigation`
@@ -47949,10 +47957,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 65 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 64 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×26
               - `primitives` ×17
-              - `framework` ×5
+              - `framework` ×4
               - `ui` ×4
               - `apps-core` ×2
               - `page` ×2

@@ -555,7 +555,7 @@ measures the queue, so any per-check cost claim needs `./singularity check --job
 - Cross-plugin:
   - Imported by: `framework/tooling/checks/type-check/backstop`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/contract-refs.ts`, `shared/pass-set.ts`, `shared/type-fingerprint.ts`, `shared/worker.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/contract-refs.ts`, `shared/keyed-check.ts`, `shared/lockfile.ts`, `shared/pass-set.ts`, `shared/program-graph.ts`, `shared/program-manifest.ts`, `shared/type-fingerprint.ts`, `shared/worker.ts` (debt)
 - Sub-plugins:
   - **`backstop`** — The keyed type check's backstop: a daily main-only job runs the type-check worker in dual mode (the keyed check beside a full check of a fresh program, compared file by file) and files a…
 

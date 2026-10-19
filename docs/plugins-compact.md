@@ -117,7 +117,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tooling`** [exempt] — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Plugins:
         - **`boundaries`** [exempt] — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
-        - **`checks`** [test helpers] [exempt] [53 sub-plugins] — Check runner and built-in checks for ./singularity check
+        - **`checks`** [test helpers] [exempt] [54 sub-plugins] — Check runner and built-in checks for ./singularity check
         - **`codegen`** [exempt] — Plugin doc generation and registry codegen
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
         - **`e2e-harness`** [exempt] — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots, and Chromium on…
