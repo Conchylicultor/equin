@@ -7,10 +7,12 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { useConversation } from "@plugins/conversations/web";
+import { QUESTION_WAITING_FOR } from "@plugins/conversations/core";
 import { MarkerAnswerForm } from "./marker-answer-form";
 import { OptionBody, OptionRow } from "./option-row";
 import { summaryFor } from "./question-card";
-import { findAnswerTurn } from "./awaiting";
+import { findAnswerTurn, isAwaitingAnswer } from "./awaiting";
 import {
   answersFromRecord,
   parseMarkerAnswer,
@@ -26,8 +28,10 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
 
   const { convId } = conversationPane.useParams();
   const eventsResult = useLive(jsonlEvents, { id: convId });
+  const conversation = useConversation(convId);
 
-  if (eventsResult.status === "loading") return null;
+  if (eventsResult.status === "loading" || conversation.status === "loading")
+    return null;
   if (eventsResult.status === "error")
     return (
       <ResourceErrorInline
@@ -57,8 +61,21 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
     lastToolCall.toolUseId === event.toolUseId;
   const answerTurn = findAnswerTurn(events, event.toolUseId);
 
-  // awaiting: cancelled (interrupt) + most recent question + no answer yet.
-  if (resultIsInterrupt && isLastToolCall && answerTurn == null) {
+  // still being asked: no result yet, the latest tool call, and the
+  // conversation waiting on a question. The `"question"` pending prompt draws
+  // the question then (its owner decides how it is answered — a held call's
+  // form, or the flush fallback), so the transcript leaves it to that one card.
+  // Whether the call reaches the transcript before its answer depends on the
+  // host (the SDK writes it at once; the interactive CLI only once answered).
+  // A stale conversation row keeps the card: hiding is only for a live ask.
+  const waitingOnQuestion =
+    conversation.status === "ready" &&
+    conversation.data?.waitingFor === QUESTION_WAITING_FOR;
+  if (event.result == null && isLastToolCall && waitingOnQuestion) return null;
+
+  // awaiting: cancelled (interrupt) + most recent question + no answer yet,
+  // and no message sent in its place.
+  if (isAwaitingAnswer(events, event)) {
     return (
       <ToolCallCard
         event={event}

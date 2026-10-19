@@ -866,3 +866,42 @@ describe("api-request-shape lines", () => {
     expect(events.map((e) => e.kind)).toEqual(["unknown"]);
   });
 });
+
+describe("queue operations", () => {
+  const queueOp = (operation: string, at: string, content?: string) => ({
+    type: "queue-operation",
+    operation,
+    timestamp: at,
+    ...(content === undefined ? {} : { content }),
+  });
+
+  test("a prompt dequeued straight after its enqueue is not a queued prompt", async () => {
+    const path = await writeFixture([
+      queueOp("enqueue", "2026-06-30T00:00:01.000Z", "hi"),
+      queueOp("dequeue", "2026-06-30T00:00:01.001Z"),
+      userLine("u1", null, "hi", "2026-06-30T00:00:01.002Z"),
+    ]);
+    const events = await readJsonlEvents(path);
+    expect(events.map((e) => e.kind)).toEqual(["user-text"]);
+  });
+
+  test("a prompt that waited while the agent worked keeps its markers", async () => {
+    const path = await writeFixture([
+      userLine("u1", null, "first", "2026-06-30T00:00:01.000Z"),
+      queueOp("enqueue", "2026-06-30T00:00:02.000Z", "second"),
+      assistantLine("a1", "u1", "working", "2026-06-30T00:00:03.000Z"),
+      queueOp("dequeue", "2026-06-30T00:00:04.000Z"),
+    ]);
+    const events = await readJsonlEvents(path);
+    expect(
+      events.map((e) =>
+        e.kind === "queue-operation" ? `queue:${e.operation}` : e.kind,
+      ),
+    ).toEqual([
+      "user-text",
+      "queue:enqueue",
+      "assistant-text",
+      "queue:dequeue",
+    ]);
+  });
+});

@@ -181,7 +181,8 @@ The signal directory is touched by two kinds of hook:
   to fire for a normal exit, `kill-session` and a SIGKILL of the pane process.
   Installed at boot, and chained onto every `create()`'s `new-session`: the tmux
   server exits with its last session and forgets its hooks.
-- **The agent's own Claude Code hooks** (`launch-settings.ts`), merged into the
+- **The agent's own Claude Code hooks** (`launch-settings.ts`, beside the ones
+  every runtime runs — agent-launch's `agentLaunchHooks`), merged into the
   launch's one `--settings` object beside the thinking mode: `PreToolUse`,
   `PostToolUse` and `PostToolUseFailure` on `AskUserQuestion`, and
   `UserPromptSubmit`, each touching `$SINGULARITY_CONVERSATION_ID`'s file. The
@@ -205,7 +206,8 @@ The signal directory is touched by two kinds of hook:
   (`recordPromptHookLaunch`) so the ledger knows this session reports its
   prompts; a session launched before the hook existed is `hookless` until it is
   resumed.
-- **Compaction context** (`conversations/compaction-context`) rides
+- **Compaction context** (`conversations/compaction-context`, wired by
+  `conversations/agent-launch` for every runtime) rides
   `SessionStart` on the `compact` source: `compactionHookEntry()` asks the
   backend, right after the CLI compacts the agent's context, for what plugins had
   handed the agent through tool results (a page's instructions), and hands it
@@ -228,7 +230,10 @@ temporary 1 s shadow of the retired poller ran on main until the push path had
 proved itself (no missed signal in a day after its last fix); it is gone. Every session name is tested against
 one constant, `AGENT_SESSION_RE` (`pane-rows.ts`), by the pane listing and every
 signal route alike: a tmux-side `-f` copy of it once kept every pane, and main
-adopted sessions no signal could name. Design:
+adopted sessions no signal could name. A session carrying the
+`@singularity-host` user option (agent-launch's `TMUX_HOSTED_BY_OPTION`, read
+through `PANE_ROW_FORMAT`) is skipped by the listing whatever its name or path:
+another runtime hosts its agent there, and tmux only supervises and shows it. Design:
 [`research/2026-10-02-conversations-poller-push-status.md`](../../../../research/2026-10-02-conversations-poller-push-status.md).
 
 ## Typing a turn: the box must read empty first
@@ -249,8 +254,14 @@ went in together. So:
   `returned` when the CLI handed it back; anything else is logged) and
   `typeTurn`'s verdict, `submitted` or `unverified`. `unverified` is a verdict,
   not a throw: the keystrokes are in the pane, and the CLI's hook still decides.
-- `clearInput(id, { awaitRestore })` is the same guard on its own, for Stop:
+- `screen.clearInput(id, { awaitRestore })` is the same guard on its own, for
+  `stop()` (interrupt → rewind the turn out of the transcript → clear the box):
   it first waits (≤ 1.5 s) for the interrupted turn to reappear, then clears it.
+  A box that will not empty is reported (`reportInputNotEmpty`), not thrown —
+  the text is already rewound and goes back to the composer.
+- The box-and-menu methods (`clearInput`, `flushInteractivePrompt`,
+  `answerMenu`) sit on the runtime's optional `screen` facet: they exist only
+  because this runtime drives a terminal UI.
 - Every keystroke-sending call runs as the conversation's only terminal writer
   (`withTerminal` in the conversations server), so two sends can never
   interleave.
@@ -260,14 +271,16 @@ went in together. So:
 There is one tmux server per machine, it keeps the environment of whichever
 process first talked to its socket (in practice the main backend), and every
 `tmux new-session` forks from it — so a pane inherits that backend's namespace,
-socket path and cwd. `-e` only ADDS, so the two variables we deliver that way
+socket path and cwd. `-e` only ADDS, so the variables we deliver that way
 sat on top of the leak rather than replacing it. tmux therefore execs
 
 ```
 zsh -l -c <wrapper> zsh <claudeCmd> [prompt]
 ```
 
-with the wrapper (`server/internal/agent-session-env.ts`)
+with the wrapper (`conversations/agent-launch`'s
+`server/internal/agent-session-env.ts` — `agentSessionArgs`, shared with every
+runtime that hosts an agent in a tmux session)
 
 ```
 cmd="$1"; shift; exec env -i HOME="$HOME" … PATH=/usr/bin:/bin:/usr/sbin:/sbin zsh -l -c "$cmd" zsh "$@"
@@ -308,14 +321,14 @@ may be a real command (`/compact`).
 
 - Description: Runs Claude CLI sessions inside tmux panes.
 - Server:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×9
+    - `conversations/agent-launch` ×5
+    - `conversations/turn-ledger` ×3
     - `infra/file-watcher` ×3
     - `infra/paths` ×3
     - `infra/worktree` ×3
     - `reports` ×3
-    - `conversations/turn-ledger` ×2
-    - `conversations` ×2
-    - `conversations/compaction-context.compactionHookEntry`
     - `conversations/question-relay.relayHookEntry`
     - `infra/claude-cli/availability.requireClaudeBin`
     - `infra/jobs.defineJob`
@@ -339,6 +352,6 @@ may be a real command (`/compact`).
 - Exemptions:
   - Exempts itself from:
     - `spawn-safety/no-raw-bun-spawn` — `server/internal/tmux-runtime.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/agent-session-env.ts`, `server/internal/claude-session.ts`, `server/internal/prune-signals-job.ts`, `server/internal/signals.ts`, `server/internal/tmux-runtime.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/claude-session.ts`, `server/internal/prune-signals-job.ts`, `server/internal/signals.ts`, `server/internal/tmux-runtime.ts` (debt)
 
 <!-- AUTOGENERATED:END -->

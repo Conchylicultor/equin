@@ -25,7 +25,7 @@ What we already know from reading the code and the SDK:
 
 The spike code goes in the repo as the seed of the Phase 1 plugin. It is not wired into any runtime or UI yet.
 
-`plugins/conversations/plugins/runtime-api/`
+`plugins/conversations/plugins/runtime-sdk/`
 - `package.json`: pins `@anthropic-ai/claude-agent-sdk` to `0.3.303` exactly.
 - `core/protocol.ts` (+ barrel `core/index.ts`): zod schemas for socket commands (`hello{version}`, `turn{text}`, `interrupt`, `answer{requestId, answers}`, `setModel`, `shutdown`) and for the event line envelope `{seq, t, kind: "sdk" | "permission_request" | "agent", payload}`. `PROTOCOL_VERSION = 1`. This follows the `packages/resource-protocol` precedent.
 - `bin/agent.ts`, the agent process (a few hundred lines):
@@ -64,7 +64,7 @@ Tmux baseline for latency: read-only from main's DB (`query_db`): `conversation_
 
 ## Verification
 
-- `./singularity run plugins/conversations/plugins/runtime-api/bin/spike.ts <scenario>` for each scenario. The results JSON files are the evidence quoted on the wiki.
+- `./singularity run plugins/conversations/plugins/runtime-sdk/bin/spike.ts <scenario>` for each scenario. The results JSON files are the evidence quoted on the wiki.
 - `./singularity build` (run in the background), to confirm the new plugin passes checks (boundaries, docs in sync) and to give scenario 5 a build to drive.
 - `tail -f ~/.singularity/agents/<id>/events.jsonl` and `tmux attach -r -t <id>` by hand, as a sanity check.
 

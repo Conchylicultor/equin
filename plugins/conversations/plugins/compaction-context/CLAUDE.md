@@ -65,7 +65,7 @@ adds itself.
     - `CompactionContextResponseSchema`
 - Cross-plugin:
   - Imported by:
-    - `conversations/runtime-tmux`
+    - `conversations/agent-launch`
     - `page/annotations/agent-access`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/hook-entry.ts` (debt)

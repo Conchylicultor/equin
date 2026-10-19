@@ -16,7 +16,7 @@ function fakeImpl<K extends "worktree" | "scratch">(
     onCommit: async () => {},
     prepare: async () => {},
     onFinish: async () => {},
-    launch: () => ({ argv: [], settings: {} }),
+    launch: () => ({ settings: {} }),
     checkResumable: () => ({ kind: "ok" }),
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parsePaneRows } from "./pane-rows";
+import { PANE_ROW_FORMAT, parsePaneRows } from "./pane-rows";
 
 function row(
   session: string,
@@ -7,8 +7,9 @@ function row(
   paneId = "%1",
   title = "✳ Fix it",
   path = "/elsewhere",
+  hostedBy = "",
 ): string {
-  return [session, pid, paneId, "0", path, title].join("\t");
+  return [session, pid, paneId, "0", path, hostedBy, title].join("\t");
 }
 
 const WT = "/repo/.claude/worktrees/att-1";
@@ -62,6 +63,25 @@ describe("parsePaneRows", () => {
     );
     expect([...panes.keys()]).toEqual(["conv-1-a"]);
     expect(panes.get("conv-1-a")?.paneId).toBe("%1");
+  });
+
+  test("skips a session another runtime hosts, whatever its name or path", () => {
+    const panes = parsePaneRows(
+      [
+        row("conv-1-a", "1", "%1"),
+        row("conv-1-b", "2", "%2", "✳", "/elsewhere", "sdk"),
+        row("spike-auq", "3", "%3", "✳", WT, "sdk"),
+      ].join("\n"),
+      isAgentWorktree,
+    );
+    expect([...panes.keys()]).toEqual(["conv-1-a"]);
+  });
+
+  test("the format reads the host option, before the title", () => {
+    expect(PANE_ROW_FORMAT.split("\t").slice(-2)).toEqual([
+      "#{@singularity-host}",
+      "#{pane_title}",
+    ]);
   });
 
   test("empty output is no panes", () => {

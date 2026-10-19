@@ -201,3 +201,26 @@ export async function releaseOpenHolds(
     )
     .returning({ toolUseId: t.toolUseId });
 }
+
+/**
+ * Retire one question if it is still open — its holder stopped waiting without
+ * the web answering (the agent dismissed or withdrew it). Returns whether it
+ * was open.
+ */
+export async function abandonIfOpen(
+  conversationId: string,
+  toolUseId: string,
+): Promise<boolean> {
+  const rows = await db
+    .update(t)
+    .set({ state: "abandoned", resolvedAt: sql`now()` })
+    .where(
+      and(
+        eq(t.toolUseId, toolUseId),
+        eq(t.conversationId, conversationId),
+        eq(t.state, "open"),
+      ),
+    )
+    .returning({ toolUseId: t.toolUseId });
+  return rows.length > 0;
+}

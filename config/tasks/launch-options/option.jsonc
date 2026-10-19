@@ -1,4 +1,4 @@
-// @hash 27d233df3d36
+// @hash 9a0952b4791f
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -17,8 +17,9 @@
 // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // Launch options, ordered as the launch itself resolves them — WHETHER it
-// starts (auto-start model), WHERE it runs (workspace), WHAT is prepended to
-// the first turn (preprompt), then HOW hard it thinks (thinking mode).
+// starts (auto-start model), WHERE it runs (workspace), ON WHAT it runs
+// (runtime), WHAT is prepended to the first turn (preprompt), then HOW hard it
+// thinks (thinking mode).
 // ONE order, TWO surfaces: the task detail's Prompt card reads it top-down as a
 // vertical stack of label + control rows, and the task-draft popover reads it
 // left-to-right as a chip row. Both render this slot, so a change here moves
@@ -34,6 +35,7 @@
   "items": [
     "tasks.auto-start.launch-option:auto-start",
     "conversations.workspace.launch-option:workspace",
+    "conversations.runtime-launch-option:runtime",
     "tasks.task-preprompt:preprompt",
     "tasks.task-effort:effort"
   ]

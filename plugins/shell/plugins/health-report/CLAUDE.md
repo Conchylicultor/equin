@@ -106,6 +106,7 @@ detail is rendered through `renderIsolated`.
 - Web:
   - Slots: `HealthReport.Row`
   - Slot contributors:
+    - `HealthReport.Row` ← `conversations.runtime-sdk`
     - `HealthReport.Row` ← `database.query-deadline`
     - `HealthReport.Row` ← `debug.queue-health`
     - `HealthReport.Row` ← `debug.sentinel`
@@ -158,6 +159,7 @@ detail is rendered through `renderIsolated`.
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
+    - `conversations/runtime-sdk`
     - `database/query-deadline`
     - `debug/queue-health`
     - `debug/sentinel`

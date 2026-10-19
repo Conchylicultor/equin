@@ -8,7 +8,6 @@ import {
   registerRelayQuestion,
   releaseRelayQuestion,
 } from "../../core/endpoints";
-import type { RelayState } from "../../core/schemas";
 import { toCliAnswer } from "./answer";
 import {
   readOpenQuestions,
@@ -17,6 +16,7 @@ import {
   resolveQuestion,
 } from "./store";
 import { waitForQuestion, wakeQuestion } from "./waiters";
+import { notifyQuestionResolved, type ResolvedQuestion } from "./resolved";
 
 export const handleRegister = implement(
   registerRelayQuestion,
@@ -52,12 +52,17 @@ export const handleAwait = implement(
 async function settle(
   conversationId: string,
   toolUseId: string,
-  to: Exclude<RelayState, "open">,
-  answer: Parameters<typeof resolveQuestion>[3] = null,
+  resolution: ResolvedQuestion["resolution"],
 ): Promise<void> {
-  await resolveQuestion(conversationId, toolUseId, to, answer);
+  await resolveQuestion(
+    conversationId,
+    toolUseId,
+    resolution.state,
+    resolution.state === "answered" ? resolution.answer : null,
+  );
   wakeQuestion(toolUseId);
   requestStatusReconcile([conversationId]);
+  await notifyQuestionResolved({ conversationId, toolUseId, resolution });
 }
 
 export const handleAnswer = implement(
@@ -66,14 +71,17 @@ export const handleAnswer = implement(
     const row = await readOpenQuestions(params.id, params.toolUseId);
     const checked = toCliAnswer(row.questions, body);
     if (!checked.ok) throw new HttpError(400, checked.error);
-    await settle(params.id, params.toolUseId, "answered", checked.answer);
+    await settle(params.id, params.toolUseId, {
+      state: "answered",
+      answer: checked.answer,
+    });
   },
 );
 
 export const handleRelease = implement(releaseRelayQuestion, ({ params }) =>
-  settle(params.id, params.toolUseId, "released"),
+  settle(params.id, params.toolUseId, { state: "released" }),
 );
 
 export const handleAbandon = implement(abandonRelayQuestion, ({ params }) =>
-  settle(params.id, params.toolUseId, "abandoned"),
+  settle(params.id, params.toolUseId, { state: "abandoned" }),
 );

@@ -2172,9 +2172,9 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 249 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 251 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×70
-    - `conversations` ×43
+    - `conversations` ×45
     - `tasks` ×27
     - `debug` ×26
     - `infra` ×14

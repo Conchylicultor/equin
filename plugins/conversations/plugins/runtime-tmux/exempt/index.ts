@@ -11,7 +11,6 @@ export default [
   {
     rule: "boundaries/no-platform-api",
     paths: [
-      "server/internal/agent-session-env.ts",
       "server/internal/claude-session.ts",
       "server/internal/prune-signals-job.ts",
       "server/internal/signals.ts",

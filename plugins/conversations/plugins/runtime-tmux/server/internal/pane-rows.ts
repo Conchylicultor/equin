@@ -1,3 +1,4 @@
+import { TMUX_HOSTED_BY_OPTION } from "@plugins/conversations/plugins/agent-launch/core";
 import { conversationIdKind } from "@plugins/tasks/plugins/task-ids/core";
 import type { PaneRef } from "./claude-session";
 
@@ -25,13 +26,18 @@ export const AGENT_SESSION_RE = new RegExp(
 // unambiguous even though pane titles can contain arbitrary characters.
 const SEP = "\t";
 
-/** The `list-panes -F` format `parsePaneRows` reads. */
+/**
+ * The `list-panes -F` format `parsePaneRows` reads. The title is last: it is
+ * the one field that may itself contain the separator. The host option reads
+ * empty for a session nothing set it on.
+ */
 export const PANE_ROW_FORMAT = [
   "#{session_name}",
   "#{pane_pid}",
   "#{pane_id}",
   "#{pane_dead}",
   "#{pane_start_path}",
+  `#{${TMUX_HOSTED_BY_OPTION}}`,
   "#{pane_title}",
 ].join(SEP);
 
@@ -62,7 +68,11 @@ export interface TmuxPane extends PaneRef {
  *   running goes unseen. No signal names them; the minute sweep follows them.
  *
  * Everything else (the user's own sessions) is never listed, captured or
- * probed. The first pane of a session wins; malformed lines are skipped.
+ * probed — and neither is a session another runtime hosts its agent in (it
+ * carries `TMUX_HOSTED_BY_OPTION`): tmux only supervises and shows that
+ * process, its conversation belongs to that runtime, and adopting it here
+ * would claim it as a tmux conversation twice over. The first pane of a
+ * session wins; malformed lines are skipped.
  */
 export function parsePaneRows(
   stdout: string,
@@ -70,8 +80,10 @@ export function parsePaneRows(
 ): Map<string, TmuxPane> {
   const map = new Map<string, TmuxPane>();
   for (const line of stdout.trim().split("\n").filter(Boolean)) {
-    const [name, pidStr, paneId, deadStr, startPath, ...rest] = line.split(SEP);
+    const [name, pidStr, paneId, deadStr, startPath, hostedBy, ...rest] =
+      line.split(SEP);
     if (!name || !pidStr || !paneId) continue;
+    if (hostedBy) continue;
     const worktreePath = startPath ?? "";
     if (!AGENT_SESSION_RE.test(name) && !isAgentWorktree(worktreePath))
       continue;

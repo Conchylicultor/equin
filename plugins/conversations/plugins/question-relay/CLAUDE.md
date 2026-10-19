@@ -117,7 +117,12 @@ questions.
     - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/question-relay/server/internal/tables.ts`
-  - Exports (values): `relayHookEntry`
+  - Exports (types): `ResolvedQuestion`
+  - Exports (values):
+    - `holdQuestion`
+    - `onQuestionResolved`
+    - `relayHookEntry`
+    - `retireQuestion`
   - Register: `defineJob('retention.pending_questions')`
   - Resources:
     - `question-relay.pending` (keyed, window)

@@ -21,7 +21,6 @@ import { releaseQuestionHolds } from "./question-hold";
 import {
   conversationRuntime,
   InputNotEmptyError,
-  rewindConversationTurn,
   withTerminal,
   type TypedTurn,
 } from "./runtime";
@@ -230,34 +229,20 @@ export async function launchWithHeldTurn(
 }
 
 /**
- * Stop: interrupt the turn, rewind it out of the transcript and empty the input
- * box — the CLI puts an interrupted turn back in the box (Step 1, E2), and that
- * copy left there would ride the user's next send. The web's draft becomes the
- * turn's only copy, and its ledger row is `returned`. Returns the rewound text.
- *
- * A box that will not empty is reported, not thrown: the interrupt and the
- * rewind already happened, and failing here would lose the text the user is
- * about to get back.
+ * Stop: the runtime interrupts the turn and, when it got no reply, takes it
+ * back out of the session (`ConversationRuntime.stop` — for tmux, rewinding the
+ * transcript and emptying the input box the CLI put the turn back in). The
+ * web's draft becomes the turn's only copy, and its ledger row is `returned`.
+ * Returns the text taken back.
  */
 export async function stopTurn(conversationId: string): Promise<string | null> {
   return withTerminal(conversationId, async () => {
     const { runtime } = await conversationRuntime(conversationId);
-    await runtime.interrupt(conversationId);
-    const rewound = await rewindConversationTurn(conversationId);
-    if (rewound === null) return null;
-    await returnTurnByText(conversationId, rewound);
-    try {
-      await runtime.clearInput(conversationId, { awaitRestore: true });
-    } catch (err) {
-      if (!(err instanceof InputNotEmptyError)) throw err;
-      await reportInputNotEmpty({
-        conversationId,
-        turnId: null,
-        during: "stop",
-        draft: err.draft,
-      });
+    const { returnedText } = await runtime.stop(conversationId);
+    if (returnedText !== null) {
+      await returnTurnByText(conversationId, returnedText);
     }
-    return rewound;
+    return returnedText;
   });
 }
 
@@ -299,6 +284,7 @@ async function deliverLocked(turn: TurnRow): Promise<TurnRow> {
     }
     throw err;
   }
+  // Absent `cleared`: the runtime has no input box, so nothing was cleared.
   if (typed.cleared) await noteClearedDraft(conversationId, typed.cleared);
   const hookless = !(await hasPromptHook(conversationId));
   return applyTurnEvent(

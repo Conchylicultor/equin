@@ -3,13 +3,31 @@ import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { EnqueueTx } from "@plugins/infra/plugins/jobs/server";
 import type { WorkspaceKind, WorkspaceSpec } from "../../core";
 
+/** Where Claude Code reads its settings, memory and CLAUDE.md from. */
+export type SettingSource = "user" | "project" | "local";
+
+/** One MCP server a launch connects the agent to. */
+export interface LaunchMcpServer {
+  type: "http";
+  url: string;
+}
+
 /**
- * What a workspace adds to the agent's launch: extra CLI arguments, appended
- * after the runtime's own, and a `--settings` fragment merged into the
- * runtime's one settings object (a key both set throws).
+ * What a workspace adds to the agent's launch, as typed options — never CLI
+ * flags, which would collide with an SDK runtime's own `settingSources` /
+ * `mcpServers`. Each runtime renders it its own way (tmux to argv, the SDK to
+ * query options).
+ *
+ * - `settingSources` — absent: the CLI's default sources.
+ * - `mcpServers` — servers added to the agent's own, by name.
+ * - `strictMcpConfig` — only `mcpServers`, none from the agent's own config.
+ * - `settings` — merged into the runtime's one settings object (a key both
+ *   set throws).
  */
 export interface LaunchFragment {
-  argv: readonly string[];
+  settingSources?: readonly SettingSource[];
+  mcpServers?: Readonly<Record<string, LaunchMcpServer>>;
+  strictMcpConfig?: boolean;
   settings: Record<string, unknown>;
 }
 
@@ -28,7 +46,7 @@ type SpecOf<K extends WorkspaceKind> = Extract<WorkspaceSpec, { kind: K }>;
 
 /**
  * One kind of workspace — where a conversation runs, and every step of its
- * life that depends on that. Orthogonal to the runtime (tmux | api), which
+ * life that depends on that. Orthogonal to the runtime (tmux | sdk), which
  * only ever sees the cwd and the {@link LaunchFragment}.
  */
 /** What a launch adds per session, beyond the workspace itself. */

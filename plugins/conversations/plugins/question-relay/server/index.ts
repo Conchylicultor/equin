@@ -18,6 +18,9 @@ import { pendingQuestionsServed } from "./internal/resource";
 import { pendingQuestionsRetention } from "./internal/retention";
 
 export { relayHookEntry } from "./internal/relay-hook";
+export { holdQuestion, retireQuestion } from "./internal/held-in-process";
+export { onQuestionResolved } from "./internal/resolved";
+export type { ResolvedQuestion } from "./internal/resolved";
 
 export default {
   description:

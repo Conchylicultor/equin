@@ -4,12 +4,13 @@ The `scratch` workspace: `state/workspaces/<attemptId>/`, holding the profile's
 `CLAUDE.md` (its instructions — the agent's whole project context), whatever its
 `prepare` materializes, and the agent's own files. No git, DB fork or build.
 
-- **Launch** (`launch-fragment.ts`): `--setting-sources user,project` — the
-  user's own settings, memory and plugins apply; `project` is the scratch dir,
-  and is what loads its `CLAUDE.md` (`user` alone reads no cwd `CLAUDE.md` —
-  measured). The dir is outside the repo, so no repo context is reachable.
-  `--mcp-config` (the app's server for this conversation) + `--strict-mcp-config`;
-  the profile's `permissions` ride `--settings`.
+- **Launch** (`launch-fragment.ts`, a typed `LaunchFragment` each runtime
+  renders): setting sources `user` + `project` — the user's own settings,
+  memory and plugins apply; `project` is the scratch dir, and is what loads its
+  `CLAUDE.md` (`user` alone reads no cwd `CLAUDE.md` — measured). The dir is
+  outside the repo, so no repo context is reachable. One MCP server (the app's,
+  for this conversation), strictly; the profile's `permissions` ride the
+  settings fragment.
 - **MCP**: `Mcp.scope` resolves a scratch conversation to its profile's
   `mcpTools` exactly, with no server instructions.
 - **Reaper**: `workspace.scratch-reap` (daily, main) deletes a dir a week after

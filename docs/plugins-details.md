@@ -12435,7 +12435,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` "auto-answer"
+    - Contributes:
+      - `ConfigV2.WebRegister` "auto-answer"
+      - `ConfigV2.WebRegister` "conversation-runtime"
     - Uses:
       - `config_v2.ConfigV2`
       - `network/live.mapRow`
@@ -12457,6 +12459,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Server:
     - Contributes:
       - `ConfigV2.Register` "auto-answer"
+      - `ConfigV2.Register` "conversation-runtime"
       - `trigger` "conversations.notify-created"
       - `trigger` "conversations.turn-emitter.reconcile"
       - `trigger` "conversations.turn-emitter.reconcile"
@@ -12467,7 +12470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "held-turn-undelivered"
-    - Uses: 80 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 81 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
       - `conversations/turn-ledger` ×13
       - `conversations/transcript-watcher` ×7
@@ -12484,6 +12487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/task-category` ×2
       - `conversations/model-provider/catalog.getModelCatalog`
       - `conversations/preprompts.resolvePreprompt`
+      - `conversations/runtime-launch-option.getTaskRuntime`
       - `conversations/workspace/launch-option.getTaskWorkspace`
       - `infra/attachments.getAttachment`
       - `infra/jobs.defineJob`
@@ -12502,6 +12506,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `QuestionHold`
       - `QuestionHoldSource`
       - `RuntimeInfo`
+      - `RuntimeScreen`
       - `RuntimeSignal`
       - `SubmitOutcome`
       - `SubmitVerdict`
@@ -12530,6 +12535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ResumeBlockedError`
       - `resumeConversation`
       - `rewindConversationAt`
+      - `rewindConversationTurn`
       - `Runtime`
       - `submitTurn`
       - `TranscriptCutError`
@@ -12558,6 +12564,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `config_v2.defineConfig`
       - `conversations/model-provider.ModelChoiceSchema`
+      - `conversations/runtime-catalog.ConversationRuntimeIdSchema`
       - `conversations/turn-ledger.turnIdKind`
       - `conversations/turn-ledger.TurnStateSchema`
       - `conversations/workspace.WorkspaceSpecSchema`
@@ -12612,8 +12619,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `stopConversation`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 65 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×50
+    - Imported by: 64 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×49
       - `tasks` ×4
       - `apps` ×3
       - `review` ×3
@@ -12629,6 +12636,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
       - `boundaries/no-platform-api` — `server/internal/lifecycle.ts`, `server/internal/locate-cut.ts`, `server/internal/status-reconciler.ts` (debt)
   - Plugins:
+    - **`agent-launch`** — What every app-launched agent starts with, whatever runtime hosts it: the tmux session's allowlisted environment (the env -i wrapper, the -e values it delivers, its PATH and login shell — agentSessionArgs), the fixed CLI settings, the hooks every runtime runs (the compaction hook) and the one merge of the launch's settings fragments.
+      - Server:
+        - Uses: `conversations/compaction-context.compactionHookEntry`
+        - Exports (types):
+          - `AgentSessionEnv`
+          - `LaunchHooks`
+        - Exports (values):
+          - `agentLaunchHooks`
+          - `agentSessionArgs`
+          - `agentSessionEnv`
+          - `LAUNCH_CLI_SETTINGS`
+          - `mergeLaunchSettings`
+      - Cross-plugin:
+        - Imported by:
+          - `conversations/runtime-sdk`
+          - `conversations/runtime-tmux`
+      - Core:
+        - Exports (values): `TMUX_HOSTED_BY_OPTION`
     - **`agent-thread`** — Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the AgentThreadSlots.StepLabel dispatch, its answer, the host's own result cards, a composer that resumes an ended conversation), the hooks a host's other surfaces read (useThreadTurns, useThreadProgress, useLatestResult), generic step labels for the common built-in tools, and useThreadRuns (a host's recent runs under its scratch profile). Serves `agent-thread.runs` — the recent conversations launched in a scratch workspace, newest first, filterable by profile — over `_conversations` with the attempt joined (routed: a conversation write refills its own row).
       - Web:
         - Slots: `AgentThreadSlots.StepLabel`
@@ -13076,7 +13101,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CompactionContextResponseSchema`
       - Cross-plugin:
         - Imported by:
-          - `conversations/runtime-tmux`
+          - `conversations/agent-launch`
           - `page/annotations/agent-access`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/hook-entry.ts` (debt)
@@ -15419,7 +15444,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: 34 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
+                    - Uses: 35 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
                       - `primitives/css/ui-kit` ×9
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                       - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
@@ -15430,6 +15455,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/pending-turn.sendConversationTurn`
                       - `conversations/conversation-view/rewind.useGoBackToMessage`
                       - `conversations/conversation-view.conversationPane`
+                      - `conversations.useConversation`
                       - `network/live.useLive`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/fill.Fill`
@@ -17277,7 +17303,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveCollection`
           - `tasks/tasks-core._conversations`
         - DB schema: `plugins/conversations/plugins/question-relay/server/internal/tables.ts`
-        - Exports (values): `relayHookEntry`
+        - Exports (types): `ResolvedQuestion`
+        - Exports (values):
+          - `holdQuestion`
+          - `onQuestionResolved`
+          - `relayHookEntry`
+          - `retireQuestion`
         - Register: `defineJob('retention.pending_questions')`
         - Resources:
           - `question-relay.pending` (keyed, window)
@@ -17380,30 +17411,124 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `restoreBatch`
           - `RestoreBatchBodySchema`
-    - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
-      - Server:
-        - Uses: `conversations.Runtime`
+    - **`runtime-catalog`**
+      - Cross-plugin:
+        - Imported by:
+          - `conversations`
+          - `conversations/runtime-launch-option`
       - Core:
+        - Exports (types): `ConversationRuntimeId`
+        - Exports (values):
+          - `CONVERSATION_RUNTIME_IDS`
+          - `CONVERSATION_RUNTIMES`
+          - `ConversationRuntimeIdSchema`
+          - `conversationRuntimeInfo`
+    - **`runtime-launch-option`** — Runtime picker as a launch option: which runtime the task's conversations start on — the configured default, the interactive CLI in tmux, or a headless Agent SDK session — on the task-draft composer (a pill) and the task detail's Prompt card. Owns the tasks_ext_runtime side-table: the runtime (tmux or the Agent SDK) a task's conversations start on, read when one is launched — absent, the configured default.
+      - Web:
+        - Contributes: `TaskLaunch.Option` "Runtime" → `RuntimeLaunchControl`
+        - Uses:
+          - `infra/endpoints.fetchEndpoint`
+          - `network/live.mapRow`
+          - `network/live.useLiveRow`
+          - `primitives/css/ui-kit.Select`
+          - `primitives/css/ui-kit.SelectContent`
+          - `primitives/css/ui-kit.SelectItem`
+          - `primitives/css/ui-kit.SelectTrigger`
+          - `primitives/css/ui-kit.SelectValue`
+          - `primitives/text-editor/composer/picker-pill.PickerPill`
+          - `shell/notifications.toast`
+          - `tasks/launch-options.TaskLaunch`
+      - Server:
+        - Contributes:
+          - `resource.declare` "task-runtimes:rows"
+          - `taskLaunchServer` "runtime"
+        - Uses:
+          - `infra/endpoints.implement`
+          - `infra/entity-extensions.defineExtension`
+          - `network/live.serveCollection`
+          - `tasks/launch-options.TaskLaunchServer`
+          - `tasks/tasks-core._tasks`
+        - DB schema: `plugins/conversations/plugins/runtime-launch-option/server/internal/tables.ts`
+        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_runtime`)
+        - Exports (values): `getTaskRuntime`
+        - Resources: `task-runtimes:rows` (keyed, point)
+        - Routes:
+          - `PUT /api/task-runtimes/:taskId`
+          - `DELETE /api/task-runtimes/:taskId`
+      - Core:
+        - Uses:
+          - `conversations/runtime-catalog.ConversationRuntimeId`
+          - `conversations/runtime-catalog.ConversationRuntimeIdSchema`
+          - `tasks/launch-options.defineLaunchOption`
+        - Exports (values): `runtimeLaunchOption`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/shape --spacing`
+        - Imported by: `conversations`
+      - Shared:
+        - Exports (types): `TaskRuntime`
+        - Exports (values):
+          - `deleteTaskRuntime`
+          - `putTaskRuntime`
+          - `taskRuntimes`
+          - `taskRuntimeShape`
+    - **`runtime-sdk`** — The health report's Agent SDK row: attention when the system Claude Code the sdk runtime runs differs in major.minor from the CLI version the pinned Agent SDK was built for. The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file.
+      - Web:
+        - Contributes: `HealthReport.Row` "Agent SDK"
+        - Uses:
+          - `infra/claude-cli/availability.useClaudeCodeStatus`
+          - `network/live.useLive`
+          - `primitives/live-state.combineResources`
+          - `shell/health-report.HealthReport`
+      - Server:
+        - Contributes: `resource.declare` "runtime-sdk.bundled-cli"
+        - Uses:
+          - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
+          - `conversations/agent-launch.mergeLaunchSettings`
+          - `database.db`
+          - `infra/entity-extensions.defineExtension`
+          - `tasks/tasks-core._conversations`
+        - DB schema: `plugins/conversations/plugins/runtime-sdk/server/internal/tables.ts`
+        - Entity extension of: `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
+        - Resources: `runtime-sdk.bundled-cli` (push, fixed)
+      - Core:
+        - Uses: `network/live.liveValue`
         - Exports (types):
+          - `AgentAnswer`
           - `AgentCommand`
           - `AgentEvent`
+          - `AgentLaunchOptions`
+          - `AgentLifecycle`
           - `CommandReply`
+          - `HelloReply`
+          - `OpenRequest`
         - Exports (values):
           - `AGENT_EVENTS_FILE`
+          - `AGENT_OPTIONS_FILE`
+          - `AgentAnswerSchema`
           - `AgentCommandSchema`
           - `AgentEventSchema`
+          - `AgentLaunchOptionsSchema`
+          - `AgentLifecycleSchema`
           - `CommandReplySchema`
+          - `DismissReplySchema`
+          - `HelloReplySchema`
+          - `OpenRequestSchema`
           - `PROTOCOL_VERSION`
+          - `sameMajorMinor`
+          - `sdkBundledCli`
+          - `TurnReplySchema`
+      - Machine:
+        - Register: `defineFileWatcher('runtime-sdk.events')`
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
       - Server:
-        - Uses: 21 symbols — full list in [`plugins/conversations/plugins/runtime-tmux/REFERENCE.md`](../plugins/conversations/plugins/runtime-tmux/REFERENCE.md)
+        - Uses: 33 symbols — full list in [`plugins/conversations/plugins/runtime-tmux/REFERENCE.md`](../plugins/conversations/plugins/runtime-tmux/REFERENCE.md)
+          - `conversations` ×9
+          - `conversations/agent-launch` ×5
+          - `conversations/turn-ledger` ×3
           - `infra/file-watcher` ×3
           - `infra/paths` ×3
           - `infra/worktree` ×3
           - `reports` ×3
-          - `conversations/turn-ledger` ×2
-          - `conversations` ×2
-          - `conversations/compaction-context.compactionHookEntry`
           - `conversations/question-relay.relayHookEntry`
           - `infra/claude-cli/availability.requireClaudeBin`
           - `infra/jobs.defineJob`
@@ -17427,7 +17552,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `spawn-safety/no-raw-bun-spawn` — `server/internal/tmux-runtime.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/agent-session-env.ts`, `server/internal/claude-session.ts`, `server/internal/prune-signals-job.ts`, `server/internal/signals.ts`, `server/internal/tmux-runtime.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/claude-session.ts`, `server/internal/prune-signals-job.ts`, `server/internal/signals.ts`, `server/internal/tmux-runtime.ts` (debt)
     - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
       - Web:
         - Contributes: `IdKinds.Kind` "sess"
@@ -17782,6 +17907,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `promptSubmitHookEntry`
           - `recordPromptHookLaunch`
           - `reportInputNotEmpty`
+          - `resolvePromptSubmit`
           - `returnTurnByText`
           - `returnTurnsSince`
           - `userTurnSent`
@@ -17873,8 +17999,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `LaunchContext`
           - `LaunchFragment`
+          - `LaunchMcpServer`
           - `Resumability`
           - `ScratchProfileDef`
+          - `SettingSource`
           - `WorkspaceAt`
           - `WorkspaceImpl`
         - Exports (values):
@@ -18054,10 +18182,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
   - Cross-plugin:
-    - Imported by: 120 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 121 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×32
       - `page` ×15
-      - `conversations` ×13
+      - `conversations` ×14
       - `infra` ×13
       - `tasks` ×10
       - `active-data` ×8
@@ -24346,7 +24474,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/rewind` (1 debt)
               - `conversations/model-provider/catalog` (2 debt)
               - `conversations/question-relay` (1 debt)
-              - `conversations/runtime-tmux` (5 debt)
+              - `conversations/runtime-tmux` (4 debt)
               - `conversations/summary` (1 debt)
               - `conversations/transcript-retention` (1 debt)
               - `conversations/transcript-watcher` (4 debt)
@@ -26174,6 +26302,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations`
               - `conversations/agents`
               - `conversations/model-provider/catalog`
+              - `conversations/runtime-sdk`
               - `conversations/runtime-tmux`
               - `infra/claude-cli`
               - `primitives/launch`
@@ -26573,9 +26702,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unavailableMessage`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 205 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 206 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×55
-          - `conversations` ×30
+          - `conversations` ×31
           - `debug` ×17
           - `infra` ×16
           - `page` ×14
@@ -26729,10 +26858,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 41 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×16
           - `tasks` ×11
-          - `conversations` ×8
+          - `conversations` ×10
           - `page` ×3
           - `plugin-meta/plugin-health`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger(). Contributes a BackgroundTriggerSource so the Background activity catalog names the events that start each job.
@@ -30213,9 +30342,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 249 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 251 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×70
-          - `conversations` ×43
+          - `conversations` ×45
           - `tasks` ×27
           - `debug` ×26
           - `infra` ×14
@@ -36774,10 +36903,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 417 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 418 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×106
               - `apps` ×93
-              - `conversations` ×56
+              - `conversations` ×57
               - `page` ×25
               - `debug` ×22
               - `ui` ×20
@@ -39081,9 +39210,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 249 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 250 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×69
-          - `conversations` ×44
+          - `conversations` ×45
           - `debug` ×23
           - `ui` ×23
           - `tasks` ×22
@@ -41638,6 +41767,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-lg`
                   - `ui/tokens/shape --spacing`
                 - Imported by:
+                  - `conversations/runtime-launch-option`
                   - `conversations/workspace/launch-option`
                   - `primitives/text-editor/composer`
                   - `tasks/auto-start/launch-option`
@@ -43989,6 +44119,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `HealthReport.Row`
         - Slot contributors:
+          - `HealthReport.Row` ← `conversations.runtime-sdk`
           - `HealthReport.Row` ← `database.query-deadline`
           - `HealthReport.Row` ← `debug.queue-health`
           - `HealthReport.Row` ← `debug.sentinel`
@@ -44041,6 +44172,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by:
+          - `conversations/runtime-sdk`
           - `database/query-deadline`
           - `debug/queue-health`
           - `debug/sentinel`
@@ -44182,8 +44314,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×7
           - `ui/tokens/density` ×4
           - `ui/tokens/shape --spacing`
-        - Imported by: 34 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
-          - `conversations` ×15
+        - Imported by: 35 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+          - `conversations` ×16
           - `tasks` ×6
           - `apps` ×2
           - `build` ×2
@@ -45154,6 +45286,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `TaskLaunch.Option`
         - Slot contributors:
+          - `TaskLaunch.Option` ← `conversations.runtime-launch-option`
           - `TaskLaunch.Option` ← `conversations.workspace.launch-option`
           - `TaskLaunch.Option` ← `tasks.auto-start.launch-option`
           - `TaskLaunch.Option` ← `tasks.task-effort`
@@ -45196,6 +45329,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/type-scale --font-weight-medium`
         - Imported by:
           - `apps/agent-manager/welcome`
+          - `conversations/runtime-launch-option`
           - `conversations/workspace/launch-option`
           - `plugin-meta/plugin-health`
           - `primitives/launch`
@@ -46418,8 +46552,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 72 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×31
+        - Imported by: 74 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×33
           - `tasks` ×17
           - `active-data` ×5
           - `debug` ×5
@@ -46437,6 +46571,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)
           - `conversations/conversation-progress` (table `conversations_ext_progress`)
           - `conversations/conversations-view/queue` (table `conversations_ext_queue`)
+          - `conversations/runtime-sdk` (table `conversations_ext_sdk_agent`)
           - `conversations/spawn-failure` (table `conversations_ext_spawn_failure`)
           - `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`)
           - `conversations/usage` (table `conversations_ext_usage`)
@@ -46449,6 +46584,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
           - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
           - `page/prompt/link` (table `tasks_ext_prompt_block`)
+          - `conversations/runtime-launch-option` (table `tasks_ext_runtime`)
           - `tasks/task-title` (table `tasks_ext_short_title`)
           - `tasks/sidequest-autopilot` (table `tasks_ext_sidequest_triage`)
           - `tasks/task-source-url` (table `tasks_ext_source_url`)
@@ -48054,8 +48190,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 414 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×90
+            - Tokens used by: 415 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×91
               - `apps` ×82
               - `primitives` ×69
               - `page` ×35

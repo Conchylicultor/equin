@@ -7,6 +7,7 @@ import {
   turnIdKind,
   TurnStateSchema,
 } from "@plugins/conversations/plugins/turn-ledger/core";
+import { ConversationRuntimeIdSchema } from "@plugins/conversations/plugins/runtime-catalog/core";
 
 // --- Body schemas ---
 
@@ -15,7 +16,8 @@ export const CreateConversationBodySchema = z
     taskId: z.string().optional(),
     attemptId: z.string().optional(),
     prompt: z.string().optional(),
-    runtime: z.string().optional(),
+    // Omitted: the fork source's, else the task's pick, else the default.
+    runtime: ConversationRuntimeIdSchema.optional(),
     // Strict enum — an unknown/typo model id is rejected loudly at the endpoint
     // boundary (400) rather than silently coerced to the default. A family
     // ("opus") or a pinned version; the spawn resolves it. This is an *input*

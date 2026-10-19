@@ -206,6 +206,7 @@ removes settled rows (accepted, merged, returned, withdrawn).
     - `promptSubmitHookEntry`
     - `recordPromptHookLaunch`
     - `reportInputNotEmpty`
+    - `resolvePromptSubmit`
     - `returnTurnByText`
     - `returnTurnsSince`
     - `userTurnSent`

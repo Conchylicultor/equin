@@ -1,10 +1,12 @@
-import type {
-  ConversationRuntime,
-  RuntimeInfo,
-  RuntimeSignal,
-  SubmitVerdict,
-  TerminalMenuChoice,
-  TypedTurn,
+import {
+  InputNotEmptyError,
+  rewindConversationTurn,
+  type ConversationRuntime,
+  type RuntimeInfo,
+  type RuntimeSignal,
+  type SubmitVerdict,
+  type TerminalMenuChoice,
+  type TypedTurn,
 } from "@plugins/conversations/server";
 import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
 import {
@@ -23,7 +25,6 @@ import {
 } from "@plugins/conversations/plugins/effort-provider/core";
 import { TMUX } from "@plugins/infra/plugins/paths/server";
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
-import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   ensureMainWorktreeRoot,
   isCanonicalWorktreePath,
@@ -33,29 +34,29 @@ import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/serve
 import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
 import { userInfo } from "node:os";
-import { runtimeShimsDir } from "@plugins/infra/plugins/launcher/core";
-import { compactionHookEntry } from "@plugins/conversations/plugins/compaction-context/server";
+import {
+  agentLaunchHooks,
+  agentSessionArgs,
+  agentSessionEnv,
+  LAUNCH_CLI_SETTINGS,
+  mergeLaunchSettings,
+} from "@plugins/conversations/plugins/agent-launch/server";
 import { relayHookEntry } from "@plugins/conversations/plugins/question-relay/server";
 import {
   promptSubmitHookEntry,
   recordPromptHookLaunch,
+  reportInputNotEmpty,
 } from "@plugins/conversations/plugins/turn-ledger/server";
 import { tmuxSignalsDir } from "../../data-dirs";
-import {
-  AGENT_SESSION_WRAPPER,
-  agentLoginShell,
-  agentSessionPath,
-} from "./agent-session-env";
 import { resolveSessionState, type SessionState } from "./claude-session";
 import { parseInputDraft } from "./input-draft";
 import { clearDraft } from "./input-guard";
 import { PANE_ROW_FORMAT, parsePaneRows, type TmuxPane } from "./pane-rows";
 import { asLaunchMessage } from "./launch-message";
 import {
-  LAUNCH_CLI_SETTINGS,
-  mergeLaunchSettings,
-  settingsFlag,
+  launchFragmentArgv,
   launchHookSettings,
+  settingsFlag,
 } from "./launch-settings";
 import { classifyPaneText, type PaneMenu } from "./pane-menu";
 import { resolvePaneStatus } from "./pane-status";
@@ -646,6 +647,28 @@ async function describePanes(
   return out;
 }
 
+/**
+ * Escape interrupts Claude Code's current operation (same as pressing Esc in
+ * the TUI). Exit copy mode first so the key reaches Claude rather than tmux's
+ * vi bindings.
+ */
+async function interruptPane(conversationId: string): Promise<void> {
+  await exitCopyMode(conversationId);
+  await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Escape"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  }).exited;
+}
+
+/** The screen's `clearInput`: the verified-empty box on its own (see input-guard.ts). */
+async function clearInput(
+  conversationId: string,
+  opts?: { awaitRestore?: boolean },
+): Promise<string | null> {
+  await exitCopyMode(conversationId);
+  return clearInputBox(conversationId, opts?.awaitRestore ?? false);
+}
+
 // One single-quoted word of the pane's shell command.
 function shellWord(value: string): string {
   return `'${value.replaceAll("'", `'\\''`)}'`;
@@ -706,23 +729,6 @@ export const tmuxRuntime: ConversationRuntime = {
     // dies — tmux itself would report success.
     const claudeBin = requireClaudeBin();
 
-    // SINGULARITY_CONVERSATION_ID is read by the .githooks/prepare-commit-msg
-    // hook so any `git commit` made inside the pane gets stamped with a
-    // Singularity-Conversation trailer. SINGULARITY_PARENT_HOST is the
-    // namespace Claude's .mcp.json dials back to over HTTP — it must be a host
-    // the gateway actually routes, so it is this backend's own declared
-    // runtime namespace rather than a caller-supplied label. runtimeNamespace()
-    // throws when the process never declared one.
-    //
-    // CLAUDE_CODE_DISABLE_AGENT_VIEW pins the session to this pane. Claude
-    // Code's agent view can otherwise move a live session into its per-machine
-    // background daemon (`←` on an empty prompt, `/background`, the exit
-    // dialog), and the daemon hands every session it hosts ITS OWN environment
-    // — the one of whichever pane first spawned it. A session moved that way
-    // keeps working through a stub in this pane, so the app cannot tell, but
-    // its commits, pushes and MCP calls then carry another conversation's id
-    // (the Sep 9 misattributed push). The app never uses background sessions,
-    // so the pane is the only place a session may run.
     // The launch message, escaped so the CLI reads it as a turn and never as a
     // slash command (see launch-message.ts). Every use below reads this one
     // value, so the temp-file and positional paths cannot diverge.
@@ -730,7 +736,6 @@ export const tmuxRuntime: ConversationRuntime = {
       typeof opts?.prompt === "string" && opts.prompt.length > 0
         ? asLaunchMessage(opts.prompt)
         : undefined;
-    const parentHost = runtimeNamespace();
     const cliFlag = opts?.model ? cliFlagFor(opts.model) : undefined;
     // Thinking mode: levels low..max ride `--effort <flag>`; `ultracode` is not a
     // valid flag value, so it rides `--settings '{"ultracode":true}'` (xhigh +
@@ -739,7 +744,8 @@ export const tmuxRuntime: ConversationRuntime = {
       ? resolveEffortFlag(opts.effort)
       : undefined;
     // One `--settings` object for the whole launch: the thinking mode (if any),
-    // the fixed CLI preferences, the question hooks that touch this conversation's signal file (see
+    // the fixed CLI preferences, the hooks every agent runs with plus the
+    // question hooks that touch this conversation's signal file (see
     // launch-settings.ts) and the workspace's fragment. Resume launches through
     // here too, so a resumed session gets the hooks as well.
     const settings = mergeLaunchSettings(
@@ -749,7 +755,7 @@ export const tmuxRuntime: ConversationRuntime = {
         signalDir: tmuxSignalsDir.ensure(),
         relay: relayHookEntry(),
         promptSubmit: promptSubmitHookEntry(),
-        compaction: compactionHookEntry(),
+        shared: agentLaunchHooks(),
       }),
       launch.settings,
     );
@@ -767,8 +773,8 @@ export const tmuxRuntime: ConversationRuntime = {
       "--permission-mode bypassPermissions",
       // Single-quoted JSON; settingsFlag throws on a value carrying a quote.
       settingsFlag(settings),
-      // The workspace's own arguments, each its own shell word.
-      ...launch.argv.map(shellWord),
+      // The workspace's launch options, each its own shell word.
+      ...launchFragmentArgv(launch).map(shellWord),
     ]
       .filter(Boolean)
       .join(" ");
@@ -804,10 +810,11 @@ export const tmuxRuntime: ConversationRuntime = {
     const claudeCmd = backgroundPrefix() + cmdParts.join(" ");
     // tmux execs this argv directly, so the first shell is the only process that
     // can expand `$VAR` against what tmux hands the pane (its injected TMUX /
-    // TMUX_PANE plus the two `-e` values). That shell immediately re-execs into
-    // an allowlisted environment; see agent-session-env.ts for why the pane's
-    // inherited environment cannot be trusted. The Claude command and the
-    // prompt ride as positional words, never interpolated into the wrapper.
+    // TMUX_PANE plus the `-e` values). That shell immediately re-execs into an
+    // allowlisted environment; see agent-launch's agent-session-env.ts for why
+    // the pane's inherited environment cannot be trusted. The Claude command
+    // and the prompt ride as positional words, never interpolated into the
+    // wrapper.
     const proc = Bun.spawn(
       [
         TMUX,
@@ -818,23 +825,14 @@ export const tmuxRuntime: ConversationRuntime = {
         conversationId,
         "-c",
         cwd,
-        "-e",
-        `SINGULARITY_CONVERSATION_ID=${conversationId}`,
-        "-e",
-        `SINGULARITY_PARENT_HOST=${parentHost}`,
-        "-e",
-        "CLAUDE_CODE_DISABLE_AGENT_VIEW=1",
-        "/bin/sh",
-        "-c",
-        AGENT_SESSION_WRAPPER,
-        "sh",
-        agentLoginShell(userInfo().shell ?? "/bin/sh"),
-        agentSessionPath({
-          shimsDir: runtimeShimsDir(process.env),
+        ...agentSessionArgs({
+          env: agentSessionEnv(conversationId),
+          accountShell: userInfo().shell ?? "/bin/sh",
           claudeBin,
+          command: claudeCmd,
+          args:
+            launchMessage !== undefined && !useTempFile ? [launchMessage] : [],
         }),
-        claudeCmd,
-        ...(launchMessage !== undefined && !useTempFile ? [launchMessage] : []),
         // Re-arm the global session hooks in the same invocation: a tmux server
         // this `new-session` just started has none (see tmux-hooks.ts).
         ...chainedTmuxHookArgs(),
@@ -863,15 +861,30 @@ export const tmuxRuntime: ConversationRuntime = {
     }).exited;
   },
 
-  async interrupt(conversationId: string): Promise<void> {
-    // Escape interrupts Claude Code's current operation (same as pressing
-    // Esc in the TUI). Exit copy mode first so the key reaches Claude
-    // rather than tmux's vi bindings.
-    await exitCopyMode(conversationId);
-    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Escape"], {
-      stdout: "pipe",
-      stderr: "pipe",
-    }).exited;
+  interrupt: interruptPane,
+
+  async stop(conversationId: string): Promise<{ returnedText: string | null }> {
+    // Interrupt, then rewind the turn out of the transcript and empty the
+    // input box — the CLI puts an interrupted turn back in the box (Step 1,
+    // E2), and that copy left there would ride the user's next send.
+    await interruptPane(conversationId);
+    const returnedText = await rewindConversationTurn(conversationId);
+    if (returnedText === null) return { returnedText };
+    // A box that will not empty is reported, not thrown: the interrupt and the
+    // rewind already happened, and failing here would lose the text the user
+    // is about to get back.
+    try {
+      await clearInput(conversationId, { awaitRestore: true });
+    } catch (err) {
+      if (!(err instanceof InputNotEmptyError)) throw err;
+      await reportInputNotEmpty({
+        conversationId,
+        turnId: null,
+        during: "stop",
+        draft: err.draft,
+      });
+    }
+    return { returnedText };
   },
 
   async send(conversationId: string, text: string): Promise<TypedTurn> {
@@ -879,14 +892,6 @@ export const tmuxRuntime: ConversationRuntime = {
     // A verified-empty box, then typed keystrokes and a verified Enter.
     const cleared = await clearInputBox(conversationId, false);
     return { cleared, verdict: await typeTurn(conversationId, text) };
-  },
-
-  async clearInput(
-    conversationId: string,
-    opts?: { awaitRestore?: boolean },
-  ): Promise<string | null> {
-    await exitCopyMode(conversationId);
-    return clearInputBox(conversationId, opts?.awaitRestore ?? false);
   },
 
   async answerPrompt(conversationId: string, text: string): Promise<TypedTurn> {
@@ -918,17 +923,21 @@ export const tmuxRuntime: ConversationRuntime = {
     return waitForInputReady(conversationId, signal);
   },
 
-  async flushInteractivePrompt(conversationId: string): Promise<void> {
-    // Dismiss the live prompt menu (e.g. AskUserQuestion) WITHOUT sending an
-    // answer. Cancelling the menu forces the CLI to flush the buffered
-    // assistant tool_use to the JSONL transcript so the web UI can render it.
-    // This is exactly answerPrompt()'s self-healing Escape loop minus the
-    // C-c + type step — no answer text is ever sent. A menu that never appears
-    // (already answered in the terminal) leaves nothing to flush.
-    if (await awaitPromptMenu(conversationId)) {
-      await escapeUntilPromptCleared(conversationId);
-    }
-  },
+  screen: {
+    clearInput,
 
-  answerMenu: answerOpenMenu,
+    async flushInteractivePrompt(conversationId: string): Promise<void> {
+      // Dismiss the live prompt menu (e.g. AskUserQuestion) WITHOUT sending an
+      // answer. Cancelling the menu forces the CLI to flush the buffered
+      // assistant tool_use to the JSONL transcript so the web UI can render
+      // it. This is exactly answerPrompt()'s self-healing Escape loop minus
+      // the C-c + type step — no answer text is ever sent. A menu that never
+      // appears (already answered in the terminal) leaves nothing to flush.
+      if (await awaitPromptMenu(conversationId)) {
+        await escapeUntilPromptCleared(conversationId);
+      }
+    },
+
+    answerMenu: answerOpenMenu,
+  },
 };

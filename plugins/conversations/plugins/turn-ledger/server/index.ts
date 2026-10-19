@@ -24,6 +24,7 @@ export {
   latestSubmitAt,
   listHeldTurns,
   recordPromptHookLaunch,
+  resolvePromptSubmit,
   returnTurnByText,
   returnTurnsSince,
 } from "./internal/store";

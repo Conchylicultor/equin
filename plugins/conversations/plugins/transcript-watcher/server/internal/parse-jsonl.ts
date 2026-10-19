@@ -731,6 +731,21 @@ async function buildEvents(
         extractTaskNotifications(content, ts, events);
         continue;
       }
+      // A prompt that never waited: its dequeue comes right after its enqueue,
+      // with nothing the transcript shows in between. That is how a prompt
+      // reaches an idle agent through the queue (every Agent SDK turn does), so
+      // the pair is plumbing, not a parked prompt — the turn itself follows as
+      // the user line. Only a prompt that sat in the queue while the agent
+      // worked keeps its "Queued" / "Sent to agent" markers.
+      const prev = events.at(-1);
+      if (
+        operation === "dequeue" &&
+        prev?.kind === "queue-operation" &&
+        prev.operation === "enqueue"
+      ) {
+        events.pop();
+        continue;
+      }
       events.push({ kind: "queue-operation", at: ts, operation, content });
       continue;
     }

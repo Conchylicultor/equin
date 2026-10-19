@@ -1513,6 +1513,10 @@
       "name": "@singularity/plugin-conversations",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/agent-launch": {
+      "name": "@singularity/plugin-conversations-agent-launch",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/agent-thread": {
       "name": "@singularity/plugin-conversations-agent-thread",
       "version": "0.0.1",
@@ -2116,8 +2120,16 @@
       "name": "@singularity/plugin-conversations-recover",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/runtime-api": {
-      "name": "@singularity/plugin-conversations-runtime-api",
+    "plugins/conversations/plugins/runtime-catalog": {
+      "name": "@singularity/plugin-conversations-runtime-catalog",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/runtime-launch-option": {
+      "name": "@singularity/plugin-conversations-runtime-launch-option",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/runtime-sdk": {
+      "name": "@singularity/plugin-conversations-runtime-sdk",
       "version": "0.0.1",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.3.303",
@@ -7587,6 +7599,8 @@
 
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
 
+    "@singularity/plugin-conversations-agent-launch": ["@singularity/plugin-conversations-agent-launch@workspace:plugins/conversations/plugins/agent-launch"],
+
     "@singularity/plugin-conversations-agent-thread": ["@singularity/plugin-conversations-agent-thread@workspace:plugins/conversations/plugins/agent-thread"],
 
     "@singularity/plugin-conversations-agents": ["@singularity/plugin-conversations-agents@workspace:plugins/conversations/plugins/agents"],
@@ -7889,7 +7903,11 @@
 
     "@singularity/plugin-conversations-recover": ["@singularity/plugin-conversations-recover@workspace:plugins/conversations/plugins/recover"],
 
-    "@singularity/plugin-conversations-runtime-api": ["@singularity/plugin-conversations-runtime-api@workspace:plugins/conversations/plugins/runtime-api"],
+    "@singularity/plugin-conversations-runtime-catalog": ["@singularity/plugin-conversations-runtime-catalog@workspace:plugins/conversations/plugins/runtime-catalog"],
+
+    "@singularity/plugin-conversations-runtime-launch-option": ["@singularity/plugin-conversations-runtime-launch-option@workspace:plugins/conversations/plugins/runtime-launch-option"],
+
+    "@singularity/plugin-conversations-runtime-sdk": ["@singularity/plugin-conversations-runtime-sdk@workspace:plugins/conversations/plugins/runtime-sdk"],
 
     "@singularity/plugin-conversations-runtime-tmux": ["@singularity/plugin-conversations-runtime-tmux@workspace:plugins/conversations/plugins/runtime-tmux"],
 

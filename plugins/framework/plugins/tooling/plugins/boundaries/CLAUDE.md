@@ -173,7 +173,7 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
     - `conversations/conversation-view/rewind` (1 debt)
     - `conversations/model-provider/catalog` (2 debt)
     - `conversations/question-relay` (1 debt)
-    - `conversations/runtime-tmux` (5 debt)
+    - `conversations/runtime-tmux` (4 debt)
     - `conversations/summary` (1 debt)
     - `conversations/transcript-retention` (1 debt)
     - `conversations/transcript-watcher` (4 debt)

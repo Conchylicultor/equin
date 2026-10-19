@@ -11,6 +11,7 @@ import {
   type Turn,
 } from "./claude-transcript";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
+import type { ConversationRuntimeId } from "@plugins/conversations/plugins/runtime-catalog/core";
 
 export type { Turn };
 
@@ -72,9 +73,10 @@ export type SubmitVerdict =
 export interface TypedTurn {
   /**
    * The draft the box held before typing, cleared first — `""` when it was
-   * empty, `null` when the box could not be read.
+   * empty, `null` when the box could not be read. Absent: this runtime has no
+   * input box, so there was nothing to clear.
    */
-  cleared: string | null;
+  cleared?: string | null;
   verdict: SubmitVerdict;
 }
 
@@ -97,12 +99,14 @@ export class InputNotEmptyError extends Error {
 }
 
 export interface ConversationRuntime {
-  readonly id: string;
+  /** One of the closed list `CONVERSATION_RUNTIMES` (conversations core). */
+  readonly id: ConversationRuntimeId;
   /**
    * Start a session in `cwd` (the attempt's workspace). `launch` is the
-   * workspace's addition to the CLI launch — appended argv and a settings
-   * fragment the runtime merges into its own; the runtime knows nothing else
-   * about the workspace.
+   * workspace's addition to the CLI launch — typed launch options (setting
+   * sources, MCP servers) the runtime renders its own way, and a settings
+   * fragment it merges into its own; the runtime knows nothing else about the
+   * workspace.
    */
   create(
     conversationId: string,
@@ -140,27 +144,24 @@ export interface ConversationRuntime {
    */
   subscribe(onSignal: (signal: RuntimeSignal) => void): Promise<() => void>;
   /**
-   * Type `text` into the session's input box and submit it. Implementers MUST
+   * Type `text` into the session's input box and submit it. A terminal runtime MUST
    * leave the box empty before typing — clear any draft and verify it is gone
-   * ({@link clearInput}), throwing {@link InputNotEmptyError} when it will not
+   * ({@link RuntimeScreen.clearInput}), throwing {@link InputNotEmptyError} when it will not
    * empty — because the CLI submits whatever the box holds plus the typed text
    * as ONE prompt. Resolves with what was cleared and the submit check's
    * verdict; throws only when the text provably never reached the box.
    */
   send(conversationId: string, text: string): Promise<TypedTurn>;
-  /**
-   * Empty the input box and verify it is empty; throws
-   * {@link InputNotEmptyError} when it still holds text after the bound.
-   * `awaitRestore` first waits (bounded) for a draft to APPEAR — the CLI puts a
-   * turn interrupted before its reply back into the box asynchronously, and
-   * Stop must clear that copy, not race it. Resolves with the draft it cleared
-   * (`""` when there was none, `null` when the box could not be read).
-   */
-  clearInput(
-    conversationId: string,
-    opts?: { awaitRestore?: boolean },
-  ): Promise<string | null>;
   interrupt(conversationId: string): Promise<void>;
+  /**
+   * Stop the running turn: interrupt it and, when it got no reply, take it back
+   * out of the session — the transcript no longer holds it and nothing of it is
+   * left for the next turn to ride on (a terminal runtime empties the input box
+   * the CLI put it back in). Resolves with the text taken back, which the web
+   * hands back to the composer, or null when the turn stays (it had a reply, or
+   * there was none). Runs as the conversation's terminal writer.
+   */
+  stop(conversationId: string): Promise<{ returnedText: string | null }>;
   /**
    * Answer a pending interactive prompt form (e.g. AskUserQuestion) by
    * sending `text` as a turn. This is a single ATOMIC operation:
@@ -179,17 +180,6 @@ export interface ConversationRuntime {
    */
   answerPrompt(conversationId: string, text: string): Promise<TypedTurn>;
   /**
-   * Dismiss a pending interactive prompt form (e.g. AskUserQuestion) WITHOUT
-   * sending any answer. Cancelling the form forces the CLI to flush the
-   * buffered assistant `tool_use` to the JSONL transcript so the web UI can
-   * render it; the user can then answer from the web form (which goes through
-   * {@link answerPrompt}). Implementers MUST verify the form has cleared and
-   * MUST throw if it never clears, exactly like {@link answerPrompt}'s
-   * dismissal step — they share the same self-healing Escape loop, this method
-   * simply stops after the form clears (no answer is sent).
-   */
-  flushInteractivePrompt(conversationId: string): Promise<void>;
-  /**
    * Wait, bounded, until the session can take a typed turn — for a session that
    * was just started, until the agent has drawn its input box. Resolves
    * `"timeout"` (never throws for it) when the bound or `signal` elapses first,
@@ -201,6 +191,41 @@ export interface ConversationRuntime {
     signal: AbortSignal,
   ): Promise<"ready" | "timeout">;
   /**
+   * The methods that exist only because the runtime drives a terminal UI — an
+   * input box, menus drawn on a screen. Absent for a runtime without one; the
+   * callers ({@link flushInteractivePrompt}, {@link answerTerminalMenu}) then
+   * throw, which cannot happen in practice: only a screen runtime reports a
+   * menu ({@link RuntimeInfo.menu}) or a drawn question to flush.
+   */
+  readonly screen?: RuntimeScreen;
+}
+
+/** A terminal runtime's screen: its input box and the menus drawn on it. */
+export interface RuntimeScreen {
+  /**
+   * Empty the input box and verify it is empty; throws
+   * {@link InputNotEmptyError} when it still holds text after the bound.
+   * `awaitRestore` first waits (bounded) for a draft to APPEAR — the CLI puts a
+   * turn interrupted before its reply back into the box asynchronously, and
+   * Stop must clear that copy, not race it. Resolves with the draft it cleared
+   * (`""` when there was none, `null` when the box could not be read).
+   */
+  clearInput(
+    conversationId: string,
+    opts?: { awaitRestore?: boolean },
+  ): Promise<string | null>;
+  /**
+   * Dismiss a pending interactive prompt form (e.g. AskUserQuestion) WITHOUT
+   * sending any answer. Cancelling the form forces the CLI to flush the
+   * buffered assistant `tool_use` to the JSONL transcript so the web UI can
+   * render it; the user can then answer from the web form (which goes through
+   * {@link ConversationRuntime.answerPrompt}). Implementers MUST verify the
+   * form has cleared and MUST throw if it never clears, exactly like
+   * `answerPrompt`'s dismissal step — they share the same self-healing Escape
+   * loop, this method simply stops after the form clears (no answer is sent).
+   */
+  flushInteractivePrompt(conversationId: string): Promise<void>;
+  /**
    * Answer the terminal menu reported as {@link RuntimeInfo.menu}. Implementers
    * MUST re-read the menu first and throw unless it is still open and, for an
    * option, still offers that label at that number — a key sent into a changed
@@ -208,6 +233,24 @@ export interface ConversationRuntime {
    * once the menu has left the screen; throws if it never does.
    */
   answerMenu(conversationId: string, choice: TerminalMenuChoice): Promise<void>;
+}
+
+/**
+ * `runtime`'s screen, for an operation only a terminal UI has; throws when the
+ * runtime has none (see {@link ConversationRuntime.screen}).
+ */
+function screenOf(
+  runtime: ConversationRuntime,
+  conversationId: string,
+  operation: string,
+): RuntimeScreen {
+  if (!runtime.screen) {
+    throw new Error(
+      `${operation} on ${conversationId}: runtime "${runtime.id}" has no ` +
+        "terminal screen — only a screen runtime reports a menu or a drawn question",
+    );
+  }
+  return runtime.screen;
 }
 
 const registry = new Map<string, ConversationRuntime>();
@@ -270,7 +313,12 @@ export async function interruptConversation(id: string): Promise<void> {
 
 export async function flushInteractivePrompt(id: string): Promise<void> {
   await withTerminal(id, async () => {
-    await (await conversationRuntime(id)).runtime.flushInteractivePrompt(id);
+    const { runtime } = await conversationRuntime(id);
+    await screenOf(
+      runtime,
+      id,
+      "flushInteractivePrompt",
+    ).flushInteractivePrompt(id);
   });
 }
 
@@ -288,7 +336,8 @@ export async function answerTerminalMenu(
   choice: TerminalMenuChoice,
 ): Promise<void> {
   await withTerminal(id, async () => {
-    await (await conversationRuntime(id)).runtime.answerMenu(id, choice);
+    const { runtime } = await conversationRuntime(id);
+    await screenOf(runtime, id, "answerMenu").answerMenu(id, choice);
   });
 }
 

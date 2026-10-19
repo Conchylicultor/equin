@@ -75,7 +75,7 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
   // The checkout carries the repo's own `.claude/settings.json` and
   // `.mcp.json`; the launch adds nothing.
   launch() {
-    return { argv: [], settings: {} };
+    return { settings: {} };
   },
 
   // A conversation's checkout can be reclaimed underneath it while its branch

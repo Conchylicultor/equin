@@ -17,6 +17,10 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { Runtime } from "./runtime";
+import type { ConversationRuntimeId } from "@plugins/conversations/plugins/runtime-catalog/core";
+import { runtimeConfig } from "../../shared/config";
+import { getConfig } from "@plugins/config_v2/server";
+import { getTaskRuntime } from "@plugins/conversations/plugins/runtime-launch-option/server";
 import {
   assertClaudeCodeReady,
   checkClaudeCode,
@@ -71,7 +75,22 @@ import { serializeTranscript } from "./claude-transcript";
 import { locateTranscriptCut, type LocateCutRefusal } from "./locate-cut";
 import type { RewindOutcome, RewindPreview } from "../../core/rewind";
 
-const DEFAULT_RUNTIME = "tmux";
+// The runtime a launch starts on: the caller's, else the source's for a fork
+// (its transcript and session are that runtime's), else the launching task's
+// pick (the Runtime launch option), else the configured default.
+async function resolveRuntimeId(
+  explicit: ConversationRuntimeId | undefined,
+  forkSource: ConversationRuntimeId | undefined,
+  taskId: string | undefined,
+): Promise<ConversationRuntimeId> {
+  const id =
+    explicit ??
+    forkSource ??
+    (taskId ? await getTaskRuntime(taskId) : null) ??
+    getConfig(runtimeConfig).defaultRuntime;
+  // Resolve now so an unregistered runtime throws before anything is written.
+  return Runtime.get(id).id;
+}
 
 // The per-task thinking mode (effort), applied to Claude Code at launch and on
 // resume. Read live from the task side-table (no per-conversation snapshot), so
@@ -84,7 +103,7 @@ async function resolveTaskEffort(
 }
 
 export interface CreateConversationOpts {
-  runtimeId?: string;
+  runtimeId?: ConversationRuntimeId;
   taskId?: string;
   attemptId?: string;
   prompt?: string;
@@ -146,7 +165,7 @@ export class TranscriptCutError extends Error {
 // Produced by `prepareConversation`, consumed by `commitConversation` (the
 // writes, on one transaction) and `finishConversation` (what runs after commit).
 export interface PreparedConversation {
-  runtimeId: string;
+  runtimeId: ConversationRuntimeId;
   conversationId: string;
   model: ConversationModel;
   spawnedBy: string;
@@ -173,9 +192,6 @@ export interface PreparedConversation {
 export async function prepareConversation(
   opts: CreateConversationOpts = {},
 ): Promise<PreparedConversation> {
-  const runtimeId = opts.runtimeId ?? DEFAULT_RUNTIME;
-  // Resolve now so an unknown runtime throws before anything is written.
-  Runtime.get(runtimeId);
   // An agent that cannot run is refused here, with the fix, before a task,
   // attempt or job exists — not started as a pane that dies on `command not
   // found` or sits at a login prompt (ClaudeCodeUnavailableError).
@@ -187,6 +203,7 @@ export async function prepareConversation(
   let resumeSessionId: string | undefined;
   let attemptId = opts.attemptId;
   let inheritedModel: ConversationModel | undefined;
+  let inheritedRuntime: ConversationRuntimeId | undefined;
   let transcriptCopy: TranscriptCopy | undefined;
   if (opts.forkAtMessageUuid && !opts.forkFromConversationId) {
     throw new Error("forkAtMessageUuid requires forkFromConversationId");
@@ -211,6 +228,7 @@ export async function prepareConversation(
     attemptId = source.attemptId;
     resumeSessionId = source.claudeSessionId;
     inheritedModel = source.model;
+    inheritedRuntime = Runtime.get(source.runtime).id;
 
     if (opts.forkAtMessageUuid) {
       // Fork from a chosen message: resume OUR truncated copy rather than let
@@ -338,6 +356,11 @@ export async function prepareConversation(
   // Threaded to the runtime as CLI args; no prompt mutation (unlike preprompt,
   // ultracode rides --settings, not the transcript).
   const effort = await resolveTaskEffort(effectiveTaskId);
+  const runtimeId = await resolveRuntimeId(
+    opts.runtimeId,
+    inheritedRuntime,
+    effectiveTaskId,
+  );
 
   return {
     runtimeId,
@@ -522,8 +545,8 @@ export async function createConversation(
 
 export async function deleteConversation(id: string): Promise<void> {
   const row = await getConversationRuntime(id);
-  const runtimeId = row?.runtime ?? DEFAULT_RUNTIME;
-  await Runtime.get(runtimeId).delete(id);
+  if (!row) return;
+  await Runtime.get(row.runtime).delete(id);
 }
 
 // Thrown by the resume paths that map onto a request/response (the toolbar

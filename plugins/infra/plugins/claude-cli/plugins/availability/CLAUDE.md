@@ -123,6 +123,7 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
     - `conversations`
     - `conversations/agents`
     - `conversations/model-provider/catalog`
+    - `conversations/runtime-sdk`
     - `conversations/runtime-tmux`
     - `infra/claude-cli`
     - `primitives/launch`

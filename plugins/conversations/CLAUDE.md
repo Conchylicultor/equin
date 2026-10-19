@@ -7,7 +7,9 @@
 - Description: Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 - Load-bearing: yes
 - Web:
-  - Contributes: `ConfigV2.WebRegister` "auto-answer"
+  - Contributes:
+    - `ConfigV2.WebRegister` "auto-answer"
+    - `ConfigV2.WebRegister` "conversation-runtime"
   - Uses:
     - `config_v2.ConfigV2`
     - `network/live.mapRow`
@@ -29,6 +31,7 @@
 - Server:
   - Contributes:
     - `ConfigV2.Register` "auto-answer"
+    - `ConfigV2.Register` "conversation-runtime"
     - `trigger` "conversations.notify-created"
     - `trigger` "conversations.turn-emitter.reconcile"
     - `trigger` "conversations.turn-emitter.reconcile"
@@ -39,7 +42,7 @@
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "held-turn-undelivered"
-  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×27
     - `conversations/turn-ledger` ×13
     - `conversations/transcript-watcher` ×7
@@ -56,6 +59,7 @@
     - `tasks/task-category` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `conversations/preprompts.resolvePreprompt`
+    - `conversations/runtime-launch-option.getTaskRuntime`
     - `conversations/workspace/launch-option.getTaskWorkspace`
     - `infra/attachments.getAttachment`
     - `infra/jobs.defineJob`
@@ -74,6 +78,7 @@
     - `QuestionHold`
     - `QuestionHoldSource`
     - `RuntimeInfo`
+    - `RuntimeScreen`
     - `RuntimeSignal`
     - `SubmitOutcome`
     - `SubmitVerdict`
@@ -102,6 +107,7 @@
     - `ResumeBlockedError`
     - `resumeConversation`
     - `rewindConversationAt`
+    - `rewindConversationTurn`
     - `Runtime`
     - `submitTurn`
     - `TranscriptCutError`
@@ -130,6 +136,7 @@
   - Uses:
     - `config_v2.defineConfig`
     - `conversations/model-provider.ModelChoiceSchema`
+    - `conversations/runtime-catalog.ConversationRuntimeIdSchema`
     - `conversations/turn-ledger.turnIdKind`
     - `conversations/turn-ledger.TurnStateSchema`
     - `conversations/workspace.WorkspaceSpecSchema`
@@ -184,8 +191,8 @@
     - `stopConversation`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×50
+  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×49
     - `tasks` ×4
     - `apps` ×3
     - `review` ×3
@@ -201,6 +208,7 @@
     - `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
     - `boundaries/no-platform-api` — `server/internal/lifecycle.ts`, `server/internal/locate-cut.ts`, `server/internal/status-reconciler.ts` (debt)
 - Sub-plugins:
+  - **`agent-launch`** — What every app-launched agent starts with, whatever runtime hosts it: the tmux session's allowlisted environment (the env -i wrapper, the -e values it delivers, its PATH and login shell…
   - **`agent-thread`** — Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the…
   - **`agents`** — Named agent definitions that launch conversations.
   - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the…
@@ -318,7 +326,9 @@
   - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a…
   - **`question-relay`** [exempt] — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form (answered as the tool's real result) with an Answer in terminal release…
   - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
-  - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
+  - **`runtime-catalog`**
+  - **`runtime-launch-option`** — Runtime picker as a launch option: which runtime the task's conversations start on — the configured default, the interactive CLI in tmux, or a headless Agent SDK session — on the task-draft composer…
+  - **`runtime-sdk`** — The health report's Agent SDK row: attention when the system Claude Code the sdk runtime runs differs in major.minor from the CLI version the pinned Agent SDK was built for. The sdk runtime's…
   - **`runtime-tmux`** [exempt] — Runs Claude CLI sessions inside tmux panes.
   - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has…
   - **`spawn-failure`** — Answers the conversation-spawn-failures collection inside a demo scope (no launch failed), so the surfaces that read a conversation's spawn failure render in the demo. Per-conversation spawn…

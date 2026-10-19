@@ -523,8 +523,8 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 72 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×31
+  - Imported by: 74 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×33
     - `tasks` ×17
     - `active-data` ×5
     - `debug` ×5
@@ -542,6 +542,7 @@ serves them.
     - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)
     - `conversations/conversation-progress` (table `conversations_ext_progress`)
     - `conversations/conversations-view/queue` (table `conversations_ext_queue`)
+    - `conversations/runtime-sdk` (table `conversations_ext_sdk_agent`)
     - `conversations/spawn-failure` (table `conversations_ext_spawn_failure`)
     - `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`)
     - `conversations/usage` (table `conversations_ext_usage`)
@@ -554,6 +555,7 @@ serves them.
     - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
     - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
     - `page/prompt/link` (table `tasks_ext_prompt_block`)
+    - `conversations/runtime-launch-option` (table `tasks_ext_runtime`)
     - `tasks/task-title` (table `tasks_ext_short_title`)
     - `tasks/sidequest-autopilot` (table `tasks_ext_sidequest_triage`)
     - `tasks/task-source-url` (table `tasks_ext_source_url`)

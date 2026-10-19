@@ -55,7 +55,7 @@ import {
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { ConfigV2 } from "@plugins/config_v2/server";
-import { autoAnswerConfig } from "../shared/config";
+import { autoAnswerConfig, runtimeConfig } from "../shared/config";
 
 export { maybeLaunchTaskJob, launchTaskNow } from "./internal/auto-start-jobs";
 export type {
@@ -81,11 +81,13 @@ export {
   InputNotEmptyError,
   interruptConversation,
   readConversationTurns,
+  rewindConversationTurn,
 } from "./internal/runtime";
 export type {
   RuntimeInfo,
   RuntimeSignal,
   ConversationRuntime,
+  RuntimeScreen,
   SubmitVerdict,
   TerminalMenuChoice,
   TypedTurn,
@@ -123,6 +125,7 @@ export default {
   // The conversations live resources (active/system/gone/gone-stats) are mounted on tasks-core.
   contributions: [
     ConfigV2.Register({ descriptor: autoAnswerConfig }),
+    ConfigV2.Register({ descriptor: runtimeConfig }),
     Trigger({
       on: taskStatusChanged,
       do: maybeLaunchOnStatusJob,
