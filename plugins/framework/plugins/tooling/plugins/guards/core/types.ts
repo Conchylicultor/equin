@@ -140,4 +140,3 @@ export interface Guard<I = unknown> {
   once?: boolean;
   check(input: I, ctx: GuardContext): Verdict | Promise<Verdict>;
 }
-
