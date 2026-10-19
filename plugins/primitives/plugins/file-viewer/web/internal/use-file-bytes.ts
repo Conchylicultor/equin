@@ -6,6 +6,7 @@ import {
 import { getImageContent } from "@plugins/code-explorer/plugins/code-api/core";
 import { hostFsRaw } from "@plugins/infra/plugins/host-fs/core";
 import { fileRefKey, type FileRef } from "../../core";
+import { useRefetchOnFileChange } from "./use-file-revision";
 
 /**
  * Why a file has no bytes to hand over — a determinate answer about the file,
@@ -58,7 +59,7 @@ function readBlob(file: FileRef, signal: AbortSignal): Promise<Blob> {
  * archive listing). A host file through host-fs's `raw` route, a checkout file
  * through code-api's (as of the ref's revision when it names one). A refusal by
  * status is an `unavailable` answer, never retried; anything else is an
- * `error`.
+ * `error`. Re-read in place whenever the file changes on disk.
  */
 export function useFileBytes(file: FileRef): FileBytesState {
   const read = useQuery<ArrayBuffer, Error>({
@@ -68,6 +69,7 @@ export function useFileBytes(file: FileRef): FileBytesState {
     retry: (failures, error) =>
       !(error instanceof EndpointError && error.status < 500) && failures < 3,
   });
+  useRefetchOnFileChange(file, read.refetch);
   if (read.error) {
     const error = read.error;
     if (error instanceof EndpointError) {

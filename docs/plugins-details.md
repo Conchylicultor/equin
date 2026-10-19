@@ -11902,6 +11902,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes:
       - `resource.declare` "code.commit-files"
       - `resource.declare` "code.commit-info"
+      - `resource.declare` "code.file-version"
     - Uses:
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
@@ -11928,6 +11929,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Resources:
       - `code.commit-files` (push, immutable)
       - `code.commit-info` (push, immutable)
+      - `code.file-version` (push, notified)
+  - Machine:
+    - Uses:
+      - `infra/host-fs.hostPathVersion`
+      - `infra/host-fs.watchHostPath`
+      - `network/live.serveValue`
   - Cross-plugin:
     - Imported by:
       - `code-explorer/file-resolve`
@@ -11942,12 +11949,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
           - `infra/endpoints.interpolatePath`
+          - `infra/host-fs.FileVersionSchema`
           - `network/live.liveValue`
           - `primitives/commit-list.CommitRowSchema`
         - Exports (types):
           - `CodeDirEntry`
           - `CommitFiles`
         - Exports (values):
+          - `codeFileVersion`
           - `codeImageUrl`
           - `commitFiles`
           - `CommitFilesSchema`
@@ -27484,6 +27493,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/read-account.ts` (debt)
     - **`host-fs`** — The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it: replace / keep-both / skip), all three refused unless the Origin is the app's own *.localhost.
       - Server:
+        - Contributes: `resource.declare` "host-fs.version"
         - Uses:
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
@@ -27505,6 +27515,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readHostPathText`
           - `resolveHostPath`
           - `serveHostPath`
+        - Resources: `host-fs.version` (push, notified)
         - Routes:
           - `GET /api/host-fs/list`
           - `GET /api/host-fs/stat`
@@ -27516,11 +27527,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/host-fs/open`
           - `POST /api/host-fs/extract`
           - `POST /api/host-fs/move`
+      - Machine:
+        - Uses: `network/live.serveValue`
+        - Exports (types): `HostPathWatch`
+        - Exports (values):
+          - `hostPathVersion`
+          - `watchHostPath`
       - Core:
         - Uses:
           - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
         - Exports (types):
+          - `FileVersion`
           - `HostFsArchiveReason`
           - `HostFsCompleteResult`
           - `HostFsEntry`
@@ -27538,6 +27557,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostFsWithin`
           - `ReadHostPathsResult`
         - Exports (values):
+          - `FileVersionSchema`
           - `hasHostPaths`
           - `HOST_FS_COMPLETE_LIMIT`
           - `HOST_FS_MOVE_MAX_SOURCES`
@@ -27555,6 +27575,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hostFsRaw`
           - `hostFsStat`
           - `hostFsText`
+          - `hostFsVersion`
           - `hostFsVolume`
           - `isBrowsable`
           - `readHostPaths`
@@ -27563,6 +27584,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `code-explorer`
+          - `code-explorer/code-api`
           - `infra/host-fs/image`
           - `infra/host-fs/zip`
           - `primitives/file-viewer`
@@ -30197,16 +30219,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 244 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 246 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×70
           - `conversations` ×41
           - `tasks` ×27
           - `debug` ×26
-          - `infra` ×13
+          - `infra` ×14
           - `active-data` ×12
           - `page` ×10
           - `build` ×6
-          - `primitives` ×5
+          - `primitives` ×6
           - `plugin-meta` ×4
           - `auth` ×3
           - `code-explorer` ×3
@@ -38381,11 +38403,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileViewer.Renderer` ← `primitives.file-viewer.markdown`
           - `FileViewer.Renderer` ← `primitives.file-viewer.media`
           - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
-        - Uses:
-          - `infra/endpoints.EndpointError`
-          - `infra/endpoints.fetchEndpoint`
-          - `infra/endpoints.useEndpoint`
-          - `infra/endpoints.useEndpointMutation`
+        - Uses: 21 symbols — full list in [`plugins/primitives/plugins/file-viewer/REFERENCE.md`](../plugins/primitives/plugins/file-viewer/REFERENCE.md)
+          - `infra/endpoints` ×4
+          - `network/live.useLive`
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
           - `primitives/css/fill.Fill`

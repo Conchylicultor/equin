@@ -43,11 +43,9 @@ workspace file.
     - `FileViewer.Renderer` ← `primitives.file-viewer.markdown`
     - `FileViewer.Renderer` ← `primitives.file-viewer.media`
     - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
-  - Uses:
-    - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpoint`
-    - `infra/endpoints.useEndpointMutation`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/endpoints` ×4
+    - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/fill.Fill`

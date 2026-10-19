@@ -41,3 +41,8 @@ export {
   writeHostPaths,
 } from "./internal/drag";
 export type { ReadHostPathsResult } from "./internal/drag";
+export {
+  FileVersionSchema,
+  hostFsVersion,
+  type FileVersion,
+} from "./internal/version";

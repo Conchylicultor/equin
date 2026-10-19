@@ -2125,16 +2125,16 @@ never add one.
     - `serveValueOn`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 244 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 246 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×70
     - `conversations` ×41
     - `tasks` ×27
     - `debug` ×26
-    - `infra` ×13
+    - `infra` ×14
     - `active-data` ×12
     - `page` ×10
     - `build` ×6
-    - `primitives` ×5
+    - `primitives` ×6
     - `plugin-meta` ×4
     - `auth` ×3
     - `code-explorer` ×3

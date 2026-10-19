@@ -13,3 +13,4 @@ export {
   CommitFilesSchema,
   type CommitFiles,
 } from "./commit-values";
+export { codeFileVersion } from "./file-version";

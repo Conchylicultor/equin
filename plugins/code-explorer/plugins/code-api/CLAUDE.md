@@ -30,12 +30,14 @@ on the endpoints primitive and `EditedFileSchema` (a pure schema sink in the
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `infra/endpoints.interpolatePath`
+    - `infra/host-fs.FileVersionSchema`
     - `network/live.liveValue`
     - `primitives/commit-list.CommitRowSchema`
   - Exports (types):
     - `CodeDirEntry`
     - `CommitFiles`
   - Exports (values):
+    - `codeFileVersion`
     - `codeImageUrl`
     - `commitFiles`
     - `CommitFilesSchema`

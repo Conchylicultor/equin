@@ -18,6 +18,7 @@ commit-diff pane in `commit-detail`, fuzzy path resolution in `file-resolve`.
   - Contributes:
     - `resource.declare` "code.commit-files"
     - `resource.declare` "code.commit-info"
+    - `resource.declare` "code.file-version"
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
@@ -44,6 +45,12 @@ commit-diff pane in `commit-detail`, fuzzy path resolution in `file-resolve`.
   - Resources:
     - `code.commit-files` (push, immutable)
     - `code.commit-info` (push, immutable)
+    - `code.file-version` (push, notified)
+- Machine:
+  - Uses:
+    - `infra/host-fs.hostPathVersion`
+    - `infra/host-fs.watchHostPath`
+    - `network/live.serveValue`
 - Cross-plugin:
   - Imported by:
     - `code-explorer/file-resolve`

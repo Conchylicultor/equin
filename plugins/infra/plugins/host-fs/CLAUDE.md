@@ -136,6 +136,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
 
 - Description: The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it: replace / keep-both / skip), all three refused unless the Origin is the app's own *.localhost.
 - Server:
+  - Contributes: `resource.declare` "host-fs.version"
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
@@ -157,6 +158,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `readHostPathText`
     - `resolveHostPath`
     - `serveHostPath`
+  - Resources: `host-fs.version` (push, notified)
   - Routes:
     - `GET /api/host-fs/list`
     - `GET /api/host-fs/stat`
@@ -168,11 +170,19 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `POST /api/host-fs/open`
     - `POST /api/host-fs/extract`
     - `POST /api/host-fs/move`
+- Machine:
+  - Uses: `network/live.serveValue`
+  - Exports (types): `HostPathWatch`
+  - Exports (values):
+    - `hostPathVersion`
+    - `watchHostPath`
 - Core:
   - Uses:
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
+    - `network/live.liveValue`
   - Exports (types):
+    - `FileVersion`
     - `HostFsArchiveReason`
     - `HostFsCompleteResult`
     - `HostFsEntry`
@@ -190,6 +200,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `HostFsWithin`
     - `ReadHostPathsResult`
   - Exports (values):
+    - `FileVersionSchema`
     - `hasHostPaths`
     - `HOST_FS_COMPLETE_LIMIT`
     - `HOST_FS_MOVE_MAX_SOURCES`
@@ -207,6 +218,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `hostFsRaw`
     - `hostFsStat`
     - `hostFsText`
+    - `hostFsVersion`
     - `hostFsVolume`
     - `isBrowsable`
     - `readHostPaths`
@@ -215,6 +227,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `code-explorer`
+    - `code-explorer/code-api`
     - `infra/host-fs/image`
     - `infra/host-fs/zip`
     - `primitives/file-viewer`

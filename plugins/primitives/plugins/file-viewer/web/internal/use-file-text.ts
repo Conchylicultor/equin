@@ -8,6 +8,7 @@ import {
   type HostFsTextResult,
 } from "@plugins/infra/plugins/host-fs/core";
 import type { FileRef } from "../../core";
+import { useRefetchOnFileChange } from "./use-file-revision";
 
 /**
  * Why a file has no text to show — a determinate answer about the file, not a
@@ -71,6 +72,8 @@ function hostState(result: HostFsTextResult): FileTextState {
  * `file` route (as of the ref's revision when it names one), a host file
  * through host-fs's `text` route. Both reads are declared every render (hooks
  * cannot be conditional) and the one for the other source stays disabled.
+ * Re-read in place whenever the file changes on disk (`useFileRevision`): the
+ * text on screen stays until the new one lands.
  */
 export function useFileText(file: FileRef): FileTextState {
   const ws = file.source === "workspace" ? file : null;
@@ -92,6 +95,7 @@ export function useFileText(file: FileRef): FileTextState {
     {},
     { query: { path: host?.path ?? "" }, enabled: host !== null },
   );
+  useRefetchOnFileChange(file, ws !== null ? wsRead.refetch : hostRead.refetch);
 
   if (ws !== null) {
     if (wsRead.error) return failureState(wsRead.error);
