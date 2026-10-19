@@ -74,7 +74,6 @@ itself stays a pane concern — this surface only follows the choice made there.
   - Exports (types): `QuickThemeSectionContribution`
   - Exports (values): `QuickTheme`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `ui/theme-engine/theme-gallery`
     - `ui/theme-toggle`

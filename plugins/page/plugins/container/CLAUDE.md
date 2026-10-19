@@ -351,7 +351,6 @@ they describe.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-2xs`
     - `ui/tokens/type-scale --font-weight-medium`

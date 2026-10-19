@@ -118,7 +118,6 @@ worktrees in a single process (`log-channels`' `handle-emit.test.ts`).
     - `runtimeNamespace`
     - `servingSocketPath`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `infra/jobs/supervised-job`
     - `infra/paths`

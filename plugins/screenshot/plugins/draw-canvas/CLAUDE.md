@@ -18,7 +18,6 @@ Strokes are stored in image-natural pixels so they survive resizing and can be b
     - `applyStrokes`
     - `DrawCanvas`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `screenshot`
     - `screenshot/draw-on-app`

@@ -51,7 +51,6 @@ declared on the pane.**
     - `primitives/ui-context.UiRegion`
   - Exports (values): `FullPane`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/shell`
     - `apps/file-explorer/shell`

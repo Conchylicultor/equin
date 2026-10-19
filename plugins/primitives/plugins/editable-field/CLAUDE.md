@@ -110,7 +110,6 @@ self-echo behavior that must keep holding.
     - `UseEditableFieldOptions`
   - Exports (values): `useEditableField`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/deployments`
     - `apps/deploy/servers`

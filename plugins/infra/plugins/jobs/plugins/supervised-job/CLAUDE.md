@@ -723,7 +723,6 @@ construction, and the job and the body it spawns cannot drift apart.
   - Uses: `framework/server-core.runExec`
   - Exports (values): `cliExecContext`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/song-index`
     - `apps/deploy/deployments`

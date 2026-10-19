@@ -137,7 +137,6 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `RowActions`
     - `rowActionsAnchor`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/row-actions`

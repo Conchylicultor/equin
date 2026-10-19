@@ -101,7 +101,6 @@ layout, graphite tone, underline tabs).
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shadow --shadow-2xl`
     - `ui/tokens/shadow --shadow-popover`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/app-launcher`
     - `apps-core/app-rail`

@@ -117,7 +117,6 @@ The orphan reconciler lives in `op-log/plugins/op-store` (`reconcile.ts`).
     - `ui/tokens/density --space-sm`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --font-weight-medium`

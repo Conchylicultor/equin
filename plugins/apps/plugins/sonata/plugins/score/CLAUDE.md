@@ -40,7 +40,6 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
 ## Plugin reference
 
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/vocabulary`
     - `apps/sonata/lyric-line`

@@ -447,7 +447,6 @@ only agreement that matters.
     - `stageDrizzleOut`
     - `UnjoinedSnapshotTipsError`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `database`
 - Exemptions:
   - Exempts itself from:

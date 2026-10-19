@@ -32,8 +32,6 @@
   - Exports (values):
     - `installLockedToolchain`
     - `miseUpdater`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/mise-updater.ts`, `core/internal/mise.ts` (debt)
 

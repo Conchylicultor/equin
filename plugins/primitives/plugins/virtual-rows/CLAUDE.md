@@ -57,7 +57,6 @@
     - `useVirtualRows`
     - `VirtualRows`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/notation`
     - `primitives/data-table`

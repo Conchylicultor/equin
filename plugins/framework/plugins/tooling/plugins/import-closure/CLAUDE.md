@@ -39,8 +39,6 @@ never import this plugin back.
   - Exports (values):
     - `importClosure`
     - `loadTypescript`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/import-closure.ts` (debt)
 

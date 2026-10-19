@@ -79,7 +79,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `putBinding`
       - `putBindingBodySchema`
   - Cross-plugin:
-    - Uses tokens: `ui/tokens/shape --spacing`
     - Imported by:
       - `active-data/commit-link`
       - `active-data/go`
@@ -509,8 +508,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `agentManagerDemo`
               - `DEMO_CONVERSATION_ID`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
         - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
           - Web:
             - Contributes: `Conversation.ActionBar` → `PagesTreeButton`
@@ -533,9 +530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `agentManagerApp`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
+            - Uses tokens: `ui/tokens/shape --radius`
         - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
           - Web:
             - Slots: `welcomePane.Actions`
@@ -572,7 +567,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-xl`
               - `ui/tokens/density --space-xs`
-              - `ui/tokens/shape --spacing`
     - **`browser`** — Minimal iframe-based web browser app.
       - Plugins:
         - **`bookmarks`** — Browser bookmarks UI: a star toggle in the chrome actions and a bookmarks bar of clickable chips below the omnibox. Browser bookmarks: the browser_bookmarks table, the browser-bookmarks live collection, and add/delete endpoints backing the star toggle and bookmarks bar.
@@ -650,7 +644,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `browserBookmarks`
               - `browserBookmarksEntityRef`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `apps/browser/start-page`
             - Endpoint callers: `history`
         - **`history`** — Browser history: a headless recorder that logs every navigation to the history store, plus the browserRecents live value (read with useLive). Browser history store (browser_history table), the distinct-by-url recents live value, and the POST /api/browser/history record endpoint.
@@ -691,7 +684,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `BrowserVisitId`
             - Exports (values): `browserVisitIdKind`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `apps/browser/start-page`
         - **`navigation`** — Browser navigation controls: back / forward / reload / home buttons in the chrome bar.
           - Web:
@@ -712,7 +704,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `NormalizedInput`
             - Exports (values): `normalizeInput`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `apps/browser/start-page`
         - **`proxy`** — Browser proxy-mode toggle: a shield button in the chrome actions that flips the framing-stripping proxy on/off for the surface. Framing-stripping browser proxy: fetches the target server-side (SSRF-guarded, anonymous), strips X-Frame-Options/CSP and credential headers, and rewrites HTML to inject a <base> + nav-interception script so framing-blocked sites render in the in-app browser.
           - Web:
@@ -800,7 +791,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --background`
               - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/browser/bookmarks`
               - `apps/browser/history`
@@ -1036,7 +1026,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --secondary`
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by:
               - `apps/chord/progress`
@@ -1574,7 +1563,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `songKeyTonicPc`
               - `songVocabulary`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/chord/curriculum`
               - `apps/chord/piano`
@@ -1628,7 +1616,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --background`
               - `ui/tokens/density --space-lg`
               - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
     - **`deploy`** — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
       - Server:
         - Contributes: `taskCategory` "deploy"
@@ -1948,7 +1935,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --success`
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/font-family --font-mono`
-              - `ui/tokens/shape --spacing`
             - Imported by: `apps/deploy/deploy-history/investigate-failure`
           - Plugins:
             - **`investigate-failure`** — Contributes the investigate row action to every failed run in a deployment's History, launching an agent briefed on that failure — the CLI's own message verbatim, the run's identity and pinned bundle, and where the transcript is.
@@ -2130,7 +2116,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `updateDeployment`
               - `UpdateDeploymentBodySchema`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/composition`
@@ -2172,8 +2157,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `DEPLOY_RUN_KIND`
                   - `DEPLOY_STATUS_OUTCOME`
                   - `deployRunArm`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
         - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and exposes its verdict as the `status` field of every list of servers plus the verify step of the SSH setup flow. Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its live collection, its `status` field exposed to every list of servers, and the probe / forget-host-key endpoints.
           - Web:
             - Contributes:
@@ -2255,7 +2238,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-xs`
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/deployments`
@@ -2294,8 +2276,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
         - **`remote-deploy`** — Deploy one composition to its remote server: a single Deploy button launching the `update` sequence (converge → build a platform-pinned candidate unless one is already current → ship that pinned run id), the three-phase report of the running deploy, what is currently built and how it relates to HEAD, the public URLs to inspect the deployed app, the phase-following deploy/build log output section, and the `Release` client field (`releaseFields`) of the deployments list.
           - Web:
             - Contributes:
@@ -2348,7 +2328,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --success`
               - `ui/tokens/color-palette --warning`
-              - `ui/tokens/shape --spacing`
         - **`servers`** — Server registry for the deployment platform.
           - Web:
             - Slots:
@@ -2542,7 +2521,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-xs`
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-caption`
               - `ui/tokens/type-scale --font-weight-medium`
@@ -2977,7 +2955,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`event-date`** — The event date format: a schema that states a recurrence once, its pure expander, its human label, its anchor-independent identity key, and the prompt fragment that documents it to the model — one folder so spec, parser and expander cannot drift.
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `apps/events/events-core`
           - Core:
             - Exports (types):
@@ -3069,7 +3046,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-medium`
             - Imported by: `apps/events/sources/source-detail/runs/extracted-events`
         - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / run hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources and run-ledger collections.
@@ -3272,7 +3248,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `updateEventSource`
               - `UpdateEventSourceBodySchema`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `active-data/event-source`
               - `apps/events/event-list`
@@ -3446,9 +3421,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useEventSourceType`
               - `useEventSourceTypes`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --spacing`
+            - Uses tokens: `ui/tokens/density --space-sm`
             - Imported by:
               - `active-data/event-source`
               - `apps/events/sources/refresh-all`
@@ -3534,8 +3507,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/icon-button.IconButton`
                   - `shell/toast.showToast`
                   - `shell/toast.ToastArgs`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
             - **`salsanueva`** — SalsaNueva source type in the Events `+` menu: contributes the `salsanueva` type with its dance / style / level / school / teacher / day filters. SalsaNueva event source type: probe reads the school's own courses API (SSRF-guarded) for the published term and groups the dated occurrences back into weekly courses; extract filters them by the source's own dance / level / school selection and publishes each course as ONE recurring event, with no model call.
               - Web:
                 - Contributes: `EventSources.Type` "SalsaNueva"
@@ -3608,9 +3579,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `eventSourceRunPane`
                       - `RunActions`
                   - Cross-plugin:
-                    - Uses tokens:
-                      - `ui/tokens/density --space-sm`
-                      - `ui/tokens/shape --spacing`
+                    - Uses tokens: `ui/tokens/density --space-sm`
                     - Imported by:
                       - `apps/events/sources/source-detail/runs/caveats`
                       - `apps/events/sources/source-detail/runs/extracted-events`
@@ -3643,8 +3612,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                           - `primitives/data-view.defineDataView`
                           - `primitives/data-view.FieldDef`
                           - `primitives/live-state.foldResource`
-                      - Cross-plugin:
-                        - Uses tokens: `ui/tokens/shape --spacing`
                     - **`model-call`** — Model call section of the Events run pane: the prompt and output behind one run, reached through claude-cli's generic correlation API. Renders all three arms — the calls, 'never called' (the right answer for a cheap unchanged run), and 'the log no longer retains it'.
                       - Web:
                         - Contributes: `EventSourceRunDetail.Section` "Model call" → `ModelCallSection`
@@ -3749,8 +3716,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `URL_FETCH_MODES`
                   - `URL_SOURCE_TYPE_ID`
                   - `urlSourceConfigFields`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
               - Exemptions:
                 - Exempts itself from: `boundaries/no-platform-api` — `server/internal/page-text.ts` (debt)
     - **`file-explorer`** — File explorer app.
@@ -4120,8 +4085,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/int/config.intField`
               - `network/live.clientFields`
             - Exports (values): `appUsageFields`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
     - **`mail`** — Mail — a Gmail-class client.
       - Plugins:
         - **`attachments`** — Reading-pane attachment UI: the useMailAttachment() lazy-download hook (deduped, cached) and the AttachmentChip component (filename + size + MIME icon; downloads on click and opens in a new tab). Lazy Gmail attachment blob download: fetches an attachment's bytes on demand (reading-pane chip click or inline cid: image), caches them via infra/attachments, stamps mail_attachments.stored_attachment_id, and serves the same-origin URL.
@@ -4402,7 +4365,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-sans`
               - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
             - Imported by: `apps/mail/threads`
           - Exemptions:
             - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-hydrated-message.ts` (debt)
@@ -4492,7 +4454,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `mailApp`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/mail/search`
               - `apps/mail/sync-status`
@@ -4628,7 +4589,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --warning`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-semibold`
     - **`pages`** — Notion-like pages app.
       - Plugins:
@@ -5770,8 +5730,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/embed.embedUrl`
                   - `primitives/embed.isEmbeddedDocument`
                   - `primitives/pane.parseUrl`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
         - **`copy-id`** — Copy prototype ID button in the prototype detail header: copies the open prototype's id (its minted folder name) to the clipboard.
           - Web:
             - Contributes: `prototypeDetailPane.Actions` "copy-id" → `CopyIdAction`
@@ -5913,7 +5871,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `viewportRenderSize`
               - `viewportWord`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `active-data/prototype`
               - `apps/prototypes/canvas`
@@ -5964,7 +5921,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --accent`
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/color-palette --success`
-              - `ui/tokens/shape --spacing`
             - Imported by: `apps/home/app-cards`
         - **`present`** — Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays), In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame); beside it, an Open responsive in a new tab button (the chromeless present page at the Responsive size, filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks. In the canvas header, Open the canvas in a new tab opens the whole canvas (frames, versions, picks, size, zoom, layout, encoded in present-canvas/<id>/<canvas>) chromeless in a new browser tab, so the frames get the whole screen to compare.
           - Web:
@@ -6189,7 +6145,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ScheduledNote`
                 - Exports (values): `SonataAudio`
               - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
                 - Imported by:
                   - `apps/chord/piano`
                   - `apps/sonata/audio/engine`
@@ -6214,7 +6169,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `useChordAudition`
                   - `useLivePlay`
               - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
                 - Imported by:
                   - `apps/sonata/piano-keyboard`
                   - `apps/sonata/rich/circle-of-fifths`
@@ -6250,7 +6204,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --border`
                   - `ui/tokens/color-palette --primary-text`
                   - `ui/tokens/shadow --shadow-lg`
-                  - `ui/tokens/shape --spacing`
             - **`piano`** — Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback. Registers the splendid-grand-piano asset mirror so the acoustic piano's samples are served same-origin (offline-capable) rather than streamed from the remote CDN.
               - Web:
                 - Contributes: `SonataAudio.Instrument` "Acoustic Piano"
@@ -6259,8 +6212,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/audio/sample-loader.sharedSampleLoader`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
             - **`sample-loader`** — Sonata audio sample loader: one smplr SampleLoader per AudioContext, shared by every instrument instance built against it, so N copies of an instrument cost one download and one decode instead of N.
               - Cross-plugin:
                 - Imported by:
@@ -6277,8 +6228,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/audio/sample-loader.sharedSampleLoader`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
         - **`chord-chart`** — Sonata Display: the chord grid. Lays the song's chords out as bars in rows of four under their section headers, each bar split by beats into chord boxes painted in the root's degree colour (held chords drawn as ties), labelled by the shared chord-label mode, optionally with the songsheet lines sung in each row printed under it (the Lyrics under bars view option), following playback with the active bar washed, the sounding chord ringed and a beat line through the bar. A reading view (no time-axis / pitch-plane capabilities); click a chord to seek. Server registration of the Sonata chord grid config (lyrics under bars).
           - Web:
             - Contributes:
@@ -6315,7 +6264,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --ring`
               - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-bold`
               - `ui/tokens/type-scale --font-weight-semibold`
         - **`controls`** — Keyboard transport for Sonata players: Space toggles play/pause and ←/→ seek the playhead (tap to jump a bar, hold to scrub) on every shown player — the Sonata app's and a file preview's alike — and, in the Sonata app, ↑/↓ speed up / slow down the tempo. All focus-scoped per surface.
@@ -6334,8 +6282,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/shortcuts.getFocusedSurfaceId`
               - `primitives/shortcuts.targetClaimsKey`
               - `primitives/shortcuts.useSurfaceShortcuts`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
         - **`document`** — Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode → swing pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document settles every setting to its default and mounts no observer.
           - Web:
             - Slots:
@@ -6390,7 +6336,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSongSetting`
               - `useWriteSongSetting`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 26 plugins — full list in [`plugins/apps/plugins/sonata/plugins/document/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/document/REFERENCE.md)
               - `apps` ×26
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by every field an extension exposes on the songs entity). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
@@ -6642,7 +6587,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/font-family --font-mono`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-bold`
               - `ui/tokens/type-scale --font-weight-semibold`
             - Imported by:
@@ -6680,7 +6624,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-2xs`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shadow --shadow`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-bold`
               - `ui/tokens/type-scale --font-weight-semibold`
         - **`notation`** — Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
@@ -6729,7 +6672,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses tokens:
                   - `ui/tokens/color-palette --primary`
                   - `ui/tokens/shadow --shadow-sm`
-                  - `ui/tokens/shape --spacing`
         - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys. Server registration of the piano-keyboard config (key-label scope).
           - Web:
             - Contributes:
@@ -6861,8 +6803,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Contributes: `ConfigV2.Register` "config"
                 - Uses: `config_v2.ConfigV2`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
             - **`fx-ripples`** — Fancy piano-roll FX (opt-in): expanding sound-wave ripple rings from each note strike, chords merging into one stronger ripple. Server registration of the fx-ripples enabled toggle.
               - Web:
                 - Contributes:
@@ -6923,7 +6863,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pitchKeyboardHeight`
               - `pitchLayoutConfig`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `apps/sonata/rich/readout-keyboard`
         - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), and presents the Plays / Last-played fields its extension exposes on every list of songs — on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and exposes both to every list of songs (LiveColumns.Expose).
           - Web:
@@ -6949,8 +6888,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_playback`)
             - Exports (values): `songPlayback`
             - Routes: `POST /api/sonata/songs/:id/play`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/record-play-observer.tsx` (sanctioned)
         - **`player`** — Sonata player: SonataPlayerScope, the one composition root of a player (cursor store > song document > playback session > player view, with the per-session effects and a library song's setting observers), and the parts a host composes inside it — PlayerDisplay, PlayerTransport (the strip row of every Transport contribution: play, scrubber, loop), PlayerTime. Owns the SonataPlayer.{Display,Transport,Effect} slots — Effect mounting once per player while a PlayerDisplay shows it (the keyboard transport) — and the per-player view state (display lens, piano-roll spread, shown), whose display pick a host can bind to its own value (a URL param) with PlayerDisplayBinding.
@@ -7027,7 +6964,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `InertialDragHandle`
                 - Exports (values): `useInertialDrag`
               - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
                 - Imported by:
                   - `apps/sonata/piano-roll`
                   - `apps/sonata/transport-bar`
@@ -7159,7 +7095,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses tokens:
                   - `ui/tokens/color-palette --background`
                   - `ui/tokens/color-palette --muted-foreground`
-                  - `ui/tokens/shape --spacing`
             - **`keys`** — Sonata progress keys: a thin key-coloured line on the progression rail at each key change, the key names in the label lane under it (starting key muted), and the hover preview's key line (key in force, or 'Key change → …' snapped onto a change). Keys come from the starting key + 'key' annotations.
               - Web:
                 - Contributes:
@@ -7223,7 +7158,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-xs`
                   - `ui/tokens/shadow --shadow-sm`
                   - `ui/tokens/shape --radius`
-                  - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-scale`
                   - `ui/tokens/type-scale --font-size-2xs`
                   - `ui/tokens/type-scale --font-weight-bold`
@@ -7328,7 +7262,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/categorical --categorical-8`
                   - `ui/tokens/categorical --categorical-9`
                   - `ui/tokens/density --space-xs`
-                  - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-scale`
                   - `ui/tokens/type-scale --font-size-3xs`
                   - `ui/tokens/type-scale --font-weight-semibold`
@@ -7414,8 +7347,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Web:
                 - Contributes: `SonataDocument.Analyzer` "chord-analyzer"
                 - Uses: `apps/sonata/document.SonataDocument`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
             - **`chord-label`** — Sonata chord-label preference: the single shared symbol/numeral/both display mode that drives the piano-roll overlay and the progression strip in lockstep, surfaced in the View popover. Server registration of the Sonata chord-label config (the shared symbol/numeral/both display mode).
               - Web:
                 - Contributes:
@@ -7461,8 +7392,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
                   - `primitives/css/spacing.Stack`
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
             - **`chord-mode`** — Sonata accompaniment part: per-song chord mode. Exports the Accompaniment on/off switch of a song with notes of its own and chords, detected or authored (ChordModeSwitch) and its gate (useChordModeAvailable) for the Accompaniment section's header: on, the song document voices the song's chords (detected and authored) onto the Chords / Bass tracks (through the same groove as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and registers with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves it as a per-song lookup collection.
               - Web:
                 - Contributes: `SonataDocument.SongSetting` "chord-mode-sync" → `ChordModeObserver`
@@ -7501,7 +7430,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Resources: `sonata-chord-mode:rows` (keyed, point)
                 - Routes: `POST /api/sonata/songs/:id/chord-mode`
               - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
                 - Imported by: `apps/sonata/rich/accompaniment`
             - **`chord-overlay`** — Sonata Overlay: labels chord annotations along the timeline. Requires the time-axis capability, so it renders on the piano roll and any future time-based display.
               - Web:
@@ -7547,7 +7475,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --muted`
                   - `ui/tokens/density --control-height-sm`
                   - `ui/tokens/shape --radius`
-                  - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-semibold`
             - **`chord-readout`** — Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the session's Score + cursor (useSession).
               - Web:
@@ -7570,7 +7497,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/color-palette --primary-foreground`
-                  - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-bold`
             - **`circle-of-fifths`** — Sonata Section: a small circle-of-fifths wheel — major keys on the outer ring, their relative minors on the inner ring — that highlights the chord under the playback cursor, reading the session's Score + cursor (useSession).
               - Web:
@@ -7591,7 +7517,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/color-palette --primary`
                   - `ui/tokens/color-palette --primary-foreground`
-                  - `ui/tokens/shape --spacing`
             - **`key-chip`** — Sonata Hud: current-key chip overlaid on the display, tracking the playback cursor. Reads the session's Score + cursor (useSession).
               - Web:
                 - Contributes: `Sonata.Hud` "key-chip" → `KeyChip`
@@ -7637,7 +7562,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Resources: `sonata-key-auto-detect:rows` (keyed, point)
                 - Routes: `POST /api/sonata/songs/:id/key-auto-detect`
               - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
                 - Imported by: `apps/sonata/rich/key-readout`
               - Exemptions:
                 - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
@@ -7660,9 +7584,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/loading.Loading`
                   - `primitives/persistent-draft.useDraft`
               - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/color-palette --primary`
-                  - `ui/tokens/shape --spacing`
+                - Uses tokens: `ui/tokens/color-palette --primary`
             - **`readout-keyboard`** — Sonata readout keyboard: useReadoutPlane (voicings octave-fitted into the two-octave readout window, laid in the active pitch layout), ReadoutKeyboard (proportional keys in Sonata's skin), KeyboardCaption (lead · trail caption row, trail accented when current) and ChordKeyboardRow (a chord's box, its keyboard lit in its colour and a trail — the whole row a button that sounds the chord — shared by the chord list and the current key's chords) with ChordRowFrame, its lead · keyboard · trail columns for a keyboard that must line up with the rows.
               - Web:
                 - Uses:
@@ -7692,7 +7614,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --accent`
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/density --space-sm`
-                  - `ui/tokens/shape --spacing`
                 - Imported by:
                   - `apps/sonata/rich/chord-list`
                   - `apps/sonata/rich/chord-readout`
@@ -7842,7 +7763,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `swingUnitLabel`
         - **`score`**
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/chord/vocabulary`
               - `apps/sonata/lyric-line`
@@ -7988,7 +7908,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useCursorSelector`
               - `useSession`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 32 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
               - `apps` ×32
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
@@ -8040,7 +7959,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `sonataApp`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 29 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
               - `apps` ×29
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
@@ -8072,7 +7990,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
             - **`chord-grid`** — Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. A cell may name a chord by letter (`Am7`) or by degree (`vi7`), the latter resolved against the key a `key:` directive declares. compile() emits chord + key annotations only; the shell's reactive re-voicing step generates the notes under the global voicing config. Persists per-song grid text and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs and persists grid edits (syncing the parent song's derived duration only; the title is library-owned).
@@ -8534,7 +8451,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - Types: `SynthFeaturesOptions`
                 - **`tab`** — The Ultimate Guitar tab model: the normalized raw tab schema and the chord/lyric markup parser.
                   - Cross-plugin:
-                    - Uses tokens: `ui/tokens/shape --spacing`
                     - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
                   - Core:
                     - Exports (types):
@@ -8602,7 +8518,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `transposeKey`
               - `transposeScore`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/chord/vocabulary`
               - `apps/sonata/lyric-line`
@@ -8851,7 +8766,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --background`
               - `ui/tokens/shadow --shadow-sm`
-              - `ui/tokens/shape --spacing`
         - **`voicing`** — Voicing strategies for Sonata: turn timed chord events into performed notes. Shared by every chord-authoring source (chord-grid, Ultimate Guitar, …) so chord-to-notes voicing has one home.
           - Core:
             - Uses:
@@ -8892,8 +8806,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MIN_HAND_OCTAVE`
               - `reVoiceChords`
               - `voiceChords`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
     - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
       - Plugins:
         - **`compositions`** — Compositions pane: list named compositions and open a composition's detail pane, whose sections (draft, closure, release) are contributed by sub-plugins.
@@ -9395,7 +9307,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses tokens:
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/font-family --font-mono`
-                      - `ui/tokens/shape --spacing`
                   - Exemptions:
                     - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
                   - Shared:
@@ -9529,7 +9440,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/categorical --categorical-2`
                   - `ui/tokens/categorical --categorical-4`
                   - `ui/tokens/categorical --categorical-7`
-                  - `ui/tokens/shape --spacing`
                 - Imported by: `apps/studio/compositions`
         - **`graph`** — Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
           - Web:
@@ -9668,7 +9578,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/shape --radius`
-                  - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-semibold`
             - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it and the three properties the claim rests on (self-evolving, integrated, personal).
               - Web:
@@ -10268,8 +10177,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps-core/app-rail-framing.AppRailFraming`
               - `primitives/css/spacing.Stack`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
         - **`rail`** — App-rail framing — the default 2.5rem icon rail.
           - Web:
             - Contributes: `AppRailFraming.Variant` "Rail" → `RailFraming`
@@ -10277,8 +10184,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/app-rail-framing.AppRailFraming`
               - `apps-core/app-rail.AppRail`
               - `primitives/css/spacing.Stack`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
     - **`app-usage`** — Records per-app usage from the browser — a launch whenever the focused app changes to another, active time while the app is focused, the page visible, the window focused and the user not idle for 5 minutes — and reads it back with useAppUsageSummary(). Owns app_usage_daily: per (local day, app) opens and active milliseconds, added to by one batched upsert from the browser tracker's flush endpoint, served as the live per-app summary (7-day and all-time), and swept after two years.
       - Web:
         - Contributes: `Core.Root` → `AppUsageRecorder`
@@ -10317,7 +10222,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `flushAppUsageEndpoint`
           - `LocalDaySchema`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `apps/home/usage-fields`
     - **`chrome-theme`** — The app chrome's fixed theme (graphite): the rail, tab bar, action bar and toasts wear it whichever app is focused, so the frame stays the same while the app inside changes.
       - Web:
@@ -10333,7 +10237,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shadow --shadow-2xl`
           - `ui/tokens/shadow --shadow-popover`
-          - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps-core/app-launcher`
           - `apps-core/app-rail`
@@ -10357,8 +10260,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/embed.isChromelessDocument`
           - `primitives/loading.Loading`
           - `primitives/slot-render.renderIsolated`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
       - Exemptions:
         - Exempts itself from: `apps-core/no-raw-history-nav` — `web/components/apps-layout.tsx` (sanctioned)
     - **`surface`** — Generic surface dispatcher: renders every open tab at once under the ONE surface mode (docked / windows / solo) selected from the Surface.Placement registry, so the modes are mutually exclusive. Owns the surface body and the mode control; each mode (docked / floating / solo) is a self-contained sub-plugin.
@@ -10396,9 +10297,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Surface`
           - `usePlacementStyle`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --background`
-          - `ui/tokens/shape --spacing`
+        - Uses tokens: `ui/tokens/color-palette --background`
         - Imported by:
           - `apps-core/surface/docked`
           - `apps-core/surface/solo`
@@ -10473,7 +10372,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SurfaceCore`
           - `TabSurface`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps-core/app-embed`
           - `apps-core/layout`
@@ -11501,7 +11399,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-scale`
           - `ui/tokens/type-scale --font-size-code`
           - `ui/tokens/type-scale --font-weight-normal`
@@ -11780,7 +11677,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `buildRunIdKind`
           - `buildRunsEntityRef`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `active-data/build-run`
           - `build`
@@ -12226,7 +12122,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Uses tokens: `ui/tokens/shape --spacing`
     - Imported by: 111 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×31
       - `backup` ×13
@@ -12669,7 +12564,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `stopConversation`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Uses tokens: `ui/tokens/shape --spacing`
     - Imported by: 65 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `conversations` ×50
       - `tasks` ×4
@@ -13133,7 +13027,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `compactionContextHook`
           - `CompactionContextResponseSchema`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `conversations/runtime-tmux`
           - `page/annotations/agent-access`
@@ -13514,7 +13407,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xl`
           - `ui/tokens/density --space-xs`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --measure-reading`
         - Imported by: 61 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
           - `conversations` ×50
@@ -14795,7 +14687,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-sm`
                   - `ui/tokens/density --space-xs`
                   - `ui/tokens/font-family --font-mono`
-                  - `ui/tokens/shape --spacing`
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
                   - `conversations/conversation-view/running-agents`
@@ -14942,7 +14833,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/font-family --font-mono`
-                  - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-scale`
                   - `ui/tokens/type-scale --font-size-2xs`
                   - `ui/tokens/type-scale --line-height-2xs`
@@ -15949,8 +15839,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptRead`
-                  - Cross-plugin:
-                    - Uses tokens: `ui/tokens/shape --spacing`
                 - **`usage`** — Context and output token usage as a transcript stat: the current context window and the output produced, folded from each message's own usage record up to the reading position.
                   - Web:
                     - Contributes: `TranscriptStats.Item` "usage" → `UsageStat`
@@ -16282,7 +16170,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
             - Imported by:
               - `conversations/agent-thread`
               - `conversations/all-conversations`
@@ -16829,7 +16716,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --pad-row-x`
               - `ui/tokens/density --pad-row-y`
               - `ui/tokens/density --space-xs`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/sidebar-palette --sidebar-border`
             - Imported by:
               - `conversations/conversations-view`
@@ -17088,7 +16974,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AnswerMenuBodySchema`
           - `answerTerminalMenu`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `conversations/menu-relay/usage-limit`
       - Plugins:
         - **`usage-limit`** — Claude Code's usage-limit menu, drawn by the terminal-menu card: when the limit resets (with a countdown) and Wait & continue automatically / Stop / Use usage credits buttons that answer it.
@@ -17702,7 +17587,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `watchTranscriptFile`
         - Register: `defineFileWatcher('transcript-watcher.transcripts')`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/prototypes/checkpoints`
           - `backup/sources/transcripts`
@@ -17880,8 +17764,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('conversations.usage.backfill')`
           - `defineJob('conversations.usage.reprice')`
           - `defineWarmup('conversations.usage.backfill')`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/scan.ts` (debt)
     - **`workspace`** — Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to, the workspace.catalog live value (every workspace a task can name), and the conversation → workspace lookup.
@@ -18074,7 +17956,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
   - Cross-plugin:
-    - Uses tokens: `ui/tokens/shape --spacing`
     - Imported by: 119 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×32
       - `page` ×15
@@ -18293,8 +18174,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `startBlackHoleProxy` — Start a black-hole proxy on 127.0.0.1 forwarding to `upstream` (e.g. the cluster's Unix socket).
           - Types: `BlackHoleProxy`
     - **`db-test-fixture`** — Shared throwaway-database fixture for DB-backed test suites.
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
       - Core:
         - Exports (types): `TestDbName`
         - Exports (values):
@@ -18432,7 +18311,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `topoSortViews`
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `database/query-deadline`
           - `debug/sentinel`
@@ -18601,7 +18479,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stageDrizzleOut`
           - `UnjoinedSnapshotTipsError`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `database`
       - Exemptions:
         - Exempts itself from:
@@ -18851,8 +18728,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `taskCategory` "background"
             - Uses: `tasks/task-category.TaskCategory`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
           - Core:
             - Exports (values): `BACKGROUND_CATEGORY_ID`
     - **`boot-budget`** — Boot-budget report renderer: a one-line Debug → Reports summary for the boot-budget kind, plus the per-phase budget config registration. Boot-budget monitor: a cheap per-worktree scheduled job that reads the post-boot profile once and files a deduped boot-budget report per server boot hook (onReadyBlocking / onReady / onAllReady) or warmup span whose wall-time exceeds its per-phase budget, so a heavy boot hook is loud immediately instead of invisible-until-threshold.
@@ -19067,9 +18942,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `bootWatchdogConfig`
           - `BootWedgePayloadSchema`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/shape --spacing`
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`broadcasts`** — View and edit the CLI's broadcasts.json (plugins/framework/plugins/cli/broadcasts.json in the main checkout): the broadcast messages printed on stale worktrees. View and edit the CLI's broadcasts.json from the UI: the broadcasts.entries live value (watched through the dir hub) and its PUT.
       - Web:
         - Slots:
@@ -19239,7 +19112,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/color-palette --success`
           - `ui/tokens/color-palette --warning`
-          - `ui/tokens/shape --spacing`
     - **`config-orphans`** — Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live, plus a notice pinned above Settings → Config when any of the user's own saved settings no longer apply. Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live. Files one rolling `config-orphans-stranded` report at boot when any real user override is stranded.
       - Web:
         - Slots: `configOrphansPane.Actions`
@@ -19425,8 +19297,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveValue`
         - Resources: `heap.stats` (invalidate, snapshot)
         - Routes: `POST /api/debug/heap-snapshot`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-capture-snapshot.ts`, `server/internal/heap-stats.ts` (debt)
     - **`latency-ledger`** — The browser half of the latency ledger: times every page load and in-app navigation until every list on screen has its data, and the delay of every update pushed into the tab, and posts them as per-minute histograms at most once a minute. The server half of the latency ledger: counts every delivery to a tab, every 10 s thread-lag sample and every stack sample by owning plugin into per-minute histograms, merges the browser's page-load / navigation / update-delay minutes into the same rows, and answers p50 / p95 for any window split into calm and under-pressure minutes, with the track's exit criteria as pass / fail.
@@ -19517,8 +19387,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PRESSURE_FREE_MEM_MB`
           - `submitClientLatency`
           - `THREAD_STALL_MS`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - **`live-state-churn`** — Umbrella for live-state churn debugging: the no-op push monitor/detector and the synthetic-push emitter.
@@ -20000,7 +19868,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --success`
-              - `ui/tokens/shape --spacing`
         - **`boot-bench`** — Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it.
           - Server:
             - Uses:
@@ -20015,8 +19882,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/tasks-core.getConversation`
             - Register: `mcpTool('benchmark_boot')`
             - Routes: `POST /api/debug/boot-bench/run`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/eld-probe.ts`, `server/internal/mcp-tools.ts`, `server/internal/snapshot-bytes.ts` (debt)
         - **`build`** — Build step profiling: the Gantt detail pane of one build run (debug-profiling-build-detail). Build step profiling data endpoint: one build run's profile, by worktree and build id.
@@ -20106,7 +19971,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `toOpRecords`
               - `WAIT_KINDS`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `debug/profiling/op-log/op-store`
           - Server:
             - Exports (types):
@@ -20185,7 +20049,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `WAIT_KIND_IDS`
                   - `WAIT_RESULTS`
               - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
                 - Imported by: `stats/pushes`
               - Exemptions:
                 - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ingest.ts`, `server/internal/service.ts` (debt)
@@ -20231,7 +20094,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-sm`
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-3xs`
               - `ui/tokens/type-scale --font-weight-medium`
@@ -20317,7 +20179,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-md`
               - `ui/tokens/font-family --font-mono`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-3xs`
               - `ui/tokens/type-scale --line-height-3xs`
@@ -20722,7 +20583,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --radius`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-scale`
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
@@ -20845,7 +20705,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status files (one per watcher host, the newest claim reported): their schemas, the writer main's watcher host uses, the per-tick vitals file the watcher's worker writes (the latest reading, limits and trip state), the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `debug/sentinel`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/json-file.ts`, `server/internal/status-file.ts`, `server/internal/vitals-file.ts` (debt)
@@ -21142,7 +21001,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/font-family --font-mono`
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-3xs`
               - `ui/tokens/type-scale --line-height-3xs`
@@ -21324,7 +21182,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
-              - `ui/tokens/shape --spacing`
             - Imported by: `debug/profiling/boot`
           - Core:
             - Exports (types):
@@ -21662,7 +21519,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/font-family --font-mono`
-              - `ui/tokens/shape --spacing`
             - Imported by: `debug/stall-monitor`
           - Core:
             - Exports (types):
@@ -22119,8 +21975,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/date-picker.startOfWeek`
               - `primitives/date-picker.toISODay`
             - Exports (values): `dateGroupings`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
         - **`filter`** — Date field type: data-view filter operator set (is / before / after / between …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "date"
@@ -22166,7 +22020,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/date-picker.DatePickerPopover`
           - Cross-plugin:
             - Uses tokens:
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
@@ -22409,8 +22262,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.GroupBucket`
               - `primitives/data-view.GroupingPlanContext`
             - Exports (values): `enumGroupings`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
         - **`filter`** — Enum (select) field type: data-view filter operator set (is / is-any-of / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "enum"
@@ -22540,8 +22391,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `iconField`
               - `iconSample`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
     - **`image`** — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).
       - Web:
         - Contributes: `Fields.Identity` "image"
@@ -22735,7 +22584,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `listField`
               - `listSample`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `config_v2`
               - `plugin-meta/composition`
@@ -22994,7 +22842,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reorderTreeFieldType`
           - `reorderTreeIdentity`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `fields/reorder-tree/config`
           - `framework/tooling/codegen`
@@ -23033,7 +22880,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/font-family --font-mono`
-              - `ui/tokens/shape --spacing`
     - **`secret`** — Secret field type: identity only. The config-render/storage/central capabilities and the secretField factory live in the plugins/config sub-plugin. Registers NO coerce and contributes NO data-view cell/filter, so a secret can never become a readable table cell.
       - Web:
         - Contributes: `Fields.Identity` "secret"
@@ -23509,7 +23355,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrowserServerSocket`
         - Exports (values): `createBrowserServer`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `framework/browser-server/demo/scope`
       - Plugins:
         - **`demo`** — Demo packs (core) and the two slots a plugin answers its own keys in every demo scope through (web): Demo.Resource (a useBackend hook returning a plugin's per-scope backend: a browser server serve function plus endpoint routes sharing its state) and Demo.Route (a stateless [ep.route, implement(ep, handler)]). A leaf: the scope that reads them lives in demo/scope, so a low plugin (config_v2) can contribute without depending on the scope's UI.
@@ -23663,7 +23508,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `framework/tooling/import-closure`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/claudemd-conflicts.ts`, `core/internal/git-dir.ts`, `core/internal/merge-markers.ts`, `core/internal/registry-entry.ts` (debt)
@@ -23893,8 +23737,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `framework/cli/op-runtime.FATAL_SIGNAL_EXITS`
               - `infra/jobs/supervised-job.cliExecContext`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `shared/entrypoints.ts` (debt)
         - **`run`** — `./singularity run <script.ts> [args…]` — run a repo script against THIS worktree's own dependencies; the correct spelling of `bun <file>`, which silently resolves another checkout's installed tree.
@@ -23948,7 +23790,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `createRequestHandler`
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `framework/server-core`
           - `framework/tooling/boundaries`
@@ -24078,7 +23919,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `retainSnapEncoder`
           - `tableLayoutRequirements`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `framework/browser-server`
           - `framework/central-core`
@@ -24214,7 +24054,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/places/mapstr-import`
           - `infra/audio-analysis`
@@ -24239,7 +24078,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states.
     - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `framework/tooling/codegen`
           - `framework/web-sdk`
@@ -24292,7 +24130,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pathsUnder`
           - `repoFilesOver`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
@@ -24330,7 +24167,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `runtimeNames`
               - `zone`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `plugin-meta/plugin-refs`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/check.ts`, `core/resolve.ts` (debt)
@@ -24580,9 +24416,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `scopeOf`
               - `tsBuildInfoPath`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/shadow --shadow`
-              - `ui/tokens/shape --spacing`
+            - Uses tokens: `ui/tokens/shadow --shadow`
           - Exemptions:
             - Exempts itself from:
               - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
@@ -24690,9 +24524,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `TYPE_CHECK_WORKER_PEAK_BYTES`
                   - `TYPE_CHECK_WORKER_UNITS`
               - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/shadow --shadow`
-                  - `ui/tokens/shape --spacing`
+                - Uses tokens: `ui/tokens/shadow --shadow`
               - Exemptions:
                 - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/contract-refs.ts`, `shared/pass-set.ts`, `shared/type-fingerprint.ts`, `shared/worker.ts` (debt)
         - **`codegen`** — Plugin doc generation and registry codegen
@@ -24868,12 +24700,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --pad-row-x`
               - `ui/tokens/density --pad-row-y`
               - `ui/tokens/shadow --shadow`
-              - `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/app-css-utilities.ts`, `core/authored-override-seed.ts`, `core/barrel-free-tree.ts`, `core/barrel-stubs-gen.ts`, `core/companion-manifest-gen.ts`, `core/config-git-layer-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/enriched-tree.ts`, `core/exempt-rule-ids-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/reorderable-slots-gen.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/theme-declarations-gen.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `framework/central-core`
               - `framework/cli`
@@ -24964,7 +24794,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resolveTarget`
               - `ruleIdProblems`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `framework/tooling/checks`
               - `framework/tooling/lint`
@@ -24989,7 +24818,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isFormattable`
               - `listChangedFormattableFiles`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `framework/tooling/codegen`
           - Exemptions:
             - Exempts itself from:
@@ -25041,7 +24869,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WINDOW_MS`
               - `WINDOW_SIZE`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `debug/browser-recordings/writer`
               - `framework/tooling/e2e-harness`
@@ -25060,8 +24887,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `importClosure`
               - `loadTypescript`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/import-closure.ts` (debt)
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
@@ -25249,7 +25074,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resourceVocabularyOwnerPaths`
               - `SERVER_CORE`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `framework/tooling/codegen`
         - **`test-layout`** — The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
           - Core:
@@ -25268,8 +25092,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isTestFilePath`
               - `partitionTestPaths`
               - `TEST_FILE_GLOB`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `marker-scan-safety/no-adhoc-marker-scan` — `check/index.ts` (sanctioned)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
@@ -25612,7 +25434,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Uses tokens: `ui/tokens/shape --spacing`
     - Imported by: 32 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×10
       - `conversations` ×5
@@ -25684,9 +25505,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (values): `viteCollectedDir`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --foreground`
-          - `ui/tokens/shape --spacing`
+        - Uses tokens: `ui/tokens/color-palette --foreground`
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
@@ -25703,7 +25522,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineAssetMirrorPrewarm`
           - `prewarmEntries`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/sonata/audio/piano`
           - `apps/sonata/audio/soundfont`
@@ -25864,7 +25682,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/deps/python.pythonEnv`
         - Exports (values): `audioPythonDep`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ensure.ts`, `server/internal/job.ts`, `server/internal/state.ts`, `server/internal/store.ts` (debt)
@@ -25989,7 +25806,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `defineTimer`
             - Register: `defineBackgroundKind('central-timer')`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `auth`
               - `debug/health-monitor`
@@ -26210,7 +26026,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ClaudeCodeStatusSchema`
               - `recheckClaudeCode`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/agent-manager/welcome`
               - `apps/sonata/transcription`
@@ -26311,7 +26126,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-          - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/chord/song-index`
           - `apps/prototypes/thumbnails`
@@ -26417,8 +26231,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `installLockedToolchain`
               - `miseUpdater`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/internal/mise-updater.ts`, `core/internal/mise.ts` (debt)
         - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring reviewed holds — contributed to the infra/deps updater registry.
@@ -27030,7 +26842,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `waitEventsTestIdle`
     - **`file-sink`** — Bounded-append file sink primitive: defineFileSink declares an absolute-path sink that rotates at a byte cap (default 128 MB × 3), true by construction because append() IS the rotation. Node-only (no db/jobs) so a CLI process can import it. getFileSinks exposes the registered set; openDynamicSink covers the open-ended browser clientLog family under one declared bound.
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `framework/tooling/checks`
           - `packages/signal-origin/sink`
@@ -27062,7 +26873,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `statHistory`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope.
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: 29 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `debug` ×7
           - `infra` ×7
@@ -27581,7 +27391,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readHostPaths`
           - `writeHostPaths`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `code-explorer`
           - `code-explorer/code-api`
@@ -27803,7 +27612,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: 71 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×19
           - `conversations` ×14
@@ -27988,7 +27796,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/server-core.runExec`
             - Exports (values): `cliExecContext`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/chord/song-index`
               - `apps/deploy/deployments`
@@ -28072,7 +27879,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/deps/build.build`
         - Exports (values): `gatewayBinary`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `release`
       - Exemptions:
         - Exempts itself from:
@@ -28209,13 +28015,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MAX_HOST_ERRORS`
               - `MAX_SESSIONS`
               - `MAX_TABS`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/host-client.ts`, `shared/code-id.ts` (debt)
     - **`namespace`** — Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `build`
           - `framework/tooling/codegen`
@@ -28333,7 +28136,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: 56 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×10
           - `infra` ×8
@@ -28649,7 +28451,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `infra/jobs/supervised-job`
           - `infra/paths`
@@ -28659,7 +28460,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resetRuntimeNamespaceForTest` — Drop the declaration.
     - **`runtime-profiler`**
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `debug/slow-ops`
           - `infra/endpoints`
@@ -28960,7 +28760,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `SshFailureKindSchema`
     - **`stack-sampler`** — The one owner of bun:jsc's JSC sampling profiler: claimStackSampler(owner) arms it once per process and hands a single reader drain() → normalized stacks (innermost → outermost, JSC's no-line sentinel as null), refusing a second owner because every read empties the shared buffer. Bun-only leaf in core, so a CLI process and a server can both import it; frameKey is the one spelling of a frame's identity.
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `framework/tooling/checks`
           - `plugin-meta/barrel-import`
@@ -29351,7 +29150,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete, places:searchText, place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/places/place-details`
               - `apps/places/places-core`
@@ -29455,7 +29253,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TrendSongSchema`
           - `trendSongsEndpoint`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/chord/curriculum`
           - `apps/chord/progress`
@@ -29511,7 +29308,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --ring`
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-sm`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-medium`
         - Imported by:
           - `apps/chord/trainer`
@@ -29625,7 +29421,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/ui-context.UiRegion`
         - Exports (values): `FullPane`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/chord/shell`
           - `apps/file-explorer/shell`
@@ -29821,7 +29616,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/density --space-md`
       - `ui/tokens/shadow --shadow`
       - `ui/tokens/shadow --shadow-md`
-      - `ui/tokens/shape --spacing`
     - Imported by:
       - `apps/places/places-map`
       - `map/google`
@@ -29853,9 +29647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `ConfigV2.Register` "config"
         - Uses: `config_v2.ConfigV2`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/density --space-md`
-          - `ui/tokens/shape --spacing`
+        - Uses tokens: `ui/tokens/density --space-md`
     - **`pin-layer`** — The map's pin layer, vendor-neutral: PinLayer holds every pin at rest as a scene of marks and draws a frame from a projection — one sprite per pin on one surface (marks rasterized once per look, a new scene swapped in whole once its sprites are ready), texts beside or inside marks in map-label paint, and hit testing from the last frame's boxes; drawing goes through the PinPainter seam (createCanvas2dPainter today). A renderer hosts it on its map and lifts only the pins being interacted with into the DOM.
       - Web:
         - Uses:
@@ -30218,7 +30010,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: 246 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×70
           - `conversations` ×41
@@ -30322,7 +30113,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `network/live`
               - `shell/notifications`
@@ -30396,8 +30186,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `canonicalJson`
           - `canonicalParams`
     - **`coalesce`** — Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
       - Core:
         - Exports (types):
           - `Coalescer`
@@ -30408,7 +30196,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createKeyedCoalescer`
     - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2), and waitForFlock — a push-based blocking acquire run in a child so the event loop never freezes. The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `framework/tooling/checks`
           - `infra/spawn`
@@ -30457,7 +30244,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/host-semaphore.ts` (debt)
     - **`inflight`** — In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `framework/resource-runtime`
           - `infra/endpoints`
@@ -30524,14 +30310,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceContractError`
           - `ResourceRefusal`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `framework/browser-server`
           - `framework/resource-runtime`
           - `network/live`
     - **`retry`**
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
       - Core:
         - Exports (types): `DelayStrategy`
         - Exports (values):
@@ -30611,8 +30394,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/single-flight.ts` (debt)
     - **`sleep-clock`** — How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/sleep-clock.ts` (debt)
       - Core:
@@ -30632,7 +30413,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SMOOTH_CLOCK_SNAP_SEC`
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `conversations/runtime-tmux`
           - `infra/host/host-admission`
@@ -30674,7 +30454,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sha256Hex`
     - **`wall-clock`** — Wall clock ↔ UTC instant for an IANA zone, without a timezone database: a wall time's candidate instants are enumerated from the offsets either side of it and each verified against Intl, so a clock change resolves the same way in every zone rather than by the sign of its offset. Also reads a clock face back out of an instant, and answers when the local day began.
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `primitives/metrics`
       - Core:
         - Exports (types): `WallClock`
@@ -30904,7 +30683,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
             - Imported by: `page/annotations/agent-access`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/delivery.ts` (debt)
@@ -31260,8 +31038,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.textDataSchema`
           - `ui/icons.symbol`
         - Exports (values): `bulletedListBlock`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
     - **`callout`** — Callout block type: a void CONTAINER whose tinted box wraps blocks of any type nested inside it, with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary.
       - Web:
         - Contributes:
@@ -31396,7 +31172,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-scale`
           - `ui/tokens/type-scale --font-size-2xs`
           - `ui/tokens/type-scale --font-weight-medium`
@@ -31440,7 +31215,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --border`
           - `ui/tokens/density --space-sm`
-          - `ui/tokens/shape --spacing`
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots:
@@ -32179,8 +31953,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor.textDataSchema`
               - `ui/icons.symbol`
             - Exports (values): `heading1Block`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
         - **`heading-2`** — Heading 2 block type for the page editor. Heading 2 block type: registers its `data` schema at the server write boundary.
           - Web:
             - Contributes: `Editor.Block` "heading-2" → `BlockTextRenderer`
@@ -32195,8 +31967,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor.textDataSchema`
               - `ui/icons.symbol`
             - Exports (values): `heading2Block`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
         - **`heading-3`** — Heading 3 block type for the page editor. Heading 3 block type: registers its `data` schema at the server write boundary.
           - Web:
             - Contributes: `Editor.Block` "heading-3" → `BlockTextRenderer`
@@ -32211,8 +31981,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor.textDataSchema`
               - `ui/icons.symbol`
             - Exports (values): `heading3Block`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
     - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Image block type: registers its `data` schema (attachment + width) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "image" → `ImageBlock`
@@ -32540,9 +32308,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `subtractNoise`
           - `touchedBlocks`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/shadow --shadow`
-          - `ui/tokens/shape --spacing`
+        - Uses tokens: `ui/tokens/shadow --shadow`
         - Imported by:
           - `page/annotations/agent-access`
           - `page/annotations/instructions`
@@ -32648,8 +32414,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.textDataSchema`
           - `ui/icons.symbol`
         - Exports (values): `numberedListBlock`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
     - **`open-as-page`** — Open as page, in the block ⋮⋮ menu: opens one block — a card, a heading with its nested lines, a toggle — as a page of its own beside the current one, editable and saving to the page that holds it. Contributed into Editor.BlockMenuItem, and absent where the host declared no PageNavigation.openBlock, on a sub-page row (which already opens), and on the block a view is already zoomed into.
       - Web:
         - Contributes: `Editor.BlockMenuItem` → `OpenAsPageItem`
@@ -32931,9 +32695,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `promptBlock`
               - `promptDataSchema`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/density --space-xs`
-              - `ui/tokens/shape --spacing`
+            - Uses tokens: `ui/tokens/density --space-xs`
         - **`link`** — Task↔prompt-block link: reads the tasks a prompt block launched (useBlockPromptTasks) and the page/block a task came from (usePromptTaskLink), and creates a provenance-stamped task (createPromptTask). No UI of its own. Owns the tasks_ext_prompt_block side-table: the page/block a task was launched from, the live link collection over it (block-side window, task-side row lookup), the create-task endpoint, and the Pages task category.
           - Server:
             - Contributes:
@@ -33320,8 +33082,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `toDoBlock`
           - `toDoDataSchema`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
     - **`toggle`** — Toggle (collapsible) block type for the page editor. Toggle (collapsible) block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "toggle" → `BlockTextRenderer`
@@ -33338,8 +33098,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `toggleBlock`
           - `toggleDataSchema`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
     - **`turn-into-page`** — Turn a block into a sub-page in place, keeping its id, position, and subtree: from Turn into → Page, or from the caret's line with `/page` (the line's other words become its title, and the new page opens). The page row renders inline as the link.
       - Web:
         - Contributes:
@@ -33370,8 +33128,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
           - `shell/toast.showToast`
           - `ui/icons.Icon`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
     - **`video`** — Video block type: upload a video file and play it inline. Video block type: registers its `data` schema (attachment) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "video" → `VideoBlock`
@@ -33482,7 +33238,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serializeEdgeGraph`
           - `slotGroupOwners`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `framework/tooling/codegen`
           - `plugin-meta/plugin-refs`
@@ -33574,7 +33329,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SERVE_MODES`
           - `serveModeLabel`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/deploy/analytics/dashboard`
           - `apps/deploy/composition`
@@ -33700,7 +33454,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `lookupExhibit`
           - `regionExhibit`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `apps/prototypes/compare/exhibit`
     - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
       - Core:
@@ -34335,7 +34088,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `walkFiles`
           - `walkFilesAsync`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
@@ -34488,7 +34240,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scanReorderItemRefs`
           - `scanRuntimeExceptionRefs`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `plugin-meta/relocate`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/resolve.ts` (debt)
@@ -34784,8 +34535,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PLUGIN_MOVES_FILE`
           - `pluginMoveKey`
           - `readPluginMoves`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/apply-moves.ts`, `core/internal/ledger.ts` (debt)
     - **`token-usage`** — Which theme tokens a plugin's source uses, and which plugin owns each one: the static defineTokenGroup reader (owner + CSS vars) and the token-usage scanner (literal var(--x) plus Tailwind classes resolved by Tailwind's own design system over app.css). Feeds the cross-refs facet's tokenUses, which the closure engine turns into hard edges.
@@ -34883,7 +34632,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --foreground`
           - `ui/tokens/density --space-sm`
-          - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps-core/tab-bar`
           - `apps/prototypes/canvas`
@@ -35115,7 +34863,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/density --subpane-pad-x`
-          - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/browser/bookmarks`
           - `apps/browser/shell`
@@ -35159,7 +34906,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/color-palette --strong-foreground`
           - `ui/tokens/density --space-2xs`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-scale`
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-medium`
@@ -35261,8 +35007,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reorder.ReorderLayoutContext`
         - Exports (types): `CollapsibleWrapProps`
         - Exports (values): `CollapsibleWrap`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
     - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
       - Web:
         - Slots: `CommandPalette.Item`
@@ -35388,8 +35132,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/exhibits`
           - `tasks/worktree-identity`
     - **`css`** — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
       - Exemptions:
         - Exempts itself from: `layout/no-adhoc-layout` — `plugins` (sanctioned)
         - Exempted by:
@@ -35421,7 +35163,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --status-dot-md`
               - `ui/tokens/density --status-dot-sm`
               - `ui/tokens/density --status-dot-xs`
-              - `ui/tokens/shape --spacing`
             - Imported by: `shell/health-report`
         - **`badge`** — The canonical chip primitive and shared chip shell (region-line single-line core, rigid leading icon, truncating label leaf): semantic variant × colorClass coloring, a rect|pill shape axis, size, and an optional monospace label. The label is the chip's baseline, so a chip dropped in a sentence sits on the same line as the words beside it instead of on its icon's bottom edge. LinkChip and ToggleChip compose it.
           - Web:
@@ -35441,11 +35182,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Badge`
               - `formatStatusLabel`
           - Cross-plugin:
-            - Uses tokens: 28 vars — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Uses tokens: 27 vars — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `ui/tokens/color-palette` ×10
               - `ui/tokens/type-scale` ×8
               - `ui/tokens/density` ×6
-              - `ui/tokens/shape` ×3
+              - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
             - Imported by: 166 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
@@ -35557,9 +35298,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
+            - Uses tokens: `ui/tokens/shape --radius`
             - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×20
               - `primitives` ×10
@@ -35585,7 +35324,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
               - `apps` ×24
               - `debug` ×11
@@ -35668,7 +35406,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColumnProps`
             - Exports (values): `Column`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/column/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/column/REFERENCE.md)
               - `apps` ×11
               - `primitives` ×5
@@ -35766,7 +35503,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
               - `apps` ×16
               - `primitives` ×7
@@ -35789,7 +35525,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 161 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×49
               - `primitives` ×29
@@ -35814,7 +35549,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `GridProps`
             - Exports (values): `Grid`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
               - `apps` ×17
               - `primitives` ×9
@@ -35827,7 +35561,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `screenshot`
         - **`grow`** — Growing-cell layout primitive: growClass() is the flex child that takes the row's slack (flex-1) while staying floored at its own content width. The half of <Fill> that grows, without the half that gives.
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `active-data/go`
               - `apps/pages/page-tree`
@@ -35845,7 +35578,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `growClass`
         - **`grow-relay`** — The grow request: a widget that sizes itself from the room it is given asks for that room (useRequestGrow), every box in between relays the ask upward (<GrowRelay>, render-prop), and the row stops it (<GrowRelay.Stop>). Replaces the fill flag a contribution had to declare three files away from the <AdaptiveBar> it was about — the ask travels with the widget, so there is nothing left to forget.
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps-core/tab-bar`
               - `primitives/adaptive-bar`
@@ -35869,7 +35601,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×16
               - `debug` ×15
@@ -35901,7 +35632,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Layer`
               - `layerClasses`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
               - `apps` ×13
               - `primitives` ×5
@@ -35919,7 +35649,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --chrome-pad-x`
               - `ui/tokens/density --space-lg`
-              - `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
           - Core:
@@ -35944,8 +35673,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GEOMETRY_VIOLATION_MARKER`
           - Plugins:
             - **`geometry`** — Geometry vocabulary of the layout harness, as a types-only leaf: FixtureDims, GeometryInvariant, FixtureMutation, HOST_MARKER_ATTR and GeometrySpec (what an exhibit declares to be geometry-gated). Split out so the exhibit catalog can carry geometry without depending on the harness.
-              - Cross-plugin:
-                - Uses tokens: `ui/tokens/shape --spacing`
               - Core:
                 - Exports (types):
                   - `FixtureDims`
@@ -36028,7 +35755,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Overlay`
               - `OverlayInteractive`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/browser/webview`
               - `apps/chord/trainer`
@@ -36332,7 +36058,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 398 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×63
@@ -36436,9 +36161,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `stickyClasses`
               - `stickyOffsetPx`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --background`
-              - `ui/tokens/shape --spacing`
+            - Uses tokens: `ui/tokens/color-palette --background`
             - Imported by:
               - `apps/chord/curriculum`
               - `apps/mail/search`
@@ -36550,11 +36273,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Text`
               - `textVariantClass`
           - Cross-plugin:
-            - Uses tokens: 44 vars — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Uses tokens: 43 vars — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-              - `ui/tokens/shape --spacing`
             - Imported by: 373 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×72
@@ -36907,7 +36629,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `viewportEscapeReportSink`
               - `ViewportOverlay`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps-core/surface`
               - `apps/prototypes/present`
@@ -36923,7 +36644,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempted by: `primitives/css/ui-kit` (0 debt)
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `primitives` ×8
               - `apps` ×7
@@ -36973,7 +36693,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ScrollSentinel`
           - `useInfiniteScroll`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/mail/search`
           - `primitives/data-view`
@@ -37558,7 +37277,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setCustomColumnValue`
               - `SetCustomColumnValueBodySchema`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/deploy/deploy-history`
               - `apps/events/sources/source-detail/runs`
@@ -37691,7 +37409,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xl`
               - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
           - Core:
             - Exports (types): `ListViewOptions`
         - **`map`** — Map view child for the data-view primitive: every row with a location as a pin on a full-bleed map, clustered, with clicking a pin activating its row.
@@ -37906,7 +37623,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-scale`
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
@@ -38188,8 +37904,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
           - Web:
             - Contributes: `Core.Root` → `OverscrollHintController`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
         - **`scroll-reveal`** — Reveal-on-activation primitive: useRevealOnActive() scrolls an element into view only when it TRANSITIONS active (or on explicit revealOnMount intent), never because it remounted already-active — so background data churn can't move the user's scroll. revealElement() is the imperative funnel for event handlers.
           - Web:
             - Uses: `primitives/latest-ref.useLatestRef`
@@ -38198,7 +37912,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps-core/tab-bar`
               - `apps/desktop/launcher`
@@ -38244,7 +37957,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UseEditableFieldOptions`
         - Exports (values): `useEditableField`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/deploy/deployments`
           - `apps/deploy/servers`
@@ -38360,7 +38072,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --info`
           - `ui/tokens/color-palette --primary-text`
           - `ui/tokens/font-family --font-mono`
-          - `ui/tokens/shape --spacing`
         - Imported by: `conversations/conversation-view/markdown-extensions`
     - **`file-type`** — <FileTypeIcon name isDir? open?/>: a directory as the Material folder in the --folder colour, a file as its Seti glyph tinted by its file-type tone.
       - Web:
@@ -38978,7 +38689,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor`
     - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
           - `conversations` ×11
@@ -39144,7 +38854,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-          - `ui/tokens/shape --spacing`
         - Imported by: 247 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×69
           - `conversations` ×43
@@ -39807,7 +39516,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `wsUrl`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/events/event-list`
           - `apps/pages/page-tree`
@@ -39879,7 +39587,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `optimisticRejectionSink`
           - `useOptimisticResource`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/prototypes/canvas`
           - `apps/sonata/track-mixer`
@@ -39957,7 +39664,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CursorAnchoredMenuProps`
             - Exports (values): `CursorAnchoredMenu`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/desktop/launcher`
               - `apps/desktop/shelf`
@@ -39993,7 +39699,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shadow --shadow-2xl`
               - `ui/tokens/shadow --shadow-sm`
-              - `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/sonata/track-mixer`
               - `conversations/conversation-view/prompt-templates`
@@ -40013,7 +39718,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `FloatingSurfaceProps`
             - Exports (values): `FloatingSurface`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/desktop/shelf`
               - `apps/sonata/progress/scrubber`
@@ -40070,7 +39774,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HoverPopoverProps`
             - Exports (values): `HoverPopover`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: `apps-core/app-launcher`
           - Core:
             - Exports (types):
@@ -40281,7 +39984,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlinePopoverProps`
             - Exports (values): `InlinePopover`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
               - `page` ×6
               - `primitives` ×5
@@ -40308,7 +40010,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useReportPopupOpen`
         - **`portal-host`** — Where a popup opened inside a region is drawn: PortalHost makes every ui-kit popup (popover, menu, select, tooltip, dialog, sheet) opened inside it render into the region instead of document.body — required under the Fullscreen API, which paints only the fullscreen element's subtree, and over overlays stacked above the popup layer. ui-kit's portal wrappers read usePortalContainer. Imports only react, so ui-kit can consume it without a cycle.
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/prototypes/canvas`
               - `apps/prototypes/present`
@@ -40329,7 +40030,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SurfaceOverlay`
               - `SurfaceOverlayHost`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps-core/tab-surface`
               - `apps/prototypes/present`
@@ -40720,7 +40420,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --radius`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-scale`
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
@@ -40731,7 +40430,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`boot-trace`** — Module-level boot-span store imported eagerly by the framework boot path. Captures one-clock boot spans (startBootSpan/markBootInstant/recordBootSpan) and folds in Navigation/Paint Timing plus the first React commit; getBootTrace() assembles the trace. Every span / instant is mirrored as a User Timing measure / mark named boot:<id>, so an outside reader (a Playwright script) reads it with performance.getEntriesByType.
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `debug/boot-profile`
               - `debug/slow-ops`
@@ -40783,8 +40481,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLIENT_LATENCY_SIGNALS`
               - `clientLatencySink`
               - `splitPhases`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
         - **`scheduler`** — Main-thread scheduling primitives (yieldToMain: scheduler.yield → postTask → setTimeout(0)) for cooperative boot/work batching.
           - Cross-plugin:
             - Imported by: `framework/web-core`
@@ -40848,9 +40544,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PromptEditor`
           - `PromptEditorSlots`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/density --pad-composer-actions`
-          - `ui/tokens/shape --spacing`
+        - Uses tokens: `ui/tokens/density --pad-composer-actions`
         - Imported by:
           - `conversations/conversation-view/exit-menu`
           - `conversations/conversation-view/prompt-input`
@@ -40870,7 +40564,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --toolbar-foreground`
-              - `ui/tokens/shape --spacing`
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use rankAdjacentTo() from the server barrel to resolve a DnD move's anchor. Never use floats or integers. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
       - Server:
         - Uses: `database.db`
@@ -40996,7 +40689,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RowActions`
           - `rowActionsAnchor`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
@@ -41027,7 +40719,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readAppInstance`
               - `stampAppInstance`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps-core/tabs`
               - `apps/desktop/windows`
@@ -41341,9 +41032,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SlotRender`
           - `useDispatchOutcome`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/density --control-height-sm`
-          - `ui/tokens/shape --spacing`
+        - Uses tokens: `ui/tokens/density --control-height-sm`
         - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×26
           - `conversations` ×14
@@ -41385,7 +41074,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortableItem`
           - `SortableList`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps-core/tab-bar`
           - `apps/sonata/rich/rhythm-controls`
@@ -41522,7 +41210,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --spacing`
             - Imported by: `apps/sonata/sources/chord-grid`
     - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
       - Web:
@@ -41593,7 +41280,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --pad-composer`
           - `ui/tokens/density --pad-composer-text`
           - `ui/tokens/shape --radius-card`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-scale`
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
@@ -41646,7 +41332,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useCaretQuery`
               - `useForcedCaretQuery`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `page/editor`
               - `page/inline-date`
@@ -41735,7 +41420,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `primitives/text-editor/caret-motion.crossCaret`
             - Exports (values): `DecoratorNavPlugin`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `page/editor`
               - `primitives/text-editor`
@@ -41865,7 +41549,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-draft-form`
         - **`token-extension`** — The inline-token primitive's synchronously-loadable half: the declaration TYPES of a token family, the tokenExtension pairing of pattern and node, THE line scan, and the lazy-source host registry. Imports lexical for types only — the class factory lives in the `node` sub-plugin.
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `page/editor`
               - `primitives/text-editor/token-extension/node`
@@ -42197,7 +41880,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useUndoRedo`
           - `useUndoRedoShortcuts`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps-core/tab-surface`
           - `apps/pages/page-tree`
@@ -42310,7 +41992,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useVirtualRows`
           - `VirtualRows`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/sonata/notation`
           - `primitives/data-table`
@@ -42331,7 +42012,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `UseRowFoldOptions`
             - Exports (values): `useRowFold`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `debug/trace/spans`
               - `primitives/data-table`
@@ -42468,7 +42148,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `stopPreviewEndpoint`
       - `triggerReleaseEndpoint`
   - Cross-plugin:
-    - Uses tokens: `ui/tokens/shape --spacing`
     - Imported by:
       - `apps/deploy/deployments`
       - `auth/apple-signing`
@@ -42611,9 +42290,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reorderableSlots`
       - `reorderDirectiveDescriptor`
   - Cross-plugin:
-    - Uses tokens:
-      - `ui/tokens/density --space-xs`
-      - `ui/tokens/shape --spacing`
+    - Uses tokens: `ui/tokens/density --space-xs`
     - Imported by:
       - `apps-core/app-launcher`
       - `apps/desktop/launcher`
@@ -42648,7 +42325,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ReorderAreaContext`
           - `ReorderItemBox`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `fields/reorder-tree/config`
           - `reorder`
@@ -43048,7 +42724,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports.ReportKind`
           - `reports.ReportRow`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `framework/tooling/checks`
       - Core:
         - Exports (types):
@@ -43241,7 +42916,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OutboxCodeSchema`
           - `OutboxEntrySchema`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `framework/tooling/checks`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/file-report.ts`, `server/internal/drain.ts` (debt)
@@ -43404,9 +43078,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes: `report-kind` "viewport-escape"
         - Uses: `reports.ReportKind`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/shape --spacing`
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
       - Core:
         - Exports (types): `ViewportEscapePayload`
         - Exports (values):
@@ -43867,7 +43539,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `applyStrokes`
           - `DrawCanvas`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `screenshot`
           - `screenshot/draw-on-app`
@@ -44378,7 +44049,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses tokens:
       - `ui/tokens/color-palette --muted-foreground`
       - `ui/tokens/density --space-lg`
-      - `ui/tokens/shape --spacing`
     - Imported by:
       - `stats/commits`
       - `stats/cost`
@@ -44808,7 +44478,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `updateTask`
       - `UpdateTaskBodySchema`
   - Cross-plugin:
-    - Uses tokens: `ui/tokens/shape --spacing`
     - Imported by:
       - `conversations/conversation-view/dependent-count`
       - `conversations/conversation-view/drop-dependents`
@@ -44839,7 +44508,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --muted`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/color-palette --success`
-          - `ui/tokens/shape --spacing`
         - Imported by:
           - `active-data/attempt`
           - `active-data/task`
@@ -45032,8 +44700,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/model-provider.ModelChoiceSchema`
               - `tasks/launch-options.defineLaunchOption`
             - Exports (values): `autoStartLaunchOption`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
     - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the presentation of the exposed `origin` Automation field in every list whose rows reach a task (its options the live catalog), and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, written by the decide-launch endpoint alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.catalog value, the automations.tasks collection (the origin side-table, an automation's history) and the automations.launch-decisions.all set, exposes the filing automation to every list whose rows reach a task (the `origin` field), and notifies the bell when an automated task needs its person.
       - Web:
         - Slots:
@@ -45295,9 +44961,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resolveLaunchOptions`
           - `TaskLaunchServer`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/shape --spacing`
-          - `ui/tokens/type-scale --font-weight-medium`
+        - Uses tokens: `ui/tokens/type-scale --font-weight-medium`
         - Imported by:
           - `apps/agent-manager/welcome`
           - `conversations/workspace/launch-option`
@@ -45373,8 +45037,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OutcomeReportSchema`
           - `outcomeReportShape`
           - `REPORT_STANDINGS`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
     - **`reports-investigation`** — The Report investigations automation in the Automations pane: registers its config (trigger, push policy, model, prompt, scope) and contributes its Which reports section — severity, recurrence threshold, kind by kind with the uninvestigated reports that match right now. Files reports' investigation tasks: owns the Reports task category, registers the task-creating handler into reports' investigation sink (Investigate), and declares the Report investigations automation (off by default) — woken when a report nobody investigated is recorded (once the burst settles) or on a schedule, it files ONE task for the batch of in-scope reports (severity, recurrence, kind), links them to it, and launches an agent to find and fix the root cause.
       - Web:
         - Contributes:
@@ -45487,8 +45149,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes:
           - `POST /api/sidequest-autopilot/triage/:taskId/run`
           - `PUT /api/sidequest-autopilot/triage/:taskId/answer`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Attachments" → `TaskAttachments`
@@ -45821,7 +45481,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/launch-options.defineLaunchOption`
         - Exports (values): `effortLaunchOption`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `conversations`
       - Shared:
         - Exports (types): `TaskEffort`
@@ -46000,7 +45659,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-scale`
           - `ui/tokens/type-scale --font-size-3xs`
           - `ui/tokens/type-scale --line-height-3xs`
@@ -46048,9 +45706,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `tasks/launch-options.defineLaunchOption`
         - Exports (values): `prepromptLaunchOption`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/shape --spacing`
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
         - Imported by:
           - `conversations`
           - `conversations/conversation-preprompt`
@@ -46530,7 +46186,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: 71 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×30
           - `tasks` ×17
@@ -46631,7 +46286,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Cli:
     - Uses: `infra/deps/updates.upgradeThisWorktree`
   - Cross-plugin:
-    - Uses tokens: `ui/tokens/shape --spacing`
     - Imported by: `infra/deps/mise`
   - Exemptions:
     - Exempts itself from: `boundaries/no-platform-api` — `core/internal/mise-bin.ts` (debt)
@@ -47115,7 +46769,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/sidebar-framing.SidebarFraming`
           - Cross-plugin:
             - Uses tokens:
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/sidebar-metrics --sidebar-brand-height`
               - `ui/tokens/sidebar-metrics --sidebar-brand-pad`
         - **`flush`** — Flush sidebar framing — the default, pixel-identical to the original app shell.
@@ -47132,7 +46785,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/sidebar-framing.SidebarFraming`
           - Cross-plugin:
             - Uses tokens:
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/sidebar-metrics --sidebar-brand-height`
               - `ui/tokens/sidebar-metrics --sidebar-brand-pad`
         - **`inset`** — Inset sidebar framing — the main area floats as a rounded inset card.
@@ -47149,7 +46801,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/sidebar-framing.SidebarFraming`
           - Cross-plugin:
             - Uses tokens:
-              - `ui/tokens/shape --spacing`
               - `ui/tokens/sidebar-metrics --sidebar-brand-height`
               - `ui/tokens/sidebar-metrics --sidebar-brand-pad`
     - **`tab-bar`** — Themable tab bar: chip / underline / connected variants.
@@ -47465,7 +47116,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `QuickThemeSectionContribution`
             - Exports (values): `QuickTheme`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `ui/theme-engine/theme-gallery`
               - `ui/theme-toggle`
@@ -48169,44 +47819,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 672 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `apps` ×143
-              - `primitives` ×124
-              - `conversations` ×100
-              - `page` ×46
-              - `debug` ×40
-              - `ui` ×35
-              - `framework` ×21
-              - `infra` ×21
-              - `tasks` ×19
-              - `plugin-meta` ×17
-              - `fields` ×16
-              - `apps-core` ×11
-              - `reorder` ×9
-              - `packages` ×8
-              - `stats` ×6
-              - `build` ×5
+            - Tokens used by: 414 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×90
+              - `apps` ×82
+              - `primitives` ×69
+              - `page` ×35
+              - `ui` ×31
+              - `debug` ×26
+              - `plugin-meta` ×11
+              - `fields` ×9
+              - `tasks` ×9
+              - `reorder` ×7
               - `review` ×5
-              - `active-data` ×4
-              - `database` ×4
-              - `integrations` ×4
-              - `reports` ×4
+              - `stats` ×5
+              - `apps-core` ×4
               - `shell` ×4
-              - `config_v2` ×3
-              - `map` ×3
-              - `screenshot` ×3
+              - `active-data` ×3
+              - `build` ×3
+              - `infra` ×3
               - `auth` ×2
               - `backup` ×2
               - `code-explorer` ×2
-              - `layouts` ×2
-              - `network` ×2
+              - `config_v2` ×2
+              - `framework` ×2
+              - `screenshot` ×2
               - `history/dialog`
-              - `ids`
-              - `improve/element-picker`
-              - `release`
+              - `integrations/google-maps`
+              - `layouts/miller`
+              - `map/pin-layer`
+              - `reports/launch-fix`
               - `search/quick-find`
-              - `toolchain`
-              - `upstream`
         - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role) with its customizer section.
           - Web:
             - Contributes:
@@ -48570,7 +48212,5 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fetchUpstreamStatus`
       - `UPSTREAM_BRANCH`
       - `UPSTREAM_SUBJECT_LIMIT`
-  - Cross-plugin:
-    - Uses tokens: `ui/tokens/shape --spacing`
 
 <!-- AUTOGENERATED:END -->

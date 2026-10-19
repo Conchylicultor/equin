@@ -351,7 +351,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `updateEventSource`
     - `UpdateEventSourceBodySchema`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `active-data/event-source`
     - `apps/events/event-list`

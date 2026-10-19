@@ -9,7 +9,6 @@
   - Uses: `primitives/text-editor/caret-motion.crossCaret`
   - Exports (values): `DecoratorNavPlugin`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `page/editor`
     - `primitives/text-editor`

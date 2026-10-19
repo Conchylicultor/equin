@@ -82,7 +82,6 @@ has the vocabulary for it.
     - `Layer`
     - `layerClasses`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×13
     - `primitives` ×5

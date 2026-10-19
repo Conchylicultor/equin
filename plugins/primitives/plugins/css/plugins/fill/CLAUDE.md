@@ -80,7 +80,6 @@ primitive exists to name.
     - `Fill`
     - `fillClasses`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 161 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×49
     - `primitives` ×29

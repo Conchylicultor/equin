@@ -63,7 +63,6 @@ same `SlowEvents.View` slot; it fans out across every worktree DB fork.
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --line-height-3xs`

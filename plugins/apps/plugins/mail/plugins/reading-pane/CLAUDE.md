@@ -121,7 +121,6 @@ parses MIME or HTML itself.
   - Uses tokens:
     - `ui/tokens/font-family --font-sans`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
   - Imported by: `apps/mail/threads`
 - Exemptions:
   - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-hydrated-message.ts` (debt)

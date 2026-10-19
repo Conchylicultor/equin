@@ -199,7 +199,6 @@ rather than reading as "not preloaded". A factory's own declaration
     - `ui/tokens/density --pad-row-x`
     - `ui/tokens/density --pad-row-y`
     - `ui/tokens/shadow --shadow`
-    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/app-css-utilities.ts`, `core/authored-override-seed.ts`, `core/barrel-free-tree.ts`, `core/barrel-stubs-gen.ts`, `core/companion-manifest-gen.ts`, `core/config-git-layer-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/enriched-tree.ts`, `core/exempt-rule-ids-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/reorderable-slots-gen.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/theme-declarations-gen.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
 

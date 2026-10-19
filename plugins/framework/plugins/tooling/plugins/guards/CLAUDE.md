@@ -161,7 +161,6 @@ can blind or deafen all of them at once.
     - `WINDOW_MS`
     - `WINDOW_SIZE`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `debug/browser-recordings/writer`
     - `framework/tooling/e2e-harness`

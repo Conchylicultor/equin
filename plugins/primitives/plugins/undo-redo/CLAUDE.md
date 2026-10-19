@@ -247,7 +247,6 @@ undoes the title text only — an ordinary autosaved input, never on this stack.
     - `useUndoRedo`
     - `useUndoRedoShortcuts`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/tab-surface`
     - `apps/pages/page-tree`

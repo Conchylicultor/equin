@@ -2124,7 +2124,6 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 246 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×70
     - `conversations` ×41

@@ -76,9 +76,7 @@ region is the `model-call` sub-plugin's section and **`runs` names no LLM**.
     - `eventSourceRunPane`
     - `RunActions`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/density --space-sm`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/density --space-sm`
   - Imported by:
     - `apps/events/sources/source-detail/runs/caveats`
     - `apps/events/sources/source-detail/runs/extracted-events`

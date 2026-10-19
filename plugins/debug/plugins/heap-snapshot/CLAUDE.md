@@ -37,8 +37,6 @@
     - `network/live.serveValue`
   - Resources: `heap.stats` (invalidate, snapshot)
   - Routes: `POST /api/debug/heap-snapshot`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-capture-snapshot.ts`, `server/internal/heap-stats.ts` (debt)
 

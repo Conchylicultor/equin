@@ -62,7 +62,6 @@ inferred key.
   - Resources: `sonata-key-auto-detect:rows` (keyed, point)
   - Routes: `POST /api/sonata/songs/:id/key-auto-detect`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `apps/sonata/rich/key-readout`
 - Exemptions:
   - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)

@@ -357,7 +357,6 @@ A round nothing was typed into reads exactly like the next one, so after
     - `ui/tokens/color-palette --secondary`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/chord/progress`

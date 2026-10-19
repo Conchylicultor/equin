@@ -39,7 +39,6 @@
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-lg`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `stats/commits`
     - `stats/cost`

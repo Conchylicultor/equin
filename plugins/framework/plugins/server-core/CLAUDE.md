@@ -406,7 +406,6 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `validatePersistedValue`
     - `withNotifyBatch`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/places/mapstr-import`
     - `infra/audio-analysis`

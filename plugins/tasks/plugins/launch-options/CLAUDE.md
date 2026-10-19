@@ -82,9 +82,7 @@ Ordering for both surfaces lives in
     - `resolveLaunchOptions`
     - `TaskLaunchServer`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/shape --spacing`
-    - `ui/tokens/type-scale --font-weight-medium`
+  - Uses tokens: `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `apps/agent-manager/welcome`
     - `conversations/workspace/launch-option`

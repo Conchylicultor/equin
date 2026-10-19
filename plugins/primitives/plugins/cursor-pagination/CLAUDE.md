@@ -66,7 +66,6 @@ See `research/2026-07-03-infinite-scroll-error-gate.md` for the full rationale.
     - `ScrollSentinel`
     - `useInfiniteScroll`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/mail/search`
     - `primitives/data-view`

@@ -72,11 +72,11 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `Badge`
     - `formatStatusLabel`
 - Cross-plugin:
-  - Uses tokens: 28 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 27 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×10
     - `ui/tokens/type-scale` ×8
     - `ui/tokens/density` ×6
-    - `ui/tokens/shape` ×3
+    - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
   - Imported by: 166 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×38

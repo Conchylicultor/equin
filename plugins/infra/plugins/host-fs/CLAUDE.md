@@ -224,7 +224,6 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `readHostPaths`
     - `writeHostPaths`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `code-explorer`
     - `code-explorer/code-api`

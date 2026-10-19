@@ -546,7 +546,6 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `updateDeployment`
     - `UpdateDeploymentBodySchema`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/composition`

@@ -38,7 +38,6 @@ imports no drag code (`sortable-list/deferred-item` only).
     - `ReorderAreaContext`
     - `ReorderItemBox`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `fields/reorder-tree/config`
     - `reorder`

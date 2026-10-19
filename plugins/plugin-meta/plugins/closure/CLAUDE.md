@@ -351,7 +351,6 @@ Run with `./singularity test plugins/plugin-meta/plugins/closure`.
     - `serializeEdgeGraph`
     - `slotGroupOwners`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/tooling/codegen`
     - `plugin-meta/plugin-refs`

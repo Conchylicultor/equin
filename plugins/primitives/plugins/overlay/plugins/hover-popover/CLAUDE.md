@@ -39,7 +39,6 @@ close, re-entry always cancels the pending close). `floating-action`'s
     - `HoverPopoverProps`
   - Exports (values): `HoverPopover`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `apps-core/app-launcher`
 - Core:
   - Exports (types):

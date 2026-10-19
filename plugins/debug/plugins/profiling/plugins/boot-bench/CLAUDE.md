@@ -61,8 +61,6 @@ Uses (hand-written, beyond the autogen list below): `infra/host/host-read-pool`
     - `tasks/tasks-core.getConversation`
   - Register: `mcpTool('benchmark_boot')`
   - Routes: `POST /api/debug/boot-bench/run`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/eld-probe.ts`, `server/internal/mcp-tools.ts`, `server/internal/snapshot-bytes.ts` (debt)
 

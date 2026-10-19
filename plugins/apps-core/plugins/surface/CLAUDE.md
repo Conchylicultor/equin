@@ -39,9 +39,7 @@
     - `Surface`
     - `usePlacementStyle`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --background`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/color-palette --background`
   - Imported by:
     - `apps-core/surface/docked`
     - `apps-core/surface/solo`

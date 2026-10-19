@@ -313,7 +313,6 @@ remaining allocations are one flat band array per completed entry span, and what
 
 - Load-bearing: yes
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `debug/slow-ops`
     - `infra/endpoints`

@@ -71,7 +71,6 @@ Shared (both paths):
   - Exports (types): `GridProps`
   - Exports (values): `Grid`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×17
     - `primitives` ×9

@@ -123,7 +123,6 @@ changing the format changes how existing traces read.
 
 - Description: The one owner of bun:jsc's JSC sampling profiler: claimStackSampler(owner) arms it once per process and hands a single reader drain() → normalized stacks (innermost → outermost, JSC's no-line sentinel as null), refusing a second owner because every read empties the shared buffer. Bun-only leaf in core, so a CLI process and a server can both import it; frameKey is the one spelling of a frame's identity.
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/tooling/checks`
     - `plugin-meta/barrel-import`

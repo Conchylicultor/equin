@@ -68,7 +68,6 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
 
 - Description: Kernel advisory file locking: flockTry/flockRelease over libc flock(2), and waitForFlock — a push-based blocking acquire run in a child so the event loop never freezes. The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/tooling/checks`
     - `infra/spawn`

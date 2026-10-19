@@ -212,7 +212,6 @@ conditional hook.
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xl`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
 - Core:
   - Exports (types): `ListViewOptions`
 

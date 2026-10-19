@@ -180,7 +180,6 @@ share is the entry model.
 
 - Description: The inline-token primitive's synchronously-loadable half: the declaration TYPES of a token family, the tokenExtension pairing of pattern and node, THE line scan, and the lazy-source host registry. Imports lexical for types only — the class factory lives in the `node` sub-plugin.
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `page/editor`
     - `primitives/text-editor/token-extension/node`

@@ -113,7 +113,6 @@ pass the same `code` field.
     - `OutboxCodeSchema`
     - `OutboxEntrySchema`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `framework/tooling/checks`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/file-report.ts`, `server/internal/drain.ts` (debt)

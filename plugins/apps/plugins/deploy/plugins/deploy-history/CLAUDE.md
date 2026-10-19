@@ -93,7 +93,6 @@ with `releaseDetailRoute` and `{ runId }` would make this chip a cross-app link.
     - `ui/tokens/color-palette --success`
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
   - Imported by: `apps/deploy/deploy-history/investigate-failure`
 - Sub-plugins:
   - **`investigate-failure`** — Contributes the investigate row action to every failed run in a deployment's History, launching an agent briefed on that failure — the CLI's own message verbatim, the run's identity and pinned…

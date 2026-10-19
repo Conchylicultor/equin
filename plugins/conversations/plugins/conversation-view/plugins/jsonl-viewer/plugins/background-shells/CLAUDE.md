@@ -164,7 +164,6 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
     - `conversations/conversation-view/running-agents`

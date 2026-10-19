@@ -122,7 +122,6 @@ global action bar's `e2e/focus-restore.ts` checks this in Chromium.
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shadow --shadow-2xl`
     - `ui/tokens/shadow --shadow-sm`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/track-mixer`
     - `conversations/conversation-view/prompt-templates`

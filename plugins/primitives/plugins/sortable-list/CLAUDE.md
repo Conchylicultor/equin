@@ -69,7 +69,6 @@ items. Importing this barrel for an item would pull dnd-kit into that bundle.
     - `SortableItem`
     - `SortableList`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/tab-bar`
     - `apps/sonata/rich/rhythm-controls`

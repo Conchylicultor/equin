@@ -45,7 +45,6 @@
     - `ui/tokens/density --pad-row-x`
     - `ui/tokens/density --pad-row-y`
     - `ui/tokens/density --space-xs`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/sidebar-palette --sidebar-border`
   - Imported by:
     - `conversations/conversations-view`

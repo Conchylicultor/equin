@@ -63,7 +63,6 @@ comes back when the trail's slack covers the open run's (cached) width plus a
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --strong-foreground`
     - `ui/tokens/density --space-2xs`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-medium`

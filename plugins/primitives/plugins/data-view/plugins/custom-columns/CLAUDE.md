@@ -164,7 +164,6 @@ how the caller obtained it.
     - `setCustomColumnValue`
     - `SetCustomColumnValueBodySchema`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/deploy-history`
     - `apps/events/sources/source-detail/runs`

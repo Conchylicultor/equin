@@ -104,7 +104,6 @@ primitive when a second consumer appears.
     - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-weight-normal`

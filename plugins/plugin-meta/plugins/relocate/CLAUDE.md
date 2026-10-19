@@ -92,8 +92,6 @@ moving anything.
     - `PLUGIN_MOVES_FILE`
     - `pluginMoveKey`
     - `readPluginMoves`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/apply-moves.ts`, `core/internal/ledger.ts` (debt)
 

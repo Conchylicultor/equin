@@ -121,7 +121,6 @@ Tests: `web/__tests__/browser-server.test.tsx` drives the real
     - `BrowserServerSocket`
   - Exports (values): `createBrowserServer`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `framework/browser-server/demo/scope`
 - Sub-plugins:
   - **`demo`** — Demo packs (core) and the two slots a plugin answers its own keys in every demo scope through (web): Demo.Resource (a useBackend hook returning a plugin's per-scope backend: a browser server serve…

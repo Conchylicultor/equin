@@ -152,8 +152,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `URL_FETCH_MODES`
     - `URL_SOURCE_TYPE_ID`
     - `urlSourceConfigFields`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/page-text.ts` (debt)
 

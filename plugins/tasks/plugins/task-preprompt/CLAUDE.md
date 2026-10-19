@@ -44,9 +44,7 @@
   - Uses: `tasks/launch-options.defineLaunchOption`
   - Exports (values): `prepromptLaunchOption`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/color-palette --muted-foreground`
   - Imported by:
     - `conversations`
     - `conversations/conversation-preprompt`

@@ -64,7 +64,6 @@
   - Uses tokens:
     - `ui/tokens/color-palette --background`
     - `ui/tokens/density --space-sm`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/browser/bookmarks`
     - `apps/browser/history`

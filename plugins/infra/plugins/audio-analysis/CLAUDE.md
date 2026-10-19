@@ -137,7 +137,6 @@ of one video are independent entries.
     - `infra/deps/python.pythonEnv`
   - Exports (values): `audioPythonDep`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ensure.ts`, `server/internal/job.ts`, `server/internal/state.ts`, `server/internal/store.ts` (debt)

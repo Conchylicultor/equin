@@ -67,7 +67,6 @@ recompile), so partial reports from either side of the skew must stay valid.
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
-    - `ui/tokens/shape --spacing`
   - Imported by: `debug/profiling/boot`
 - Core:
   - Exports (types):

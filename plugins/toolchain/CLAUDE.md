@@ -85,7 +85,6 @@ every move proven before it lands.
 - Cli:
   - Uses: `infra/deps/updates.upgradeThisWorktree`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `infra/deps/mise`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/mise-bin.ts` (debt)

@@ -444,7 +444,6 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
     - `readMergeMarkers`
     - `resolveGitDir`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `framework/tooling/import-closure`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/claudemd-conflicts.ts`, `core/internal/git-dir.ts`, `core/internal/merge-markers.ts`, `core/internal/registry-entry.ts` (debt)

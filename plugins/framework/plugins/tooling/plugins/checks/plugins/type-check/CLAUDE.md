@@ -576,9 +576,7 @@ measures the queue, so any per-check cost claim needs `./singularity check --job
     - `TYPE_CHECK_WORKER_PEAK_BYTES`
     - `TYPE_CHECK_WORKER_UNITS`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/shadow --shadow`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/shadow --shadow`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/contract-refs.ts`, `shared/pass-set.ts`, `shared/type-fingerprint.ts`, `shared/worker.ts` (debt)
 

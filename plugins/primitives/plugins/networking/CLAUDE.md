@@ -136,7 +136,6 @@ built on them — see
     - `useTransport`
     - `wsUrl`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/events/event-list`
     - `apps/pages/page-tree`

@@ -122,7 +122,6 @@ availability gates over the composed score.
     - `useSongSetting`
     - `useWriteSongSetting`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×26
 

@@ -1222,7 +1222,6 @@ and those plugins' `CLAUDE.md`.
     - `retainSnapEncoder`
     - `tableLayoutRequirements`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/browser-server`
     - `framework/central-core`

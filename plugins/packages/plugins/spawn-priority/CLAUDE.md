@@ -81,7 +81,6 @@ re-exports what server consumers use (same-plugin re-export), and
 
 - Description: OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/runtime-tmux`
     - `infra/host/host-admission`

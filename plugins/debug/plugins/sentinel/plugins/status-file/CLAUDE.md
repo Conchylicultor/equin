@@ -6,7 +6,6 @@
 
 - Description: The machine watcher's (cluster sentinel's) host-global status files (one per watcher host, the newest claim reported): their schemas, the writer main's watcher host uses, the per-tick vitals file the watcher's worker writes (the latest reading, limits and trip state), the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `debug/sentinel`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/json-file.ts`, `server/internal/status-file.ts`, `server/internal/vitals-file.ts` (debt)

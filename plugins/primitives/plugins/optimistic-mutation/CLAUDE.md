@@ -568,7 +568,6 @@ that drops it from the overlay — is emitted on `clientLatencySink`
     - `optimisticRejectionSink`
     - `useOptimisticResource`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/prototypes/canvas`
     - `apps/sonata/track-mixer`

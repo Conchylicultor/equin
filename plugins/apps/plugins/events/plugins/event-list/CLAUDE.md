@@ -200,7 +200,6 @@ ascending), `All`, and `By category` (grouped). The surface is the collection's
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/density --space-sm`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by: `apps/events/sources/source-detail/runs/extracted-events`
 

@@ -121,7 +121,6 @@ memo degrades to a full chain re-read on every push.
     - `watchTranscriptFile`
   - Register: `defineFileWatcher('transcript-watcher.transcripts')`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/prototypes/checkpoints`
     - `backup/sources/transcripts`

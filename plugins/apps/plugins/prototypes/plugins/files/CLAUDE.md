@@ -603,7 +603,6 @@ for the `checkpoints` plugin's end-of-turn job.
     - `viewportRenderSize`
     - `viewportWord`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `active-data/prototype`
     - `apps/prototypes/canvas`

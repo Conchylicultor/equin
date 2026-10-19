@@ -63,8 +63,6 @@ flag at run time, from `PLATFORM_TAGS` itself, in `resolvePlatformTag`.
   - Uses:
     - `framework/cli/op-runtime.FATAL_SIGNAL_EXITS`
     - `infra/jobs/supervised-job.cliExecContext`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `shared/entrypoints.ts` (debt)
 

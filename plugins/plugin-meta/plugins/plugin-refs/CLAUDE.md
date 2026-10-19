@@ -104,7 +104,6 @@ links **into** research from anywhere else are.
     - `scanReorderItemRefs`
     - `scanRuntimeExceptionRefs`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `plugin-meta/relocate`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/resolve.ts` (debt)

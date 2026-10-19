@@ -58,7 +58,6 @@ Only present slots render — an absent slot produces no region and no phantom g
   - Exports (types): `ColumnProps`
   - Exports (values): `Column`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
     - `primitives` ×5

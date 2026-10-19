@@ -1164,7 +1164,6 @@ keeps every row's identity rather than re-minting each moved row.
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/shadow --shadow`
-    - `ui/tokens/shape --spacing`
   - Imported by: 247 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×69
     - `conversations` ×43

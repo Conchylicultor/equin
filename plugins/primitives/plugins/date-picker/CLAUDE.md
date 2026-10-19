@@ -217,7 +217,6 @@ clock is pinned with `vi.setSystemTime` so "today" is deterministic.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`

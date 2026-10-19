@@ -450,7 +450,6 @@ somehow is not.
   - Uses tokens:
     - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --space-lg`
-    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
 - Core:

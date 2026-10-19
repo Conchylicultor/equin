@@ -50,7 +50,6 @@ lane that parses it.
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
   - Imported by: `debug/stall-monitor`
 - Core:
   - Exports (types):

@@ -302,9 +302,7 @@ the outcome too, with no separate code path.
     - `SlotRender`
     - `useDispatchOutcome`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/density --control-height-sm`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/density --control-height-sm`
   - Imported by: 84 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×26
     - `conversations` ×14

@@ -81,7 +81,6 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `ui/tokens/density --space-sm`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-caption`
     - `ui/tokens/type-scale --font-weight-normal`

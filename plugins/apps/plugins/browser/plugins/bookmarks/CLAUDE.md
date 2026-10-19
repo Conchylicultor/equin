@@ -97,7 +97,6 @@ Bookmarks section reads the same collection).
     - `browserBookmarks`
     - `browserBookmarksEntityRef`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `apps/browser/start-page`
   - Endpoint callers: `history`
 

@@ -40,7 +40,6 @@
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --ring`
     - `ui/tokens/density --space-sm`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-bold`
     - `ui/tokens/type-scale --font-weight-semibold`
 

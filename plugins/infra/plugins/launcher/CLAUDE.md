@@ -287,7 +287,6 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `infra/deps/build.build`
   - Exports (values): `gatewayBinary`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `release`
 - Exemptions:
   - Exempts itself from:

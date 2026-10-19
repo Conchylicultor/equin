@@ -18,7 +18,6 @@
     - `ui/sidebar-framing.SidebarFraming`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/sidebar-metrics --sidebar-brand-height`
     - `ui/tokens/sidebar-metrics --sidebar-brand-pad`
 

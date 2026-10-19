@@ -83,7 +83,6 @@ persistence); an effect that must run wherever a song plays is a
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `sonataApp`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×29
 

@@ -117,7 +117,6 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
     - `ClaudeCodeStatusSchema`
     - `recheckClaudeCode`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/agent-manager/welcome`
     - `apps/sonata/transcription`

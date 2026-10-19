@@ -183,7 +183,6 @@
     - `stopConversation`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×50
     - `tasks` ×4

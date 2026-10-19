@@ -141,7 +141,6 @@ yields no latency sample by construction.
     - `ResourceContractError`
     - `ResourceRefusal`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `framework/browser-server`
     - `framework/resource-runtime`

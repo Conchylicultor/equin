@@ -31,7 +31,6 @@ wiring; the calendar's rendering and day math are the primitive's tests.
     - `primitives/date-picker.DatePickerPopover`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`

@@ -127,7 +127,6 @@ render (`reports/turn-unconfirmed`).
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/agent-thread`
     - `conversations/all-conversations`

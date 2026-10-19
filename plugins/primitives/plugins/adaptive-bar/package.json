@@ -4,6 +4,6 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "@floating-ui/react-dom": "^2.1.8"
+    "@floating-ui/react-dom": "^2.1.9"
   }
 }

@@ -35,7 +35,6 @@
     - `ui/tokens/categorical --categorical-8`
     - `ui/tokens/categorical --categorical-9`
     - `ui/tokens/density --space-xs`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --font-weight-semibold`

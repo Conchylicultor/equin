@@ -40,7 +40,6 @@ Two stylings look under-done and must stay that way:
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --success`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `active-data/attempt`
     - `active-data/task`

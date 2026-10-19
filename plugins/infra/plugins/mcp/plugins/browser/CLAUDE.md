@@ -209,8 +209,6 @@ under it.
     - `MAX_HOST_ERRORS`
     - `MAX_SESSIONS`
     - `MAX_TABS`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/host-client.ts`, `shared/code-id.ts` (debt)
 

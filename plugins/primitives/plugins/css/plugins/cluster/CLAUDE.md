@@ -38,7 +38,6 @@ defined in exactly one place. The distinct export buys two things:
   - Exports (types): `ClusterProps`
   - Exports (values): `Cluster`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 63 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×24
     - `debug` ×11

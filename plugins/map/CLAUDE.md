@@ -248,7 +248,6 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `ui/tokens/density --space-md`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shadow --shadow-md`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/places/places-map`
     - `map/google`

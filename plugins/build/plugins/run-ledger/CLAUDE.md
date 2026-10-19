@@ -187,7 +187,6 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
     - `buildRunIdKind`
     - `buildRunsEntityRef`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `active-data/build-run`
     - `build`

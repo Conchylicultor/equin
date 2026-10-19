@@ -203,9 +203,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `reorderableSlots`
     - `reorderDirectiveDescriptor`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/density --space-xs`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/density --space-xs`
   - Imported by:
     - `apps-core/app-launcher`
     - `apps/desktop/launcher`

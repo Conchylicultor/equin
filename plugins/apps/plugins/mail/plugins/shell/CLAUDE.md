@@ -56,7 +56,6 @@ Auth state and affordances come only from
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `mailApp`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/mail/search`
     - `apps/mail/sync-status`

@@ -363,7 +363,6 @@ torch.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/song-index`
     - `apps/prototypes/thumbnails`

@@ -86,7 +86,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `selfClass`
     - `Stack`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 398 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×105
     - `conversations` ×63

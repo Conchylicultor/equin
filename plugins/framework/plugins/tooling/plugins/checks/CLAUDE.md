@@ -426,9 +426,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `scopeOf`
     - `tsBuildInfoPath`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/shadow --shadow`
-    - `ui/tokens/shape --spacing`
+  - Uses tokens: `ui/tokens/shadow --shadow`
 - Exemptions:
   - Exempts itself from:
     - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)

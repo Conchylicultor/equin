@@ -277,11 +277,10 @@ to reconcile them; they never needed reconciling.
     - `Text`
     - `textVariantClass`
 - Cross-plugin:
-  - Uses tokens: 44 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 43 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/type-scale` ×36
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
   - Imported by: 373 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×105
     - `conversations` ×72

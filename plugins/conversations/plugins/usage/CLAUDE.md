@@ -37,8 +37,6 @@
     - `defineJob('conversations.usage.backfill')`
     - `defineJob('conversations.usage.reprice')`
     - `defineWarmup('conversations.usage.backfill')`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/scan.ts` (debt)
 

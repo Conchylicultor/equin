@@ -85,7 +85,6 @@ needs the surface element.
   - Exports (types): `FloatingSurfaceProps`
   - Exports (values): `FloatingSurface`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/desktop/shelf`
     - `apps/sonata/progress/scrubber`

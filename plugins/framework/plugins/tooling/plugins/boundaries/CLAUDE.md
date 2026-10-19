@@ -115,7 +115,6 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
     - `runtimeNames`
     - `zone`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `plugin-meta/plugin-refs`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/check.ts`, `core/resolve.ts` (debt)

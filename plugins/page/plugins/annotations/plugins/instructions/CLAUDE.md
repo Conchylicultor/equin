@@ -167,7 +167,6 @@ at a time; exclusivity with `author`, and `global` requiring `instructions`, is
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
   - Imported by: `page/annotations/agent-access`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/delivery.ts` (debt)

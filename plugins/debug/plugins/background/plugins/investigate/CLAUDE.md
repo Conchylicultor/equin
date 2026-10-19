@@ -21,8 +21,6 @@ Debug app, which mounts the list, fills it.
 - Server:
   - Contributes: `taskCategory` "background"
   - Uses: `tasks/task-category.TaskCategory`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Core:
   - Exports (values): `BACKGROUND_CATEGORY_ID`
 

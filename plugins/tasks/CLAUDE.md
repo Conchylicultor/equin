@@ -118,7 +118,6 @@
     - `updateTask`
     - `UpdateTaskBodySchema`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/drop-dependents`

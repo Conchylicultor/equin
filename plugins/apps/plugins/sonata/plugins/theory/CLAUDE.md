@@ -56,7 +56,6 @@
     - `transposeKey`
     - `transposeScore`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/vocabulary`
     - `apps/sonata/lyric-line`

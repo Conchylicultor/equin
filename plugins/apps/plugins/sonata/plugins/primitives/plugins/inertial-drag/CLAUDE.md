@@ -29,7 +29,6 @@ it does not fling). Both are `bun test`-covered.
     - `InertialDragHandle`
   - Exports (values): `useInertialDrag`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/piano-roll`
     - `apps/sonata/transport-bar`

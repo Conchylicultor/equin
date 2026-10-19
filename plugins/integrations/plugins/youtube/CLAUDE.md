@@ -206,7 +206,6 @@ calls the controller makes; `@types/youtube` is not a dependency.
     - `ui/tokens/color-palette --ring`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `apps/chord/trainer`

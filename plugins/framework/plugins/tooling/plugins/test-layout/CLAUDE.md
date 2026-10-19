@@ -122,8 +122,6 @@ reads the two config files directly, so its reads bypass the recording
     - `isTestFilePath`
     - `partitionTestPaths`
     - `TEST_FILE_GLOB`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `marker-scan-safety/no-adhoc-marker-scan` — `check/index.ts` (sanctioned)
 

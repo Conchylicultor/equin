@@ -93,8 +93,6 @@ code is gated immediately, and a genuine one-off escapes per-site via
 ## Plugin reference
 
 - Description: Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `layout/no-adhoc-layout` — `plugins` (sanctioned)
   - Exempted by:

@@ -283,7 +283,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `loadKnownRelations`
     - `quotedRelationsIn`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 119 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×32
     - `page` ×15

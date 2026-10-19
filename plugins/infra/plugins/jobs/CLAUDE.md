@@ -702,7 +702,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×19
     - `conversations` ×14

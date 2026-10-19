@@ -534,7 +534,6 @@ remote is built here.
     - `stopPreviewEndpoint`
     - `triggerReleaseEndpoint`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/deployments`
     - `auth/apple-signing`

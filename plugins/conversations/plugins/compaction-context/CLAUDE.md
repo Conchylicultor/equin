@@ -64,7 +64,6 @@ adds itself.
     - `compactionContextHook`
     - `CompactionContextResponseSchema`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/runtime-tmux`
     - `page/annotations/agent-access`

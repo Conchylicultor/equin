@@ -150,7 +150,6 @@ filesystem event; the 30 s tick is what notices it.
     - `WAIT_KIND_IDS`
     - `WAIT_RESULTS`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `stats/pushes`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ingest.ts`, `server/internal/service.ts` (debt)

@@ -98,7 +98,6 @@ had been rendered there. The same idiom — and the same reason — as
     - `SurfaceOverlay`
     - `SurfaceOverlayHost`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps-core/tab-surface`
     - `apps/prototypes/present`

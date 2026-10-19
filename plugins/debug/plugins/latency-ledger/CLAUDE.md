@@ -207,8 +207,6 @@ state rather than the previous window's numbers.
     - `PRESSURE_FREE_MEM_MB`
     - `submitClientLatency`
     - `THREAD_STALL_MS`
-- Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 

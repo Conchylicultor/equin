@@ -40,7 +40,6 @@
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-md`
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-3xs`
     - `ui/tokens/type-scale --line-height-3xs`

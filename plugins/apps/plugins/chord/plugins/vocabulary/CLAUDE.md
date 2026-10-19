@@ -238,7 +238,6 @@ surface.
     - `songKeyTonicPc`
     - `songVocabulary`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/curriculum`
     - `apps/chord/piano`

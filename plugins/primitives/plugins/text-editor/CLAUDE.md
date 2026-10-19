@@ -116,7 +116,6 @@ registry readers are headless.
     - `ui/tokens/density --pad-composer`
     - `ui/tokens/density --pad-composer-text`
     - `ui/tokens/shape --radius-card`
-    - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`

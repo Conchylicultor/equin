@@ -31,7 +31,6 @@ Tiers: `chrome` (the app toolbar, `h-chrome-bar`), `pane` (a pane header, `h-chr
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/density --subpane-pad-x`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/browser/bookmarks`
     - `apps/browser/shell`

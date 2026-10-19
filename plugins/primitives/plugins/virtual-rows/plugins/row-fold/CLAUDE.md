@@ -77,7 +77,6 @@ a 60 fps display paints). It passes on the tween clock.
     - `UseRowFoldOptions`
   - Exports (values): `useRowFold`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
     - `debug/trace/spans`
     - `primitives/data-table`

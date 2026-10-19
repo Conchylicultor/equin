@@ -97,7 +97,6 @@ not state: the same arguments give the same answer with or without it.
 
 - Description: Wall clock ↔ UTC instant for an IANA zone, without a timezone database: a wall time's candidate instants are enumerated from the offsets either side of it and each verified against Intl, so a clock change resolves the same way in every zone rather than by the sign of its offset. Also reads a clock face back out of an instant, and answers when the local day began.
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `primitives/metrics`
 - Core:
   - Exports (types): `WallClock`

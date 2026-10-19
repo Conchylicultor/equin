@@ -71,7 +71,6 @@ Design: [`research/2026-08-07-apps-events-recurrence-format-and-extraction-flags
 
 - Description: The event date format: a schema that states a recurrence once, its pure expander, its human label, its anchor-independent identity key, and the prompt fragment that documents it to the model — one folder so spec, parser and expander cannot drift.
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: `apps/events/events-core`
 - Core:
   - Exports (types):
