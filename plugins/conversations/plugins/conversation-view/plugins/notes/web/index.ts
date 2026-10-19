@@ -6,7 +6,7 @@ import { conversationNotesDemo } from "./internal/demo-resource";
 
 export default {
   description:
-    "Free-form per-conversation notes, auto-saved to the server. The note button opens and hides the note; a dot on it marks a written note it is hiding.",
+    "Free-form per-conversation notes, auto-saved to the server. A written note always shows, with a dot on the note button; the button opens and hides an empty note.",
   contributions: [
     conversationNotesDemo,
     Conversation.AbovePromptInput({

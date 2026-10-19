@@ -16027,7 +16027,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.Button`
               - `tasks/task-draft-form.TaskDraftPopover`
               - `ui/icons.Icon`
-        - **`notes`** — Free-form per-conversation notes, auto-saved to the server. The note button opens and hides the note; a dot on it marks a written note it is hiding. Per-conversation free-form notes, auto-saved to the server.
+        - **`notes`** — Free-form per-conversation notes, auto-saved to the server. A written note always shows, with a dot on the note button; the button opens and hides an empty note. Per-conversation free-form notes, auto-saved to the server.
           - Web:
             - Contributes:
               - `Demo.Resource` "conversation-notes"

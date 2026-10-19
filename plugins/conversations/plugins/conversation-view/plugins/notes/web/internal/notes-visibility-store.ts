@@ -7,7 +7,7 @@ function notify(conversationId: string): void {
   listeners.get(conversationId)?.forEach((l) => l());
 }
 
-function setIsOpen(conversationId: string, value: boolean): void {
+export function setIsOpen(conversationId: string, value: boolean): void {
   if ((state.get(conversationId) ?? false) === value) return;
   state.set(conversationId, value);
   notify(conversationId);

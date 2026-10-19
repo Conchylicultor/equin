@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import {
   useLiveRow,
   type LiveRowResult,
@@ -9,7 +9,7 @@ import {
 } from "@plugins/primitives/plugins/editable-field/web";
 import { conversationNoteRows, type ConversationNote } from "../../shared";
 import { upsertNote, deleteNote } from "./api";
-import { useIsOpen, toggleIsOpen } from "./notes-visibility-store";
+import { useIsOpen, setIsOpen, toggleIsOpen } from "./notes-visibility-store";
 
 export interface ConversationNoteState extends EditableField<string> {
   isVisible: boolean;
@@ -35,7 +35,14 @@ export function useConversationNote(
   let serverNote = "";
   if (note.status === "ready" && note.found) serverNote = note.row.notes;
   const noteExists = note.status === "ready" && serverNote.trim().length > 0;
-  const isManuallyOpen = useIsOpen(conversationId);
+  const isOpen = useIsOpen(conversationId);
+
+  // A written note opens itself, and stays open once seen: clearing it mid-edit
+  // must not yank the editor away — the user hides the emptied note with the
+  // toggle.
+  useEffect(() => {
+    if (noteExists) setIsOpen(conversationId, true);
+  }, [conversationId, noteExists]);
 
   const handleSave = useCallback(
     async (next: string) => {
@@ -54,16 +61,15 @@ export function useConversationNote(
     debounceMs: 1000,
   });
 
-  const toggleVisible = useCallback(
-    () => toggleIsOpen(conversationId),
-    [conversationId],
-  );
+  // A written note cannot be hidden — only an empty one toggles.
+  const toggleVisible = useCallback(() => {
+    if (!noteExists) toggleIsOpen(conversationId);
+  }, [conversationId, noteExists]);
 
   return {
     ...field,
-    // The note shows only while toggled open, written or not: the toggle is
-    // the one way in, and its dot says a note is waiting behind it.
-    isVisible: isManuallyOpen,
+    // A written note always shows; an empty one only while toggled open.
+    isVisible: noteExists || isOpen,
     noteExists,
     read: note,
     toggleVisible,

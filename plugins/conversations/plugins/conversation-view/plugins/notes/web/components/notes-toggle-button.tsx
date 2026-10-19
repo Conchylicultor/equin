@@ -11,8 +11,8 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const stickyNote2Icon = symbol("sticky-note-2");
 
 /**
- * The one way to the note: opens and hides it whether or not it has text. A
- * written note it is hiding shows as a dot on the icon's corner.
+ * The note's toggle: opens and hides an empty note. A written note always
+ * shows, and marks the button with a dot on the icon's corner.
  */
 export function NotesToggleButton({
   conversation,
@@ -39,18 +39,24 @@ export function NotesToggleButton({
     );
 
   return (
-    // The positioning context the hidden-note dot pins to.
+    // The positioning context the written-note dot pins to.
     <Stack as="span" direction="row" gap="none" className="relative">
       <IconButton
         icon={stickyNote2Icon}
         glyph="small"
         className={cn(!isVisible && "text-muted-foreground")}
-        label={isVisible ? "Hide note" : noteExists ? "Open note" : "Add note"}
+        label={
+          noteExists
+            ? "Clear the note to hide it"
+            : isVisible
+              ? "Hide note"
+              : "Add note"
+        }
         active={isVisible}
         aria-pressed={isVisible}
         onClick={toggleVisible}
       />
-      {noteExists && !isVisible && (
+      {noteExists && (
         <Pin to="top-right" offset="xs" decorative>
           <StatusDot colorClass="bg-warning" />
         </Pin>
