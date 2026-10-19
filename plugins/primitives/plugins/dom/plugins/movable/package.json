@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-dom-movable",
+  "description": "Drag-to-move floating chrome: <Movable bounds> lets the user pull a floating piece off what it covers, kept inside bounds, double-click to send it home.",
+  "private": true,
+  "version": "0.0.1"
+}

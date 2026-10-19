@@ -14,10 +14,19 @@ import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popu
 import { usePointerIdle } from "../internal/use-pointer-idle";
 
 const ChromeIdleContext = createContext(false);
+const PresentRootContext = createContext<HTMLElement | null>(null);
 
 /** Whether the presentation's chrome is resting out of sight (see `PresentBox`). */
 export function useChromeIdle(): boolean {
   return useContext(ChromeIdleContext);
+}
+
+/**
+ * The presentation's box — what the chrome is dragged around inside (`null`
+ * until it mounts).
+ */
+export function usePresentRoot(): HTMLElement | null {
+  return useContext(PresentRootContext);
 }
 
 /**
@@ -81,9 +90,11 @@ function IdleBox({
         idle && "cursor-none",
       )}
     >
-      <ChromeIdleContext.Provider value={idle}>
-        <PortalHost>{children}</PortalHost>
-      </ChromeIdleContext.Provider>
+      <PresentRootContext.Provider value={root}>
+        <ChromeIdleContext.Provider value={idle}>
+          <PortalHost>{children}</PortalHost>
+        </ChromeIdleContext.Provider>
+      </PresentRootContext.Provider>
     </div>
   );
 }

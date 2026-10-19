@@ -54,6 +54,12 @@ Hovering shows the chrome (`PresentStage`):
 - the canvas's **size & zoom chip**, bottom right. Changing it changes the
   canvas too: there is one size for the whole canvas.
 
+**Every piece of chrome can be dragged** off what it covers in the frame
+(`Movable`, `primitives/dom/movable`): grab its surface, or press one of its
+buttons and pull — a plain press is still a click. It stays inside the box, and
+a double-click on its surface sends it home. Positions last as long as the
+presentation (flipping frames keeps them); they are not saved.
+
 **Resting the pointer hides the chrome again** (`PresentBox`,
 `internal/use-pointer-idle.ts`): after 0.8 s with no pointer move, press, wheel
 or key over the presentation it fades out, so what it covers can be seen —
@@ -137,7 +143,7 @@ embedded document): a reload reopens the canvas the link carries.
     - `prototypeDetailPane.Actions` "open-canvas" → `OpenCanvasAction`
     - `PrototypeFrameActions` "present" → `PresentMenu`
     - `PrototypeFrameActions` "open-responsive" → `OpenResponsiveAction`
-  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/prototypes/canvas` ×25
     - `primitives/css/ui-kit` ×8
     - `primitives/hover-reveal` ×2
@@ -154,6 +160,7 @@ embedded document): a reload reopens the canvas the link carries.
     - `primitives/css/text.Text`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/dom/element-size.useElementSize`
+    - `primitives/dom/movable.Movable`
     - `primitives/embed.embedUrl`
     - `primitives/live-state.matchResource`
     - `primitives/loading.Loading`

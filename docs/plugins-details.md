@@ -5946,7 +5946,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `prototypeDetailPane.Actions` "open-canvas" → `OpenCanvasAction`
               - `PrototypeFrameActions` "present" → `PresentMenu`
               - `PrototypeFrameActions` "open-responsive" → `OpenResponsiveAction`
-            - Uses: 60 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
+            - Uses: 61 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
               - `apps/prototypes/canvas` ×25
               - `primitives/css/ui-kit` ×8
               - `primitives/hover-reveal` ×2
@@ -5963,6 +5963,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/viewport-overlay.ViewportOverlay`
               - `primitives/dom/element-size.useElementSize`
+              - `primitives/dom/movable.Movable`
               - `primitives/embed.embedUrl`
               - `primitives/live-state.matchResource`
               - `primitives/loading.Loading`
@@ -36663,8 +36664,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 414 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×105
+            - Imported by: 415 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×106
               - `apps` ×93
               - `conversations` ×55
               - `page` ×25
@@ -37965,8 +37966,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useElementSize`
               - `useResizeObserver`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
-              - `primitives` ×18
+            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+              - `primitives` ×19
               - `apps` ×8
               - `shell` ×2
               - `active-data/go`
@@ -38005,6 +38006,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `flowAxis`
               - `layoutHost`
+        - **`movable`** — Drag-to-move floating chrome: <Movable bounds> wraps a floating piece (a pinned pill, a tag, a chip) so the user can pull it off whatever it covers — grabbed by its surface, or by one of its buttons once the pointer travels (a plain press stays a click, and the release after a drag never clicks). It stays inside `bounds`, is pulled back in when bounds shrink, and a double-click on its surface sends it home.
+          - Web:
+            - Uses:
+              - `primitives/css/ui-kit.cn`
+              - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/latest-ref.useLatestRef`
+            - Exports (types): `MovableProps`
+            - Exports (values): `Movable`
+          - Cross-plugin:
+            - Imported by: `apps/prototypes/present`
         - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
           - Web:
             - Contributes: `Core.Root` → `OverscrollHintController`
@@ -38659,8 +38670,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 71 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
-          - `primitives` ×33
+        - Imported by: 72 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+          - `primitives` ×34
           - `apps` ×22
           - `page` ×4
           - `conversations` ×3

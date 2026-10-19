@@ -5043,6 +5043,10 @@
       "name": "@singularity/plugin-primitives-dom-layout-host",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/movable": {
+      "name": "@singularity/plugin-primitives-dom-movable",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom/plugins/overscroll-hint": {
       "name": "@singularity/plugin-primitives-dom-overscroll-hint",
       "version": "0.0.1",
@@ -9215,6 +9219,8 @@
     "@singularity/plugin-primitives-dom-in-view": ["@singularity/plugin-primitives-dom-in-view@workspace:plugins/primitives/plugins/dom/plugins/in-view"],
 
     "@singularity/plugin-primitives-dom-layout-host": ["@singularity/plugin-primitives-dom-layout-host@workspace:plugins/primitives/plugins/dom/plugins/layout-host"],
+
+    "@singularity/plugin-primitives-dom-movable": ["@singularity/plugin-primitives-dom-movable@workspace:plugins/primitives/plugins/dom/plugins/movable"],
 
     "@singularity/plugin-primitives-dom-overscroll-hint": ["@singularity/plugin-primitives-dom-overscroll-hint@workspace:plugins/primitives/plugins/dom/plugins/overscroll-hint"],
 

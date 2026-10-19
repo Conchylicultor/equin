@@ -15,6 +15,7 @@ import {
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
+import { Movable } from "@plugins/primitives/plugins/dom/plugins/movable/web";
 import {
   prototypesList,
   type PrototypeMeta,
@@ -38,7 +39,7 @@ import {
   type PageExtent,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { PRESENT_CHROME_ATTR } from "../internal/use-pointer-idle";
-import { useChromeIdle } from "./present-box";
+import { useChromeIdle, usePresentRoot } from "./present-box";
 
 /** The Exit button, and which top corner it takes. */
 export interface PresentExit {
@@ -58,7 +59,9 @@ export interface PresentExit {
  *
  * Hovering shows the chrome: the frame's tag (name, version stepper,
  * and "i of n · ← →" when there are more frames), Exit, the options pill
- * (bottom centre) and the size & zoom chip (bottom right).
+ * (bottom centre) and the size & zoom chip (bottom right). Each piece can be
+ * dragged off what it covers in the frame (double-click its surface to send it
+ * home).
  */
 export function PresentStage({
   name,
@@ -98,6 +101,7 @@ function PresentedFrame({
 }): ReactElement {
   const { canvas } = usePrototypeDetail();
   const idle = useChromeIdle();
+  const root = usePresentRoot();
   const [roomRef, room] = useElementSize<HTMLDivElement>();
   const browserWindow = useWindowSize();
   // The shown frame's extent, for Whole page. Keyed by frame so flipping to
@@ -166,6 +170,7 @@ function PresentedFrame({
             ) : null}
           </Scroll>
           <Pin to="top-left" offset="md" {...chrome}>
+            <Movable bounds={root}>
             <Stack direction="row" gap="sm" align="center">
               <FrameTag
                 frame={frame}
@@ -178,19 +183,26 @@ function PresentedFrame({
                 <ExitButton onExit={exit.onExit} />
               ) : null}
             </Stack>
+            </Movable>
           </Pin>
           {exit?.side === "right" ? (
             <Pin to="top-right" offset="md" {...chrome}>
-              <ExitButton onExit={exit.onExit} />
+              <Movable bounds={root}>
+                <ExitButton onExit={exit.onExit} />
+              </Movable>
             </Pin>
           ) : null}
           {frame.kind === "prototype" ? (
             <Pin to="bottom" offset="lg" {...chrome}>
-              <OptionsPill frame={frame} meta={meta} />
+              <Movable bounds={root}>
+                <OptionsPill frame={frame} meta={meta} />
+              </Movable>
             </Pin>
           ) : null}
           <Pin to="bottom-right" offset="md" {...chrome}>
-            <SizeChip layout={layout} noWholePage={noWholePage} />
+            <Movable bounds={root}>
+              <SizeChip layout={layout} noWholePage={noWholePage} />
+            </Movable>
           </Pin>
         </>
       )}
