@@ -17379,6 +17379,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
       - Server:
         - Uses: `conversations.Runtime`
+      - Core:
+        - Exports (types):
+          - `AgentCommand`
+          - `AgentEvent`
+          - `CommandReply`
+        - Exports (values):
+          - `AGENT_EVENTS_FILE`
+          - `AgentCommandSchema`
+          - `AgentEventSchema`
+          - `CommandReplySchema`
+          - `PROTOCOL_VERSION`
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
       - Server:
         - Uses: 21 symbols — full list in [`plugins/conversations/plugins/runtime-tmux/REFERENCE.md`](../plugins/conversations/plugins/runtime-tmux/REFERENCE.md)

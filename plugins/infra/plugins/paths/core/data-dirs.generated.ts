@@ -24,6 +24,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/data-dirs"), dependsOn: [] },
   { pluginPath: "conversations/plugins/conversation-view/plugins/rewind", id: "conversations.conversation-view.rewind", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/rewind/data-dirs"), dependsOn: [] },
   { pluginPath: "conversations/plugins/model-provider/plugins/catalog", id: "conversations.model-provider.catalog", loader: () => import("@plugins/conversations/plugins/model-provider/plugins/catalog/data-dirs"), dependsOn: [] },
+  { pluginPath: "conversations/plugins/runtime-api", id: "conversations.runtime-api", loader: () => import("@plugins/conversations/plugins/runtime-api/data-dirs"), dependsOn: [] },
   { pluginPath: "conversations/plugins/runtime-tmux", id: "conversations.runtime-tmux", loader: () => import("@plugins/conversations/plugins/runtime-tmux/data-dirs"), dependsOn: [] },
   { pluginPath: "conversations/plugins/turn-ledger", id: "conversations.turn-ledger", loader: () => import("@plugins/conversations/plugins/turn-ledger/data-dirs"), dependsOn: [] },
   { pluginPath: "conversations/plugins/workspace/plugins/scratch", id: "conversations.workspace.scratch", loader: () => import("@plugins/conversations/plugins/workspace/plugins/scratch/data-dirs"), dependsOn: [] },
