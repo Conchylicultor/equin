@@ -5,50 +5,53 @@
 // those declarations can name other files' types: a re-export (`export … from`),
 // a type-only import, or the `import("./e").T` tsc writes for an inferred type
 // that comes from elsewhere (`export type U = T`, a return type). So the files a
-// typed lint result depends on are the closure of these edges from the file's
-// direct imports — and the closure stops at a contract that names nothing that
+// file's check depends on are the closure of these edges from the file's direct
+// imports — and the closure stops at a contract that names nothing that
 // changed, where the SOURCE import graph would keep going through every body.
 //
-// PURE: `.d.ts` text in, specifiers out. tsc's signature for a file is the hash
-// of exactly this text (`computeSignatureWithDiagnostics`), so the specifiers
-// are a function of (file, signature) and can be stored under that key
-// (`./contract-refs-store.ts`). Resolution is NOT part of that: a specifier is
-// resolved on every run, from the file's source location (`contractEdges`), so
-// a file added that shadows a resolution can never leave a stale edge.
+// An edge goes to the file that DECLARES what is named, not to the module the
+// `.d.ts` happens to spell. tsc prints a type through whatever module path it
+// finds accessible — `import("../index").X` for an `X` declared in
+// `../types.ts` and re-exported by the barrel — and that barrel is neither
+// something the importer's types depend on (the symbol is `types.ts`'s, reached
+// through an alias), nor, often, in the file's source closure at all: it can
+// import the very file whose contract names it. Followed as printed, the edge
+// made a barrel's whole closure part of every key that saw one of its types,
+// and broke the dependency order the keyed check walks in. So each specifier
+// keeps the NAMES it is used for, and the resolver follows each name through
+// the module's exports and aliases to its declarations. A whole-module mention
+// (`export *`, `import * as`, `typeof import("x")`) stays an edge to the module.
+//
+// `contractSpecifiers` is PURE: `.d.ts` text in, specifiers and names out, so
+// they are stored with the file's other checked results (`./keyed-check.ts`).
+// Resolution is NOT stored: it is redone on every run, from the file's source
+// location (`contractResolver`), so a file added that shadows a resolution, or
+// a re-export that moves, can never leave a stale edge.
 
 import { dirname, relative, resolve } from "path";
 import ts from "typescript";
 import { z } from "zod";
-import {
-  isRepoPath,
-  needsContract,
-  type BuildInfoGraph,
-  type Contract,
-} from "./type-fingerprint";
+import { isRepoPath } from "./type-fingerprint";
 
-/** The specifiers one `.d.ts` names, each list sorted and de-duplicated. */
+/** A name that stands for the whole module: `export *`, `import * as`, `typeof import()`. */
+export const WHOLE_MODULE = "*";
+
+/** What one `.d.ts` names, each list sorted and de-duplicated. */
 export const contractSpecifiersSchema = z.object({
   /**
-   * Module specifiers: import / export declarations, `import x = require()`,
-   * and import types (`import("x").T`).
+   * Module specifier → the export names it is used for (`WHOLE_MODULE` for
+   * the module itself): import / export declarations, `import x =
+   * require()`, import types (`import("x").T` — the leftmost name of the
+   * qualifier), and augmented modules.
    */
-  modules: z.array(z.string()),
+  modules: z.record(z.string(), z.array(z.string())),
   /** `/// <reference path="…" />` targets, relative to the file. */
   paths: z.array(z.string()),
-  /**
-   * Whether the contract augments another module (`declare module "x"` in a
-   * module file). An augmentation changes what EVERY importer of `x` sees,
-   * though none of them names this file — so its signature counts as global
-   * scope, like a `declare global` file's.
-   */
-  augments: z.boolean(),
 });
 
 export type ContractSpecifiers = z.infer<typeof contractSpecifiersSchema>;
 
-const sorted = (s: Set<string>): string[] => [...s].sort();
-
-/** The specifiers one emitted `.d.ts` names. */
+/** What one emitted `.d.ts` names. */
 export function contractSpecifiers(dtsText: string): ContractSpecifiers {
   const sf = ts.createSourceFile(
     "contract.d.ts",
@@ -57,42 +60,66 @@ export function contractSpecifiers(dtsText: string): ContractSpecifiers {
     /*setParentNodes*/ false,
     ts.ScriptKind.TS,
   );
-  const modules = new Set<string>();
-  let augments = false;
-  const literal = (n: ts.Node | undefined): void => {
-    if (n && ts.isStringLiteralLike(n)) modules.add(n.text);
+  const modules = new Map<string, Set<string>>();
+  const mention = (n: ts.Node | undefined, name: string): void => {
+    if (!n || !ts.isStringLiteralLike(n)) return;
+    let names = modules.get(n.text);
+    if (names === undefined) modules.set(n.text, (names = new Set()));
+    names.add(name);
   };
+  const leftmost = (q: ts.EntityName): string =>
+    ts.isIdentifier(q) ? q.text : leftmost(q.left);
   const visit = (node: ts.Node): void => {
-    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
-      literal(node.moduleSpecifier);
+    if (ts.isImportDeclaration(node)) {
+      const clause = node.importClause;
+      if (clause === undefined) mention(node.moduleSpecifier, WHOLE_MODULE);
+      else {
+        if (clause.name) mention(node.moduleSpecifier, "default");
+        const bindings = clause.namedBindings;
+        if (bindings && ts.isNamespaceImport(bindings)) {
+          mention(node.moduleSpecifier, WHOLE_MODULE);
+        } else if (bindings) {
+          for (const e of bindings.elements) {
+            mention(node.moduleSpecifier, (e.propertyName ?? e.name).text);
+          }
+        }
+      }
+    } else if (ts.isExportDeclaration(node)) {
+      const clause = node.exportClause;
+      if (clause === undefined || ts.isNamespaceExport(clause)) {
+        mention(node.moduleSpecifier, WHOLE_MODULE);
+      } else {
+        for (const e of clause.elements) {
+          mention(node.moduleSpecifier, (e.propertyName ?? e.name).text);
+        }
+      }
     } else if (
       ts.isImportEqualsDeclaration(node) &&
       ts.isExternalModuleReference(node.moduleReference)
     ) {
-      literal(node.moduleReference.expression);
+      mention(node.moduleReference.expression, WHOLE_MODULE);
     } else if (ts.isImportTypeNode(node)) {
-      if (ts.isLiteralTypeNode(node.argument)) literal(node.argument.literal);
+      if (ts.isLiteralTypeNode(node.argument)) {
+        mention(
+          node.argument.literal,
+          node.qualifier ? leftmost(node.qualifier) : WHOLE_MODULE,
+        );
+      }
     } else if (ts.isModuleDeclaration(node) && ts.isStringLiteral(node.name)) {
       // `declare module "x" { … }`. In a module file it augments `x`; in a
-      // script it declares an ambient module, and a script affects the global
-      // scope anyway. Either way the target is an edge too.
-      augments = true;
-      modules.add(node.name.text);
+      // script it declares an ambient module. Either way the target is an
+      // edge, and the file is global (`isGlobalFile`, read off its source).
+      mention(node.name, WHOLE_MODULE);
     }
     ts.forEachChild(node, visit);
   };
   visit(sf);
   return {
-    modules: sorted(modules),
-    paths: sorted(new Set(sf.referencedFiles.map((r) => r.fileName))),
-    augments,
+    modules: Object.fromEntries(
+      [...modules.keys()].sort().map((m) => [m, [...modules.get(m)!].sort()]),
+    ),
+    paths: [...new Set(sf.referencedFiles.map((r) => r.fileName))].sort(),
   };
-}
-
-/** Where recorded specifiers live: per (file, signature), host-wide in the worker. */
-export interface ContractRefsLookup {
-  read(relPath: string, signature: string): ContractSpecifiers | undefined;
-  record(relPath: string, signature: string, refs: ContractSpecifiers): void;
 }
 
 /** tsc's own identity for a path: lower-cased where the filesystem ignores case. */
@@ -103,39 +130,39 @@ const rel = (root: string, abs: string): string =>
   relative(root, abs).split("\\").join("/");
 
 /**
- * Every repo source file's contract edges, as nodes of the buildinfo graph:
- * the specifiers its `.d.ts` names — from this run's emit (`emitted`, by
- * canonical repo path), else `store`, else by emitting that one file's
- * declaration now (recorded, so it is paid once per file API version) —
- * resolved from the file's source location the way the program resolves its
- * imports.
- *
- * A specifier that resolves to a dependency is dropped: dependencies are pinned
- * by the lockfile, which is in the lint engine, so every key moves with them
- * anyway. One that resolves to a repo file the program does not hold cannot
- * come out of a `.d.ts` tsc emitted for this program, so it is a bug here, and
- * throws. An unresolved specifier is an ambient module, declared by a
- * global-scope file every fingerprint already folds in.
+ * Resolves the specifiers of the contracts in one program to graph nodes, the
+ * way the program resolves imports: from each file's SOURCE location, with the
+ * program's options and one shared resolution cache — and each name, through
+ * the module's exports and aliases, to the files declaring it.
  */
-export function contractEdges(
+export interface ContractResolver {
+  /**
+   * The nodes `specs` names, for the contract of node `from`.
+   *
+   * A target that is a dependency is dropped: dependencies are pinned by the
+   * lockfile, which is in the engine, so every key moves with them anyway. A
+   * GLOBAL target is dropped too: its version is in every key already. One
+   * that resolves to a repo file the program does not hold cannot come out of
+   * a `.d.ts` tsc emitted for this program, so it is a bug here, and throws.
+   * An unresolved specifier is an ambient module, declared by a global file.
+   */
+  refs(from: number, specs: ContractSpecifiers): number[];
+}
+
+export function contractResolver(
   root: string,
   program: ts.Program,
   options: ts.CompilerOptions,
-  graph: Pick<BuildInfoGraph, "paths" | "shapes">,
-  emitted: ReadonlyMap<string, ContractSpecifiers>,
-  store: ContractRefsLookup,
-): { contracts: Map<number, Contract>; summary: string } {
-  const start = performance.now();
-  const { paths, shapes } = graph;
+  paths: readonly string[],
+  global: readonly boolean[],
+): ContractResolver {
   const index = new Map<string, number>();
   paths.forEach((p, i) => index.set(canonical(p), i));
-  const sources = new Map<string, ts.SourceFile>();
-  for (const sf of program.getSourceFiles()) {
-    sources.set(canonical(rel(root, sf.fileName)), sf);
-  }
+  const files = program.getSourceFiles();
+  const nodeOf = new Map<ts.SourceFile, number>();
+  files.forEach((sf, i) => nodeOf.set(sf, i));
+  const checker = program.getTypeChecker();
   const cache = ts.createModuleResolutionCache(root, canonical, options);
-  const counts = { files: 0, stored: 0, emitted: 0, alone: 0 };
-  const contracts = new Map<number, Contract>();
   const target = (
     abs: string,
     from: string,
@@ -149,71 +176,60 @@ export function contractEdges(
         `type-check: the contract of ${from} names "${spec}", which resolves to ${r} — not in the program`,
       );
     }
-    return i;
+    return global[i] ? undefined : i;
   };
-  paths.forEach((p, i) => {
-    if (!needsContract(p)) return;
-    counts.files++;
-    const key = canonical(p);
-    const shape = shapes[i]!;
-    const sf = sources.get(key);
-    if (sf === undefined) {
-      throw new Error(
-        `type-check: ${p} is in the buildinfo but not in the program it was written for`,
-      );
-    }
-    let specs = emitted.get(key);
-    if (specs !== undefined) {
-      counts.emitted++;
-      if (store.read(key, shape) === undefined) store.record(key, shape, specs);
-    } else {
-      specs = store.read(key, shape);
-      if (specs !== undefined) {
-        counts.stored++;
-      } else {
-        let text: string | undefined;
-        program.emit(
-          sf,
-          (fileName, data) => {
-            if (/\.d\.[mc]?ts$/.test(fileName)) text = data;
-          },
-          undefined,
-          /*emitOnlyDtsFiles*/ true,
-        );
-        if (text === undefined) {
-          throw new Error(
-            `type-check: emitting ${p}'s declaration produced no .d.ts`,
-          );
+  // Per module node: export name → the repo nodes declaring it. A name the
+  // module does not export (it cannot come out of tsc's emit, but an augmented
+  // or merged module can spell one) is the module itself, the wide side.
+  const exportsOf = new Map<number, Map<string, number[]>>();
+  const declaring = (module: number, name: string): number[] => {
+    let table = exportsOf.get(module);
+    if (table === undefined) {
+      table = new Map();
+      exportsOf.set(module, table);
+      const symbol = checker.getSymbolAtLocation(files[module]!);
+      for (const e of symbol ? checker.getExportsOfModule(symbol) : []) {
+        const resolved =
+          e.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(e) : e;
+        const nodes = new Set<number>();
+        for (const d of resolved.declarations ?? []) {
+          const n = nodeOf.get(d.getSourceFile());
+          if (n !== undefined && isRepoPath(paths[n]!) && !global[n]) {
+            nodes.add(n);
+          }
         }
-        specs = contractSpecifiers(text);
-        store.record(key, shape, specs);
-        counts.alone++;
+        table.set(e.name, [...nodes]);
       }
     }
-    const refs = new Set<number>();
-    for (const spec of specs.modules) {
-      const resolved = ts.resolveModuleName(
-        spec,
-        sf.fileName,
-        options,
-        ts.sys,
-        cache,
-      ).resolvedModule;
-      if (resolved === undefined) continue;
-      const t = target(resolved.resolvedFileName, p, spec);
-      if (t !== undefined) refs.add(t);
-    }
-    for (const ref of specs.paths) {
-      const t = target(resolve(dirname(sf.fileName), ref), p, ref);
-      if (t !== undefined) refs.add(t);
-    }
-    contracts.set(i, { refs: [...refs], augments: specs.augments });
-  });
-  const ms = Math.round(performance.now() - start);
+    return table.get(name) ?? [module];
+  };
   return {
-    contracts,
-    summary:
-      `contracts of ${counts.files} files: ${counts.stored} stored, ` +
-      `${counts.emitted} from this run's emit, ${counts.alone} emitted alone, ${ms}ms`,
+    refs(from, specs) {
+      const sf = files[from]!;
+      const p = paths[from]!;
+      const out = new Set<number>();
+      for (const [spec, names] of Object.entries(specs.modules)) {
+        const resolved = ts.resolveModuleName(
+          spec,
+          sf.fileName,
+          options,
+          ts.sys,
+          cache,
+        ).resolvedModule;
+        if (resolved === undefined) continue;
+        const t = target(resolved.resolvedFileName, p, spec);
+        if (t === undefined) continue;
+        for (const name of names) {
+          if (name === WHOLE_MODULE) out.add(t);
+          else for (const d of declaring(t, name)) out.add(d);
+        }
+      }
+      for (const ref of specs.paths) {
+        const t = target(resolve(dirname(sf.fileName), ref), p, ref);
+        if (t !== undefined) out.add(t);
+      }
+      out.delete(from);
+      return [...out];
+    },
   };
 }

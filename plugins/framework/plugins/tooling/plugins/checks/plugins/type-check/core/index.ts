@@ -9,6 +9,8 @@ export type {
   RawLintMessage,
   TypeCheckWorkerJob,
   TypeCheckWorkerResult,
+  TscDivergence,
+  TscMode,
   TypedDecision,
   TypedPartFp,
   TypedPartOutcome,

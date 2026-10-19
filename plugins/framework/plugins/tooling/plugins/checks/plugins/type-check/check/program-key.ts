@@ -15,14 +15,14 @@
 // invoked at all, so the key IS the verdict — there is
 // no compiler behind it to catch a key that was too loose. That is why the
 // envelope below is spelled out in full, and why anything unclear (no
-// buildinfo, a shape we do not recognise) yields NO key and a cold run rather
+// manifest, a shape we do not recognise) yields NO key and a cold run rather
 // than a guess. Design and measurements:
 // research/2026-09-08-global-type-check-per-target-program-skip.md.
 //
 // Soundness, in one paragraph. A program is a function of (roots, file
-// contents, compiler options). `L_t` — the `fileNames` tsc itself wrote into
-// the program's `.tsbuildinfo` — is the exact set of files it loaded on
-// some earlier tree. If every file in `L_t` has identical content now and the
+// contents, compiler options). `L_t` — the program manifest the worker wrote
+// (`../shared/program-manifest.ts`: every file its program loaded) — is the
+// exact set of files it loaded on some earlier tree. If every file in `L_t` has identical content now and the
 // roots are identical, module resolution runs the same and yields the same
 // program, hence the same verdict. Roots are covered by `R_t`; options by the
 // tsconfig contents; `node_modules` contents are hashed directly rather than
@@ -48,13 +48,13 @@ import { fileURLToPath } from "url";
 import {
   hashFileBytes,
   hashFileCached,
-  readProgramFileList,
   type ContentHashMemo,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { programPassDir } from "../data-dirs";
 import { findFiles, type TreeListing } from "./fingerprint";
 import { openPassSet, type PassSetBounds } from "../shared/pass-set";
+import { readProgramManifest } from "../shared/program-manifest";
 
 // Entries are per (program name, program key) — one or two per run, against
 // the lint result store's thousands — so the count bound is a formality and the
@@ -153,12 +153,9 @@ export function selfSourceHash(): string {
 export interface ProgramKeyContext {
   root: string;
   /**
-   * Memoised `abs -> content hash`, shared with whoever opened the context.
-   *
-   * The warm-base selection hashes most of these same files moments earlier to
-   * score the pool, so the run passes ONE memo through both steps: the reads
-   * are paid once, and both steps necessarily answered from the same reading
-   * of the tree.
+   * Memoised `abs -> content hash`, shared with whoever opened the context:
+   * the key before the worker and the one recomputed after it read each file
+   * once, from the same reading of the tree.
    */
   contentHash: ContentHashMemo;
   sharedPrefix: string;
@@ -221,17 +218,17 @@ export type ProgramKeyResult =
  * The content key of a program.
  *
  * `roots` is the tsconfig's own include-expansion (`R_t`), which pins WHICH
- * program this is; the buildinfo's file list is what that program actually
+ * program this is; the manifest's file list is what that program actually
  * loaded (`L_t`), which pins what it saw.
  */
 export function programKey(
   ctx: ProgramKeyContext,
-  program: { tsconfigPath: string; buildInfoPath: string },
+  program: { tsconfigPath: string; manifestPath: string },
   roots: string[],
 ): ProgramKeyResult {
-  const listed = readProgramFileList(program.buildInfoPath);
+  const listed = readProgramManifest(program.manifestPath, ctx.root);
   if (listed.kind === "absent") {
-    return { kind: "none", why: "no buildinfo yet" };
+    return { kind: "none", why: "no program manifest yet" };
   }
   if (listed.kind === "unreadable") return { kind: "none", why: listed.why };
   const rel = (abs: string): string =>

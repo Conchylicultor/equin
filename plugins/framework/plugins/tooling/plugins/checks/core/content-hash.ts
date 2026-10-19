@@ -1,16 +1,12 @@
 // One sha256-of-a-file's-bytes, and the memo that keeps it to one read.
 //
-// Two very different consumers hash the SAME files in the same run: the
-// warm-base scorer compares each pool candidate's recorded `version` against
-// the tree on disk, and the per-target program key hashes every file its
-// program loaded. Both walk programs that overlap almost completely — seven
-// tsc targets over ~7,000 files, most of them shared — so the memo is not an
-// optimisation detail, it is what makes "hash the tree" affordable at all.
+// The program key hashes every file its program loaded, twice per run: once to
+// decide whether the program changed, and again after the worker, for the
+// program it built. The memo keeps that to one read per file.
 //
-// It is also a CONSISTENCY guarantee. A memo passed from the warm-base step
-// into the program keys means both answered from the same reading of the tree,
-// so a file edited mid-run cannot make the scorer and the key disagree about
-// what the program contained.
+// It is also a CONSISTENCY guarantee: both keys answered from the same reading
+// of the tree, so a file edited mid-run cannot make them disagree about what
+// the program contained.
 
 import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";

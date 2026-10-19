@@ -13,8 +13,8 @@
  *
  * The worker is not spawned: its outcome is written here, shaped exactly as
  * the protocol says. A real git fixture, because the listing is read from git;
- * a hand-written buildinfo, because the program key enumerates the program
- * from one.
+ * a hand-written program manifest, because the program key enumerates the
+ * program from one.
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
@@ -85,12 +85,8 @@ beforeAll(async () => {
   for (const rel of LINT_DATA_FILES) write(rel, "@utility fixture {}\n");
   // What the program loaded, as the program key reads it: names only.
   write(
-    ".cache/tsbuildinfo/repo.tsbuildinfo",
-    JSON.stringify({
-      fileNames: ["../../src/a.ts", "../../src/b.ts"],
-      fileInfos: ["va", "vb"],
-      version: "6.0.3",
-    }),
+    ".cache/type-check/repo.program.json",
+    JSON.stringify({ files: ["src/a.ts", "src/b.ts"] }),
   );
   await git("init", "-q");
   await git("config", "core.excludesFile", "/dev/null");
@@ -165,7 +161,7 @@ test(
     const outcome: ProgramOutcome = {
       tscClean: true,
       lint,
-      typeFps: { kind: "table", fps: TYPE_FPS, contracts: "contracts" },
+      typeFps: { kind: "table", fps: TYPE_FPS },
     };
     const done = await first.finalize(outcome);
     expect(done.lintViolations).toBe("src/b.ts:1:1  x/syntactic  stored");
@@ -186,7 +182,7 @@ test(
     const again = await second.finalize({
       tscClean: true,
       lint: [],
-      typeFps: { kind: "table", fps: TYPE_FPS, contracts: "contracts" },
+      typeFps: { kind: "table", fps: TYPE_FPS },
     });
     expect(again.lintViolations).toBe("src/b.ts:1:1  x/syntactic  stored");
     expect(again.lintLine).toContain("type-check: lint 0/2 files");
@@ -243,7 +239,7 @@ test(
           typed: ranAll(jobB, "src/b.ts"),
         },
       ],
-      typeFps: { kind: "table", fps: TYPE_FPS, contracts: "contracts" },
+      typeFps: { kind: "table", fps: TYPE_FPS },
     });
     expect(done.lintViolations).toBe("");
     expect(done.lintLine).toContain(

@@ -18,11 +18,8 @@ import { expect, test } from "bun:test";
 import type { ResolvedExemption } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import type { RawLintMessage } from "../core";
 import { hasLintDirective } from "./fingerprint";
-import {
-  lockfileLintDigest,
-  typedGroupFps,
-  type LintGroups,
-} from "./lint-groups";
+import { lockfileLintDigest } from "../shared/lockfile";
+import { typedGroupFps, type LintGroups } from "./lint-groups";
 import { mergeLintEntry, sameEntry } from "./lint-results";
 import { lintViolationLines } from "./lint-verdict";
 

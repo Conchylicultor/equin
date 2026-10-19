@@ -3324,6 +3324,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-type-check",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/plugins/backstop": {
+      "name": "@singularity/plugin-framework-tooling-checks-type-check-backstop",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/codegen": {
       "name": "@singularity/plugin-framework-tooling-codegen",
       "version": "0.0.1",
@@ -8433,6 +8437,8 @@
     "@singularity/plugin-framework-tooling-checks-tsconfig-alias-single-owner": ["@singularity/plugin-framework-tooling-checks-tsconfig-alias-single-owner@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/tsconfig-alias-single-owner"],
 
     "@singularity/plugin-framework-tooling-checks-type-check": ["@singularity/plugin-framework-tooling-checks-type-check@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/type-check"],
+
+    "@singularity/plugin-framework-tooling-checks-type-check-backstop": ["@singularity/plugin-framework-tooling-checks-type-check-backstop@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/plugins/backstop"],
 
     "@singularity/plugin-framework-tooling-codegen": ["@singularity/plugin-framework-tooling-codegen@workspace:plugins/framework/plugins/tooling/plugins/codegen"],
 

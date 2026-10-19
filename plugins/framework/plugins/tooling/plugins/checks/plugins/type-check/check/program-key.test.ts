@@ -11,7 +11,7 @@
  *   4. a tsconfig's own contents changed (different compiler options);
  *   5. a NEW `.ts` appeared that no listed file mentions — the resolution
  *      shadowing hazard, which no content hash of an existing file can see;
- *   6. no buildinfo, or one whose shape we do not recognise → NO key at all,
+ *   6. no program manifest, or one whose shape we do not recognise → NO key at all,
  *      never a key over an empty program.
  */
 
@@ -19,9 +19,9 @@ import { test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
-import { readProgramFileList } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { readTreeListing } from "./fingerprint";
 import { openProgramKeyContext, programKey } from "./program-key";
+import { readProgramManifest } from "../shared/program-manifest";
 
 let root = "";
 
@@ -31,22 +31,20 @@ function write(rel: string, content: string): void {
   writeFileSync(abs, content);
 }
 
-/** A buildinfo listing `fileNames`, written where the check keeps them. */
-function writeBuildInfo(rels: string[]): string {
-  const rel = ".cache/tsbuildinfo/web.tsbuildinfo";
-  // Paths in a buildinfo are relative to the buildinfo's OWN directory, which
-  // here is two levels below the root.
-  write(rel, JSON.stringify({ fileNames: rels.map((r) => `../../${r}`) }));
+/** A program manifest listing `rels`, written where the check keeps them. */
+function writeManifest(rels: string[]): string {
+  const rel = ".cache/type-check/repo.program.json";
+  // Manifest paths are relative to the repo root.
+  write(rel, JSON.stringify({ files: rels }));
   return join(root, rel);
 }
 
 const PROGRAM = {
-  name: "web",
   get tsconfigPath() {
     return join(root, "tsconfig.json");
   },
-  get buildInfoPath() {
-    return join(root, ".cache/tsbuildinfo/web.tsbuildinfo");
+  get manifestPath() {
+    return join(root, ".cache/type-check/repo.program.json");
   },
 };
 
@@ -90,7 +88,7 @@ beforeEach(async () => {
   write("node_modules/dep/index.d.ts", "export declare const d: number;\n");
   write("tsconfig.json", JSON.stringify({ compilerOptions: { strict: true } }));
   write("package.json", JSON.stringify({ name: "fixture" }));
-  writeBuildInfo(["a.ts", "b.ts", "node_modules/dep/index.d.ts"]);
+  writeManifest(["a.ts", "b.ts", "node_modules/dep/index.d.ts"]);
   // A real repository, because the key's file listing is read out of git — the
   // one enumeration the check cache key also hashes. `core.excludesFile` is
   // pointed at nothing so the host user's own global ignores cannot decide what
@@ -181,48 +179,44 @@ test("a .ts in a GITIGNORED directory does not change the key", async () => {
   );
 });
 
-test("no buildinfo means no key — a cold run, never a skip", async () => {
+test("no manifest means no key — a cold run, never a skip", async () => {
   rmSync(join(root, ".cache"), { recursive: true, force: true });
   expect(await keyNow()).toBeNull();
 });
 
-test("a buildinfo with no fileNames array means no key", async () => {
-  write(".cache/tsbuildinfo/web.tsbuildinfo", JSON.stringify({ version: "5" }));
+test("a manifest with no files array means no key", async () => {
+  write(
+    ".cache/type-check/repo.program.json",
+    JSON.stringify({ version: "5" }),
+  );
   expect(await keyNow()).toBeNull();
 });
 
-test("a torn buildinfo means no key", async () => {
-  write(".cache/tsbuildinfo/web.tsbuildinfo", '{"fileNames": ["../../a.ts"');
+test("a torn manifest means no key", async () => {
+  write(".cache/type-check/repo.program.json", '{"files": ["a.ts"');
   expect(await keyNow()).toBeNull();
 });
 
-test("readProgramFileList resolves against the buildinfo's own directory", () => {
-  const path = writeBuildInfo(["a.ts"]);
-  expect(readProgramFileList(path)).toEqual({
+test("readProgramManifest resolves paths against the repo root", () => {
+  const path = writeManifest(["a.ts", "node_modules/dep/index.d.ts"]);
+  expect(readProgramManifest(path, root)).toEqual({
     kind: "files",
-    files: [join(root, "a.ts")],
-    versions: [undefined],
+    files: [join(root, "a.ts"), join(root, "node_modules/dep/index.d.ts")],
   });
 });
 
-test("readProgramFileList tells an ABSENT buildinfo from an unreadable one", () => {
+test("readProgramManifest tells an ABSENT manifest from an unreadable one", () => {
   // The two are different facts: absent is the ordinary cold case, unreadable
   // is worth naming in the log. Collapsing them to one nullish value is exactly
   // what the discriminated result exists to prevent.
   rmSync(join(root, ".cache"), { recursive: true, force: true });
-  expect(readProgramFileList(PROGRAM.buildInfoPath).kind).toBe("absent");
-  write(".cache/tsbuildinfo/web.tsbuildinfo", "{not json");
-  expect(readProgramFileList(PROGRAM.buildInfoPath).kind).toBe("unreadable");
-});
-
-test("readProgramFileList reads the nested `program.fileNames` shape too", () => {
-  write(
-    ".cache/tsbuildinfo/web.tsbuildinfo",
-    JSON.stringify({ program: { fileNames: ["../../a.ts"] } }),
+  expect(readProgramManifest(PROGRAM.manifestPath, root).kind).toBe("absent");
+  write(".cache/type-check/repo.program.json", "{not json");
+  expect(readProgramManifest(PROGRAM.manifestPath, root).kind).toBe(
+    "unreadable",
   );
-  expect(readProgramFileList(PROGRAM.buildInfoPath)).toEqual({
-    kind: "files",
-    files: [join(root, "a.ts")],
-    versions: [undefined],
-  });
+  write(".cache/type-check/repo.program.json", JSON.stringify({ files: 3 }));
+  expect(readProgramManifest(PROGRAM.manifestPath, root).kind).toBe(
+    "unreadable",
+  );
 });

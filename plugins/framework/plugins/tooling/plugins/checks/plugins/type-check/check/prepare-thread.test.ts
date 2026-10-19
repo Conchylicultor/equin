@@ -63,7 +63,7 @@ const priorDataRoot = process.env.SINGULARITY_DIR;
 
 beforeAll(async () => {
   // The program name is a fixed literal now (`repo`), not a per-suite one, so
-  // the host-global stores this preparation touches — the warm-base pool, the
+  // the host-global stores this preparation touches — the
   // lint result store, the program-pass set, the signature tables — are the
   // REAL ones unless pointed
   // elsewhere. Left alone, the suite would score (and copy) every pooled
@@ -151,10 +151,7 @@ test(
         run: true,
         lintFiles: [job("src/a.ts"), job("src/b.ts")],
         skipped: false,
-        unkeyed: "no buildinfo yet",
-        // The data root is a fresh temp dir, so the pool partition really is
-        // empty and the cold branch is the only one reachable.
-        warmBase: `type-check: warm base ${PROGRAM}: cold, pool empty`,
+        unkeyed: "no program manifest yet",
         keysMs: 0,
       });
     } finally {

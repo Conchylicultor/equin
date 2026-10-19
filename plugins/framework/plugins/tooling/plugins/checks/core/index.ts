@@ -1,14 +1,8 @@
 export { checkCollectedDir } from "./collected-dir";
 export { runChecks, listAllChecks, scopeOf, requestedJobs } from "./runner";
 export type { RunChecksOptions } from "./runner";
-export { repoProgram, tsBuildInfoPath } from "./discover";
+export { repoProgram, programManifestPath } from "./discover";
 export type { TscProgram } from "./discover";
-export { materializeWarmBase, publishWarmBase } from "./warm-base";
-export type { WarmBaseOutcome, WarmBasePublish } from "./warm-base";
-export { realGitFacts } from "./warm-base-git";
-export type { WarmBaseGitFacts, GitFactResult } from "./warm-base-git";
-export { readProgramFileList } from "./buildinfo";
-export type { ProgramFileList } from "./buildinfo";
 export { hashFileBytes, hashFileCached } from "./content-hash";
 export type { ContentHashMemo } from "./content-hash";
 export { listRepoFiles } from "./repo-files";

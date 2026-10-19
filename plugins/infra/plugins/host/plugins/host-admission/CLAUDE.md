@@ -316,6 +316,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `database/admin`
     - `debug/profiling/boot-bench`
     - `framework/tooling/checks/type-check`
+    - `framework/tooling/checks/type-check/backstop`
     - `infra/host/host-read-pool`
     - `infra/jobs/supervised-job`
     - `infra/safe-fetch/browser-fetch`

@@ -94,35 +94,50 @@ export interface LintFileResult {
 }
 
 /**
- * The program's type fingerprints as the worker read them off the buildinfo it
- * wrote, by repo-relative path — or why it could not.
+ * The program's type fingerprints, by repo-relative path, as the keyed check
+ * computed them — or why there are none.
  */
 export type TypeFpTable =
-  | {
-      kind: "table";
-      fps: Record<string, string>;
-      /**
-       * Where the contract edges came from, for the transcript: how many source
-       * files, how many the store answered, how many the program's own emit,
-       * how many had to be emitted alone (a store miss), and what it cost.
-       */
-      contracts: string;
-    }
+  | { kind: "table"; fps: Record<string, string> }
   | { kind: "unavailable"; why: string };
+
+/**
+ * How the worker type-checks (`../shared/keyed-check.ts`):
+ *
+ * - `keyed` — re-check only the files whose key moved; everything else comes
+ *   from the host-wide checked-results store. The verdict.
+ * - `dual` — the keyed walk, then a FULL check of a fresh program, compared
+ *   file by file. The verdict is the full check's, and every divergence is
+ *   reported (and the full check's results overwrite the store). What
+ *   validated the keyed mode, and what the backstop on main runs.
+ */
+export type TscMode = "keyed" | "dual";
+
+/** One file whose keyed result differed from the full check's (dual only). */
+export interface TscDivergence {
+  file: string;
+  kind: "diagnostics" | "signature" | "missing";
+  keyed: string;
+  full: string;
+}
 
 /** The job file handed to the worker as `argv[2]` (see `../shared/worker.ts`). */
 export interface TypeCheckWorkerJob {
   root: string;
   name: string;
   tsconfigPath: string;
-  buildInfoPath: string;
+  /**
+   * Where the worker writes the program manifest — the files its program
+   * loaded (`../shared/program-manifest.ts`), which the program key hashes.
+   */
+  manifestPath: string;
+  tscMode: TscMode;
   /** The files to lint under this program — only their stale parts. */
   lintFiles: LintFileJob[];
   /**
-   * Whether to compute the program's type fingerprints (and so every source
-   * file's contract edges). The check always does — it records them as the
-   * signature table; the build's type-check-only fast path never reads them.
-   * Implied by a deferred typed part, which cannot be decided without them.
+   * Whether to return the program's type fingerprints. The check always does
+   * — it records them as the signature table; the build's type-check-only
+   * fast path never reads them. (The keyed check computes them either way.)
    */
   typeFps: boolean;
 }
@@ -140,10 +155,22 @@ export interface TypeCheckWorkerResult {
    */
   typeFps: TypeFpTable;
   /**
-   * CPU seconds the worker spent in each phase: building and checking the
-   * program (diagnostics and emit), computing the type fingerprints (contract
-   * edges included), and linting. What tells a run whose cost is tsc's
-   * re-check from one whose cost is lint.
+   * Transcript lines from the type check: what the keyed walk reused and
+   * checked, and in dual mode what the full check found.
    */
-  phaseCpuSeconds: { tsc: number; typeFps: number; lint: number };
+  tscLines: string[];
+  /** Dual mode only: every file whose keyed result differed from the full check's. */
+  divergences: TscDivergence[];
+  /**
+   * CPU seconds the worker spent in each phase: building the program (parse
+   * and bind), the keyed check (the graph, the keys, and checking and emitting
+   * the files whose key moved), the full check a dual run adds, and linting.
+   * What tells a run whose cost is tsc's re-check from one whose cost is lint.
+   */
+  phaseCpuSeconds: {
+    program: number;
+    check: number;
+    full: number;
+    lint: number;
+  };
 }

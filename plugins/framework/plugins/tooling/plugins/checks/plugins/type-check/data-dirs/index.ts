@@ -89,23 +89,37 @@ export const typeFpTablesDir = defineDataDir({
 });
 
 /**
- * The contract-refs store: per (file, signature), the module specifiers the
- * file's emitted `.d.ts` names — the edges of the declaration graph the type
- * fingerprint walks. tsc emits only the files it re-checked; this is what lets
- * every other file's contract edges be known without emitting it again.
+ * The checked-results store: per unit key — a hash of a file's text and of
+ * every declaration its check can see — that file's tsc diagnostics, its
+ * signature, and what its `.d.ts` names. What lets a run re-check only the
+ * files whose key moved.
  *
- * Content-addressed (a signature is the hash of the `.d.ts` text), host-global,
- * and its own store: one small entry per file API version, aged independently
- * of the lint results.
+ * Content-addressed, host-global: a fresh worktree reuses what any worktree
+ * checked for the same key.
  *
- * @see plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/shared/contract-refs-store.ts
+ * @see plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/shared/keyed-check.ts
  */
-export const contractRefsDir = defineDataDir({
+export const fileResultsDir = defineDataDir({
+  kind: "cache",
+  name: "type-check-file-results",
+  owner: "framework/tooling/checks/type-check",
+  description:
+    "Per unit key (a file's text and every declaration its check sees) its tsc diagnostics, signature and contract specifiers, host-global so only files whose key moved are re-checked",
+  reclaim: { kind: "safe" },
+});
+
+/**
+ * RETIRED: the contract-refs store, superseded by `fileResultsDir`, which
+ * holds each checked file's specifiers with its other results. Declared only
+ * so the data-dir audit reads the leftover directory as safe to delete. Drop
+ * the declaration once no host has it.
+ */
+export const retiredContractRefsDir = defineDataDir({
   kind: "cache",
   name: "type-check-contract-refs",
   owner: "framework/tooling/checks/type-check",
   description:
-    "Per (file, signature) module specifiers its emitted .d.ts names, host-global so the type fingerprint knows every file's contract edges without re-emitting it",
+    "RETIRED, no longer written: per (file, signature) contract specifiers, replaced by type-check-file-results — safe to delete",
   reclaim: { kind: "safe" },
 });
 
@@ -114,5 +128,6 @@ export default [
   retiredLintResultsDir,
   programPassDir,
   typeFpTablesDir,
-  contractRefsDir,
+  fileResultsDir,
+  retiredContractRefsDir,
 ];

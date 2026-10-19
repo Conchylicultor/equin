@@ -15,13 +15,19 @@ export const checkCacheDir = defineDataDir({
   reclaim: { kind: "safe" },
 });
 
-/** @see plugins/framework/plugins/tooling/plugins/checks/core/warm-base.ts */
-export const tsBuildInfoPoolDir = defineDataDir({
+/**
+ * RETIRED: the `.tsbuildinfo` warm-base pool. type-check no longer builds
+ * incrementally from a buildinfo — its keyed check reuses per-file results
+ * from a content-addressed store (`type-check-file-results`), which needs no
+ * base to pick. Declared only so the data-dir audit reads the leftover
+ * directory as safe to delete. Drop the declaration once no host has it.
+ */
+export const retiredTsBuildInfoPoolDir = defineDataDir({
   kind: "cache",
   name: "tsbuildinfo",
   owner: "framework/tooling/checks",
   description:
-    "Recency-selected pool of published `.tsbuildinfo` warm bases, partitioned by (typescript version, tsconfig target)",
+    "RETIRED, no longer written: the `.tsbuildinfo` warm-base pool, replaced by type-check's checked-results store — safe to delete",
   reclaim: { kind: "safe" },
 });
 
@@ -48,4 +54,4 @@ export const checkProgressLogDir = defineDataDir({
   reclaim: { kind: "safe" },
 });
 
-export default [checkCacheDir, tsBuildInfoPoolDir, checkProgressLogDir];
+export default [checkCacheDir, retiredTsBuildInfoPoolDir, checkProgressLogDir];

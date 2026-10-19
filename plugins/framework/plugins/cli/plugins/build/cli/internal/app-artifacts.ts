@@ -11,12 +11,8 @@ import {
   type CodegenStep,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
-  materializeWarmBase,
-  publishWarmBase,
-  realGitFacts,
+  programManifestPath,
   repoProgram,
-  tsBuildInfoPath,
-  type ContentHashMemo,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { spawnTypeCheckWorker } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/server";
 import {
@@ -685,15 +681,6 @@ export async function fastValidationJobs(opts: {
 
   const program = repoProgram(root);
 
-  // The memo is the file-content hashes the warm-base scoring compares against a
-  // candidate base's recorded versions. The sha labels the entry this build
-  // publishes, and it names the tree the build answered for. Unavailable
-  // (detached, no git) means the entry publishes unlabelled, which only makes it
-  // unprotectable at prune time; it is never a failure of the build.
-  const hashMemo: ContentHashMemo = new Map();
-  const head = await realGitFacts.headSha(root);
-  const headSha = head.ok ? head.value : undefined;
-
   jobs.push(async (grant) => {
     const end = hooks.span(
       `tsc:${program.name}`,
@@ -701,19 +688,14 @@ export async function fastValidationJobs(opts: {
       `tsc ${program.name}`,
     );
     const start = performance.now();
-    const buildInfo = tsBuildInfoPath(root, program.name);
-    // Feed and read the same host-global warm-base pool the `type-check` check
-    // uses, so the fast path is not a second, divergent incremental lineage.
-    const warm = materializeWarmBase(root, program.name, hashMemo);
-    const lines: StepResult["lines"] = [{ text: warm.line, stream: "stdout" }];
+    const lines: StepResult["lines"] = [];
     // The SAME worker the `type-check` check runs — not a `tsc --noEmit` of
-    // our own. A buildinfo has exactly one producer, so the compiler options
-    // and the declaration emit that gives every file in it a real signature
-    // (the hash of its public shape) are written down in one place and the two
-    // producers cannot drift. That emit is the whole point: a `--noEmit` base
-    // stores a placeholder signature per file, so a body-only edit to a hub
-    // re-checks its entire importer closure — and publishing such a base into
-    // the shared pool inflicts that on whoever picks it up next.
+    // our own — so the compiler options, the declaration emit that gives every
+    // checked file a real signature (the hash of its public shape), and the
+    // keyed check that re-checks only the files whose key moved are written
+    // down in one place. It reads and writes the same host-wide
+    // checked-results store as the check, so this path and the check never
+    // re-check what the other already checked.
     //
     // Admitted exactly like the check's worker — the host-wide
     // `type-check-worker` slot in the grant's lane, then the measured grant
@@ -724,7 +706,8 @@ export async function fastValidationJobs(opts: {
       root,
       name: program.name,
       tsconfigPath: program.tsconfigPath,
-      buildInfoPath: buildInfo,
+      manifestPath: programManifestPath(root, program.name),
+      tscMode: "keyed",
       // Type-checking only: linting belongs to the check pass this path is
       // skipping, and an empty list is what the worker reads as "none".
       lintFiles: [],
@@ -736,20 +719,11 @@ export async function fastValidationJobs(opts: {
     for (const line of run.result.tscErrors.split("\n")) {
       if (line) lines.push({ text: line, stream: "stdout" });
     }
-    // A worker that CRASHED threw out of `spawnTypeCheckWorker` above and takes this step
-    // down with it, so reaching here means the program built: diagnostics or
-    // not, its state is a usable base. Published only when clean, matching the
-    // pool's other producer's caution about state it cannot vouch for.
+    // A worker that CRASHED threw out of `spawnTypeCheckWorker` above and
+    // takes this step down with it.
     const success = run.result.tscErrors === "";
-    if (success) {
-      const p = await publishWarmBase(root, program.name, headSha);
-      lines.push({
-        text: p.published
-          ? `type-check: warm base ${program.name}: published ${p.labelled ? "labelled" : "unlabelled"}, pool keeps ${p.kept} (${p.protectedOnMain} on main)`
-          : `type-check: warm base ${program.name}: nothing to publish (no local buildinfo)`,
-        stream: "stdout",
-      });
-    }
+    for (const text of run.result.tscLines)
+      lines.push({ text, stream: "stdout" });
     const rss = maxRssLine(`tsc ${program.name}`, run.maxRssBytes);
     if (rss) lines.push({ text: rss, stream: "stdout" });
     return {

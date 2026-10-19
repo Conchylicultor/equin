@@ -1,25 +1,21 @@
 /**
  * The type fingerprint (research/2026-10-17-global-lint-keyed-on-what-it-reads.md,
- * research/2026-10-18-global-typed-lint-key-stops-at-contracts.md):
+ * research/2026-10-18-global-typed-lint-key-stops-at-contracts.md,
+ * research/2026-10-18-global-tsc-recheck-follows-contracts.md):
  *   1. a body edit (version moves, signature does not) moves no fingerprint;
  *   2. a signature change moves the files that import it directly, and the
  *      files whose direct imports' CONTRACTS name it, transitively — and the
  *      chain stops at a contract that does not name it;
- *   3. a global-scope file's change, or an augmenting file's, moves every file;
+ *   3. a global file's change (its version — a body edit too), or the
+ *      engine's, moves every file;
  *   4. cycles are one component, and a long chain does not overflow the stack;
- *   5. a placeholder signature (string entry, none, `false`) falls back to the
- *      version;
- *   6. the ids are one-based, paths are relative to the buildinfo's directory,
- *      and only repo files come back;
- *   7. a shape it does not know is `unreadable`, never an empty table, and a
- *      source file with no contract edges throws;
- *   8. the same, end to end, on a buildinfo and declarations real tsc wrote —
- *      re-exports, inferred `import("…")` types three files deep, and a chain
- *      that stops;
- *   9. PURE: the same files give the same fingerprints whatever order the
- *      checker reached them in (an incremental run reaches them in a different
- *      order than a cold one) — the property every cached typed result rests
- *      on, held by the worker's `stableTypeOrdering`.
+ *   5. only repo files come back, and a dependency's change reaches them;
+ *   6. a source file with no contract edges throws;
+ *   7. the same, end to end, on declarations real tsc emits — re-exports,
+ *      inferred `import("…")` types three files deep, and a chain that stops;
+ *   8. PURE: the same files give the same fingerprints whatever order the
+ *      checker reached them in — the property every cached result rests on,
+ *      held by the worker's `stableTypeOrdering`.
  */
 
 import { afterAll, expect, test } from "bun:test";
@@ -27,28 +23,25 @@ import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
 import ts from "typescript";
-import {
-  contractEdges,
-  type ContractRefsLookup,
-  type ContractSpecifiers,
-} from "./contract-refs";
 import { signatureEmitOptions } from "./emit-options";
 import {
+  keyedCheck,
+  type FileResultsLookup,
+  type UnitResults,
+} from "./keyed-check";
+import {
   computeTypeFingerprints,
-  readBuildInfoGraph,
   typedResultKey,
   type Contract,
+  type ProgramGraph,
 } from "./type-fingerprint";
-
-const ROOT = "/repo";
-const DIR = "/repo/.cache/tsbuildinfo";
 
 interface FixtureFile {
   /** Repo-relative path. */
   path: string;
   version: string;
-  /** Omitted: a placeholder (tsc writes a bare string entry). */
-  signature?: string | false;
+  /** A source file's signature (a declaration input's shape is its version). */
+  signature?: string;
   global?: boolean;
   /** Repo-relative paths this file references. */
   refs?: string[];
@@ -57,48 +50,30 @@ interface FixtureFile {
    * of `refs`, the widest a contract can be.
    */
   contract?: string[];
-  augments?: boolean;
 }
 
-/** A buildinfo in tsc's incremental layout, one-based ids, paths from DIR. */
-function buildInfo(files: FixtureFile[]): string {
-  const id = new Map(files.map((f, i) => [f.path, i + 1] as const));
-  const fileIdsList: number[][] = [];
-  const referencedMap: [number, number][] = [];
-  for (const f of files) {
-    if (!f.refs?.length) continue;
-    fileIdsList.push(f.refs.map((r) => id.get(r)!).sort((a, b) => a - b));
-    referencedMap.push([id.get(f.path)!, fileIdsList.length]);
-  }
-  return JSON.stringify({
-    fileNames: files.map((f) => `../../${f.path}`),
-    fileInfos: files.map((f) =>
-      f.signature === undefined && !f.global
-        ? f.version
-        : {
-            version: f.version,
-            ...(f.signature !== undefined ? { signature: f.signature } : {}),
-            ...(f.global ? { affectsGlobalScope: true } : {}),
-          },
-    ),
-    ...(referencedMap.length ? { fileIdsList, referencedMap } : {}),
-    version: "6.0.3",
-  });
-}
+const isDeclInput = (p: string): boolean =>
+  p.endsWith(".d.ts") || p.startsWith("node_modules/");
 
-function fps(files: FixtureFile[]): Map<string, string> {
-  const r = readBuildInfoGraph(buildInfo(files), DIR, ROOT);
-  if (r.kind !== "graph") throw new Error(r.why);
+function fps(files: FixtureFile[], engine = "engine"): Map<string, string> {
   const id = new Map(files.map((f, i) => [f.path, i] as const));
+  const graph: ProgramGraph = {
+    paths: files.map((f) => f.path),
+    versions: files.map((f) => f.version),
+    global: files.map((f) => f.global === true),
+    succ: files.map((f) => (f.refs ?? []).map((r) => id.get(r)!)),
+  };
   const contracts = new Map<number, Contract>();
   files.forEach((f, i) => {
-    if (f.path.endsWith(".d.ts") || f.path.startsWith("node_modules/")) return;
+    if (isDeclInput(f.path)) return;
     contracts.set(i, {
       refs: (f.contract ?? f.refs ?? []).map((p) => id.get(p)!),
-      augments: f.augments === true,
     });
   });
-  return computeTypeFingerprints(r.graph, contracts);
+  const shapes = files.map((f) =>
+    isDeclInput(f.path) ? f.version : (f.signature ?? `sig-of-${f.version}`),
+  );
+  return computeTypeFingerprints(graph, shapes, contracts, engine);
 }
 
 /** The paths whose fingerprint differs between two tables. */
@@ -161,18 +136,33 @@ test("a contract chain is followed to its end, not one hop", () => {
   ).toEqual(["d.ts", "e.ts", "f.ts"]);
 });
 
-test("a global-scope file's change moves every file", () => {
+test("a global file's change moves every file", () => {
   expect(
     moved(fps(BASE), fps(edit(BASE, "g.d.ts", { version: "vg2" }))),
   ).toEqual(["a.ts", "b.ts", "c.ts", "d.ts", "g.d.ts"]);
 });
 
-test("a module augmentation counts as global scope", () => {
-  // d augments a module nobody reaches through d: its change still moves all.
-  const augmented = edit(BASE, "d.ts", { augments: true });
+test("a global source file counts by its version: a body edit moves every file", () => {
+  // d augments a module nobody reaches through d (global): even an edit that
+  // leaves its signature alone moves all, because the global hash is needed
+  // before any file's signature is known.
+  const augmented = edit(BASE, "d.ts", { global: true });
   expect(
-    moved(fps(augmented), fps(edit(augmented, "d.ts", { signature: "sd2" }))),
+    moved(
+      fps(augmented),
+      fps(edit(augmented, "d.ts", { version: "vd2", signature: "sd" })),
+    ),
   ).toEqual(["a.ts", "b.ts", "c.ts", "d.ts", "g.d.ts"]);
+});
+
+test("the engine moves every file", () => {
+  expect(moved(fps(BASE), fps(BASE, "engine2"))).toEqual([
+    "a.ts",
+    "b.ts",
+    "c.ts",
+    "d.ts",
+    "g.d.ts",
+  ]);
 });
 
 test("a cycle is one component, seen by whoever references it", () => {
@@ -200,21 +190,7 @@ test("a chain far deeper than the call stack is walked iteratively", () => {
   // Four builds of a 20k-file graph: seconds on a loaded host.
 }, 30_000);
 
-test("a placeholder signature falls back to the version", () => {
-  for (const placeholder of [undefined, false] as const) {
-    const files: FixtureFile[] = [
-      { path: "a.ts", version: "va", signature: placeholder },
-      { path: "b.ts", version: "vb", signature: "sb", refs: ["a.ts"] },
-    ];
-    expect(
-      moved(fps(files), fps(edit(files, "a.ts", { version: "va2" }))),
-    ).toEqual(["b.ts"]);
-  }
-});
-
-test("ids are one-based, paths resolve from the buildinfo's directory, dependencies are left out", () => {
-  // File 2 references file 1: an off-by-one would point it at nothing (or at
-  // itself) and the edit below would not move it.
+test("dependencies are left out, and their change reaches their importers", () => {
   const files: FixtureFile[] = [
     { path: "node_modules/dep/index.d.ts", version: "v1", signature: "s1" },
     {
@@ -227,34 +203,19 @@ test("ids are one-based, paths resolve from the buildinfo's directory, dependenc
   const before = fps(files);
   expect([...before.keys()]).toEqual(["src/x/core/a.ts"]);
   const after = fps(
-    edit(files, "node_modules/dep/index.d.ts", { signature: "s1'" }),
+    edit(files, "node_modules/dep/index.d.ts", { version: "v1'" }),
   );
   expect(moved(before, after)).toEqual(["src/x/core/a.ts"]);
 });
 
-test("a shape it does not know is unreadable, never an empty table", () => {
-  const ok = JSON.parse(buildInfo(BASE)) as Record<string, unknown>;
-  const cases: Record<string, unknown>[] = [
-    { ...ok, fileNames: undefined },
-    { ...ok, fileInfos: (ok.fileInfos as unknown[]).slice(1) },
-    { ...ok, fileInfos: [42, ...(ok.fileInfos as unknown[]).slice(1)] },
-    { ...ok, referencedMap: [[0, 1]] },
-    { ...ok, referencedMap: [[1, 99]] },
-    { ...ok, fileIdsList: [[0]] },
-    { ...ok, referencedMap: undefined },
-  ];
-  for (const doc of cases) {
-    expect(readBuildInfoGraph(JSON.stringify(doc), DIR, ROOT).kind).toBe(
-      "unreadable",
-    );
-  }
-  expect(readBuildInfoGraph("{", DIR, ROOT).kind).toBe("unreadable");
-});
-
 test("a source file with no contract edges is refused", () => {
-  const r = readBuildInfoGraph(buildInfo(BASE), DIR, ROOT);
-  if (r.kind !== "graph") throw new Error(r.why);
-  expect(() => computeTypeFingerprints(r.graph, new Map())).toThrow(
+  const graph: ProgramGraph = {
+    paths: ["a.ts"],
+    versions: ["v"],
+    global: [false],
+    succ: [[]],
+  };
+  expect(() => computeTypeFingerprints(graph, ["s"], new Map(), "e")).toThrow(
     "no contract edges",
   );
 });
@@ -266,44 +227,36 @@ test("the typed result key depends on both the rules and the types", () => {
   expect(typedResultKey("rules", "types2")).not.toBe(k);
 });
 
-// End to end: the shape the worker really reads, written by the compiler the
-// worker really runs, with the worker's own emit options, and contract edges
-// read off declarations it really emits.
+// End to end: the program the worker really builds, with its own emit
+// options, and the fingerprints its keyed check computes off the declarations
+// it really emits.
 const realRoot = mkdtempSync(join(tmpdir(), "type-fingerprint-"));
 afterAll(() => rmSync(realRoot, { recursive: true, force: true }));
-const buildInfoDir = join(realRoot, ".cache");
 
-/** An in-memory contract-refs store, shared across compiles like the real one. */
-const memoryStore = (): ContractRefsLookup => {
-  const m = new Map<string, ContractSpecifiers>();
-  return {
-    read: (p, sig) => m.get(`${p}\0${sig}`),
-    record: (p, sig, refs) => void m.set(`${p}\0${sig}`, refs),
-  };
+/** An in-memory checked-results store. */
+const memoryStore = (): FileResultsLookup => {
+  const m = new Map<string, UnitResults>();
+  return { read: (k) => m.get(k), record: (k, r) => void m.set(k, r) };
 };
 
 /**
- * Compile `sources` into the buildinfo at `buildInfoPath` — a fresh path by
- * default, so the build starts cold; pass one to build incrementally on top of
- * an earlier compile. `override` replaces worker options (the purity test's
- * control).
+ * Compile `sources` cold and return every file's type fingerprint.
+ * `override` replaces worker options (the purity test's control).
  */
 function compile(
   sources: Record<string, string>,
-  buildInfoPath = join(buildInfoDir, `${Math.random()}.tsbuildinfo`),
   override: ts.CompilerOptions = {},
-  store: ContractRefsLookup = memoryStore(),
 ): Map<string, string> {
   for (const [rel, text] of Object.entries(sources)) {
     const abs = join(realRoot, rel);
     ts.sys.createDirectory(dirname(abs));
     writeFileSync(abs, text);
   }
-  let text: string | undefined;
   const options = {
     ...signatureEmitOptions(
       {
         strict: true,
+        skipLibCheck: true,
         target: ts.ScriptTarget.ES2022,
         module: ts.ModuleKind.ESNext,
         moduleResolution: ts.ModuleResolutionKind.Bundler,
@@ -311,32 +264,30 @@ function compile(
         types: [],
       },
       realRoot,
-      buildInfoPath,
     ),
     ...override,
   };
-  const builder = ts.createIncrementalProgram({
+  const program = ts.createProgram({
     rootNames: Object.keys(sources).map((rel) => join(realRoot, rel)),
     options,
   });
-  builder.emit(undefined, (fileName, data) => {
-    if (fileName.endsWith(".tsbuildinfo")) text = data;
-  });
-  if (text === undefined) throw new Error("tsc wrote no buildinfo");
-  const r = readBuildInfoGraph(text, buildInfoDir, realRoot);
-  if (r.kind !== "graph") throw new Error(r.why);
-  const { contracts } = contractEdges(
-    realRoot,
-    builder.getProgram(),
+  // Every file checked in root order first, as a cold `tsc` does: the order
+  // is what the purity test varies.
+  program.getSemanticDiagnostics();
+  const { typeFps } = keyedCheck({
+    root: realRoot,
+    program,
     options,
-    r.graph,
-    new Map(),
-    store,
-  );
-  return computeTypeFingerprints(r.graph, contracts);
+    engineFp: "engine",
+    store: memoryStore(),
+    mode: "all",
+  });
+  const out = new Map<string, string>();
+  for (const rel of Object.keys(sources)) out.set(rel, typeFps.get(rel)!);
+  return out;
 }
 
-test("on a buildinfo tsc wrote: a body edit moves nothing, an API change moves the importer", () => {
+test("on a program tsc built: a body edit moves nothing, an API change moves the importer", () => {
   const sources = {
     "a.ts": "export function f(): number { return 1; }\n",
     "b.ts": 'import { f } from "./a";\nexport const g = (): number => f();\n',
@@ -372,17 +323,11 @@ test("on real declarations: the chain follows what contracts name, and stops whe
       'import type { G } from "./g";\nexport function k(): number { const v: G = { x: 1 }; return v.x; }\n',
     "chain/h.ts": 'import { k } from "./k";\nexport const h = k();\n',
   };
-  const store = memoryStore();
-  const before = compile(sources, undefined, {}, store);
-  const after = compile(
-    {
-      ...sources,
-      "chain/g.ts": "export interface G { x: number; y?: string }\n",
-    },
-    undefined,
-    {},
-    store,
-  );
+  const before = compile(sources);
+  const after = compile({
+    ...sources,
+    "chain/g.ts": "export interface G { x: number; y?: string }\n",
+  });
   // e, k and r import g; d and f see it through contracts; s through r's
   // re-export. h sees only k's contract, which does not name g.
   expect(moved(before, after)).toEqual([
@@ -421,8 +366,8 @@ function bothCheckOrders(override: ts.CompilerOptions = {}): {
 } {
   const reversed = Object.fromEntries(Object.entries(UNION).reverse());
   return {
-    firstFirst: compile({ ...UNION, ...USE }, undefined, override),
-    pickFirst: compile({ ...reversed, ...USE }, undefined, override),
+    firstFirst: compile({ ...UNION, ...USE }, override),
+    pickFirst: compile({ ...reversed, ...USE }, override),
   };
 }
 

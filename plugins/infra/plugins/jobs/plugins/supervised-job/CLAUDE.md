@@ -735,6 +735,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `framework/cli/release`
     - `framework/cli/serve-app`
     - `framework/cli/start`
+    - `framework/tooling/checks/type-check/backstop`
     - `infra/audio-analysis`
     - `infra/deps`
     - `infra/events-test`

@@ -4,8 +4,10 @@
  * its peak RSS is measurable from outside. It builds the program ONCE and
  * drives both consumers:
  *
- *   1. `tsc` semantic diagnostics (via the incremental builder, persisting the
- *      shared `.tsbuildinfo` so warm runs re-check only the diff);
+ *   1. `tsc` diagnostics, through the keyed check (`./keyed-check.ts`): only
+ *      the files whose key moved are checked and emitted, the rest come from
+ *      the host-wide checked-results store — and, in `dual` mode, a full check
+ *      of a fresh program beside it, compared file by file;
  *   2. ESLint, only the parts of each file its job names, returning the
  *      messages RAW (exemptions are the check's to apply, when it reads them):
  *      the stale SYNTACTIC rule groups with no program at all, and the TYPED
@@ -20,7 +22,7 @@
  * never hit the argv limit). stdout is one JSON result object. A nonzero exit
  * means the worker itself crashed (the orchestrator records no PASSes for it).
  */
-import { existsSync, readFileSync, unlinkSync, writeSync } from "fs";
+import { readFileSync, unlinkSync, writeSync } from "fs";
 import { dirname, relative } from "path";
 import ts from "typescript";
 import { Linter } from "eslint";
@@ -38,90 +40,77 @@ import {
   LINT_GROUP_BASE,
   type LintFileResult,
   type RawLintMessage,
+  type TscDivergence,
   type TypedPartOutcome,
   type TypeFpTable,
   type TypeCheckWorkerJob as Job,
   type TypeCheckWorkerResult as Result,
 } from "../core";
-import {
-  canonical,
-  contractEdges,
-  contractSpecifiers,
-  type ContractSpecifiers,
-} from "./contract-refs";
-import { openContractRefsStore } from "./contract-refs-store";
+import { canonical } from "./contract-refs";
 import { signatureEmitOptions } from "./emit-options";
+import { openFileResultsStore } from "./file-results-store";
 import {
-  computeTypeFingerprints,
-  readBuildInfoGraph,
-  typedResultKey,
-} from "./type-fingerprint";
+  compareResults,
+  formatDiagnostic,
+  keyedCheck,
+  tscEngineFp,
+  type KeyedCheck,
+} from "./keyed-check";
+import { writeProgramManifest } from "./program-manifest";
+import { typedResultKey } from "./type-fingerprint";
 
 function rel(root: string, abs: string): string {
   return relative(root, abs).split("\\").join("/");
-}
-
-function formatTscDiagnostic(root: string, d: ts.Diagnostic): string {
-  const msg = ts.flattenDiagnosticMessageText(d.messageText, "\n");
-  if (d.file && d.start !== undefined) {
-    const { line, character } = d.file.getLineAndCharacterOfPosition(d.start);
-    return `${rel(root, d.file.fileName)}:${line + 1}:${character + 1} - error TS${d.code}: ${msg}`;
-  }
-  return `error TS${d.code}: ${msg}`;
-}
-
-/**
- * The program's type fingerprints, from the buildinfo the emit just wrote —
- * or, when tsc wrote none because nothing changed, from the one on disk, which
- * then describes this very program.
- *
- * Keyed by each root's spelling ON DISK (`rootNames`, the tsconfig's directory
- * expansion), not the buildinfo's. On a case-insensitive filesystem tsc names a
- * file by the first spelling it resolved, so the buildinfo can say
- * `web/app.tsx` for `web/App.tsx` — and every reader looks a file up by its
- * git spelling. Every lintable file is a root (the coverage gate), so re-keying
- * the roots is exact.
- */
-function readTypeFps(
-  job: Job,
-  program: ts.Program,
-  options: ts.CompilerOptions,
-  written: string | undefined,
-  emitted: ReadonlyMap<string, ContractSpecifiers>,
-  rootNames: readonly string[],
-): TypeFpTable {
-  let text = written;
-  if (text === undefined) {
-    if (!existsSync(job.buildInfoPath)) {
-      return { kind: "unavailable", why: "tsc wrote no buildinfo" };
-    }
-    text = readFileSync(job.buildInfoPath, "utf8");
-  }
-  const r = readBuildInfoGraph(text, dirname(job.buildInfoPath), job.root);
-  if (r.kind !== "graph") return { kind: "unavailable", why: r.why };
-  const { contracts, summary } = contractEdges(
-    job.root,
-    program,
-    options,
-    r.graph,
-    emitted,
-    openContractRefsStore(),
-  );
-  const computed = computeTypeFingerprints(r.graph, contracts);
-  const onDisk = new Map<string, string>();
-  for (const name of rootNames) {
-    const p = rel(job.root, name);
-    onDisk.set(canonical(p), p);
-  }
-  const fps: Record<string, string> = {};
-  for (const [p, fp] of computed) fps[onDisk.get(canonical(p)) ?? p] = fp;
-  return { kind: "table", fps, contracts: summary };
 }
 
 /** This process's CPU seconds so far (user + system). */
 function cpuSeconds(): number {
   const { user, system } = process.cpuUsage();
   return (user + system) / 1e6;
+}
+
+/**
+ * Every repo file's type fingerprint, keyed by its spelling ON DISK
+ * (`rootNames`, the tsconfig's directory expansion), not the program's. On a
+ * case-insensitive filesystem tsc names a file by the first spelling it
+ * resolved, so the program can say `web/app.tsx` for `web/App.tsx` — and every
+ * reader looks a file up by its git spelling. Every lintable file is a root
+ * (the coverage gate), so re-keying the roots is exact.
+ */
+function onDiskFps(
+  root: string,
+  computed: ReadonlyMap<string, string>,
+  rootNames: readonly string[],
+): Record<string, string> {
+  const onDisk = new Map<string, string>();
+  for (const name of rootNames) {
+    const p = rel(root, name);
+    onDisk.set(canonical(p), p);
+  }
+  const fps: Record<string, string> = {};
+  for (const [p, fp] of computed) fps[onDisk.get(canonical(p)) ?? p] = fp;
+  return fps;
+}
+
+/** The diagnostics no file's key covers: config, options, global, syntax. */
+function programDiagnostics(
+  root: string,
+  program: ts.Program,
+  configDiagnostics: readonly ts.Diagnostic[],
+): string[] {
+  return [
+    ...configDiagnostics,
+    ...program.getOptionsDiagnostics(),
+    ...program.getGlobalDiagnostics(),
+    ...program.getSyntacticDiagnostics(),
+  ].map((d) => formatDiagnostic(root, d));
+}
+
+/** Every checked file's diagnostics, in program order. */
+function fileDiagnostics(check: KeyedCheck): string[] {
+  return [...check.results.keys()]
+    .sort((a, b) => a - b)
+    .flatMap((i) => check.results.get(i)!.diagnostics);
 }
 
 async function run(job: Job): Promise<Result> {
@@ -131,10 +120,17 @@ async function run(job: Job): Promise<Result> {
   if (cfg.error) {
     return {
       name: job.name,
-      tscErrors: formatTscDiagnostic(job.root, cfg.error),
+      tscErrors: formatDiagnostic(job.root, cfg.error),
       lint: [],
       typeFps: { kind: "unavailable", why: "the tsconfig did not parse" },
-      phaseCpuSeconds: { tsc: cpuSeconds() - cpuStart, typeFps: 0, lint: 0 },
+      tscLines: [],
+      divergences: [],
+      phaseCpuSeconds: {
+        program: cpuSeconds() - cpuStart,
+        check: 0,
+        full: 0,
+        lint: 0,
+      },
     };
   }
   const parsed = ts.parseJsonConfigFileContent(
@@ -145,79 +141,79 @@ async function run(job: Job): Promise<Result> {
     job.tsconfigPath,
   );
 
-  // 2. Build ONE incremental program; gather diagnostics through the builder so
-  //    its state (and the persisted .tsbuildinfo) reflects what was checked.
-  //    The options emit declarations, so every file carries a real signature,
-  //    and order types stably, so that signature is a function of the code
+  // 2. Build ONE program — no incremental builder: what to re-check is the
+  //    keyed check's to decide (`./keyed-check.ts`). The options emit
+  //    declarations, so every checked file has a real signature, and order
+  //    types stably, so that signature is a function of the code
   //    (`./emit-options.ts`).
-  const options = signatureEmitOptions(
-    parsed.options,
+  const options = signatureEmitOptions(parsed.options, job.root);
+  const configDiagnostics = ts.getConfigFileParsingDiagnostics(parsed);
+  const build = (): ts.Program =>
+    ts.createProgram({
+      rootNames: parsed.fileNames,
+      options,
+      configFileParsingDiagnostics: configDiagnostics,
+    });
+  const program = build();
+  writeProgramManifest(
+    job.manifestPath,
     job.root,
-    job.buildInfoPath,
+    program.getSourceFiles().map((sf) => sf.fileName),
   );
-  const builder = ts.createIncrementalProgram({
-    rootNames: parsed.fileNames,
-    options,
-  });
-  const diags: ts.Diagnostic[] = [
-    ...builder.getConfigFileParsingDiagnostics(),
-    ...builder.getOptionsDiagnostics(),
-    ...builder.getGlobalDiagnostics(),
-    ...builder.getSyntacticDiagnostics(),
-    ...builder.getSemanticDiagnostics(),
-    // Declaration diagnostics are their own channel: an exported value whose
-    // inferred type cannot be written down (TS2883 / TS4023) is only reported
-    // here, and a program that cannot emit declarations cannot have real
-    // signatures — so it is a real error, fixed with an annotation.
-    ...builder.getDeclarationDiagnostics(),
-  ];
-  // Emit through a writer that persists ONLY the .tsbuildinfo. The .d.ts text
-  // is computed (that is what fills in the signatures) and dropped, after
-  // reading off what it names — its contract edges (`./contract-refs.ts`). The
-  // buildinfo text is also KEPT: it is what the type fingerprints are read off.
-  let buildInfoText: string | undefined;
-  const emitted = new Map<string, ContractSpecifiers>();
-  const emitResult = builder.emit(
-    undefined,
-    (fileName, text, writeByteOrderMark, _onError, sourceFiles) => {
-      if (fileName.endsWith(".tsbuildinfo")) {
-        ts.sys.writeFile(fileName, text, writeByteOrderMark);
-        buildInfoText = text;
-      } else if (/\.d\.[mc]?ts$/.test(fileName) && sourceFiles?.length === 1) {
-        emitted.set(
-          canonical(rel(job.root, sourceFiles[0]!.fileName)),
-          contractSpecifiers(text),
-        );
-      }
-    },
-    undefined,
-    undefined,
-    undefined,
-  );
-  diags.push(...emitResult.diagnostics);
-  const tscErrors = diags
-    .map((d) => formatTscDiagnostic(job.root, d))
-    .join("\n");
+  const cpuProgram = cpuSeconds();
 
-  // 3. The type fingerprints of the program just built
-  //    (`./type-fingerprint.ts`), read off the buildinfo the emit wrote and
-  //    every source file's contract edges. tsc writes a buildinfo only when its
-  //    state changed, and an unchanged program left the one on disk describing
-  //    exactly this program — so that is the fallback, not a guess. A shape we
-  //    cannot read is `unavailable`: fatal below only if a job needs it, so the
-  //    build's fast path (no lint files) never fails over a table nobody asked
-  //    for.
-  const program = builder.getProgram();
-  const cpuTsc = cpuSeconds();
+  // 3. The keyed check: re-check and re-emit only the files whose key moved,
+  //    the rest from the host-wide store. Its type fingerprints are what keys
+  //    the typed lint parts below.
+  const engineFp = tscEngineFp(job.root, options);
+  const store = openFileResultsStore();
+  const keyed = keyedCheck({
+    root: job.root,
+    program,
+    options,
+    engineFp,
+    store,
+    mode: "keyed",
+  });
+  const tscLines = [`type-check: ${keyed.summary}`];
+  const head = programDiagnostics(job.root, program, configDiagnostics);
+  let tscErrors = [...head, ...fileDiagnostics(keyed)].join("\n");
+  const cpuCheck = cpuSeconds();
+
+  // 3b. Dual: a full check of a FRESH program — the cold ground truth, with no
+  //     checker state the walk left behind — compared file by file. Its
+  //     verdict stands, and its results overwrite the store's.
+  const divergences: TscDivergence[] = [];
+  if (job.tscMode === "dual") {
+    const fresh = build();
+    // Every file's diagnostics first, in program order — exactly what `tsc`
+    // does cold — so the walk below reads tsc's own answers back.
+    fresh.getSemanticDiagnostics();
+    const full = keyedCheck({
+      root: job.root,
+      program: fresh,
+      options,
+      engineFp,
+      store,
+      mode: "all",
+    });
+    divergences.push(...compareResults(keyed, full));
+    tscLines.push(
+      `type-check: ${full.summary}`,
+      `type-check: dual: ${divergences.length} of ${full.results.size} files diverge from the full check`,
+    );
+    tscErrors = [
+      ...programDiagnostics(job.root, fresh, configDiagnostics),
+      ...fileDiagnostics(full),
+    ].join("\n");
+  }
+  const cpuFull = cpuSeconds();
+
   const typeFps: TypeFpTable = job.typeFps
-    ? readTypeFps(
-        job,
-        program,
-        options,
-        buildInfoText,
-        emitted,
-        parsed.fileNames,
-      )
+    ? {
+        kind: "table",
+        fps: onDiskFps(job.root, keyed.typeFps, parsed.fileNames),
+      }
     : { kind: "unavailable", why: "the job did not ask for them" };
 
   // 4. Lint, in up to three passes per file, each with its own config:
@@ -232,7 +228,6 @@ async function run(job: Job): Promise<Result> {
   //
   //    Messages come back RAW — before exemptions, which the check applies when
   //    it reads them — and split by part, so each lands under its own key.
-  const cpuTypeFps = cpuSeconds();
   const lint: LintFileResult[] = [];
   if (job.lintFiles.length > 0) {
     const contributions = await loadLintContributions(job.root);
@@ -310,7 +305,7 @@ async function run(job: Job): Promise<Result> {
       }
       if (typeFps.kind !== "table") {
         throw new Error(
-          `type-check worker: ${rel(job.root, file)} needs its type fingerprint, and the program's could not be read: ${typeFps.why}`,
+          `type-check worker: ${rel(job.root, file)} needs its type fingerprint, and the job did not ask for them: ${typeFps.why}`,
         );
       }
       const typeFp = typeFps.fps[rel(job.root, file)];
@@ -412,10 +407,13 @@ async function run(job: Job): Promise<Result> {
     tscErrors,
     lint,
     typeFps,
+    tscLines,
+    divergences,
     phaseCpuSeconds: {
-      tsc: cpuTsc - cpuStart,
-      typeFps: cpuTypeFps - cpuTsc,
-      lint: cpuEnd - cpuTypeFps,
+      program: cpuProgram - cpuStart,
+      check: cpuCheck - cpuProgram,
+      full: cpuFull - cpuCheck,
+      lint: cpuEnd - cpuFull,
     },
   };
 }

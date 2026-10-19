@@ -1,8 +1,8 @@
 // Everything type-check does that reads file bytes or walks the tree, before and
 // after the tsc worker: the import graph, the content hashes, the tsconfig's
-// include-expansion and the coverage gate, the warm-base materialize, the
-// program key, the signature table and the lint result lookups — and, once the
-// worker is back, every record.
+// include-expansion and the coverage gate, the program key, the signature
+// table and the lint result lookups — and, once the worker is back, every
+// record.
 //
 // It is 70–130 s of SYNCHRONOUS work, and it used to run on the check runner's
 // own thread. `./singularity check` runs every selected check concurrently in
@@ -23,20 +23,17 @@
 // `keyCtx.contentHash`, the memo the post-run key recompute reuses. Keeping that memo in memory is what keeps the
 // recorded program key exactly what it was when this all ran in one function.
 //
-// The three orderings `../CLAUDE.md` calls load-bearing all live inside this
-// one module, in the order they always ran: the key AFTER `materializeWarmBase`;
-// the skip clause AFTER `lintFiles` is built (which now itself needs the key:
-// the signature table is looked up by it); a PASS — and a signature table —
-// recorded from the buildinfo the worker WROTE, through the same `keyCtx`.
+// The two orderings `../CLAUDE.md` calls load-bearing both live inside this
+// one module: the skip clause AFTER `lintFiles` is built (which itself needs
+// the key: the signature table is looked up by it); a PASS — and a signature
+// table — recorded from the manifest the worker WROTE, through the same
+// `keyCtx`.
 
 import { join, relative } from "path";
 import ts from "typescript";
 import {
+  programManifestPath,
   repoProgram,
-  tsBuildInfoPath,
-  materializeWarmBase,
-  publishWarmBase,
-  realGitFacts,
   type ContentHashMemo,
   type TscProgram,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
@@ -107,8 +104,6 @@ export type Plan =
       skipped: boolean;
       /** Why the program could not be keyed at all, when it could not. */
       unkeyed?: string;
-      /** The transcript line saying which incremental base this run starts from. */
-      warmBase: string;
       /** What computing the program key cost, rounded. */
       keysMs: number;
     };
@@ -131,7 +126,7 @@ export interface Finalized {
    * parts were stale.
    */
   lintLine: string;
-  /** Further transcript lines (the warm-base publish summary, the table record). */
+  /** Further transcript lines (the table record). */
   lines: string[];
   /**
    * The lint violations, assembled from every file's stored and fresh results
@@ -269,28 +264,17 @@ export async function openPreparation({
   const keepSyntactic = 3 * groups.fps.size;
   const keepTyped = 3 * typedParts.length;
 
-  // Pick the incremental base: the pooled entry whose recorded file contents
-  // best match this tree, or the local base when nothing beats it. That is what
-  // makes a FRESH worktree warm — its tree is a main commit's tree, and the base
-  // that fits it is the one the last-merged agent published, which "newest wins"
-  // evicted within minutes. See `checks/core/warm-base.ts`.
-  //
-  // ONE memo for the whole run, created here: the scoring hashes most of the
-  // files the program key is about to hash, so sharing it both halves the
-  // reads and guarantees the two steps saw the same tree.
-  const contentHash: ContentHashMemo = new Map();
-  const warmBase = materializeWarmBase(root, program.name, contentHash);
-
   // The program key says "this exact program — these roots, this content,
-  // these options". Computed AFTER `materializeWarmBase`, because the
-  // enumeration of the program comes out of the `.tsbuildinfo` on disk: a
-  // fresh worktree that just pulled a sibling's base can skip on its very first
-  // run. It keys two records: the program PASS (below) and the signature table.
+  // these options", enumerated from the manifest the last worker wrote. It
+  // keys two records: the program PASS (below) and the signature table. ONE
+  // content-hash memo for the whole run, so the key recomputed after the
+  // worker reads each file once and sees the same tree.
+  const contentHash: ContentHashMemo = new Map();
   const keyStart = performance.now();
   const keyCtx = openProgramKeyContext(listing, contentHash);
   const passes = openProgramPasses();
   const tables = openTypeFpTables();
-  const buildInfoPath = tsBuildInfoPath(root, program.name);
+  const manifestPath = programManifestPath(root, program.name);
   let key: string | undefined;
   let unkeyed: string | undefined;
   if (rootsResult.kind === "unparsed") {
@@ -298,7 +282,7 @@ export async function openPreparation({
   } else {
     const result = programKey(
       keyCtx,
-      { tsconfigPath: program.tsconfigPath, buildInfoPath },
+      { tsconfigPath: program.tsconfigPath, manifestPath },
       rootsResult.roots,
     );
     if (result.kind === "key") key = result.key;
@@ -404,53 +388,22 @@ export async function openPreparation({
     lintFiles,
     skipped,
     ...(unkeyed !== undefined ? { unkeyed } : {}),
-    warmBase: warmBase.line,
     keysMs,
   };
 
   async function finalize(
     outcome: ProgramOutcome | undefined,
   ): Promise<Finalized> {
-    // Publish the worker's buildinfo as a warm base for whoever runs next.
-    // Publish even when the check FAILED with diagnostics: the buildinfo records
-    // program STATE, which is valid regardless of the verdict — a run that found
-    // type errors is still a perfectly good incremental base. `outcome` is
-    // absent when the worker crashed or never ran, and a crashed worker may
-    // have left torn state, so nothing is published then.
-    //
-    // HEAD is the label that lets the pool's prune recognise this entry later as
-    // a commit that reached `main` — the property that decides which base
-    // survives for the next fresh worktree. An unavailable HEAD publishes a
-    // legacy unlabelled entry and SAYS so in the summary line, rather than
-    // dropping the fact on the floor.
-    const lines: string[] = [];
-    if (outcome) {
-      const head = await realGitFacts.headSha(root);
-      const p = await publishWarmBase(
-        root,
-        program.name,
-        head.ok ? head.value : undefined,
-      );
-      lines.push(
-        `type-check: published ${p.published ? 1 : 0} warm base ` +
-          (head.ok
-            ? `labelled ${head.value.slice(0, 12)}`
-            : `UNLABELLED (git: ${head.reason})`) +
-          (p.protectedOnMain > 0
-            ? ` (kept ${p.kept}, ${p.protectedOnMain} on main)`
-            : ""),
-      );
-    }
-
     // The key of the program the worker actually built, RECOMPUTED from the
-    // buildinfo it just WROTE, so what is recorded describes that program rather
+    // manifest it just WROTE, so what is recorded describes that program rather
     // than the one predicted before it ran — on a cold run the two differ, since
     // there was no enumeration to predict from at all.
+    const lines: string[] = [];
     let builtKey: string | undefined;
     if (outcome && rootsResult.kind === "roots") {
       const result = programKey(
         keyCtx,
-        { tsconfigPath: program.tsconfigPath, buildInfoPath },
+        { tsconfigPath: program.tsconfigPath, manifestPath },
         rootsResult.roots,
       );
       if (result.kind === "key") builtKey = result.key;
@@ -561,7 +514,6 @@ export async function openPreparation({
       // program, not of whether it type-checks.
       if (builtKey !== undefined) {
         if (outcome.typeFps.kind === "table") {
-          lines.push(`type-check: ${outcome.typeFps.contracts}`);
           tables.record(
             program.name,
             builtKey,

@@ -14,8 +14,9 @@
  * loaded the identical type environment. The split cost 3.7 checks of the
  * average file per cold miss and bought no type isolation.
  *
- * Warm paths are preserved: tsc stays incremental via the shared `.tsbuildinfo`,
- * lint reuses the per-file lint result store (a file's syntactic rule groups
+ * Warm paths: tsc re-checks only the files whose key moved (the keyed check,
+ * `../shared/keyed-check.ts`, over a host-wide checked-results store), lint
+ * reuses the per-file lint result store (a file's syntactic rule groups
  * re-run only when its text or their rules change, its type-aware rules only
  * when the declarations it can see change too), and a program whose content key
  * is already recorded green runs no worker at all.
@@ -27,8 +28,8 @@
  * preparation thread (`./prepare-thread`, `./prepare`).
  */
 import {
-  tsBuildInfoPath,
   currentScanView,
+  programManifestPath,
   type TscProgram,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
@@ -70,7 +71,10 @@ async function runWorker(
     root,
     name: program.name,
     tsconfigPath: program.tsconfigPath,
-    buildInfoPath: tsBuildInfoPath(root, program.name),
+    manifestPath: programManifestPath(root, program.name),
+    // The keyed check decides. `dual` (beside a full check) is the backstop
+    // job's (`../server`) and the validation script's, never a check run's.
+    tscMode: "keyed",
     lintFiles,
     typeFps: true,
     grant,
@@ -211,8 +215,8 @@ const check: Check = {
 
     // Everything that reads file bytes or walks the tree — the import graph,
     // content hashes, tsconfig include-expansion, the coverage gate, the lint
-    // result store, the warm base, the program key and signature table, and the
-    // records after the run —
+    // result store, the program key and signature table, and the records after
+    // the run —
     // runs on the preparation thread, so this thread (shared by every other
     // check in the pass) keeps servicing timers and sockets throughout.
     const thread = openPrepareThread();
@@ -250,11 +254,6 @@ const check: Check = {
           : `type-check: program changed, running (program keys ${keysMs}ms)`,
         "stderr",
       );
-      // Which incremental base this run starts from, and how much of it still
-      // matches the tree. Without it "why was this run cold?" had no answer
-      // anywhere in the transcript — and a pool that hands out a base matching
-      // nothing looks exactly like a pool that works.
-      ctx.log?.(plan.warmBase, "stderr");
       // Named, not just implied: "running" with no explanation of why there was
       // no key to compare against is the shape of a report that hides a broken
       // key. A cold worktree legitimately says this on its first run.
@@ -302,18 +301,20 @@ const check: Check = {
       );
       if (costLine !== null) ctx.log?.(costLine, "stderr");
       // Where that CPU went, phase by phase (in the worker's own clock, so it
-      // excludes process start-up): tsc's build and re-check, the type
-      // fingerprints, lint.
+      // excludes process start-up): building the program, the keyed check
+      // (graph, keys, and checking the files whose key moved), lint — and
+      // what the keyed check reused and checked.
       if (result) {
-        const { tsc, typeFps, lint } = result.phaseCpuSeconds;
+        const { program: build, check, lint } = result.phaseCpuSeconds;
         ctx.log?.(
-          `type-check worker ${program.name} phases: tsc ${tsc.toFixed(1)}s, type fps ${typeFps.toFixed(1)}s, lint ${lint.toFixed(1)}s (cpu)`,
+          `type-check worker ${program.name} phases: program ${build.toFixed(1)}s, keyed check ${check.toFixed(1)}s, lint ${lint.toFixed(1)}s (cpu)`,
           "stderr",
         );
+        for (const line of result.tscLines) ctx.log?.(line, "stderr");
       }
 
-      // The record phase, on the thread that holds the session: the warm base,
-      // the per-file lint results, the signature table, the lint verdict, the
+      // The record phase, on the thread that holds the session: the per-file
+      // lint results, the signature table, the lint verdict, the
       // program PASS, the skipped re-record (see `./prepare`). The outcome is handed over only
       // when the worker RETURNED — a crashed or skipped run records nothing
       // new. The lint verdict comes back from there, not from the worker: most
@@ -330,8 +331,7 @@ const check: Check = {
       // the worker, because without a signature table only the worker could
       // tell which typed parts were stale.
       ctx.log?.(finalized.lintLine, "stderr");
-      // What the record phase published back into the warm-base pool, and
-      // whether that entry carries the sha that lets the prune protect it.
+      // What the record phase recorded (or why it could not).
       for (const line of finalized.lines) ctx.log?.(line, "stderr");
       // What used to be a freeze of the runner's thread, still measured: the
       // instrument for making the preparation itself cheaper.

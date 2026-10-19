@@ -11,8 +11,8 @@
 //
 // `snapshot` builds a checkout's program cold, with the worker's own emit
 // options, and records for every repo file (a) its type fingerprint, computed
-// exactly as the worker computes it (contract edges read off the declarations
-// this build emitted), and (b) a DIGEST of what a type-aware rule can observe
+// exactly as the worker's keyed check computes it (with every file checked and
+// its contract read off its emitted declaration), and (b) a DIGEST of what a type-aware rule can observe
 // in it: for every identifier, its type as text (never truncated) with, one
 // level down, its properties' types and its call signatures, and the files
 // declaring its symbol; for every call, the resolved signature; for every
@@ -27,22 +27,18 @@
 // files per snapshot (minutes, ~15 GB). It is the correctness gate for a
 // change to the key, not part of any check.
 
-import { readFileSync, rmSync, writeFileSync } from "fs";
-import { dirname, join, relative } from "path";
+import { readFileSync, writeFileSync } from "fs";
+import { join, relative } from "path";
 import { createHash } from "crypto";
 import ts from "typescript";
-import {
-  contractEdges,
-  contractSpecifiers,
-  canonical,
-  type ContractSpecifiers,
-} from "../shared/contract-refs";
+import { canonical } from "../shared/contract-refs";
 import { signatureEmitOptions } from "../shared/emit-options";
 import {
-  computeTypeFingerprints,
-  isRepoPath,
-  readBuildInfoGraph,
-} from "../shared/type-fingerprint";
+  keyedCheck,
+  tscEngineFp,
+  type UnitResults,
+} from "../shared/keyed-check";
+import { isRepoPath } from "../shared/type-fingerprint";
 
 interface Snapshot {
   root: string;
@@ -141,52 +137,27 @@ function snapshot(root: string, out: string, dumpFiles?: Set<string>): void {
     undefined,
     tsconfigPath,
   );
-  // Laid out where the worker's buildinfo lives, so its relative paths read
-  // the same; cold, so nothing from an earlier build leaks in.
-  const buildInfoPath = join(
-    root,
-    ".cache",
-    "tsbuildinfo",
-    "oracle.tsbuildinfo",
-  );
-  rmSync(buildInfoPath, { force: true });
-  try {
-    const options = signatureEmitOptions(parsed.options, root, buildInfoPath);
-    const builder = ts.createIncrementalProgram({
-      rootNames: parsed.fileNames,
-      options,
-    });
-    const errors = ts.getPreEmitDiagnostics(builder.getProgram()).length;
-    let buildInfoText: string | undefined;
-    const emitted = new Map<string, ContractSpecifiers>();
-    builder.emit(undefined, (fileName, text, _bom, _onError, sourceFiles) => {
-      if (fileName.endsWith(".tsbuildinfo")) buildInfoText = text;
-      else if (/\.d\.[mc]?ts$/.test(fileName) && sourceFiles?.length === 1) {
-        emitted.set(
-          canonical(rel(root, sourceFiles[0]!.fileName)),
-          contractSpecifiers(text),
-        );
-      }
-    });
-    if (buildInfoText === undefined) throw new Error("tsc wrote no buildinfo");
-    const r = readBuildInfoGraph(buildInfoText, dirname(buildInfoPath), root);
-    if (r.kind !== "graph") throw new Error(r.why);
-    const memo = new Map<string, ContractSpecifiers>();
-    const { contracts, summary } = contractEdges(
+  // Cold, with the worker's own options and engine fingerprint, and a store
+  // of its own: nothing from an earlier build leaks in.
+  {
+    const options = signatureEmitOptions(parsed.options, root);
+    const program = ts.createProgram({ rootNames: parsed.fileNames, options });
+    const errors = ts.getPreEmitDiagnostics(program).length;
+    const memo = new Map<string, UnitResults>();
+    const { typeFps, summary } = keyedCheck({
       root,
-      builder.getProgram(),
+      program,
       options,
-      r.graph,
-      emitted,
-      {
-        read: (p, sig) => memo.get(`${p}\0${sig}`),
-        record: (p, sig, refs) => void memo.set(`${p}\0${sig}`, refs),
+      engineFp: tscEngineFp(root, options),
+      store: {
+        read: (k) => memo.get(k),
+        record: (k, r) => void memo.set(k, r),
       },
-    );
-    const fps = Object.fromEntries(computeTypeFingerprints(r.graph, contracts));
+      mode: "all",
+    });
+    const fps = Object.fromEntries(typeFps);
     console.log(`${root}: ${errors} tsc diagnostics; ${summary}`);
 
-    const program = builder.getProgram();
     const checker = program.getTypeChecker();
     const digests: Record<string, string> = {};
     const texts: Record<string, string> = {};
@@ -211,8 +182,6 @@ function snapshot(root: string, out: string, dumpFiles?: Set<string>): void {
     const snap: Snapshot = { root, fps, digests, texts };
     writeFileSync(out, JSON.stringify(snap));
     console.log(`wrote ${Object.keys(digests).length} files to ${out}`);
-  } finally {
-    rmSync(buildInfoPath, { force: true });
   }
 }
 

@@ -1,9 +1,10 @@
 /**
- * THE way to build a TypeScript program and get a buildinfo out of it. Both
- * producers go through here — the `type-check` check and the build's
- * `--skip-checks` fast path — so the compiler options, and the declaration emit
- * that gives every file in the buildinfo a real signature, are written down
- * once (`../../shared/worker.ts`) and cannot drift apart.
+ * THE way to type-check the repo program. Every caller goes through here — the
+ * `type-check` check, the build's `--skip-checks` fast path, and the dual
+ * backstop — so the compiler options, the declaration emit that gives every
+ * checked file a real signature, and the keyed check that decides what to
+ * re-check are written down once (`../../shared/worker.ts`) and cannot drift
+ * apart.
  *
  * It is also the one place a worker is ADMITTED, so neither producer can spawn
  * one outside the bound: a host-wide `type-check-worker` slot in the caller's
@@ -82,13 +83,22 @@ export async function spawnTypeCheckWorker(opts: {
   root: string;
   name: string;
   tsconfigPath: string;
-  buildInfoPath: string;
+  manifestPath: string;
+  tscMode: TypeCheckWorkerJob["tscMode"];
   lintFiles: TypeCheckWorkerJob["lintFiles"];
   typeFps: TypeCheckWorkerJob["typeFps"];
   grant: Grant;
 }): Promise<TypeCheckWorkerRun> {
-  const { root, name, tsconfigPath, buildInfoPath, lintFiles, typeFps, grant } =
-    opts;
+  const {
+    root,
+    name,
+    tsconfigPath,
+    manifestPath,
+    tscMode,
+    lintFiles,
+    typeFps,
+    grant,
+  } = opts;
   const queuedAt = performance.now();
   return typeCheckWorkerPool.run(
     (slot) => {
@@ -102,7 +112,8 @@ export async function spawnTypeCheckWorker(opts: {
               root,
               name,
               tsconfigPath,
-              buildInfoPath,
+              manifestPath,
+              tscMode,
               lintFiles,
               typeFps,
             },

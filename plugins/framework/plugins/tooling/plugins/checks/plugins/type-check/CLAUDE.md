@@ -77,19 +77,20 @@ Design and decision: `research/2026-09-18-global-type-check-one-program.md`.
   entry `prepare-worker.ts`, runner-side host `prepare-thread.ts`). Builds the
   import graph + content hashes, parses the tsconfig's include-expansion,
   runs the coverage gate (replaces projectService's "every file resolves to a
-  project"), materializes the warm base, computes the program key, reads the
-  signature table and the lint result store (which parts of each file are
-  stale, or not yet decidable) → returns a `Plan` and keeps the session. After
-  the worker, `finalize` runs the records (warm-base publish, the fresh lint
-  results, the signature table, the program PASS or its re-record) and
-  assembles the lint verdict under the current exemptions.
-- `shared/worker.ts` — the worker **process**. `createIncrementalProgram` →
-  `getPreEmitDiagnostics` (+ persists the shared `.tsbuildinfo`) → the type
-  fingerprints off that buildinfo (`shared/type-fingerprint.ts`) → ESLint
-  `Linter.verify`: each file's stale syntactic groups with no program, its
-  typed part with the program injected, returning the messages raw. A
-  separate process so the single-threaded program build runs on its own core
-  and its peak RSS is measurable from outside.
+  project"), computes the program key, reads the signature table and the lint
+  result store (which parts of each file are stale, or not yet decidable) →
+  returns a `Plan` and keeps the session. After the worker, `finalize` runs
+  the records (the fresh lint results, the signature table, the program PASS
+  or its re-record) and assembles the lint verdict under the current
+  exemptions.
+- `shared/worker.ts` — the worker **process**. `ts.createProgram` (writing the
+  program manifest) → the **keyed check** (`shared/keyed-check.ts`, below):
+  tsc diagnostics and signatures for only the files whose key moved, the type
+  fingerprints as a by-product → ESLint `Linter.verify`: each file's stale
+  syntactic groups with no program, its typed parts with the program
+  injected, returning the messages raw. A separate process so the
+  single-threaded program build runs on its own core and its peak RSS is
+  measurable from outside.
 
 **Nothing that reads file bytes or walks the tree goes in `index.ts`** — it goes
 in `prepare.ts`, whose values only the worker imports. That work is 70–130 s of
@@ -160,6 +161,55 @@ noise for one broken JSON file — and would mint a program key for a program we
 could not describe. The `unparsed` arm skips the gate and the key and lets the
 worker run, where tsc reports the broken config as the one diagnostic it is.
 
+## tsc re-checks only what its key says moved — the keyed check
+
+`shared/keyed-check.ts`. A file's tsc diagnostics and its emitted `.d.ts` (its
+**signature**) are a function of its own text, the `.d.ts` of what it imports
+and of everything those name, the global scope, and the engine. That is exactly
+the **type fingerprint** typed lint is keyed on (below), so
+
+    key = H(path, version, typeFp)   (an import cycle: one key for the cycle)
+
+and a file whose key is in the **checked-results store**
+(`shared/file-results-store.ts`, `type-check-file-results`, host-global,
+content-addressed) is not checked: its diagnostics, signature and contract
+specifiers come from the store. A file whose key moved is checked
+(`getSemanticDiagnostics` + `getDeclarationDiagnostics`) and its `.d.ts`
+emitted, and the new signature feeds its importers' keys — so the re-check
+stops wherever a contract stops changing. One key decides both tsc and lint.
+
+- **The walk** visits the source graph's strongly-connected components in
+  dependency order (Tarjan); contract components nest inside them, so each
+  component's contract hashes are final before its importers are keyed. The
+  source graph is `shared/program-graph.ts`, a port of the TS builder's own
+  `getReferencedFiles`; its test holds it equal to the builder's
+  `referencedMap` and `affectsGlobalScope`.
+- **Why not TypeScript's incremental builder:** on a signature change TS 6's
+  builder walks every TRANSITIVE referencer, whether or not their own
+  signatures changed (`handleDtsMayChangeOfReferencingExportOfAffectedFile`).
+  A hub API change re-checked ~96 CPU-s — a cold build — and re-emitted all
+  ~11.9k declarations. So there is no builder, no `.tsbuildinfo` and no
+  warm-base pool any more: the store is the incremental state, and a fresh
+  worktree on a main tree is warm without picking a base.
+- **The engine** (`tscEngineFp`) is in every key, through the global hash: the
+  TS version, the compiler options (root-relative), the lockfile's npm
+  resolutions, `patches/**`, and the engine's own sources. A **global** file —
+  a script, a `declare global`, a `declare module "x"` augmentation — counts by
+  its VERSION (the global hash is needed before any signature is known), so a
+  body edit to one of the ~13 global source files re-checks everything.
+- **Soundness** is validated, not assumed. `dual` mode (`TscMode`) runs the
+  walk, then a full check of a FRESH program in tsc's own order, and compares
+  every file's diagnostics and signature; the full check's answers overwrite
+  the store. `scripts/dual-check.ts` runs it by hand (the gate for any change
+  to the key); the `backstop` sub-plugin runs it daily on main and files a
+  `type-check-divergence` report per divergent file. Known hazards it watches
+  for: diagnostics that depend on the order the checker reached things, and an
+  error one file's check files under another.
+- Requires `skipLibCheck` (declaration inputs are never checked) and throws
+  without it.
+
+Design: `research/2026-10-18-global-tsc-recheck-follows-contracts.md`.
+
 ## The lint cache is keyed on what the rules read, and exemptions apply when it is read
 
 A rule reads the file's own text and, if it is **type-aware** (declares
@@ -207,13 +257,16 @@ imports directly, of every file those `.d.ts` NAME (a re-export, a type-only
 import, the `import("./e").T` tsc writes for an inferred type), transitively,
 and of the global scope. So the type fp hashes the **contract graph**: a Merkle
 hash over the strongly-connected-component condensation of the contract edges
-(`shared/contract-refs.ts`: for a repo source file, the specifiers its emitted
-`.d.ts` names, resolved from its source location; for a declaration input, its
-`referencedMap`), each component hashing its members' `signature` (the hash of
-their `.d.ts`; the version where tsc wrote a placeholder) and its successors'
-hashes. A file's type fp is the hashes of its direct imports' components plus
-the global fp: every `affectsGlobalScope` file and every file whose `.d.ts`
-augments a module (`declare module "x"` — its importers never name it). A body
+(`shared/contract-refs.ts`: for a repo source file, what its emitted `.d.ts`
+names — each name resolved from its source location, through the module's
+exports and aliases, to the file DECLARING it, so `import("../index").X`
+printed through a barrel is an edge to `X`'s file, not the barrel's closure;
+for a declaration input, what it references), each component hashing its members' shape (a source
+file's signature, the hash of its `.d.ts`; a declaration input's version) and
+its successors' hashes. A file's type fp is the hashes of its direct imports'
+components plus the global fp: the engine, and the version of every global
+file — `affectsGlobalScope`, or a module augmentation (`declare module "x"` —
+its importers never name it). A body
 edit moves nothing; an API change moves the direct importers, and theirs only
 while their contract names it — the chain stops at an importer whose `.d.ts`
 does not mention the change. That is never wider than a closure over
@@ -222,24 +275,20 @@ the re-export chain). Following a contract chain one hop is not enough: `D.d.ts`
 can name `E`'s `T` and `E.d.ts` name `G`, so a change to `G` reaches `D`'s
 importers through two byte-identical contracts. O(V + E), in the worker.
 
-The `.d.ts` texts come from the run's own emit, which covers only the files tsc
-re-checked, so every other file's specifiers come from the **contract-refs
-store** (`shared/contract-refs-store.ts`, `type-check-contract-refs`: per (file,
-signature) — a signature is the hash of the `.d.ts` text — host-global). A miss
-emits that one file's declaration (`emitted alone` in the transcript): every
-file once per host after this landed, then only file versions this host never
-emitted. A specifier into a dependency is dropped (the lockfile is in the
+The specifiers of a file the keyed check did not re-check come from its stored
+result. A specifier into a dependency is dropped (the lockfile is in the
 engine); one into a repo file outside the program throws.
 `scripts/typed-key-oracle.ts` is the correctness gate for any change to this
-key: it snapshots two trees' fingerprints and a digest of every type a rule can
-observe, and reports a file whose digest changed while its fingerprint did not.
+key on the lint side: it snapshots two trees' fingerprints and a digest of
+every type a rule can observe, and reports a file whose digest changed while
+its fingerprint did not (`scripts/dual-check.ts` is the tsc side's).
 
-**When the type fp is known.** Fresh signatures exist only after tsc runs, in
-the worker. So `finalize` records each program's **signature table**
+**When the type fp is known.** Fresh signatures exist only after the keyed
+check runs, in the worker. So `finalize` records each program's **signature table**
 (`check/type-fp-tables.ts`, `type-check-type-fps`: program key → every lintable
 file's type fp, concatenated in lintable-list order, ~180 KB) whenever a worker
 comes back — whatever the verdict, since signatures are facts of the program —
-under the key it recomputes from the buildinfo the worker wrote. A later run
+under the key it recomputes from the manifest the worker wrote. A later run
 whose program key has a table decides every typed part in prepare
 (`decided`: which parts are stale, under which keys), so an all-fresh tree on a PASS program skips the worker. Without one
 (the program changed, or a cold run) each file's typed part goes to the worker
@@ -318,16 +367,15 @@ The key is not the import graph. The import graph has blind spots (`*.generated.
 are excluded from it yet are tsc roots; `/// <reference>`, computed `import()`,
 resolution shadowing), which are harmless only while tsc re-runs as the backstop
 — and a skip removes that backstop. So the key is built from what TypeScript
-itself loaded: `fileNames` out of the `.tsbuildinfo` (`L`), each file hashed by
-content, repo and `node_modules` alike; plus the tsconfig's own
+itself loaded: the **program manifest** the worker writes
+(`shared/program-manifest.ts`, `.cache/type-check/<name>.program.json`: every
+`program.getSourceFiles()` path) (`L`), each file hashed by content, repo and `node_modules` alike; plus the tsconfig's own
 include-expansion (`R`), every `tsconfig*.json` / `package.json` / lockfile /
 ambient `.d.ts`, a name-only census of every `.ts` in the repo (the
 added-file-shadows-a-resolution hazard), and this check's own source.
 
-Three orderings are load-bearing:
+Two orderings are load-bearing:
 
-- The key is computed **after `materializeWarmBase`**, so a fresh worktree can
-  enumerate the program from a sibling's base and skip on its very first run.
 - The skip clause is read **after `lintFiles` is built**: a run with files still
   to lint is never skipped, so an evicted lint result — or a typed part no
   signature table could decide — re-runs the worker. (`lintFiles` itself is
@@ -337,13 +385,13 @@ Three orderings are load-bearing:
   stale for every file, so the lint list is non-empty and nothing skips. An
   exemption edit stales nothing, and needs no worker: `finalize` re-assembles
   the verdict from the store either way.
-- A PASS — and a signature table — is recorded from the buildinfo the worker
+- A PASS — and a signature table — is recorded from the manifest the worker
   just **wrote**, so what is recorded describes the program that was built.
 
-No buildinfo, an unparseable tsconfig, or a buildinfo shape we do not recognise
-means **no key**, which means a cold run — never a key over an empty program.
-Those are distinct arms of a discriminated result, not one nullish value, and
-the run says WHY it could not key (`type-check: no program key — no buildinfo
+No manifest, an unparseable tsconfig, or a manifest we cannot read means **no
+key**, which means the worker runs — never a key over an empty program. Those
+are distinct arms of a discriminated result, not one nullish value, and the run
+says WHY it could not key (`type-check: no program key — no program manifest
 yet`): "running" with no account of why there was nothing to compare against is
 the shape of a report that hides a broken key.
 
@@ -358,73 +406,11 @@ does NOT disarm the RECORD — the pass that run produces is still a good fact.
 The per-file lint result store is unaffected either way.
 
 **What the single program costs, stated plainly.** Any edit anywhere now runs
-the one worker, whose identical-tree floor is ~45 CPU-s / ~2.7 GB (the parse;
-tsc's own incremental engine then re-checks only the affected closure, thanks to
-the real signatures). Before, an edit confined to one target ran only that
+the one worker, whose floor is the parse and bind of the whole program (the
+keyed check then re-checks only the files whose key moved). Before, an edit confined to one target ran only that
 worker — a `tools`-only edit cost 22 CPU-s / 1 GB. That is the price of not
 paying 3.7× on every other kind of edit. The unchanged-tree case still skips
 everything.
-
-## Which base a fresh worktree starts from
-
-Every run picks an incremental `.tsbuildinfo` to start from, out of a
-host-global pool every worktree publishes into (`checks/core/warm-base.ts`).
-That choice is worth about 2 GB and 30 s against 7 GB and 240 s, and nothing
-downstream catches a bad one — a mismatched base is not wrong, only slow.
-
-The pool is partitioned by (typescript version, program name), so the seven old
-partitions are simply unused after this change and age out in 14 days; the
-`repo` partition's first entry is published by the first run after merge, and
-every fresh worktree seeds from it thereafter. Each EXISTING worktree pays one
-cold run (~7–10 GB, 100–300 CPU-s) the first time it checks after rebasing.
-
-The pool used to hand out its NEWEST entry, which is always some sibling
-branch: measured, seeding from it cost the same as starting cold, and 75 % of
-`web-core` runs host-wide were near-cold. So a base is now chosen by **content
-overlap**. Each candidate records a `version` per file (tsc's sha256 of the
-file's text); the run hashes the files on disk and counts how many still match.
-The highest count wins, ties go to the newer entry, and a local base already
-present is replaced only by a strictly better one — so a worktree iterating in
-place always keeps its own, while a just-rebased one picks up the pool's newer
-main base.
-
-Counts, not ratios: the score is "files tsc will not re-check", so a small
-program matching perfectly must not beat a large one matching 99 % of ten times
-as many files.
-
-Two things make that work, and both are easy to get wrong:
-
-- **A candidate is scored as if it already sat at this worktree's
-  `.cache/tsbuildinfo/`.** A buildinfo's paths are relative to its own
-  directory, so resolving a pooled entry against the pool directory gives paths
-  that exist nowhere — every candidate scores zero and the pool silently looks
-  empty. `readProgramFileList` takes the destination base explicitly for this.
-- **The entry worth picking has to still be there.** A published base is
-  labelled with its worktree's `HEAD` sha (`<ms>-<pid>-<sha12>.tsbuildinfo`),
-  and the prune keeps the newest three plus up to six further entries whose sha
-  is an ancestor of `main`. A fresh worktree's tree IS a main commit's tree, and
-  the agent whose branch tip became that commit published exactly that base —
-  which pure recency evicted within minutes. `main` is only fast-forwarded, so
-  "is on main" never flips back.
-
-`HEAD` is read in `finalize`, and only when there is something to publish. When
-it is unavailable the run publishes a legacy unlabelled entry — still usable as
-a base, never protectable — and says so on its summary line rather than
-swallowing it.
-
-The file hashes this needs are the ones the program key needs anyway: `prepare.ts`
-creates one `ContentHashMemo` before the selection and hands the same memo to
-`openProgramKeyContext`, so each file is read once and both steps necessarily
-saw the same tree.
-
-The pool has exactly ONE producer of a buildinfo: `shared/worker.ts`, spawned
-through `core/spawnTypeCheckWorker`. The build's `--skip-checks` fast path
-(`cli/plugins/build/cli/internal/app-artifacts.ts`) used to run its own
-`tsc --noEmit` and publish the result into the same pool — a base whose every
-signature is a placeholder, which makes a body-only hub edit re-check its whole
-importer closure for whoever picks it up. It now spawns the same worker with no
-lint files, at the same grant weight, so the compiler options and the
-declaration emit live in one place and the two producers cannot drift.
 
 ## One reading of the tree, passed around
 
@@ -476,10 +462,7 @@ lines per run, and they are the instrument every claim about this check is made 
   `worker` (and why there was no table), and the parts with the most stale
   files (`(types) <group>` is a typed part). The instrument for "did that edit
   cost its group, its importers, or the repo". `type-check: no signature table
-  recorded — <why>` follows when the worker could not read the buildinfo it
-  wrote; otherwise `type-check: contracts of N files: S stored, E from this
-  run's emit, A emitted alone, Tms` says where the contract edges came from and
-  what they cost.
+  recorded — <why>` follows when the worker returned no type fingerprints.
 - `type-check worker repo: cpu 186.6s (sys 12.0s), wall 95.2s, maxRSS 7.2 GB, slot wait 3.1s`
   — only when the worker RAN (a skipped run has no line, by construction). These
   are the numbers `TYPE_CHECK_WORKER_UNITS` is measured from, so a grep over many
@@ -487,25 +470,18 @@ lines per run, and they are the instrument every claim about this check is made 
   memory pressure, not this program's work; `wall` is the slot's hold time
   (every queued worker waits it out); `slot wait` is what the
   `type-check-worker` cap cost this run.
-- `type-check worker repo phases: tsc 97.8s, type fps 1.0s, lint 20.5s (cpu)` —
+- `type-check worker repo phases: program 8.1s, keyed check 30.2s, lint 20.5s (cpu)` —
   beside the cost line: where the worker's CPU went (its own clock, so process
-  start-up is left out). Measured 2026-10-18: a hub API change costs ~96 s of
-  tsc re-check — about a cold build — and ~20 s of lint, so the remaining cost of
-  a wide change, and its ~21 GB peak, is tsc's, not lint's.
+  start-up is left out): parsing and binding the program, the keyed check
+  (graph, keys, and checking the files whose key moved), lint.
+- `type-check: keyed check (keyed): 5155 of 11939 files checked (5101 of 11850
+  units, largest 3), 6784 reused; graph 900ms, check 28000ms, walk 1300ms` —
+  what the keyed check reused and re-checked: the instrument for "did that
+  edit cost the file, its contract's reach, or the repo".
 - `type-check worker repo: lane background, priority foreground (slot holder)` —
   when the worker is about to run: the grant's lane (which slot window it
   queued in) and its tier — always the foreground as the slot's holder, or
   `unknown (<reason>)` on a host with no darwinbg tier.
-- `type-check: warm base repo: …` — every run, saying which incremental base it
-  started from and how much of it still matches: `seeded 6701/6858 from pool
-  <entry>` (cold worktree, took a pooled base), `pool <entry> matched 6701/6858
-  files (local 5120, replaced)` (a pooled base beat the local one), `kept local
-  6799/6858 (best pool 6701)` (the local base won), or `cold, pool empty`. A
-  `seeded`/`kept` count far below the denominator is the signal that the pool
-  holds nothing that fits.
-- `type-check: published 1 warm base labelled <sha12>` — after the worker.
-  `UNLABELLED (git: <reason>)` instead when `HEAD` could not be read; a
-  parenthetical `(kept N, M on main)` when the prune protected entries.
 - `type-check: prepared off-thread in 71.3s (finalize 2.1s)` — once per run:
   the preparation thread's cost before and after the worker (the work that
   used to freeze the runner; most of it is `parseProgramRoots`' include
@@ -527,15 +503,14 @@ measures the queue, so any per-check cost claim needs `./singularity check --job
 - The flat config comes from the shared builder
   `@plugins/framework/plugins/tooling/plugins/lint/core` (`buildLintConfig`),
   the same one the root `eslint.config.ts` uses — editor and check can't drift.
-- Warm paths: tsc is incremental via `.cache/tsbuildinfo/repo.tsbuildinfo`,
-  and the worker EMITS declarations to a writer that keeps only the buildinfo,
-  so every file in it carries a real signature (the hash of its public shape).
-  That is what lets tsc skip the importers of a file whose body changed but
-  whose API did not — under `noEmit` the signature is a placeholder and a
-  body edit in a hub re-checks its whole importer closure (measured 4.4× the
-  CPU and 3× the RAM of the same edit with real signatures). The price is that
-  every exported value must have a nameable type: a `TS2883` / `TS4023`
-  declaration diagnostic is a real error here, fixed by an annotation;
+- Warm paths: tsc re-checks only the files whose key moved (the keyed check),
+  and every checked file's `.d.ts` is emitted, so its signature is the hash of
+  its public shape. That is what lets a body edit stop at the file — a
+  placeholder signature would move with every edit and re-check the whole
+  importer closure (measured 4.4× the CPU and 3× the RAM of the same edit with
+  real signatures). The price is that every exported value must have a
+  nameable type: a `TS2883` / `TS4023` declaration diagnostic is a real error
+  here, fixed by an annotation;
   lint reuses the per-part result store (only stale parts re-lint, and the
   real signatures are what key the typed part); and
   an unchanged PROGRAM runs no worker at all (above). A worker that crashes
@@ -564,6 +539,8 @@ measures the queue, so any per-check cost claim needs `./singularity check --job
     - `LintFileJob`
     - `LintFileResult`
     - `RawLintMessage`
+    - `TscDivergence`
+    - `TscMode`
     - `TypeCheckWorkerJob`
     - `TypeCheckWorkerResult`
     - `TypedDecision`
@@ -576,8 +553,10 @@ measures the queue, so any per-check cost claim needs `./singularity check --job
     - `TYPE_CHECK_WORKER_PEAK_BYTES`
     - `TYPE_CHECK_WORKER_UNITS`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shadow --shadow`
+  - Imported by: `framework/tooling/checks/type-check/backstop`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/contract-refs.ts`, `shared/pass-set.ts`, `shared/type-fingerprint.ts`, `shared/worker.ts` (debt)
+- Sub-plugins:
+  - **`backstop`** — The keyed type check's backstop: a daily main-only job runs the type-check worker in dual mode (the keyed check beside a full check of a fresh program, compared file by file) and files a…
 
 <!-- AUTOGENERATED:END -->

@@ -16,8 +16,8 @@ import { join } from "path";
  */
 export interface TscProgram {
   /**
-   * The program's name. Used for its `.tsbuildinfo` filename, its warm-base
-   * pool partition and its transcript lines — so it is a stable literal, not
+   * The program's name. Used for its manifest's filename, its program-key
+   * records and its transcript lines — so it is a stable literal, not
    * something derived from a path that varies per worktree.
    */
   name: string;
@@ -29,11 +29,9 @@ export function repoProgram(root: string): TscProgram {
   return { name: "repo", tsconfigPath: join(root, "tsconfig.json") };
 }
 
-// Stable `.tsbuildinfo` location for incremental type-checking. Lives under
-// `.cache/` (gitignored) — OUTSIDE `node_modules`, so it survives the `bun
-// install` that every build runs. Warmed before each run from the host-global
-// pool in `./warm-base.ts`, so a fresh worktree's first check starts from
-// whatever any worktree checked most recently.
-export function tsBuildInfoPath(root: string, programName: string): string {
-  return join(root, ".cache", "tsbuildinfo", `${programName}.tsbuildinfo`);
+// Where the type-check worker writes the program manifest: the files its
+// program loaded, which the program key hashes. Under `.cache/` (gitignored),
+// outside `node_modules`, so it survives the `bun install` every build runs.
+export function programManifestPath(root: string, programName: string): string {
+  return join(root, ".cache", "type-check", `${programName}.program.json`);
 }
