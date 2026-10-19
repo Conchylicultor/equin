@@ -1,0 +1,15 @@
+// @hash 229102bb7c88
+{
+  // Sonata paints its own designed theme, `sonata` (the immersive player's
+  // blue-black night, the sky accent, the chord colours and Manrope),
+  // contributed by the Sonata shell
+  // (`plugins/apps/plugins/sonata/plugins/shell/web/internal/theme.ts`) — never
+  // the desktop's runtime choice. A group `sonata` does not mention paints its
+  // schema defaults.
+  //
+  // `colorMode` is deliberately absent: light/dark is a single global setting
+  // today (`COLOR_MODE_SCOPE_ID` in `theme-engine/web/use-color-mode.ts`), so a
+  // value here would claim something that is not true. The theme is dark only
+  // by writing the same values for both modes instead.
+  "theme": "sonata"
+}

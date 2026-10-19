@@ -140,6 +140,16 @@ export interface DetailSections<EntityProps, Extra extends object = {}> {
     section: DetailSection<EntityProps> & Extra & { id: string };
     entityProps: EntityProps;
   }>;
+  /**
+   * One section's persisted open state and its setter — the same device-local
+   * value the card chrome reads (`<slotId>.<sectionId>.open`), for a pane that
+   * opens a section from outside its card (a rail of section icons). A section
+   * the user never touched reads closed here even when its `useDefaultOpen`
+   * would seed it open: the seed belongs to the card.
+   */
+  useSectionOpen: Hook<
+    (sectionId: string) => [boolean, (open: boolean) => void]
+  >;
 }
 
 /**
@@ -218,6 +228,25 @@ export function defineDetailSections<
 
   type SectionItem = DetailSection<EntityProps> & Extra & { id: string };
 
+  /**
+   * One section's persisted open state — the ONE spelling of its key, read by
+   * the card chrome and by anything outside it that opens a section (a rail
+   * that jumps to it). Read at RENDER, never at factory time: a slot's id is
+   * derived from the plugin that declares it, so it does not exist while this
+   * module evaluates. It still keys two panes' identically-named sections
+   * apart.
+   */
+  function useSectionOpen(
+    sectionId: string,
+    defaultOpen: boolean,
+  ): [boolean, (open: boolean) => void] {
+    const [open, setOpen] = useDraft(
+      `${Section.id}.${sectionId}.open`,
+      defaultOpen,
+    );
+    return [open, setOpen];
+  }
+
   interface SectionProps {
     section: SectionItem;
     entityProps: EntityProps;
@@ -233,10 +262,18 @@ export function defineDetailSections<
   function headerRight(
     section: SectionItem,
     entityProps: EntityProps,
+    open: boolean | undefined,
   ): ReactNode {
     const Actions = section.actions;
     const Summary = section.summary;
     if (!Summary && !Actions) return undefined;
+    // The inspector says ONE thing beside a collapsible section's title: its
+    // summary while it is shut (what you would see if you opened it), its
+    // controls once it is open (the body shows the rest). Either falls back to
+    // the other when a section declares only one.
+    if (chrome === "inspector" && open !== undefined && Summary && Actions) {
+      return open ? <Actions {...entityProps} /> : <Summary {...entityProps} />;
+    }
     return (
       <Inline gap="xs">
         {Summary ? <Summary {...entityProps} /> : null}
@@ -259,13 +296,7 @@ export function defineDetailSections<
     defaultOpen: boolean;
     Body: ComponentType<EntityProps>;
   }): ReactNode {
-    // Read at RENDER, never at factory time: a slot's id is derived from the
-    // plugin that declares it, so it does not exist while this module evaluates.
-    // It still keys two panes' identically-named sections apart.
-    const [open, setOpen] = useDraft(
-      `${Section.id}.${section.id}.open`,
-      defaultOpen,
-    );
+    const [open, setOpen] = useSectionOpen(section.id, defaultOpen);
     const icon = section.icon;
 
     return (
@@ -273,7 +304,7 @@ export function defineDetailSections<
         variant={chrome}
         title={section.label}
         icon={icon ? <Icon icon={icon} /> : undefined}
-        actions={headerRight(section, entityProps)}
+        actions={headerRight(section, entityProps, open)}
         open={open}
         onOpenChange={setOpen}
       >
@@ -299,7 +330,7 @@ export function defineDetailSections<
         variant={chrome}
         title={section.label}
         icon={icon ? <Icon icon={icon} /> : undefined}
-        actions={headerRight(section, entityProps)}
+        actions={headerRight(section, entityProps, undefined)}
       />
     );
   }
@@ -427,5 +458,11 @@ export function defineDetailSections<
     );
   }
 
-  return { Section, Host, SectionItem: SectionItemHost, SectionStack };
+  return {
+    Section,
+    Host,
+    SectionItem: SectionItemHost,
+    SectionStack,
+    useSectionOpen: (sectionId: string) => useSectionOpen(sectionId, false),
+  };
 }

@@ -52,7 +52,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
-  accidentalColor,
+  useTrackColorLook,
   useTrackColorMap,
   useHiddenTrackIds,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
@@ -77,7 +77,6 @@ import { ProjectionProvider } from "./projection-context";
 import { OverlayHost } from "./overlay-host";
 import { TransportOverlayHost } from "./transport-overlay-host";
 import { TransportEdgeHost } from "./transport-edge-host";
-import { FxToggle } from "./fx-toggle";
 import { PitchAxisHost } from "./pitch-axis-host";
 
 /** Props the player's `SonataPlayer.Display.Dispatch` passes to the chosen display. The
@@ -351,6 +350,8 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // for the round trip), and the lane shows the loading state below.
   const colorMap = useTrackColorMap();
   const hiddenIds = useHiddenTrackIds();
+  // Whether a black-key note wears its track's darker partner is the look's.
+  const trackColors = useTrackColorLook();
 
   // Authored-space note visuals — the canvas renderer's entire input. Pure and
   // CURSOR-INVARIANT: built once per (score, track view, tempoScale); resize
@@ -364,11 +365,19 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             plane,
             hiddenIds: hiddenIds.value,
             colorMap: colorMap.value,
-            accidentalColor,
+            accidentalColor: trackColors.accidental,
             speller,
             tempoScale,
           }),
-    [axisScore, plane, hiddenIds, colorMap, speller, tempoScale],
+    [
+      axisScore,
+      plane,
+      hiddenIds,
+      colorMap,
+      speller,
+      tempoScale,
+      trackColors.accidental,
+    ],
   );
   // A failed track-view read also fails the score gate (`scoreFailure`);
   // unsettled views otherwise read as still loading.
@@ -380,10 +389,20 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // numbers and each rest opens with an unnumbered line.
   const barMarkers = useMemo(
     () =>
-      axis.bars.map((b) => ({
-        index: b.index,
-        startSec: authoredSecondsOf(tempo, tempoScale, b.startBeat),
-      })),
+      axis.bars.map((b, i) => {
+        // The whole beats inside the bar, after its downbeat — up to the next
+        // bar's line (the last bar draws none: nothing closes it).
+        const next = axis.bars[i + 1]?.startBeat ?? b.startBeat;
+        const beatSecs: number[] = [];
+        for (let k = Math.floor(b.startBeat) + 1; k < next - 1e-6; k++) {
+          beatSecs.push(authoredSecondsOf(tempo, tempoScale, k));
+        }
+        return {
+          index: b.index,
+          startSec: authoredSecondsOf(tempo, tempoScale, b.startBeat),
+          beatSecs,
+        };
+      }),
     [axis, tempo, tempoScale],
   );
 
@@ -667,7 +686,11 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             layer="raised"
             x={{ start: 0, size: lane.width }}
             y={{ start: lane.height, size: 2 }}
-            className="bg-primary"
+            // The look's landing line: its colour, at its strength.
+            style={{
+              backgroundColor: lookStyle.nowLine.colorExpr,
+              opacity: lookStyle.nowLine.alpha,
+            }}
           />
 
           {/* Screen-anchored transport-edge indicators (the off-screen A–B loop
@@ -692,12 +715,6 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
               <Sonata.Hud.Render>
                 {(h) => <h.component key={h.id} />}
               </Sonata.Hud.Render>
-              {/* Host-owned FX popover — piano-roll-specific, so it stays
-                  manually mounted with the HUD chips and re-enables its own
-                  pointer events (the cluster is pointer-events-none). The
-                  shared display-options "View" chip is contributed to
-                  Sonata.Hud above by the view-options plugin. */}
-              <FxToggle />
             </Stack>
           </Pin>
 

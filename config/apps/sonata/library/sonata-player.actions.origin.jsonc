@@ -1,4 +1,4 @@
-// @hash 1d76a77907c9
+// @hash 2296b32756f9
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -9,9 +9,8 @@
   "items": [
     "apps.sonata.audio.engine:volume",
     "apps.sonata.audio.metronome:metronome",
-    "apps.sonata.library:back",
     "apps.sonata.library:display-picker",
-    "apps.sonata.library:panels",
+    "apps.sonata.library:fullscreen",
     "apps.sonata.piano-roll:spread",
     "apps.sonata.transport-bar:speed",
     "apps.sonata.transpose:transpose",

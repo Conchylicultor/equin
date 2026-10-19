@@ -12,8 +12,11 @@ share the header-right slot (both stay visible while collapsed).
 which of `SectionCard`'s two variants EVERY section of the pane wears — never a
 section's choice. `card`: bordered cards, leading chevron, `gap-sm` stack inside
 the `inset` (default `lg`). `inspector`: flat sections divided by a bottom rule,
-chevron-free full-width headers (collapsed title muted), no gap, no inset — and
-`inset` is type-rejected on that arm. `SectionStack` is the stack that owns this
+full-width headers (collapsed title muted, an open section's icon in the primary
+colour, a quiet chevron at the row's far end), no gap, no inset — and `inset`
+is type-rejected on that arm. Beside a collapsible inspector section's title
+sits ONE thing: its `summary` while shut, its `actions` once open (either alone
+when it declares only one). `SectionStack` is the stack that owns this
 rhythm; `Host` uses it, and a multi-zone pane wraps its `SectionItem` zones in it
 instead of hand-setting a gap or padding. Sonata's player column is the
 inspector pane.
@@ -58,7 +61,9 @@ order.
 
 **persisted toggle → `useDefaultOpen?.(props)` → `false`**, persisted per device
 via `useDraft` under `` `<slotId>.<sectionId>.open` `` (e.g.
-`sonata.section.chord-readout.open`). `useDefaultOpen` only *seeds* it — resolved
+`sonata.section.chord-readout.open`). `useSectionOpen(sectionId)` (on the
+factory's return) reads and writes that same value from outside the card — a
+rail of section icons opening the one picked. `useDefaultOpen` only *seeds* it — resolved
 once per mount, so a later flip never yanks a card the user has touched.
 
 ## A collapsed body is genuinely UNMOUNTED

@@ -108,7 +108,7 @@ export function JogWheel({
       <Text
         as="span"
         variant="caption"
-        className="min-w-[3rem] border-l border-border px-xs text-center font-medium tabular-nums"
+        className="min-w-9 font-bold text-foreground tabular-nums"
       >
         {readout}
       </Text>

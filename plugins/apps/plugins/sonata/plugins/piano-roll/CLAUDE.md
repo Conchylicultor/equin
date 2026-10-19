@@ -29,17 +29,17 @@ bar).
     - `PianoRollFx` ← `apps.sonata.piano-roll.fx-ripples`
     - `PianoRollFx` ← `apps.sonata.piano-roll.fx-shatter`
   - Contributes:
-    - `SonataPlayer.Display` "Piano Roll" → `LazyBoundary`
+    - `SonataPlayer.Display` "Piano roll" → `LazyBoundary`
     - `sonataPlayerPane.Actions` "spread" → `SpreadWheel`
     - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "piano-roll"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Sonata.ViewSection` "piano-roll-fx" → `FxViewSection`
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/track-mixer` ×3
     - `config_v2` ×3
     - `apps/sonata/player` ×2
     - `apps/sonata/session` ×2
     - `apps/sonata/shell` ×2
-    - `primitives/css/control-panel` ×2
     - `apps/sonata/document.useSongDocument`
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/primitives/inertial-drag.useInertialDrag`
@@ -47,12 +47,12 @@ bar).
     - `apps/sonata/rich/swing.usePerformedScore`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
+    - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/coords.Placed`
     - `primitives/css/layer.Layer`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/latest-ref.useLatestRef`

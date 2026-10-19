@@ -1,0 +1,31 @@
+/* The player's floating surface (proto-1792113547-2qr6g7): a barely
+ * translucent fill under a top sheen, blurred and saturated so the notes
+ * passing under it show as soft colour, closed by a hairline and lifted by a
+ * long shadow with an inner top highlight. */
+.sonata-glass {
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.075), rgb(255 255 255 / 0.02)),
+    rgb(22 22 32 / 0.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.9);
+  backdrop-filter: blur(16px) saturate(1.9);
+  border: 1px solid var(--border);
+  box-shadow:
+    0 16px 44px rgb(0 0 0 / 0.42),
+    inset 0 1px 0 rgb(255 255 255 / 0.12);
+  pointer-events: auto;
+}
+.sonata-glass[data-shape="pill"] {
+  border-radius: 999px;
+}
+.sonata-glass[data-shape="panel"] {
+  border-radius: 22px;
+}
+/* The progression capsule: darker, blurrier, a softer top highlight. */
+.sonata-glass[data-tint="deep"] {
+  background: rgb(20 20 30 / 0.56);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  backdrop-filter: blur(22px) saturate(1.4);
+  box-shadow:
+    0 18px 50px rgb(0 0 0 / 0.45),
+    inset 0 1px 0 rgb(255 255 255 / 0.06);
+}

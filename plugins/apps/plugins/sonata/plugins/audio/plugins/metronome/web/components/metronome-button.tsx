@@ -12,7 +12,7 @@ import { metronomeConfig } from "../../shared/config";
 import { TempoBand } from "./tempo-band";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
-const avTimerIcon = symbol("av-timer");
+const metronomeIcon = symbol("av-timer");
 
 // Count-in lengths as a single-select segmented control. The ids are strings
 // (SegmentedControl is keyed by string); they map 1:1 to the `countInBars` int.
@@ -62,7 +62,7 @@ export function MetronomeButton() {
         // The trigger owns its own tooltip (`label`), which is why the panel has
         // no tooltip prop to duplicate it with.
         <IconButton
-          icon={avTimerIcon}
+          icon={metronomeIcon}
           label="Metronome"
           variant={continuous ? "default" : "ghost"}
           disabled={!hasScore}

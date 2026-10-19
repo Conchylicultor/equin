@@ -1,4 +1,4 @@
-// @hash 1d76a77907c9
+// @hash 2296b32756f9
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -6,22 +6,30 @@
 //   Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items either side of it, turned to the slot's flow (flat in a column such as a sidebar's footer rows, upright in a row such as a toolbar).
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
-// The Sonata player's header, read left to right: identity and tools. Playback
-// itself — play / pause, the time, the chord timeline, loop — is the transport
-// strip below the header (`config/apps/sonata/player/transport.jsonc`), not
-// this row.
+// Arrange "items" for how this slot ACTUALLY renders — a sidebar is a
+// vertical list, a toolbar a horizontal bar, a pane a stack of blocks.
+// Look at the surface, then order for that reading direction.
+// Node forms:
+// Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+// Hide: { "item": "<key>", "hidden": true }
+// Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
+// Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items either side of it, turned to the slot's flow (flat in a column such as a sidebar's footer rows, upright in a row such as a toolbar).
+// Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+// Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+// The Sonata player's toolbar pill, read left to right (the header band's
+// identity — back, the song title — sits left of it, outside the slot).
+// Playback itself — play / pause, the time, the chord timeline, loop — is the
+// progression capsule under it (`config/apps/sonata/player/transport.jsonc`),
+// not this row.
 //
-// Leading: the back arrow (the way out), then the song title, which is the pane's own
-// title item and the row's give — it holds the slack and ellipsizes rather than
-// pushing the tools out.
+// First which view it is (the display switcher), then, after a divider, the
+// tools, each named for its role: time — how fast (the speed wheel) and the
+// beat that goes with it (the metronome) — then pitch (transpose), then output
+// (volume), then the view's zoom (the spread wheel, piano roll only); and after
+// a second divider, full screen. The wheels and volume fold to icon + value at
+// rest and open on hover, so the pill stays short.
 //
-// After the spacer, the tools, each named for its role: time — how fast (the
-// speed wheel) and the beat that goes with it (the metronome, whose popover
-// shows the live tempo) — then pitch (transpose), then output (volume), then the
-// view, after a divider: its zoom (the spread wheel, piano roll only), which view
-// it is (the display switcher), and the Song panels toggle that shows or hides
-// the right-hand panel. The wheels and volume fold to icon + value at rest and
-// open on hover, so the row stays short.
+// The pane's own title item is hidden: the band draws the title itself.
 //
 // Node forms:
 // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
@@ -32,16 +40,15 @@
 // At most one spacer per slot.
 {
   "items": [
-    "apps.sonata.library:back",
-    "primitives.pane:title",
-    { "type": "spacer", "id": "spacer-1" },
+    { "item": "primitives.pane:title", "hidden": true },
+    "apps.sonata.library:display-picker",
+    { "type": "divider", "id": "divider-view" },
     "apps.sonata.transport-bar:speed",
     "apps.sonata.audio.metronome:metronome",
     "apps.sonata.transpose:transpose",
     "apps.sonata.audio.engine:volume",
-    { "type": "divider", "id": "divider-view" },
     "apps.sonata.piano-roll:spread",
-    "apps.sonata.library:display-picker",
-    "apps.sonata.library:panels"
+    { "type": "divider", "id": "divider-screen" },
+    "apps.sonata.library:fullscreen"
   ]
 }

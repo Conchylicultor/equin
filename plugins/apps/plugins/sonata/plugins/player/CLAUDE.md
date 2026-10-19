@@ -102,7 +102,9 @@ the scope, so the player cannot import the shell).
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-2xl`
     - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xl`
+    - `ui/tokens/density --space-xs`
   - Imported by:
     - `apps/sonata/chord-chart`
     - `apps/sonata/controls`

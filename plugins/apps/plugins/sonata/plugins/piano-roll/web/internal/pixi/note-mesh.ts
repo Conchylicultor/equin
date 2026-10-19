@@ -174,6 +174,7 @@ uniform float uDpr;
 uniform float uSketch;
 uniform vec4 uPen;    // wobble px | grain 1/px | stroke px | wash
 uniform vec4 uPaper;  // paper rgb (linear 0..1) | hatch
+uniform vec2 uShape;  // inset px per side | corner radius px
 
 out vec4 finalColor;
 
@@ -202,11 +203,14 @@ float fbm(vec2 p) {
 
 void main() {
   vec2 sizePx = vSize * uScale;
-  // 0.5px inset per side = 1px gap between adjacent notes (DOM's w-1/h-1).
-  // Clamped so sub-pixel notes keep a visible ~1px core instead of vanishing.
-  vec2 halfPx = max(0.5 * sizePx - 0.5, vec2(0.5));
-  // Rounded pill corners (Synthesia-style).
-  float radius = min(4.0, min(halfPx.x, halfPx.y));
+  // The look's inset per side (0.5px = a 1px gap between adjacent notes, the
+  // DOM's w-1/h-1), capped at a tenth of the note's width so a narrow
+  // black-key note keeps its body — but never below that 1px gap. Clamped so
+  // sub-pixel notes keep a visible ~1px core instead of vanishing.
+  float inset = min(uShape.x, max(0.5, 0.1 * sizePx.x));
+  vec2 halfPx = max(0.5 * sizePx - inset, vec2(0.5));
+  // Rounded pill corners, at the look's radius.
+  float radius = min(uShape.y, min(halfPx.x, halfPx.y));
   // In CSS px from the note's centre. Reaches past ±halfPx under the sketch
   // look, where the vertex stage grew the quad by uMargin.
   vec2 p = (vLocal - 0.5) * sizePx;
@@ -301,6 +305,7 @@ struct NoteUniforms {
   uMargin: f32,
   uPen: vec4<f32>,   // wobble px | grain 1/px | stroke px | wash
   uPaper: vec4<f32>, // paper rgb (linear 0..1) | hatch
+  uShape: vec2<f32>, // inset px per side | corner radius px
 }
 
 @group(0) @binding(0) var<uniform> globalUniforms: GlobalUniforms;
@@ -402,12 +407,15 @@ fn fsMain(v: VsOut) -> @location(0) vec4<f32> {
   let uSketch = noteUniforms.uSketch;
   let uPen = noteUniforms.uPen;
   let uPaper = noteUniforms.uPaper;
+  let uShape = noteUniforms.uShape;
 
   let sizePx = v.vSize * uScale;
-  // 0.5px inset per side = 1px gap between adjacent notes (DOM's w-1/h-1).
-  let halfPx = max(0.5 * sizePx - vec2<f32>(0.5), vec2<f32>(0.5));
-  // Rounded pill corners (Synthesia-style).
-  let radius = min(4.0, min(halfPx.x, halfPx.y));
+  // The look's inset per side, capped at a tenth of the note's width (never
+  // below the 1px gap) — see the GLSL twin.
+  let inset = min(uShape.x, max(0.5, 0.1 * sizePx.x));
+  let halfPx = max(0.5 * sizePx - vec2<f32>(inset), vec2<f32>(0.5));
+  // Rounded pill corners, at the look's radius.
+  let radius = min(uShape.y, min(halfPx.x, halfPx.y));
   // In CSS px from the note's centre. Reaches past ±halfPx under the sketch
   // look, where the vertex stage grew the quad by uMargin.
   let p = (v.vLocal - vec2<f32>(0.5)) * sizePx;
@@ -498,7 +506,7 @@ export interface NoteMeshHandle {
    * may write, which the VERTEX stage turns into a bigger quad. Under the digital looks
    * both are 0 and the rest of the pen is never read.
    */
-  setLook(pen: SonataLookStyle["pen"]): void;
+  setLook(pen: SonataLookStyle["pen"], notes: SonataLookStyle["notes"]): void;
   /** Rewrite ONLY the color buffer (theme flip) — geometry untouched. */
   recolor(
     visuals: readonly NoteVisual[],
@@ -577,6 +585,7 @@ export function createNoteMesh(): NoteMeshHandle {
   //   uScale (vec2) | uDpr (f32) | uSketch (f32) | uMargin (f32)
   //                 | uPen (vec4: wobble, grain, stroke, wash)
   //                 | uPaper (vec4: r, g, b, hatch)
+  //                 | uShape (vec2: inset px, radius px)
   const noteUniforms = new UniformGroup({
     uScale: { value: new Float32Array([1, PX_PER_SECOND]), type: "vec2<f32>" },
     uDpr: { value: 1, type: "f32" },
@@ -584,6 +593,7 @@ export function createNoteMesh(): NoteMeshHandle {
     uMargin: { value: 0, type: "f32" },
     uPen: { value: new Float32Array([0, 0, 0, 0]), type: "vec4<f32>" },
     uPaper: { value: new Float32Array([0, 0, 0, 0]), type: "vec4<f32>" },
+    uShape: { value: new Float32Array([0.5, 4]), type: "vec2<f32>" },
   });
 
   const shader = Shader.from({
@@ -676,7 +686,10 @@ export function createNoteMesh(): NoteMeshHandle {
       noteUniforms.update();
     },
 
-    setLook(pen) {
+    setLook(pen, notes) {
+      const uShape = noteUniforms.uniforms.uShape as Float32Array;
+      uShape[0] = notes.insetPx;
+      uShape[1] = notes.radiusPx;
       noteUniforms.uniforms.uSketch = pen.sketch;
       noteUniforms.uniforms.uMargin = pen.marginPx;
       const uPen = noteUniforms.uniforms.uPen as Float32Array;

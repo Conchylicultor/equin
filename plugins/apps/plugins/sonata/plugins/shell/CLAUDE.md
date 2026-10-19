@@ -34,7 +34,7 @@ persistence); an effect that must run wherever a song plays is a
 
 ## Plugin reference
 
-- Description: App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
+- Description: App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots, and the app's own dark-only theme (the immersive player's blue-black night, sky accent, the chord colours, Manrope), which the sonata app selects.
 - Web:
   - Slots:
     - `Sonata.Overlay`
@@ -45,8 +45,9 @@ persistence); an effect that must run wherever a song plays is a
     - `Sonata.Effect`
     - `Sonata.Hud`
     - `Sonata.ViewOption`
+    - `Sonata.ViewSection`
     - `Sonata.Section`
-  - Slot contributors: 36 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 37 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Sonata.Section` ×11
     - `Sonata.ViewOption` ×8
     - `Sonata.Effect` ×6
@@ -56,7 +57,10 @@ persistence); an effect that must run wherever a song plays is a
     - `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`
     - `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`
     - `Sonata.TransportEdge` ← `apps.sonata.progress.loop`
-  - Contributes: `Apps.App` "Sonata" → `SonataLayout`
+    - `Sonata.ViewSection` ← `apps.sonata.piano-roll`
+  - Contributes:
+    - `Apps.App` "Sonata" → `SonataLayout`
+    - `ThemeEngine.Theme` "Sonata"
   - Uses:
     - `apps-core.Apps`
     - `apps/sonata/document.useLibrarySong`
@@ -68,6 +72,7 @@ persistence); an effect that must run wherever a song plays is a
     - `primitives/detail-sections.DetailSection`
     - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`
+    - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `LaneInsets`
     - `SonataAppValue`
@@ -79,10 +84,15 @@ persistence); an effect that must run wherever a song plays is a
     - `SonataSectionStack`
     - `useLaneInsets`
     - `useSonataApp`
+    - `useSonataSectionOpen`
 - Core:
   - Uses: `primitives/pane.defineApp`
   - Exports (values): `sonataApp`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --popover`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shadow --shadow-popover`
   - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×29
 

@@ -1,35 +1,45 @@
-/**
- * Synthesia track palette. Each track has TWO coordinated colors — a brighter
- * shade for notes on white keys (naturals) and a darker, slightly more
- * saturated shade for notes on black keys (sharps/flats) — exactly as Synthesia
- * draws them. The white-key shade is the track's "base" color (the swatch shown
- * in the mixer and the color the keyboard lights with); the black-key shade is
- * its partner, applied per-note by the piano-roll renderer via
- * {@link accidentalColor}.
- *
- * The first two entries are sampled pixel-exact from Synthesia (blue + green —
- * its default right/left-hand colors); the rest extend the set in the same
- * vivid-but-soft register, their black-key partners derived by the shared
- * darken+saturate transform so every track keeps the natural/sharp distinction.
- *
- * Tracks default to a color by their index in `score.tracks`; the user can
- * override the base per track (the override flows through `accidentalColor` the
- * same way). Cycles if a score has more tracks than colors.
- */
+import { useConfig } from "@plugins/config_v2/web";
+import {
+  asSonataLook,
+  SONATA_LOOK_STYLES,
+  sonataLookConfig,
+} from "@plugins/apps/plugins/sonata/plugins/look/core";
 
-/** White-key (base) color per palette slot. */
-export const TRACK_PALETTE = [
-  "#87aacf", // 1 — Synthesia blue
-  "#a2e55b", // 2 — Synthesia green
-  "#cf87c4", // 3 — magenta
-  "#e5b15b", // 4 — amber
-  "#5bd2cf", // 5 — cyan
-  "#e58787", // 6 — rose
-  "#9b87cf", // 7 — violet
-  "#b6cf5b", // 8 — lime
-  "#5b9be5", // 9 — azure
-  "#e5cf5b", // 10 — gold
-] as const;
+/**
+ * Track colours. Each track defaults to a colour by its index in
+ * `score.tracks`, from the active LOOK's track palette (`SonataLookStyle.tracks`
+ * — Synthesia's under the flat looks, the night stage's under `immersive`); the
+ * user can override the base per track. Cycles if a score has more tracks than
+ * colours.
+ *
+ * Under a look that shades accidentals (`notes.accidentalShade`), a note on a
+ * black key wears its track colour's darker, slightly more saturated partner —
+ * Synthesia's natural/sharp distinction — via {@link accidentalColor}; the
+ * white-key shade is the track's "base" colour. Under one that does not, every
+ * note of a track is the same colour.
+ */
+export interface TrackColorLook {
+  /** The look's palette: the defaults by index, and the swatch picker's choices. */
+  palette: readonly string[];
+  /** The default colour of the track at `index`. */
+  defaultColor: (index: number) => string;
+  /** The colour a note on a black key wears, for a track's base colour. */
+  accidental: (base: string) => string;
+}
+
+const sameColor = (base: string) => base;
+
+/** The active look's track colours — see {@link TrackColorLook}. */
+export function useTrackColorLook(): TrackColorLook {
+  const style =
+    SONATA_LOOK_STYLES[asSonataLook(useConfig(sonataLookConfig).look)];
+  const palette = style.tracks;
+  return {
+    palette,
+    defaultColor: (index) => palette[index % palette.length]!,
+    accidental: style.notes.accidentalShade ? accidentalColor : sameColor,
+  };
+}
 
 /**
  * Exact black-key partners for the colors Synthesia ships (sampled from its
@@ -40,11 +50,6 @@ const EXACT_ACCIDENTAL: Record<string, string> = {
   "#a2e55b": "#569d10", // green
 };
 
-/** The default (white-key/base) color for the track at `index`. */
-export function defaultTrackColor(index: number): string {
-  return TRACK_PALETTE[index % TRACK_PALETTE.length]!;
-}
-
 /**
  * The black-key (sharp/flat) shade for a given base color — Synthesia's
  * natural-vs-accidental distinction. Returns the sampled-exact partner for the
@@ -52,7 +57,7 @@ export function defaultTrackColor(index: number): string {
  * base (the relationship the exact pairs share). Non-hex inputs (e.g. the
  * `var(--primary)` no-track fallback) are returned unchanged.
  */
-export function accidentalColor(base: string): string {
+function accidentalColor(base: string): string {
   const key = base.trim().toLowerCase();
   return EXACT_ACCIDENTAL[key] ?? deriveAccidental(key);
 }

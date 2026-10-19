@@ -70,6 +70,12 @@ export const SonataSectionItem = sonataSections.SectionItem;
 export const SonataSectionStack = sonataSections.SectionStack;
 
 /**
+ * One section's persisted open state — the same value its card reads — for the
+ * section rail, which opens the picked section as it expands into the panel.
+ */
+export const useSonataSectionOpen = sonataSections.useSectionOpen;
+
+/**
  * The Sonata app's extension axes — what a display hosts and what the app
  * surface shows around a player:
  *
@@ -197,6 +203,20 @@ export const Sonata = {
     config: ConfigDescriptor;
     /** Optional subset/order of field keys; default = all descriptor fields. */
     fields?: string[];
+  }>({
+    docLabel: (p) => p.id,
+  }),
+
+  // VIEW SECTION — a lens's own block in the same View options panel, for a
+  // control that is not a config field (the piano roll's effect switches,
+  // grouped by tier). Rendered after the `ViewOption` fields, scoped by
+  // `displays` exactly like them. The component paints control-panel members
+  // (sections, rows) — never a surface of its own; the panel around it does.
+  ViewSection: defineSlot<{
+    id: string;
+    /** Owning lens(es): display ids, or `"global"` to show in every lens. */
+    displays: string[] | "global";
+    component: ComponentType;
   }>({
     docLabel: (p) => p.id,
   }),

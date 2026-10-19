@@ -23,7 +23,7 @@ import {
 import { usePerformedScore } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/swing/web";
 import { useLivePlay } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/live-play/web";
 import {
-  accidentalColor,
+  useTrackColorLook,
   useHiddenTrackIds,
   useMutedTrackIds,
   useTrackColorMap,
@@ -122,6 +122,7 @@ function keyLabel(
 export function PianoKeyboard({ projection }: { projection: Projection }) {
   // Sonata's own look paints its keys: one control, every keyboard in the app.
   const skin = useSonataKeySkin();
+  const trackColors = useTrackColorLook();
   const plane = projection.pitchPlane;
   const { score } = useSession();
   const { labelScope } = useConfig(pianoKeyboardConfig);
@@ -250,9 +251,9 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
       // The pitch-axis gutter sizes the keybed (the layout's keybed height);
       // the keys stretch to it so they stay under the falling notes.
       sizing="fill"
-      // A lit accidental shows the same darker shade as the falling note that
-      // lands on it — the exact `accidentalColor` the piano-roll uses.
-      accidentalColor={accidentalColor}
+      // A lit accidental shows the same shade as the falling note that lands
+      // on it — the look's own accidental colour, as the piano-roll uses.
+      accidentalColor={trackColors.accidental}
       // The keyboard primitive owns the element, so the layer arrives as the
       // class helper: a full-bleed fill of the pitch-axis gutter, inside which
       // the primitive lays its keys by runtime projection coordinates.

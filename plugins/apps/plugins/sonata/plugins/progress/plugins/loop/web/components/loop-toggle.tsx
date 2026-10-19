@@ -21,7 +21,7 @@ const OPTION_KEYS = ["showAhead", "restBeforeRepeat"] as const;
  * (`SonataPlayer.Transport`, after the scrubber): a split button.
  *
  *  - The main segment toggles the A–B practice loop in one click: with a
- *    region set it flips `enabled` (active = filled `default` variant); with
+ *    region set it flips `enabled` (on = the accent's glyph); with
  *    none it loops the whole song (see `toggleLoop`). `L` does the same.
  *  - The chevron opens the loop's repeat options — "Show loop ahead" and "Rest
  *    before repeat", the user's `loopConfig` preferences, rendered by the
@@ -38,7 +38,10 @@ export function LoopToggle() {
   const [open, setOpen] = useState(false);
   const values = useConfig(loopConfig);
   const setConfig = useSetConfig(loopConfig);
-  const variant = loop?.enabled ? "default" : "ghost";
+  // On, the loop's glyphs take the accent — a quiet mark on the bar, not a
+  // filled button competing with play.
+  const on = loop?.enabled === true;
+  const tone = on ? "text-primary-text hover:text-primary-text" : undefined;
 
   return (
     <ButtonGroup>
@@ -47,7 +50,8 @@ export function LoopToggle() {
         label="Loop"
         tooltip="Loop"
         shortcut="l"
-        variant={variant}
+        variant="ghost"
+        className={tone}
         disabled={!hasScore}
         onClick={() => toggleLoop({ loop, setLoop, score })}
       />
@@ -62,7 +66,8 @@ export function LoopToggle() {
             icon={optionsIcon}
             glyph="small"
             label="Loop options"
-            variant={open && !loop?.enabled ? "secondary" : variant}
+            variant={open ? "secondary" : "ghost"}
+            className={tone}
           />
         }
       >

@@ -37,7 +37,16 @@ const CONTROL_HEIGHT: Record<ControlSize, string> = {
  * the mount so `useEditableField` is only ever seeded from a *ready* title (the sanctioned "never autosave from a not-yet-loaded value"
  * guard, mirroring `PageHeader`). Renders nothing until a song row exists.
  */
-export function SongTitle() {
+export function SongTitle({
+  appearance = "field",
+}: {
+  /**
+   * `field` (default) — an input at the ambient control density, for a pane
+   * header row. `heading` — the immersive player's title: the subheading role
+   * in bold, no box at rest, as tall as its text.
+   */
+  appearance?: "field" | "heading";
+} = {}) {
   const size = useControlSize();
   const current = useCurrentSong();
   switch (current.status) {
@@ -58,11 +67,19 @@ export function SongTitle() {
         />
       );
     case "ready":
-      return current.found ? <SongTitleInner song={current.row} /> : null;
+      return current.found ? (
+        <SongTitleInner song={current.row} appearance={appearance} />
+      ) : null;
   }
 }
 
-function SongTitleInner({ song }: { song: Song }) {
+function SongTitleInner({
+  song,
+  appearance,
+}: {
+  song: Song;
+  appearance: "field" | "heading";
+}) {
   const { mutateAsync } = useEndpointMutation(updateSong);
 
   const title = useEditableField({
@@ -88,7 +105,11 @@ function SongTitleInner({ song }: { song: Song }) {
       onBlur={title.onBlur}
       placeholder="Untitled"
       aria-label="Song title"
-      className="w-56 border-transparent bg-transparent font-semibold hover:border-border focus:border-primary"
+      className={
+        appearance === "heading"
+          ? "h-auto w-80 rounded-sm border-transparent bg-transparent px-2xs py-none text-subheading font-bold hover:border-border focus:border-primary"
+          : "w-56 border-transparent bg-transparent font-semibold hover:border-border focus:border-primary"
+      }
     />
   );
 }

@@ -27,6 +27,8 @@
  * pointer-events-none, so the wrapper re-enables pointer events locally.
  */
 import { useState } from "react";
+import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
@@ -44,21 +46,9 @@ type ViewOptionItem = ReturnType<
 >[number];
 
 export function ViewOptionsToggle() {
-  const options = Sonata.ViewOption.useContributions();
-  const { displayId: effectiveDisplayId } = usePlayerView();
+  const hasOptions = useHasViewOptions();
   const [open, setOpen] = useState(false);
-
-  // Scope options to the active lens: show only the current display's options
-  // plus globals, so e.g. Notation never surfaces piano-roll-only key controls.
-  // Read the *effective* display (the lens actually on screen), not the raw
-  // explicit pick — the latter is null until the user clicks the picker, which
-  // would hide every lens-scoped option on first load even though a lens is up.
-  const visible = options.filter(
-    (o) =>
-      o.displays === "global" ||
-      (effectiveDisplayId != null && o.displays.includes(effectiveDisplayId)),
-  );
-  if (visible.length === 0) return null;
+  if (!hasOptions) return null;
 
   return (
     // The HUD may sit INSIDE a display's drag-to-scrub surface (e.g. the piano
@@ -98,11 +88,59 @@ export function ViewOptionsToggle() {
           </ToggleChip>
         }
       >
-        {visible.map((o) => (
-          <ViewOptionGroup key={o.id} option={o} />
-        ))}
+        <ViewOptionsPanel />
       </ControlPanelPopover>
     </div>
+  );
+}
+
+/** Whether the lens on screen has any view option or view section to show. */
+export function useHasViewOptions(): boolean {
+  const options = Sonata.ViewOption.useContributions();
+  const sections = Sonata.ViewSection.useContributions();
+  const { displayId } = usePlayerView();
+  return (
+    options.some((o) => inLens(o.displays, displayId)) ||
+    sections.some((s) => inLens(s.displays, displayId))
+  );
+}
+
+/**
+ * The View options panel's members for the lens on screen: every
+ * `Sonata.ViewOption` field scoped to it (or global), then every
+ * `Sonata.ViewSection` block scoped to it. Members only — the caller's
+ * `ControlPanelPopover` is the surface. Shared by the HUD chip above and any
+ * host that opens the same panel from its own trigger (the player toolbar's
+ * display switcher).
+ */
+export function ViewOptionsPanel() {
+  const options = Sonata.ViewOption.useContributions();
+  const sections = Sonata.ViewSection.useContributions();
+  // Scope options to the active lens: show only the current display's options
+  // plus globals, so e.g. Notation never surfaces piano-roll-only key controls.
+  // Read the *effective* display (the lens actually on screen), not the raw
+  // explicit pick — the latter is null until the user clicks the picker, which
+  // would hide every lens-scoped option on first load even though a lens is up.
+  const { displayId } = usePlayerView();
+  return (
+    <>
+      {options
+        .filter((o) => inLens(o.displays, displayId))
+        .map((o) => (
+          <ViewOptionGroup key={o.id} option={o} />
+        ))}
+      {sections
+        .filter((s) => inLens(s.displays, displayId))
+        .map((s) =>
+          renderIsolated(Sonata.ViewSection, s as unknown as Contribution, {}),
+        )}
+    </>
+  );
+}
+
+function inLens(displays: string[] | "global", displayId: string | null) {
+  return (
+    displays === "global" || (displayId != null && displays.includes(displayId))
   );
 }
 

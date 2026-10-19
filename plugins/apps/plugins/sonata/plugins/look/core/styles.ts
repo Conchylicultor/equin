@@ -16,16 +16,19 @@ export interface SonataDrawnKeys {
  * Which skin a look wears on the 88 keys below the lane, and — for the one that
  * draws them — the colours it draws them in.
  *
- * A union rather than a flag plus four colours, because two of the three skins
- * have no palette to give: `flat` and `realistic` are CSS chrome the keyboard
- * paints from the theme, and only `drawn` hands colours to an SVG layer. Under a
+ * A union rather than a flag plus four colours, because three of the four skins
+ * have no palette to give: `flat`, `realistic` and `immersive` are CSS chrome
+ * the keyboard paints itself, and only `drawn` hands colours to an SVG layer. Under a
  * flat record those four fields would have to be filled with unread values on
  * every non-drawn look; here they simply have nowhere to be written, and the
  * consumer that needs them ({@link SonataDrawnKeys}) is handed a type that
  * guarantees they are present.
  */
 export type SonataKeys =
-  { skin: "flat" } | { skin: "realistic" } | SonataDrawnKeys;
+  | { skin: "flat" }
+  | { skin: "realistic" }
+  | { skin: "immersive" }
+  | SonataDrawnKeys;
 
 /**
  * The palette of ONE look: every fixed constant the roll's four surfaces used to
@@ -70,6 +73,28 @@ export interface SonataLookStyle {
     paper: readonly [number, number, number];
   };
   /**
+   * The falling bars' shape, in CSS px: how far each note's box is drawn in
+   * from its key column on each side (`insetPx`, capped at a tenth of the
+   * column so a narrow black-key note keeps its body), and its corner radius.
+   * `accidentalShade` — whether a note on a black key wears its track colour's
+   * darker partner (Synthesia's natural/sharp distinction) or the same colour.
+   */
+  notes: {
+    insetPx: number;
+    radiusPx: number;
+    accidentalShade: boolean;
+  };
+  /**
+   * The default colour of each track, by its index in the score (cycling) —
+   * the colour a track falls in until the user picks another.
+   */
+  tracks: readonly string[];
+  /**
+   * The line the notes land on, over the keys: a colour expression and its
+   * opacity.
+   */
+  nowLine: { colorExpr: string; alpha: number };
+  /**
    * The grid rules. One colour expression (resolved through the scene's cached
    * CSS resolver) plus a per-layer alpha, matching how the grid already paints:
    * the bar-line container carries its alpha, the pitch lines bake theirs per
@@ -78,6 +103,8 @@ export interface SonataLookStyle {
   grid: {
     colorExpr: string;
     barLineAlpha: number;
+    /** Each beat inside a bar, fainter than the bar lines; 0 draws none. */
+    beatLineAlpha: number;
     octaveLineAlpha: number;
     pitchLineAlpha: number;
     octaveDash: readonly [number, number] | null;
@@ -108,8 +135,29 @@ export interface SonataLookStyle {
  * ONLY in the key skin, and a stage written twice is a stage that can be tweaked
  * once.
  */
+/**
+ * The Synthesia track palette: the first two sampled pixel-exact from
+ * Synthesia (blue + green — its default right/left-hand colours), the rest
+ * extending the set in the same vivid-but-soft register.
+ */
+const SYNTHESIA_TRACKS = [
+  "#87aacf", // 1 — Synthesia blue
+  "#a2e55b", // 2 — Synthesia green
+  "#cf87c4", // 3 — magenta
+  "#e5b15b", // 4 — amber
+  "#5bd2cf", // 5 — cyan
+  "#e58787", // 6 — rose
+  "#9b87cf", // 7 — violet
+  "#b6cf5b", // 8 — lime
+  "#5b9be5", // 9 — azure
+  "#e5cf5b", // 10 — gold
+] as const;
+
 const DIGITAL_ROLL: Omit<SonataLookStyle, "keys"> = {
   laneBg: "#262626",
+  notes: { insetPx: 0.5, radiusPx: 4, accidentalShade: true },
+  tracks: SYNTHESIA_TRACKS,
+  nowLine: { colorExpr: "var(--primary)", alpha: 1 },
   laneGrain: null,
   // The grid's white: the one ink the digital stage already draws in.
   laneInk: "#ffffff",
@@ -126,6 +174,7 @@ const DIGITAL_ROLL: Omit<SonataLookStyle, "keys"> = {
   grid: {
     colorExpr: "#ffffff",
     barLineAlpha: 0.1,
+    beatLineAlpha: 0,
     octaveLineAlpha: 0.24,
     pitchLineAlpha: 0.09,
     octaveDash: null,
@@ -145,6 +194,36 @@ const DIGITAL_ROLL: Omit<SonataLookStyle, "keys"> = {
  * (`~/.singularity/apps/prototypes/sketch-roll`), not fresh guesses.
  */
 export const SONATA_LOOK_STYLES: Record<SonataLook, SonataLookStyle> = {
+  // The immersive player's night (proto-1792113547-2qr6g7, `roll: immersive`):
+  // the stage's blue-black, a rule at every bar and a fainter one at every
+  // beat, a column rule at every C (stronger) and F, roomy rounded bars in one
+  // colour per track whatever key they land on, ivory keys, and the sky accent
+  // as the landing line at half strength.
+  immersive: {
+    laneBg: "#0d0d13",
+    laneGrain: null,
+    laneInk: "#f1efea",
+    notes: { insetPx: 2.5, radiusPx: 5, accidentalShade: false },
+    tracks: [
+      "#5f8ff0", // 1 — blue
+      "#a6e36b", // 2 — green
+      "#c39bff", // 3 — lilac
+      ...SYNTHESIA_TRACKS.slice(3),
+    ],
+    nowLine: { colorExpr: "var(--primary)", alpha: 0.55 },
+    pen: DIGITAL_ROLL.pen,
+    grid: {
+      colorExpr: "#ffffff",
+      barLineAlpha: 0.11,
+      beatLineAlpha: 0.035,
+      octaveLineAlpha: 0.12,
+      pitchLineAlpha: 0.075,
+      octaveDash: null,
+    },
+    labels: DIGITAL_ROLL.labels,
+    keys: { skin: "immersive" },
+  },
+
   flat: { ...DIGITAL_ROLL, keys: { skin: "flat" } },
 
   realistic: { ...DIGITAL_ROLL, keys: { skin: "realistic" } },
@@ -155,6 +234,9 @@ export const SONATA_LOOK_STYLES: Record<SonataLook, SonataLookStyle> = {
   // rect's own opacity absorbs that factor.
   sketch: {
     laneBg: "#f7f2e5",
+    notes: { insetPx: 0.5, radiusPx: 4, accidentalShade: true },
+    tracks: SYNTHESIA_TRACKS,
+    nowLine: { colorExpr: "var(--primary)", alpha: 1 },
     // The graphite the grid rules and drawn keys are inked in.
     laneInk: "#2c2926",
     laneGrain:
@@ -177,6 +259,7 @@ export const SONATA_LOOK_STYLES: Record<SonataLook, SonataLookStyle> = {
     grid: {
       colorExpr: "#2c2926",
       barLineAlpha: 0.14,
+      beatLineAlpha: 0,
       octaveLineAlpha: 0.26,
       pitchLineAlpha: 0.13,
       // The reference's octave rules are dashed; the rest are hairlines.

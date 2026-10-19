@@ -2,6 +2,7 @@ import { type ReactElement, useEffect, useRef, useState } from "react";
 import {
   Pane,
   PaneChrome,
+  PaneHeaderCell,
   type,
   type Hint,
   defineRoute,
@@ -27,7 +28,9 @@ import {
 import { sonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
+import { Glass } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/glass/web";
 import {
   Inset,
   Stack,
@@ -37,7 +40,21 @@ import { Library } from "./slots";
 import { hydrateSources, type PendingSource } from "./hydrate-sources";
 import { SonataLibrarySurface } from "./components/library-surface";
 import { SongTitle } from "./components/song-title-field";
-import { SectionPane } from "./components/section-pane";
+import { SectionDock } from "./components/section-pane";
+import { useSectionPaneCollapsed } from "./components/panels-toggle";
+import { PlayerHeader } from "./components/player-header";
+import {
+  CAPSULE_MARGIN,
+  CAPSULE_MAX_WIDTH,
+  CAPSULE_TOP,
+  EDGE,
+  PANEL_BOTTOM,
+  PANEL_RESERVE,
+  PANEL_TOP,
+  PANEL_WIDTH,
+  RAIL_RESERVE,
+  RAIL_WIDTH,
+} from "./internal/player-geometry";
 import { formatBarParam, parseBarParam } from "./bar-param";
 
 // Panes are declared first so their types are known before the component bodies
@@ -295,14 +312,12 @@ function placementKey(songId: string, bar: number | undefined): string {
 }
 
 /**
- * The player surface. The pane's OWN header carries identity and tools: the
- * song title is the pane title (an inline-editable node, since it needs the
- * loaded row), and ← Library, the speed wheel, metronome, transpose, volume,
- * the spread wheel and the display switcher are contributions to
- * `sonataPlayerPane.Actions` — where each lands in the row is the slot's
- * reorder config. The surface body is the player's transport strip
- * (`PlayerTransport`, body top: play / pause, the scrubber, loop), its active
- * display (`PlayerDisplay`), and the collapsible `SectionPane`.
+ * The player surface: the song's hydration states, then — once the song is
+ * loaded — the immersive player ({@link ImmersivePlayer}) bound to the URL's
+ * display lens. The toolbar's controls (the display switcher, the speed wheel,
+ * metronome, transpose, volume, the spread wheel, full screen) are
+ * contributions to `sonataPlayerPane.Actions` — where each lands in the pill
+ * is the slot's reorder config.
  */
 function SonataPlayerSurface(): ReactElement {
   const params = sonataPlayerPane.useParams();
@@ -331,7 +346,7 @@ function SonataPlayerSurface(): ReactElement {
   }
   return (
     // The display lens lives in the URL's `;view`: the binding wraps the whole
-    // chrome, so the header's picker and the body's display both read and
+    // surface, so the header's picker and the body's display both read and
     // write it. A pick rewrites the address in place (no remount); the default
     // lens drops the key so the bare song URL stays the canonical one.
     <PlayerDisplayBinding
@@ -344,39 +359,77 @@ function SonataPlayerSurface(): ReactElement {
         })
       }
     >
-      {/* The player bar IS the pane header — one slot, title included. The
-          full-width Transport progress strip stays OUT of it, in the body top
-          (the first child below), and the display + Section panels fill the
-          rest. The body is a single `h-full` column under the chrome's inert
-          `PaneScroll`. */}
-      <PaneChrome pane={sonataPlayerPane}>
-        <Column
-          fill
-          scrollBody={false}
-          className="h-full bg-background text-foreground"
-          header={
-            /* Transport strip: play / pause, the progression bar, loop (the
-               SonataPlayer.Transport contributions, in its reorder order).
-               Renders nothing when no contributor is present. */
-            <PlayerTransport />
-          }
-          body={
-            /* Main area: the active display + free-floating Section panels. */
-            <Stack
-              direction="row"
-              gap="none"
-              align="stretch"
-              className="h-full"
-            >
-              <PlayerDisplay />
+      <ImmersivePlayer />
+    </PlayerDisplayBinding>
+  );
+}
 
-              {/* Free-floating panels (current-chord readout, controls, …),
-                collapsible to a thin rail. */}
-              <SectionPane />
-            </Stack>
+/**
+ * The immersive player: the active display fills the window and everything
+ * else floats over it — the header band (back, the title, the toolbar pill),
+ * the progression capsule centred over the notes, and the section dock at the
+ * right edge. Only the dock takes room: the display (and the capsule) keep to
+ * the part of the window the dock leaves — the rail's narrow strip, or the
+ * open panel's width — so the panel sits beside the notes, never over them.
+ *
+ * The pane draws its own header (`PlayerHeader`) in place of `PaneChrome`'s
+ * bar, because its top chrome is not a row above the body but a band floating
+ * over it.
+ */
+function ImmersivePlayer() {
+  const [collapsed] = useSectionPaneCollapsed();
+  const right = collapsed ? RAIL_RESERVE : PANEL_RESERVE;
+  return (
+    <Clip className="relative isolate h-full bg-background text-foreground">
+      <Placed x={{ start: 0, end: right }} y="fill">
+        {/* A column, so the display's filling clip takes the whole height. */}
+        <Stack gap="none" className="h-full">
+          <PlayerDisplay />
+        </Stack>
+      </Placed>
+
+      <Placed x="fill" y={{ start: 0 }} layer="float">
+        <PlayerHeader
+          tools={
+            <sonataPlayerPane.Actions.Render controlSize="lg">
+              {(item) => <PaneHeaderCell {...item} />}
+            </sonataPlayerPane.Actions.Render>
           }
         />
-      </PaneChrome>
-    </PlayerDisplayBinding>
+      </Placed>
+
+      {/* The progression: play, the timeline, the loop — centred over the
+          notes, as wide as they allow up to its max. */}
+      <Placed
+        x={{
+          center: `calc((100% - ${right}px) / 2)`,
+          size: `min(${CAPSULE_MAX_WIDTH}px, calc(100% - ${right + 2 * CAPSULE_MARGIN}px))`,
+        }}
+        y={{ start: CAPSULE_TOP }}
+        layer="float"
+      >
+        <Glass tint="deep">
+          <PlayerTransport variant="capsule" />
+        </Glass>
+      </Placed>
+
+      {collapsed ? (
+        <Placed
+          x={{ end: EDGE, size: RAIL_WIDTH }}
+          y={{ center: "50%" }}
+          layer="float"
+        >
+          <SectionDock />
+        </Placed>
+      ) : (
+        <Placed
+          x={{ end: EDGE, size: PANEL_WIDTH }}
+          y={{ start: PANEL_TOP, end: PANEL_BOTTOM }}
+          layer="float"
+        >
+          <SectionDock />
+        </Placed>
+      )}
+    </Clip>
   );
 }

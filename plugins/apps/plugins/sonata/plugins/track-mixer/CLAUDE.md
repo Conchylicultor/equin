@@ -103,7 +103,7 @@ plus a per-song reset.
   - Contributes:
     - `SonataDocument.SongSetting` "track-view-sync" → `TrackViewObserver`
     - `Sonata.Section` "Tracks" → `TrackMixerPanel`
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/document` ×8
     - `primitives/css/text` ×3
     - `primitives/css/spacing` ×2
@@ -115,6 +115,7 @@ plus a per-song reset.
     - `apps/sonata/audio/instruments.SonataAudio`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
+    - `config_v2.useConfig`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/color-picker.SwatchGrid`
@@ -130,12 +131,14 @@ plus a per-song reset.
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
     - `ui/icons.Icon`
-  - Exports (types): `TrackMixerEntry`
+  - Exports (types):
+    - `TrackColorLook`
+    - `TrackMixerEntry`
   - Exports (values):
-    - `accidentalColor`
     - `setTracksActive`
     - `useHiddenTrackIds`
     - `useMutedTrackIds`
+    - `useTrackColorLook`
     - `useTrackColorMap`
     - `useTrackInstrumentMap`
     - `useTrackMixerEntries`

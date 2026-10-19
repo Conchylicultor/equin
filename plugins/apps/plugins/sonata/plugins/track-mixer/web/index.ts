@@ -17,7 +17,7 @@ export {
   useMutedTrackIds,
   type TrackMixerEntry,
 } from "./hooks";
-export { accidentalColor } from "./palette";
+export { useTrackColorLook, type TrackColorLook } from "./palette";
 export { setTracksActive } from "./actions";
 
 export default {

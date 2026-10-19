@@ -75,11 +75,10 @@ export function SectionLabel({
           seekTo(start);
         }}
       >
-        <SectionDot name={name} />
         <Text
           tone={current ? "strong" : "muted"}
           // eslint-disable-next-line text/no-adhoc-typography -- the label lane is 13px tall: line-height must stay 1 and the size below the caption role
-          className={cn("text-3xs leading-none", current && "font-semibold")}
+          className={cn("text-3xs leading-none", current && "font-bold")}
         >
           {name}
         </Text>

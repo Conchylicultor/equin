@@ -17,8 +17,10 @@ import {
  * - **`card`** (default) — a bordered, rounded `Card` with a leading chevron:
  *   the detail-pane look, where each section is an object of its own.
  * - **`inspector`** — a flat `<section>` closed by a 1px rule, its header a
- *   full-width row that fills on hover, with NO chevron (the collapsed title is
- *   muted instead — see `SectionHeaderRow`'s `disclosure="none"`). For a
+ *   full-width row that fills on hover: the collapsed title is muted, the open
+ *   one reads at full strength with its icon in the primary colour, and a quiet
+ *   chevron sits at the row's far end (`SectionHeaderRow`'s
+ *   `disclosure="end"`). For a
  *   side-panel inspector, where the sections are one continuous column and a
  *   card per section would box it into tiles. Its stack carries no gap and no
  *   inset: the rules divide it, and the headers' hover runs edge to edge.
@@ -104,7 +106,7 @@ export function SectionCard({
       className={
         inspector ? "rounded-none pl-lg pr-sm py-md" : "rounded-lg px-lg py-md"
       }
-      disclosure={inspector ? "none" : "lead"}
+      disclosure={inspector ? "end" : "lead"}
       collapsible={children !== undefined}
       actions={
         actions ? (
@@ -112,7 +114,13 @@ export function SectionCard({
         ) : undefined
       }
     >
-      {icon}
+      {inspector && open && icon ? (
+        // The open section's icon takes the primary colour: the column's one
+        // mark of which sections are showing their body.
+        <span className="contents text-primary-text">{icon}</span>
+      ) : (
+        icon
+      )}
       {title}
     </SectionHeaderRow>
   );

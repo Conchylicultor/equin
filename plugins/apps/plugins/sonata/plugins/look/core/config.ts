@@ -5,10 +5,13 @@ import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
  * Every look the Sonata roll can be drawn in, in picker order — the lane, the
  * grid, the falling notes, and the keys below them, all from one switch.
  *
+ *  - `immersive` — the player's night stage (proto-1792113547-2qr6g7): a
+ *                  blue-black lane with bar and beat rules, roomy rounded note
+ *                  bars in one colour per track, ivory keys under a sky
+ *                  landing line. The default.
  *  - `flat`      — the Synthesia stage with flat keys: a dark lane, faint white
  *                  rules, opaque note bars, and keys as solid fills with strong
  *                  dark borders, a lit key painted in the note's actual colour.
- *                  The default.
  *  - `realistic` — the same stage under skeuomorphic ivory/ebony keys:
  *                  gradients, bevels, gloss, and a pressed-key depression.
  *  - `sketch`    — the whole roll as a drawing on paper: cream ground with a
@@ -28,6 +31,7 @@ import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
  * cannot list different looks.
  */
 export const SONATA_LOOKS = [
+  { value: "immersive", label: "Immersive" },
   { value: "flat", label: "Flat (Synthesia)" },
   { value: "realistic", label: "Realistic" },
   { value: "sketch", label: "Sketch" },
@@ -45,7 +49,7 @@ export type SonataLook = (typeof SONATA_LOOKS)[number]["value"];
  * AND the ink the piano roll's grid and labels hold before the first `setLook()`
  * reaches them, so those two must not be able to drift apart.
  */
-export const SONATA_DEFAULT_LOOK: SonataLook = "flat";
+export const SONATA_DEFAULT_LOOK: SonataLook = "immersive";
 
 export const sonataLookConfig = defineConfig({
   fields: {

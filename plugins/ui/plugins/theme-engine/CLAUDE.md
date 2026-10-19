@@ -173,9 +173,9 @@ without its own theme document is the `""` entry exactly.
     - `ThemeEngine.SubTheme`
     - `ThemeEngine.FixedTheme`
     - `ThemeEngine.ThemeSource`
-  - Slot contributors: 39 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 40 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `ThemeEngine.TokenGroup` ×17
-    - `ThemeEngine.Theme` ×9
+    - `ThemeEngine.Theme` ×10
     - `ThemeEngine.VariantGroup` ×6
     - `ThemeEngine.SubTheme` ×4
     - `ThemeEngine.ThemeSource` ×2
@@ -305,9 +305,9 @@ without its own theme document is the `""` entry exactly.
     - `ui/tokens/type-scale` ×4
     - `ui/tokens/shadow` ×2
     - `ui/tokens/shape --radius`
-  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×27
-    - `apps` ×11
+    - `apps` ×12
     - `apps-core/chrome-theme`
     - `plugin-meta/token-usage`
     - `reports/theme-resolution`

@@ -42,7 +42,7 @@ import {
 } from "../actions";
 import { useTrackMixerEntries, type TrackMixerEntry } from "../hooks";
 import { useTrackFader } from "../use-track-fader";
-import { TRACK_PALETTE, accidentalColor } from "../palette";
+import { useTrackColorLook } from "../palette";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -83,6 +83,10 @@ function ColorSwatch({
   /** A hidden track's swatch fades with its name. */
   dimmed: boolean;
 }) {
+  // The swatch shows the colour a note of this track mostly wears: its base,
+  // or — under a look that shades accidentals — the darker partner the mixer
+  // has always shown.
+  const { palette, accidental } = useTrackColorLook();
   return (
     <InlinePopover
       tooltip="Track color"
@@ -98,16 +102,16 @@ function ColorSwatch({
             dimmed && "opacity-50",
           )}
           style={{
-            background: accidentalColor(color),
-            boxShadow: `0 0 0 3px color-mix(in oklab, ${accidentalColor(color)} 20%, transparent)`,
+            background: accidental(color),
+            boxShadow: `0 0 0 3px color-mix(in oklab, ${accidental(color)} 20%, transparent)`,
           }}
         />
       }
     >
       <SwatchGrid
-        colors={[...TRACK_PALETTE]}
+        colors={[...palette]}
         value={color}
-        renderColor={accidentalColor}
+        renderColor={accidental}
         onChange={(c) => setTrackColor(songId, trackId, c)}
       />
     </InlinePopover>

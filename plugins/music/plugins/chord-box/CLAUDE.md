@@ -40,6 +40,7 @@
     - `apps/sonata/chord-chart`
     - `apps/sonata/lyric-line`
     - `apps/sonata/lyrics-hud`
+    - `apps/sonata/rich/chord-overlay`
     - `apps/sonata/rich/readout-keyboard`
     - `apps/sonata/theory`
 - Core:

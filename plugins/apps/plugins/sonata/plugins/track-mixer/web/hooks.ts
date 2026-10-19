@@ -7,7 +7,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import type { TrackViewRow } from "../core";
-import { defaultTrackColor } from "./palette";
+import { useTrackColorLook } from "./palette";
 import { trackViewSetting } from "./track-view-setting";
 
 /** A track row resolved for display: score metadata + effective view-state. */
@@ -105,6 +105,8 @@ function useCurrentSongOverrides(): SongSetting<Map<string, TrackViewRow>> {
 export function useTrackMixerEntries(): SongSetting<TrackMixerEntry[]> {
   const { score } = useSession();
   const overrides = useCurrentSongOverrides();
+  // The look's palette names each track's default colour.
+  const { palette } = useTrackColorLook();
 
   // Registered timbres, read generically — never names a contributor. The
   // metadata fields (`id`, `label`, `gmProgram`, `default`) drive per-track
@@ -164,7 +166,7 @@ export function useTrackMixerEntries(): SongSetting<TrackMixerEntry[]> {
             instrumentId,
             instrumentLabel,
             noteCount: counts.get(t.id) ?? 0,
-            color: row?.color ?? defaultTrackColor(i),
+            color: row?.color ?? palette[i % palette.length]!,
             muted: row?.muted ?? false,
             hidden: row?.hidden ?? false,
             volume: row?.volume ?? 1,
@@ -173,7 +175,7 @@ export function useTrackMixerEntries(): SongSetting<TrackMixerEntry[]> {
           };
         });
       }),
-    [score.tracks, score.notes, overrides, instrumentIndex],
+    [score.tracks, score.notes, overrides, instrumentIndex, palette],
   );
 }
 

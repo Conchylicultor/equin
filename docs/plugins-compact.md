@@ -25,7 +25,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`places`** [exempt] [6 sub-plugins] — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
     - **`prototypes`** [exempt] [11 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
     - **`settings`** [4 sub-plugins] — Settings app.
-    - **`sonata`** [test helpers] [exempt] [78 sub-plugins] — Sonata — extensible piano and music app.
+    - **`sonata`** [test helpers] [exempt] [79 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [exempt] [27 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
     - **`website`** [15 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
 
@@ -132,7 +132,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`web-core`** [exempt]
     - **`web-sdk`** [test helpers] — Web plugin runtime: slots, contributions, loader
 
-- **`fullscreen`** — Browser fullscreen switch in the action bar's view-options popover.
+- **`fullscreen`** — Browser fullscreen switch in the action bar's view-options popover, and the same switch as a toolbar button (FullscreenButton) for an app header that carries its own.
 
 - **`history`** — Umbrella for the reusable version-history primitive: the domain-agnostic versioning engine substrate (more sub-plugins to follow).
   - Plugins:

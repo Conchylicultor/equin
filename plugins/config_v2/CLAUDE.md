@@ -533,8 +533,8 @@ per-composition scoping:
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 111 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×31
+  - Imported by: 112 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×32
     - `backup` ×13
     - `conversations` ×13
     - `debug` ×13

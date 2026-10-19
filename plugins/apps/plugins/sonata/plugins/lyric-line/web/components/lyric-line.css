@@ -1,0 +1,20 @@
+/* The `words` layout: the line flows as words that wrap; each word is a small
+ * column — its chord row over its text, in the surface's own font — so a word
+ * a chord starts on carries the chord just above it, a chord longer than its
+ * word widens the word rather than overprinting the next one, and every word
+ * keeps the chord row's height so the lines hold one rhythm. */
+.sonata-lyric-words {
+  white-space: normal;
+}
+.sonata-lyric-word {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: bottom;
+}
+.sonata-lyric-chord {
+  min-height: 1.2em;
+  font-size: 0.75em;
+  line-height: 1.2;
+  white-space: nowrap;
+  padding-right: 0.35em;
+}

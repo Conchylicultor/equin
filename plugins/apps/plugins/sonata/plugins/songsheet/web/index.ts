@@ -15,7 +15,7 @@ export default {
       match: "songsheet",
       id: "songsheet",
       label: "Songsheet",
-      icon: symbol("lyrics"),
+      icon: symbol("description"),
       capabilities: [],
       component: Songsheet,
     }),

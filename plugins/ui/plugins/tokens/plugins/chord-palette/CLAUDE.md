@@ -27,6 +27,8 @@
     - `apps/chord/trainer`
     - `apps/sonata/chord-chart`
     - `apps/sonata/lyrics-hud`
+    - `apps/sonata/progress/scrubber`
+    - `apps/sonata/rich/chord-overlay`
     - `apps/sonata/rich/readout-keyboard`
     - `music/chord-box`
 

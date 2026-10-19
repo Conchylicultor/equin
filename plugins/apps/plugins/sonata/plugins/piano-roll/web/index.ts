@@ -7,6 +7,7 @@ import { sonataPlayerPane } from "@plugins/apps/plugins/sonata/plugins/library/w
 import { SpreadWheel } from "./components/spread-wheel";
 import { pianoRollConfig } from "../shared/config";
 import { PianoRollFx } from "./slots";
+import { FxViewSection } from "./components/fx-view-section";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // The FX extension point: effect sub-plugins import these from this barrel
@@ -34,7 +35,7 @@ export default {
     SonataPlayer.Display({
       match: "piano-roll",
       id: "piano-roll",
-      label: "Piano Roll",
+      label: "Piano roll",
       icon: symbol("graphic-eq"),
       capabilities: ["time-axis", "pitch-plane"],
       // The default lens when the user hasn't picked one.
@@ -62,6 +63,13 @@ export default {
       displays: ["piano-roll"],
       config: pianoRollConfig,
       fields: ["showNoteNames"],
+    }),
+    // The roll's visual effects, as its own block of the same View options
+    // panel (one switch per PianoRollFx contribution, grouped by tier).
+    Sonata.ViewSection({
+      id: "piano-roll-fx",
+      displays: ["piano-roll"],
+      component: FxViewSection,
     }),
   ],
   slots: { fx: PianoRollFx },

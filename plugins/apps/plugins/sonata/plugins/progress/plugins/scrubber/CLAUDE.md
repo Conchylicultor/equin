@@ -53,19 +53,18 @@
     - `ZONE_HEIGHT`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --background`
+    - `ui/tokens/chord-palette --chord-6`
     - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
-    - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-3xs`
+    - `ui/tokens/type-scale --font-weight-bold`
     - `ui/tokens/type-scale --font-weight-semibold`
     - `ui/tokens/type-scale --line-height-3xs`
   - Imported by:

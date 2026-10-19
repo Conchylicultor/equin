@@ -18,16 +18,22 @@
 // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
+  // The dividers group the section rail: the song's sources, its tracks, its
+  // harmony as it plays, its accompaniment and feel, its key.
   "items": [
     "apps.sonata.sources.chord-grid:chord-grid-editor",
     "apps.sonata.sources.ultimate-guitar:ultimate-guitar-editor",
     "apps.sonata.sources.ultimate-guitar.alignment:ug-alignment-recording",
+    { "type": "divider", "id": "divider-tracks" },
     "apps.sonata.track-mixer:track-mixer",
+    { "type": "divider", "id": "divider-harmony" },
     "apps.sonata.rich.chord-progression:chord-progression",
     "apps.sonata.rich.chord-readout:chord-readout",
     "apps.sonata.rich.chord-list:chord-list",
+    { "type": "divider", "id": "divider-accompaniment" },
     "apps.sonata.rich.accompaniment:accompaniment",
     "apps.sonata.rich.swing:feel",
+    { "type": "divider", "id": "divider-key" },
     "apps.sonata.rich.key-readout:key-readout",
     "apps.sonata.rich.circle-of-fifths:circle-of-fifths"
   ]

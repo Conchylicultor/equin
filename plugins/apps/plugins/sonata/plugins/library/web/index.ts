@@ -2,13 +2,10 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { SongLibrary } from "./components/song-library";
-import {
-  BackToLibrary,
-  DisplayPicker,
-} from "./components/player-toolbar-items";
+import { DisplayPicker } from "./components/player-toolbar-items";
+import { FullscreenButton } from "@plugins/fullscreen/web";
 import { PlaySongAction } from "./components/play-song-action";
 import { DeleteSongAction } from "./components/delete-song-action";
-import { PanelsToggle } from "./components/panels-toggle";
 import { Library } from "./slots";
 import { IdKinds } from "@plugins/ids/web";
 import { songIdKind } from "../core";
@@ -34,17 +31,13 @@ export default {
     // How the songs entity's fields present in the library list.
     songPresentation,
     Sonata.Home({ id: "library", component: SongLibrary }),
-    // The player pane's header. The song title is NOT here: a pane contributes
-    // exactly one `title` item into its own header, and the player's title is
-    // that item's value (`title: { component: SongTitle }` in `panes.tsx`).
-    sonataPlayerPane.Actions({ id: "back", component: BackToLibrary }),
+    // The player's toolbar pill. Back and the song title are NOT here: they
+    // are the header band's own identity (`PlayerHeader`), left of the pill.
     sonataPlayerPane.Actions({
       id: "display-picker",
       component: DisplayPicker,
     }),
-    // Shows / hides the song's section column (the inspector beside the
-    // display). The column itself renders nothing while hidden.
-    sonataPlayerPane.Actions({ id: "panels", component: PanelsToggle }),
+    sonataPlayerPane.Actions({ id: "fullscreen", component: FullscreenButton }),
     // Play is the library's one at-rest affordance: it earns a permanent slot
     // on every view that has one (the card's footer, the table's trailing
     // track). Delete keeps the default hover-revealed zone.

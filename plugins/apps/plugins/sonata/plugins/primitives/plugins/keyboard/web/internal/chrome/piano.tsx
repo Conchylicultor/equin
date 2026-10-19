@@ -31,8 +31,11 @@ import type {
  * className-only `no-hardcoded-colors` check (the sanctioned escape hatch for
  * physical-object colors).
  *
- * THREE skins, applied to EVERY keyboard render (full roll + readout chips),
- * and all three come from ONE switch — Sonata's look:
+ * FOUR skins, applied to EVERY keyboard render (full roll + readout chips),
+ * and all four come from ONE switch — Sonata's look:
+ *  - `immersive` — the night keybed: warm ivory naturals on a near-black bed
+ *    (a 1px seam between keys), cool dark accidentals, and a lit key painted
+ *    in the note's actual colour.
  *  - `realistic` — skeuomorphic ivory/ebony: gradients + box-shadow bevels, a
  *    pressed-key depression, and a lit key tinted (translucent) over the ivory.
  *  - `flat` — Synthesia-style: solid fills, no gloss/gradients, strong dark
@@ -72,6 +75,17 @@ const KEY_BOTTOM_RADIUS = {
   borderBottomRightRadius: "3.5px",
 } satisfies KeyChromeStyle;
 
+/* ---- Immersive variant -------------------------------------------------- *
+ * The player's night keybed (proto-1792113547-2qr6g7): warm ivory naturals with
+ * a soft shade at the top edge, separated by a 1px seam of the near-black bed;
+ * accidentals a cool dark gradient. A lit key is painted in the note's actual
+ * colour, as under `flat`. */
+const IMMERSIVE_BED = "#08080c";
+const IMMERSIVE_WHITE_BG =
+  "linear-gradient(to bottom, #d9d4ca, #f2efe9 10%, #e4dfd6)";
+const IMMERSIVE_BLACK_BG = "linear-gradient(to bottom, #15151b, #30303a)";
+const IMMERSIVE_SEAM = `inset -1px 0 0 ${IMMERSIVE_BED}`;
+
 /**
  * Red felt strip at the top of the keybed — the dampening felt visible where
  * the keys meet the fallboard on a real piano. Flat keeps the line as a solid
@@ -83,8 +97,18 @@ const FELT_REALISTIC: CSSProperties = {
   boxShadow: "0 1px 1px rgba(0, 0, 0, 0.25)",
 };
 const FELT_FLAT: CSSProperties = { height: "2px", background: "#7a1f2b" };
+/** The immersive keybed shows a dark seam where the felt would be: the stage's
+ *  black between the landing line and the keys. */
+const FELT_IMMERSIVE: CSSProperties = {
+  height: "2px",
+  background: IMMERSIVE_BED,
+};
 const feltStyle = (style: Exclude<KeySkin, "drawn">): CSSProperties =>
-  style === "flat" ? FELT_FLAT : FELT_REALISTIC;
+  style === "flat"
+    ? FELT_FLAT
+    : style === "immersive"
+      ? FELT_IMMERSIVE
+      : FELT_REALISTIC;
 
 /**
  * Which skin draws the keys — the look's own three-member choice, aliased here
@@ -166,6 +190,13 @@ function whiteKeyStyle(
   isFirst: boolean,
 ): KeyChromeStyle {
   if (style === "drawn") return DRAWN_CHROME;
+  if (style === "immersive") {
+    return {
+      background: litColor ?? IMMERSIVE_WHITE_BG,
+      boxShadow: IMMERSIVE_SEAM,
+      transition: PRESS_TRANSITION,
+    };
+  }
   if (style === "flat") {
     return {
       background: litColor ?? FLAT_WHITE_BG,
@@ -203,6 +234,9 @@ function blackKeyStyle(
   if (style === "drawn") return { ...base, ...DRAWN_CHROME };
   if (style === "flat") {
     return { ...base, background: litColor ?? FLAT_BLACK_BG };
+  }
+  if (style === "immersive") {
+    return { ...base, background: litColor ?? IMMERSIVE_BLACK_BG };
   }
   if (litColor === undefined) {
     return {

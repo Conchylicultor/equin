@@ -15,28 +15,45 @@ them without a `shell → library` import that would cycle with the existing
   are keyed (named) views of the song, absent by default: `;bar=12` opens it
   with the playhead at that bar (`sonataSongLink(id, bar)`), and `;view` is the
   display lens (`…;view=notation`, absent for the default lens) — the surface
-  wraps its chrome in the player's `PlayerDisplayBinding`, so the header's
-  display switcher writes it in place and a reload, bookmark or shared link
-  reopens the same lens. Its own header
-  slot (`sonataPlayerPane.Actions`) IS the player's header — ← Library, the song
-  title as the pane's title item, then the tools: the speed wheel, metronome,
-  transpose, volume, the spread (zoom) wheel and, far right, the display
-  switcher — rendered by `PaneChrome` as one overflow-collapsing row. Playback
-  is the transport strip at the body top, above the display (`PlayerTransport`:
-  play / pause, the scrubber, loop — the `SonataPlayer.Transport` slot). **This plugin's barrel is where every other Sonata plugin reaches
-  that header**: it exports `sonataPlayerPane`, and a control is contributed as
-  `sonataPlayerPane.Actions({ id, component })`. Which side of the row an item
-  lands on is the slot's reorder config
-  (`config/apps/sonata/library/sonata-player.actions.jsonc`), not a field on the
-  contribution.
-  Carries the optimistic title in `input`; its `resolve` hook
-  (`useSonataPlayerResolve`) hydrates every `Library.Source`'s raw for the song
-  and loads it (`useLoadDocument({ kind: "library", songId }, rawMap)`) — so
-  direct nav / reload restores it — and gates on the song existing. A song
-  already loaded (playing in the background, reopened from the now-playing bar)
-  is NOT reloaded: a reload would rebuild its timeline and the session's content
-  reset would stop and rewind it. The surface composes the player parts
-  (`PlayerTransport`, `PlayerDisplay`) with the `SectionPane`.
+  wraps itself in the player's `PlayerDisplayBinding`, so the toolbar's display
+  switcher writes it in place and a reload, bookmark or shared link reopens the
+  same lens. Carries the optimistic title in `input`; its `resolve` hook
+  (`useSonataPlayerResolve`) gates on the song existing, and the surface
+  hydrates every `Library.Source`'s raw for the song and loads it
+  (`useLoadDocument({ kind: "library", songId }, rawMap)`) — so direct nav /
+  reload restores it. A song already loaded (playing in the background,
+  reopened from the now-playing bar) is NOT reloaded: a reload would rebuild
+  its timeline and the session's content reset would stop and rewind it.
+
+### The immersive player (`ImmersivePlayer`, `panes.tsx`)
+
+The design is proto-1792113547-2qr6g7 (`toolbar: corner`, `bar: v1`). The
+active display fills the window and everything else FLOATS over it, on the
+one translucent `Glass` surface (`primitives/glass`); menus stay the theme's
+solid popover. The app's theme is `sonata` (shell). Positions are the
+mockup's px, spelled once in `web/internal/player-geometry.ts`.
+
+- **Header band** (`PlayerHeader`): the surface's leading control (the app
+  launcher), ← Library (`BackToLibrary`), the inline-editable title
+  (`SongTitle appearance="heading"`) over the composer — and, right, ONE glass
+  pill holding the pane's own header slot, `sonataPlayerPane.Actions`, at `lg`
+  density: the display switcher (`DisplayPicker`: the lens on screen is a
+  filled chip whose ▾ opens its View options — `ViewOptionsPanel` from
+  view-options), then the tools (speed, metronome, transpose, volume, the
+  spread wheel), then full screen. The band replaces `PaneChrome`'s bar, so it
+  takes over the bar's surface-edge duties (leading control, the floating
+  action bar's safe area via `useReservesFloatingBar`). **This plugin's barrel
+  is where every other Sonata plugin reaches that pill**: a control is
+  contributed as `sonataPlayerPane.Actions({ id, component })`, and its place
+  is the slot's reorder config
+  (`config/apps/sonata/library/sonata-player.actions.jsonc`, which hides the
+  pane's own `title` item — the band draws the title).
+- **Progression capsule**: `PlayerTransport variant="capsule"` (play / pause,
+  the scrubber, loop — the `SonataPlayer.Transport` slot) in a deep glass pill
+  centred over the notes, at most 980px wide.
+- **Section dock** (`SectionDock`): see below. Only the dock takes room — the
+  display and the capsule keep to the part of the window it leaves (the rail's
+  strip, or the open panel's width), so the panel sits BESIDE the notes.
 
 `useSongLink` opens the player with `openPane(sonataPlayerPane, { songId },
 { mode: "root", hint: { title } })`. The ← Library button calls `clearRoute()`
@@ -78,17 +95,22 @@ Which fields the CARD shows is authored config, not code — `properties` on
 the `cards` row of `config/apps/sonata/library/sonata.library.jsonc`. Leave it
 unauthored and every exposed field stacks another caption row.
 
-## The section column (`SectionPane`)
+## The section dock (`SectionDock`)
 
 `Sonata.Section` is a
 [detail-sections](../../../../../primitives/plugins/detail-sections/CLAUDE.md)
 slot — read that first; it owns the card chrome, the persisted per-section open
 state, and the `useAvailable` gate. Sonata-specific on top of it:
 
-- `web/components/section-pane.tsx` owns only the **column**: the
-  collapse-to-rail toggle, the scroll body, and two `area`-filtered zones
-  (`"editor"` above `"player"`). Each section is painted by the primitive's
-  `SonataSectionItem`.
+- `web/components/section-pane.tsx` owns only the **dock**, in two states of
+  one device-local choice (`useSectionPaneCollapsed`): the **rail** — one icon
+  per available section, grouped by the `divider` nodes of the slot's order
+  config (`config/apps/sonata/shell/section.jsonc`) — and the **panel**, a
+  "Song" header over every section in two `area`-filtered zones (`"editor"`
+  above `"player"`), each painted by the primitive's `SonataSectionItem`.
+  Picking a rail icon opens that section (writing its card's own open state
+  through `useSonataSectionOpen`) and expands the dock; the panel's × folds it
+  back.
 - **A collapsed card's body is unmounted**, so per-song work that must outlive
   the panel lives in a headless `Sonata.Effect` — hence the chord-grid / Ultimate
   Guitar `*PersistObserver`s and `rhythm-controls`' `RhythmObserver`.
@@ -189,36 +211,41 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `IdKinds.Kind` "song|seed"
     - `FieldPresentation.Register` "entity:sonata_songs"
     - `Sonata.Home` "library" → `SongLibrary`
-    - `sonataPlayerPane.Actions` "back" → `BackToLibrary`
     - `sonataPlayerPane.Actions` "display-picker" → `DisplayPicker`
-    - `sonataPlayerPane.Actions` "panels" → `PanelsToggle`
+    - `sonataPlayerPane.Actions` "fullscreen" → `FullscreenButton`
     - `Library.SongActions` "play" → `PlaySongAction`
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 65 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×10
+  - Uses: 78 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×13
+    - `apps/sonata/shell` ×6
     - `network/live` ×6
+    - `primitives/css/ui-kit` ×6
     - `primitives/data-view` ×6
     - `apps/sonata/player` ×5
-    - `primitives/css/ui-kit` ×5
     - `apps/sonata/document` ×4
-    - `apps/sonata/shell` ×4
+    - `apps/sonata/view-options` ×2
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
     - `primitives/live-state` ×2
+    - `apps/sonata/primitives/glass.Glass`
     - `apps/sonata/session.useSession`
+    - `fullscreen.FullscreenButton`
     - `ids.IdKinds`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
+    - `primitives/css/clip.Clip`
     - `primitives/css/column.Column`
+    - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`
-    - `primitives/css/scroll.Scroll`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
-    - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/css/yield.yieldClass`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.linkProps`
@@ -297,21 +324,11 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `songsEntityRef`
     - `updateSong`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --background`
-    - `ui/tokens/color-palette --border`
-    - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/color-palette --primary-text`
-    - `ui/tokens/density --control-height-lg`
-    - `ui/tokens/density --control-height-md`
-    - `ui/tokens/density --control-height-sm`
-    - `ui/tokens/density --control-height-xs`
-    - `ui/tokens/density --space-lg`
-    - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
-    - `ui/tokens/type-scale --font-weight-medium`
-    - `ui/tokens/type-scale --font-weight-semibold`
+  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×10
+    - `ui/tokens/type-scale` ×6
+    - `ui/tokens/color-palette` ×5
+    - `ui/tokens/shape` ×2
   - Imported by:
     - `active-data/song`
     - `apps/sonata/audio/engine`

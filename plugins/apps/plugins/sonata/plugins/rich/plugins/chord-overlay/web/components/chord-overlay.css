@@ -1,0 +1,68 @@
+/* The roll's chord tags (proto-1792113547-2qr6g7): a tag on the line where
+ * each chord starts, in its numeral's chord colour (`--fn`, from
+ * `chordToneStyle`). At rest it is outlined — a near-black body under a
+ * hairline of the colour, the name written in it; the sounding chord fills
+ * with the colour and writes in the dark ink. The roll is a fixed dark stage,
+ * so these colours are the stage's, not the theme's. */
+
+/* The positioned tag box: the section line stacks above the tag, so the box
+ * grows upward from the tag's line. */
+.sonata-chord-tag-host {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.sonata-chord-tag {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  background: rgb(16 16 22 / 0.82);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--fn, var(--chord-outside)) 45%, transparent);
+  line-height: 22px;
+}
+.sonata-chord-tag b {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--fn, var(--chord-outside));
+}
+.sonata-chord-tag small {
+  font-weight: 600;
+  font-size: 10px;
+  color: rgb(241 239 234 / 0.45);
+}
+.sonata-chord-tag[data-now] {
+  background: var(--fn, var(--chord-outside));
+  box-shadow: none;
+}
+.sonata-chord-tag[data-now] b {
+  color: #101014;
+}
+.sonata-chord-tag[data-now] small {
+  color: rgb(16 16 20 / 0.6);
+}
+
+/* A section opening on the chord: its name in quiet caps, and the key it moves
+ * to in the warning amber. */
+.sonata-chord-tag-section {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 2px;
+  font-weight: 700;
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgb(241 239 234 / 0.5);
+}
+.sonata-chord-tag-section em {
+  font-style: normal;
+  color: rgb(255 197 107 / 0.9);
+}

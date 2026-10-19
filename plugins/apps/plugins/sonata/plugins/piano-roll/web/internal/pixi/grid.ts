@@ -44,6 +44,9 @@ import { PX_PER_SECOND } from "../../components/geometry";
 export interface BarMarker {
   index: number | null;
   startSec: number;
+  /** Each beat inside the bar after its downbeat, in authored seconds — the
+   *  fainter beat rules a look may draw (`grid.beatLineAlpha`). */
+  beatSecs: readonly number[];
 }
 
 export interface GridHandle {
@@ -95,14 +98,26 @@ export function createGrid(): GridHandle {
 
   const redrawBars = (): void => {
     barLines.clear();
+    const h = 1 / (PX_PER_SECOND * spread);
+    // The beat rules share the bar lines' container, whose alpha is the bar
+    // line's: a beat's own fill alpha is its share of it, so the two read at
+    // exactly the look's two strengths.
+    const beatAlpha =
+      ink.barLineAlpha > 0
+        ? Math.min(1, ink.beatLineAlpha / ink.barLineAlpha)
+        : 0;
     for (const b of lastBars) {
       // The DOM drew `border-t` at the bar's content Y, extending 1px DOWN
       // (toward earlier time). y = -startSec; height = 1px after the content
       // scale.y = PX_PER_SECOND * spread, so the authored-seconds height is
       // 1 / (PX_PER_SECOND * spread) to stay exactly 1px at any zoom.
-      barLines
-        .rect(0, -b.startSec, 1, 1 / (PX_PER_SECOND * spread))
-        .fill(0xffffff);
+      barLines.rect(0, -b.startSec, 1, h).fill(0xffffff);
+      if (beatAlpha <= 0) continue;
+      for (const sec of b.beatSecs) {
+        barLines
+          .rect(0, -sec, 1, h)
+          .fill({ color: 0xffffff, alpha: beatAlpha });
+      }
     }
   };
 
@@ -139,6 +154,7 @@ export function createGrid(): GridHandle {
     barLines.tint = color;
     barLines.alpha = ink.barLineAlpha;
     pitchLines.tint = color;
+    redrawBars();
     redrawPitchLines();
   };
 

@@ -255,7 +255,7 @@ export function createPianoRollScene(app: Application): PianoRollScene {
 
     setLook(look) {
       const style = SONATA_LOOK_STYLES[look];
-      mesh.setLook(style.pen);
+      mesh.setLook(style.pen, style.notes);
       grid.setLook(style.grid, resolveColor);
       labels.setLook(style.labels, resolveColor);
     },

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { SongSetting } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import {
-  accidentalColor,
+  useTrackColorLook,
   useTrackMixerEntries,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import {
@@ -24,7 +24,7 @@ export const HANDS: Record<Hand, { label: string; trackId: string }> = {
 
 /**
  * A hand's track as the mixer shows it: its name and its swatch's colour (the
- * mixer paints a swatch in the track colour's `accidentalColor` shade).
+ * mixer paints a swatch in the look's accidental shade of the track colour).
  */
 export interface HandTrack {
   name: string;
@@ -39,6 +39,7 @@ export interface HandTrack {
  */
 export function useHandTracks(): SongSetting<Record<Hand, HandTrack>> {
   const entries = useTrackMixerEntries();
+  const { accidental } = useTrackColorLook();
   return useMemo(() => {
     if (entries.kind !== "settled") return entries;
     const track = (hand: Hand): HandTrack => {
@@ -46,12 +47,12 @@ export function useHandTracks(): SongSetting<Record<Hand, HandTrack>> {
         (e) => e.trackId === HANDS[hand].trackId,
       );
       return entry
-        ? { name: entry.name, color: accidentalColor(entry.color) }
+        ? { name: entry.name, color: accidental(entry.color) }
         : { name: HANDS[hand].label, color: "var(--muted-foreground)" };
     };
     return {
       kind: "settled",
       value: { chord: track("chord"), bass: track("bass") },
     };
-  }, [entries]);
+  }, [entries, accidental]);
 }

@@ -64,8 +64,8 @@ follow.
   - Uses tokens:
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`
-  - Tokens used by: 229 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×59
+  - Tokens used by: 227 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×57
     - `primitives` ×38
     - `conversations` ×37
     - `debug` ×16

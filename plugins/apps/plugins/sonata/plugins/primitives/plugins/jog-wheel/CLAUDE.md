@@ -37,10 +37,10 @@ while `drag.phase !== "idle"`. Both header wheels (speed, spread) use it.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --primary`
-    - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-    - `ui/tokens/type-scale --font-weight-medium`
+    - `ui/tokens/type-scale --font-weight-bold`
   - Imported by:
     - `apps/sonata/piano-roll`
     - `apps/sonata/transport-bar`

@@ -10,11 +10,15 @@
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  //
+  // The key chip and the View chip are hidden: in the immersive player the
+  // display switcher's active view opens the View options, and the key lives
+  // in the chord gutter (key changes) and the Current key section.
   "items": [
     "apps.sonata.audio.metronome:count-in",
-    "apps.sonata.rich.key-chip:key-chip",
+    { "item": "apps.sonata.rich.key-chip:key-chip", "hidden": true },
     "apps.sonata.rich.swing:swing-chip",
-    "apps.sonata.view-options:view-options",
+    { "item": "apps.sonata.view-options:view-options", "hidden": true },
     "apps.sonata.lyrics-hud:lyrics"
   ]
 }

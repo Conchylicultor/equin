@@ -50,19 +50,31 @@ export function PlayerDisplay({ displayId }: { displayId?: string }) {
  * The transport strip — one row holding every `SonataPlayer.Transport`
  * contribution (play / pause, the progress scrubber with its markers, the loop
  * toggle), in the order the slot's reorder config gives. The strip owns the
- * row: its rule and inset, and the alignment. A contribution that should take
- * the row's slack (the scrubber) declares `fill` on itself. Renders nothing
- * with no contributor.
+ * row: its inset, its rhythm and the alignment. A contribution that should
+ * take the row's slack (the scrubber) declares `fill` on itself. Renders
+ * nothing with no contributor.
+ *
+ * Two ways to sit in a host: `strip` (default) — a full-width band closed by a
+ * rule, under a header; `capsule` — the inside of a floating pill (the
+ * immersive player's progression bar), hugging the round play button.
  */
-export function PlayerTransport() {
+export function PlayerTransport({
+  variant = "strip",
+}: {
+  variant?: "strip" | "capsule";
+} = {}) {
   const items = SonataPlayer.Transport.useContributions();
   if (items.length === 0) return null;
   return (
     <Stack
       direction="row"
       align="center"
-      gap="md"
-      className="border-b border-border px-xl py-md"
+      gap={variant === "capsule" ? "sm" : "md"}
+      className={
+        variant === "capsule"
+          ? "py-xs pr-sm pl-xs"
+          : "border-b border-border px-xl py-md"
+      }
     >
       <SonataPlayer.Transport.Render>
         {(t) => <t.component key={t.id} />}

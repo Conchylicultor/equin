@@ -6364,36 +6364,41 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `IdKinds.Kind` "song|seed"
               - `FieldPresentation.Register` "entity:sonata_songs"
               - `Sonata.Home` "library" → `SongLibrary`
-              - `sonataPlayerPane.Actions` "back" → `BackToLibrary`
               - `sonataPlayerPane.Actions` "display-picker" → `DisplayPicker`
-              - `sonataPlayerPane.Actions` "panels" → `PanelsToggle`
+              - `sonataPlayerPane.Actions` "fullscreen" → `FullscreenButton`
               - `Library.SongActions` "play" → `PlaySongAction`
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
-            - Uses: 65 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
-              - `primitives/pane` ×10
+            - Uses: 78 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+              - `primitives/pane` ×13
+              - `apps/sonata/shell` ×6
               - `network/live` ×6
+              - `primitives/css/ui-kit` ×6
               - `primitives/data-view` ×6
               - `apps/sonata/player` ×5
-              - `primitives/css/ui-kit` ×5
               - `apps/sonata/document` ×4
-              - `apps/sonata/shell` ×4
+              - `apps/sonata/view-options` ×2
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
               - `primitives/live-state` ×2
+              - `apps/sonata/primitives/glass.Glass`
               - `apps/sonata/session.useSession`
+              - `fullscreen.FullscreenButton`
               - `ids.IdKinds`
               - `infra/endpoints.useEndpointMutation`
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
+              - `primitives/css/clip.Clip`
               - `primitives/css/column.Column`
+              - `primitives/css/control-panel.ControlPanelPopover`
+              - `primitives/css/coords.Placed`
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
               - `primitives/css/line.Line`
-              - `primitives/css/scroll.Scroll`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
-              - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/css/yield.yieldClass`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.linkProps`
@@ -6472,21 +6477,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `songsEntityRef`
               - `updateSong`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --background`
-              - `ui/tokens/color-palette --border`
-              - `ui/tokens/color-palette --foreground`
-              - `ui/tokens/color-palette --primary`
-              - `ui/tokens/color-palette --primary-text`
-              - `ui/tokens/density --control-height-lg`
-              - `ui/tokens/density --control-height-md`
-              - `ui/tokens/density --control-height-sm`
-              - `ui/tokens/density --control-height-xs`
-              - `ui/tokens/density --space-lg`
-              - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
-              - `ui/tokens/type-scale --font-weight-medium`
-              - `ui/tokens/type-scale --font-weight-semibold`
+            - Uses tokens: 23 vars — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+              - `ui/tokens/density` ×10
+              - `ui/tokens/type-scale` ×6
+              - `ui/tokens/color-palette` ×5
+              - `ui/tokens/shape` ×2
             - Imported by:
               - `active-data/song`
               - `apps/sonata/audio/engine`
@@ -6547,8 +6542,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SONATA_LOOKS`
               - `sonataLookConfig`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-        - **`lyric-line`** — One songsheet line as text: <LyricLineText> — the chord row (each chord pinned over its lyric column) stacked over the words, monospace so a column is one character, with no chrome of its own and an optional chordStyle so the caller paints the chords. Shared by the Songsheet and the Chord grid's lyrics.
+            - Uses tokens:
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --primary`
+        - **`lyric-line`** — One songsheet line as text: <LyricLineText> — the chord row (each chord pinned over its lyric column) stacked over the words, monospace so a column is one character — or, as `layout: words`, the line's words flowing in the surface's own font, each chord over the word it starts on — with no chrome of its own and an optional chordStyle so the caller paints the chords. Shared by the Songsheet and the Chord grid's lyrics.
           - Web:
             - Uses:
               - `primitives/css/coords.Placed`
@@ -6611,7 +6608,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.useConfig`
               - `music/chord-box.chordToneStyle`
               - `primitives/css/scroll.Scroll`
-              - `primitives/css/text.Text`
               - `primitives/dom/scroll-reveal.revealElement`
           - Server:
             - Contributes: `ConfigV2.Register` "config"
@@ -6621,11 +6617,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chord-palette --chord-outside`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/color-palette --ring`
-              - `ui/tokens/density --space-2xs`
-              - `ui/tokens/density --space-sm`
-              - `ui/tokens/shadow --shadow`
-              - `ui/tokens/type-scale --font-weight-bold`
-              - `ui/tokens/type-scale --font-weight-semibold`
         - **`notation`** — Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
           - Web:
             - Contributes:
@@ -6687,9 +6678,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/session.useCursorSelector`
               - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
-              - `apps/sonata/track-mixer.accidentalColor`
               - `apps/sonata/track-mixer.useHiddenTrackIds`
               - `apps/sonata/track-mixer.useMutedTrackIds`
+              - `apps/sonata/track-mixer.useTrackColorLook`
               - `apps/sonata/track-mixer.useTrackColorMap`
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
@@ -6711,17 +6702,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PianoRollFx` ← `apps.sonata.piano-roll.fx-ripples`
               - `PianoRollFx` ← `apps.sonata.piano-roll.fx-shatter`
             - Contributes:
-              - `SonataPlayer.Display` "Piano Roll" → `LazyBoundary`
+              - `SonataPlayer.Display` "Piano roll" → `LazyBoundary`
               - `sonataPlayerPane.Actions` "spread" → `SpreadWheel`
               - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "piano-roll"
-            - Uses: 36 symbols — full list in [`plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md)
+              - `Sonata.ViewSection` "piano-roll-fx" → `FxViewSection`
+            - Uses: 34 symbols — full list in [`plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md)
               - `apps/sonata/track-mixer` ×3
               - `config_v2` ×3
               - `apps/sonata/player` ×2
               - `apps/sonata/session` ×2
               - `apps/sonata/shell` ×2
-              - `primitives/css/control-panel` ×2
               - `apps/sonata/document.useSongDocument`
               - `apps/sonata/library.sonataPlayerPane`
               - `apps/sonata/primitives/inertial-drag.useInertialDrag`
@@ -6729,12 +6720,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/rich/swing.usePerformedScore`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
+              - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/coords.Placed`
               - `primitives/css/layer.Layer`
               - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.cn`
               - `primitives/dom/element-size.useElementSize`
               - `primitives/latest-ref.useLatestRef`
@@ -6939,7 +6930,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-2xl`
               - `ui/tokens/density --space-md`
+              - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xl`
+              - `ui/tokens/density --space-xs`
             - Imported by:
               - `apps/sonata/chord-chart`
               - `apps/sonata/controls`
@@ -6956,6 +6949,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/view-options`
         - **`primitives`** — Umbrella for Sonata-local client primitives.
           - Plugins:
+            - **`glass`** — The player's one floating surface: <Glass> — a barely translucent, blurred panel with a top sheen and a hairline edge that the toolbar pill, the progression capsule and the section rail all float on over the notes (menus stay the theme's solid popover). A shape (pill / panel) and a tint (the bars' or the progression capsule's deeper glass).
+              - Web:
+                - Uses: `primitives/css/ui-kit.cn`
+                - Exports (types):
+                  - `GlassProps`
+                  - `GlassShape`
+                  - `GlassTint`
+                - Exports (values): `Glass`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --border`
+                  - `ui/tokens/shadow --shadow`
+                - Imported by: `apps/sonata/library`
             - **`inertial-drag`** — 1-D pointer drag-to-scrub hook with exponential-friction release momentum (flick → coast → settle).
               - Web:
                 - Uses: `primitives/latest-ref.useLatestRef`
@@ -6989,10 +6995,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --border`
+                  - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --primary`
-                  - `ui/tokens/density --space-xs`
                   - `ui/tokens/shape --spacing`
-                  - `ui/tokens/type-scale --font-weight-medium`
+                  - `ui/tokens/type-scale --font-weight-bold`
                 - Imported by:
                   - `apps/sonata/piano-roll`
                   - `apps/sonata/transport-bar`
@@ -7071,9 +7077,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ToolbarControl`
               - Cross-plugin:
                 - Uses tokens:
-                  - `ui/tokens/color-palette --border`
+                  - `ui/tokens/color-palette --accent`
                   - `ui/tokens/color-palette --muted-foreground`
-                  - `ui/tokens/shape --radius`
+                  - `ui/tokens/density --control-height-lg`
+                  - `ui/tokens/density --space-xs`
                   - `ui/tokens/shape --spacing`
                 - Imported by:
                   - `apps/sonata/audio/engine`
@@ -7154,6 +7161,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --background`
                   - `ui/tokens/color-palette --primary`
                   - `ui/tokens/color-palette --primary-foreground`
+                  - `ui/tokens/color-palette --primary-text`
                   - `ui/tokens/density --space-2xs`
                   - `ui/tokens/density --space-xs`
                   - `ui/tokens/shadow --shadow-sm`
@@ -7211,19 +7219,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ZONE_HEIGHT`
               - Cross-plugin:
                 - Uses tokens:
-                  - `ui/tokens/color-palette --background`
+                  - `ui/tokens/chord-palette --chord-6`
                   - `ui/tokens/color-palette --foreground`
-                  - `ui/tokens/color-palette --muted`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/color-palette --primary`
                   - `ui/tokens/density --space-2xs`
                   - `ui/tokens/density --space-sm`
                   - `ui/tokens/density --space-xs`
-                  - `ui/tokens/shadow --shadow`
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-scale`
                   - `ui/tokens/type-scale --font-size-3xs`
+                  - `ui/tokens/type-scale --font-weight-bold`
                   - `ui/tokens/type-scale --font-weight-semibold`
                   - `ui/tokens/type-scale --line-height-3xs`
                 - Imported by:
@@ -7264,7 +7271,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-xs`
                   - `ui/tokens/type-scale --font-scale`
                   - `ui/tokens/type-scale --font-size-3xs`
-                  - `ui/tokens/type-scale --font-weight-semibold`
+                  - `ui/tokens/type-scale --font-weight-bold`
                   - `ui/tokens/type-scale --line-height-3xs`
         - **`recording`** — Sonata recording: the session's recording player — the YouTube video whoever shows a song's recording declares (useShowRecording), owned by the playback session so it outlives what shows it: RecordingVideo is only a viewport the playing iframe is moved into (Element.moveBefore, never reloaded) and out of, to an off-screen parking spot, so collapsing its section or switching the display neither stops nor reloads it. When the open score is timed on that video (Score.meta.recording) it is the session's transport driver while ready — the cursor, the synth and the A–B loop follow the video, its rate is the tempo; otherwise it plays on its own with YouTube's controls under a “Not synced” badge. RecordingSwitch turns the video off (the synth plays alone, same timing) and on. The video's on/off persists in the sonata.recording-video config; its sound, level and the sync offset (no control in the card; Settings → Config) in the sonata.recording config. Owns the SonataRecording.Refused seam for whoever picked a video YouTube refuses to embed. Server registration of the Sonata recording mix config and the video on/off config.
           - Web:
@@ -7436,24 +7443,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `Sonata.Overlay` "chord-overlay" → `ChordOverlay`
                 - Uses:
                   - `apps/sonata/rich/chord-label.useChordDisplayMode`
+                  - `apps/sonata/session.useCursorSelector`
                   - `apps/sonata/session.useSession`
                   - `apps/sonata/shell.Sonata`
+                  - `music/chord-box.chordToneStyle`
                   - `primitives/css/coords.Placed`
                   - `primitives/css/pin.Pin`
               - Cross-plugin:
                 - Uses tokens:
-                  - `ui/tokens/color-palette --background`
-                  - `ui/tokens/color-palette --border`
-                  - `ui/tokens/color-palette --foreground`
-                  - `ui/tokens/density --space-2xs`
-                  - `ui/tokens/density --space-xs`
-                  - `ui/tokens/shadow --shadow-sm`
-                  - `ui/tokens/shape --radius`
+                  - `ui/tokens/chord-palette --chord-outside`
                   - `ui/tokens/shape --spacing`
-                  - `ui/tokens/type-scale --font-scale`
-                  - `ui/tokens/type-scale --font-size-2xs`
-                  - `ui/tokens/type-scale --font-weight-semibold`
-                  - `ui/tokens/type-scale --line-height-2xs`
             - **`chord-progression`** — Sonata Section: a rhythm-aware chord-progression strip of chips, laid out bar-by-bar and sized by duration, highlighting the chord under the playhead and seeking on click.
               - Web:
                 - Contributes: `Sonata.Section` "Progression" → `ChordProgression`
@@ -7910,7 +7909,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: 32 plugins — full list in [`plugins/apps/plugins/sonata/plugins/session/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/session/REFERENCE.md)
               - `apps` ×32
-        - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots.
+        - **`shell`** — App shell for Sonata. Registers the /sonata app entry (SonataLayout: one SonataPlayerScope around the pane router), derives the app's song — the one loaded in the player (useSonataApp) — and defines the app-level Sonata.{Overlay,TransportOverlay,TransportEdge,PitchAxis,Home,Effect,Hud,ViewOption,Section} slots, and the app's own dark-only theme (the immersive player's blue-black night, sky accent, the chord colours, Manrope), which the sonata app selects.
           - Web:
             - Slots:
               - `Sonata.Overlay`
@@ -7921,8 +7920,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.Effect`
               - `Sonata.Hud`
               - `Sonata.ViewOption`
+              - `Sonata.ViewSection`
               - `Sonata.Section`
-            - Slot contributors: 36 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+            - Slot contributors: 37 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
               - `Sonata.Section` ×11
               - `Sonata.ViewOption` ×8
               - `Sonata.Effect` ×6
@@ -7932,7 +7932,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`
               - `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`
               - `Sonata.TransportEdge` ← `apps.sonata.progress.loop`
-            - Contributes: `Apps.App` "Sonata" → `SonataLayout`
+              - `Sonata.ViewSection` ← `apps.sonata.piano-roll`
+            - Contributes:
+              - `Apps.App` "Sonata" → `SonataLayout`
+              - `ThemeEngine.Theme` "Sonata"
             - Uses:
               - `apps-core.Apps`
               - `apps/sonata/document.useLibrarySong`
@@ -7944,6 +7947,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/detail-sections.DetailSection`
               - `primitives/slot-render.defineMountSlot`
               - `primitives/slot-render.defineRenderSlot`
+              - `ui/theme-engine.ThemeEngine`
             - Exports (types):
               - `LaneInsets`
               - `SonataAppValue`
@@ -7955,10 +7959,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SonataSectionStack`
               - `useLaneInsets`
               - `useSonataApp`
+              - `useSonataSectionOpen`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values): `sonataApp`
           - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --popover`
+              - `ui/tokens/shadow --shadow`
+              - `ui/tokens/shadow --shadow-popover`
             - Imported by: 29 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
               - `apps` ×29
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
@@ -8528,7 +8537,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `SonataDocument.SongSetting` "track-view-sync" → `TrackViewObserver`
               - `Sonata.Section` "Tracks" → `TrackMixerPanel`
-            - Uses: 41 symbols — full list in [`plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md)
+            - Uses: 42 symbols — full list in [`plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/track-mixer/REFERENCE.md)
               - `apps/sonata/document` ×8
               - `primitives/css/text` ×3
               - `primitives/css/spacing` ×2
@@ -8540,6 +8549,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/audio/instruments.SonataAudio`
               - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
+              - `config_v2.useConfig`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.useLive`
               - `primitives/css/color-picker.SwatchGrid`
@@ -8555,12 +8565,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `primitives/overlay/popover.InlinePopover`
               - `ui/icons.Icon`
-            - Exports (types): `TrackMixerEntry`
+            - Exports (types):
+              - `TrackColorLook`
+              - `TrackMixerEntry`
             - Exports (values):
-              - `accidentalColor`
               - `setTracksActive`
               - `useHiddenTrackIds`
               - `useMutedTrackIds`
+              - `useTrackColorLook`
               - `useTrackColorMap`
               - `useTrackInstrumentMap`
               - `useTrackMixerEntries`
@@ -8696,10 +8708,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/primitives/inertial-drag.useInertialDrag`
               - `apps/sonata/primitives/jog-wheel.JogWheel`
               - `apps/sonata/session.useSession`
+              - `primitives/css/center.Center`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
               - `ui/icons.Icon`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
+            - Uses tokens:
+              - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/shape --spacing`
         - **`transpose`** — Per-song global transpose offset: persists a semitone shift, registers it with the song document's score pipeline as a per-song setting (SonataDocument.SongSetting) settled by a headless observer, and exposes a toolbar transpose popover (stepper, key line, Play-in grid). Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves it as a per-song lookup collection.
           - Web:
             - Contributes:
@@ -8749,7 +8768,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --line-height-3xs`
           - Exemptions:
             - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/actions.ts` (sanctioned)
-        - **`view-options`** — Sonata Hud: shared display-options chip. Renders every Sonata.ViewOption contribution generically via FieldRenderer, so the View popover appears in every display lens (piano roll, notation, songsheet).
+        - **`view-options`** — Sonata Hud: shared display-options chip. Renders every Sonata.ViewOption contribution generically via FieldRenderer, so the View popover appears in every display lens (piano roll, notation, songsheet), plus each lens's Sonata.ViewSection blocks. Exports the panel's members (ViewOptionsPanel) for a host that opens it from its own trigger — the player toolbar's display switcher.
           - Web:
             - Contributes: `Sonata.Hud` "view-options" → `ViewOptionsToggle`
             - Uses:
@@ -8761,11 +8780,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.cn`
+              - `primitives/slot-render.renderIsolated`
               - `ui/icons.Icon`
+            - Exports (values):
+              - `useHasViewOptions`
+              - `ViewOptionsPanel`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --background`
               - `ui/tokens/shadow --shadow-sm`
+            - Imported by: `apps/sonata/library`
         - **`voicing`** — Voicing strategies for Sonata: turn timed chord events into performed notes. Shared by every chord-authoring source (chord-grid, Ultimate Guitar, …) so chord-to-notes voicing has one home.
           - Core:
             - Uses:
@@ -12122,8 +12146,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 111 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×31
+    - Imported by: 112 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×32
       - `backup` ×13
       - `conversations` ×13
       - `debug` ×13
@@ -25269,13 +25293,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Core: `@plugins/framework/plugins/web-sdk/core/testing`
           - `resetDeferredLoadStateForTests` — TEST-ONLY: reset the module-global deferred-load state to its initial values (empty loaded/failed sets, not-yet-settled) and notify subscribers.
 
-- **`fullscreen`** — Browser fullscreen switch in the action bar's view-options popover.
+- **`fullscreen`** — Browser fullscreen switch in the action bar's view-options popover, and the same switch as a toolbar button (FullscreenButton) for an app header that carries its own.
   - Web:
     - Contributes: `ActionBar.ViewOption` → `FullscreenToggle`
     - Uses:
       - `primitives/css/control-panel.ControlPanel`
+      - `primitives/icon-button.IconButton`
       - `shell/action-bar.ActionBar`
       - `ui/icons.Icon`
+    - Exports (values): `FullscreenButton`
+  - Cross-plugin:
+    - Imported by: `apps/sonata/library`
 
 - **`history`** — Umbrella for the reusable version-history primitive: the domain-agnostic versioning engine substrate (more sub-plugins to follow).
   - Plugins:
@@ -29723,6 +29751,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/chord-chart`
           - `apps/sonata/lyric-line`
           - `apps/sonata/lyrics-hud`
+          - `apps/sonata/rich/chord-overlay`
           - `apps/sonata/rich/readout-keyboard`
           - `apps/sonata/theory`
       - Core:
@@ -35268,8 +35297,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 114 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×32
+            - Imported by: 115 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×33
               - `primitives` ×24
               - `page` ×17
               - `conversations` ×7
@@ -35299,8 +35328,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `clipClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
-              - `apps` ×20
+            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+              - `apps` ×21
               - `primitives` ×10
               - `conversations` ×7
               - `debug` ×7
@@ -35468,8 +35497,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow`
-            - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
-              - `apps` ×14
+            - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+              - `apps` ×15
               - `page` ×5
               - `primitives` ×4
               - `tasks` ×3
@@ -35503,8 +35532,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
-              - `apps` ×16
+            - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+              - `apps` ×17
               - `primitives` ×7
               - `debug` ×3
               - `page` ×2
@@ -35877,8 +35906,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 117 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
-              - `apps` ×26
+            - Imported by: 119 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+              - `apps` ×28
               - `conversations` ×21
               - `primitives` ×17
               - `debug` ×11
@@ -35920,9 +35949,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Row`
               - `SectionHeaderRow`
           - Cross-plugin:
-            - Uses tokens: 24 vars — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+            - Uses tokens: 25 vars — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
               - `ui/tokens/type-scale` ×11
-              - `ui/tokens/color-palette` ×7
+              - `ui/tokens/color-palette` ×8
               - `ui/tokens/density` ×4
               - `ui/tokens/shape` ×2
             - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
@@ -35958,9 +35987,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 96 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 95 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×26
-              - `apps` ×22
+              - `apps` ×21
               - `primitives` ×14
               - `debug` ×13
               - `page` ×4
@@ -36277,8 +36306,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 373 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×105
+            - Imported by: 372 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×104
               - `conversations` ×72
               - `primitives` ×42
               - `debug` ×35
@@ -36383,8 +36412,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/density` ×7
               - `ui/tokens/type-scale` ×6
-            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
-              - `apps` ×22
+            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+              - `apps` ×20
               - `primitives` ×7
               - `stats` ×5
               - `debug` ×3
@@ -36562,9 +36591,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 412 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 414 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×105
-              - `apps` ×91
+              - `apps` ×93
               - `conversations` ×55
               - `page` ×25
               - `debug` ×22
@@ -36644,9 +36673,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempted by: `primitives/css/ui-kit` (0 debt)
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+              - `apps` ×8
               - `primitives` ×8
-              - `apps` ×7
               - `conversations` ×5
               - `debug` ×4
               - `ui` ×3
@@ -38449,7 +38478,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 117 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 118 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×39
           - `conversations` ×21
           - `primitives` ×21
@@ -38464,6 +38493,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui` ×2
           - `apps-core/tab-bar`
           - `fields/enum/column-config`
+          - `fullscreen`
           - `map/google`
     - **`icon-picker`** — Searchable, categorized picker over the Material Symbols set: a windowed grid of runtime-symbol cells browsing and searching Google's vendored Material Symbols metadata; onSelect hands back the picked SavedSymbolName. avatar, the page icon button and the callout panel compose it.
       - Web:
@@ -40869,6 +40899,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --border`
+          - `ui/tokens/color-palette --primary-text`
           - `ui/tokens/density --space-lg`
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
@@ -41033,8 +41064,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDispatchOutcome`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/density --control-height-sm`
-        - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
-          - `apps` ×26
+        - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+          - `apps` ×27
           - `conversations` ×14
           - `primitives` ×13
           - `ui` ×5
@@ -46949,9 +46980,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 39 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 40 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×17
-          - `ThemeEngine.Theme` ×9
+          - `ThemeEngine.Theme` ×10
           - `ThemeEngine.VariantGroup` ×6
           - `ThemeEngine.SubTheme` ×4
           - `ThemeEngine.ThemeSource` ×2
@@ -47081,9 +47112,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/shadow` ×2
           - `ui/tokens/shape --radius`
-        - Imported by: 41 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 42 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×27
-          - `apps` ×11
+          - `apps` ×12
           - `apps-core/chrome-theme`
           - `plugin-meta/token-usage`
           - `reports/theme-resolution`
@@ -47399,6 +47430,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/trainer`
               - `apps/sonata/chord-chart`
               - `apps/sonata/lyrics-hud`
+              - `apps/sonata/progress/scrubber`
+              - `apps/sonata/rich/chord-overlay`
               - `apps/sonata/rich/readout-keyboard`
               - `music/chord-box`
         - **`color-adjust`** — Customizer section for a theme's color adjustment — the hue / saturation / lightness shift applied to every color it paints — with "Fill from…" shortcuts.
@@ -47442,8 +47475,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 487 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×107
+            - Tokens used by: 489 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×109
               - `conversations` ×85
               - `primitives` ×75
               - `debug` ×34
@@ -47501,9 +47534,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 314 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
-              - `apps` ×66
+            - Tokens used by: 312 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×65
+              - `apps` ×64
               - `conversations` ×47
               - `debug` ×27
               - `page` ×20
@@ -47782,8 +47815,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 66 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
-              - `apps` ×27
+            - Tokens used by: 65 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+              - `apps` ×26
               - `primitives` ×17
               - `framework` ×5
               - `ui` ×4
@@ -47948,8 +47981,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 229 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
-              - `apps` ×59
+            - Tokens used by: 227 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+              - `apps` ×57
               - `primitives` ×38
               - `conversations` ×37
               - `debug` ×16

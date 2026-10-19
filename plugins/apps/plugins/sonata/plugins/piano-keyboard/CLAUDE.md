@@ -19,9 +19,9 @@
     - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/track-mixer.accidentalColor`
     - `apps/sonata/track-mixer.useHiddenTrackIds`
     - `apps/sonata/track-mixer.useMutedTrackIds`
+    - `apps/sonata/track-mixer.useTrackColorLook`
     - `apps/sonata/track-mixer.useTrackColorMap`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`

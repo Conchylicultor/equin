@@ -110,6 +110,7 @@ the rest — never on a plain wrap; tempo changes follow the existing loop-aware
     - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-foreground`
+    - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shadow --shadow-sm`

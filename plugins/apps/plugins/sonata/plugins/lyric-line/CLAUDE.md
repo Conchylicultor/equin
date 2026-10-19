@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: One songsheet line as text: <LyricLineText> — the chord row (each chord pinned over its lyric column) stacked over the words, monospace so a column is one character, with no chrome of its own and an optional chordStyle so the caller paints the chords. Shared by the Songsheet and the Chord grid's lyrics.
+- Description: One songsheet line as text: <LyricLineText> — the chord row (each chord pinned over its lyric column) stacked over the words, monospace so a column is one character — or, as `layout: words`, the line's words flowing in the surface's own font, each chord over the word it starts on — with no chrome of its own and an optional chordStyle so the caller paints the chords. Shared by the Songsheet and the Chord grid's lyrics.
 - Web:
   - Uses:
     - `primitives/css/coords.Placed`

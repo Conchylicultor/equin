@@ -66,6 +66,11 @@ const VARIANT_CLASS: Record<SectionHeaderVariant, string> = {
  *   open/closed state is carried by TONE instead of ink — a collapsed header's
  *   label is muted, an open one reads at full strength. For an INSPECTOR stack
  *   of flat, rule-divided sections, where a column of chevrons is noise.
+ * - **`end`** — `none`'s tone (a collapsed header is muted, an open one reads
+ *   at full strength), plus a quiet, always-visible chevron at the row's FAR
+ *   end, after the header actions: the inspector's look, where the titles
+ *   start on the row's own padding and the open/closed state still has a mark
+ *   in one column down the panel's edge.
  *
  * The reveal is the `hover-reveal` primitive's per-instance state
  * (`useHoverReveal`), not a Tailwind group: `Row` already publishes
@@ -73,7 +78,7 @@ const VARIANT_CLASS: Record<SectionHeaderVariant, string> = {
  * group would borrow a name another primitive owns. Headers are few (one per
  * section), so the per-row state costs nothing measurable.
  */
-export type SectionHeaderDisclosure = "lead" | "trailing" | "none";
+export type SectionHeaderDisclosure = "lead" | "trailing" | "none" | "end";
 
 /**
  * The passthrough ({@link Passthrough}) is handed straight to `Row`, which
@@ -241,7 +246,7 @@ export function SectionHeaderRow({
     );
   }
 
-  if (disclosure === "none") {
+  if (disclosure === "none" || disclosure === "end") {
     // No chevron, so TONE carries the state: the row (label and icon) is muted
     // while collapsed. The actions are re-toned to the foreground they would
     // inherit open, so a header toggle does not read as disabled just because
@@ -255,7 +260,19 @@ export function SectionHeaderRow({
         actionsAlwaysVisible
         hover="muted"
         actions={
-          actions === undefined ? undefined : open ? (
+          disclosure === "end" ? (
+            <>
+              {actions === undefined ? null : open ? (
+                actions
+              ) : (
+                <span className="contents text-foreground">{actions}</span>
+              )}
+              <CollapsibleChevron
+                open={open}
+                className="text-faint-foreground"
+              />
+            </>
+          ) : actions === undefined ? undefined : open ? (
             actions
           ) : (
             <span className="contents text-foreground">{actions}</span>

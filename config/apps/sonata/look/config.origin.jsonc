@@ -1,6 +1,6 @@
-// @hash f31868b95fde
+// @hash a340397b2e41
 {
   // How the whole roll is drawn — lane, grid, notes, and the keys below them.
-  // Allowed values: "flat", "realistic", "sketch"
-  "look": "flat"
+  // Allowed values: "immersive", "flat", "realistic", "sketch"
+  "look": "immersive"
 }

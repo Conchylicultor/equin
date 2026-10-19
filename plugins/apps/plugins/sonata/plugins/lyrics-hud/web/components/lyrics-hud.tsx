@@ -7,12 +7,10 @@ import { usePlayerView } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import type {
   LyricAnnotation,
   LyricChord,
-  SectionAnnotation,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   activeLyricChord,
   currentLyricLine,
-  groupLyricLines,
   lyricChordReadings,
   lyricLines,
   sameActiveChord,
@@ -32,7 +30,6 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/look/core";
 import { useConfig } from "@plugins/config_v2/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { LYRICS_HUD_DISPLAYS, lyricsHudConfig } from "../../shared/config";
 import "./lyrics-hud.css";
@@ -40,21 +37,20 @@ import "./lyrics-hud.css";
 /** How many lines the corner shows at once: the current one and the next two. */
 const VISIBLE_LINES = 3;
 
-/** One row of the corner: a lyric line, headed by its section's name when it
- *  opens one. */
+/** One row of the corner: a lyric line. */
 interface Row {
   line: LyricAnnotation;
   /** Index in the flat `lines` list (what the cursor selectors return). */
   index: number;
-  section: SectionAnnotation | null;
 }
 
 /**
- * The lyrics corner — a Sonata HUD under the key chip. Shows the line in
- * progress and the next two, chords over the words (each in the colour of the
- * chord sounding at its beat); the rest stay a scroll away, and a click on a
- * line seeks there. No card: a frosted backing (`lyrics-hud.css`) blurs and
- * covers the notes behind the text, its edges feathered into the roll.
+ * The lyrics corner — a Sonata HUD, a third of the way down the roll's right
+ * side. Shows the line in progress and the next two, each chord over the word
+ * it starts on (in the colour of the chord sounding at its beat); the rest stay
+ * a scroll away, and a click on a line seeks there. No card: a soft backing
+ * (`lyrics-hud.css`) blurs and dims the notes behind the text, its edges
+ * feathered into the roll.
  *
  * Shown only on the lenses that have no lyrics of their own
  * (`LYRICS_HUD_DISPLAYS`) and only when the user turned it on in the View
@@ -79,18 +75,10 @@ export function LyricsHud() {
 function LyricsCorner({ lines }: { lines: LyricAnnotation[] }) {
   const { score, seekTo } = useSession();
 
-  const rows = useMemo<Row[]>(() => {
-    const sections = score.annotations.filter(
-      (a): a is SectionAnnotation => a.type === "section",
-    );
-    return groupLyricLines(lines, sections).flatMap((g) =>
-      g.lines.map(({ line, index }, i) => ({
-        line,
-        index,
-        section: i === 0 ? g.section : null,
-      })),
-    );
-  }, [score.annotations, lines]);
+  const rows = useMemo<Row[]>(
+    () => lines.map((line, index) => ({ line, index })),
+    [lines],
+  );
 
   const readings = useMemo(
     () => lyricChordReadings(score, lines),
@@ -134,7 +122,7 @@ function LyricsCorner({ lines }: { lines: LyricAnnotation[] }) {
     return () => el.removeEventListener("wheel", keep);
   }, []);
 
-  // Fit the viewport to the current line (with its section name) and the next
+  // Fit the viewport to the current line and the next
   // two, and scroll it to the top; earlier and later lines stay a scroll away.
   const rowRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [height, setHeight] = useState<number | undefined>(undefined);
@@ -163,12 +151,16 @@ function LyricsCorner({ lines }: { lines: LyricAnnotation[] }) {
       style={{ color: lane.laneInk }}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      {/* The frosted backing: the lane's ground, near-opaque, over a blur. */}
+      {/* The backing: the lane's ground, mostly opaque, over a light blur,
+          feathered out so it reads as no box at all. */}
       <div
         aria-hidden
         className="lyrics-hud-backing"
         style={{
-          backgroundColor: `color-mix(in oklab, ${lane.laneBg} 92%, transparent)`,
+          backgroundColor: `color-mix(in oklab, ${lane.laneBg} 72%, transparent)`,
+          // The lane's ground also haloes the words, so a note passing behind
+          // one cannot cut through it.
+          ["--lyrics-halo" as string]: lane.laneBg,
         }}
       />
       <Scroll
@@ -177,7 +169,7 @@ function LyricsCorner({ lines }: { lines: LyricAnnotation[] }) {
         className="lyrics-hud-scroll"
         style={{ height }}
       >
-        {rows.map(({ line, index, section }) => {
+        {rows.map(({ line, index }) => {
           const now = index === current;
           const chordStyle = (
             c: LyricChord,
@@ -185,8 +177,8 @@ function LyricsCorner({ lines }: { lines: LyricAnnotation[] }) {
           ): LyricChordStyle => ({
             className:
               active && now
-                ? "lyrics-hud-chord lyrics-hud-chord-now font-bold"
-                : "lyrics-hud-chord font-semibold",
+                ? "lyrics-hud-chord lyrics-hud-chord-now"
+                : "lyrics-hud-chord",
             style: chordToneStyle(readings.get(c)?.degree ?? null),
           });
           return (
@@ -201,11 +193,6 @@ function LyricsCorner({ lines }: { lines: LyricAnnotation[] }) {
               data-past={index < current || undefined}
               onClick={() => seekTo(line.start)}
             >
-              {section !== null ? (
-                <Text variant="eyebrow" as="div" className="lyrics-hud-section">
-                  {section.data.name}
-                </Text>
-              ) : null}
               <div className="lyrics-hud-line">
                 <LyricLineText
                   lyric={line}
@@ -215,6 +202,7 @@ function LyricsCorner({ lines }: { lines: LyricAnnotation[] }) {
                   chordStyle={chordStyle}
                   chordLabel={chordLabel}
                   variant="caption"
+                  layout="words"
                 />
               </div>
             </button>

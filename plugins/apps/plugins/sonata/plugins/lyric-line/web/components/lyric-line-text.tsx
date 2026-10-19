@@ -7,6 +7,7 @@ import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import "./lyric-line.css";
 
 /** How a caller paints one chord name over the words. */
 export interface LyricChordStyle {
@@ -30,6 +31,17 @@ export interface LyricLineTextProps {
   /** Type role of both rows: `body` (default) on a reading surface, `caption`
    *  for a compact one floating over another view. */
   variant?: "body" | "caption";
+  /**
+   * How the chords sit over the words:
+   *
+   * - `columns` (default) — the songbook: a monospace chord row over a
+   *   monospace lyric row, each chord pinned to its character column.
+   * - `words` — in the surface's own font: the line flows as words that wrap,
+   *   and each word a chord starts on carries that chord just above it. The
+   *   words before the sounding chord read as sung (`data-sung`), the word it
+   *   starts on as now (`data-now`), for the caller's CSS.
+   */
+  layout?: "columns" | "words";
 }
 
 function symbolLabel(chord: LyricChord): string {
@@ -76,7 +88,19 @@ export function LyricLineText({
   chordStyle = defaultChordStyle,
   chordLabel = symbolLabel,
   variant = "body",
+  layout = "columns",
 }: LyricLineTextProps) {
+  if (layout === "words") {
+    return (
+      <LyricWords
+        lyric={lyric}
+        activeChord={activeChord}
+        chordStyle={chordStyle}
+        chordLabel={chordLabel}
+        variant={variant}
+      />
+    );
+  }
   const { text, chords } = lyric.data;
   const labels = chords.map(chordLabel);
   const columns = chordColumns(labels, chords);
@@ -135,5 +159,97 @@ export function LyricLineText({
         {text.length === 0 ? " " : text}
       </Text>
     </Stack>
+  );
+}
+
+/** One word of a `words` line, and the chord (by index) it starts, if any. */
+interface LyricWord {
+  text: string;
+  chord: number | null;
+  /** The chord sounding over this word: the last chord at or before it. */
+  under: number | null;
+}
+
+/**
+ * A line's words, each carrying the chord that starts on it. The text is cut
+ * at every chord's column first (a chord can start mid-word), then each piece
+ * into words; the first word of a piece takes the piece's chord.
+ */
+function lyricWords(text: string, chords: readonly LyricChord[]): LyricWord[] {
+  const cuts = chords.map((c) =>
+    Math.min(Math.max(c.charOffset, 0), text.length),
+  );
+  const words: LyricWord[] = [];
+  let under: number | null = null;
+  const pushPiece = (piece: string, chord: number | null) => {
+    if (chord !== null) under = chord;
+    const tokens = piece.match(/\S+\s*|\s+/g) ?? [];
+    if (tokens.length === 0 && chord !== null) {
+      // A chord past the words: a word of its own, nothing under it.
+      words.push({ text: "", chord, under });
+      return;
+    }
+    tokens.forEach((t, i) =>
+      words.push({ text: t, chord: i === 0 ? chord : null, under }),
+    );
+  };
+  pushPiece(text.slice(0, cuts[0] ?? text.length), null);
+  cuts.forEach((at, i) =>
+    pushPiece(text.slice(at, cuts[i + 1] ?? text.length), i),
+  );
+  return words;
+}
+
+/** The `words` layout — see {@link LyricLineTextProps.layout}. */
+function LyricWords({
+  lyric,
+  activeChord,
+  chordStyle,
+  chordLabel,
+  variant,
+}: Required<Omit<LyricLineTextProps, "layout">>) {
+  const { text, chords } = lyric.data;
+  const words = lyricWords(text, chords);
+  return (
+    <Text variant={variant} as="div" className="sonata-lyric-words">
+      {words.length === 0
+        ? " "
+        : words.map((w, i) => {
+            const paint =
+              w.chord === null
+                ? null
+                : chordStyle(chords[w.chord]!, w.chord === activeChord);
+            return (
+              <span
+                key={i}
+                className="sonata-lyric-word"
+                data-sung={
+                  activeChord !== null &&
+                  w.under !== null &&
+                  w.under < activeChord
+                    ? true
+                    : undefined
+                }
+                data-now={
+                  activeChord !== null && w.under === activeChord
+                    ? true
+                    : undefined
+                }
+              >
+                {/* The chord row, empty over a word no chord starts on — it
+                    still holds the row's height. */}
+                <span
+                  className={cn("sonata-lyric-chord", paint?.className)}
+                  style={paint?.style}
+                >
+                  {paint !== null && w.chord !== null
+                    ? chordLabel(chords[w.chord]!)
+                    : null}
+                </span>
+                <span>{w.text.replace(/ /g, "\u00a0")}</span>
+              </span>
+            );
+          })}
+    </Text>
   );
 }

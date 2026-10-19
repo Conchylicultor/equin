@@ -137,6 +137,7 @@ export const pianoLayout: PitchLayout = {
   snapRange,
   lay,
   proportion,
-  // Today's `KEYBOARD_HEIGHT` constant in the roll.
-  heights: { keybed: 112 },
+  // The immersive player's keybed (proto-1792113547-2qr6g7): low enough that
+  // the notes keep most of the window.
+  heights: { keybed: 92 },
 };

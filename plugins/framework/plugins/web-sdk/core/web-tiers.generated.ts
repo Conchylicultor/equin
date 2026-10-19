@@ -26,7 +26,9 @@
 //   - apps/plugins/sonata/plugins/document: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/library: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/player: dependency closure (imported by an eager plugin)
+//   - apps/plugins/sonata/plugins/primitives/plugins/glass: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/session: dependency closure (imported by an eager plugin)
+//   - apps/plugins/sonata/plugins/view-options: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/compositions: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/compositions/plugins/release: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/explorer: dependency closure (imported by an eager plugin)
@@ -187,7 +189,6 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/sonata/plugins/transcription",
   "apps/plugins/sonata/plugins/transport-bar",
   "apps/plugins/sonata/plugins/transpose",
-  "apps/plugins/sonata/plugins/view-options",
   "apps/plugins/studio/plugins/compositions/plugins/closure-tree",
   "apps/plugins/studio/plugins/compositions/plugins/contributors",
   "apps/plugins/studio/plugins/compositions/plugins/draft-actions",

@@ -39,8 +39,16 @@ import { LabelLane } from "./label-lane";
 /** Gap between neighbouring rail segments (chapters), in px. */
 const SEGMENT_GAP = 3;
 
+/** The played part of the rail: from the accent's violet side into the accent. */
+const PLAYED_FILL =
+  "linear-gradient(90deg, color-mix(in oklab, var(--primary) 60%, var(--chord-6)), var(--primary))";
+
+/** The playhead's white knob, ringed and lit by the accent. */
+const PLAYHEAD_GLOW =
+  "0 0 0 4px color-mix(in oklab, var(--primary) 35%, transparent), 0 0 16px var(--primary)";
+
 /**
- * The Sonata Transport progression bar: `[elapsed][slider][total]`, the
+ * The Sonata Transport progression bar: `[elapsed / total][slider]`, the
  * growing middle of the player's transport strip. The slider is a thin rail
  * over the whole song `[0, endBeat]` — split into one rounded segment per
  * chapter (`SonataProgress.Chapters`), thickening on hover/drag — with the
@@ -314,9 +322,13 @@ export function ProgressBar() {
       <Text
         variant="caption"
         tone="muted"
-        className={cn(rigidClass(), "tabular-nums")}
+        className={cn(rigidClass(), "min-w-21 tabular-nums")}
       >
-        <span ref={timeRef}>{ready ? "0:00.0" : "—"}</span>
+        <span ref={timeRef} className="font-bold text-foreground">
+          {ready ? "0:00.0" : "—"}
+        </span>
+        {" / "}
+        {totalText}
       </Text>
 
       {/* The slider column: the rail zone and the label lane under it — the
@@ -372,7 +384,7 @@ export function ProgressBar() {
                 }}
                 className={cn(
                   placedClasses(),
-                  "rounded-full bg-muted transition-[height] duration-150 data-[hot]:[--segment-grow:4px]",
+                  "rounded-full bg-foreground/12 transition-[height] duration-150 data-[hot]:[--segment-grow:4px]",
                 )}
                 style={placedStyle(
                   {
@@ -389,8 +401,10 @@ export function ProgressBar() {
                   ref={(el: HTMLElement | null) => {
                     fillRefs.current[i] = el;
                   }}
-                  className="origin-left bg-primary"
-                  style={{ transform: "scaleX(0)" }}
+                  className="origin-left"
+                  // The played part warms from the accent's violet side into
+                  // the accent itself.
+                  style={{ transform: "scaleX(0)", background: PLAYED_FILL }}
                 />
               </Clip>
             );
@@ -448,7 +462,8 @@ export function ProgressBar() {
               <Placed
                 x={{ start: 0, shift: "-50%" }}
                 y={{ center: "50%" }}
-                className="size-3.5 rounded-full border-2 border-background bg-primary shadow"
+                className="size-4 rounded-full bg-white"
+                style={{ boxShadow: PLAYHEAD_GLOW }}
               />
             </Layer>
           ) : null}
@@ -471,14 +486,6 @@ export function ProgressBar() {
           />
         ) : null}
       </div>
-
-      <Text
-        variant="caption"
-        tone="muted"
-        className={cn(rigidClass(), "tabular-nums")}
-      >
-        {totalText}
-      </Text>
     </Stack>
   );
 }

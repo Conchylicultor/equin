@@ -29,11 +29,12 @@ export interface ToolbarControlProps {
 
 /**
  * The shared chrome for Sonata's toolbar "dial" controls — the speed/spread jog
- * wheels and the transpose stepper. A compact bordered pill with a leading,
- * muted category icon followed by a row of segments. This frame owns the rounded
- * border, the tooltip, the no-song disabled dimming, and — crucially — the
- * leading icon's horizontal clearance from the rounded corner, so its glyph
- * never crowds the border (the old cross-control overlap glitch). Segment
+ * wheels and the transpose stepper. A borderless pill, as tall as the toolbar's
+ * buttons, with a leading muted category icon followed by a row of segments; it
+ * lifts on hover like the buttons beside it. This frame owns the pill, the
+ * tooltip, the no-song disabled dimming, and — crucially — the leading icon's
+ * horizontal clearance from the rounded end, so its glyph never crowds it (the
+ * old cross-control overlap glitch). Segment
  * dividers stay on the segments themselves (a `border-l`/`border-x`), not here,
  * so a control can divide its interior however it likes.
  */
@@ -53,10 +54,12 @@ export function ToolbarControl({
         gap="none"
         {...host}
         className={cn(
-          "rounded-md border border-border",
+          "rounded-full pr-xs transition-colors hover:bg-accent",
           host?.className,
           disabled && "pointer-events-none opacity-40",
         )}
+        // As tall as the toolbar's own buttons, whatever density it declares.
+        style={{ height: "var(--control-height-lg)" }}
       >
         {/* Horizontal clearance so the icon glyph doesn't crowd the rounded
             corner; vertical centering comes from the row's `align="center"`. */}
