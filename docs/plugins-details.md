@@ -16027,7 +16027,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.Button`
               - `tasks/task-draft-form.TaskDraftPopover`
               - `ui/icons.Icon`
-        - **`notes`** — Free-form per-conversation notes, auto-saved to the server. A written note always shows, with a dot on the note button; the button opens and hides an empty note. Per-conversation free-form notes, auto-saved to the server.
+        - **`notes`** — Free-form per-conversation notes, auto-saved to the server. A note with text always shows, with a dot on the note button that follows the draft as it is typed; the button opens and hides an empty note, and deleting the last of the text closes it (Ctrl+Z brings it back). Per-conversation free-form notes, auto-saved to the server.
           - Web:
             - Contributes:
               - `Demo.Resource` "conversation-notes"
@@ -16043,7 +16043,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/ui-kit.cn`
-              - `primitives/editable-field.EditableField`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.ResourceErrorInline`

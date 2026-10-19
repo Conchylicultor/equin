@@ -11,15 +11,16 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const stickyNote2Icon = symbol("sticky-note-2");
 
 /**
- * The note's toggle: opens and hides an empty note. A written note always
- * shows, and marks the button with a dot on the icon's corner.
+ * The note's toggle: opens and hides an empty note. A note with text always
+ * shows, and marks the button with a dot on the icon's corner — following the
+ * editor's draft as it is typed, not the debounced save.
  */
 export function NotesToggleButton({
   conversation,
 }: {
   conversation: ConversationRecord;
 }) {
-  const { isVisible, noteExists, read, toggleVisible } = useConversationNote(
+  const { isVisible, hasText, read, toggleVisible } = useConversationNote(
     conversation.id,
   );
 
@@ -46,7 +47,7 @@ export function NotesToggleButton({
         glyph="small"
         className={cn(!isVisible && "text-muted-foreground")}
         label={
-          noteExists
+          hasText
             ? "Clear the note to hide it"
             : isVisible
               ? "Hide note"
@@ -56,7 +57,7 @@ export function NotesToggleButton({
         aria-pressed={isVisible}
         onClick={toggleVisible}
       />
-      {noteExists && (
+      {hasText && (
         <Pin to="top-right" offset="xs" decorative>
           <StatusDot colorClass="bg-warning" />
         </Pin>
