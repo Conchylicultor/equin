@@ -12467,7 +12467,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "held-turn-undelivered"
-    - Uses: 78 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 80 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
       - `conversations/turn-ledger` ×13
       - `conversations/transcript-watcher` ×7
@@ -12476,6 +12476,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reports` ×3
       - `config_v2` ×2
       - `conversations/session-chain` ×2
+      - `conversations/spawn-failure` ×2
       - `database` ×2
       - `infra/endpoints` ×2
       - `infra/events` ×2
@@ -16532,10 +16533,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/header.HeaderChip`
               - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
+              - `network/live.useLiveRow`
               - `primitives/css/badge.formatStatusLabel`
+              - `primitives/css/ui-kit.WithTooltip`
+              - `primitives/live-state.ResourceErrorInline`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --muted`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary`
@@ -17465,6 +17470,42 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/transcript-watcher`
           - `conversations/usage`
           - `debug/session-divergence`
+    - **`spawn-failure`** — Answers the conversation-spawn-failures collection inside a demo scope (no launch failed), so the surfaces that read a conversation's spawn failure render in the demo. Per-conversation spawn failure: the latest error of a conversation's spawn job (the failed step and its message), stored in conversations_ext_spawn_failure by the job on every failed attempt and deleted once a session starts, served as a lookup-only collection.
+      - Web:
+        - Contributes: `Demo.Resource` "conversation-spawn-failures"
+        - Uses: `framework/browser-server/demo.demoResource`
+      - Server:
+        - Contributes: `resource.declare` "conversation-spawn-failures:rows"
+        - Uses:
+          - `infra/entity-extensions.defineExtension`
+          - `network/live.serveCollection`
+          - `tasks/tasks-core._conversations`
+        - DB schema: `plugins/conversations/plugins/spawn-failure/server/internal/tables.ts`
+        - Entity extension of: `tasks/tasks-core` (table `conversations_ext_spawn_failure`)
+        - Exports (values):
+          - `clearSpawnFailure`
+          - `recordSpawnFailure`
+          - `spawnFailures`
+        - Resources: `conversation-spawn-failures:rows` (keyed, point)
+      - Core:
+        - Uses:
+          - `fields/date/config.dateField`
+          - `fields/text/config.enumTextField`
+          - `fields/text/config.textField`
+          - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.liveCollection`
+        - Exports (types):
+          - `SpawnFailure`
+          - `SpawnStep`
+        - Exports (values):
+          - `describeSpawnFailure`
+          - `FAILED_TO_START_LABEL`
+          - `SPAWN_STEPS`
+          - `spawnFailureRows`
+          - `SpawnFailureSchema`
+          - `spawnFailureShape`
+      - Cross-plugin:
+        - Imported by: `conversations`
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Web:
         - Slots: `conv-summary.actions`
@@ -22007,9 +22048,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 40 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 41 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×9
-              - `conversations` ×5
+              - `conversations` ×6
               - `debug` ×5
               - `infra` ×5
               - `page` ×4
@@ -23262,9 +23303,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 56 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 57 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×16
-              - `conversations` ×8
+              - `conversations` ×9
               - `debug` ×5
               - `infra` ×5
               - `tasks` ×5
@@ -23452,6 +23493,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Demo.Resource` ← `conversations.conversation-view.notes`
               - `Demo.Resource` ← `conversations.conversation-view.turn-summary`
               - `Demo.Resource` ← `conversations.model-provider`
+              - `Demo.Resource` ← `conversations.spawn-failure`
               - `Demo.Resource` ← `debug.profiling.op-log.op-store`
               - `Demo.Resource` ← `infra.claude-cli.availability`
               - `Demo.Resource` ← `infra.host.machine-sleep`
@@ -23489,27 +23531,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packWindow`
               - `servePack`
           - Cross-plugin:
-            - Imported by:
+            - Imported by: 21 plugins — full list in [`plugins/framework/plugins/browser-server/plugins/demo/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/REFERENCE.md)
+              - `conversations` ×11
+              - `infra` ×2
+              - `tasks` ×2
               - `apps/agent-manager/demo`
               - `config_v2`
-              - `conversations/agents`
-              - `conversations/conversation-preprompt`
-              - `conversations/conversation-progress`
-              - `conversations/conversation-view/allow-monitor`
-              - `conversations/conversation-view/code`
-              - `conversations/conversation-view/jsonl-viewer/subagents`
-              - `conversations/conversation-view/notes`
-              - `conversations/conversation-view/turn-summary`
-              - `conversations/hibernation`
-              - `conversations/model-provider`
               - `debug/profiling/op-log/op-store`
               - `framework/browser-server/demo/scope`
-              - `infra/claude-cli/availability`
-              - `infra/host/machine-sleep`
               - `plugin-meta/plugin-view`
               - `primitives/usage-rank`
-              - `tasks/outcome-report`
-              - `tasks/task-track`
           - Test helpers:
             - Core: `@plugins/framework/plugins/browser-server/plugins/demo/core/testing`
               - `definePack` — Declare a pack — lazily: nothing is evaluated until `servePack` loads it, so `ago` is relative to load time, and a pack module costs nothing to import.
@@ -26699,10 +26730,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 39 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×16
           - `tasks` ×11
-          - `conversations` ×7
+          - `conversations` ×8
           - `page` ×3
           - `plugin-meta/plugin-health`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger(). Contributes a BackgroundTriggerSource so the Background activity catalog names the events that start each job.
@@ -30183,9 +30214,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 247 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 249 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×70
-          - `conversations` ×41
+          - `conversations` ×43
           - `tasks` ×27
           - `debug` ×26
           - `infra` ×14
@@ -36744,10 +36775,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 416 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 417 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×106
               - `apps` ×93
-              - `conversations` ×55
+              - `conversations` ×56
               - `page` ×25
               - `debug` ×22
               - `ui` ×20
@@ -39051,9 +39082,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 248 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 249 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×69
-          - `conversations` ×43
+          - `conversations` ×44
           - `debug` ×23
           - `ui` ×23
           - `tasks` ×22
@@ -46388,8 +46419,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 71 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×30
+        - Imported by: 72 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×31
           - `tasks` ×17
           - `active-data` ×5
           - `debug` ×5
@@ -46407,6 +46438,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)
           - `conversations/conversation-progress` (table `conversations_ext_progress`)
           - `conversations/conversations-view/queue` (table `conversations_ext_queue`)
+          - `conversations/spawn-failure` (table `conversations_ext_spawn_failure`)
           - `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`)
           - `conversations/usage` (table `conversations_ext_usage`)
           - `tasks/auto-start` (table `tasks_ext_auto_start`)

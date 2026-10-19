@@ -38,6 +38,7 @@ describe("classifyQueue — Lost", () => {
       // An adopted conversation seeded before Lost existed still has a rank.
       queue: { ranks: [rankRow("conv-1"), rankRow("spike-a")] },
       tasks: [],
+      spawnFailedIds: new Set(),
     });
     expect(q.lost.map((c) => c.id)).toEqual(["spike-a", "spike-b"]);
     expect(q.waitingGroups.map((g) => g.selected.id)).toEqual(["conv-1"]);
@@ -54,8 +55,30 @@ describe("classifyQueue — Lost", () => {
       gone: [],
       queue: { ranks: [] },
       tasks: [],
+      spawnFailedIds: new Set(),
     });
     expect(q.lost).toEqual([]);
     expect(q.disconnected.map((c) => c.id)).toEqual(["spike-a"]);
+  });
+});
+
+describe("classifyQueue — Failed to start", () => {
+  test("a gone conversation with a spawn failure is Failed to start, not Disconnected", () => {
+    const q = classifyQueue({
+      active: [
+        conv({ id: "conv-failed", status: "gone" }),
+        conv({ id: "conv-ran", status: "gone" }),
+        // A failure recorded on a conversation a later retry started: it is
+        // live, so the failure does not move it.
+        conv({ id: "conv-retried", status: "waiting" }),
+      ],
+      gone: [],
+      queue: { ranks: [rankRow("conv-retried")] },
+      tasks: [],
+      spawnFailedIds: new Set(["conv-failed", "conv-retried"]),
+    });
+    expect(q.failedToStart.map((c) => c.id)).toEqual(["conv-failed"]);
+    expect(q.disconnected.map((c) => c.id)).toEqual(["conv-ran"]);
+    expect(q.waitingGroups.map((g) => g.selected.id)).toEqual(["conv-retried"]);
   });
 });

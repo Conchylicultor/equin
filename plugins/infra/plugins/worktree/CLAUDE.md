@@ -36,11 +36,15 @@ checkout. The refill job, its boot warm-up and its daily cron live in the
   since the spare's commit) → lock. Two claimers of one spare are told apart by
   git: the first `unlock` wins, and `move` is a rename; the loser tries the next
   spare, then the cold add.
-- **Crash convergence.** A crash between `move` and `switch` leaves the dir in
-  place on a detached HEAD. The early return finishes the switch when
-  `isUnfinishedSpareClaim`: admin dir `spare-*` (the move keeps it), HEAD
+- **Crash convergence.** A crash after `move` leaves the dir in place on a
+  detached HEAD — before the switch, or inside it. The early return recognises
+  it by `isUnfinishedSpareClaim`: admin dir `spare-*` (the move keeps it), HEAD
   detached, and NO lock — a finished claim is always locked, so a working
-  checkout on a detached HEAD (mid-rebase) is never switched.
+  checkout on a detached HEAD (mid-rebase) is never touched. It **discards** the
+  tree and checks the attempt out again (another spare, else the cold add); it
+  never re-runs the switch in place: a switch killed mid-write leaves the files
+  it added untracked under the old HEAD, which blocks any further switch
+  (`--discard-changes` covers tracked changes only).
 - **Pruning.** `pruneSpares` removes `spare-*` dirs that are unregistered or
   unlocked and older than 15 minutes (newest of the dir's and its admin dir's
   mtime — an `unlock` touches the admin dir), and ready spares older than a day,

@@ -39,7 +39,7 @@
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "held-turn-undelivered"
-  - Uses: 78 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×27
     - `conversations/turn-ledger` ×13
     - `conversations/transcript-watcher` ×7
@@ -48,6 +48,7 @@
     - `reports` ×3
     - `config_v2` ×2
     - `conversations/session-chain` ×2
+    - `conversations/spawn-failure` ×2
     - `database` ×2
     - `infra/endpoints` ×2
     - `infra/events` ×2
@@ -320,6 +321,7 @@
   - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
   - **`runtime-tmux`** [exempt] — Runs Claude CLI sessions inside tmux panes.
   - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has…
+  - **`spawn-failure`** — Answers the conversation-spawn-failures collection inside a demo scope (no launch failed), so the surfaces that read a conversation's spawn failure render in the demo. Per-conversation spawn…
   - **`summary`** [exempt] — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags…
   - **`terminal-menu`** — The shape of an interactive numbered menu a conversation's terminal has open (title, options, highlighted option, footer): the value the runtime reads off the screen, the conversation row carries as…
   - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the ordered on-disk JSONL paths of a conversation's Claude session chain.

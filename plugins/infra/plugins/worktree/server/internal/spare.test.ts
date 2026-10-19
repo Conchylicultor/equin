@@ -149,7 +149,7 @@ describe("spare claim", () => {
 });
 
 describe("crash convergence", () => {
-  test("a spare moved into place but still detached gets switched and locked", async () => {
+  test("a spare moved into place but still detached is checked out again and locked", async () => {
     const spare = await createSpareIn(repo);
     const wt = wtFor("att-8");
     // The claim's first two steps, then a crash before the switch.
@@ -157,12 +157,73 @@ describe("crash convergence", () => {
     await git(repo, "worktree", "move", spare, wt);
     expect(await isUnfinishedSpareClaim(repo, wt)).toBe(true);
 
-    await convergeExistingCheckout(repo, "att-8", wt, noGate);
+    expect(await convergeExistingCheckout(repo, "att-8", wt, noGate)).toEqual({
+      source: "fresh",
+    });
     expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
       "refs/heads/claude-web/att-8",
     );
+    expect(await git(wt, "status", "--porcelain")).toBe("");
     expect(await lockOf(wt)).toBe("singularity agent worktree");
     expect(await isUnfinishedSpareClaim(repo, wt)).toBe(false);
+  });
+
+  test("a switch killed after writing an added file converges to a clean checkout", async () => {
+    // The 2026-10-18 launch failure: a backend restart killed `git switch`
+    // after it had written main's new files but before it moved HEAD or the
+    // index, so every added file was left untracked and every later switch
+    // refused with "untracked working tree file would be overwritten".
+    const spare = await createSpareIn(repo);
+    await commit("added.txt", "new on main");
+    await commit("a.txt", "changed on main");
+    const wt = wtFor("att-10");
+    await git(repo, "worktree", "unlock", spare);
+    await git(repo, "worktree", "move", spare, wt);
+    // What the killed switch left: main's files written, HEAD still the spare's.
+    writeFileSync(join(wt, "added.txt"), "new on main");
+    writeFileSync(join(wt, "a.txt"), "changed on main");
+    const plainSwitch = await spawnCaptured(
+      [
+        GIT,
+        "-C",
+        wt,
+        "switch",
+        "--discard-changes",
+        "-c",
+        "claude-web/att-10",
+        "main",
+      ],
+      { timeoutMs: 60_000 },
+    );
+    expect(plainSwitch.exitCode).not.toBe(0);
+    expect(plainSwitch.stderr).toContain("Untracked working tree file");
+    expect(await isUnfinishedSpareClaim(repo, wt)).toBe(true);
+
+    expect(
+      (await convergeExistingCheckout(repo, "att-10", wt, noGate)).source,
+    ).not.toBe("existing");
+    expect(await git(wt, "symbolic-ref", "HEAD")).toBe(
+      "refs/heads/claude-web/att-10",
+    );
+    expect(await git(wt, "rev-parse", "HEAD")).toBe(
+      await git(repo, "rev-parse", "main"),
+    );
+    expect(await git(wt, "status", "--porcelain")).toBe("");
+    expect(await lockOf(wt)).toBe("singularity agent worktree");
+  });
+
+  test("a finished checkout is left in place and only re-locked", async () => {
+    await createSpareIn(repo);
+    const wt = wtFor("att-11");
+    await checkoutAttempt(repo, "att-11", wt);
+    writeFileSync(join(wt, "work.txt"), "the agent's work");
+    await git(repo, "worktree", "unlock", wt);
+
+    expect(await convergeExistingCheckout(repo, "att-11", wt, noGate)).toEqual({
+      source: "existing",
+    });
+    expect(existsSync(join(wt, "work.txt"))).toBe(true);
+    expect(await lockOf(wt)).toBe("singularity agent worktree");
   });
 
   test("a finished checkout on a detached HEAD (e.g. mid-rebase) is left alone", async () => {

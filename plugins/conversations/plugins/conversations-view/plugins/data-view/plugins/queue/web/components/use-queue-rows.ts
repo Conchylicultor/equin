@@ -29,6 +29,7 @@ import {
   type ReorderVars,
   type TaskGroup,
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/web";
+import { spawnFailureRows } from "@plugins/conversations/plugins/spawn-failure/core";
 import { reuseRows } from "./reuse-rows";
 
 /** The read-time section a queue row belongs to (the enum the `section` field partitions by). */
@@ -38,6 +39,7 @@ export type QueueSection =
   | "working"
   | "lost"
   | "unranked"
+  | "failed"
   | "disconnected"
   | "done";
 
@@ -160,6 +162,18 @@ export function useQueueRows(): {
       return null;
     return activeResult.data.map((c) => c.id);
   }, [activeResult]);
+  // The spawn failures of the gone live conversations — which of them are
+  // Failed to start rather than Disconnected. Only gone rows are asked: a
+  // failure on a live row (a later retry started it) moves nothing.
+  const goneIds = useMemo<string[]>(() => {
+    if (activeResult.status === "loading" || activeResult.status === "error")
+      return [];
+    return activeResult.data
+      .filter((c) => c.status === "gone")
+      .map((c) => c.id);
+  }, [activeResult]);
+  const failuresResult = useLive(spawnFailureRows, { ids: goneIds });
+
   // The ranks of the live set, as an id set of the collection. A pending live
   // set reads the empty set — a valid EMPTY point subscription (no query), never
   // surfaced because the gate stays pending until active settles. The id set
@@ -179,7 +193,7 @@ export function useQueueRows(): {
     },
   );
 
-  // All-or-nothing gate over the four live resources, memoized on their STABLE
+  // All-or-nothing gate over the five live resources, memoized on their STABLE
   // result identities (each `useLive`/`useOptimisticResource` result is
   // referentially stable when its data/status is unchanged). This stability is
   // load-bearing: the retain-last set-during-render below relies on `computed`
@@ -192,13 +206,14 @@ export function useQueueRows(): {
       gone: goneResult,
       ranks: ranksResult,
       tasks: tasksResult,
+      failures: failuresResult,
     });
     if (all.status === "loading" || all.status === "error") return null;
     // Already settled per the combine above; this narrows the optimistic
     // result to its `ready` arm, the one carrying `dispatch`.
     if (ranksResult.status === "loading" || ranksResult.status === "error")
       return null;
-    const { active, gone, ranks, tasks } = all.data;
+    const { active, gone, ranks, tasks, failures } = all.data;
 
     // Wrap the point ranks in the client-side `QueueData` shape so
     // `classifyQueue` (the shared source of truth) stays UNCHANGED.
@@ -211,9 +226,16 @@ export function useQueueRows(): {
       blockedIds,
       unranked,
       lost,
+      failedToStart,
       disconnected,
       recentGone,
-    } = classifyQueue({ active, gone, queue, tasks });
+    } = classifyQueue({
+      active,
+      gone,
+      queue,
+      tasks,
+      spawnFailedIds: new Set(failures.map((f) => f.conversationId)),
+    });
 
     const out: QueueRow[] = [];
 
@@ -299,14 +321,15 @@ export function useQueueRows(): {
     }
     for (const conv of workingUnranked) emitFlat(conv, "working");
 
-    // 4–7. flat sections (keep incoming order).
+    // 4–8. flat sections (keep incoming order).
     for (const conv of lost) emitFlat(conv, "lost");
     for (const conv of unranked) emitFlat(conv, "unranked");
+    for (const conv of failedToStart) emitFlat(conv, "failed");
     for (const conv of disconnected) emitFlat(conv, "disconnected");
     for (const conv of recentGone) emitFlat(conv, "done");
 
     return { rows: out, dispatchReorder: ranksResult.dispatch };
-  }, [activeResult, goneResult, ranksResult, tasksResult]);
+  }, [activeResult, goneResult, ranksResult, tasksResult, failuresResult]);
 
   // The display actually shown, derived from the last settled `computed`:
   //

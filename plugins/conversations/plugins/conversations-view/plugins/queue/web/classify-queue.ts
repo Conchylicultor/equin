@@ -49,6 +49,12 @@ export interface ClassifiedQueue<C extends Conversation = Conversation> {
    * the user's work.
    */
   lost: C[];
+  /**
+   * Gone conversations whose spawn job recorded a failure: the launch never
+   * started a session, so there is nothing to resume — kept apart from
+   * Disconnected, which promises a session to resume.
+   */
+  failedToStart: C[];
   disconnected: C[];
   recentGone: C[];
 }
@@ -57,7 +63,7 @@ export interface ClassifiedQueue<C extends Conversation = Conversation> {
  * Pure, React-free queue classification — the single source of truth for how
  * live conversations, their queue ranks, and their tasks partition into the
  * queue's read-time sections (Pinned / Queue / Working / Lost / Unranked /
- * Disconnected / Done), grouped by `taskId` with a shared rank per group.
+ * Failed to start / Disconnected / Done), grouped by `taskId` with a shared rank per group.
  *
  * A pin only moves a WAITING group into its own section: an active group belongs
  * in Working whether or not it is pinned, since Working answers "what is running
@@ -71,8 +77,10 @@ export function classifyQueue<C extends Conversation>(data: {
   gone: C[];
   queue: QueueData;
   tasks: TaskListItem[];
+  /** The ids, among the gone `active` rows, that carry a spawn failure. */
+  spawnFailedIds: ReadonlySet<string>;
 }): ClassifiedQueue<C> {
-  const { active, gone, queue, tasks } = data;
+  const { active, gone, queue, tasks, spawnFailedIds } = data;
   const ranks = new Map(queue.ranks.map((r) => [r.conversationId, r]));
   const taskStatusMap = new Map(tasks.map((t) => [t.id, t.status]));
   const ranked: RankedConversation<C>[] = [];
@@ -161,7 +169,12 @@ export function classifyQueue<C extends Conversation>(data: {
     blockedIds: blocked,
     unranked: noRank,
     lost,
-    disconnected: active.filter((c) => c.status === "gone"),
+    failedToStart: active.filter(
+      (c) => c.status === "gone" && spawnFailedIds.has(c.id),
+    ),
+    disconnected: active.filter(
+      (c) => c.status === "gone" && !spawnFailedIds.has(c.id),
+    ),
     recentGone: gone,
   };
 }

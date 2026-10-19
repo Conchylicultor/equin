@@ -12,10 +12,14 @@
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/header.HeaderChip`
     - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
+    - `network/live.useLiveRow`
     - `primitives/css/badge.formatStatusLabel`
+    - `primitives/css/ui-kit.WithTooltip`
+    - `primitives/live-state.ResourceErrorInline`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`

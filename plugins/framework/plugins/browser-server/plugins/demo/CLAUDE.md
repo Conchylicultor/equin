@@ -100,6 +100,7 @@ HTTP read, with tuples spelled by the declarations' own codecs (the client's).
     - `Demo.Resource` ← `conversations.conversation-view.notes`
     - `Demo.Resource` ← `conversations.conversation-view.turn-summary`
     - `Demo.Resource` ← `conversations.model-provider`
+    - `Demo.Resource` ← `conversations.spawn-failure`
     - `Demo.Resource` ← `debug.profiling.op-log.op-store`
     - `Demo.Resource` ← `infra.claude-cli.availability`
     - `Demo.Resource` ← `infra.host.machine-sleep`
@@ -137,27 +138,16 @@ HTTP read, with tuples spelled by the declarations' own codecs (the client's).
     - `packWindow`
     - `servePack`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×11
+    - `infra` ×2
+    - `tasks` ×2
     - `apps/agent-manager/demo`
     - `config_v2`
-    - `conversations/agents`
-    - `conversations/conversation-preprompt`
-    - `conversations/conversation-progress`
-    - `conversations/conversation-view/allow-monitor`
-    - `conversations/conversation-view/code`
-    - `conversations/conversation-view/jsonl-viewer/subagents`
-    - `conversations/conversation-view/notes`
-    - `conversations/conversation-view/turn-summary`
-    - `conversations/hibernation`
-    - `conversations/model-provider`
     - `debug/profiling/op-log/op-store`
     - `framework/browser-server/demo/scope`
-    - `infra/claude-cli/availability`
-    - `infra/host/machine-sleep`
     - `plugin-meta/plugin-view`
     - `primitives/usage-rank`
-    - `tasks/outcome-report`
-    - `tasks/task-track`
 - Test helpers:
   - Core: `@plugins/framework/plugins/browser-server/plugins/demo/core/testing`
     - `definePack` — Declare a pack — lazily: nothing is evaluated until `servePack` loads it, so `ago` is relative to load time, and a pack module costs nothing to import.

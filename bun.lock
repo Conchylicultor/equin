@@ -2131,6 +2131,10 @@
       "name": "@singularity/plugin-conversations-session-chain",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/spawn-failure": {
+      "name": "@singularity/plugin-conversations-spawn-failure",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/summary": {
       "name": "@singularity/plugin-conversations-summary",
       "version": "0.0.1",
@@ -7890,6 +7894,8 @@
     "@singularity/plugin-conversations-runtime-tmux": ["@singularity/plugin-conversations-runtime-tmux@workspace:plugins/conversations/plugins/runtime-tmux"],
 
     "@singularity/plugin-conversations-session-chain": ["@singularity/plugin-conversations-session-chain@workspace:plugins/conversations/plugins/session-chain"],
+
+    "@singularity/plugin-conversations-spawn-failure": ["@singularity/plugin-conversations-spawn-failure@workspace:plugins/conversations/plugins/spawn-failure"],
 
     "@singularity/plugin-conversations-summary": ["@singularity/plugin-conversations-summary@workspace:plugins/conversations/plugins/summary"],
 

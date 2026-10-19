@@ -50,6 +50,7 @@ export function PinAction({
   // A lost conversation is never ranked, so a pin would have nothing to lift.
   if (
     row.section === "done" ||
+    row.section === "failed" ||
     row.section === "disconnected" ||
     row.section === "lost"
   )

@@ -25,6 +25,7 @@ export const QUEUE_EXTRA_FIELDS: FieldDef<QueueRow>[] = [
       { value: "working", label: "Working" },
       { value: "lost", label: "Lost" },
       { value: "unranked", label: "Unranked" },
+      { value: "failed", label: "Failed to start" },
       { value: "disconnected", label: "Disconnected" },
       { value: "done", label: "Done" },
     ],

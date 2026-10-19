@@ -6,6 +6,10 @@ import { Workspace } from "@plugins/conversations/plugins/workspace/server";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { EffortLevelSchema } from "@plugins/conversations/plugins/effort-provider/core";
 import { ClaudeCodeUnavailableError } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
+import {
+  clearSpawnFailure,
+  recordSpawnFailure,
+} from "@plugins/conversations/plugins/spawn-failure/server";
 import { Runtime } from "./runtime";
 import { launchWithHeldTurn } from "./turns";
 
@@ -14,7 +18,8 @@ import { launchWithHeldTurn } from "./turns";
 // restart mid-checkout, or a crash between `tmux new-session` and the job
 // commit) re-runs when the worker reboots instead of leaving the conversation
 // stuck `starting` with no session. Both steps are idempotent — the workspace's
-// `prepare` (`setupWorktree` no-ops once the worktree dir exists) and
+// `prepare` (`setupWorktree` no-ops once the checkout landed, and redoes a
+// spare claim a kill left unfinished) and
 // `runtime.create` (no-ops once a live session exists) — which is the
 // precondition that makes durable retry safe.
 //
@@ -95,6 +100,8 @@ export const spawnConversationJob = defineJob({
           ),
         );
       }
+      // A session runs: an earlier attempt's failure no longer describes it.
+      await clearSpawnFailure(conversationId);
     } catch (err) {
       // Claude Code went missing between the launch's check and this spawn.
       // Retrying cannot help until the user installs it, so say that — with
@@ -102,6 +109,7 @@ export const spawnConversationJob = defineJob({
       // sweep's starting timeout moves it to `gone`, from where Resume works once
       // Claude Code is back.
       if (err instanceof ClaudeCodeUnavailableError) {
+        await recordSpawnFailure(conversationId, step, err.message);
         await recordReport({
           kind: "claude-code-unavailable-at-spawn",
           source: "server-caught",
@@ -111,6 +119,10 @@ export const spawnConversationJob = defineJob({
         return;
       }
       const message = err instanceof Error ? err.message : String(err);
+      // The latest attempt's failure, on the conversation itself: once the
+      // status sweep moves the row to `gone`, it is what tells a launch that
+      // never started apart from a session that ended.
+      await recordSpawnFailure(conversationId, step, message);
       await recordReport({
         kind: "conversation-spawn-failed",
         source: "server-caught",

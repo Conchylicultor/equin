@@ -473,7 +473,7 @@ async function discardPartialCheckout(
   );
   if (pruned.timedOut || pruned.exitCode !== 0) {
     console.warn(
-      `[worktree] prune after a timed-out checkout for ${label} did not succeed ` +
+      `[worktree] prune after a discarded partial checkout for ${label} did not succeed ` +
         `(${pruned.timedOut ? "timed out" : `exit ${pruned.exitCode}`}): ` +
         `${pruned.stderr.trim() || "<no stderr>"}`,
     );
@@ -559,9 +559,12 @@ function spareCreatedAt(path: string): number {
  * exists (the same convergence the cold add has). A two-tree checkout, so it
  * writes only the diff between the spare's commit and current `main`.
  *
- * `--discard-changes`: the tree is a spare nobody has worked in, and the one way
- * it can differ from its HEAD is a switch killed half-way — which a retry must
- * be able to finish rather than refuse as "local changes would be overwritten".
+ * Runs only on a freshly moved spare, never to finish a killed one: a switch
+ * killed half-way leaves the files it already wrote with HEAD and the index
+ * still at the spare's commit, so every file it ADDED is untracked and blocks
+ * any later switch ("untracked working tree file would be overwritten") —
+ * `--discard-changes` covers tracked changes only. Such a tree is discarded and
+ * re-checked-out instead (`convergeExistingCheckout`).
  */
 async function switchToAttemptBranch(
   repoRoot: string,
@@ -570,7 +573,7 @@ async function switchToAttemptBranch(
   signal?: AbortSignal,
 ): Promise<void> {
   const branch = attemptBranchName(id);
-  const sw = [...checkoutGit(wtPath), "switch", "--discard-changes"];
+  const sw = [...checkoutGit(wtPath), "switch"];
   const argv = (await attemptBranchExists(repoRoot, id, signal))
     ? [...sw, branch]
     : [...sw, "-c", branch, "main"];
@@ -593,7 +596,8 @@ async function switchToAttemptBranch(
     });
   }
   // Thrown, not absorbed: the dir is at `wtPath` on a detached HEAD, which the
-  // retry's early return recognises (`isUnfinishedSpareClaim`) and finishes.
+  // retry's early return recognises (`isUnfinishedSpareClaim`), discards and
+  // checks out again.
   if (r.exitCode !== 0) {
     throw new Error(
       `git switch to ${branch} in the claimed spare ${wtPath} failed (exit ${r.exitCode}): ` +
@@ -733,11 +737,22 @@ export async function checkoutAttempt(
   return source;
 }
 
+/** What `setupWorktree` did: claimed a spare, added a fresh checkout, or found one in place. */
+export interface WorktreeSetup {
+  source: CheckoutSource | "existing";
+}
+
 /**
  * The early-return body of `setupWorktree` for a checkout that already exists:
- * finish a spare claim a crash interrupted (see `isUnfinishedSpareClaim`), then
- * re-assert the lock. The switch is a checkout write, so it takes the gate;
- * `gate` is `withWorktreeMutateSlot` in production.
+ * re-assert the lock — or, for a spare claim a crash interrupted (see
+ * `isUnfinishedSpareClaim`), discard the tree and check the attempt out again.
+ *
+ * Discarded, never finished in place: the claim may have died anywhere inside
+ * its switch (a backend restart kills git with the process group), and a
+ * half-applied switch cannot be switched again (see `switchToAttemptBranch`).
+ * Nobody has worked in an unfinished claim, so the discard loses nothing, and
+ * one rule covers every way the switch can die. Both are checkout writes, so
+ * they take the gate; `gate` is `withWorktreeMutateSlot` in production.
  */
 export async function convergeExistingCheckout(
   repoRoot: string,
@@ -745,16 +760,16 @@ export async function convergeExistingCheckout(
   wtPath: string,
   gate: <T>(fn: () => Promise<T>) => Promise<T>,
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<WorktreeSetup> {
   if (await isUnfinishedSpareClaim(repoRoot, wtPath, signal)) {
-    await gate(() => switchToAttemptBranch(repoRoot, id, wtPath, signal));
+    const source = await gate(async () => {
+      await discardPartialCheckout(id, repoRoot, wtPath);
+      return checkoutAttempt(repoRoot, id, wtPath, signal);
+    });
+    return { source };
   }
   await ensureWorktreeLocked(repoRoot, wtPath, signal);
-}
-
-/** What `setupWorktree` did: claimed a spare, added a fresh checkout, or found one in place. */
-export interface WorktreeSetup {
-  source: CheckoutSource | "existing";
+  return { source: "existing" };
 }
 
 /**
@@ -790,21 +805,20 @@ export async function setupWorktree(
   // landed, so a durable-job retry (or a caller reusing an existing worktree) is
   // a no-op. `worktreePathFor` derives the path purely from the id, so the dir's
   // existence is an authoritative "already set up" signal — with one exception
-  // it converges: a spare moved into place whose branch switch never ran.
+  // it converges: a spare moved into place whose branch switch never finished.
   //
   // The lock is re-asserted rather than skipped: this is the path every reused
   // and every pre-lock worktree takes, so making it the place the lock is
   // guaranteed means a checkout cannot stay unlocked just because it predates
   // this code or something released its lock.
   if (existsSync(wtPath)) {
-    await convergeExistingCheckout(
+    return convergeExistingCheckout(
       repoRoot,
       id,
       wtPath,
       (fn) => withWorktreeMutateSlot(fn, signal),
       signal,
     );
-    return { source: "existing" };
   }
 
   // A checkout's namespace is its own name (the main composition's prefix
