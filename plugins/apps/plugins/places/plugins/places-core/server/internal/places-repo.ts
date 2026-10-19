@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { getMapsKey } from "@plugins/integrations/plugins/google-maps/server";
+import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/server";
 import {
   autocomplete,
   placeDetails,
+  searchText,
 } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
+import { billingMonth } from "@plugins/integrations/plugins/google-maps/plugins/usage/core";
 import type { PlaceSnapshot } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import {
   autoTagsFor,
@@ -16,6 +18,7 @@ import {
   type Place,
   type SavePlaceBody,
   type SavePlaceResult,
+  type PlaceSearchQuery,
   type PlaceSearchResult,
   type UpdatePlaceBody,
 } from "../../core";
@@ -23,6 +26,7 @@ import { _places } from "./tables";
 import { listTags } from "./tags-repo";
 import { editPlaceTags } from "./tag-edits";
 import { placeIconJob } from "./place-icon";
+import { searchBias } from "./search-bias";
 
 // Place reads and writes. Rows reach the UI through the live
 // `places.places.all` collection; these return the written row for the
@@ -47,13 +51,39 @@ async function placeByGoogleId(
   return place;
 }
 
-export async function searchPlaces(
-  q: string,
-  session: string,
-): Promise<PlaceSearchResult> {
-  const key = await getMapsKey();
-  if (!key.ok) return { kind: "maps-not-configured" };
-  return { kind: "ok", suggestions: await autocomplete(key.key, q, session) };
+/** At most this many Google hits per search (one call bills the same at any size). */
+const SEARCH_RESULTS = 20;
+
+/**
+ * The Places search bar's Google half, at the rung of the downgrade ladder
+ * the reader asked (`searchRung` over this month's live counts). A downgraded
+ * answer says when the richer one comes back: the next billing month.
+ */
+export async function searchPlaces({
+  q,
+  bias,
+  session,
+  rung,
+}: PlaceSearchQuery): Promise<PlaceSearchResult> {
+  const maps = await getPlacesClient();
+  if (!maps.ok) return { kind: "maps-not-configured" };
+  const resumesAt = billingMonth(new Date()).resetsAt.toISOString();
+  if (rung === "names") {
+    return {
+      kind: "names",
+      suggestions: await autocomplete(maps.client, q, session),
+      resumesAt,
+    };
+  }
+  const box = searchBias(bias);
+  const results = await searchText(maps.client, q, {
+    detail: rung === "rich" ? "rich" : "pro",
+    ...(box === undefined ? {} : { bias: box }),
+    maxResults: SEARCH_RESULTS,
+  });
+  return rung === "rich"
+    ? { kind: "rich", results }
+    : { kind: "basic", results, resumesAt };
 }
 
 /**
@@ -68,9 +98,9 @@ export async function savePlace({
   const existing = await placeByGoogleId(googlePlaceId);
   if (existing) return { kind: "already-saved", place: existing };
 
-  const key = await getMapsKey();
-  if (!key.ok) return { kind: "maps-not-configured" };
-  const snapshot = await placeDetails(key.key, googlePlaceId, session);
+  const maps = await getPlacesClient();
+  if (!maps.ok) return { kind: "maps-not-configured" };
+  const snapshot = await placeDetails(maps.client, googlePlaceId, session);
 
   const tags = await listTags();
   const autoTags = autoTagsFor(snapshot.types ?? [], tags);

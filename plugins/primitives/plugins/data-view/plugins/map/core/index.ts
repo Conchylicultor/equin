@@ -1,1 +1,1 @@
-export type { MapViewOptions } from "./internal/types";
+export type { MapExtraOverlays, MapViewOptions } from "./internal/types";

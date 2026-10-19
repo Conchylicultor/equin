@@ -1154,6 +1154,19 @@ tools floating over it — `floating-toolbar` is the reference arrangement).
   `DataViewSourceBundle`), shown once there is an active view, and only a band
   chrome takes it — a hosted or sections toolbar throws.
 
+### Search with suggestions (`search.suggestions`)
+
+A controlled `search` can carry `suggestions: { content, open, onOpenChange }`
+— "search or add": a panel under the search field for what the query matches
+beyond the rows (results to add). The toolbar owns its behaviour
+(`web/components/toolbar/search-suggestions.tsx`): the field widens (`w-80`),
+the panel hangs under it non-modal (focus stays in the field), opens on focus
+or typing, closes on Escape (which also blurs) and on a press outside both the
+field and the panel, and ArrowDown moves into its first control. `open` is the
+host's, so it can open the panel from elsewhere and close it on a pick. The
+panel renders inside the toolbar's controls provider, so it can read the view
+(`useDataViewControls`, `useFlatRows`). Places is the reference.
+
 ## Hosted toolbar: no band
 
 `toolbar={{ kind: "hosted", frame }}` draws **no toolbar band at all**. For a
@@ -2666,9 +2679,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 104 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 107 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
-    - `primitives/css/ui-kit` ×12
+    - `primitives/css/ui-kit` ×14
     - `primitives/data-view/view-core` ×8
     - `primitives/live-state` ×5
     - `primitives/css/control-panel` ×4
@@ -2688,6 +2701,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/loading` ×2
     - `primitives/search` ×2
     - `primitives/sortable-list` ×2
+    - `shell/toast` ×2
     - `fields.Fields`
     - `ids.IdKinds`
     - `primitives/css/center.Center`
@@ -2708,7 +2722,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/row-actions.RowActions`
-    - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `CellContributionMeta`
@@ -2922,6 +2935,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewRowsCollection`
     - `DataViewRowsComplete`
     - `DataViewSearch`
+    - `DataViewSearchSuggestions`
     - `DataViewSection`
     - `DataViewSectioning`
     - `DataViewSectionPaging`

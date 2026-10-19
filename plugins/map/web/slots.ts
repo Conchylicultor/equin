@@ -5,6 +5,7 @@ import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web"
 import type { IconMarkupReader } from "@plugins/ui/plugins/icons/web";
 import {
   clusterPinType,
+  type CameraRest,
   type CameraView,
   type LatLng,
   type MapCrowd,
@@ -37,6 +38,14 @@ export interface MapRendererProps {
   /** A pin was clicked. */
   onActivate: (id: string) => void;
   activeId: string | null;
+  /**
+   * A pin to draw hovered though the pointer is not on it — the hover of
+   * something linked to it outside the map (a result card). The pointer's own
+   * hover wins while there is one.
+   */
+  hoveredId: string | null;
+  /** The pin under the pointer changed (`null`: none). */
+  onHoverChange?: (id: string | null) => void;
   /**
    * How pins that crowd each other are drawn (`MapCrowd`). Absent = every pin
    * on its own, near, at every zoom.
@@ -85,11 +94,10 @@ export interface MapRendererProps {
    */
   initialCamera?: CameraView;
   /**
-   * The camera came to rest (a pan, a zoom, a fit or a flight ended), while
-   * the map has overlays — so an empty map's world view is never reported as
-   * where the user left it.
+   * The camera came to rest (a pan, a zoom, a fit or a flight ended — and
+   * once when the map first settles): the view, and the area it shows.
    */
-  onCameraRest?: (view: CameraView) => void;
+  onCameraRest?: (rest: CameraRest) => void;
 }
 
 /**

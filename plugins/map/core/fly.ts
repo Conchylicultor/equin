@@ -1,4 +1,4 @@
-import type { MapCamera, MapPadding } from "./camera";
+import type { MapBounds, MapCamera, MapPadding } from "./camera";
 import type { LatLng } from "./overlays";
 
 // Camera motion, vendor-free: where a framing puts the map (`viewFor`) and the
@@ -9,6 +9,11 @@ import type { LatLng } from "./overlays";
 export interface CameraView {
   center: LatLng;
   zoom: number;
+}
+
+/** Where the camera came to rest: its view, and the area it shows. */
+export interface CameraRest extends CameraView {
+  bounds: MapBounds;
 }
 
 /** The map's size on screen, in CSS px. */

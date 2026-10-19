@@ -1,6 +1,6 @@
 import { rename } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { getMapsKey } from "@plugins/integrations/plugins/google-maps/server";
+import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/server";
 import { PlacesApiError } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import {
   placeFirstPhotoName,
@@ -62,13 +62,13 @@ async function thumbnail(id: string): Promise<Thumbnail> {
   const cached = await readCached(id);
   if (cached !== null) return cached;
 
-  const key = await getMapsKey();
-  if (!key.ok) return { kind: "maps-not-configured" };
+  const maps = await getPlacesClient();
+  if (!maps.ok) return { kind: "maps-not-configured" };
   let image: Response;
   try {
-    const name = await placeFirstPhotoName(key.key, id);
+    const name = await placeFirstPhotoName(maps.client, id);
     if (name === null) return await markNoPhoto(id);
-    image = await placePhoto(key.key, name, THUMBNAIL_WIDTH);
+    image = await placePhoto(maps.client, name, THUMBNAIL_WIDTH);
   } catch (err) {
     // Google refused the id (it no longer knows the place) or the fresh photo
     // name: nothing to show, as with a place without photos.

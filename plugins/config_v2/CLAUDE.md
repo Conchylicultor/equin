@@ -365,8 +365,8 @@ per-composition scoping:
 - Description: Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 - Web:
   - Slots: `ConfigV2.WebRegister`
-  - Slot contributors: 88 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×88
+  - Slot contributors: 89 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×89
   - Contributes: `Demo.Resource` "config-v2"
   - Uses:
     - `framework/browser-server/demo.Demo`
@@ -533,7 +533,7 @@ per-composition scoping:
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 112 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 113 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×32
     - `backup` ×13
     - `conversations` ×13
@@ -544,11 +544,11 @@ per-composition scoping:
     - `config_v2` ×3
     - `primitives` ×3
     - `infra` ×2
+    - `integrations` ×2
     - `stats` ×2
     - `build`
     - `fields/secret/config`
     - `framework/tooling/codegen`
-    - `integrations/gmail`
     - `map/google`
     - `plugin-meta/composition`
     - `reorder`

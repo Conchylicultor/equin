@@ -379,6 +379,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `physFootprintBytes`
     - `procMemory`
     - `profilerStart`
+    - `provideHostServicesUnbooted`
     - `recomputeResource`
     - `recordLoaderReadSet`
     - `recordMemoryCheckpoint`
@@ -424,7 +425,6 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `clearHostServices` — Forget every declared service — test support (`core/testing`), so a suite's services do not leak into the next suite's boot asserts in one bun process.
     - `clearRelationBases` — Back to "not set" (test support: a suite that set bases must not leak them into the next).
     - `getReadSetIndex` — The whole index as a plain object, each key's tables sorted — every key that ever captured a table, including one a removal emptied (`[]`).
-    - `provideHostServicesUnbooted` — Name the host's providers for a process that runs graph code WITHOUT booting the graph — test support (`core/testing`), for the `bun test` preload, which hands it the contributions of the desktop host's machine halves.
     - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
     - `serverEntries`
     - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states.

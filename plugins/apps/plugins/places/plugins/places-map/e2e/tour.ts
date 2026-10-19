@@ -1,9 +1,9 @@
 // A tour of the Places app on THIS checkout's deploy: saves a few places
-// through the real Add place flow (Google Places search → pick), then captures
+// through the real search bar (Google results → Save on a card), then captures
 // the map, the sidebar's Restaurants filter included then excluded (logging
 // the map's marks and the sidebar counts at each step), a selected place's
 // card, the Gallery and List views and the tag manager. Needs the Google Maps Places key configured; without it the search
-// popover shows the set-up action and the script stops there.
+// panel shows the set-up action and the script stops there.
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/places/plugins/places-map/e2e/tour.ts \
@@ -38,27 +38,26 @@ await withBrowser(async (h) => {
   });
   await page.goto(pathUrl("/places"));
   await page
-    .getByRole("button", { name: "Add place", exact: true })
+    .getByPlaceholder("Search or add places")
     .waitFor({ timeout: 30_000 });
   await page.waitForTimeout(1500);
   await snap(page, out, "start");
 
   if (!skipAdd) {
+    const input = page.getByPlaceholder("Search or add places");
     for (const q of queries) {
-      await page
-        .getByRole("button", { name: "Add place", exact: true })
-        .click();
-      const input = page.getByRole("textbox", { name: "Search Google Places" });
-      await input.waitFor();
       await input.fill(q);
-      // The query's longest word is in the first suggestion's primary line
-      // (a short word like "Le" would also match unrelated buttons).
+      // The query's longest word is in the first hit's name (a short word
+      // like "Le" would also match unrelated cards).
       const word = q
         .split(" ")
         .filter((w) => w !== "Paris")
         .reduce((a, b) => (b.length > a.length ? b : a), "");
-      const pick = page.getByRole("button").filter({ hasText: word }).first();
-      const appeared = await pick
+      const card = page
+        .locator("[data-google-place-id]")
+        .filter({ hasText: word })
+        .first();
+      const appeared = await card
         .waitFor({ timeout: 15_000 })
         .then(() => true)
         .catch((err: unknown) => {
@@ -67,13 +66,16 @@ await withBrowser(async (h) => {
         });
       if (!appeared) {
         await snap(page, out, "search-no-result");
-        throw new Error(`no suggestion containing "${word}" for "${q}"`);
+        throw new Error(`no Google result containing "${word}" for "${q}"`);
       }
-      await pick.click();
+      // A place saved by an earlier run shows "Saved" instead.
+      const save = card.getByRole("button", { name: /^Save / });
+      if (await save.isVisible()) await save.click();
       await page.waitForTimeout(2500);
       await snap(page, out, `added-${word.toLowerCase()}`);
-      await page.keyboard.press("Escape");
     }
+    await input.fill("");
+    await page.keyboard.press("Escape");
   }
 
   await page.waitForTimeout(3000);

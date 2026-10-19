@@ -5,7 +5,7 @@ import {
   defineJob,
   NonRetryableError,
 } from "@plugins/infra/plugins/jobs/server";
-import { getMapsKey } from "@plugins/integrations/plugins/google-maps/server";
+import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/server";
 import {
   PlacesApiError,
   type PlaceSnapshot,
@@ -77,8 +77,8 @@ export const refreshPlacesJob = defineJob({
       return;
     }
 
-    const key = await getMapsKey();
-    if (!key.ok) {
+    const maps = await getPlacesClient();
+    if (!maps.ok) {
       // Nothing can be refreshed until the user connects a Maps key; retrying
       // cannot change that.
       throw new NonRetryableError(
@@ -92,7 +92,7 @@ export const refreshPlacesJob = defineJob({
     for (const place of stale) {
       let snapshot: PlaceSnapshot;
       try {
-        snapshot = await placeDetails(key.key, place.googlePlaceId);
+        snapshot = await placeDetails(maps.client, place.googlePlaceId);
       } catch (err) {
         if (!(err instanceof PlacesApiError)) throw err;
         if (isPlaceIdObsolete(err)) {

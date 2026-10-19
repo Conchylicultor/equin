@@ -114,7 +114,7 @@ await withBrowser(async (h) => {
   const t0 = Date.now();
   await page.goto(pathUrl("/places"), { waitUntil: "commit" });
   await page
-    .getByRole("button", { name: "Add place", exact: true })
+    .getByPlaceholder("Search or add places")
     .waitFor({ timeout: 120_000 });
   const tChrome = Date.now() - t0;
   await overlays.first().waitFor({ state: "attached", timeout: 120_000 });
@@ -132,7 +132,7 @@ await withBrowser(async (h) => {
       )
       .map((m) => `${m.name}@${Math.round(m.startTime)}`),
   );
-  console.log(`[load] chrome (Add place) at ${tChrome} ms`);
+  console.log(`[load] chrome (search bar) at ${tChrome} ms`);
   console.log(`[load] first pin at       ${tPin} ms`);
   console.log(`[load] boot marks         ${marks.join(", ") || "(none)"}`);
   await stop("load");

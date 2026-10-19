@@ -1,4 +1,8 @@
-import { PlaceSuggestionSchema, type PlaceSuggestion } from "../../core";
+import {
+  PlaceSuggestionSchema,
+  type PlaceSuggestion,
+  type PlacesClient,
+} from "../../core";
 import { PLACES_BASE, placesFetch } from "./request";
 
 /** Raw `places:autocomplete` response. A field mask is optional on this call. */
@@ -27,13 +31,14 @@ interface AutocompleteResponse {
  * Anything that goes wrong throws `PlacesApiError`.
  */
 export async function autocomplete(
-  apiKey: string,
+  client: PlacesClient,
   input: string,
   sessionToken: string,
 ): Promise<PlaceSuggestion[]> {
   const body = await placesFetch<AutocompleteResponse>(
     new URL(`${PLACES_BASE}/places:autocomplete`),
-    { method: "POST", apiKey, body: { input, sessionToken } },
+    client,
+    { method: "POST", sku: "autocomplete", body: { input, sessionToken } },
   );
 
   const out: PlaceSuggestion[] = [];

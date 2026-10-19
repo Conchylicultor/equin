@@ -25,7 +25,6 @@ export { clearHostServices } from "../host-service";
 // A headless test process boots no graph, yet runs code that reads host
 // services (`db`, the job queue): the `bun test` preload names the desktop
 // host's providers through this.
-export { provideHostServicesUnbooted } from "../host-service";
 
 // The one boot sequence, for a suite that boots a plugin graph of its own (the
 // portable boot test boots task-category's closure on PGlite).

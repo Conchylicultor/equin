@@ -1,4 +1,4 @@
-import { PlacesApiError } from "../../core";
+import { PlacesApiError, type PlacesClient, type PlacesSku } from "../../core";
 
 /** Places API (New) host. Every path below is ours, never user-supplied. */
 export const PLACES_BASE = "https://places.googleapis.com/v1";
@@ -13,7 +13,9 @@ interface PlacesErrorBody {
 }
 
 /**
- * Perform one Places call and return its parsed JSON body.
+ * Perform one Places call and return its parsed JSON body. The call is counted
+ * on the client's meter as `sku` first — recorded before the request, since a
+ * refused call may still be billed.
  *
  * Plain `fetch` on purpose: `@plugins/infra/plugins/safe-fetch` exists to guard
  * URLs a USER supplied (SSRF), and `places.googleapis.com` is a fixed host we
@@ -26,14 +28,16 @@ interface PlacesErrorBody {
  */
 export async function placesFetch<T>(
   url: URL,
+  client: PlacesClient,
   init: {
     method: "GET" | "POST";
-    apiKey: string;
+    sku: PlacesSku;
     fieldMask?: string;
     body?: unknown;
   },
 ): Promise<T> {
-  const headers: Record<string, string> = { "X-Goog-Api-Key": init.apiKey };
+  await client.meter.record(init.sku);
+  const headers: Record<string, string> = { "X-Goog-Api-Key": client.apiKey };
   if (init.fieldMask) headers["X-Goog-FieldMask"] = init.fieldMask;
   if (init.body !== undefined) headers["Content-Type"] = "application/json";
 

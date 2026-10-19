@@ -1,4 +1,9 @@
-import { PlaceSnapshotSchema, type PlaceSnapshot } from "../../core";
+import {
+  PlaceSnapshotSchema,
+  skuFor,
+  type PlaceSnapshot,
+  type PlacesClient,
+} from "../../core";
 import { PLACE_DETAILS_FIELD_MASK } from "./field-mask";
 import { PLACES_BASE, placesFetch } from "./request";
 
@@ -27,7 +32,7 @@ interface PlaceDetailsResponse {
  * with blanks where the place should be.
  */
 export async function placeDetails(
-  apiKey: string,
+  client: PlacesClient,
   placeId: string,
   sessionToken?: string,
 ): Promise<PlaceSnapshot> {
@@ -36,9 +41,9 @@ export async function placeDetails(
     url.searchParams.set("sessionToken", sessionToken);
   }
 
-  const body = await placesFetch<PlaceDetailsResponse>(url, {
+  const body = await placesFetch<PlaceDetailsResponse>(url, client, {
     method: "GET",
-    apiKey,
+    sku: skuFor("place-details", PLACE_DETAILS_FIELD_MASK),
     fieldMask: PLACE_DETAILS_FIELD_MASK,
   });
 

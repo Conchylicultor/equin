@@ -1,4 +1,5 @@
-import { getMapsKey } from "@plugins/integrations/plugins/google-maps/server";
+import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/server";
+import type { PlacesClient } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import {
   autocomplete,
   placeDetails,
@@ -15,21 +16,21 @@ import { googleTypeToFamily } from "./type-to-family";
 import { PLACE_GOOGLE_UNKNOWN_TYPE } from "./unknown-type-kind";
 
 /**
- * The API key, or a loud stop.
+ * The Places client, or a loud stop.
  *
  * The registry's contract is that a provider which CANNOT answer throws, and
  * only a provider that genuinely found nothing returns an empty list. "No key
  * configured" is the first kind: returning `[]` here would render as "no
  * results for that address", which is a lie the user cannot debug.
  */
-async function requireKey(): Promise<string> {
-  const key = await getMapsKey();
-  if (!key.ok) {
+async function requireClient(): Promise<PlacesClient> {
+  const maps = await getPlacesClient();
+  if (!maps.ok) {
     throw new Error(
       "Google Maps is not set up: no API key configured. Add one under Settings → Accounts → Google Maps Platform.",
     );
   }
-  return key.key;
+  return maps.client;
 }
 
 /**
@@ -46,7 +47,11 @@ export const googlePlaceProvider = definePlaceProvider({
   id: GOOGLE_PLACE_PROVIDER_ID,
 
   async search(query: string, session: string): Promise<PlaceSuggestion[]> {
-    const suggestions = await autocomplete(await requireKey(), query, session);
+    const suggestions = await autocomplete(
+      await requireClient(),
+      query,
+      session,
+    );
     return suggestions.map((s) => ({
       placeId: s.placeId,
       primary: s.primary,
@@ -55,7 +60,7 @@ export const googlePlaceProvider = definePlaceProvider({
   },
 
   async resolve(placeId: string, session: string): Promise<PlaceSnapshot> {
-    const place = await placeDetails(await requireKey(), placeId, session);
+    const place = await placeDetails(await requireClient(), placeId, session);
     const { family, unknownPrimary } = googleTypeToFamily(
       place.primaryType,
       place.types,

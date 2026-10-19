@@ -2,6 +2,7 @@ import { Core, type PluginDefinition } from "@plugins/framework/plugins/web-sdk/
 import { ToasterHost } from "./components/toaster-host";
 
 export { showToast } from "./internal/show-toast";
+export { isInToast } from "./internal/is-in-toast";
 export { type ToastArgs, type ToastVariant } from "../core";
 
 export default {

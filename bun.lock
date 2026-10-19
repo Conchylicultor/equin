@@ -3920,6 +3920,10 @@
       "name": "@singularity/plugin-integrations-google-maps-places-api",
       "version": "0.0.1",
     },
+    "plugins/integrations/plugins/google-maps/plugins/usage": {
+      "name": "@singularity/plugin-integrations-google-maps-usage",
+      "version": "0.0.1",
+    },
     "plugins/integrations/plugins/hooktheory": {
       "name": "@singularity/plugin-integrations-hooktheory",
       "version": "0.0.1",
@@ -8695,6 +8699,8 @@
     "@singularity/plugin-integrations-google-maps": ["@singularity/plugin-integrations-google-maps@workspace:plugins/integrations/plugins/google-maps"],
 
     "@singularity/plugin-integrations-google-maps-places-api": ["@singularity/plugin-integrations-google-maps-places-api@workspace:plugins/integrations/plugins/google-maps/plugins/places-api"],
+
+    "@singularity/plugin-integrations-google-maps-usage": ["@singularity/plugin-integrations-google-maps-usage@workspace:plugins/integrations/plugins/google-maps/plugins/usage"],
 
     "@singularity/plugin-integrations-hooktheory": ["@singularity/plugin-integrations-hooktheory@workspace:plugins/integrations/plugins/hooktheory"],
 

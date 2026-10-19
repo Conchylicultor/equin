@@ -104,8 +104,9 @@ function providerCountError(
 
 /**
  * Name the host's providers for a process that runs graph code WITHOUT booting
- * the graph — test support (`core/testing`), for the `bun test` preload, which
- * hands it the contributions of the desktop host's machine halves. Until some
+ * the graph: the `bun test` preload (the desktop host's machine halves'
+ * contributions) and a check that runs booted code headless (the migration
+ * dry-run's log persistence). Until some
  * suite boots a graph (whose collected providers then answer), every
  * `HostService.get()` reads its provider from these, with the same
  * exactly-one rule.

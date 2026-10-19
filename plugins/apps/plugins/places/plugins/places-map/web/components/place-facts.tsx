@@ -38,11 +38,14 @@ const TONE_CLASS: Record<OpenTone, string> = {
 /** The open-now clock: re-read each minute, so "Closes soon" turns up on time. */
 const MINUTE_MS = 60_000;
 
-/** "4.7 ★★★★★ (182k) · €€" — Google's rating, its count, the price ramp. */
+/**
+ * "4.7 ★★★★★ (182k) · €€" — Google's rating, its count, the price ramp: of a
+ * saved place's rich details, or of a search hit carrying them.
+ */
 export function RatingLine({
   details,
 }: {
-  details: PlaceRichDetails;
+  details: Pick<PlaceRichDetails, "rating" | "ratingCount" | "priceLevel">;
 }): ReactNode {
   const { rating, ratingCount, priceLevel } = details;
   if (rating === undefined && priceLevel === undefined) return null;
@@ -87,7 +90,7 @@ export function RatingLine({
 export function OpenNowLine({
   details,
 }: {
-  details: PlaceRichDetails;
+  details: Pick<PlaceRichDetails, "hours" | "utcOffsetMinutes">;
 }): ReactNode {
   const now = useNow(MINUTE_MS);
   if (details.hours === undefined) return null;

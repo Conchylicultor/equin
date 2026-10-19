@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -15,7 +16,9 @@ import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import {
   MARK_PENDING,
   NO_MAP_PADDING,
+  framingOverlays,
   resolveCrowd,
+  type CameraRest,
   type CameraView,
   type LatLng,
   type MapCrowdRequest,
@@ -45,6 +48,18 @@ export interface MapViewProps {
   activeId?: string | null;
   /** A pin was clicked. */
   onActivate?: (id: string) => void;
+  /**
+   * A pin to draw hovered though the pointer is not on it: the hover of
+   * whatever outside the map stands for it (a result card beside the map).
+   */
+  hoveredId?: string | null;
+  /** The pin under the pointer changed (`null`: none) — to link it back. */
+  onHoverChange?: (id: string | null) => void;
+  /**
+   * The camera came to rest (and once when the map first settles): where it
+   * is, and the area it shows — what a search biased to "this map area" reads.
+   */
+  onCameraRest?: (rest: CameraRest) => void;
   /**
    * How pins that crowd each other on screen are drawn: merged into clusters
    * (`GeoMap.Cluster`) or kept as spots (see `MapRendererProps.crowd`).
@@ -111,26 +126,38 @@ function isCameraView(v: unknown): v is CameraView {
 /**
  * The remembered camera for `cameraKey`: the view to open at (read once, at
  * mount — a later write must not move a mounted map) and the writer of each
- * view the camera rests at. Nothing without a key.
+ * view the camera rests at — only while there is something the camera frames,
+ * so a map showing nothing of its own never remembers its world view as where
+ * the user left it. Nothing without a key.
  */
-function useRememberedCamera(cameraKey: string | undefined): {
+function useRememberedCamera(
+  cameraKey: string | undefined,
+  framesSomething: boolean,
+): {
   initialCamera: CameraView | null;
-  onCameraRest: ((view: CameraView) => void) | undefined;
+  remember: ((view: CameraView) => void) | undefined;
 } {
   const [initialCamera] = useState(() => {
     if (cameraKey === undefined) return null;
     const stored = readDraft<unknown>(cameraDraftKey(cameraKey), CAMERA_DRAFT);
     return isCameraView(stored) ? stored : null;
   });
-  const onCameraRest = useMemo(
+  const framing = useLatestRef(framesSomething);
+  const remember = useMemo(
     () =>
       cameraKey === undefined
         ? undefined
-        : (view: CameraView) =>
-            writeDraft(cameraDraftKey(cameraKey), view, CAMERA_DRAFT),
-    [cameraKey],
+        : ({ center, zoom }: CameraView) => {
+            if (!framing.current) return;
+            writeDraft(
+              cameraDraftKey(cameraKey),
+              { center, zoom },
+              CAMERA_DRAFT,
+            );
+          },
+    [cameraKey, framing],
   );
-  return { initialCamera, onCameraRest };
+  return { initialCamera, remember };
 }
 
 /**
@@ -146,6 +173,9 @@ export function MapView({
   overlays,
   activeId = null,
   onActivate = ignoreActivate,
+  hoveredId = null,
+  onHoverChange,
+  onCameraRest: reportRest,
   crowd,
   focusId = null,
   fitPadding = NO_MAP_PADDING,
@@ -154,7 +184,24 @@ export function MapView({
   empty,
 }: MapViewProps) {
   const renderer = GeoMap.Renderer.useContributions()[0];
-  const { initialCamera, onCameraRest } = useRememberedCamera(cameraKey);
+  const { initialCamera, remember } = useRememberedCamera(
+    cameraKey,
+    framingOverlays(overlays).length > 0,
+  );
+  // The caller's report through a ref, keyed on its presence only: a new
+  // closure each render must not re-subscribe the renderer.
+  const latestReport = useLatestRef(reportRest);
+  const reports = reportRest !== undefined;
+  const onCameraRest = useMemo(
+    () =>
+      remember === undefined && !reports
+        ? undefined
+        : (rest: CameraRest) => {
+            remember?.(rest);
+            latestReport.current?.(rest);
+          },
+    [remember, reports, latestReport],
+  );
 
   if (renderer === undefined) {
     return (
@@ -179,6 +226,8 @@ export function MapView({
     renderPin,
     onActivate,
     activeId,
+    hoveredId,
+    ...(onHoverChange === undefined ? {} : { onHoverChange }),
     ...(crowd === undefined ? {} : { crowd: resolveCrowd(crowd) }),
     renderCluster,
     focusId,

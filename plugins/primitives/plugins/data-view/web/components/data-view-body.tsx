@@ -1548,6 +1548,9 @@ function DataViewBodyInner<TRow>(
                 density={chrome.density}
                 arrangement={arrangement}
                 searchPlaceholder={chrome.searchPlaceholder}
+                {...(search?.suggestions === undefined
+                  ? {}
+                  : { searchSuggestions: search.suggestions })}
                 asideInset={asideInset}
               />
             )}

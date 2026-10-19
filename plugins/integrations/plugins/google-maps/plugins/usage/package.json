@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-integrations-google-maps-usage",
+  "description": "Google Maps Platform usage ledger: every Places call counted per billing month and SKU, against a per-SKU monthly budget kept inside Google's free allowance.",
+  "private": true,
+  "version": "0.0.1"
+}

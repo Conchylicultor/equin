@@ -27,11 +27,11 @@ await withBrowser(async (h) => {
   });
   await page.goto(pathUrl("/places"));
   await page
-    .getByRole("button", { name: "Add place", exact: true })
+    .getByPlaceholder("Search or add places")
     .waitFor({ timeout: 120_000 });
   await page.waitForTimeout(settle);
 
-  await page.getByPlaceholder("Search places").fill(name);
+  await page.getByPlaceholder("Search or add places").fill(name);
   await page.waitForTimeout(3000);
   await clickPin(page, name);
   const note = page.getByLabel("Note", { exact: true });

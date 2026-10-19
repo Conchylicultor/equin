@@ -49,7 +49,7 @@ declareRuntimeNamespace(await checkoutNamespace(REPO_ROOT));
 const { machineEntries } =
   await import("../plugins/framework/plugins/server-core/core/machine.generated");
 const { provideHostServicesUnbooted } =
-  await import("@plugins/framework/plugins/server-core/core/testing");
+  await import("@plugins/framework/plugins/server-core/core");
 const providers: ServerContribution[] = [];
 for (const entry of machineEntries) {
   const barrel = join(PLUGINS_DIR, entry.pluginPath, "machine", "index.ts");

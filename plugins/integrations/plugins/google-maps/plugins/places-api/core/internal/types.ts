@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OpeningHoursSchema } from "./rich-details";
 
 /**
  * One row of a place search's dropdown. The neutral, provider-independent shape
@@ -70,14 +71,15 @@ export const PlaceSnapshotSchema = z.object({
 
 export type PlaceSnapshot = z.infer<typeof PlaceSnapshotSchema>;
 
-/**
- * One hit of a free-text place search (`searchText`): just enough to decide
- * whether it is the place meant — its id, name, position and Google types (a
- * hit whose types are all address-like is an address, not a place). Resolve it
- * with `placeDetails` for the full snapshot.
- */
 const LatLngSchema = z.object({ lat: z.number(), lng: z.number() });
 
+/**
+ * One hit of a free-text place search (`searchText`): enough to decide whether
+ * it is the place meant — its id, name, position and Google types (a hit whose
+ * types are all address-like is an address, not a place) — and, at the `rich`
+ * detail, what a result card shows (rating, price, this week's hours). Resolve
+ * it with `placeDetails` for the full snapshot.
+ */
 export const PlaceCandidateSchema = z.object({
   placeId: z.string(),
   name: z.string(),
@@ -92,6 +94,18 @@ export const PlaceCandidateSchema = z.object({
    * metres around a shop. Absent when Google gives none.
    */
   viewport: z.object({ low: LatLngSchema, high: LatLngSchema }).optional(),
+  /** Human-readable primary type ("Sichuan restaurant"). */
+  category: z.string().optional(),
+  primaryType: z.string().optional(),
+  /** Rich detail only — absent at `pro`, and when Google knows none. */
+  rating: z.number().optional(),
+  ratingCount: z.number().optional(),
+  /** 0 (free) … 4 (very expensive). */
+  priceLevel: z.number().int().min(0).max(4).optional(),
+  /** This week's hours (Google's `currentOpeningHours`), in the place's clock. */
+  hours: OpeningHoursSchema.optional(),
+  /** The place's offset from UTC now, in minutes — its clock for `hours`. */
+  utcOffsetMinutes: z.number().optional(),
 });
 
 export type PlaceCandidate = z.infer<typeof PlaceCandidateSchema>;

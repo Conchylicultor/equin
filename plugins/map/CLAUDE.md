@@ -35,6 +35,10 @@ Plain data, no React:
   lead is its best pin; `pinStackOrder(pins, activeId)` is the z-order every
   renderer stacks pins in (rank, then id; the active pin on top).
 - `MapPin.rank` (default 0): a pin's importance among its neighbours.
+- `frame: false` (any overlay): kept out of the camera's framing — neither the
+  one framing a map makes on its own nor the Fit control frames it
+  (`framingOverlays`). For proposals (search hits) shown where they are
+  without ever moving the user's camera.
 - **Marks** (`mark.ts`): a pin's look as data — `MapMark { key, svg, width,
   height, anchor, labelAt, texts? }`, one standalone SVG image placed with its
   `anchor` on the point. `key` names the look (equal keys = identical pixels:
@@ -77,8 +81,16 @@ Plain data, no React:
   (`persistent-draft`, no expiry): the map opens at the centre and zoom the
   user left it at, and frames the overlays only on a first visit. The
   renderer gets it as `initialCamera` (read once, at mount; it then skips its
-  one framing) and reports each resting view through `onCameraRest` — only
-  while there are overlays, so an empty map's world view is never remembered.
+  one framing) and reports each resting view through `onCameraRest`; the host
+  remembers it only while some overlay frames (an empty map's world view is
+  never remembered).
+- `onCameraRest` (optional) — the caller's: each time the camera rests (and
+  once when the map first settles), a `CameraRest` (`center`, `zoom`,
+  `bounds`) — what a search biased to "this map area" reads.
+- `hoveredId` / `onHoverChange` (optional) — hover linked to something outside
+  the map (a result card): `hoveredId` lifts that pin as a pointer hover does
+  (the pointer's own hover wins), and `onHoverChange` reports the pin under the
+  pointer (`null`: none).
 - `GeoMap.Renderer` — a data slot. **First contribution wins**; zero is a loud
   "no map renderer installed" state. Its contract is `Place.Provider`'s, widened
   to three states: `useReadiness(): "pending" | "ready" | "blocked"`, and
@@ -152,6 +164,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
     - `primitives/persistent-draft.DraftOptions`
     - `primitives/persistent-draft.readDraft`
@@ -186,6 +199,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
 - Core:
   - Uses: `packages/string-hash.hash53`
   - Exports (types):
+    - `CameraRest`
     - `CameraView`
     - `ClusterPoint`
     - `DropHeadInput`
@@ -224,6 +238,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `dropTipPx`
     - `escapeSvg`
     - `flyPath`
+    - `framingOverlays`
     - `groupSpots`
     - `MAP_TONE_TOKEN`
     - `MARK_PENDING`

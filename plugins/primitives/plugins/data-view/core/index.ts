@@ -105,6 +105,7 @@ export type {
   DataViewBaseProps,
   DataViewReserve,
   DataViewSearch,
+  DataViewSearchSuggestions,
   DataViewDataOrigin,
   DataViewInMemoryOrigin,
   DataViewRowsCollection,

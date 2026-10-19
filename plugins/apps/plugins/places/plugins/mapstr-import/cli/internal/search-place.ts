@@ -1,5 +1,5 @@
 import { searchText } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
-import { requireMapsKey, underQuota } from "./google";
+import { requirePlacesClient, underQuota } from "./google";
 import { distanceM } from "./match";
 import type { SearchPlaceOptions } from "./options";
 
@@ -35,11 +35,13 @@ export async function searchPlace(
       `--radius must be metres in (0, 50000], got "${opts.radius}"`,
     );
   }
-  const key = await requireMapsKey();
+  const client = await requirePlacesClient();
   const hits = await underQuota(() =>
-    searchText(key, query, {
+    searchText(client, query, {
       maxResults: MAX_RESULTS,
-      ...(near === undefined ? {} : { bias: { ...near, radiusM } }),
+      ...(near === undefined
+        ? {}
+        : { bias: { kind: "circle", ...near, radiusM } }),
       ...(opts.lang === undefined ? {} : { languageCode: opts.lang }),
     }),
   );

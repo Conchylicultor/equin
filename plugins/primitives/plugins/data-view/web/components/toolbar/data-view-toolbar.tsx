@@ -14,6 +14,7 @@ import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import type {
   CreateOption,
   DataViewDensity,
+  DataViewSearchSuggestions,
   ToolbarArrangement,
   ToolbarParts,
 } from "../../../core";
@@ -22,6 +23,7 @@ import { CompactControls } from "./compact-controls";
 import { ControlTrigger } from "./control-trigger";
 import { CreatorsControl } from "../creators-control";
 import { barArrangement } from "./bar-arrangement";
+import { SearchWithSuggestions } from "./search-suggestions";
 
 /**
  * Below this container width the toolbar folds: search AND every control
@@ -70,6 +72,8 @@ export interface DataViewToolbarProps {
   arrangement?: ToolbarArrangement;
   /** The search field's placeholder; default `"Search…"`. */
   searchPlaceholder?: string;
+  /** The panel under the search field (`DataViewSearch.suggestions`). */
+  searchSuggestions?: DataViewSearchSuggestions;
   /** `ToolbarParts.asideInset`: how far the surface's aside reaches from the
    *  left edge, as a CSS length; default `"0px"` (no aside, or one in its own
    *  column beside the band). */
@@ -106,6 +110,7 @@ export function DataViewToolbar({
   density,
   arrangement = barArrangement,
   searchPlaceholder = "Search…",
+  searchSuggestions,
   asideInset = "0px",
 }: DataViewToolbarProps): ReactNode {
   const [measureRef, { width }] = useElementSize();
@@ -145,21 +150,34 @@ export function DataViewToolbar({
       form={forms.creators}
     />
   );
-  const searchInput = (
+  const field = (
     <SearchInput
       ref={searchRef}
       value={query}
       onChange={(e) => onQueryChange(e.target.value)}
       placeholder={searchPlaceholder}
       appearance={compact ? "field" : forms.search}
-      // Wide field: a fixed lane in the inline row. Compact: full width of the
-      // options popover (the wrapper's own block box) — hence no width class
-      // there. Bare: fills whatever cell the arrangement gives it.
+      // Wide field: a fixed lane in the inline row — wider when it searches
+      // beyond the rows (suggestions). Compact: full width of the options
+      // popover (the wrapper's own block box) — hence no width class there.
+      // Bare: fills whatever cell the arrangement gives it.
       wrapperClassName={
-        !compact && forms.search === "field" ? cn("w-48") : undefined
+        !compact && forms.search === "field"
+          ? cn(searchSuggestions === undefined ? "w-48" : "w-80")
+          : undefined
       }
     />
   );
+  const searchInput =
+    searchSuggestions === undefined ? (
+      field
+    ) : (
+      <SearchWithSuggestions
+        input={field}
+        inputRef={searchRef}
+        suggestions={searchSuggestions}
+      />
+    );
 
   const titleNode = title ? (
     <Text as="div" variant="label">

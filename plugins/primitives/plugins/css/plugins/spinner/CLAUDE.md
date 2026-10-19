@@ -17,6 +17,7 @@
     - `apps/mail/attachments`
     - `apps/mail/sync-status`
     - `apps/pages/page-tree`
+    - `apps/places/places-map`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/sources/ultimate-guitar/alignment`
     - `apps/sonata/transcription`

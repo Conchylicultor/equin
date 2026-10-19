@@ -60,7 +60,7 @@ await withBrowser(async (h) => {
   });
   await page.goto(pathUrl("/places"));
   await page
-    .getByRole("button", { name: "Add place", exact: true })
+    .getByPlaceholder("Search or add places")
     .waitFor({ timeout: 30_000 });
   await page.waitForTimeout(4000);
 

@@ -2,7 +2,7 @@
 // data as it found it:
 //   1. a title on a Google place, typed in its card, shows on its pin and card
 //      (Google's name under it), then cleared back to Google's name;
-//   2. Add place › Drop a custom pin, named, dropped by a click on the map,
+//   2. the search panel's Drop a custom pin, named, dropped by a click on the map,
 //      opens its card (no Google place) — then deleted.
 // Needs a saved Google place named `--place` (default "Rue Sainte-Anne").
 //
@@ -59,11 +59,11 @@ await withBrowser(async (h) => {
   });
   await page.goto(pathUrl("/places"));
   await page
-    .getByRole("button", { name: "Add place", exact: true })
+    .getByPlaceholder("Search or add places")
     .waitFor({ timeout: 120_000 });
   await page.waitForTimeout(settle);
 
-  const search = page.getByPlaceholder("Search places");
+  const search = page.getByPlaceholder("Search or add places");
   const deletePlace = async (name: string) => {
     await clickPin(page, name);
     await page
@@ -125,7 +125,7 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(3000);
 
   // ── 2. A custom pin ──
-  await page.getByRole("button", { name: "Add place", exact: true }).click();
+  await search.click();
   await page.getByText("Drop a custom pin", { exact: true }).click();
   const pinName = page.getByLabel("Custom pin name", { exact: true });
   await pinName.waitFor({ timeout: 10_000 });

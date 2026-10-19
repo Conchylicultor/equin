@@ -21,6 +21,18 @@ export interface LatLng {
 export type MapTone =
   "primary" | "muted" | "destructive" | "success" | "warning" | "info";
 
+/**
+ * What every overlay kind carries. `frame: false` keeps an overlay out of the
+ * camera's framing — neither the one framing a map makes on its own nor the
+ * Fit control ever frames it: a proposal on the map (a search hit, a
+ * suggestion) is shown where it is, and never moves the user's camera to
+ * itself.
+ */
+interface MapOverlayBase {
+  id: string;
+  frame?: false;
+}
+
 /** Stroke styling shared by paths and area outlines. */
 export interface MapStrokeStyle {
   /** Defaults to `primary`. */
@@ -35,9 +47,8 @@ export interface MapStrokeStyle {
  * (`GeoMap.Pin` dispatches on it), so the layer that produces a pin decides what
  * it looks like and the renderer never styles one itself.
  */
-export interface MapPin {
+export interface MapPin extends MapOverlayBase {
   kind: "pin";
-  id: string;
   position: LatLng;
   pinType: string;
   /** The pin's name: its accessible label, and what the default pin shows. */
@@ -52,17 +63,15 @@ export interface MapPin {
 }
 
 /** An open polyline through `points`, in order. */
-export interface MapPath {
+export interface MapPath extends MapOverlayBase {
   kind: "path";
-  id: string;
   points: LatLng[];
   style?: MapStrokeStyle;
 }
 
 /** A closed polygon; `ring` is its outline (the closing edge is implied). */
-export interface MapArea {
+export interface MapArea extends MapOverlayBase {
   kind: "area";
-  id: string;
   ring: LatLng[];
   style?: MapStrokeStyle;
 }

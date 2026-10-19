@@ -12,8 +12,12 @@ import { MapsNotConfiguredSchema } from "./maps";
 
 export const SavePlaceBodySchema = z.object({
   googlePlaceId: z.string().min(1),
-  /** The session token of the search this pick came from. */
-  session: z.string().min(1),
+  /**
+   * The search's session token, when the pick came from an autocomplete
+   * answer (the `names` rung): Google then bills the round as one session.
+   * Absent for a Text Search hit — those have no session.
+   */
+  session: z.string().min(1).optional(),
 });
 export type SavePlaceBody = z.infer<typeof SavePlaceBodySchema>;
 

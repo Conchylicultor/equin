@@ -12,11 +12,18 @@ export type { PlaceId, PlaceTagId } from "./internal/id-kinds";
 export { places, placeTags, placeSearch } from "./internal/resources";
 export {
   MapsNotConfiguredSchema,
+  PlaceBoundsSchema,
+  type PlaceBounds,
   PlaceSearchQuerySchema,
   type PlaceSearchQuery,
   PlaceSearchResultSchema,
   type PlaceSearchResult,
 } from "./internal/maps";
+export {
+  SEARCH_RUNGS,
+  searchRung,
+  type SearchRung,
+} from "./internal/search-rung";
 export {
   savePlace,
   SavePlaceBodySchema,

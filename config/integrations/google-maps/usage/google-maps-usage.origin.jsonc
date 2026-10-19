@@ -1,0 +1,21 @@
+// @hash ebb416993626
+{
+  // Google's free allowance: 10,000.
+  "autocomplete": 9500,
+  // Google's free allowance: 10,000.
+  "placeDetailsEssentials": 9500,
+  // Google's free allowance: 5,000. Saving a place, the monthly refresh, the page place block.
+  "placeDetailsPro": 4800,
+  // Google's free allowance: 1,000.
+  "placeDetailsEnterprise": 950,
+  // Google's free allowance: 1,000. A place card's rich details (photos, hours, rating, summary).
+  "placeDetailsEnterpriseAtmosphere": 950,
+  // Google's free allowance: 5,000. The Places search without ratings, and the Mapstr import.
+  "textSearchPro": 4800,
+  // Google's free allowance: 1,000. The Places search with ratings, prices and opening hours.
+  "textSearchEnterprise": 950,
+  // Google's free allowance: 1,000.
+  "textSearchEnterpriseAtmosphere": 950,
+  // Google's free allowance: 1,000.
+  "placePhoto": 950
+}

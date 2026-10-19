@@ -1,15 +1,21 @@
-import { getMapsKey } from "@plugins/integrations/plugins/google-maps/server";
-import { PlacesApiError } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
+import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/server";
+import {
+  PlacesApiError,
+  type PlacesClient,
+} from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 
-/** The stored Places key, or a loud error saying where to set it up. */
-export async function requireMapsKey(): Promise<string> {
-  const key = await getMapsKey();
-  if (!key.ok) {
+/**
+ * The Places client (the stored key, counted on the usage ledger like every
+ * server call), or a loud error saying where to set it up.
+ */
+export async function requirePlacesClient(): Promise<PlacesClient> {
+  const maps = await getPlacesClient();
+  if (!maps.ok) {
     throw new Error(
       "No Google Maps (Places) key is configured — set it up in Settings → Accounts → Google Maps",
     );
   }
-  return key.key;
+  return maps.client;
 }
 
 // Google's per-minute request quotas (Text Search hits it after ~300 calls) are

@@ -18,7 +18,6 @@ export const ICON_MANIFEST: {
     "add-circle",
     "add-comment",
     "add-link",
-    "add-location-alt",
     "add-reaction",
     "adjust",
     "ads-click",

@@ -64,6 +64,7 @@ function PopoverContent({
   side = "bottom",
   sideOffset = 4,
   anchor,
+  collisionAvoidance,
   width = "content",
   padding = "md",
   maxHeight = "viewport",
@@ -75,7 +76,12 @@ function PopoverContent({
 }: Omit<PopoverPrimitive.Popup.Props, "render" | "className"> &
   Pick<
     PopoverPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset" | "anchor"
+    | "align"
+    | "alignOffset"
+    | "side"
+    | "sideOffset"
+    | "anchor"
+    | "collisionAvoidance"
   > & {
     /**
      * Plain override class landing LAST on the panel. Narrower than base-ui's
@@ -134,6 +140,7 @@ function PopoverContent({
           side={side}
           sideOffset={sideOffset}
           anchor={anchor}
+          {...(collisionAvoidance === undefined ? {} : { collisionAvoidance })}
         >
           {/* The popup IS the shared panel: base-ui owns the state machine, and
             `render` hands it `OverlayPanel` as the element to clone its merged

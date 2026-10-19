@@ -17,7 +17,8 @@ import { placeColors } from "./pin-paint";
 /** The pin type the map view stamps on every saved place (`GeoMap.Pin` / `GeoMap.Cluster` key). */
 export const SAVED_PLACE_PIN_TYPE = "saved-place";
 
-const fallbackIcon = symbol("location-on");
+/** A place no tag gives an icon to. */
+export const fallbackIcon = symbol("location-on");
 
 /**
  * How a place looks — on its pin, its cluster share, its card hero, its
@@ -46,9 +47,12 @@ export interface PlaceVisual {
   ownIcon: boolean;
 }
 
-/** The icon of the first tag (or its nearest ancestor) that has one. */
-function tagIcon(place: Place, tags: readonly PlaceTag[]): IconRef | null {
-  for (const tagId of place.tags) {
+/** The icon of the first of `tagIds` (or its nearest ancestor) that has one. */
+export function tagIcon(
+  tagIds: readonly string[],
+  tags: readonly PlaceTag[],
+): IconRef | null {
+  for (const tagId of tagIds) {
     if (isRoleTag(tagId, tags)) continue;
     const withIcon = tagPath(tagId, tags)
       .reverse()
@@ -71,7 +75,7 @@ export function placeVisual(
     colors,
     mainColor: colors[0]!,
     ...placeFlags(place, tags),
-    icon: ownIcon ?? tagIcon(place, tags) ?? fallbackIcon,
+    icon: ownIcon ?? tagIcon(place.tags, tags) ?? fallbackIcon,
     ownIcon: ownIcon !== null,
   };
 }

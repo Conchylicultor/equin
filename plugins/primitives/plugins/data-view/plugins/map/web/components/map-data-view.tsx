@@ -118,7 +118,13 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
   }
 
   const { pins, rowById, missing } = mapped;
+  const extra = options.overlays;
+  const extraIds = new Set(extra?.items.map((o) => o.id));
   const onActivate = (id: string) => {
+    if (extraIds.has(id)) {
+      extra?.onActivate(id);
+      return;
+    }
     const row = rowById.get(id);
     if (row === undefined) return;
     const activation = props.rowActivation?.(row);
@@ -134,7 +140,7 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
   return (
     <div className="relative size-full">
       <MapView
-        overlays={pins}
+        overlays={extra === undefined ? pins : [...pins, ...extra.items]}
         crowd={crowd}
         activeId={selected}
         focusId={selected}
@@ -144,6 +150,15 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
           ? {}
           : { cameraKey: options.cameraKey })}
         onActivate={onActivate}
+        {...(options.hoveredId === undefined
+          ? {}
+          : { hoveredId: options.hoveredId })}
+        {...(options.onHoverChange === undefined
+          ? {}
+          : { onHoverChange: options.onHoverChange })}
+        {...(options.onCameraRest === undefined
+          ? {}
+          : { onCameraRest: options.onCameraRest })}
         empty={
           // The surface's empty state speaks for an empty LIST. A list the
           // search or filter emptied is just a bare map (the map stays put,

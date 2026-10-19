@@ -18,8 +18,10 @@ import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   cameraFor,
+  framingOverlays,
   overlayPositions,
   viewFor,
+  type CameraRest,
   type CameraView,
   type MapArea,
   type MapOverlay,
@@ -112,6 +114,8 @@ function GoogleMapCanvas({
   markPin,
   onActivate,
   activeId,
+  hoveredId,
+  onHoverChange,
   crowd,
   renderCluster,
   markCluster,
@@ -128,13 +132,15 @@ function GoogleMapCanvas({
   const [loadError, setLoadError] = useState<string | null>(null);
   const colors = useToneColors(host, overlays);
   const pins = overlays.filter((o): o is MapPin => o.kind === "pin");
+  // What the camera frames — never a `frame: false` overlay (a proposal).
+  const framed = framingOverlays(overlays);
 
   if (refused) return <MapErrorCard reason={{ kind: "refused" }} />;
   if (loadError !== null) {
     return <MapErrorCard reason={{ kind: "load", detail: loadError }} />;
   }
 
-  const opening = initialCamera ?? roughView(overlays);
+  const opening = initialCamera ?? roughView(framed);
 
   return (
     <div ref={setHost} className="size-full">
@@ -184,15 +190,12 @@ function GoogleMapCanvas({
         >
           {/* A restored camera is where the user left the map: no framing. */}
           {initialCamera === undefined ? (
-            <FitCamera overlays={overlays} fitPadding={fitPadding} />
+            <FitCamera overlays={framed} fitPadding={fitPadding} />
           ) : null}
           {onCameraRest === undefined ? null : (
-            <ReportCameraRest
-              hasOverlays={overlays.length > 0}
-              onCameraRest={onCameraRest}
-            />
+            <ReportCameraRest onCameraRest={onCameraRest} />
           )}
-          <FitControl overlays={overlays} fitPadding={fitPadding} />
+          <FitControl overlays={framed} fitPadding={fitPadding} />
           {mapId === null ? null : <RasterNotice />}
           <WheelZoom />
           <FocusCamera
@@ -210,6 +213,8 @@ function GoogleMapCanvas({
             pins={pins}
             crowd={crowd}
             activeId={activeId}
+            hoveredId={hoveredId}
+            {...(onHoverChange === undefined ? {} : { onHoverChange })}
             renderPin={renderPin}
             renderCluster={renderCluster}
             markPin={markPin}
@@ -249,34 +254,33 @@ function roughView(overlays: readonly MapOverlay[]): CameraView {
 
 /**
  * Reports the camera each time it comes to rest (Google's `idle`: after a
- * pan, a zoom, a fit or a flight settles) — only while there are overlays, so
- * an empty map's world view is never taken for where the user left it.
+ * pan, a zoom, a fit or a flight settles, and once when the map first
+ * settles), with the area it shows.
  */
 function ReportCameraRest({
-  hasOverlays,
   onCameraRest,
 }: {
-  hasOverlays: boolean;
-  onCameraRest: (view: CameraView) => void;
+  onCameraRest: (rest: CameraRest) => void;
 }) {
   const map = useMap();
   const report = useLatestRef(onCameraRest);
-  const active = useLatestRef(hasOverlays);
 
   useEffect(() => {
     if (map === null) return;
     const listener = map.addListener("idle", () => {
-      if (!active.current) return;
       const center = map.getCenter();
       const zoom = map.getZoom();
-      if (center === undefined || zoom === undefined) return;
+      const bounds = map.getBounds();
+      if (center === undefined || zoom === undefined || bounds === undefined)
+        return;
       report.current({
         center: { lat: center.lat(), lng: center.lng() },
         zoom,
+        bounds: bounds.toJSON(),
       });
     });
     return () => listener.remove();
-  }, [map, report, active]);
+  }, [map, report]);
 
   return null;
 }

@@ -24,6 +24,11 @@ import forkSchemaDriftCheck from "./fork-schema-drift";
 import drizzleConfigSchemaGlobsCheck from "./drizzle-config-schema-globs";
 import migrationPhasesValidCheck from "./migration-phases-valid";
 import publishedMigrationsImmutableCheck from "./published-immutable";
+import { provideHostServicesUnbooted } from "@plugins/framework/plugins/server-core/core";
+import {
+  LogPersistence,
+  type LogPersistenceImpl,
+} from "@plugins/primitives/plugins/log-channels/server";
 import { withDirectDb } from "./internal/direct-db";
 import { declaredSchemaInputs } from "./internal/declared-schema-inputs";
 
@@ -32,6 +37,13 @@ import { declaredSchemaInputs } from "./internal/declared-schema-inputs";
 // slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
 // measurements.
 const GIT_TIMEOUT_MS = 60_000;
+
+/** Log persistence for the dry-run: nothing past each channel's own ring. */
+const RING_ONLY_LOGS: LogPersistenceImpl = {
+  sinkFor: () => ({ appendAll() {} }),
+  clientSinkFor: () => ({ appendAll() {} }),
+  clientIngressPaused: () => false,
+};
 
 // Inlined minimal Check shape (mirrors the other plugin-contributed checks, e.g.
 // data-migration-dml-only / migration-hashes-unique) to avoid a cross-plugin
@@ -119,6 +131,12 @@ const check: Check = {
     // (cannot verify → fail loudly) from a real apply failure (the migration is
     // broken), which is reported from inside the callback.
     const database = await mainDatabaseOf(root);
+    // The dry-run replays the derived layer, whose rebuilds log to durable
+    // channels — and a durable channel's store is a host service, which this
+    // process (a host that never boots its graph) must name itself, or the
+    // first log line throws and reads as a broken migration. Its lines stay in
+    // the channel's ring: a dry-run's log is not worth keeping.
+    provideHostServicesUnbooted([LogPersistence.provide(RING_ONLY_LOGS)]);
     const dryRun = async (pool: Pool): Promise<CheckResult> => {
       try {
         await dryRunPendingMigrations(

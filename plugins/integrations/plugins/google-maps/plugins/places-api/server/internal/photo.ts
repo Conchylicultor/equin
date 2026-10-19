@@ -1,4 +1,9 @@
-import { PHOTO_NAME_PATTERN, PlacesApiError } from "../../core";
+import {
+  PHOTO_NAME_PATTERN,
+  PlacesApiError,
+  skuFor,
+  type PlacesClient,
+} from "../../core";
 import { PLACE_PHOTOS_FIELD_MASK } from "./field-mask";
 import { PLACES_BASE, placesFetch } from "./request";
 
@@ -11,7 +16,7 @@ import { PLACES_BASE, placesFetch } from "./request";
  * `PlacesApiError`.
  */
 export async function placePhoto(
-  apiKey: string,
+  client: PlacesClient,
   name: string,
   maxWidthPx: number,
 ): Promise<Response> {
@@ -20,7 +25,11 @@ export async function placePhoto(
   }
   const url = new URL(`${PLACES_BASE}/${name}/media`);
   url.searchParams.set("maxWidthPx", String(maxWidthPx));
-  const res = await fetch(url, { headers: { "X-Goog-Api-Key": apiKey } });
+  // Not `placesFetch`: the answer is the image bytes, not JSON.
+  await client.meter.record("place-photo");
+  const res = await fetch(url, {
+    headers: { "X-Goog-Api-Key": client.apiKey },
+  });
   if (!res.ok) {
     throw new PlacesApiError(
       res.status,
@@ -37,15 +46,19 @@ export async function placePhoto(
  * `PlacesApiError`.
  */
 export async function placeFirstPhotoName(
-  apiKey: string,
+  client: PlacesClient,
   placeId: string,
 ): Promise<string | null> {
   const url = new URL(`${PLACES_BASE}/places/${encodeURIComponent(placeId)}`);
-  const body = await placesFetch<{ photos?: { name?: string }[] }>(url, {
-    method: "GET",
-    apiKey,
-    fieldMask: PLACE_PHOTOS_FIELD_MASK,
-  });
+  const body = await placesFetch<{ photos?: { name?: string }[] }>(
+    url,
+    client,
+    {
+      method: "GET",
+      sku: skuFor("place-details", PLACE_PHOTOS_FIELD_MASK),
+      fieldMask: PLACE_PHOTOS_FIELD_MASK,
+    },
+  );
   const name = body.photos?.[0]?.name;
   if (name === undefined) return null;
   if (!PHOTO_NAME_PATTERN.test(name)) {

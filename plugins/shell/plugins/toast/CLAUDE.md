@@ -19,15 +19,17 @@
   - Exports (types):
     - `ToastArgs`
     - `ToastVariant`
-  - Exports (values): `showToast`
+  - Exports (values):
+    - `isInToast`
+    - `showToast`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --popover-foreground`
     - `ui/tokens/shape --radius`
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×8
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×9
     - `conversations` ×3
     - `primitives` ×3
     - `page` ×2

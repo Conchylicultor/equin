@@ -1164,7 +1164,7 @@ keeps every row's identity rather than re-minting each moved row.
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 247 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 248 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×69
     - `conversations` ×43
     - `debug` ×23
@@ -1178,9 +1178,9 @@ keeps every row's identity rather than re-minting each moved row.
     - `auth` ×4
     - `build` ×4
     - `framework` ×3
+    - `integrations` ×3
     - `review` ×3
     - `config_v2` ×2
-    - `integrations` ×2
     - `reports` ×2
     - `code-explorer/commit-detail`
     - `fields/secret/config`

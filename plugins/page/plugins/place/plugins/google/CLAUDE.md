@@ -37,7 +37,7 @@ gardens, which Google files under "Entertainment and Recreation", are `nature`
 - Server:
   - Contributes: `report-kind` "place-google-unknown-type"
   - Uses:
-    - `integrations/google-maps.getMapsKey`
+    - `integrations/google-maps.getPlacesClient`
     - `integrations/google-maps/places-api.autocomplete`
     - `integrations/google-maps/places-api.placeDetails`
     - `page/place.definePlaceProvider`

@@ -13,6 +13,7 @@ export {
   SINGLE_POINT_ZOOM,
   NO_MAP_PADDING,
   cameraFor,
+  framingOverlays,
   overlayPositions,
   type MapBounds,
   type MapCamera,
@@ -22,6 +23,7 @@ export {
   flyPath,
   viewFor,
   type FlyPath,
+  type CameraRest,
   type CameraView,
   type MapViewport,
 } from "./fly";

@@ -1,10 +1,24 @@
 # places-api
 
-A **stateless, typed Google Places API (New) client**. Every function takes the
-`apiKey: string` as its first parameter and returns the neutral
-`PlaceSuggestion` / `PlaceSnapshot` shapes from `core`. It calls
+A **stateless, typed Google Places API (New) client**. Every function takes a
+`PlacesClient` (`{ apiKey, meter }`, core) as its first parameter and returns
+the neutral `PlaceSuggestion` / `PlaceSnapshot` / `PlaceCandidate` shapes from
+`core`. It calls
 `https://places.googleapis.com/v1/...` and nothing else — no DB, no auth import,
 no per-call state.
+
+## Every call is counted (`PlacesClient`, `skuFor`)
+
+The key and the meter travel as ONE value, so no call can be made without being
+counted: `placesFetch` (and `placePhoto`) record the call's SKU on
+`client.meter` BEFORE the request (a refused call may still be billed). The
+SKU is derived, never written beside a call: `skuFor("place-details" |
+"text-search", mask)` is the highest tier among the mask's fields (`FIELD_TIER`
+in `core/internal/sku.ts`; Text Search has no Essentials SKU; an unknown field
+throws, so a new field gets its price written down). Autocomplete is
+`autocomplete`, a photo's bytes `place-photo`. The meter itself — the usage
+ledger and the budgets — is `google-maps/usage`'s; the broker hands out the
+metered client (`getPlacesClient`).
 
 ## Why separate from the broker
 
@@ -14,22 +28,24 @@ imports `@plugins/auth/*` and can be reused by any caller that can produce a key
 
 ## The calls
 
-- `autocomplete(apiKey, input, sessionToken)` →
+- `autocomplete(client, input, sessionToken)` →
   `POST /v1/places:autocomplete`, body `{ input, sessionToken }`. A field mask is
   optional on this call. Rows without a `placePrediction` (Google's
   "query predictions") are skipped — there is no place to resolve behind them.
-- `placeDetails(apiKey, placeId, sessionToken)` → `GET /v1/places/{placeId}`
+- `placeDetails(client, placeId, sessionToken)` → `GET /v1/places/{placeId}`
   with `X-Goog-FieldMask` (**required** — omitting it is an error) and the
   session token as a query param. The token is optional: a call no search led
   to (the Places app's monthly refresh) is billed on its own.
-- `searchText(apiKey, query, { bias?, maxResults?, languageCode? })` →
+- `searchText(client, query, { bias?, detail?, maxResults?, languageCode? })` →
   `POST /v1/places:searchText`, body `{ textQuery, pageSize, languageCode,
-  locationBias }`, returning `PlaceCandidate`s (id, name, lat/lng, types, address, viewport,
-  business status) — for a caller that has a
-  name and an address but no place id (the Places app's Mapstr import). Its
-  field mask (`SEARCH_TEXT_FIELD_MASK`) is **Text Search
-  Pro**, not the free IDs-only SKU: the name and position are what let a caller
-  judge a hit. See `SEARCH_TEXT_FIELD_MASK`'s comment.
+  locationBias }` (a `circle` or a `rectangle` — the map's view), returning
+  `PlaceCandidate`s (id, name, lat/lng, types, address, viewport, business
+  status, primary type and its display name). `detail: "pro"` (default) is
+  **Text Search Pro** — the name and position are what let a caller judge a
+  hit (the Mapstr import); `detail: "rich"` is **Text Search Enterprise** and
+  adds rating, count, price level, this week's hours (`currentOpeningHours`)
+  and the UTC offset — what the Places search bar's cards show. See
+  `SEARCH_TEXT_FIELD_MASKS`.
 
 **Session tokens**: mint one per search-to-selection round and pass it to both
 calls, so Google bills the pair as a single autocomplete session.
@@ -42,13 +58,13 @@ Enterprise-tier ones (`rating`, `userRatingCount`, `regularOpeningHours`,
 `internationalPhoneNumber`, `editorialSummary`) that roughly double the per-call
 price. Adding one later is a one-line change with a known bill attached.
 
-Those richer fields have their own call instead: `placeRichDetails(apiKey,
+Those richer fields have their own call instead: `placeRichDetails(client,
 placeId)` with `PLACE_RICH_DETAILS_FIELD_MASK` (photos, regular opening hours
 and the place's UTC offset, rating and count, price level, phone, website,
 editorial summary) → `PlaceRichDetails`. Enterprise-priced, so it is never
 merged into `PLACE_DETAILS_FIELD_MASK`; its caller (`places/place-details`)
 makes it when a card opens and keeps the answer a day, never stored (Google's
-terms). `placePhoto(apiKey, name, maxWidthPx)` fetches one photo's bytes
+terms). `placePhoto(client, name, maxWidthPx)` fetches one photo's bytes
 (`/v1/{name}/media`, key as a header; the name must match
 `PHOTO_NAME_PATTERN`). `openState(hours, utcOffsetMinutes, now)` (core, pure,
 tested) says whether a place is open, closing within the hour or closed, and
@@ -76,7 +92,7 @@ is correct here — do not "fix" it later.
 
 ## Plugin reference
 
-- Description: Stateless typed Google Places API (New) client: places:autocomplete, places:searchText, place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
+- Description: Stateless typed Google Places API (New) client: places:autocomplete, places:searchText (pro, or rich with rating, price and this week's hours; biased to a circle or a box), place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot / PlaceCandidate shapes. Every call takes a PlacesClient — the key and the meter it is counted on, its SKU derived from its field mask (skuFor) — and never touches auth or storage.
 - Cross-plugin:
   - Imported by:
     - `apps/places/place-details`
@@ -85,6 +101,7 @@ is correct here — do not "fix" it later.
 - Server:
   - Exports (types):
     - `SearchTextBias`
+    - `SearchTextDetail`
     - `SearchTextOptions`
   - Exports (values):
     - `autocomplete`
@@ -98,13 +115,17 @@ is correct here — do not "fix" it later.
 - Core:
   - Exports (types):
     - `BusinessStatus`
+    - `MaskedCall`
     - `OpeningHours`
     - `OpeningPoint`
     - `OpenState`
     - `PlaceCandidate`
     - `PlacePhoto`
     - `PlaceRichDetails`
+    - `PlacesClient`
+    - `PlacesMeter`
     - `PlaceSnapshot`
+    - `PlacesSku`
     - `PlaceSuggestion`
   - Exports (values):
     - `BUSINESS_STATUSES`
@@ -114,8 +135,10 @@ is correct here — do not "fix" it later.
     - `PlaceCandidateSchema`
     - `PlacePhotoSchema`
     - `PlaceRichDetailsSchema`
+    - `PLACES_SKUS`
     - `PlacesApiError`
     - `PlaceSnapshotSchema`
     - `PlaceSuggestionSchema`
+    - `skuFor`
 
 <!-- AUTOGENERATED:END -->

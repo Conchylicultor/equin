@@ -7,7 +7,7 @@ export type {
   ServerContribution,
   ServerContributionToken,
 } from "./contributions";
-export { defineHostService } from "./host-service";
+export { defineHostService, provideHostServicesUnbooted } from "./host-service";
 export type { HostService } from "./host-service";
 export {
   reportServerError,

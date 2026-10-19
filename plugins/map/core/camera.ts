@@ -43,6 +43,11 @@ export type MapCamera =
   | { kind: "point"; center: LatLng; zoom: number }
   | { kind: "bounds"; bounds: MapBounds };
 
+/** The overlays a camera frames: all but those marked `frame: false`. */
+export function framingOverlays(overlays: readonly MapOverlay[]): MapOverlay[] {
+  return overlays.filter((o) => o.frame !== false);
+}
+
 /** Every coordinate an overlay occupies — a pin's position, a path's points, an area's ring. */
 export function overlayPositions(overlays: readonly MapOverlay[]): LatLng[] {
   const out: LatLng[] = [];

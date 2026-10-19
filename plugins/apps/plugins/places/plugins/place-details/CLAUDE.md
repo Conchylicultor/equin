@@ -67,7 +67,7 @@ day, plus one Place Photo call per photo shown.
 - Server:
   - Contributes: `resource.declare` "places.details"
   - Uses:
-    - `integrations/google-maps.getMapsKey`
+    - `integrations/google-maps.getPlacesClient`
     - `integrations/google-maps/places-api.placeFirstPhotoName`
     - `integrations/google-maps/places-api.placePhoto`
     - `integrations/google-maps/places-api.placeRichDetails`

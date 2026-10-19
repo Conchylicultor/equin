@@ -41,10 +41,12 @@ export function usePlaceTags(): ResourceResult<PlaceTag[]> {
 }
 
 /**
- * Google Places autocomplete for `{ q, session }` (one session token per
- * search-to-pick round, passed again to the save). `null` reads nothing — pass
- * it while the debounced query is empty. The answer is a discriminated
- * `PlaceSearchResult`: `maps-not-configured` renders `MapsAccessAction`.
+ * The Google half of the Places search for `{ q, bias, session }` (the map box
+ * the search is biased to; one session token per search round, passed again
+ * to a save from a `names` answer). `null` reads nothing — pass it while the
+ * debounced query is too short. The answer is a discriminated
+ * `PlaceSearchResult` naming its rung of the downgrade ladder;
+ * `maps-not-configured` renders `MapsAccessAction`.
  */
 export function usePlaceSearch(query: PlaceSearchQuery | null) {
   return useLive(placeSearch, query);

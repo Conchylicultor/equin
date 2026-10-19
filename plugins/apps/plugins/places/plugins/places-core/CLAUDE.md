@@ -75,9 +75,10 @@
     - `infra/jobs.defineJob`
     - `infra/jobs.NonRetryableError`
     - `infra/warmup.defineWarmup`
-    - `integrations/google-maps.getMapsKey`
+    - `integrations/google-maps.getPlacesClient`
     - `integrations/google-maps/places-api.autocomplete`
     - `integrations/google-maps/places-api.placeDetails`
+    - `integrations/google-maps/places-api.searchText`
     - `network/live.serveCollection`
     - `network/live.serveValue`
     - `primitives/log-channels.Log`
@@ -111,11 +112,11 @@
     - `PATCH /api/places/tags/:id`
     - `DELETE /api/places/tags/:id`
 - Core:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×4
+    - `integrations/google-maps/places-api` ×4
     - `fields/text/config` ×3
     - `ids` ×3
-    - `integrations/google-maps/places-api` ×3
     - `network/live` ×2
     - `ui/icons/saved-names` ×2
     - `fields/date/config.dateField`
@@ -130,6 +131,7 @@
     - `CreateCustomPlaceBody`
     - `CreatePlaceTagBody`
     - `Place`
+    - `PlaceBounds`
     - `PlaceId`
     - `PlacePosition`
     - `PlaceSearchQuery`
@@ -139,6 +141,7 @@
     - `RegeneratePlaceIconResult`
     - `SavePlaceBody`
     - `SavePlaceResult`
+    - `SearchRung`
     - `TagNode`
     - `TagRole`
     - `TagTreeEntry`
@@ -159,6 +162,7 @@
     - `mainColor`
     - `MapsNotConfiguredSchema`
     - `NEUTRAL_PLACE_COLOR`
+    - `PlaceBoundsSchema`
     - `placeFields`
     - `placeFlags`
     - `placeIdKind`
@@ -181,6 +185,8 @@
     - `savePlace`
     - `SavePlaceBodySchema`
     - `SavePlaceResultSchema`
+    - `SEARCH_RUNGS`
+    - `searchRung`
     - `tagColor`
     - `tagDescendants`
     - `tagIdByRole`

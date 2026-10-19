@@ -1,4 +1,4 @@
-import { getMapsKey } from "@plugins/integrations/plugins/google-maps/server";
+import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/server";
 import {
   PHOTO_NAME_PATTERN,
   PlacesApiError,
@@ -24,12 +24,12 @@ export async function handlePlacePhoto(req: Request): Promise<Response> {
     PHOTO_WIDTH.max,
     Math.max(PHOTO_WIDTH.min, Number.isFinite(asked) ? Math.round(asked) : 800),
   );
-  const key = await getMapsKey();
-  if (!key.ok)
+  const maps = await getPlacesClient();
+  if (!maps.ok)
     return new Response("Google Maps is not set up", { status: 503 });
   let image: Response;
   try {
-    image = await placePhoto(key.key, name, width);
+    image = await placePhoto(maps.client, name, width);
   } catch (err) {
     if (
       err instanceof PlacesApiError &&

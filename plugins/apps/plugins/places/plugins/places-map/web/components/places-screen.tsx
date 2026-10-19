@@ -16,19 +16,23 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
-import type { LatLng } from "@plugins/map/core";
+import type { LatLng, MapBounds, MapPin } from "@plugins/map/core";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   placeFlags,
   placeName,
   places as placesCollection,
+  tagPath,
   type Place,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import {
   useCreateCustomPlace,
   useCreatePlaceTag,
+  useDeletePlace,
   usePlaces,
   usePlaceTags,
+  useSavePlace,
   useUpdatePlace,
 } from "@plugins/apps/plugins/places/plugins/places-core/web";
 import { TagManagerPanel } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
@@ -36,7 +40,14 @@ import { placeExtraFields, placeSearchText } from "../internal/fields";
 import { useClickAway } from "../internal/use-click-away";
 import { useCoveredEdges } from "../internal/use-covered-edges";
 import { SAVED_PLACE_PIN_TYPE, placeVisual } from "../internal/place-visual";
-import { AddPlaceButton } from "./add-place";
+import {
+  GOOGLE_RESULT_PIN_TYPE,
+  googlePinId,
+  googlePlaceIdOfPin,
+} from "../internal/google-result";
+import { useGoogleSearch } from "../internal/use-google-search";
+import type { GoogleHit } from "./google-result-card";
+import { UniversalSearchPanel } from "./universal-search";
 import { PLACE_CARD_WIDTH, PlaceCard } from "./place-card";
 import { PlaceCover, PlaceGlyph } from "./place-glyph";
 import { PinPickBar, dropName, type PinPick } from "./pin-pick-bar";
@@ -76,12 +87,15 @@ const PAST_CARD = `calc(${CARD_REACH} + ${spaceLength("md")})`;
  * The Places screen: one full-bleed DataView of every saved place — Map,
  * Gallery and List over the same filtered rows — with its chrome floating on
  * the map (`floatingToolbar`): the tag sidebar as the surface's `aside`, the
- * view tabs top-left, search / filter / Add place top-right. The map is the
+ * view tabs top-left, the "Search or add places" bar and the filter top-right.
+ * The bar filters your places (and their pins) and, in its panel, proposes
+ * Google's hits around the map's view as cards to save and as ghost pins on
+ * the map, hover-linked both ways, never moving the camera. The map is the
  * surface's `backdrop`: Gallery and List float over it as a card (the map
  * behind showing the same places), which steps aside for the place card.
  * Selecting a place (a pin, a card, a row) opens its card on the right, and a click anywhere
  * else on the screen (the map, the sidebar, the toolbar) or Esc closes it; Manage tags
- * lays the tag manager over the map. Dropping a custom pin (from Add place) or
+ * lays the tag manager over the map. Dropping a custom pin (from the search panel) or
  * moving one (from its card) puts the map in pick mode, with a bar at the
  * bottom: the next click on the map is where the pin goes.
  *
@@ -117,6 +131,55 @@ function PlacesSurface({
   const { mutateAsync: createTag } = useCreatePlaceTag();
   const { mutateAsync: createCustomPlace } = useCreateCustomPlace();
   const { mutateAsync: updatePlace } = useUpdatePlace();
+  const { mutateAsync: savePlace } = useSavePlace();
+  const { mutateAsync: deletePlace } = useDeletePlace();
+
+  // The search bar: one query for both halves — the view's own search (your
+  // places, and their pins) and Google's hits around the map's view.
+  const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [bounds, setBounds] = useState<MapBounds | null>(null);
+  // One session per search round: an autocomplete answer (the ladder's last
+  // rung) and the save it ends in are billed together.
+  const [session, setSession] = useState(() => crypto.randomUUID());
+  const [hoveredGoogleId, setHoveredGoogleId] = useState<string | null>(null);
+  const [revealGoogle, setRevealGoogle] = useState<{ placeId: string } | null>(
+    null,
+  );
+  const [saveNotConfigured, setSaveNotConfigured] = useState(false);
+  const google = useGoogleSearch({ text: query, bounds, session, tags });
+  const savedByGoogleId = useMemo(
+    () =>
+      new Map(
+        places.flatMap((p) =>
+          p.googlePlaceId === null ? [] : [[p.googlePlaceId, p] as const],
+        ),
+      ),
+    [places],
+  );
+  // Each hit not saved yet is proposed on the map; a saved one is its own pin.
+  const ghostPins = useMemo(
+    (): MapPin[] =>
+      google.kind !== "answer"
+        ? []
+        : google.hits.flatMap((hit) =>
+            hit.result === undefined || savedByGoogleId.has(hit.placeId)
+              ? []
+              : [
+                  {
+                    kind: "pin",
+                    id: googlePinId(hit.placeId),
+                    position: { lat: hit.result.lat, lng: hit.result.lng },
+                    pinType: GOOGLE_RESULT_PIN_TYPE,
+                    label: hit.name,
+                    data: hit.visual,
+                    // A proposal: the camera never moves to it.
+                    frame: false,
+                  },
+                ],
+          ),
+    [google, savedByGoogleId],
+  );
 
   const extraFields = useMemo(() => placeExtraFields(tags), [tags]);
   const selected =
@@ -172,7 +235,8 @@ function PlacesSurface({
           // Above the solo surface's Esc (exit fullscreen): the card is the
           // nearer thing to close. A popover open in the card owns its Esc.
           priority: 1,
-          when: () => showCard,
+          // The open search panel owns its own Esc.
+          when: () => showCard && !searchOpen,
           handler: () => setSelectedId(null),
         },
         {
@@ -184,7 +248,7 @@ function PlacesSurface({
           handler: () => setPinPick(null),
         },
       ],
-      [showCard, pinPick],
+      [showCard, pinPick, searchOpen],
     ),
   );
 
@@ -204,6 +268,22 @@ function PlacesSurface({
         // first visit frames every place (which, worldwide, is the globe).
         cameraKey: "places.map",
         ...(pick === undefined ? {} : { pick }),
+        overlays: {
+          items: ghostPins,
+          onActivate: (id) => {
+            const placeId = googlePlaceIdOfPin(id);
+            if (placeId === null) return;
+            // A ghost's click shows its card, in the panel.
+            setSearchOpen(true);
+            setHoveredGoogleId(placeId);
+            setRevealGoogle({ placeId });
+          },
+        },
+        hoveredId:
+          hoveredGoogleId === null ? null : googlePinId(hoveredGoogleId),
+        onHoverChange: (id) =>
+          setHoveredGoogleId(id === null ? null : googlePlaceIdOfPin(id)),
+        onCameraRest: (rest) => setBounds(rest.bounds),
       } satisfies MapViewOptions<Place>,
       gallery: {
         cover: (p: Place) => ({
@@ -220,8 +300,45 @@ function PlacesSurface({
         leading: (p: Place) => <PlaceGlyph visual={placeVisual(p, tags)} />,
       },
     }),
-    [tags, fitPadding, pick],
+    [tags, fitPadding, pick, ghostPins, hoveredGoogleId],
   );
+
+  const openPlace = (place: Place) => {
+    claim();
+    setSearchOpen(false);
+    setSelectedId(place.id);
+  };
+
+  const saveHit = async (hit: GoogleHit) => {
+    const result = await savePlace({
+      body: {
+        googlePlaceId: hit.placeId,
+        // An autocomplete name ends its session with this save.
+        ...(hit.result === undefined ? { session } : {}),
+      },
+    });
+    if (result.kind === "maps-not-configured") {
+      setSaveNotConfigured(true);
+      return;
+    }
+    if (hit.result === undefined) setSession(crypto.randomUUID());
+    if (result.kind === "already-saved") return;
+    const place = result.place;
+    const tagged = [
+      ...place.autoTags.flatMap((id) => tagPath(id, tags).slice(-1)),
+      ...tags.filter((t) => t.role === "want"),
+    ].map((t) => t.name);
+    // Saved where it is: no selection, no camera move — the ghost becomes
+    // the place's own pin and the card says Saved.
+    showToast({
+      title: `Saved ${placeName(place)}`,
+      description: `Tagged ${tagged.join(", ")}`,
+      action: {
+        label: "Undo",
+        onClick: () => void deletePlace({ params: { id: place.id } }),
+      },
+    });
+  };
 
   const newTag = useCallback(async () => {
     const tag = await createTag({ body: { name: "New tag", parentId: null } });
@@ -251,7 +368,34 @@ function PlacesSurface({
         extraFields={extraFields}
         rowKey={(p) => p.id}
         searchAccessor={placeSearchText}
-        searchPlaceholder="Search places"
+        searchPlaceholder="Search or add places"
+        search={{
+          query,
+          onQueryChange: setQuery,
+          suggestions: {
+            open: searchOpen && pinPick === null,
+            onOpenChange: setSearchOpen,
+            content: (
+              <UniversalSearchPanel
+                places={places}
+                tags={tags}
+                query={query}
+                google={google}
+                savedByGoogleId={savedByGoogleId}
+                hoveredGoogleId={hoveredGoogleId}
+                onHoverGoogle={setHoveredGoogleId}
+                revealGoogle={revealGoogle}
+                onOpenPlace={openPlace}
+                onSave={saveHit}
+                saveNotConfigured={saveNotConfigured}
+                onDropCustom={(name) => {
+                  setSearchOpen(false);
+                  setPinPick({ kind: "drop", name });
+                }}
+              />
+            ),
+          },
+        }}
         views={["map", "gallery", "list"]}
         toolbar={floatingToolbar}
         backdrop="map"
@@ -264,12 +408,6 @@ function PlacesSurface({
             onManageTags={() => setManager({ focusTagId: null })}
           />
         }
-        actions={
-          <AddPlaceButton
-            onSaved={(place) => setSelectedId(place.id)}
-            onDropCustom={(name) => setPinPick({ kind: "drop", name })}
-          />
-        }
         viewOptions={viewOptions}
         onRowActivate={(p) => {
           // Selecting another place swaps the card; it is not a click away.
@@ -279,7 +417,7 @@ function PlacesSurface({
         selectedRowId={selected?.id}
         emptyState={
           <Placeholder>
-            No places yet — Add place searches Google and saves one here.
+            No places yet — search above to find one on Google and save it.
           </Placeholder>
         }
       />

@@ -1,4 +1,4 @@
-import { getMapsKey } from "@plugins/integrations/plugins/google-maps/server";
+import { getPlacesClient } from "@plugins/integrations/plugins/google-maps/server";
 import { PlacesApiError } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import { placeRichDetails } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
@@ -20,14 +20,14 @@ const memo = createTtlMemo<Fetched>(DETAILS_TTL_MS);
 export async function loadPlaceDetails(
   googlePlaceId: string,
 ): Promise<PlaceDetailsResult> {
-  const key = await getMapsKey();
-  if (!key.ok) return { kind: "maps-not-configured" };
+  const maps = await getPlacesClient();
+  if (!maps.ok) return { kind: "maps-not-configured" };
   return memo.get(googlePlaceId, async () => {
     log.publish(`fetch ${googlePlaceId}`);
     try {
       return {
         kind: "ok",
-        details: await placeRichDetails(key.key, googlePlaceId),
+        details: await placeRichDetails(maps.client, googlePlaceId),
       };
     } catch (err) {
       if (

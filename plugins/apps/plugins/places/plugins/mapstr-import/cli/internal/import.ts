@@ -10,10 +10,11 @@ import {
 import {
   PlacesApiError,
   type PlaceSnapshot,
+  type PlacesClient,
 } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { readMapstrExport, type MapstrPlace } from "./export";
-import { requireMapsKey, underQuota } from "./google";
+import { requirePlacesClient, underQuota } from "./google";
 import { languageForAddress, pickCandidate, type MatchDecision } from "./match";
 import {
   markDuplicates,
@@ -109,13 +110,13 @@ async function match(
     `${stored.size} rows in ${matchesPath}${refresh ? " (searches discarded)" : ""}${rescore ? " (re-scoring only, no Google call)" : ""}`,
   );
 
-  let key: Promise<string> | undefined;
-  const apiKey = () => (key ??= requireMapsKey());
+  let client: Promise<PlacesClient> | undefined;
+  const placesClient = () => (client ??= requirePlacesClient());
 
   const overrides =
     overridesPath === undefined
       ? new Map<number, Override>()
-      : await validateOverrides(overridesPath, places, apiKey);
+      : await validateOverrides(overridesPath, places, placesClient);
 
   const rows = new Map<number, MatchRow>();
   let calls = 0;
@@ -123,11 +124,16 @@ async function match(
     place: MapstrPlace,
     { languageCode, nameOnly }: { languageCode?: string; nameOnly?: boolean },
   ): Promise<Search> => {
-    const k = await apiKey();
+    const k = await placesClient();
     const query = nameOnly ? place.name : `${place.name}, ${place.address}`;
     const candidates = await underQuota(() =>
       searchText(k, query, {
-        bias: { lat: place.lat, lng: place.lng, radiusM: BIAS_RADIUS_M },
+        bias: {
+          kind: "circle",
+          lat: place.lat,
+          lng: place.lng,
+          radiusM: BIAS_RADIUS_M,
+        },
         ...(languageCode === undefined ? {} : { languageCode }),
       }),
     );
@@ -245,7 +251,7 @@ type OverrideEntry = z.infer<typeof OverrideEntrySchema>;
 async function validateOverrides(
   path: string,
   places: readonly MapstrPlace[],
-  apiKey: () => Promise<string>,
+  placesClient: () => Promise<PlacesClient>,
 ): Promise<Map<number, Override>> {
   const entries = z
     .array(OverrideEntrySchema)
@@ -261,7 +267,7 @@ async function validateOverrides(
           failures.push(`#${entry.index}: no such row in the export`);
           return;
         }
-        const recorded = await overrideFor(entry, place, apiKey);
+        const recorded = await overrideFor(entry, place, placesClient);
         if (recorded.ok) out.set(entry.index, recorded.override);
         else failures.push(`#${entry.index} ${place.name}: ${recorded.reason}`);
       }),
@@ -278,7 +284,7 @@ async function validateOverrides(
 async function overrideFor(
   entry: OverrideEntry,
   place: MapstrPlace,
-  apiKey: () => Promise<string>,
+  placesClient: () => Promise<PlacesClient>,
 ): Promise<{ ok: true; override: Override } | { ok: false; reason: string }> {
   if ("discard" in entry) {
     return { ok: true, override: { discard: true, reason: entry.reason } };
@@ -294,7 +300,7 @@ async function overrideFor(
       },
     };
   }
-  const k = await apiKey();
+  const k = await placesClient();
   const details = await underQuota(() =>
     placeDetails(k, entry.googlePlaceId),
   ).then(
@@ -481,7 +487,7 @@ async function apply(
   // (An override validated by --overrides carries its details already.)
   const toDownload = toFetch.filter((f) => f.snapshot === undefined).length;
   console.log(`Fetching Google details for ${toDownload} places…`);
-  let key: Promise<string> | undefined;
+  let client: Promise<PlacesClient> | undefined;
   const gate = createSemaphore(CONCURRENCY);
   let done = 0;
   // A stored id Google no longer knows (it re-keys places) is collected per
@@ -497,7 +503,7 @@ async function apply(
             source: { kind: "google", snapshot: known, ...titled },
           };
         }
-        const k = await (key ??= requireMapsKey());
+        const k = await (client ??= requirePlacesClient());
         const snapshot = await underQuota(() =>
           placeDetails(k, googlePlaceId),
         ).catch((err: unknown) => {

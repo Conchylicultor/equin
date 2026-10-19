@@ -1759,6 +1759,23 @@ export type DataViewDataOrigin<TRow> =
 export interface DataViewSearch {
   query: string;
   onQueryChange: (query: string) => void;
+  /**
+   * A panel under the search field — "search or add": what the query matches
+   * beyond the rows the view filters (results to add, say). The toolbar owns
+   * how it behaves: it hangs under the field (which grows wider), opens when
+   * the field takes focus or is typed in, closes on Escape and on a press
+   * outside the field and the panel, and ArrowDown moves into it; focus stays
+   * in the field. `open` is the host's, so it can also open the panel from
+   * elsewhere (a click on a result's pin) or close it (a pick).
+   */
+  suggestions?: DataViewSearchSuggestions;
+}
+
+/** The search field's panel — see {@link DataViewSearch.suggestions}. */
+export interface DataViewSearchSuggestions {
+  content: ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export interface DataViewBaseProps<TRow> {

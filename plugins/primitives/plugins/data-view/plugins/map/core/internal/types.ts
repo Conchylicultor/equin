@@ -1,4 +1,21 @@
-import type { LatLng, MapCrowdRequest, MapPadding } from "@plugins/map/core";
+import type {
+  CameraRest,
+  LatLng,
+  MapCrowdRequest,
+  MapOverlay,
+  MapPadding,
+} from "@plugins/map/core";
+
+/**
+ * Overlays the map draws beside the rows' pins — things that are not rows
+ * (search hits proposed on the map, say). A click on one goes to
+ * `onActivate`, never to the row activation. Mark them `frame: false` to keep
+ * the camera off them.
+ */
+export interface MapExtraOverlays {
+  items: readonly MapOverlay[];
+  onActivate: (id: string) => void;
+}
 
 /**
  * Per-view options for the map view, threaded through
@@ -47,4 +64,15 @@ export interface MapViewOptions<TRow> {
    * only on a first visit. Absent = every visit frames the pins.
    */
   cameraKey?: string;
+  /** Non-row overlays drawn with the rows' pins (`MapExtraOverlays`). */
+  overlays?: MapExtraOverlays;
+  /**
+   * A pin to draw hovered though the pointer is not on it — a row's id, or an
+   * extra overlay's: the hover of whatever beside the map stands for it.
+   */
+  hoveredId?: string | null;
+  /** The pin under the pointer changed (`null`: none). */
+  onHoverChange?: (id: string | null) => void;
+  /** The camera came to rest: where, and the area it shows. */
+  onCameraRest?: (rest: CameraRest) => void;
 }

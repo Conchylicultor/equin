@@ -35,6 +35,9 @@ interface PinCanvasProps {
   pins: readonly MapPin[];
   crowd: MapCrowd | undefined;
   activeId: string | null;
+  /** Drawn hovered while the pointer hovers no pin (a linked card's hover). */
+  hoveredId: string | null;
+  onHoverChange?: MapRendererProps["onHoverChange"];
   renderPin: MapRendererProps["renderPin"];
   renderCluster: MapRendererProps["renderCluster"];
   markPin: MapRendererProps["markPin"];
@@ -68,6 +71,8 @@ export function PinCanvas({
   pins,
   crowd,
   activeId,
+  hoveredId: linkedHoverId,
+  onHoverChange,
   renderPin,
   renderCluster,
   markPin,
@@ -80,7 +85,13 @@ export function PinCanvas({
   const maps = useMapsLibrary("maps");
   const zoom = usePlanZoom(map);
   const text = useMapTextStyle();
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [pointerHoverId, setPointerHoverId] = useState<string | null>(null);
+  // The pointer's hover wins; else the linked one from outside the map.
+  const hoveredId = pointerHoverId ?? linkedHoverId;
+  const reportHover = useLatestRef(onHoverChange);
+  useEffect(() => {
+    reportHover.current?.(pointerHoverId);
+  }, [pointerHoverId, reportHover]);
   const [layerError, setLayerError] = useState<unknown>(null);
   if (layerError !== null) throw layerError;
 
@@ -220,9 +231,9 @@ export function PinCanvas({
         e.clientX - rect.left,
         e.clientY - rect.top,
       );
-      setHoveredId(hit?.id ?? null);
+      setPointerHoverId(hit?.id ?? null);
     };
-    const onLeave = () => setHoveredId(null);
+    const onLeave = () => setPointerHoverId(null);
     div.addEventListener("pointermove", onMove);
     div.addEventListener("pointerleave", onLeave);
     return () => {

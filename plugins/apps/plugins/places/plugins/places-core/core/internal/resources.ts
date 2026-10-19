@@ -84,10 +84,11 @@ export const placeTags = liveCollection("places.tags.all", {
 });
 
 /**
- * Google Places autocomplete for the Add place search, as a typed-query value:
- * one question (`q` + the search's session token) is one tuple. On-demand — an
- * answer is a Google call nothing pushes a change to. `maps-not-configured`
- * renders `MapsAccessAction`.
+ * The Google half of the Places search bar, as a typed-query value: one
+ * question (`q`, the map box it is biased to, the round's session) is one
+ * tuple. On-demand — an answer is a Google call nothing pushes a change to.
+ * The answer names the rung of the downgrade ladder that gave it
+ * (`PlaceSearchResult`); `maps-not-configured` renders `MapsAccessAction`.
  */
 export const placeSearch = liveValue("places.search", {
   schema: PlaceSearchResultSchema,
