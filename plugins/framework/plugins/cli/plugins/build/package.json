@@ -4,6 +4,6 @@
   "version": "0.0.1",
   "description": "`./singularity build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.",
   "dependencies": {
-    "pg": "^8.13.0"
+    "pg": "^8.23.1"
   }
 }
