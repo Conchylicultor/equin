@@ -4,7 +4,8 @@
 //
 // Two implementations share one shape:
 //   - `useServerBlockStore`  — the persistent path: the
-//     `useOptimisticResource(pageBlocks, { pageId }, …)` overlay, and nothing else.
+//     `useOptimisticResource(pageBlocks, { where: { pageId } }, …)` overlay,
+//     and nothing else.
 //   - `useMemoryBlockStore`  — an authoritative in-memory `useState<Block[]>`,
 //     the source of truth itself (no overlay, no confirmation, no network). Its
 //     writes reuse the SAME pure helpers as the server (`applyOverlayOp`, the
@@ -140,7 +141,10 @@ export function useServerBlockStore(pageId: string): BlockStore {
   // `applyBlockOp` reducer the server runs, overlaid on live-state truth and
   // reconciled by the WS push. The captured `effect` drives both the idempotency
   // apply-guard (in `applyOverlayOp`) and content-based confirmation here.
-  const params = useMemo(() => ({ pageId }), [pageId]);
+  // The base is the page's scope of `pageBlocks`: its rows in order, a scoped
+  // delta merged into them by id — confirmed by the exact ack of an op's
+  // commit or by content, denied only by a full frame's watermark (Rule B′).
+  const scope = useMemo(() => ({ where: { pageId } }), [pageId]);
   // The reducer's type facts, minted from the block-handle registry. The SERVER
   // mints the same context from its own registry through the same
   // `blockOpContextOf` and passes it to the same `applyBlockOp`; if the two ever
@@ -155,7 +159,7 @@ export function useServerBlockStore(pageId: string): BlockStore {
   // very `vars` the primitive hands back to `onError`. Weak, so an op that
   // confirms (or is never rejected) leaves nothing behind.
   const rejectHandlersRef = useRef(new WeakMap<BlockOverlayOp, () => void>());
-  const optimistic = useOptimisticResource(pageBlocks, params, {
+  const optimistic = useOptimisticResource(pageBlocks, scope, {
     apply,
     // Names the surface in the sync cloud and the rejection toast.
     label: "Page",

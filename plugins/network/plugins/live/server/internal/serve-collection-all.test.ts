@@ -9,7 +9,8 @@
  *
  * The runtime behaviour over a real database (entrant, exit, order move,
  * value-only refill, the idle `{}` snapshot) is
- * `serve-collection-all-oracle.test.ts`.
+ * `serve-collection-all-oracle.test.ts`; a scoped set's (`all: { by }`, one
+ * tuple per scope) is `serve-collection-all-scoped-oracle.test.ts`.
  *
  * Run: `./singularity test plugins/network/plugins/live`.
  */
@@ -416,6 +417,110 @@ describe("serveCollection — the `all` arm (C4)", () => {
       });
       const _row: Row | undefined = undefined;
       void _row;
+    };
+    void _typesOnly;
+  });
+});
+
+describe("serveCollection — a scoped `all` (`all: { by }`)", () => {
+  const blocksRef = entityRef("sca_blocks", {
+    id: textField({ label: "Id", filterable: false }),
+    pageId: textField({ label: "Page", filterable: false }),
+    rank: intField({ label: "Rank", filterable: false }),
+    title: textField({ label: "Title", filterable: false }),
+    at: dateField({ label: "At", filterable: false }),
+  });
+  const blocks = defineEntity(blocksRef, { primaryKey: "id" });
+  const scopedCollection = (by: readonly ("pageId" | "at" | "title")[]) =>
+    liveCollection(`test.live.all-scoped-${seq++}`, {
+      from: blocksRef,
+      pick: ["id", "pageId", "rank", "title", "at"],
+      baseExposures: false,
+      id: "id",
+      all: {
+        by: by as readonly ["pageId"],
+        orderBy: [["rank", "asc"]],
+        unbounded: { reason: "one page's blocks" },
+      },
+    });
+  const block = {
+    id: "b1",
+    pageId: "p1",
+    rank: 1,
+    title: "T",
+    at: "2026-10-19 10:00:00+00",
+  };
+  const blockScript = (q: RecordedQuery): unknown[] =>
+    /^SELECT \S+ AS __id /.test(q.sql) ? [{ __id: "b1" }] : [block];
+
+  test("registers both keys; a tuple reads its scope, `:rows` reads by id alone", async () => {
+    const c = scopedCollection(["pageId"]);
+    const { db, calls } = recordingQueryDb(blockScript);
+    const served = serveCollection(c, { from: blocks, db });
+    expect(served.keys).toEqual([c.key, `${c.key}:rows`]);
+    expect(served.declare).toHaveLength(2);
+    await loadResourceByKey(c.key, { pageId: "p1" });
+    expect(calls.at(-1)!.sql).toContain(`"sca_blocks"."page_id" = $`);
+    expect(calls.at(-1)!.params).toContain("p1");
+    await loadResourceByKey(`${c.key}:rows`, { ids: "b1" });
+    expect(calls.at(-1)!.sql).not.toContain(`"sca_blocks"."page_id" = $`);
+  });
+
+  test("compileCollection: the server gate is the descriptor's (exactly the scope) and the route matches the scope column", () => {
+    const c = scopedCollection(["pageId"]);
+    const specs = compileCollection(c, {
+      from: blocks,
+      db: recordingQueryDb(blockScript).db,
+    });
+    const gate = (specs.all as { validateParams?: (p: object) => void })
+      .validateParams!;
+    expect(() => gate({ pageId: "p1" })).not.toThrow();
+    expect(() => gate({})).toThrow(/param "pageId" must be a non-empty string/);
+    expect(() => gate({ pageId: "p1", rank: "1" })).toThrow(
+      /unknown param "rank"/,
+    );
+    const base = specs.all.routes!.routes.find((r) => r.id === "base")!;
+    expect(base.match).toEqual(["page_id"]);
+    expect(
+      specs.all.routes!.usesOf({ pageId: "p1" }).get("base")!.match,
+    ).toEqual({ page_id: new Set(["p1"]) });
+  });
+
+  test("refusals at module eval: a scope whose column type has no canonical text", () => {
+    expect(() =>
+      compileCollection(scopedCollection(["at"]), {
+        from: blocks,
+        db: recordingQueryDb(blockScript).db,
+      }),
+    ).toThrow(
+      /the scope field "at" \(`all.by`\) is a timestamp with time zone column/,
+    );
+    // A text scope of another column is fine.
+    expect(() =>
+      compileCollection(scopedCollection(["title"]), {
+        from: blocks,
+        db: recordingQueryDb(blockScript).db,
+      }),
+    ).not.toThrow();
+  });
+
+  test("types: the served set's params are exactly the scope", () => {
+    // Never called — the assertions are the `@ts-expect-error`s.
+    const _typesOnly = () => {
+      const served = serveCollection(scopedCollection(["pageId"]), {
+        from: blocks,
+      });
+      void served.all.load({ pageId: "p1" });
+      // @ts-expect-error — a scoped set has no `{}` tuple
+      void served.all.load({});
+      const whole = serveCollection(allCollection(), {
+        from: items,
+        joins: [notesJoin],
+        columns: { notes: (j) => j.kids.count },
+      });
+      void whole.all.load({});
+      // @ts-expect-error — the whole set takes no param
+      void whole.all.load({ pageId: "p1" });
     };
     void _typesOnly;
   });

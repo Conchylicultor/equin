@@ -71,8 +71,8 @@ Rules that still hold:
   `NewBlockRow` / `BlockColumnChanges` cannot name it, so `writeDocRanks` is its
   only writer; moves send **positional intent** (an anchor id) and the server
   mints the rank against the full sibling set. The same row read through
-  `pageBlocks` carries no `docRank` — that resource orders by `rank`, inside one
-  `(parent_id, rank)` space, where it is meaningful.
+  `pageBlocks` carries no `docRank` — that collection orders by `rank`, inside
+  one `(parent_id, rank)` space, where it is meaningful.
 - **Membership is never a function of the traversal.** `docOrderRows`' driving
   relation is the plain select of live page rows; the path CTE is LEFT-joined
   onto it. A page whose path can't resolve keeps its row (`path: null`, sorted
@@ -162,6 +162,39 @@ over plain HTTP for the page-link e2e script only.
 structural writer (ops, patches, trash/restore, cross-page moves,
 turn-into-page) asserting I-DR against the global `docOrderRows()` after every
 step, plus the depth-2 to-do-under-to-do drag and the 0-query data-only patch.
+
+## A page's forest is a scoped collection (`pageBlocks`, key `page-blocks.v2`)
+
+`liveCollection("page-blocks.v2", { from: pagesEntityRef, baseExposures: false,
+carry, all: { by: ["pageId"], orderBy: [rank, createdAt], unbounded } })` —
+one tuple per page, every block whose nearest page is it, sub-page rows
+included. Served by `serveCollection` over the `page_blocks` TABLE with
+`deleted_at IS NULL` as its base membership (`pageBlocksServeOptions`,
+`server/internal/resources.ts`, the one spelling the server and the oracle
+compile). Its row is pinned equal to `Block` (`_PinPageBlocksRow`): `rank`
+carried as the wire `Rank`, `data` as `unknown`, no `$columns`.
+
+- **Readers.** The editor's block store,
+  `useOptimisticResource(pageBlocks, { where: { pageId } }, …)` (the base is the
+  page's rows in order; see optimistic-mutation's *scoped set*); its two
+  overlay-less writes, `enqueueDetachedWrite(pageBlocks, { where: { pageId } },
+  …)` in the composite store (the same lane); `useLive(pageBlocks, { where: {
+  pageId } })` in history's version preview and the page outline;
+  `useLiveRow(pageBlocks, blockId)` for the page tree's block crumb. The
+  `listBlocks` endpoint reads `pageBlocksServed.all.load({ pageId })`, so the
+  HTTP twin cannot drift from the read.
+- **Costs**, pinned by `server/internal/page-blocks-oracle.test.ts` on the tree
+  oracle: the typing projection (a `data`-only write) is one one-row refill of
+  ITS page and nothing on any other (the change carries `page_id` as a key, and
+  the router matches it before loading); an insert or a rank move one refill
+  and one `orderOf`; a trash an exit (one-id probe), a restore an entrant; a
+  cross-page move an exit there and an entrant here; never a FULL load.
+- **The key is new** (it was the param'd value `page-blocks`). C39: under the
+  old name an old tab's sub-ack would parse (the wire rows are `Block`s), but
+  the first keyed `delta` throws in its non-keyed read ("no keyOf registered" —
+  reported, the page frozen, no resub, no Reload prompt;
+  `web/__tests__/page-blocks-old-tab.test.ts`). Renamed, the old key is refused
+  `unknown-key`, a `skew` verdict (the oracle's C39 describe).
 
 ## The page column (one owner for the content-left edge)
 
@@ -3900,7 +3933,7 @@ the whole document lives in React state and is discarded on unmount.
   vocabulary, folded from `useOptimisticResource`'s `loading` / `error` arms:
   `{ pending: true, error: null }` or a failed first load with its `refetch`);
   only the settled arm has rows and `dispatch`. The server feed is the positional
-  `useOptimisticResource(pageBlocks, { pageId }, …)` read, so there is no `[]`
+  `useOptimisticResource(pageBlocks, { where: { pageId } }, …)` read, so there is no `[]`
   placeholder document an op could be folded onto. `BlockEditorProviderInner`
   takes a `SettledBlockStore` (tsc), and `BlockEditorProviderGate` is the one
   place that tells them apart: it renders the editor's loading state while the
@@ -4564,7 +4597,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
 - Server:
   - Contributes:
     - `ids.kind` "block"
-    - `resource.declare` "page-blocks"
+    - `resource.declare` "page-blocks.v2"
+    - `resource.declare` "page-blocks.v2:rows"
     - `resource.declare` "page.block-locations:rows"
     - `resource.declare` "pages.tree"
     - `resource.declare` "pages.tree:rows"
@@ -4585,8 +4619,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `infra/trash._trashEntries`
     - `infra/trash.defineTrashSource`
     - `infra/trash.recordTrashEntry`
+    - `network/live.ServeAllCollectionOptions`
     - `network/live.serveCollection`
-    - `network/live.serveValue`
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
@@ -4638,7 +4672,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `defineTrashSource('pages')`
     - `defineTrashSource('page-blocks')`
   - Resources:
-    - `page-blocks` (push, unbounded: one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window)
+    - `page-blocks.v2` (keyed)
+    - `page-blocks.v2:rows` (keyed, point)
     - `page.block-locations:rows` (keyed, point)
     - `pages.tree` (keyed)
     - `pages.tree:rows` (keyed, point)
@@ -4657,13 +4692,14 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `POST /api/pages/:pageId/blocks/patch`
 - Core:
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `network/live` ×3
     - `primitives/collab-doc` ×3
     - `primitives/text-editor/token-extension` ×3
     - `primitives/tree` ×3
+    - `network/live` ×2
     - `page/block-entity` ×2
     - `primitives/rank` ×2
     - `fields/date/config.dateField`
+    - `fields/json/config.jsonField`
     - `fields/rank/config.rankValueField`
     - `ids.defineIdKind`
     - `infra/endpoints.defineEndpoint`

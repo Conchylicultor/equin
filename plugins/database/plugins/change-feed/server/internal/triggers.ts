@@ -14,6 +14,13 @@ import {
 } from "@plugins/database/plugins/derived-views/core";
 import type { TableLayoutRequirement } from "@plugins/framework/plugins/server-core/core";
 import { changeFeedLog as log } from "./log-sink";
+import {
+  ensureTxnEndTrigger,
+  TXN_END_FUNCTION_DDL,
+  TXN_END_INSTALLED_SQL,
+  TXN_END_TRIGGER,
+  TXN_END_TRIGGER_DDL,
+} from "./txn-end";
 
 // Infrastructure tables the change-feed must NEVER trigger on — its own plumbing,
 // independent of any feature plugin's opt-out. Keep this minimal.
@@ -775,6 +782,8 @@ export async function rebuildTriggers(
       CHANGELOG_TABLE_DDL,
       CHANGELOG_INDEX_DDL,
       JSON.stringify(CHANGELOG_LATER_COLUMNS),
+      TXN_END_FUNCTION_DDL,
+      TXN_END_TRIGGER_DDL,
     ].join("\n--\n"),
   );
 
@@ -813,6 +822,12 @@ export async function rebuildTriggers(
       await ensureChangelogTable(tx);
       await tx.execute(drizzleSql.raw(NOTIFY_FUNCTION_DDL));
       await tx.execute(drizzleSql.raw(ROUTED_NOTIFY_FUNCTION_DDL));
+      // The end-of-transaction marker (./txn-end): its function, then its
+      // deferred trigger on the changelog — created only when the catalog says
+      // it is missing, since CREATE TRIGGER locks the changelog every writer
+      // INSERTs into.
+      await tx.execute(drizzleSql.raw(TXN_END_FUNCTION_DDL));
+      await ensureTxnEndTrigger(tx);
       await stampSignature(tx, LAYER_ROW, layerSignature);
     });
   }
@@ -895,11 +910,14 @@ const LayerObjectsRowSchema = z.object({
   fn: z.string().nullable(),
   routedFn: z.string().nullable(),
   changelog: z.string().nullable(),
+  txnEndFn: z.string().nullable(),
+  /** The end marker's trigger is installed as the prelude makes it. */
+  txnEnd: z.boolean(),
 });
 
 /** What a rebuild must do — each part only what differs from the live layer. */
 interface RebuildPlan {
-  /** The shared layer (functions + changelog) must be (re)created. */
+  /** The shared layer (functions, changelog, end marker) must be (re)created. */
   layer: boolean;
   /** The desired tables whose triggers must be (re)installed. */
   tables: CompiledTable[];
@@ -941,13 +959,16 @@ async function planRebuild(
 
   // The trigger functions and the changelog table they INSERT into must all
   // still exist — a trigger whose function vanished would fire and error on
-  // every write. A `SELECT` with no `FROM` returns exactly one row, so this is
-  // `executeOne`.
+  // every write — and so must the end marker's function and deferred trigger:
+  // without it every transaction's changes wait out the listener's deadline.
+  // A `SELECT` with no `FROM` returns exactly one row, so this is `executeOne`.
   const objs = await executeOne(db, {
     query: drizzleSql.raw(
       `SELECT to_regproc('public.live_state_notify')::text        AS fn,
               to_regproc('public.live_state_notify_routed')::text AS "routedFn",
-              to_regclass('public.${LIVE_STATE_CHANGELOG_TABLE}')::text AS changelog`,
+              to_regclass('public.${LIVE_STATE_CHANGELOG_TABLE}')::text AS changelog,
+              to_regproc('public.live_state_txn_end')::text       AS "txnEndFn",
+              ${TXN_END_INSTALLED_SQL} AS "txnEnd"`,
     ),
     row: LayerObjectsRowSchema,
     label: "planRebuild/objects",
@@ -956,9 +977,13 @@ async function planRebuild(
     stored.get(LAYER_ROW) !== layerSignature ||
     !objs.fn ||
     !objs.routedFn ||
-    !objs.changelog;
+    !objs.changelog ||
+    !objs.txnEndFn ||
+    !objs.txnEnd;
 
-  // Every installed live_state_* trigger, by table.
+  // Every installed live_state_* trigger, by table — but the end marker on
+  // the changelog, which belongs to the shared layer (verified above), not to
+  // a table's feed: the changelog is denylisted, so it would read as stale.
   const installedRows = await executeRows(db, {
     query: drizzleSql.raw(
       `SELECT t.tgname, c.relname
@@ -967,7 +992,8 @@ async function planRebuild(
        JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'public'
          AND NOT t.tgisinternal
-         AND t.tgname LIKE 'live_state_%'`,
+         AND t.tgname LIKE 'live_state_%'
+         AND NOT (c.relname = '${LIVE_STATE_CHANGELOG_TABLE}' AND t.tgname = '${TXN_END_TRIGGER}')`,
     ),
     row: LiveStateTriggerRowSchema,
     label: "planRebuild/installed",

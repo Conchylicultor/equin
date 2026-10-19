@@ -10,8 +10,7 @@ import {
   type RefObject,
 } from "react";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
-import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   Pane,
   PaneChrome,
@@ -287,7 +286,7 @@ function BlockTitleTrail({
   blockId: string;
   type: string;
 }): ReactElement {
-  const crumb = useBlockCrumb(pageId, blockId, type);
+  const crumb = useBlockCrumb(blockId, type);
   return (
     <PageTitleTrail pageId={pageId} leaf={{ key: blockId, label: crumb }} />
   );
@@ -494,19 +493,16 @@ function TrailingClickZone({
 /**
  * The block's own name in the trail: its text when it has any (a heading, a
  * toggle's summary), else its type's label ("TODO") — a void card has no words
- * of its own. The page's block feed is the one the editor below already
- * subscribes to, so this costs no request.
+ * of its own. One row of the page's forest, read by id (`pageBlocks`' `:rows`
+ * sibling): the typing projection of any OTHER block of the page refills
+ * nothing here.
  */
-function useBlockCrumb(pageId: string, blockId: string, type: string): string {
+function useBlockCrumb(blockId: string, type: string): string {
   const label = useBlockTypeLabel(type);
-  const blocks = useLive(pageBlocks, { pageId });
-  // Not known yet, or failed: the type's label — the editor below reads the
-  // same feed and renders the failure.
-  const block = foldResource(blocks, {
-    loading: () => undefined,
-    error: () => undefined,
-    ready: (list) => list.find((b) => b.id === blockId),
-  });
+  const row = useLiveRow(pageBlocks, blockId);
+  // Not known yet, failed, or gone: the type's label — the editor below reads
+  // the page's forest and renders the failure.
+  const block = row.status === "ready" && row.found ? row.row : undefined;
   const text = block === undefined ? "" : textOf(block).trim();
   return text === "" ? label : text;
 }

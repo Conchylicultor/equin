@@ -1247,6 +1247,102 @@ describe("exact-ack confirmation (the ackTx registry probe)", () => {
   });
 });
 
+describe("a scoped `all` tuple: keyed rows in order, watermark-less deltas", () => {
+  // The base of a scoped read (`{ where }`) is the scope's rows IN ORDER, and
+  // the frames after its sub-ack are scoped deltas merged by key: no snapshot
+  // watermark (Rule B′), each carrying the `ackTx` of the commits it re-read.
+  // So the registry watermark stays the last FULL frame's, an op committed
+  // after it is confirmed by its exact ack (or by content), and only a full
+  // frame causally past its commit may deny it.
+  type Row = { id: string; text: string };
+  type Edit = { id: string; text: string };
+  const applySet = (rows: Row[], v: Edit): Row[] =>
+    rows.map((r) => (r.id === v.id ? { ...r, text: v.text } : r));
+  const scoped = {
+    isConfirmedBy: (rows: Row[], v: Edit) =>
+      rows.some((r) => r.id === v.id && r.text === v.text),
+    sameTarget: (a: Edit, b: Edit) => a.id === b.id,
+  };
+  /** A scoped delta as the client merges it: in place, by key, order kept. */
+  const merge = (rows: Row[], ...upserts: Row[]): Row[] =>
+    rows.map((r) => upserts.find((u) => u.id === r.id) ?? r);
+  const opIds = (ops: ReadonlyArray<PendingOp<Edit>>): string[] =>
+    ops.map((o) => o.opId);
+  const ackOf =
+    (...txids: string[]) =>
+    (txid: string) =>
+      txids.includes(txid);
+  const setOp = (
+    opId: string,
+    v: Edit,
+    ackWatermark: string,
+  ): PendingOp<Edit> => ({
+    opId,
+    vars: v,
+    resolved: true,
+    dispatchGen: 0,
+    misses: 0,
+    divergenceReported: false,
+    dispatchedAt: 0,
+    attempts: 0,
+    ackWatermark,
+  });
+
+  test("a delta past the full frame's watermark, without the op's ack and lacking its effect, keeps the op — never denies", () => {
+    const base: Row[] = [
+      { id: "a", text: "A" },
+      { id: "b", text: "B" },
+    ];
+    const pending = [setOp("op", { id: "b", text: "typed" }, "150")];
+    // Another block's typing projection: the registry still holds the sub-ack's "100".
+    const delta = merge(base, { id: "a", text: "A2" });
+    const next = confirmPass(pending, delta, "100", scoped, ackOf());
+    expect(opIds(next.pending)).toEqual(["op"]);
+    expect(next.dropped).toEqual([]);
+    expect(replay(delta, next.pending, applySet)).toEqual([
+      { id: "a", text: "A2" },
+      { id: "b", text: "typed" },
+    ]);
+  });
+
+  test("the delta that re-read the op's commit confirms it exactly — by its ack, whatever the row shows", () => {
+    const base: Row[] = [
+      { id: "a", text: "A" },
+      { id: "b", text: "B" },
+    ];
+    const pending = [setOp("op", { id: "b", text: "typed" }, "150")];
+    // A newer writer's text is already on the row: content alone would keep
+    // the op; its ack proves the commit was re-read for this tuple.
+    const delta = merge(base, { id: "b", text: "theirs" });
+    const next = confirmPass(pending, delta, "100", scoped, ackOf("150"));
+    expect(next.pending).toEqual([]);
+    expect(next.dropped).toEqual([]);
+    expect(next.confirmed.map((c) => c.mode)).toEqual(["exact-ack"]);
+  });
+
+  test("a delta that reflects the op confirms it by content with no ack at all", () => {
+    const base: Row[] = [{ id: "b", text: "B" }];
+    const pending = [setOp("op", { id: "b", text: "typed" }, "150")];
+    const next = confirmPass(
+      pending,
+      merge(base, { id: "b", text: "typed" }),
+      "100",
+      scoped,
+      ackOf(),
+    );
+    expect(next.pending).toEqual([]);
+    expect(next.confirmed.map((c) => c.mode)).toEqual(["content"]);
+  });
+
+  test("only a FULL frame — its watermark past the commit — denies an op it lacks", () => {
+    const pending = [setOp("op", { id: "b", text: "typed" }, "150")];
+    const full: Row[] = [{ id: "b", text: "newest" }];
+    const next = confirmPass(pending, full, "151", scoped, ackOf());
+    expect(next.pending).toEqual([]);
+    expect(opIds(next.dropped)).toEqual(["op"]);
+  });
+});
+
 describe("markResolved", () => {
   test("marks the matching op resolved, preserves order and the rest", () => {
     const pending = [

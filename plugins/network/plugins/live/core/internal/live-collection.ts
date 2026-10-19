@@ -363,8 +363,14 @@ export interface LiveNoWindowCollection<
   Row,
   Al,
 > extends LiveRowsCollection<Row> {
-  /** `key` — every row, in `all.all.orderBy` order (the id breaks ties); `undefined` when lookup-only. */
-  all: [Al] extends [undefined] ? undefined : AllQueryResourceContract<Row>;
+  /**
+   * `key` — every row, in `all.all.orderBy` order (the id breaks ties), one
+   * tuple per scope when declared `by` (see {@link LiveAllOrder.by});
+   * `undefined` when lookup-only.
+   */
+  all: [Al] extends [undefined]
+    ? undefined
+    : AllQueryResourceContract<Row, LiveAllBy<Al>>;
   window?: never;
   groups?: never;
 }
@@ -383,11 +389,26 @@ export type LiveLookupCollection<Row> = LiveNoWindowCollection<Row, undefined>;
  * no `:groups` (a grouping is a window over the set; this set has none) and
  * no window. Serving it as a lookup-only collection is a tsc error (`all` is
  * `undefined` there).
+ *
+ * Declared `all: { by }` (`B` its fields), `key` holds every row OF ONE
+ * SCOPE per tuple — `{ [K in B]: string }`, read `useLive(c, { where })` —
+ * and is a different type: a scoped set is never the param-less one.
  */
-export type LiveAllCollection<Row> = LiveNoWindowCollection<
+export interface LiveAllCollection<
   Row,
-  LiveAllOrder<Row>
->;
+  B extends string = never,
+> extends LiveRowsCollection<Row> {
+  all: AllQueryResourceContract<Row, B>;
+  window?: never;
+  groups?: never;
+}
+
+/** The `by` fields an `all` declaration (`Al`) scopes its tuples by — `never` when it declares none. */
+export type LiveAllBy<Al> = Al extends {
+  readonly by: readonly (infer B extends string)[];
+}
+  ? B
+  : never;
 
 export interface LiveCollectionSpec<Row, F, S extends string> {
   row: LiveRowSchema<Row>;
@@ -467,6 +488,17 @@ export interface LiveArmsSpec<
  * held in, and why the set may be held whole.
  */
 export interface LiveAllOrder<Row> {
+  /**
+   * Scope the set: one tuple per value of these row fields (non-empty, each
+   * once, never the id), holding the rows whose fields equal the tuple's
+   * params — `by: ["pageId"]` is one page's rows, read
+   * `useLive(c, { where: { pageId } })`. Each must bind to a base column of
+   * text, uuid or integer type (the server's compile refuses any other: the
+   * change feed carries it as text, which must equal the param). A scoped
+   * set is never preloaded (a scope is named by a reader), so never
+   * L2-persisted.
+   */
+  by?: readonly (keyof NoInfer<Row> & string)[];
   /** Row fields with their direction; non-empty, each field once. The id breaks ties. */
   orderBy: LiveOrderBy<keyof NoInfer<Row> & string>;
   /** Why the whole set is held: it has no other bound. Non-empty. */
@@ -497,8 +529,12 @@ export interface LiveNoWindowSpec<
   /** The row field that identifies a row — the point sibling's id set (and the whole set's tiebreaker). */
   id: keyof Row & string;
   all?: Al;
-  /** Only the whole set preloads. Default `"none"`. */
-  preload?: [Al] extends [undefined] ? never : LivePreload;
+  /** Only the whole set preloads — never a scoped one (`by`). Default `"none"`. */
+  preload?: [Al] extends [undefined]
+    ? never
+    : [LiveAllBy<Al>] extends [never]
+      ? LivePreload
+      : never;
   /**
    * Only the whole set reaches exposures (see {@link LiveExposes}): its rows
    * carry them under `$columns`, compiled at boot like a window's.
@@ -533,7 +569,8 @@ export interface LiveFieldsDefault<S extends string> {
  *
  * - `default` (`W`): a WINDOW — `sortable` (index-backed, so explicit; any row
  *   field), `maxLimit`, `preload`, `columnScope`, `count`;
- * - `all` (`Al`): the WHOLE ORDERED SET — `preload`, and no window field;
+ * - `all` (`Al`): the WHOLE ORDERED SET — `preload` (unless scoped `by`),
+ *   and no window field;
  * - neither: LOOKUP-ONLY — no window field, no preload, and it reaches no
  *   entity (`related` is `never`; `from` names its fields only).
  */
@@ -545,7 +582,11 @@ export type LiveFieldsForm<W, Al, S extends string, Cn, R> = [W] extends [
       maxLimit?: never;
       columnScope?: never;
       count?: never;
-      preload?: [Al] extends [undefined] ? never : LivePreload;
+      preload?: [Al] extends [undefined]
+        ? never
+        : [LiveAllBy<Al>] extends [never]
+          ? LivePreload
+          : never;
       related?: [Al] extends [undefined] ? never : R;
     }
   : {
@@ -878,11 +919,13 @@ const NOT_ALL_FIELDS: readonly string[] = [
 const SORT_DIRECTIONS: readonly LiveSortDirection[] = ["asc", "desc"];
 
 /**
- * The `all` overload: `key` (every row, in `all.orderBy` order) and `:rows`.
- * Throws on what the overload forbids for an untyped caller — a window or
- * union field beside `all` — and on what no type states: an empty reason, an
- * empty `orderBy`, an order field that is not a row field (or named twice),
- * a direction that is neither `asc` nor `desc`.
+ * The `all` overload: `key` (every row, in `all.orderBy` order — one tuple
+ * per scope when declared `by`) and `:rows`. Throws on what the overload
+ * forbids for an untyped caller — a window or union field beside `all`, a
+ * preload beside `by` — and on what no type states: an empty reason, an
+ * empty `orderBy` or `by`, an order or scope field that is not a row field
+ * (or is named twice), a scope field that is the id, a direction that is
+ * neither `asc` nor `desc`.
  */
 function allCollection<Row>(
   key: string,
@@ -902,6 +945,7 @@ function allCollection<Row>(
   }
   // Read as untyped: the checks below are for a caller the types did not reach.
   const all = spec.all as {
+    by?: unknown;
     orderBy?: unknown;
     unbounded?: { reason?: unknown };
   };
@@ -930,19 +974,23 @@ function allCollection<Row>(
     if (seen.has(field)) fail(`\`all.orderBy\` names "${field}" twice`);
     seen.add(field);
   }
+  const by = allBy(fail, spec, all.by);
   // A set reaching exposures carries them under `$columns`, declared on the
   // row schema like a window's (`rowKeys` stay the author's fields).
   const exposes = checkExposes(key, spec.exposes);
   const row = exposes === null ? spec.row : withColumnsSchema(key, spec.row);
   // Minted before `:rows`, as a window is (descriptor registration order).
   // `"none"` is the absence of the descriptor field.
-  const descriptor = allResourceDescriptor(key, row, spec.id, {
+  // Erased over the scope: `B` is the declaration's (the overload's return
+  // type), the descriptor's gate reads `by` at runtime.
+  const descriptor = allResourceDescriptor<Row, string>(key, row, spec.id, {
     all: {
       orderBy: Object.freeze(
         orderBy.map(([f, d]) => Object.freeze([f, d] as const)),
       ),
       unbounded: Object.freeze({ reason }),
-    },
+      ...(by === null ? {} : { by }),
+    } as AllQueryResourceContract<Row, string>["all"],
     ...(spec.preload === undefined || spec.preload === "none"
       ? {}
       : { preload: spec.preload }),
@@ -950,8 +998,50 @@ function allCollection<Row>(
   return {
     ...rowsPart(key, { row, id: spec.id }, exposes),
     rowKeys: Object.keys(spec.row.shape) as (keyof Row & string)[],
-    all: descriptor,
+    all: descriptor as unknown as AllQueryResourceContract<Row>,
   };
+}
+
+/**
+ * An `all` declaration's `by` (see {@link LiveAllOrder.by}), checked: `null`
+ * when it declares none, else its fields, frozen. A scope is named by a
+ * reader, so a scoped set has no tuple boot could hydrate — a preload beside
+ * it throws (it is `never` in the types).
+ */
+function allBy<Row>(
+  fail: (message: string) => never,
+  spec: LiveAllSpec<Row>,
+  by: unknown,
+): readonly (keyof Row & string)[] | null {
+  if (by === undefined) return null;
+  if (!Array.isArray(by) || by.length === 0) {
+    fail(
+      "`all.by` is empty — leave it out for the whole set, or name the row fields a tuple is scoped by.",
+    );
+  }
+  const fields = by as unknown[];
+  const seen = new Set<string>();
+  for (const field of fields) {
+    if (typeof field !== "string" || !Object.hasOwn(spec.row.shape, field)) {
+      fail(
+        `\`all.by\` names ${JSON.stringify(field)}, which is not a field of the row schema`,
+      );
+    }
+    const name = field as string;
+    if (name === spec.id) {
+      fail(
+        `\`all.by\` names the id "${name}" — a scope of one row is a point read (\`useLiveRow\`).`,
+      );
+    }
+    if (seen.has(name)) fail(`\`all.by\` names "${name}" twice`);
+    seen.add(name);
+  }
+  if (spec.preload !== undefined && spec.preload !== "none") {
+    fail(
+      `\`preload: "${spec.preload}"\` beside \`all.by\` — a scoped set's tuples are named by its readers, so boot has none to hydrate (and it is never L2-persisted).`,
+    );
+  }
+  return Object.freeze([...(fields as (keyof Row & string)[])]);
 }
 
 /** A relation of `exposes` is `base` or a join alias: a plain identifier. */

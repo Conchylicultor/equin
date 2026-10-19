@@ -15,6 +15,7 @@ import {
   type UnfedResourceTable,
 } from "./route-coverage";
 import { assertRouteLayoutsInstalled } from "./route-layout";
+import { assertNoOtherDeferredTriggers } from "./txn-end";
 import {
   assertRelationBasesSourced,
   createRelationBases,
@@ -54,7 +55,9 @@ export interface FeedInstallInputs {
  *  1. A2′ (declarations) + A3p: a produced table is neither opted out nor a
  *     rollup, and no route on it needs a carried column.
  *  2. The trigger rebuild (`rebuildTriggers`), produced tables denylisted.
- *  3. A2′ (catalog): no `live_state_*` trigger survived on a produced table.
+ *  3. A2′ (catalog): no `live_state_*` trigger survived on a produced table;
+ *     no deferred trigger but the end marker sits on a triggered table or on
+ *     the changelog (it would NOTIFY after the marker).
  *  4. A1′: every route table of a routed resource has a change source — a
  *     trigger the rebuild installed, or a mounted change producer — and so
  *     does every base of a relation a reach plan reads whole; every table a
@@ -85,6 +88,9 @@ export async function installFeed(
   );
   await rebuildTriggers(db, exclusions, layouts);
   await assertNoTriggerOnProduced(db, exclusions.produced);
+  // The end marker must be the transaction's last NOTIFY: a deferred trigger
+  // writing at commit would emit after it (./txn-end).
+  await assertNoOtherDeferredTriggers(db, getCoveredTables());
   // Reject dead routing (A1′): a routed resource (`routes` / `reach`) is
   // reached only through its route tables, so a route table with no change
   // source can never deliver; only a triggered or produced table produces a

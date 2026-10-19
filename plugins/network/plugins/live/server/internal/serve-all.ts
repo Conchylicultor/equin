@@ -6,6 +6,7 @@ import {
   BASE_RELATION,
   isExprField,
   type AggregateRef,
+  type AllQueryParams,
   type AllJoinRefs,
   type AllJoinSpec,
   type ColumnRef,
@@ -42,7 +43,8 @@ import {
 // name, overrides in `columns`, a base `where`), and compiled by
 // query-resource's `compileAllCollection` into its two resources: `key` (the
 // whole ordered set, a routed `scopedMembership` alias the runtime keeps
-// current and L2 persists) and `key:rows` (the point sibling). It is never
+// current and L2 persists — or, declared `all: { by }`, one tuple per scope,
+// never persisted) and `key:rows` (the point sibling). It is never
 // scoped or a union: those paths compile at boot from other
 // plugins' contributions, while an `all` collection's definition (A18) is
 // fixed at module eval. The one exception is its `exposes`: the exposures it
@@ -168,8 +170,15 @@ export type ServeAllCollectionOptions<
 > &
   WireCheck<T, Row>;
 
-/** An `all` collection's compiled server halves (query-resource's `CompiledAllCollection`). */
-export type AllCollectionSpecs<Row> = CompiledAllCollection<Row>;
+/**
+ * An `all` collection's compiled server halves (query-resource's
+ * `CompiledAllCollection`) — `B` its `by` fields when scoped: the whole set's
+ * params are then exactly them.
+ */
+export type AllCollectionSpecs<
+  Row,
+  B extends string = never,
+> = CompiledAllCollection<Row, AllQueryParams<B>>;
 
 function isAggregateRef(
   binding: unknown,
@@ -186,15 +195,15 @@ function isAggregateRef(
  * set) and `rows` — without registering them. Every binding miss throws here,
  * at module eval, beside every refusal `compileAllCollection` makes.
  */
-export function compileAllSpecs<Row>(
-  collection: LiveAllCollection<Row>,
+export function compileAllSpecs<Row, B extends string = never>(
+  collection: LiveAllCollection<Row, B>,
   opts: ServeAllCollectionOptions<
     CollectionSource,
     Row,
     readonly AllJoinSpec[]
   >,
   exposed: readonly ExposingExtension[] = [],
-): AllCollectionSpecs<Row> {
+): AllCollectionSpecs<Row, B> {
   const fail = (message: string): never => {
     throw new Error(`serveCollection("${collection.key}"): ${message}`);
   };

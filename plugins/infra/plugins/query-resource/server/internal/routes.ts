@@ -100,12 +100,20 @@ export function tablePrimary(table: PgTable): PgColumn | null {
  * the change's key layout, and a change that carries none recomputes its readers
  * FULL (correct, not scoped). Every tuple reads it as membership: a row write
  * may move it in or out.
+ *
+ * `match` names the base columns a tuple's use may match on (a scoped `all`
+ * set's `by` columns): the change feed then carries them as keys (old ∪ new,
+ * so a moved row names both its scopes), and a tuple matching another value
+ * is skipped before any load. Declared only when non-empty, so every other
+ * route keeps its shape.
  */
 export function baseIdentityRoute(
   base: RoutedBase,
   pk: PgColumn,
   columns: readonly string[],
+  opts: { match?: readonly string[] } = {},
 ): RawRoute {
+  const match = opts.match ?? [];
   return {
     id: BASE_ROUTE_ID,
     table: base.name,
@@ -114,6 +122,7 @@ export function baseIdentityRoute(
         ? { kind: "identity" }
         : { kind: "identity", column: pk.name },
     columns,
+    ...(match.length === 0 ? {} : { match }),
   };
 }
 

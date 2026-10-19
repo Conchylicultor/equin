@@ -7,6 +7,7 @@ import { ResourceContractError } from "@plugins/packages/plugins/resource-protoc
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
 import {
   liveCollection,
+  type LiveAllCollection,
   type LiveLookupCollection,
   type LiveRowsCollection,
 } from "./live-collection";
@@ -280,6 +281,121 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
       const _rows: LiveRowsCollection<z.infer<typeof Row>> = whole;
       void _lookup;
       void _rows;
+    };
+    void _typesOnly;
+  });
+});
+
+describe("liveCollection — a scoped `all` (`all: { by }`)", () => {
+  const FS = {
+    id: textField({ label: "Id" }),
+    pageId: textField({ label: "Page" }),
+    n: intField({ label: "N" }),
+  };
+  const ScopedRow = fieldsToZodObject(FS);
+  const all = {
+    by: ["pageId"],
+    orderBy: [["n", "asc"]],
+    unbounded: { reason: "one page's rows" },
+  } as const;
+
+  test("mints `key` keyed by its scope — no preload — and a global :rows", () => {
+    const c = liveCollection("test.live-collection.scoped", {
+      fields: FS,
+      id: "id",
+      all,
+    });
+    expect(c.all.all).toEqual({
+      orderBy: [["n", "asc"]],
+      unbounded: { reason: "one page's rows" },
+      by: ["pageId"],
+    });
+    expect("preload" in c.all).toBe(false);
+    expect(resourceDescriptorByKey("test.live-collection.scoped")).toBe(c.all);
+    // `:rows` is the collection's id read, whatever the scope.
+    expect(() => c.rows.validateParams({ ids: "a" })).not.toThrow();
+  });
+
+  test("a tuple is exactly the scope's keys, each a non-empty string — anything else is a contract mismatch", () => {
+    const c = liveCollection("test.live-collection.scoped-params", {
+      fields: FS,
+      id: "id",
+      all,
+    });
+    expect(() => c.all.validateParams({ pageId: "p1" })).not.toThrow();
+    const cases: [Record<string, string>, RegExp][] = [
+      [{}, /param "pageId" must be a non-empty string, got undefined/],
+      [{ pageId: "" }, /param "pageId" must be a non-empty string, got ""/],
+      [
+        { pageId: "p1", n: "1" },
+        /unknown param "n" — a tuple of this scoped set is exactly "pageId"/,
+      ],
+    ];
+    for (const [params, message] of cases) {
+      let thrown: unknown;
+      try {
+        c.all.validateParams(params);
+      } catch (err) {
+        thrown = err;
+      }
+      expect(thrown).toBeInstanceOf(ResourceContractError);
+      expect(String(thrown)).toMatch(message);
+    }
+  });
+
+  test("runtime throws for an untyped caller: an empty `by`, a non-row field, the id, a repeat, a preload", () => {
+    const base = { fields: FS, id: "id", all };
+    const cases: [Record<string, unknown>, RegExp][] = [
+      [{ ...base, all: { ...all, by: [] } }, /`all.by` is empty/],
+      [
+        { ...base, all: { ...all, by: ["nope"] } },
+        /`all.by` names "nope", which is not a field of the row schema/,
+      ],
+      [
+        { ...base, all: { ...all, by: ["id"] } },
+        /`all.by` names the id "id" — a scope of one row is a point read/,
+      ],
+      [
+        { ...base, all: { ...all, by: ["pageId", "pageId"] } },
+        /`all.by` names "pageId" twice/,
+      ],
+      [
+        { ...base, preload: "boot" },
+        /`preload: "boot"` beside `all.by` — a scoped set's tuples are named by its readers/,
+      ],
+    ];
+    let i = 0;
+    for (const [spec, message] of cases) {
+      expect(() =>
+        liveCollection(`test.live-collection.scoped-bad-${i++}`, spec as never),
+      ).toThrow(message);
+    }
+  });
+
+  test("types: a preload or a non-row field beside `by` is a tsc error, and a scoped set is never the whole one", () => {
+    // Never called — the assertions are the `@ts-expect-error`s.
+    const _typesOnly = () => {
+      const s = { fields: FS, id: "id", all } as const;
+      // @ts-expect-error — a scoped set is never preloaded
+      liveCollection("t.s.a", { ...s, preload: "boot" });
+      const bad = { ...all, by: ["nope"] } as const;
+      // @ts-expect-error — a scope field must be a row field
+      liveCollection("t.s.b", { ...s, all: bad });
+      type R = z.infer<typeof ScopedRow>;
+      const scoped = liveCollection("t.s.c", s);
+      const _ok: LiveAllCollection<R, "pageId"> = scoped;
+      // @ts-expect-error — a scoped set is not the param-less whole set
+      const _whole: LiveAllCollection<R> = scoped;
+      const whole = liveCollection("t.s.d", {
+        fields: FS,
+        id: "id",
+        all: { orderBy: [["n", "asc"]], unbounded: { reason: "r" } },
+      });
+      // @ts-expect-error — nor the whole set a scoped one
+      const _scoped: LiveAllCollection<R, "pageId"> = whole;
+      // Read by id like any collection.
+      const _rows: LiveRowsCollection<R> = scoped;
+      void [_ok, _whole, _scoped, _rows];
     };
     void _typesOnly;
   });

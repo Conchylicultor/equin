@@ -2,6 +2,7 @@ import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { sql } from "drizzle-orm";
 import { Client } from "pg";
 import { ensureChangelogTable, rebuildTriggers } from "./triggers";
+import { assertNoOtherDeferredTriggers } from "./txn-end";
 import {
   createTestDb,
   type TestDb,
@@ -39,7 +40,8 @@ const NO_EXCLUSIONS = {
   produced: new Set<string>(),
 };
 
-// The feed's own trigger rows, keyed name → oid, for the tables this suite makes.
+// The feed's own trigger rows, keyed name → oid, for the tables this suite makes
+// (the changelog's end marker is the shared layer's — see `markerOid`).
 async function triggerOids(): Promise<Map<string, string>> {
   const res = await testDb.db.execute<{ tgname: string; oid: string }>(
     sql`SELECT t.tgname, t.oid::text AS oid
@@ -49,9 +51,27 @@ async function triggerOids(): Promise<Map<string, string>> {
         WHERE n.nspname = 'public'
           AND NOT t.tgisinternal
           AND t.tgname LIKE 'live_state_%'
+          AND c.relname <> 'live_state_changelog'
         ORDER BY t.tgname`,
   );
   return new Map(res.rows.map((r) => [r.tgname, r.oid]));
+}
+
+// The end-of-transaction marker's trigger row on the changelog, or undefined.
+async function markerOid(): Promise<
+  { oid: string; deferrable: boolean; deferred: boolean } | undefined
+> {
+  const res = await testDb.db.execute<{
+    oid: string;
+    deferrable: boolean;
+    deferred: boolean;
+  }>(
+    sql`SELECT t.oid::text AS oid, t.tgdeferrable AS deferrable, t.tginitdeferred AS deferred
+        FROM pg_trigger t
+        WHERE t.tgrelid = 'live_state_changelog'::regclass
+          AND t.tgname = 'live_state_txn_end'`,
+  );
+  return res.rows[0];
 }
 
 beforeAll(async () => {
@@ -187,6 +207,105 @@ describe("rebuildTriggers", () => {
     );
     await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
     expect(await triggerOids()).toEqual(after);
+  });
+});
+
+describe("the end-of-transaction marker", () => {
+  test("is installed with the shared layer: deferred, and kept by a skipped rebuild", async () => {
+    await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
+    const marker = await markerOid();
+    expect(marker).toMatchObject({ deferrable: true, deferred: true });
+    await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
+    expect((await markerOid())?.oid).toBe(marker!.oid);
+  });
+
+  test("is re-created when dropped out of band — and no table rebuilds for it", async () => {
+    const before = await triggerOids();
+    await testDb.db.execute(
+      sql`DROP TRIGGER live_state_txn_end ON live_state_changelog`,
+    );
+    await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
+    expect(await markerOid()).toMatchObject({ deferred: true });
+    expect(await triggerOids()).toEqual(before);
+  });
+
+  test("is re-created when its function was dropped out of band", async () => {
+    await testDb.db.execute(sql`DROP FUNCTION live_state_txn_end() CASCADE`);
+    expect(await markerOid()).toBeUndefined();
+    await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
+    expect(await markerOid()).toMatchObject({ deferred: true });
+  });
+
+  test("is replaced when made immediate out of band", async () => {
+    await testDb.db.execute(
+      sql`DROP TRIGGER live_state_txn_end ON live_state_changelog`,
+    );
+    await testDb.db.execute(
+      sql`CREATE CONSTRAINT TRIGGER live_state_txn_end AFTER INSERT ON live_state_changelog
+          NOT DEFERRABLE FOR EACH ROW EXECUTE FUNCTION live_state_txn_end()`,
+    );
+    expect(await markerOid()).toMatchObject({ deferrable: false });
+    await rebuildTriggers(testDb.db, NO_EXCLUSIONS, []);
+    expect(await markerOid()).toMatchObject({
+      deferrable: true,
+      deferred: true,
+    });
+  });
+
+  test("emits once per transaction, at commit, counting its statements", async () => {
+    const watcher = new Client({ connectionString: testDb.connectionString });
+    await watcher.connect();
+    const got: Array<{ channel: string; payload: string }> = [];
+    watcher.on("notification", (n) =>
+      got.push({ channel: n.channel, payload: n.payload ?? "" }),
+    );
+    await watcher.query("LISTEN live_state; LISTEN live_state_end");
+    try {
+      await testDb.db.transaction(async (tx) => {
+        await tx.execute(sql`INSERT INTO widgets VALUES ('m1', 'a')`);
+        await tx.execute(sql`UPDATE widgets SET name = 'b' WHERE id = 'm1'`);
+        await tx.execute(sql`DELETE FROM widgets WHERE id = 'm1'`);
+      });
+      const deadline = Date.now() + 5000;
+      while (got.length < 4 && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      expect(got.map((g) => g.channel)).toEqual([
+        "live_state",
+        "live_state",
+        "live_state",
+        "live_state_end",
+      ]);
+      const x = (JSON.parse(got[0]!.payload) as { x: string }).x;
+      expect(JSON.parse(got[3]!.payload)).toEqual({ x, n: 3 });
+    } finally {
+      await watcher.end();
+    }
+  });
+});
+
+describe("assertNoOtherDeferredTriggers", () => {
+  test("passes with only the marker deferred, and names any other deferred trigger", async () => {
+    await assertNoOtherDeferredTriggers(testDb.db, ["widgets"]);
+    await testDb.db.execute(
+      sql`CREATE CONSTRAINT TRIGGER late_writer AFTER INSERT ON widgets
+          DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION live_state_txn_end()`,
+    );
+    try {
+      // Not a table the feed routes: out of scope.
+      await assertNoOtherDeferredTriggers(testDb.db, []);
+      // `expect(p).rejects` is typed `void` under bun:test: settle it by hand.
+      const err = await assertNoOtherDeferredTriggers(testDb.db, [
+        "widgets",
+      ]).then(
+        () => null,
+        (e: unknown) => e,
+      );
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).toMatch(/"late_writer" on "widgets"/);
+    } finally {
+      await testDb.db.execute(sql`DROP TRIGGER late_writer ON widgets`);
+    }
   });
 });
 

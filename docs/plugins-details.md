@@ -22577,16 +22577,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 23 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+            - Imported by: 24 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
               - `apps` ×4
               - `debug` ×4
               - `infra` ×4
               - `tasks` ×3
               - `backup` ×2
+              - `page` ×2
               - `apps-core/app-launcher`
               - `conversations/question-relay`
               - `history/engine`
-              - `page/block-entity`
               - `reports`
               - `shell/notifications`
         - **`storage`** — JSON field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so a jsonField<T>'s shape is derived rather than asserted.
@@ -24550,6 +24550,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempted by:
                   - `conversations/conversation-view/jsonl-viewer` (0 debt)
+                  - `network/live` (0 debt)
                   - `primitives/networking` (0 debt)
             - **`no-reexport-default`**
             - **`no-relative-server-imports`**
@@ -28396,6 +28397,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AllJoinRefs`
           - `AllJoinRefsOf`
           - `AllJoinSpec`
+          - `AllQueryParams`
           - `AllQueryResourceContract`
           - `AncestorJoin`
           - `AncestorRelation`
@@ -30199,6 +30201,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
           - `live/no-endpoint-read` — `web` (sanctioned)
+          - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
         - Exempted by:
           - `apps/deploy/analytics/dashboard` (1 debt)
           - `apps/desktop/wallpaper` (1 debt)
@@ -31547,7 +31550,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `ids.kind` "block"
-          - `resource.declare` "page-blocks"
+          - `resource.declare` "page-blocks.v2"
+          - `resource.declare` "page-blocks.v2:rows"
           - `resource.declare` "page.block-locations:rows"
           - `resource.declare` "pages.tree"
           - `resource.declare` "pages.tree:rows"
@@ -31568,8 +31572,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/trash._trashEntries`
           - `infra/trash.defineTrashSource`
           - `infra/trash.recordTrashEntry`
+          - `network/live.ServeAllCollectionOptions`
           - `network/live.serveCollection`
-          - `network/live.serveValue`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.rankAdjacentTo`
           - `primitives/rank.rankAfterSibling`
@@ -31621,7 +31625,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTrashSource('pages')`
           - `defineTrashSource('page-blocks')`
         - Resources:
-          - `page-blocks` (push, unbounded: one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window)
+          - `page-blocks.v2` (keyed)
+          - `page-blocks.v2:rows` (keyed, point)
           - `page.block-locations:rows` (keyed, point)
           - `pages.tree` (keyed)
           - `pages.tree:rows` (keyed, point)
@@ -31640,13 +31645,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `POST /api/pages/:pageId/blocks/patch`
       - Core:
         - Uses: 23 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
-          - `network/live` ×3
           - `primitives/collab-doc` ×3
           - `primitives/text-editor/token-extension` ×3
           - `primitives/tree` ×3
+          - `network/live` ×2
           - `page/block-entity` ×2
           - `primitives/rank` ×2
           - `fields/date/config.dateField`
+          - `fields/json/config.jsonField`
           - `fields/rank/config.rankValueField`
           - `ids.defineIdKind`
           - `infra/endpoints.defineEndpoint`

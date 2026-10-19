@@ -30,6 +30,7 @@ import {
   isExprField,
   type ColumnRef,
   type AllJoinSpec,
+  type AllQueryParams,
   type ExprField,
   type ExtensionJoin,
   type JoinColumns,
@@ -294,10 +295,16 @@ export interface ServedCollection<Row> {
   declare: ReturnType<typeof ResourceContribution.Declare>[];
 }
 
-/** A collection declared `all`, served: the whole ordered set (`key`) and its `:rows` sibling. */
-export interface ServedAllCollection<Row> {
-  /** The whole ordered set (`key`) — param-less, keyed, L2-persisted when preloaded. */
-  all: Resource<Row[], Record<string, never>>;
+/**
+ * A collection declared `all`, served: the whole ordered set (`key`) and its
+ * `:rows` sibling. `B`: its `by` fields, when scoped.
+ */
+export interface ServedAllCollection<Row, B extends string = never> {
+  /**
+   * The whole ordered set (`key`) — keyed; param-less and L2-persisted when
+   * preloaded, or one tuple per scope (`{ [K in B]: string }`, never persisted).
+   */
+  all: Resource<Row[], AllQueryParams<B>>;
   /** The point sibling (`${key}:rows`). */
   rows: Resource<Row[], PointParams>;
   /** Every minted key — `[key, key:rows]`. */
@@ -361,14 +368,15 @@ export function compileCollection<
   Row,
   T extends CollectionSource,
   const J extends readonly AllJoinSpec[] = readonly [],
+  B extends string = never,
 >(
-  collection: LiveAllCollection<Row>,
+  collection: LiveAllCollection<Row, B>,
   opts: ServeAllCollectionOptions<T, Row, J>,
   // Positional like the window form's: an `all` set is never scoped (refused
   // when non-empty), and folds the exposures it reaches.
   scoped?: readonly ServedScopedColumns[],
   exposed?: readonly ExposingExtension[],
-): AllCollectionSpecs<Row>;
+): AllCollectionSpecs<Row, B>;
 export function compileCollection<
   Row,
   T extends CollectionSource,
@@ -389,13 +397,18 @@ export function compileCollection<
   collection:
     | LiveCollection<Row, F, S>
     | LiveLookupCollection<Row>
+    | LiveAllCollection<Row, string>
     | LiveAllCollection<Row>,
   served:
     | ServeCollectionOptions<T, Row, J, string>
     | ServeAllCollectionOptions<T, Row, readonly AllJoinSpec[]>,
   scoped: readonly ServedScopedColumns[] = [],
   exposed: readonly ExposingExtension[] = [],
-): CollectionSpecs | LookupCollectionSpecs | AllCollectionSpecs<Row> {
+):
+  | CollectionSpecs
+  | LookupCollectionSpecs
+  | AllCollectionSpecs<Row, string>
+  | AllCollectionSpecs<Row> {
   const fail = (message: string): never => {
     throw new Error(`serveCollection("${collection.key}"): ${message}`);
   };
@@ -409,7 +422,7 @@ export function compileCollection<
       );
     }
     return compileAllSpecs(
-      collection as LiveAllCollection<Row>,
+      collection as LiveAllCollection<Row, string>,
       served as ServeAllCollectionOptions<
         CollectionSource,
         Row,
@@ -1108,10 +1121,11 @@ export interface ServeCollectionOverloads<H> {
     Row,
     T extends ServedSource,
     const J extends readonly AllJoinSpec[] = readonly [],
+    B extends string = never,
   >(
-    collection: LiveAllCollection<Row> & H,
+    collection: LiveAllCollection<Row, B> & H,
     opts: ServeAllCollectionOptions<T, Row, J>,
-  ): ServedAllCollection<Row>;
+  ): ServedAllCollection<Row, B>;
   <
     Row,
     T extends ServedSource,
@@ -1156,6 +1170,7 @@ export function serveAnyCollection<
   collection:
     | SingleTableCollection<Row, F, S>
     | LiveLookupCollection<Row>
+    | LiveAllCollection<Row, string>
     | LiveAllCollection<Row>,
   served:
     | ServeCollectionOptions<T, Row, J, keyof F & string>
@@ -1168,6 +1183,7 @@ export function serveAnyCollection<
 ):
   | ServedCollection<Row>
   | ServedLookupCollection<Row>
+  | ServedAllCollection<Row, string>
   | ServedAllCollection<Row>
   | DeclaredCollection<AnyServedExternal> {
   // An external source (`source: "external"`): the core's one serving code
@@ -1201,21 +1217,24 @@ export function serveAnyCollection<
       Row,
       readonly AllJoinSpec[]
     >;
-    let all: Resource<Row[], Record<string, never>>;
+    // Erased over the scope (the overload types it): a scoped set's params
+    // are its `by` values, a whole one's none.
+    const scoped = collection as LiveAllCollection<Row, string>;
+    let all: Resource<Row[], Record<string, string>>;
     let rows: Resource<Row[], PointParams>;
     if ((collection.exposes ?? null) === null) {
-      const specs = compileAllSpecs(collection, allOpts);
-      all = defineResource(collection.all, specs.all);
+      const specs = compileAllSpecs(scoped, allOpts);
+      all = defineResource(scoped.all, specs.all);
       rows = defineResource(collection.rows, specs.rows);
     } else {
-      let specs: AllCollectionSpecs<Row> | undefined;
-      const compiled = (): AllCollectionSpecs<Row> =>
+      let specs: AllCollectionSpecs<Row, string> | undefined;
+      const compiled = (): AllCollectionSpecs<Row, string> =>
         (specs ??= compileAllSpecs(
-          collection,
+          scoped,
           allOpts,
           LiveColumns.Expose.getContributions(),
         ));
-      all = defineDeferredResource(collection.all, () => compiled().all);
+      all = defineDeferredResource(scoped.all, () => compiled().all);
       rows = defineDeferredResource(collection.rows, () => compiled().rows);
     }
     return {

@@ -686,6 +686,17 @@ export function compileExternalCollection(
       "a `columnScope` collection folds scoped column sets from Postgres — it has no external spelling.",
     );
   }
+  // A scoped `all` set (`all: { by }`) is typed away (`ExternalAllCollection`
+  // is the param-less set): its scope compiles to SQL and to route matches,
+  // which an external source has neither of.
+  if (
+    (collection.all as { all?: { by?: unknown } } | undefined)?.all?.by !==
+    undefined
+  ) {
+    fail(
+      "a scoped `all` collection (declared `all: { by }`) is served from Postgres — its scope compiles to SQL and to route matches; it has no external spelling.",
+    );
+  }
   // An exposing collection's rows carry the fold of the exposures served on
   // this host — none on an external one (`ExternalSourceRow`).
   const folds = (collection.exposes ?? null) !== null;

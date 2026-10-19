@@ -148,6 +148,16 @@ export interface LiveAllSelect<Row, S> {
 }
 
 /**
+ * The scope of a collection declared `all: { by }` (`useLive(c, { where })`):
+ * exactly its `by` fields, each a string — a `Filter` tree, an op, a missing
+ * or an extra field is a tsc error. The record IS the tuple's params. `never`
+ * for a set declared without `by`, which has one tuple.
+ */
+export type LiveScopedAllQuery<B extends string> = [B] extends [never]
+  ? never
+  : { where: { readonly [K in B]: string } };
+
+/**
  * One row by id: loading, failed, found, or determinately absent — `ready`
  * splits on `found`. `pending` is the pre-`status` spelling (see
  * `ResourceResult`), kept while the tree migrates.
@@ -345,8 +355,17 @@ export function useLive<
  *   only when the slice changes. Gated: its first value always renders,
  *   whatever the slice.
  *
+ * - `useLive(scoped, { where: { pageId } })` — a collection declared
+ *   `all: { by }`: every row OF ONE SCOPE, in the declared order (the
+ *   `where` record is its tuple: exactly the `by` fields — `LiveScopedAllQuery`);
+ *   with `select`, a slice of it. Read and gated exactly like the whole set;
+ *   a scope change is a new tuple (loading). `useLive(scoped)` without one is
+ *   a tsc error, and a `where` on a set without `by` too (both throw for an
+ *   untyped caller).
+ *
  * An id set of an `all` collection is `useLive(all, { ids })` /
- * `useLiveRow(all, id)`, through its `:rows` point sibling like any other.
+ * `useLiveRow(all, id)`, through its `:rows` point sibling like any other —
+ * global, whatever the scope.
  * These overloads come AFTER the window and group ones (an `all` collection
  * has neither, so it never matches them) so a window query's contextual type
  * is still the first overload's.
@@ -362,6 +381,25 @@ export function useLive<
   collection: LiveAllCollection<Row> & MachineDecl<NM>,
   options: LiveAllSelect<Row, S>,
 ): WithMachine<NM, ResourceResult<S>>;
+// The selected form first: a `{ where, select }` literal would otherwise be
+// tried against the plain one (its `select` an excess property).
+export function useLive<
+  Row,
+  B extends string,
+  S,
+  NM extends MachineFeature | undefined = undefined,
+>(
+  collection: LiveAllCollection<Row, B> & MachineDecl<NM>,
+  query: LiveScopedAllQuery<NoInfer<B>> & LiveAllSelect<Row, S>,
+): WithMachine<NM, ResourceResult<S>>;
+export function useLive<
+  Row,
+  B extends string,
+  NM extends MachineFeature | undefined = undefined,
+>(
+  collection: LiveAllCollection<Row, B> & MachineDecl<NM>,
+  query: LiveScopedAllQuery<NoInfer<B>>,
+): WithMachine<NM, ResourceResult<CollectionRow<Row>[]>>;
 export function useLive<Row, NM extends MachineFeature | undefined = undefined>(
   collection: LiveRowsCollection<Row> & MachineDecl<NM>,
   query: LiveIdsQuery,
@@ -510,6 +548,7 @@ export function useLive<Row, F, S extends string>(
     | LiveCollection<Row, F, S>
     | LiveRowsCollection<Row>
     | LiveAllCollection<Row>
+    | LiveAllCollection<Row, string>
     | LiveValue<unknown, Record<string, string>, LiveValueOrigin>
     // biome-ignore lint/suspicious/noExplicitAny: a generic item's schema is invariant — erased, as page-source's `AnyPagedValue` is.
     | LivePagedPages<any, any, any, LiveValueOrigin>,
@@ -519,6 +558,8 @@ export function useLive<Row, F, S extends string>(
     | LiveCountQuery<F>
     | LiveIdsQuery
     | LiveAllSelect<Row, unknown>
+    | LiveScopedAllQuery<string>
+    | (LiveScopedAllQuery<string> & LiveAllSelect<Row, unknown>)
     | Record<string, string>
     | readonly unknown[]
     | null,
@@ -613,8 +654,8 @@ export function useLive<Row, F, S extends string>(
       );
     case "all":
       return useAll(
-        (source as LiveAllCollection<Row>).all,
-        (query ?? undefined) as LiveAllSelect<Row, unknown> | undefined,
+        (source as LiveAllCollection<Row, string>).all,
+        (query ?? undefined) as AllQuery<Row> | undefined,
       );
     case "all-pages":
       return useAllPages(
@@ -848,7 +889,8 @@ function useQueryValueList<T, Q, QIn>(
 
 /**
  * The whole ordered set, straight through `useResource` on its param-less
- * tuple (`{}` — the one boot hydrates): no row map. Always a gated read, so its
+ * tuple (`{}` — the one boot hydrates), or a scoped set's one scope (its
+ * `where` record, the tuple's params): no row map. Always a gated read, so its
  * first value re-renders even when the slice equals what the caller saw
  * before it landed, a push that changes nothing it reads re-renders nothing,
  * and a tuple already cached starts narrowed (the derived latch), so a
@@ -858,11 +900,32 @@ function useQueryValueList<T, Q, QIn>(
  * shared copy. One unconditional call either way (rules of hooks).
  */
 function useAll<Row>(
-  all: LiveAllCollection<Row>["all"],
-  options: LiveAllSelect<Row, unknown> | undefined,
+  all: LiveAllCollection<Row, string>["all"],
+  query: AllQuery<Row> | undefined,
 ): ResourceResult<unknown> {
-  return useResource(all, undefined, { gate: true, select: options?.select });
+  // A scoped set (`all: { by }`) is read by its scope, the whole set by none:
+  // the overloads pair them, this holds the line for an untyped caller (the
+  // server would refuse the tuple as a contract mismatch, far from here).
+  const scoped = (all.all as { by?: readonly string[] }).by !== undefined;
+  const where = query?.where;
+  if (scoped && where === undefined) {
+    throw new Error(
+      `useLive("${all.key}"): the set is declared \`all: { by }\` — read one scope, \`{ where: { ${(all.all.by ?? []).join(", ")} } }\`.`,
+    );
+  }
+  if (!scoped && where !== undefined) {
+    throw new Error(
+      `useLive("${all.key}"): \`where\` on a set declared without \`all.by\` — it has one tuple, the whole set.`,
+    );
+  }
+  return useResource(all, where, { gate: true, select: query?.select });
 }
+
+/** What `useAll` reads: a scope (a scoped set's), a slice, both or neither. */
+type AllQuery<Row> = {
+  where?: Record<string, string>;
+  select?: (rows: Row[]) => unknown;
+};
 
 /**
  * A collection's total over `where` through its `:count` sibling — a `null`

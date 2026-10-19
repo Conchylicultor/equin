@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import {
   liveCollection,
-  liveValue,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
 import { pagesEntityRef } from "@plugins/page/plugins/block-entity/core";
 import { rankValueField } from "@plugins/fields/plugins/rank/plugins/config/core";
-import { BlockSchema, type PageRow } from "./schemas";
+import type { Block, PageRow } from "./schemas";
 
 // All live pages (`type="page"` blocks), the WHOLE set (`all`): the sidebar
 // renders every page, and the `[[` / page-link pickers filter it by title
@@ -94,15 +94,79 @@ export type _PinPagesTreeRow = Assert<
 >;
 
 // A page's content forest: every block whose nearest page ancestor is
-// `pageId`, sub-page rows included, pushed whole whenever it changes. A value
-// rather than a collection: the editor's reducer, its optimistic overlay and
-// document order all need EVERY block of the page (a window would truncate the
-// document), and its loader reads through the `liveBlocks` subquery rather than
-// one table's rows. Not known yet is `pending` — there is no `[]` placeholder.
-export const pageBlocks = liveValue("page-blocks", {
-  schema: z.array(BlockSchema),
-  params: ["pageId"],
+// `pageId`, sub-page rows included — one tuple per page (`all: { by }`), read
+// `useLive(pageBlocks, { where: { pageId } })` and, optimistically, by the
+// editor's block store. A scoped WHOLE set rather than a window: the editor's
+// reducer, its optimistic overlay and document order all need EVERY block of
+// the page (a window would truncate the document). Its rows are ordered by
+// `(rank, createdAt)` — `rank` is one `(parent_id, rank)` space per parent,
+// so the order is only meaningful within siblings, which is how every reader
+// uses it (`toNodes` groups by parent) — the id breaking ties.
+//
+// Served over the `page_blocks` TABLE with the live-block predicate
+// (`deleted_at IS NULL`) as its base membership
+// (`../server/internal/resources.ts`): a write to one block is a one-row
+// refill of ITS page and nothing on any other (the router matches the
+// change's `page_id` before loading) — the ~1s `data.text` typing
+// projection included, which moves no column the order or the membership
+// reads — an insert or a restore an entrant, a trash an exit, a cross-page
+// move an exit here and an entrant there.
+//
+// Its rows are `Block`s, field for field (pinned below): the entity's wire
+// fields with `rank` carried as the wire `Rank` and `data` as `unknown` (a
+// reader parses a block's payload by its type — `pageData()`, a handle's
+// lens — never through the column's record decoder). No exposure folds into
+// them (`baseExposures: false`): an extension's fields are the page row's
+// (`pagesTree`), not the forest's.
+//
+// The key is NEW (`page-blocks.v2`; it was the param'd value `page-blocks`):
+// a tab still running a bundle that subscribed the old key gets `unknown-key`
+// — a `skew` verdict, the Reload prompt. Under the old name it would have
+// parsed the sub-ack and then hit a keyed `delta` its non-keyed read cannot
+// apply (a thrown "no keyOf registered", the page frozen without a prompt).
+// Pinned by `../server/internal/page-blocks-oracle.test.ts`. Not known yet is
+// `loading` — there is no `[]` placeholder.
+export const pageBlocks = liveCollection("page-blocks.v2", {
+  from: pagesEntityRef,
+  baseExposures: false,
+  carry: {
+    pick: [
+      "id",
+      "pageId",
+      "parentId",
+      "type",
+      "expanded",
+      "createdAt",
+      "updatedAt",
+    ],
+    fields: {
+      // The wire `Rank` value object over the stored key.
+      rank: rankValueField(),
+      // The payload as a reader receives it: per block type, parsed by its
+      // handle — `BlockSchema.data`'s `unknown`, not the column's record type.
+      data: jsonField<unknown>({ schema: z.unknown(), default: {} }),
+    },
+  },
+  id: "id",
+  all: {
+    by: ["pageId"],
+    orderBy: [
+      ["rank", "asc"],
+      ["createdAt", "asc"],
+    ],
+    unbounded: {
+      reason:
+        "one page's content forest — the reducer, the optimistic overlay and document order need every block of the page",
+    },
+  },
 });
+
+/** A row as `pageBlocks` delivers it. */
+export type PageBlocksRow =
+  typeof pageBlocks extends LiveRowsCollection<infer R> ? R : never;
+
+/** The derived row IS the `Block` every reader of the forest takes. */
+export type _PinPageBlocksRow = Assert<Equal<PageBlocksRow, Required<Block>>>;
 
 // Where a block lives — its type and its nearest page ancestor — for ANY live
 // block, content blocks included: the reverse lookup `pagesTree` structurally

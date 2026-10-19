@@ -50,7 +50,9 @@ the same declaration it renders the SQL from, the `RoutePlan` the runtime's
   per rollup SOURCE, and the grouped joins' routes — *The `all` compiler*),
   under a `scopedMembership` alias policy (`orderOf` = orderIds,
   `orderSignatureOf` read off the wire row); its `:rows` sibling is a point
-  membership over the same routes.
+  membership over the same routes. A scoped set (`all.by`) declares its
+  scope columns as the identity route's `match`, and each tuple matches its
+  params on them.
 - **grouping** — `reach` (the non-keyed arm): one `full` route per relation (the
   base table, and each join). A write to a table a grouping reads recomputes it;
   a write to any other table reaches none.
@@ -332,7 +334,9 @@ halves); the compile-SQL golden and tasks-core's parity oracle reach it
 through `server/testing` over declarations nothing serves. The whole set's
 descriptor TYPE is `AllQueryResourceContract<Row>` (`core/`, beside the window
 and point contracts): param-less, keyed, no placeholder, `all: { orderBy,
-unbounded }`, `queryPk`.
+unbounded }`, `queryPk`. Scoped (`all.by`, below) it is
+`AllQueryResourceContract<Row, B>`: params `AllQueryParams<B>` (exactly the
+`by` fields), `all.by` required, `preload` `never`.
 
 - **Spec.** `from` (a base table — its single-column primary key is the host
   identity), `joins` (`AllJoinSpec`: the window kinds, a top-level rollup, and
@@ -363,6 +367,34 @@ unbounded }`, `queryPk`.
   - **orderIds** — `SELECT pk AS __id FROM base <INNER joins + the joins its
     where reads> WHERE where ORDER BY orderBy, pk`: the `scopedMembership`
     `orderOf`, run only when a row enters or an order field moves.
+- **Scope — `all.by`** (track item [12] §A,
+  `research/2026-10-19-global-live-compiled-narrowing.md`). A set declared
+  `all: { by: ["pageId"] }` is PARAM'D: one tuple per scope. ONE loop
+  (`scopeOf`) emits the scope's three halves from each field, so they cannot
+  disagree: the SQL's `eq(col, params[field])` ANDed with the static `where`
+  in the full, scoped and orderIds shapes (never `:rows`, which stays global
+  by id); the base identity route's declared `match` columns
+  (`baseIdentityRoute(…, { match })`, through `routedReads`' `match` — the
+  change feed then carries them as keys, old ∪ new); and each tuple's base
+  use's `match: { col: {params[field]} }`, its `moves` joined by the scope
+  columns (a re-scoped row exits one tuple and enters another). The router
+  skips another scope's tuple on the key match, before any load. Refused at
+  compile: a field not projected, one that reads no DIRECT base column (a
+  join's, an expression), and a column type other than text / varchar,
+  uuid, smallint / integer / bigint — the feed's `col::text` must equal the
+  param, and a timestamp's or a float's text is not one spelling. The
+  `all` half gets a server `validateParams` (replacing the descriptor's):
+  the descriptor's gate, then each value the canonical text of its type
+  (lower-case uuid, canonical in-range decimal) — so `col = $param` holds
+  exactly when the key matches. The definition is still computed (the
+  shapes rendered over a placeholder scope `$<field>`, `by` folded in);
+  only a scoped set's names `by`, so every other definition and route is
+  byte-identical (no `match` key). Never persisted (it has no preload), so
+  the runtime keeps per-scope snapshots only while a tuple is tracked.
+  Pinned by `server/internal/compile-alias-scope.test.ts` (match ≡ the SQL's
+  eq for any tuple, the gate, the definition, every refusal) and
+  network/live's `serve-collection-all-scoped-oracle.test.ts` (the real
+  feed).
 - **Aggregates.** A CTE body is the declaration's expression, or a `jsonAgg`
   rendered here: `json_agg(json_build_object('<field>', <col>, …) ORDER BY
   <order> NULLS LAST, <child pk>)`, a timestamptz as `to_char(<col> AT TIME
@@ -946,6 +978,7 @@ importing `db` never touches a worktree — no test env shim needed.
     - `AllJoinRefs`
     - `AllJoinRefsOf`
     - `AllJoinSpec`
+    - `AllQueryParams`
     - `AllQueryResourceContract`
     - `AncestorJoin`
     - `AncestorRelation`

@@ -189,3 +189,13 @@ Plan: `research/2026-10-17-global-live-declared-reads-externals-session2.md`.
 - D6 is a boot check: a DB-backed resource registered or bound after change-feed's `onReadyBlocking` would be unrouted with nothing refusing it. No such caller exists.
 - D5 now files a `route drift` report for any undeclared incidental DB read of a notified external (config, auth), where the legacy router silently routed it. The gate showed none; reads inside `whileSubscribed` / `revalidate` are not captured either way.
 - Old `read-set-shrink` report rows and any persisted graphile cron item for the deleted `debug.read-set-shrink-monitor` job are left as they are.
+
+## As landed — [12] session 1 (2026-10-19, worktree `att-1792357493-oxftyu`)
+
+The performance half started: page-blocks is a param-scoped `all` collection
+(`all: { by: ["pageId"] }`, compiled narrowing — no hand-written match), and
+the change feed closes the split-burst ack hole with an end-of-transaction
+marker. A block write on a page nobody holds now costs 0 loads (was 30 for 3
+held pages, 3.76 MB); a write on the held page ships a ~1.2 KB delta (was a
+~130 KB full frame). Details and numbers:
+`research/2026-10-19-global-live-compiled-narrowing.md` (*As landed — session 1*).

@@ -3,12 +3,17 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db, type DbExecutor } from "@plugins/database/server";
 import {
   serveCollection,
-  serveValue,
+  type ServeAllCollectionOptions,
 } from "@plugins/network/plugins/live/server";
 import { Rank, withRank } from "@plugins/primitives/plugins/rank/core";
 import { PAGE_BLOCK_TYPE } from "../../core/schemas";
-import { blockLocations, pagesTree, pageBlocks } from "../../core/resources";
-import type { Block, PageRow } from "../../core/schemas";
+import {
+  blockLocations,
+  pagesTree,
+  pageBlocks,
+  type PageBlocksRow,
+} from "../../core/resources";
+import type { PageRow } from "../../core/schemas";
 import { liveBlocks } from "./live-blocks";
 import { pageEditedAtSql, pageRowsServeOptions } from "./page-rows";
 import { _pageContentEditedAt } from "./rollup-table";
@@ -76,41 +81,36 @@ export async function loadPages(
 // included — the refill of its page's one row (its `editedAt` moved).
 export const pagesTreeServed = serveCollection(pagesTree, pageRowsServeOptions);
 
-// A page's content forest: EVERY block whose nearest page ancestor is `pageId`,
-// sub-page rows included. There is no type filter, and there must not be — the
-// server's reducer (`loadPageBlocks`) has always run over exactly this set, so
-// filtering here made client and server mint fractional-index ranks over
-// different sibling sets, which is how two siblings ended up sharing `"a0"`.
+// A page's content forest (`pageBlocks`, one tuple per page): EVERY block whose
+// nearest page ancestor is `pageId`, sub-page rows included. There is no type
+// filter, and there must not be — the server's reducer (`loadPageBlocks`) has
+// always run over exactly this set, so filtering here made client and server
+// mint fractional-index ranks over different sibling sets, which is how two
+// siblings ended up sharing `"a0"`.
 //
 // A sub-page row is automatically a LEAF of this forest: its own content carries
 // `page_id = <the sub-page's id>`, a different partition. So `(parent_id, rank)`
 // is one real, rendered ordering — the sidebar's page tree is a filtered
 // subsequence of it, not a separate ordering space.
 //
-// A db-arm value: it declares `page_blocks` (the loader reads it through the
-// `liveBlocks` subquery), so every structural write, text projection and
-// trash/restore recomputes the subscribed pages; push drops a byte-identical
-// result.
-export const pageBlocksServed = serveValue(pageBlocks, {
-  source: "db",
-  reads: {
-    tables: [_blocks],
-    reason:
-      "one page's content forest; any block write may change a subscribed page — whole-table until it reads through a collection",
-  },
-  unbounded: {
-    reason:
-      "one page's content forest — the reducer, the optimistic overlay and document order need every block of the page, never a window",
-  },
-  loader: async ({ pageId }): Promise<Block[]> => {
-    const rows = await db
-      .select(BLOCK_WIRE_COLUMNS)
-      .from(liveBlocks)
-      .where(eq(liveBlocks.pageId, pageId))
-      .orderBy(asc(liveBlocks.rank), asc(liveBlocks.createdAt));
-    return rows.map(withRank);
-  },
-});
+// Routed over the `page_blocks` TABLE (a routed compile reads a base table,
+// never the `liveBlocks` subquery), so the live-block predicate is the base
+// membership here — a trash is a where-flip exit, a restore an entrant — and
+// `page_id` is the scope: the change feed carries it as a key, so a write to
+// one page's block reaches no other page's tuple before any load. Every row
+// field binds to its column by name (`rank` is the stored key, decoded to the
+// wire `Rank` by the row schema). The `listBlocks` endpoint reads through
+// `pageBlocksServed.all.load`, so the HTTP twin cannot drift from it; the
+// options are the ONE spelling the oracle (`./page-blocks-oracle.test.ts`)
+// compiles too.
+export const pageBlocksServeOptions = {
+  from: _blocks,
+  where: isNull(_blocks.deletedAt),
+} satisfies ServeAllCollectionOptions<typeof _blocks, PageBlocksRow>;
+export const pageBlocksServed = serveCollection(
+  pageBlocks,
+  pageBlocksServeOptions,
+);
 
 /**
  * When a page was last edited: the newest `updated_at` over the page row AND

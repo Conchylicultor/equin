@@ -8,12 +8,12 @@ import {
   useLiveSocketKindOf,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import type {
   ResourceDescriptor,
   ResourceError,
 } from "@plugins/primitives/plugins/live-state/core";
 import type {
+  LiveAllCollection,
   LiveRowsCollection,
   LiveValue,
 } from "@plugins/network/plugins/live/core";
@@ -34,6 +34,11 @@ import {
   REJECTION_MESSAGE_MAX,
 } from "../reporter";
 import { enqueueResourceSend, sendLaneKey } from "./send-lane";
+import {
+  resolveOptimisticSource,
+  type OptimisticIdsQuery,
+  type OptimisticScopedQuery,
+} from "./source";
 import {
   ackPass,
   classifyRejection,
@@ -117,7 +122,7 @@ type MutateOutcome = "resolved" | OpFailure["kind"] | "rejected";
 /**
  * What an optimistic read does with its ops — everything but the read itself,
  * which is positional (`useOptimisticResource(value, params?, options)` /
- * `(collection, { ids }, options)`).
+ * `(collection, { ids }, options)` / `(scopedCollection, { where }, options)`).
  */
 interface OptimisticOpArgs<Data, Vars> {
   /** Pure predicted next state. Must not mutate `current`. */
@@ -266,11 +271,6 @@ export interface OptimisticSettled<Data, Vars> {
   retry: (opId: string) => void;
 }
 
-/** The `{ ids }` read of a collection — its `:rows` point sibling. */
-interface OptimisticIdsQuery {
-  ids: readonly string[];
-}
-
 /**
  * Optimistic read of a declared `liveValue` (param-less): `loading` (or
  * `error`), then the `ready` arm with `data` / `serverData` / `dispatch`.
@@ -307,6 +307,18 @@ export function useOptimisticResource<Row, Vars>(
   query: OptimisticIdsQuery,
   options: OptimisticOptions<Row[], Vars>,
 ): OptimisticResult<Row[], Vars>;
+/**
+ * Optimistic read of ONE SCOPE of a collection declared `all: { by }` — the
+ * same read as `useLive(c, { where })`: every row of the scope in the
+ * declared order (`serverData` is that ordered `Row[]`, scoped deltas merged
+ * into it by key). The `where` record is the tuple: exactly the `by` fields
+ * (a tsc error otherwise, and on a set declared without `by`).
+ */
+export function useOptimisticResource<Row, B extends string, Vars>(
+  collection: LiveAllCollection<Row, B>,
+  query: OptimisticScopedQuery<NoInfer<B>>,
+  options: OptimisticOptions<Row[], Vars>,
+): OptimisticResult<Row[], Vars>;
 export function useOptimisticResource<Data, Vars>(
   source: object,
   second?: object,
@@ -314,65 +326,25 @@ export function useOptimisticResource<Data, Vars>(
 ): OptimisticResult<Data, Vars> {
   // The form is fixed for a call site (a declaration is a module-level const
   // and the argument count never changes), and it is resolved here with no
-  // hooks, so every form runs the same ONE core hook.
-  const form = resolveForm<Data, Vars>(source, second, third);
-  return useOptimisticCore<Data, Vars>(
-    form.resource,
-    form.params,
-    form.options,
-  );
+  // hooks, so every form runs the same ONE core hook. Options are always the
+  // last argument; the query (a value's params, `{ ids }`, `{ where }`) the
+  // one before it, when there is one.
+  const query = third === undefined ? undefined : second;
+  const options = (third ?? second) as OptimisticOptions<Data, Vars>;
+  const { resource, params } = resolveOptimisticSource<Data>(source, query);
+  return useOptimisticCore<Data, Vars>(resource, params, options);
 }
 
-interface ResolvedForm<Data, Vars> {
-  resource: ResourceDescriptor<Data, Record<string, string>>;
-  params: Record<string, string> | undefined;
-  options: OptimisticOptions<Data, Vars>;
-}
-
-function resolveForm<Data, Vars>(
-  source: object,
-  second: object | undefined,
-  third: OptimisticOptions<Data, Vars> | undefined,
-): ResolvedForm<Data, Vars> {
-  if ("live" in source) {
-    return {
-      resource: source as unknown as ResourceDescriptor<
-        Data,
-        Record<string, string>
-      >,
-      params:
-        third === undefined ? undefined : (second as Record<string, string>),
-      options: (third ?? second) as OptimisticOptions<Data, Vars>,
-    };
-  }
-  // A collection's `{ ids }` read: the `:rows` point sibling at the canonical
-  // encoding of the id set.
-  const rows = (source as LiveRowsCollection<unknown>).rows;
-  return {
-    resource: rows as unknown as ResourceDescriptor<
-      Data,
-      Record<string, string>
-    >,
-    params: rows.point.encode((second as OptimisticIdsQuery).ids),
-    options: third as OptimisticOptions<Data, Vars>,
-  };
-}
-
-// A params object with a stable identity per canonical content, so the
-// query-key memo and the effects keyed on it do not churn when a caller (or
-// the ids codec) builds an equal object each render.
+// A params object with a stable identity per content, so the query-key memo
+// and the effects keyed on it do not churn when a caller (or the ids codec)
+// builds an equal object each render. Already canonical
+// (`resolveOptimisticSource`), so every key this hook derives from the params
+// — its QueryCache subscription, send lane, tx-ack and watermark lookups —
+// names the tuple `useResource` subscribes.
 function useStableParams(
   params: Record<string, string> | undefined,
-  optional: readonly string[] | undefined,
 ): Record<string, string> | undefined {
-  // Canonical (`canonicalParams`), so every key this hook derives from the
-  // params — its QueryCache subscription, send lane, tx-ack and watermark
-  // lookups — names the tuple `useResource` subscribes, however an absent
-  // optional param is spelled.
-  const json =
-    params === undefined
-      ? null
-      : JSON.stringify(canonicalParams(params, optional));
+  const json = params === undefined ? null : JSON.stringify(params);
   return useMemo(
     () =>
       json === null ? undefined : (JSON.parse(json) as Record<string, string>),
@@ -385,7 +357,7 @@ function useOptimisticCore<Data, Vars>(
   rawParams: Record<string, string> | undefined,
   options: OptimisticOptions<Data, Vars>,
 ): OptimisticResult<Data, Vars> {
-  const params = useStableParams(rawParams, resource.optionalParams);
+  const params = useStableParams(rawParams);
   const { apply, mutate, onError, label, describeOp } = options;
   // Narrow on the object (not a destructure) so TS keeps the union correlation:
   // when `options.isConfirmedBy` is truthy, `options` is the paired arm and

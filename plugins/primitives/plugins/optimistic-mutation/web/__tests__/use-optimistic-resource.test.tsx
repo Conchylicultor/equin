@@ -25,6 +25,7 @@ import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import {
   createLiveStateHarness,
+  mergeKeyedDelta,
   noteResourceTxAcks,
   noteResourceWatermark,
   NotificationsClient,
@@ -45,6 +46,7 @@ import {
 } from "../internal/use-optimistic-resource";
 import {
   activeSendLaneCount,
+  enqueueDetachedWrite,
   enqueueResourceWrite,
 } from "../internal/send-lane";
 import {
@@ -1177,6 +1179,347 @@ describe("useOptimisticResource — read forms", () => {
       noteResourceTxAcks(ranks.rows.key, params, ["4242"]);
     });
     expect((await settledOf(result)).pendingOps).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The scoped form: one scope of a collection declared `all: { by }`, read
+// `{ where }`. The base is that scope's rows IN ORDER; a scoped delta (no
+// watermark, Rule B′) is merged into it by key; an op confirms by its exact
+// ack or by content, and only a full frame's watermark may deny it.
+// ---------------------------------------------------------------------------
+
+type BlockRow = { id: string; pageId: string; rank: string; text: string };
+const scopedBlocks = liveCollection("test.optimistic-mutation.scoped", {
+  carry: {
+    fields: {
+      id: textField(),
+      pageId: textField(),
+      rank: textField(),
+      text: textField(),
+    },
+  },
+  id: "id",
+  all: {
+    by: ["pageId"],
+    orderBy: [["rank", "asc"]],
+    unbounded: { reason: "one page's blocks" },
+  },
+});
+// A second scoped key, for the lane case: the send lanes are module-level.
+const scopedLane = liveCollection("test.optimistic-mutation.scoped-lane", {
+  carry: { fields: { id: textField(), pageId: textField() } },
+  id: "id",
+  all: {
+    by: ["pageId"],
+    orderBy: [["id", "asc"]],
+    unbounded: { reason: "one page's blocks" },
+  },
+});
+const blockKeyOf = (row: unknown): string => (row as BlockRow).id;
+const setText = (
+  rows: BlockRow[],
+  v: { id: string; text: string },
+): BlockRow[] => rows.map((r) => (r.id === v.id ? { ...r, text: v.text } : r));
+const textReflected = (
+  rows: BlockRow[],
+  v: { id: string; text: string },
+): boolean => rows.some((r) => r.id === v.id && r.text === v.text);
+const sameBlock = (a: { id: string }, b: { id: string }): boolean =>
+  a.id === b.id;
+
+describe("useOptimisticResource — a scoped `all` set ({ where })", () => {
+  const block = (id: string, rank: string, text: string): BlockRow => ({
+    id,
+    pageId: "p1",
+    rank,
+    text,
+  });
+
+  /** A scoped `delta` frame as the client writes it: acks noted, then the merge (no watermark). */
+  function deliverDelta(
+    live: LiveStateHarness,
+    params: Record<string, string>,
+    upserts: BlockRow[],
+    ackTx: string[] = [],
+  ): void {
+    const qk = queryKeyFor(scopedBlocks.key, params);
+    const prev = live.queryClient.getQueryData<BlockRow[]>(qk) ?? [];
+    const merged = mergeKeyedDelta(
+      prev,
+      new Map(upserts.map((r) => [r.id, r])),
+      undefined,
+      blockKeyOf,
+    );
+    if (merged.kind !== "merged") throw new Error("the delta drifted");
+    act(() => {
+      if (ackTx.length > 0) noteResourceTxAcks(scopedBlocks.key, params, ackTx);
+      live.queryClient.setQueryData(qk, merged.rows);
+    });
+  }
+
+  it("reads the scope's tuple in order; watermark-less deltas merge by key and confirm the op by its exact ack, never deny it", async () => {
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const { mutate, release } = deferredMutate();
+    const params = { pageId: "p1" };
+    const reports: OptimisticDivergenceReport[] = [];
+    optimisticDivergenceReportSink.register((r) => {
+      reports.push(r);
+    });
+    const { result } = mountPositional(live, () =>
+      useOptimisticResource(
+        scopedBlocks,
+        { where: { pageId: "p1" } },
+        {
+          apply: setText,
+          mutate: mutate as (v: {
+            id: string;
+            text: string;
+          }) => Promise<MutateResult>,
+          isConfirmedBy: textReflected,
+          sameTarget: sameBlock,
+        },
+      ),
+    );
+    // Not known yet: the scope's tuple holds nothing.
+    expect(result.current.status).toBe("loading");
+    // The sub-ack — a FULL frame, so it carries the snapshot watermark.
+    act(() => {
+      noteResourceWatermark(scopedBlocks.key, params, "100");
+      client.setQueryData(queryKeyFor(scopedBlocks.key, params), [
+        block("a", "a0", "A"),
+        block("b", "a1", "B"),
+      ]);
+    });
+    const settled = await settledOf(result);
+    act(() => {
+      settled.dispatch({ id: "b", text: "typed" });
+    });
+    await act(async () => {
+      release({ watermark: "150" });
+    });
+    await waitFor(() => expect(settledArm(result.current).saving).toBe(false));
+
+    // Another block's typing projection: a scoped delta, no watermark. The
+    // registry still holds the full frame's "100" — not past the op's "150",
+    // so the unreflected snapshot denies nothing: the op stays, in order.
+    deliverDelta(live, params, [block("a", "a0", "A2")]);
+    const kept = settledArm(result.current);
+    expect(kept.pendingOps).toHaveLength(1);
+    expect(kept.serverData.map((r) => r.text)).toEqual(["A2", "B"]);
+    expect(kept.data.map((r) => `${r.id}:${r.text}`)).toEqual([
+      "a:A2",
+      "b:typed",
+    ]);
+
+    // The op's own commit, re-read: a scoped delta carrying its ackTx and the
+    // row — confirmed exactly, with no watermark anywhere.
+    deliverDelta(live, params, [block("b", "a1", "typed")], ["150"]);
+    await waitFor(() =>
+      expect(settledArm(result.current).pendingOps).toEqual([]),
+    );
+    expect(settledArm(result.current).data.map((r) => r.text)).toEqual([
+      "A2",
+      "typed",
+    ]);
+    expect(reports).toEqual([]);
+  });
+
+  it("an ack on a delta that does NOT reflect the op still confirms it (a later write won); only a full frame's watermark denies", async () => {
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const params = { pageId: "p2" };
+    const { mutate, release } = deferredMutate();
+    const mutateText = mutate as (v: {
+      id: string;
+      text: string;
+    }) => Promise<MutateResult>;
+    const reports: OptimisticDivergenceReport[] = [];
+    optimisticDivergenceReportSink.register((r) => {
+      reports.push(r);
+    });
+    const { result } = mountPositional(live, () =>
+      useOptimisticResource(
+        scopedBlocks,
+        { where: { pageId: "p2" } },
+        {
+          apply: setText,
+          mutate: mutateText,
+          isConfirmedBy: textReflected,
+          sameTarget: sameBlock,
+        },
+      ),
+    );
+    act(() => {
+      noteResourceWatermark(scopedBlocks.key, params, "200");
+      client.setQueryData(queryKeyFor(scopedBlocks.key, params), [
+        { ...block("x", "a0", "X"), pageId: "p2" },
+      ]);
+    });
+    const settled = await settledOf(result);
+
+    // Op 1: acked by a delta whose row a newer writer already overwrote.
+    act(() => {
+      settled.dispatch({ id: "x", text: "mine" });
+    });
+    await act(async () => {
+      release({ watermark: "250" });
+    });
+    deliverDelta(
+      live,
+      params,
+      [{ ...block("x", "a0", "theirs"), pageId: "p2" }],
+      ["250"],
+    );
+    await waitFor(() =>
+      expect(settledArm(result.current).pendingOps).toEqual([]),
+    );
+    // An ack confirms; it never denies — no divergence report.
+    expect(reports).toEqual([]);
+
+    // Op 2: no ack arrives; a FULL frame (a FULL reload — `order` and the
+    // snapshot watermark) causally past its commit lacks its effect: denied.
+    act(() => {
+      settledArm(result.current).dispatch({ id: "x", text: "again" });
+    });
+    await act(async () => {
+      release({ watermark: "300" });
+    });
+    act(() => {
+      noteResourceWatermark(scopedBlocks.key, params, "301");
+      client.setQueryData(queryKeyFor(scopedBlocks.key, params), [
+        { ...block("x", "a0", "newest"), pageId: "p2" },
+      ]);
+    });
+    await waitFor(() =>
+      expect(settledArm(result.current).pendingOps).toEqual([]),
+    );
+    expect(reports.map((r) => r.kind)).toEqual(["superseded"]);
+  });
+
+  it("enqueueDetachedWrite and enqueueResourceWrite name the SAME lane as the mounted scope's dispatch", async () => {
+    const live = createLiveStateHarness();
+    const client = live.queryClient;
+    const calls: Array<() => void> = [];
+    const mutate = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          calls.push(resolve);
+        }),
+    );
+    const { result } = mountPositional(live, () =>
+      useOptimisticResource(
+        scopedLane,
+        { where: { pageId: "p1" } },
+        { apply: (rows: { id: string; pageId: string }[]) => rows, mutate },
+      ),
+    );
+    act(() => {
+      client.setQueryData(queryKeyFor(scopedLane.key, { pageId: "p1" }), []);
+    });
+    const settled = await settledOf(result);
+    act(() => {
+      settled.dispatch(undefined);
+    });
+    const ran: string[] = [];
+    enqueueDetachedWrite(
+      scopedLane,
+      { where: { pageId: "p1" } },
+      { label: "Page", describe: "move" },
+      async () => {
+        ran.push("detached");
+      },
+    );
+    void enqueueResourceWrite(
+      scopedLane,
+      { where: { pageId: "p1" } },
+      async () => {
+        ran.push("write");
+      },
+    );
+    // Another scope is another lane: it departs at once.
+    void enqueueResourceWrite(
+      scopedLane,
+      { where: { pageId: "p2" } },
+      async () => {
+        ran.push("other page");
+      },
+    );
+    await settleQueues();
+    expect(ran).toEqual(["other page"]);
+    await act(async () => {
+      calls[0]!();
+    });
+    await waitFor(() =>
+      expect(ran).toEqual(["other page", "detached", "write"]),
+    );
+  });
+
+  it("a scope that is not exactly the `by` fields throws at the call site; `{ where }` on a set without `by` too", () => {
+    const untyped = (q: unknown) => () =>
+      enqueueResourceWrite(
+        scopedLane,
+        q as { where: { pageId: string } },
+        async () => {},
+      );
+    expect(untyped({ where: {} })).toThrow(/pageId/);
+    expect(untyped({ where: { pageId: "p", x: "1" } })).toThrow(
+      /unknown param/,
+    );
+    expect(untyped({ where: { pageId: "" } })).toThrow(/non-empty string/);
+    const whole = liveCollection("test.optimistic-mutation.whole", {
+      carry: { fields: { id: textField() } },
+      id: "id",
+      all: { orderBy: [["id", "asc"]], unbounded: { reason: "test" } },
+    });
+    expect(() =>
+      enqueueResourceWrite(
+        whole as unknown as typeof scopedLane,
+        { where: { pageId: "p" } },
+        async () => {},
+      ),
+    ).toThrow(/not declared `all: \{ by \}`/);
+  });
+
+  it("the scope's types: exactly the `by` fields; no `{ where }` on a set without `by` (type level)", () => {
+    const whole = liveCollection("test.optimistic-mutation.whole-types", {
+      carry: { fields: { id: textField() } },
+      id: "id",
+      all: { orderBy: [["id", "asc"]], unbounded: { reason: "test" } },
+    });
+    const opts = {
+      apply: (rows: BlockRow[]) => rows,
+      mutate: async () => {},
+    };
+    const useTypeOnly = () => {
+      useOptimisticResource(scopedBlocks, { where: { pageId: "p" } }, opts);
+      // @ts-expect-error — a scope names exactly the `by` fields
+      useOptimisticResource(scopedBlocks, { where: { id: "p" } }, opts);
+      // @ts-expect-error — no extra field beside the scope
+      useOptimisticResource(
+        scopedBlocks,
+        { where: { pageId: "p", text: "t" } },
+        opts,
+      );
+      // @ts-expect-error — a set declared without `by` has no scope
+      useOptimisticResource(
+        whole,
+        { where: { pageId: "p" } },
+        {
+          apply: (rows: { id: string }[]) => rows,
+          mutate: async () => {},
+        },
+      );
+      // @ts-expect-error — the detached form takes the same scope
+      enqueueDetachedWrite(
+        scopedBlocks,
+        { pageId: "p" },
+        { label: "Page", describe: "move" },
+        async () => {},
+      );
+    };
+    expect(typeof useTypeOnly).toBe("function");
   });
 });
 

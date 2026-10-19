@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseLiveStatePayload } from "./parse-payload";
+import { parseLiveStatePayload, parseTxnEndPayload } from "./parse-payload";
 
 describe("parseLiveStatePayload", () => {
   test("parses a scoped UPDATE with ids", () => {
@@ -270,5 +270,31 @@ describe("parseLiveStatePayload", () => {
       (c) => reported.push(c.table),
     );
     expect(reported).toEqual([]);
+  });
+});
+
+describe("parseTxnEndPayload", () => {
+  test("parses the marker live_state_txn_end() emits", () => {
+    expect(parseTxnEndPayload(`{"x":"123456","n":3}`)).toEqual({
+      xid: "123456",
+      n: 3,
+    });
+  });
+
+  // Strict: the router releases a transaction on its end, so an end it cannot
+  // read must never be taken for another one.
+  test.each([
+    ["not json", "nope"],
+    ["an array", `["1",2]`],
+    ["a numeric xid", `{"x":12,"n":1}`],
+    ["an empty xid", `{"x":"","n":1}`],
+    ["a non-digit xid", `{"x":"12a","n":1}`],
+    ["a missing count", `{"x":"12"}`],
+    ["a zero count", `{"x":"12","n":0}`],
+    ["a fractional count", `{"x":"12","n":1.5}`],
+    ["a string count", `{"x":"12","n":"1"}`],
+    ["an extra field", `{"x":"12","n":1,"t":"tasks"}`],
+  ])("rejects %s", (_label, raw) => {
+    expect(parseTxnEndPayload(raw)).toBeNull();
   });
 });

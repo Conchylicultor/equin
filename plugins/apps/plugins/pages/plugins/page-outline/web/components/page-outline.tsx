@@ -62,7 +62,7 @@ export function PageOutline({ pageId }: { pageId: string }) {
   // every heading to the OTHER editor's rows — and a background tab's rows are
   // `display:none`, so their rects are all zero and the rail simply dies.
   const content = blockContentScope.useRoot();
-  const result = useLive(pageBlocks, { pageId });
+  const result = useLive(pageBlocks, { where: { pageId } });
   // The last value keeps painting through a transient error; a page never
   // loaded has no outline yet — `null`, not an empty one. A first load that
   // failed paints no rail either: the rail is an overlay, and the page's own

@@ -15,4 +15,11 @@ export default [
     reason:
       "The substrate: useLive and its paged reads are built on TanStack query hooks; this is where a live read is implemented, not a request/response read site.",
   },
+  {
+    rule: "no-raw-websocket",
+    paths: ["e2e/narrowing.ts"],
+    kind: "sanctioned",
+    reason:
+      "A measurement script run under bun, not a browser tab: it counts every frame the server sends each live tuple, so it speaks the wire protocol on its own raw socket (SharedWebSocket is a browser SharedWorker primitive).",
+  },
 ] satisfies Exemptions;

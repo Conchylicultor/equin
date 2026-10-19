@@ -1,7 +1,10 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { sql } from "drizzle-orm";
+import { Client } from "pg";
 import { createChangeFeedListener } from "./listener";
 import type { FeedChange } from "./route-change";
+import type { TxnEndProblem } from "./burst";
+import { rebuildTriggers } from "./triggers";
 import {
   createTestDb,
   type TestDb,
@@ -155,6 +158,10 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
           u: ["host"],
           x: "7",
         }),
+      );
+      // Its transaction's end marker: the change was held until it came.
+      await testDb.db.execute(
+        sql`SELECT pg_notify('live_state_end', ${JSON.stringify({ x: "7", n: 1 })})`,
       );
       await waitFor(
         () => findChange(routed, "side", "U", ["s1"]) !== undefined,
@@ -333,5 +340,151 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
     // Bounded window to let any (erroneous) delivery arrive, then assert none did.
     await new Promise((r) => setTimeout(r, 300));
     expect(routed.length).toBe(routedAfterStop);
+  });
+});
+
+// The end-of-transaction marker, end to end: the real triggers (installed by
+// `rebuildTriggers`, marker included) on a table of this suite, a real
+// transaction, and the listener holding its changes until `live_state_end`.
+describe("change-feed listener: the end-of-transaction marker (real triggers)", () => {
+  const STATEMENTS = 2000;
+
+  beforeAll(async () => {
+    await testDb.db.execute(sql`CREATE TABLE burst_rows (id text PRIMARY KEY)`);
+    await rebuildTriggers(
+      testDb.db,
+      { feedExempt: new Set(), optedOut: new Set(), produced: new Set() },
+      [],
+    );
+  });
+
+  // Each routed change counted into the burst — one synchronous run of the
+  // router's flush — it was routed in.
+  function burstRecorder() {
+    const routed: FeedChange[] = [];
+    const bursts: number[] = [];
+    let inBurst = false;
+    const route = (c: FeedChange): void => {
+      routed.push(c);
+      if (!inBurst) {
+        inBurst = true;
+        bursts.push(0);
+        queueMicrotask(() => {
+          inBurst = false;
+        });
+      }
+      bursts[bursts.length - 1]!++;
+    };
+    return { routed, bursts, route };
+  }
+
+  test(`a ${STATEMENTS}-statement transaction routes as ONE burst, after its end marker`, async () => {
+    // A raw second LISTEN client sees the marker itself.
+    const watcher = new Client({ connectionString: testDb.connectionString });
+    await watcher.connect();
+    const ends: string[] = [];
+    watcher.on("notification", (n) => {
+      if (n.channel === "live_state_end" && n.payload) ends.push(n.payload);
+    });
+    await watcher.query("LISTEN live_state_end");
+
+    const { routed, bursts, route } = burstRecorder();
+    const problems: TxnEndProblem[] = [];
+    const listener = createChangeFeedListener({
+      connectionString: () => testDb.connectionString,
+      route,
+      report: (p) => problems.push(p),
+      coveredTables: () => ["burst_rows"],
+      livenessIntervalMs: QUIET_LIVENESS_MS,
+    });
+    listener.start();
+    try {
+      await waitForListen();
+      // One transaction, one statement (one STATEMENT trigger, one NOTIFY,
+      // one changelog row) per row: ~2000 NOTIFYs, far more than one socket
+      // read carries.
+      await testDb.db.execute(
+        sql.raw(`DO $$ BEGIN
+          FOR i IN 1..${STATEMENTS} LOOP
+            INSERT INTO burst_rows VALUES ('r' || i);
+          END LOOP;
+        END $$`),
+      );
+      await waitFor(
+        () => routed.length >= STATEMENTS && ends.length >= 1,
+        "the transaction's changes routed and its end observed",
+        15_000,
+      );
+      expect(routed).toHaveLength(STATEMENTS);
+      expect(bursts).toEqual([STATEMENTS]);
+      const xids = new Set(routed.map((c) => c.xid));
+      expect(xids.size).toBe(1);
+      expect(ends.map((e) => JSON.parse(e) as unknown)).toEqual([
+        { x: [...xids][0], n: STATEMENTS },
+      ]);
+      expect(problems).toEqual([]);
+    } finally {
+      await listener.stop();
+      await watcher.end();
+    }
+  });
+
+  test("a transaction writing no feed table sends no marker, and its xid-less NOTIFY still routes", async () => {
+    const { routed, route } = burstRecorder();
+    const problems: TxnEndProblem[] = [];
+    const listener = createChangeFeedListener({
+      connectionString: () => testDb.connectionString,
+      route,
+      report: (p) => problems.push(p),
+      coveredTables: () => ["burst_rows"],
+      livenessIntervalMs: QUIET_LIVENESS_MS,
+      // Short, so a change wrongly held would be reported within the test.
+      txnEndDeadlineMs: 200,
+    });
+    listener.start();
+    try {
+      await waitForListen();
+      await emitNotify(notifyPayload("burst_rows", "U", ["loose"]));
+      await waitFor(
+        () => findChange(routed, "burst_rows", "U", ["loose"]) !== undefined,
+        "xid-less change routed",
+      );
+      await new Promise((r) => setTimeout(r, 400));
+      expect(problems).toEqual([]);
+    } finally {
+      await listener.stop();
+    }
+  });
+
+  test("a malformed end marker is skipped; its transaction is released by the deadline and reported, never dropped", async () => {
+    const { routed, route } = burstRecorder();
+    const problems: TxnEndProblem[] = [];
+    const listener = createChangeFeedListener({
+      connectionString: () => testDb.connectionString,
+      route,
+      report: (p) => problems.push(p),
+      coveredTables: () => ["burst_rows"],
+      livenessIntervalMs: QUIET_LIVENESS_MS,
+      txnEndDeadlineMs: 200,
+    });
+    listener.start();
+    try {
+      await waitForListen();
+      await emitNotify(
+        JSON.stringify({ t: "burst_rows", op: "U", ids: ["m"], x: "77" }),
+      );
+      await testDb.db.execute(
+        sql`SELECT pg_notify('live_state_end', ${JSON.stringify({ x: "77", n: "one" })})`,
+      );
+      await waitFor(
+        () => findChange(routed, "burst_rows", "U", ["m"]) !== undefined,
+        "held change released by the deadline",
+      );
+      expect(problems).toEqual([
+        { kind: "txn-end-missing", xid: "77", held: 1, ms: 200 },
+      ]);
+    } finally {
+      await listener.stop();
+    }
   });
 });

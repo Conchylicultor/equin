@@ -261,6 +261,12 @@ export function routedReads<P extends ResourceParams>(opts: {
   /** Every column any tuple may order by (the signature); `[]` for a point set. */
   orderColumns: readonly ReadColumn[];
   orderOf: (params: P) => readonly WindowOrderKey[];
+  /**
+   * Base columns a tuple's base use may `match` on (a scoped `all` set's
+   * `by`): declared on the base identity route, so the change feed carries
+   * them as keys. The caller states each tuple's match. Absent = none.
+   */
+  match?: readonly PgColumn[];
   /** What a lookup's reverse route probes the hosts with. */
   db: QueryDb;
 }): RoutedReads<P> {
@@ -286,7 +292,9 @@ export function routedReads<P extends ResourceParams>(opts: {
   const columnsOf = routeColumnsOf(joins, opts.base, reads, open);
   const host = { base: opts.base, pk: opts.pk, plan: joins, db: opts.db };
   const routes = [
-    baseIdentityRoute(opts.base, opts.pk, columnsOf(BASE_RELATION)),
+    baseIdentityRoute(opts.base, opts.pk, columnsOf(BASE_RELATION), {
+      match: (opts.match ?? []).map((c) => c.name),
+    }),
     ...joins.joins.flatMap((j) => joinRoutes(j, host, columnsOf)),
     // One route per family, whatever its members: which members a tuple
     // reads is its `match`, not a route of its own.

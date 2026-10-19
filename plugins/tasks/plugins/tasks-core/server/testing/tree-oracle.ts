@@ -122,13 +122,14 @@ export interface TreeOracle {
   readonly runtime: ResourceRuntime;
   /**
    * Register an `all` collection's compiled specs (its `key` and `key:rows`)
-   * on the harness's runtime, with their loads and `orderOf` calls counted.
-   * Before `start()`: the triggers are installed from the routes registered
-   * by then.
+   * on the harness's runtime, with their loads and `orderOf` calls counted —
+   * a scoped one (`all: { by }`) too, each subscribed tuple's truth then a
+   * fresh FULL load of its scope. Before `start()`: the triggers are
+   * installed from the routes registered by then.
    */
-  registerAll<Row>(
-    collection: LiveAllCollection<Row>,
-    specs: AllCollectionSpecs<Row>,
+  registerAll<Row, B extends string = never>(
+    collection: LiveAllCollection<Row, B>,
+    specs: AllCollectionSpecs<Row, B>,
   ): void;
   /**
    * Register a lookup-only collection's compiled `key:rows` point spec, its
@@ -431,8 +432,11 @@ export async function createTreeOracle(
       const keyOf = registerRows(collection, specs.rows);
       registered.set(key, {
         key,
-        // The whole set has one tuple, `{}`.
-        full: async () => collection.all.schema.parse(await all.loader({})),
+        // The whole set has one tuple, `{}`; a scoped set one per scope.
+        full: async (p) =>
+          collection.all.schema.parse(
+            await all.loader(p as Parameters<typeof all.loader>[0]),
+          ),
         keyOf,
         point: false,
       });

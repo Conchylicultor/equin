@@ -1,4 +1,5 @@
 export type {
+  AllQueryParams,
   AllQueryResourceContract,
   PointQueryResourceContract,
   WindowQueryResourceContract,

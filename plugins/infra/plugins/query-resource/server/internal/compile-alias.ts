@@ -1,4 +1,11 @@
-import { getTableColumns, is, sql, SQL, type SQLWrapper } from "drizzle-orm";
+import {
+  eq,
+  getTableColumns,
+  is,
+  sql,
+  SQL,
+  type SQLWrapper,
+} from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { db as realDb, quotedRelationsIn } from "@plugins/database/server";
 import {
@@ -7,13 +14,16 @@ import {
   type SqlDecoderLike,
 } from "@plugins/database/plugins/sql-projection/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import { columnSchema } from "@plugins/database/plugins/sql-column/server";
 import type {
   DerivedRead,
   KeyedServerResourceOptions,
+  ResourceParams,
   ScopePolicy,
   TupleUse,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import type { PointParams } from "@plugins/primitives/plugins/live-state/core";
+import { ResourceContractError } from "@plugins/packages/plugins/resource-protocol/core";
 import {
   orderByClauses,
   type SortKey,
@@ -24,6 +34,7 @@ import {
   type AggregateRef,
   type AllJoinRefs,
   type AllJoinSpec,
+  type AllQueryParams,
   type AllQueryResourceContract,
   type ColumnRef,
   type ExprField,
@@ -56,6 +67,7 @@ import {
 import {
   allOf,
   anyOf,
+  canonicalSqlType,
   decoderOfRead,
   fromSql,
   type InvalidIdPolicy,
@@ -100,6 +112,20 @@ import type {
 // one-row refill. It is L2-persisted, so its plan carries the DEFINITION
 // (`./fingerprint`, A18 / A40). `:rows` is a point membership over the same
 // routes.
+//
+// A set declared `all: { by }` is PARAM'D: one tuple per scope (`{ pageId }`).
+// One loop over `by` emits all three halves of the scope, so they cannot
+// disagree: the SQL's `col = $param` (ANDed into the full, scoped and
+// orderIds shapes), the base identity route's declared `match` columns (the
+// change feed carries them as keys) and each tuple's base use's
+// `match: { col: {param} }` (plus `moves`: a re-scoped row exits one tuple
+// and enters another). The router then skips every tuple of another scope
+// before any load. A scope column is a base column of text, uuid or integer
+// type, and the server's params gate admits only the canonical text of its
+// type — so `col = $param` holds exactly when the feed's `col::text` equals
+// the param. Such a set is never preloaded, so never persisted; its
+// definition is computed all the same, over a placeholder param. `:rows`
+// stays global (by id), with no match.
 
 /** The wire columns a routed source binds through: an entity's, or a table's own. */
 type SourceColumns<T extends RoutedSource> = T extends EntitySource
@@ -167,17 +193,21 @@ export interface AllCollectionSpec<
   db?: QueryDb;
 }
 
-/** The two contracts a `liveCollection(key, { all })` mints. */
-export interface AllCollectionContracts<Row> {
-  all: AllQueryResourceContract<Row>;
+/** The two contracts a `liveCollection(key, { all })` mints (`B`: its `by` fields, if scoped). */
+export interface AllCollectionContracts<Row, B extends string = never> {
+  all: AllQueryResourceContract<Row, B>;
   rows: PointQueryResourceContract<Row>;
 }
 
-type AllParams = Record<string, never>;
+/** The params the compile reads: none, or a scoped set's `by` values. */
+type AllParams = Record<string, string>;
 
 /** The compiled server halves, ready for `defineResource`. */
-export interface CompiledAllCollection<Row> {
-  all: KeyedServerResourceOptions<Row[], AllParams> & ScopePolicy<AllParams>;
+export interface CompiledAllCollection<
+  Row,
+  P extends ResourceParams = Record<string, never>,
+> {
+  all: KeyedServerResourceOptions<Row[], P> & ScopePolicy<P>;
   rows: KeyedServerResourceOptions<Row[], PointParams> &
     ScopePolicy<PointParams>;
   keyField: string;
@@ -196,11 +226,14 @@ export function compileAllCollection<
   Row,
   T extends RoutedSource,
   const J extends readonly AllJoinSpec[] = readonly [],
+  B extends string = never,
 >(
-  contracts: AllCollectionContracts<Row>,
+  contracts: AllCollectionContracts<Row, B>,
   spec: AllCollectionSpec<T, J>,
-): CompiledAllCollection<Row> {
-  const contract = contracts.all;
+): CompiledAllCollection<Row, AllQueryParams<B>> {
+  // Erased over the scope: the compile reads `by` off the contract at runtime.
+  const contract = contracts.all as unknown as
+    AllQueryResourceContract<Row> | AllQueryResourceContract<Row, string>;
   const key = contract.key;
   const label = `allCollection("${key}")`;
   const fail = (message: string): never => {
@@ -357,6 +390,15 @@ export function compileAllCollection<
   }
   const orderSql = sql.join(orderByClauses(sortKeys), sql`, `);
 
+  // ── The scope (`all.by`): base columns the feed carries as text ──────────
+  const scope = scopeOf(contract.all.by ?? [], select, plan, fail);
+  // A tuple's membership predicate: the static `where`, ANDed with its scope
+  // (`params` null: none — `:rows` is global, by id).
+  const whereOf = (params: AllParams | null): SQL | undefined =>
+    params === null || scope.length === 0
+      ? where
+      : allOf([where, ...scope.map((s) => eq(s.col, params[s.field]))]);
+
   // ── Routes and uses ──────────────────────────────────────────────────────
   const routed = routedReads<AllParams>({
     label,
@@ -367,6 +409,7 @@ export function compileAllCollection<
     keyField,
     where,
     whereReads: undefined,
+    match: scope.map((s) => s.col),
     orderColumns: orderReads,
     orderOf: () =>
       orderReads.map((col, i): WindowOrderKey => ({
@@ -415,26 +458,29 @@ export function compileAllCollection<
       [fromSql(base, plan, rowIncluded, label), ...grouped.outerJoins(pk)],
       sql` `,
     );
-  const fullSql = (): SQL => {
+  const fullSql = (params: AllParams): SQL => {
+    const w = whereOf(params);
     const parts = [
       sql`${withOf({ kind: "full" })}SELECT ${projection} FROM ${fromWith()}`,
     ];
-    if (where !== undefined) parts.push(sql`WHERE ${where}`);
+    if (w !== undefined) parts.push(sql`WHERE ${w}`);
     parts.push(sql`ORDER BY ${orderSql}`);
     return sql.join(parts, sql` `);
   };
   const scopedSql = (
     hosts: readonly string[],
     invalid: InvalidIdPolicy,
+    params: AllParams | null,
   ): SQL => {
     const hostIn = (col: PgColumn): SQL => anyOf(col, hosts, { invalid });
-    return sql`${withOf({ kind: "scoped", hostIn })}SELECT ${projection} FROM ${fromWith()} WHERE ${allOf([where, hostIn(pk)])}`;
+    return sql`${withOf({ kind: "scoped", hostIn })}SELECT ${projection} FROM ${fromWith()} WHERE ${allOf([whereOf(params), hostIn(pk)])}`;
   };
-  const orderIdsSql = (): SQL => {
+  const orderIdsSql = (params: AllParams): SQL => {
+    const w = whereOf(params);
     const parts = [
       sql`SELECT ${pk} AS __id FROM ${fromSql(base, plan, membershipIncluded, label)}`,
     ];
-    if (where !== undefined) parts.push(sql`WHERE ${where}`);
+    if (w !== undefined) parts.push(sql`WHERE ${w}`);
     parts.push(sql`ORDER BY ${orderSql}`);
     return sql.join(parts, sql` `);
   };
@@ -447,14 +493,19 @@ export function compileAllCollection<
     ...routes.map((r) => r.table),
     ...derivedReads.map((d) => d.table),
   ]);
+  // A scoped set's shapes are rendered over a placeholder scope, as the
+  // scoped shape is over the placeholder id `$ids`.
+  const placeholder: AllParams = Object.fromEntries(
+    scope.map((s) => [s.field, `$${s.field}`]),
+  );
   const rendered = {
-    full: renderQuery(fullSql(), "the full shape", fail),
+    full: renderQuery(fullSql(placeholder), "the full shape", fail),
     scoped: renderQuery(
-      scopedSql(["$ids"], "throws"),
+      scopedSql(["$ids"], "throws", placeholder),
       "the scoped shape",
       fail,
     ),
-    orderIds: renderQuery(orderIdsSql(), "the orderIds shape", fail),
+    orderIds: renderQuery(orderIdsSql(placeholder), "the orderIds shape", fail),
   };
   for (const [shape, q] of Object.entries(rendered)) {
     for (const relation of quotedRelationsIn(q.sql)) {
@@ -491,9 +542,9 @@ export function compileAllCollection<
     });
     return rows.map(encode);
   };
-  const orderOf = async (): Promise<string[]> => {
+  const orderOf = async (params: AllParams): Promise<string[]> => {
     const rows = await executeRows(db, {
-      query: orderIdsSql(),
+      query: orderIdsSql(params),
       row: decodedRow({ __id: String }),
       label: `${key}:orderIds`,
     });
@@ -539,27 +590,69 @@ export function compileAllCollection<
               rollupOf(rowWise, table),
           ),
         ]),
+      // Only a scoped set names its scope: every other definition is
+      // byte-identical to the one it had before `by` existed.
+      ...(scope.length === 0 ? {} : { by: scope.map((s) => s.field) }),
     }),
   );
 
   // ── The two halves ───────────────────────────────────────────────────────
   const usesOf = (): ReadonlyMap<string, TupleUse> => uses;
+  // A scoped tuple reads the base matching its scope, and a write moving a
+  // scope column moves it (an exit here, an entrant in the new scope).
+  const baseUse = uses.get(BASE_RELATION)!;
+  const scopedBase: TupleUse =
+    baseUse.moves === undefined
+      ? baseUse
+      : {
+          ...baseUse,
+          moves: [
+            ...new Set([...baseUse.moves, ...scope.map((s) => s.col.name)]),
+          ].sort(),
+        };
+  const allUsesOf =
+    scope.length === 0
+      ? usesOf
+      : (params: AllParams): ReadonlyMap<string, TupleUse> =>
+          new Map([
+            ...uses,
+            [
+              BASE_RELATION,
+              {
+                ...scopedBase,
+                match: Object.fromEntries(
+                  scope.map((s) => [s.col.name, new Set([params[s.field]!])]),
+                ),
+              },
+            ],
+          ]);
   const allPolicy: ScopePolicy<AllParams> = {
     routes: compiledRoutePlan<AllParams>(
       routes,
-      usesOf,
+      allUsesOf,
       derivedReads,
       definition,
     ),
     scopedMembership: { orderOf, orderSignatureOf },
   };
   const all = {
-    loader: (_params: AllParams, ctx?: { affectedIds: readonly string[] }) =>
+    loader: (params: AllParams, ctx?: { affectedIds: readonly string[] }) =>
       ctx
-        ? load(scopedSql(ctx.affectedIds, "throws"), "scoped")
-        : load(fullSql(), "full"),
+        ? load(scopedSql(ctx.affectedIds, "throws", params), "scoped")
+        : load(fullSql(params), "full"),
     ...allPolicy,
     ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
+    // The server's gate: the descriptor's (exactly the scope's keys), then
+    // what only the compile knows — each value the canonical text of its
+    // column's type, the one spelling the feed's `col::text` can equal.
+    ...(scope.length === 0
+      ? {}
+      : {
+          validateParams: (params: ResourceParams) => {
+            contract.validateParams?.(params);
+            for (const s of scope) s.check(key, params[s.field]!);
+          },
+        }),
   } as KeyedServerResourceOptions<Row[], AllParams> & ScopePolicy<AllParams>;
 
   const point = contracts.rows.point;
@@ -574,13 +667,111 @@ export function compileAllCollection<
       ctx?: { affectedIds: readonly string[] },
     ) => {
       const ids = ctx?.affectedIds ?? point.decode(params);
-      return ids.length === 0 ? [] : load(scopedSql(ids, "absent"), "rows");
+      return ids.length === 0
+        ? []
+        : load(scopedSql(ids, "absent", null), "rows");
     },
     ...rowsPolicy,
   } as KeyedServerResourceOptions<Row[], PointParams> &
     ScopePolicy<PointParams>;
 
-  return { all, rows, keyField, definition };
+  return {
+    all: all as unknown as CompiledAllCollection<Row, AllQueryParams<B>>["all"],
+    rows,
+    keyField,
+    definition,
+  };
+}
+
+/** One field of a scoped set's `by`: its base column, and the canonical-text check of its type. */
+interface ScopeField {
+  field: string;
+  col: PgColumn;
+  /** Throws `ResourceContractError` unless `value` is the canonical text of the column's type. */
+  check(key: string, value: string): void;
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const INT_RE = /^(0|-?[1-9][0-9]*)$/;
+const INT_BOUNDS: Readonly<Record<string, readonly [bigint, bigint]>> = {
+  smallint: [-(2n ** 15n), 2n ** 15n - 1n],
+  integer: [-(2n ** 31n), 2n ** 31n - 1n],
+  bigint: [-(2n ** 63n), 2n ** 63n - 1n],
+};
+
+/**
+ * The scope types and what their canonical text is: Postgres's own
+ * `col::text` of a value, so a param equal to it is the feed's key exactly
+ * (`col = $param` ⇔ `col::text = $param`). Any other type is refused: a
+ * timestamp's or a float's text depends on settings and rounding.
+ */
+function canonicalTextOf(
+  sqlType: string,
+): ((value: string) => string | null) | null {
+  if (/^(text|character varying|varchar)(\(\d+\))?$/.test(sqlType)) {
+    return () => null;
+  }
+  if (sqlType === "uuid") {
+    return (v) =>
+      UUID_RE.test(v) ? null : "a uuid in canonical form (lower-case hex)";
+  }
+  const bounds = INT_BOUNDS[sqlType];
+  if (bounds !== undefined) {
+    return (v) =>
+      INT_RE.test(v) && BigInt(v) >= bounds[0] && BigInt(v) <= bounds[1]
+        ? null
+        : `the canonical decimal text of a ${sqlType}`;
+  }
+  return null;
+}
+
+/**
+ * A scoped set's `by`, checked against the compile's plan: each field a
+ * projected DIRECT base column (no join, no expression — the change feed
+ * carries only the base's own columns as keys) of a scope type.
+ */
+function scopeOf(
+  by: readonly string[],
+  select: SelectMap,
+  plan: JoinPlan,
+  fail: (message: string) => never,
+): ScopeField[] {
+  return by.map((field) => {
+    const read =
+      (select[field] as ReadColumn | undefined) ??
+      fail(`the scope field "${field}" (\`all.by\`) is not projected.`);
+    if (plan.isComputed(read) || plan.relationOf(read) !== BASE_RELATION) {
+      fail(
+        `the scope field "${field}" (\`all.by\`) reads no base column — a tuple's scope is a base column, which the change feed carries as the key its routes match on.`,
+      );
+    }
+    const col = plan.columnOf(read);
+    if (columnSchema(col) !== undefined) {
+      fail(
+        `the scope field "${field}" (\`all.by\`) is a decoded column (sql-column) — a scope is a plain text, uuid or integer column: its param is bound as the stored text the change feed carries, which a decoder may not round-trip.`,
+      );
+    }
+    const sqlType = canonicalSqlType(plan.sqlTypeOf(read));
+    const canonical =
+      canonicalTextOf(sqlType) ??
+      fail(
+        `the scope field "${field}" (\`all.by\`) is a ${sqlType} column — a scope is text, uuid or an integer: the text the change feed carries for it must have one spelling a param can equal.`,
+      );
+    return {
+      field,
+      col,
+      check: (key, value) => {
+        const expected = canonical(value);
+        if (expected !== null) {
+          throw new ResourceContractError(
+            key,
+            `allCollection("${key}"): param "${field}" must be ${expected}, got ${JSON.stringify(value)} — the scope matches the column's own text.`,
+          );
+        }
+      },
+    };
+  });
 }
 
 function isEntitySource(from: RoutedSource): from is EntitySource {

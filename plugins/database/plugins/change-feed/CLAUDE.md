@@ -32,7 +32,8 @@ often than the schema changes. A state table still in that one-row shape is
 replaced, which costs one rebuild of every table.)
 
 **A signature is never trusted alone.** `planRebuild` re-verifies from the catalog
-that both functions and the changelog exist, that each table's three triggers are
+that both functions, the changelog and the end marker (its function and its
+deferred trigger) exist, that each table's three triggers are
 physically present, and that no `live_state_*` trigger lingers on an excluded
 table. Anything dropped out of band is rebuilt. (It reads only catalogs — no
 user-table locks, which is the whole point.)
@@ -72,7 +73,8 @@ The rebuild runs in two phases, each step its own `db.transaction`:
 
 1. **Prelude tx** (only when the shared layer changed or lost an object) —
    `ensureChangelogTable` + `CREATE OR REPLACE FUNCTION live_state_notify` /
-   `live_state_notify_routed` + the layer's signature. The functions must exist
+   `live_state_notify_routed` / `live_state_txn_end` + the end marker's trigger
+   on the changelog (only when missing or different) + the layer's signature. The functions must exist
    and be committed before any trigger references them. None of it takes a
    user-table lock, and `ensureChangelogTable` touches the changelog only for a
    piece the catalog says is missing: every trigger on every table INSERTs into
@@ -183,6 +185,9 @@ not via a static
 `./singularity check`, because neither can reach a live DB nor the server-only
 contribution/registry sets:
 
+- **`assertNoOtherDeferredTriggers`** (`internal/txn-end.ts`) — **throws** if a
+  deferred or deferrable trigger other than the end marker sits on a triggered
+  table or on the changelog (see the end marker, below).
 - **`warnOnCoverageGaps`** (`internal/triggers.ts`) — warns if any non-excluded
   public table is missing its `live_state_*` triggers (drift signal; should always
   be empty by construction).
@@ -295,10 +300,13 @@ the mounted `declare` contributions), and its writes route straight into
 ## The LISTEN connection
 
 `listener.ts` opens one dedicated client with the connection plugin's
-`createDbClient({ name: "change-feed" })`, on the direct socket. Its connect and
-its `LISTEN live_state` each give up after 60 s with no reply, and that failure
-takes the same reconnect path as any other connect failure. The client it
-happened on is abandoned, never closed.
+`createDbClient({ name: "change-feed" })`, on the direct socket. It LISTENs on
+two channels — `live_state` (every table change) and `live_state_end` (each
+transaction's end marker, below) — in ONE statement, `LISTEN live_state; LISTEN
+live_state_end`: both take effect at its commit, so no transaction is seen on one
+channel and not the other. Its connect and that statement each give up after 60 s
+with no reply, and that failure takes the same reconnect path as any other
+connect failure. The client it happened on is abandoned, never closed.
 
 Its `error` / `end` handlers act only while that client is the current one. An
 attempt that failed, or a client already retired, can emit later — a late `end`,
@@ -308,16 +316,52 @@ that replaced it or schedule a second reconnect.
 An established LISTEN with no call pending has nothing waiting for a reply, so a
 silent socket is still not detected; that needs a heartbeat.
 
-**One transaction's NOTIFYs route as one burst** (`burst.ts`). The listener buffers
-each parsed change and routes the buffer, in order, from one macrotask. A
-transaction writing N tables sends N NOTIFYs together at commit, but the socket may
-hand them over in several reads, and the runtime drains on the next microtask — so
-routing each one as it arrived could drain between two of them and ship that
-transaction's ack (`ackTx`) before its second change reached the tuple: an
-optimistic client confirms an op whose row it has not been sent yet, and flashes the
-old value. The guarantee is exactly the macrotask boundary — every NOTIFY already
-read off the socket by then; a burst split by a later read still routes in two
-flushes.
+**One transaction's NOTIFYs route as one burst, after its end marker**
+(`burst.ts`, `txn-end.ts`). A transaction writing N tables sends N NOTIFYs together
+at commit, but the socket may hand them over in several reads, and the runtime
+drains on the next microtask — so routing each one as it arrived could drain
+between two of them and ship that transaction's ack (`ackTx`) before its second
+change reached the tuple: an optimistic client confirms an op whose row it has not
+been sent yet, and flashes the old value.
+
+- **The marker.** `live_state_txn_end`, a `CONSTRAINT TRIGGER … AFTER INSERT ON
+  live_state_changelog DEFERRABLE INITIALLY DEFERRED FOR EACH ROW` (both notify
+  functions insert one changelog row per statement). Deferred triggers fire at
+  commit, after every statement, so its NOTIFY is the transaction's last; all
+  channels share one queue, so the order holds across channels. It emits once
+  per transaction (a transaction-local `live.txn_end` setting holds the xid):
+  `pg_notify('live_state_end', {x, n})`, `n` the xid's changelog row count
+  (`live_state_changelog_xid_idx`). It is part of the shared layer: installed in
+  the prelude, fingerprinted with it, and re-verified by `planRebuild` (the
+  function exists; the trigger is on the changelog, calls it, is deferred and
+  enabled). The trigger is created only when the catalog says it is missing or
+  different — `CREATE TRIGGER` locks the changelog every writer INSERTs into.
+  `planRebuild`'s stale-trigger sweep skips it (the changelog is denylisted).
+- **The router.** A change carrying an xid is held under it; on the xid's end its
+  changes move, in arrival order, to the ready queue, routed from one macrotask. A
+  change with no xid routes on the next macrotask. The guarantee is exact: the
+  whole transaction lands in the same pendings, however the socket split it.
+- **Nothing is ever dropped.** Each broken assumption is reported (logged with
+  its specifics, filed once per kind as `ChangeFeedTxnEndError`), then routed:
+  `change-after-end` (a change after its xid's end — a `SET CONSTRAINTS ALL
+  IMMEDIATE` would do it); `over-count` (more changes than `n`; Postgres folds
+  identical payloads, so `n` is an upper bound); `interleaved` (a new xid's
+  change while an older xid is open — one transaction's NOTIFYs are contiguous —
+  which releases the older); `txn-end-missing` (nothing received for an open xid
+  for 2 s — one one-shot timer, re-armed for the remainder when a change arrived
+  meanwhile, so a long burst still streaming in is never cut at its first
+  change's deadline — then released; the check waits one more macrotask, so after
+  an event-loop stall the end already waiting on the socket still wins). An end
+  payload that does not parse strictly is logged and skipped; its xid is released
+  by the deadline. `stop()` and a retired socket release an open xid unreported
+  and hold nothing until a socket LISTENs again (a cut-off transaction's end
+  never reaches the next socket; the reconnect sweep covers the gap).
+- **Boot assertion** (`installFeed`): no deferred or deferrable non-internal
+  trigger other than the marker sits on a triggered table or on the changelog —
+  it would fire at commit and could NOTIFY after the marker. Internal triggers (a
+  deferrable foreign key or unique check) write nothing.
+- The L2 catch-up replays the changelog in one synchronous loop through
+  `routeChange`, not through the router, so it needs no marker.
 
 Every routed change, including a reconnect sweep's, records a `route` profiler span
 labelled by the table (`route-span.ts`). Its duration is only the synchronous routing
@@ -446,11 +490,15 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
 Postgres** — the DB-backed half the resource-runtime fake-injection seam can't
 reach. It covers: NOTIFY delivery (`LISTEN live_state` → `parseLiveStatePayload`
 → `route`), first-connect-does-NOT-fullSweep vs reconnect-DOES-fullSweep (driven
-by a real socket drop via `pg_terminate_backend`), malformed-payload skip, and
-`stop()` teardown. The listener is exercised at its true contract boundary —
+by a real socket drop via `pg_terminate_backend`), malformed-payload skip,
+`stop()` teardown, and — with the real triggers installed — the end marker: one
+2000-statement transaction routed as ONE burst after its `live_state_end`, an
+xid-less NOTIFY still routed, a malformed end released by the deadline. Apart
+from that last block, the listener is exercised at its true contract boundary —
 `pg_notify('live_state', <payload>)`, the exact wire the STATEMENT trigger emits
 — so it needs no triggers or tables of its own (trigger→NOTIFY→changelog is the
-trigger layer's concern, exercised at every boot's `rebuildTriggers`).
+trigger layer's concern, pinned by `triggers.test.ts` and `routed-trigger.test.ts`).
+`burst.test.ts` drives every router case by hand (injected macrotask and timers).
 
 To make it testable, `listener.ts` is an injectable factory
 (`createChangeFeedListener({ connectionString, route, coveredTables, …timers })`)

@@ -42,7 +42,7 @@ export function PageVersionPreview({
     entityId: pageId,
     versionId,
   });
-  const current = useLive(pageBlocks, { pageId });
+  const current = useLive(pageBlocks, { where: { pageId } });
 
   // Gate on both async sources: the diff requires the current blocks settled,
   // and collapsing `pending` into `[]` would render a confidently-wrong diff

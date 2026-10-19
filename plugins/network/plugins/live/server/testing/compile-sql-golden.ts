@@ -44,6 +44,7 @@ import {
   type WindowQueryResourceContract,
 } from "@plugins/infra/plugins/query-resource/core";
 import type {
+  CompiledAllCollection,
   PointQueryResourceSpec,
   WindowQueryResourceSpec,
 } from "@plugins/infra/plugins/query-resource/server";
@@ -1257,7 +1258,7 @@ function allScript(sample: Record<string, unknown>) {
 async function allRecord(
   compileIt: (
     db: ReturnType<typeof recordingQueryDb>["db"],
-  ) => ReturnType<typeof compileAllCollection>,
+  ) => CompiledAllCollection<unknown>,
   sample: Record<string, unknown>,
 ): Promise<Json> {
   const recording = recordingQueryDb(allScript(sample));

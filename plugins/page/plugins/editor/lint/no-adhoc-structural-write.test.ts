@@ -39,7 +39,7 @@ ruleTester.run(
       // around `patchBlocks`.
       {
         code:
-          `void enqueueResourceWrite(pageBlocks, { pageId }, () =>` +
+          `void enqueueResourceWrite(pageBlocks, { where: { pageId } }, () =>` +
           ` fetchEndpoint(moveBlock, { id }, { body }));`,
       },
       // `moveBlock` is a live endpoint for the sidebar and the cross-page drop.
@@ -72,7 +72,7 @@ ruleTester.run(
       // is a third writer of page structure.
       {
         code:
-          `void enqueueResourceWrite(pageBlocks, { pageId }, () =>` +
+          `void enqueueResourceWrite(pageBlocks, { where: { pageId } }, () =>` +
           ` fetchEndpoint(patchBlocks, { pageId }, { body: patch }));`,
         errors: [{ messageId: "adhocWrite" }],
       },

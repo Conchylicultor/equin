@@ -320,23 +320,31 @@ export function CompositeServerProviderHost({
       // the move is lost, so it is reported (toast + report) like any other.
       const info = { label: "Page", describe: op.kind, onRejected };
       if (op.kind === "move") {
-        enqueueDetachedWrite(pageBlocks, { pageId: sourcePageId }, info, () =>
-          fetchEndpoint(
-            moveBlock,
-            { id: op.blockId },
-            { body: { parentId, targetId: op.targetId, zone: op.zone } },
-          ),
+        enqueueDetachedWrite(
+          pageBlocks,
+          { where: { pageId: sourcePageId } },
+          info,
+          () =>
+            fetchEndpoint(
+              moveBlock,
+              { id: op.blockId },
+              { body: { parentId, targetId: op.targetId, zone: op.zone } },
+            ),
         );
         return;
       }
       // A dragged SELECTION crossing pages: the same reasoning, one write for
       // the whole set so it lands atomically.
-      enqueueDetachedWrite(pageBlocks, { pageId: sourcePageId }, info, () =>
-        fetchEndpoint(
-          moveBlocks,
-          {},
-          { body: { ids: op.ids, parentId, afterId: op.afterId } },
-        ),
+      enqueueDetachedWrite(
+        pageBlocks,
+        { where: { pageId: sourcePageId } },
+        info,
+        () =>
+          fetchEndpoint(
+            moveBlocks,
+            {},
+            { body: { ids: op.ids, parentId, afterId: op.afterId } },
+          ),
       );
     },
     [],
@@ -380,7 +388,7 @@ export function CompositeServerProviderHost({
             // holds, there is simply nothing to predict.
             enqueueDetachedWrite(
               pageBlocks,
-              { pageId: owner },
+              { where: { pageId: owner } },
               { label: "Page", describe: "patch", onRejected },
               () =>
                 fetchEndpoint(patchBlocks, { pageId: owner }, { body: patch }),

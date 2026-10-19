@@ -4,11 +4,13 @@ import {
   createDbClient,
   type DbClient,
 } from "@plugins/database/plugins/connection/server";
-import { parseLiveStatePayload } from "./parse-payload";
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { parseLiveStatePayload, parseTxnEndPayload } from "./parse-payload";
 import { getCoveredTables } from "./triggers";
+import { FEED_CHANNEL, TXN_END_CHANNEL } from "./txn-end";
 import { feedChange, routeChange, type FeedChange } from "./route-change";
 import { routeWithSpan } from "./route-span";
-import { createBurstRouter } from "./burst";
+import { createBurstRouter, type TxnEndProblem } from "./burst";
 import { changeFeedLog as log } from "./log-sink";
 
 // How often the liveness timer re-checks the socket. This is NOT change-polling
@@ -25,6 +27,10 @@ export interface ChangeFeedListenerOptions {
   connectionString: () => string;
   route: (change: FeedChange) => void;
   coveredTables: () => readonly string[];
+  /** Told of a broken end-of-transaction assumption (default: logged and filed as a report). */
+  report?: (problem: TxnEndProblem) => void;
+  /** How long a transaction's changes wait for its end marker (default 2 s). */
+  txnEndDeadlineMs?: number;
   livenessIntervalMs?: number;
   reconnectMinMs?: number;
   reconnectMaxMs?: number;
@@ -56,11 +62,15 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
   let connecting = false;
   let firstConnect = true;
   let reconnectDelay = reconnectMinMs;
-  // One transaction's NOTIFYs route together, so its ack leaves only after
-  // every one of them landed (see `createBurstRouter`).
-  const routeNotify = createBurstRouter((change) =>
-    routeWithSpan(change, opts.route),
-  );
+  // One transaction's NOTIFYs route together once its end marker arrived, so
+  // its ack leaves only after every one of them landed (see `createBurstRouter`).
+  const burst = createBurstRouter({
+    route: (change) => routeWithSpan(change, opts.route),
+    report: opts.report ?? reportTxnEndProblem,
+    ...(opts.txnEndDeadlineMs !== undefined
+      ? { deadlineMs: opts.txnEndDeadlineMs }
+      : {}),
+  });
 
   // A single dedicated pg client on the DIRECT socket (connectionString()
   // bypasses pgbouncer, which breaks LISTEN — the same path graphile-worker
@@ -112,6 +122,27 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
 
       c.on("notification", (n) => {
         if (!n.payload) return;
+        if (n.channel === TXN_END_CHANNEL) {
+          const end = parseTxnEndPayload(n.payload);
+          if (!end) {
+            // Its transaction's changes are released by their deadline
+            // (reported there too), never dropped.
+            log.publish(
+              `[change-feed] skipping unparseable end marker: ${n.payload}`,
+              "stderr",
+            );
+            return;
+          }
+          burst.end(end);
+          return;
+        }
+        if (n.channel !== FEED_CHANNEL) {
+          log.publish(
+            `[change-feed] skipping a NOTIFY on unexpected channel "${n.channel}": ${n.payload}`,
+            "stderr",
+          );
+          return;
+        }
         const change = parseLiveStatePayload(n.payload, (degraded) =>
           // Routed unscoped (FULL for its readers), never dropped — the same
           // rule the catch-up replay applies to the row.
@@ -128,12 +159,17 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
           );
           return;
         }
-        routeNotify(feedChange(change));
+        burst.change(feedChange(change));
       });
 
       await c.connect();
-      await c.query("LISTEN live_state");
+      // Both channels in ONE statement: it carries the same deadline, and both
+      // LISTENs take effect at its commit — no transaction is seen on one
+      // channel and not the other.
+      await c.query(`LISTEN ${FEED_CHANNEL}; LISTEN ${TXN_END_CHANNEL}`);
       client = c;
+      // This socket hears both channels from here: hold transactions again.
+      burst.reopen();
       reconnectDelay = reconnectMinMs; // reset backoff on success
 
       // Mark-stale-on-RECONNECT only — never on the first (boot) connect.
@@ -160,7 +196,9 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
         fullSweep();
       }
 
-      log.publish("[change-feed] LISTEN live_state established");
+      log.publish(
+        `[change-feed] LISTEN ${FEED_CHANNEL}, ${TXN_END_CHANNEL} established`,
+      );
     } catch (err) {
       log.publish(`[change-feed] connect failed: ${String(err)}`, "stderr");
       // Close the failed attempt, so a connection whose LISTEN was refused does
@@ -178,6 +216,10 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
   function retire(c: DbClient): void {
     if (client !== c) return;
     client = null;
+    // A transaction cut off mid-delivery can never get its end on the next
+    // socket (it only hears later commits; the reconnect sweep covers the gap):
+    // release it unreported, and hold nothing until a socket listens again.
+    burst.close();
     endQuietly(c);
     scheduleReconnect();
   }
@@ -239,6 +281,8 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
 
   async function stop(): Promise<void> {
     started = false;
+    // A transaction still waiting for its end routes now — never dropped.
+    burst.close();
     if (livenessTimer) {
       clearIntervalFn(livenessTimer);
       livenessTimer = null;
@@ -258,6 +302,31 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
   }
 
   return { start, stop };
+}
+
+// What each broken end-of-transaction assumption means for a reader, filed once
+// per kind (the message carries no xid, so one cause is one report) and logged
+// with the specifics.
+const TXN_END_PROBLEM_MEANING: Record<TxnEndProblem["kind"], string> = {
+  "change-after-end":
+    "a change arrived after its transaction's end marker — the transaction's ack may have left before it (was the marker fired early, e.g. by SET CONSTRAINTS ALL IMMEDIATE?)",
+  "over-count":
+    "a transaction sent more changes than its end marker counted — the marker no longer counts every statement",
+  interleaved:
+    "a transaction's changes were interleaved with another's — its changes were routed before its end marker",
+  "txn-end-missing":
+    "a transaction's end marker did not arrive in time — its changes were routed without it (is the live_state_txn_end trigger installed?)",
+};
+
+function reportTxnEndProblem(problem: TxnEndProblem): void {
+  log.publish(
+    `[change-feed] ${problem.kind}: ${JSON.stringify(problem)}`,
+    "stderr",
+  );
+  reportServerError({
+    message: `[change-feed] ${problem.kind}: ${TXN_END_PROBLEM_MEANING[problem.kind]}`,
+    errorType: "ChangeFeedTxnEndError",
+  });
 }
 
 // Production singleton: the real backend wires one listener to the real deps and

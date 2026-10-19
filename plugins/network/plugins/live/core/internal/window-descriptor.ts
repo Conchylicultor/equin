@@ -202,42 +202,74 @@ export function pointQueryResourceDescriptor<Row>(
 
 /**
  * Declare the whole ordered set of a collection declared `all` — the
- * `AllQueryResourceContract`: ONE param-less keyed resource holding every row
- * in `orderBy` order. No window codec and no `defaultParams` (boot hydrates the
- * `{}` tuple, exactly the tuple `useLive(all)` subscribes to), no placeholder,
- * and any param is a subscription this declaration never minted — the gate
- * throws `ResourceContractError`, so the runtime refuses it as
- * `contract-mismatch` (a `skew` verdict for a tab on an older bundle that sent
- * params). It is NO signal against a param-less predecessor of the same key:
- * that older tab subscribes `{}`, passes, and parses the new rows with its own
- * schema — a key converted to `all` must keep the wire row identical or carry
- * a contract the runtime compares on `{}` (P8 v3, C39 open item).
+ * `AllQueryResourceContract`: ONE keyed resource holding every row in
+ * `orderBy` order. No window codec and no `defaultParams`, no placeholder.
+ *
+ * - Without `by`: param-less (boot hydrates the `{}` tuple, exactly the tuple
+ *   `useLive(all)` subscribes to), and any param is a subscription this
+ *   declaration never minted — the gate throws `ResourceContractError`, so
+ *   the runtime refuses it as `contract-mismatch` (a `skew` verdict for a tab
+ *   on an older bundle that sent params). It is NO signal against a
+ *   param-less predecessor of the same key: that older tab subscribes `{}`,
+ *   passes, and parses the new rows with its own schema — a key converted to
+ *   `all` must keep the wire row identical or carry a contract the runtime
+ *   compares on `{}` (P8 v3, C39 open item).
+ * - With `by` (a scoped set): a tuple is exactly the `by` keys, each a
+ *   non-empty string (`{ pageId }`); `{}`, a missing, an extra or an empty
+ *   key is `contract-mismatch`. The server gate adds what only it knows —
+ *   each value the canonical text of its column's type.
  *
  * Self-registers under `key` (C39), so boot-snapshot hydration resolves the
  * key's snapshot against it before first paint.
  */
-export function allResourceDescriptor<Row>(
+export function allResourceDescriptor<Row, B extends string = never>(
   key: string,
   rowSchema: ZodParser<Row>,
   pkField: keyof Row & string,
   opts: {
-    all: AllQueryResourceContract<Row>["all"];
+    all: AllQueryResourceContract<Row, B>["all"];
     preload?: ResourcePreload;
   },
-): AllQueryResourceContract<Row> {
+): AllQueryResourceContract<Row, B> {
+  const by: readonly string[] =
+    (opts.all as { by?: readonly string[] }).by ?? [];
   const validateParams = (params: Record<string, string>): void => {
     const names = Object.keys(params);
-    if (names.length > 0) {
-      throw new ResourceContractError(
-        key,
-        `allResourceDescriptor("${key}"): unknown param${names.length > 1 ? "s" : ""} ` +
-          `${names.map((n) => `"${n}"`).join(", ")} — the whole ordered set takes none`,
-      );
+    if (by.length === 0) {
+      if (names.length > 0) {
+        throw new ResourceContractError(
+          key,
+          `allResourceDescriptor("${key}"): unknown param${names.length > 1 ? "s" : ""} ` +
+            `${names.map((n) => `"${n}"`).join(", ")} — the whole ordered set takes none`,
+        );
+      }
+      return;
+    }
+    const scope = by.map((f) => `"${f}"`).join(", ");
+    for (const n of names) {
+      if (!by.includes(n)) {
+        throw new ResourceContractError(
+          key,
+          `allResourceDescriptor("${key}"): unknown param "${n}" — a tuple of this scoped set is exactly ${scope}`,
+        );
+      }
+    }
+    for (const f of by) {
+      const v: unknown = params[f];
+      if (typeof v !== "string" || v === "") {
+        throw new ResourceContractError(
+          key,
+          `allResourceDescriptor("${key}"): param "${f}" must be a non-empty string, got ${JSON.stringify(v)} — a tuple of this scoped set is exactly ${scope}`,
+        );
+      }
     }
   };
-  const d = keyedRows<Row, Record<string, never>>(key, rowSchema, pkField, {
+  const d = keyedRows<Row, Record<string, string>>(key, rowSchema, pkField, {
     ...(opts.preload === undefined ? {} : { preload: opts.preload }),
     validateParams,
   });
-  return Object.assign(d, { all: opts.all, queryPk: pkField });
+  return Object.assign(d, {
+    all: opts.all,
+    queryPk: pkField,
+  }) as unknown as AllQueryResourceContract<Row, B>;
 }

@@ -1,7 +1,8 @@
 # optimistic-mutation
 
 Reusable optimistic-mutation primitive layered on top of `live-state`. It gives
-any surface reading a `liveValue` (or a `liveCollection`'s id set) immediate,
+any surface reading a `liveValue` (or a `liveCollection`'s id set, or one scope
+of a collection declared `all: { by }`) immediate,
 snap-free optimistic updates that reconcile cleanly with the authoritative
 WebSocket push.
 
@@ -58,6 +59,13 @@ and the reconnect drain are now ONE mechanism: the **send lane**
   mounts on one tuple are two writers to one server-side entity, and a
   per-instance chain orders each only against itself. Key is canonical sorted-key
   JSON, so mounts that build `params` differently still share it.
+- **One derivation of the tuple** (`web/internal/source.ts`,
+  `resolveOptimisticSource(source, query) → { resource, params }`): the hook and
+  both enqueue functions resolve their declaration-and-query pair through it,
+  params canonicalized there (`canonicalParams`), so the lane a detached write
+  joins and the lane a mounted overlay dispatches on cannot be spelled two ways.
+  It also runs a scope's params gate at the call site (a `{ where }` that is not
+  exactly the `by` fields throws, as does `{ where }` on a set without `by`).
 - **Failure-proof.** It advances on settle, resolve *or* reject, so a durably
   rejected op cannot wedge its successors — while each send still returns its own
   true outcome, leaving classification / `failed` / `retry` / `savedAt` untouched.
@@ -66,9 +74,11 @@ and the reconnect drain are now ONE mechanism: the **send lane**
   constrains nothing, so the registry can't grow per tuple ever written.
 - **Only the send is on it.** Overlay, React commits and both confirmation edges
   are off it: `confirmPass` fires from the QueryCache subscription at any time.
-- **A write with no overlay can still join it**: `enqueueResourceWrite(resource,
-  params, fn)` puts a plain thunk on a tuple's lane. Its fire-and-forget twin
-  `enqueueDetachedWrite(resource, params, { label, describe, onRejected? }, fn)`
+- **A write with no overlay can still join it**: `enqueueResourceWrite(source,
+  query, fn)` puts a plain thunk on a tuple's lane — `source, query` in the
+  hook's own forms (`value, params`, `collection, { ids }`, `scoped, { where }`).
+  Its fire-and-forget twin
+  `enqueueDetachedWrite(source, query, { label, describe, onRejected? }, fn)`
   owns the outcome nobody reads: an `EndpointError` (any status — a detached
   write has no Retry surface) is emitted on `optimisticRejectionSink`, any other
   failure is rethrown. It exists because the
@@ -114,6 +124,7 @@ The read is a declaration, positionally — mirroring `useLive`'s arguments:
 const picks = useOptimisticResource(prototypePicks, { name }, options); // a param'd liveValue
 const unread = useOptimisticResource(someValue, options);              // a param-less liveValue
 const ranks = useOptimisticResource(queueRanks, { ids }, options);     // a collection's id set (`:rows`)
+const blocks = useOptimisticResource(pageBlocks, { where: { pageId } }, options); // one scope of `all: { by }`
 if (picks.status === "loading") return <Loading />;
 if (picks.status === "error")            // a first load that failed: no base yet
   return <ResourceErrorInline error={picks.error} refetch={picks.refetch} />;
@@ -156,6 +167,15 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
   is gone; its last caller, the page editor's blocks, reads `pageBlocks`
   positionally. The read is always a declaration, so nothing can hand the
   overlay a stand-in base.
+- **A scoped set's base is the scope's rows in order** (`{ where }`, the same
+  tuple as `useLive(c, { where })`). Its frames after the sub-ack are scoped
+  `delta`s, merged into that `Row[]` by key by live-state, carrying `ackTx` but
+  no snapshot watermark (Rule B′): so an op is confirmed by its exact ack or by
+  content, and only a FULL frame's watermark (a sub-ack, a FULL reload) may
+  deny it — the registry keeps the last full frame's watermark, which is never
+  past a commit made after it. No overlay code knows the form; pinned by
+  `overlay.test.ts` (*a scoped `all` tuple*) and the hook suite's scoped
+  describe. Consumer: the page editor's block store (`pageBlocks`).
 - **Every optimistic reader asks for acks** on its tuple (`useResourceAcks` —
   see *Exact-ack confirmation* below): nothing to declare, nothing to forget.
 
@@ -493,8 +513,9 @@ identity** when nothing changed, so the React shell skips the state write. Unit-
 lifecycle coverage belongs.
 
 The hook (`web/internal/use-optimistic-resource.ts`) is a thin shell —
-`resolveForm` turns any of the read forms into (descriptor, params, options)
-with no hooks, so every form runs the same one core hook: the `pending` state
+`resolveOptimisticSource` (`web/internal/source.ts`) turns any of the read forms
+into (descriptor, canonical params) with no hooks, so every form runs the same
+one core hook: the `pending` state
 (mirrored in a commit-time ref, because a functional `setState`
 updater cannot yield the report lists without becoming effectful), the cache
 subscription, the reconnect auto-retry subscription, the `savedAt` stamp, and the

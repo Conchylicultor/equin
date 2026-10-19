@@ -59,6 +59,14 @@ export const graphNodes = liveCollection("graph.nodes", {
 });
 useLive(graphNodes);                                                  // every row, in order
 useLive(graphNodes, { select: countNodes });                          // a slice of it (a stable selector)
+
+// one tuple per scope: the rows whose `by` fields equal the tuple's params
+export const blocks = liveCollection("page.blocks", {       // an illustrative collection
+  from: blocksEntityRef, pick: ["id", "pageId", "rank"], id: "id",
+  all: { by: ["pageId"], orderBy: [["rank", "asc"]], unbounded: { reason: "one page's blocks" } },
+});
+useLive(blocks, { where: { pageId } });                               // one page's rows, in order
+useLive(blocks, { where: { pageId }, select: headings });             // a slice of one page
 ```
 
 - **Totals (`count: true`).** A window collection may declare `count: true`
@@ -122,6 +130,31 @@ useLive(graphNodes, { select: countNodes });                          // a slice
   `serveCollection`'s `all` arm (*Serve* below) and read by `useLive(all[, {
   select }])` (*Read* below); the join kinds it reads are query-resource's
   `AllJoinSpec`.
+  - **Scoped — `all: { by }`.** `all: { by: ["pageId"], orderBy, unbounded }`
+    holds every row OF ONE SCOPE per tuple: `key`'s params are exactly the
+    `by` fields (`AllQueryResourceContract<Row, B>`, params
+    `{ [K in B]: string }`), each a non-empty string — `{}`, a missing, extra
+    or empty key is `contract-mismatch`. It is `LiveAllCollection<Row, B>`, a
+    different type from the param-less set (neither is assignable to the
+    other), read `useLive(c, { where: { pageId }[, select] })`. `by` names
+    row fields (tsc), non-empty, each once, never the id (throws). `preload`
+    is `never` beside it (and throws): a scope is named by a reader, so boot
+    has no tuple and the set is never L2-persisted. `:rows` stays global (by
+    id, whatever the scope). Served from Postgres only — the external arm
+    refuses one (its scope compiles to SQL and route matches); a wire-encoded
+    field is still refused as for the whole set. The compile (query-resource,
+    *The `all` compiler*) checks each `by` field binds a base column of
+    text, uuid or integer type, and the server gate admits only that type's
+    canonical text, so the router's key match is the SQL's `col = $param`:
+    a write to another scope's row reaches no tuple of this one before any
+    load, a move between scopes is an exit in one and an entrant in the
+    other. Tests: `core/internal/live-collection.test.ts` (the declaration),
+    `server/internal/serve-collection-all.test.ts` (serve, the gate, the
+    types), `server/internal/serve-collection-all-scoped-oracle.test.ts`
+    (two scopes over the real feed: another scope's write costs 0 loads and
+    0 frames, an insert one refill + `orderOf`, a move an exit and an
+    entrant, a delete no load, an over-cap statement FULL for both),
+    `web/__tests__/use-live-all.test.tsx` (the read and its types).
   - **C39 — the old-bundle check.** `server/testing`'s
     `subscribeAsOldDescriptor({ key, schema }, { params?, build? })` answers
     what a tab still running a bundle that declared a key with a param-less
@@ -274,7 +307,9 @@ useLive(graphNodes, { select: countNodes });                          // a slice
     `orderOf`, any other write a one-row refill, and a persisted one keeps its
     `{}` snapshot current with nobody subscribed) and `:rows`, returning
     `ServedAllCollection` (`all`, `rows`, `keys: [key, key:rows]`, a two-entry
-    `declare`). Bound eagerly, never deferred. Fields bind like a window's —
+    `declare`) — `ServedAllCollection<Row, B>` for a scoped set, whose `all`
+    takes its scope params and whose server gate replaces the descriptor's
+    (it adds each value's canonical-text check). Bound eagerly, never deferred. Fields bind like a window's —
     by property name, or in `columns` over `j` (`AllJoinRefs`): a column ref,
     an AGGREGATE of a children / closure join (`(j) => j.att.done`, its value
     type the field's, `| null` unless declared not-null — tsc) or an `expr`
@@ -443,6 +478,12 @@ useLive(graphNodes, { select: countNodes });                          // a slice
     overloads sit after the window and group ones; an id read of the set is
     `useLive(all, { ids })` / `useLiveRow(all, id)` on `:rows`. Pinned by
     `web/__tests__/use-live-all.test.tsx`.
+  - **A scoped set** (`all: { by }`) — `useLive(c, { where })` /
+    `useLive(c, { where, select })`: the same read on the tuple the `where`
+    record IS (`LiveScopedAllQuery<B>`: exactly the `by` fields, each a
+    string — a tree, an op, a missing or extra field is a tsc error). A scope
+    change is a new tuple, so it reads `loading`. `useLive(c)` without one,
+    or a `where` on a param-less set, is a tsc error and throws.
   - Every query is identified by its canonical encoding, so inline object
     literals are fine. A list result (and its `loadMore`) keeps its identity
     until its rows, state or limit change, so a consumer may memoize on it.
@@ -467,7 +508,12 @@ useLive(graphNodes, { select: countNodes });                          // a slice
 - **Optimistic reads** are `optimistic-mutation`'s, over the same argument
   shapes: `useOptimisticResource(value, params?, options)` and
   `useOptimisticResource(c, { ids }, options)` (the `:rows` read — the queue's
-  ranks). `loading` until a real value lands, never on a placeholder, and
+  ranks) and `useOptimisticResource(c, { where }, options)` (one scope of an
+  `all: { by }` set — the page editor's `pageBlocks`: its base the scope's
+  rows in order, scoped deltas merged by key, an op confirmed by its exact ack
+  or by content and denied only by a full frame's watermark, Rule B′). The
+  lane-only writes (`enqueueResourceWrite` / `enqueueDetachedWrite`) take the
+  same pairs, resolved by the one `resolveOptimisticSource`. `loading` until a real value lands, never on a placeholder, and
   `dispatch` only on the `ready` arm — named by `status` like every read, with
   live-state's one named exemption: once a value has landed, a failing read
   stays `ready` and carries the failure as `error` (see live-state CLAUDE.md). The hook asks the server for standalone
@@ -1835,7 +1881,9 @@ never add one.
 - Groups: `{ groupBy: string; limit: string; where?: string }` — `where` is the
   same encoding, present only when not the absent filter.
 - `all`: `{}` — the set has no query, so it has one tuple; any param is a
-  `contract-mismatch` (`ResourceContractError`). An `all` collection's `:rows`
+  `contract-mismatch` (`ResourceContractError`). A scoped set (`all: { by }`)
+  is exactly its `by` fields (`{ pageId: string }`), each the canonical text
+  of its column's type (the server gate). An `all` collection's `:rows`
   takes the point params like any other.
 - Typed-query value: `{ q: string }` — the question's `canonicalJson` (a
   paged value's meta sibling too). Paged value: `{ q: string; limit: string;
@@ -2157,6 +2205,7 @@ never add one.
   - Exempts itself from:
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - `live/no-endpoint-read` — `web` (sanctioned)
+    - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
   - Exempted by:
     - `apps/deploy/analytics/dashboard` (1 debt)
     - `apps/desktop/wallpaper` (1 debt)

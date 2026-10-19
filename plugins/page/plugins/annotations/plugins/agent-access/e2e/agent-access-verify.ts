@@ -121,7 +121,11 @@ import {
   typeLines,
 } from "@plugins/page/plugins/editor/e2e";
 import { fetchBlockDocText } from "@plugins/page/plugins/editor-collab/e2e";
-import { plainOf, type Block } from "@plugins/page/plugins/editor/core";
+import {
+  pageBlocks,
+  plainOf,
+  type Block,
+} from "@plugins/page/plugins/editor/core";
 import { splitPageMeta } from "@plugins/page/plugins/markdown-apply/core";
 
 const out = arg("out", "/tmp/agent-access");
@@ -325,12 +329,13 @@ function counts(summary: ApplySummary): Record<string, number | undefined> {
 /** The page's rows, straight off the live-state resource endpoint. */
 async function fetchBlocks(pageId: string): Promise<Block[]> {
   const res = await agentFetch(
-    `/api/resources/page-blocks?pageId=${encodeURIComponent(pageId)}`,
+    `/api/resources/${pageBlocks.key}?pageId=${encodeURIComponent(pageId)}`,
   );
-  if (!res.ok) throw new Error(`page-blocks ${pageId}: HTTP ${res.status}`);
+  if (!res.ok)
+    throw new Error(`${pageBlocks.key} ${pageId}: HTTP ${res.status}`);
   const body = (await res.json()) as { value?: Block[] };
   if (!body.value)
-    throw new Error(`page-blocks ${pageId}: response carried no value`);
+    throw new Error(`${pageBlocks.key} ${pageId}: response carried no value`);
   return body.value;
 }
 

@@ -15,12 +15,21 @@
 // page editor's own `writeChainRef` had. Module scope is also what lets
 // `enqueueResourceWrite` order a write for a tuple with NO mounted hook at all.
 
-import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import type {
+  LiveAllCollection,
+  LiveRowsCollection,
+  LiveValue,
+} from "@plugins/network/plugins/live/core";
 import {
   EndpointError,
   getEndpointErrorMessage,
 } from "@plugins/infra/plugins/endpoints/web";
 import { optimisticRejectionSink, REJECTION_MESSAGE_MAX } from "../reporter";
+import {
+  resolveOptimisticSource,
+  type OptimisticIdsQuery,
+  type OptimisticScopedQuery,
+} from "./source";
 
 /** One tuple's lane: the tail to chain onto, and how many sends are unsettled. */
 interface Lane {
@@ -110,15 +119,34 @@ function trackSettle(laneKey: string, lane: Lane, run: Promise<unknown>): void {
  * unpredicted, it is UNORDERED, which is the property this primitive's ordered
  * fold depends on.
  *
- * It resolves the lane key exactly as `useOptimisticResource` does (same
- * `sendLaneKey`), which is the whole point: a different derivation would order
- * the write against nothing.
+ * The tuple is named exactly as `useOptimisticResource` names it — the same
+ * declaration-and-query forms, resolved by the same `resolveOptimisticSource`
+ * into the same `sendLaneKey` — which is the whole point: a different
+ * derivation would order the write against nothing.
  */
 export function enqueueResourceWrite<T, Data, P extends Record<string, string>>(
-  resource: ResourceDescriptor<Data, P>,
+  value: LiveValue<Data, P>,
   params: P | undefined,
   fn: () => Promise<T>,
+): Promise<T>;
+/** A scope of a collection declared `all: { by }` (`{ where }`). */
+export function enqueueResourceWrite<T, Row, B extends string>(
+  collection: LiveAllCollection<Row, B>,
+  query: OptimisticScopedQuery<NoInfer<B>>,
+  fn: () => Promise<T>,
+): Promise<T>;
+/** An id set of a collection (`{ ids }`, its `:rows` sibling). */
+export function enqueueResourceWrite<T, Row>(
+  collection: LiveRowsCollection<Row>,
+  query: OptimisticIdsQuery,
+  fn: () => Promise<T>,
+): Promise<T>;
+export function enqueueResourceWrite<T>(
+  source: object,
+  query: object | undefined,
+  fn: () => Promise<T>,
 ): Promise<T> {
+  const { resource, params } = resolveOptimisticSource(source, query);
   return enqueueResourceSend(sendLaneKey(resource.key, params), fn);
 }
 
@@ -142,26 +170,50 @@ export interface DetachedWriteInfo {
  * (`EndpointError`, any status) would otherwise vanish: it is routed to
  * `optimisticRejectionSink`, which tells the user and files the report. Any
  * other failure (network, a bug) is rethrown — a deliberate unhandled
- * rejection, reported by the crash collector.
+ * rejection, reported by the crash collector. Takes the same forms as
+ * `enqueueResourceWrite`.
  */
-export function enqueueDetachedWrite<P extends Record<string, string>, Data>(
-  resource: ResourceDescriptor<Data, P>,
+export function enqueueDetachedWrite<Data, P extends Record<string, string>>(
+  value: LiveValue<Data, P>,
   params: P | undefined,
   info: DetachedWriteInfo,
   fn: () => Promise<unknown>,
+): void;
+/** A scope of a collection declared `all: { by }` (`{ where }`). */
+export function enqueueDetachedWrite<Row, B extends string>(
+  collection: LiveAllCollection<Row, B>,
+  query: OptimisticScopedQuery<NoInfer<B>>,
+  info: DetachedWriteInfo,
+  fn: () => Promise<unknown>,
+): void;
+/** An id set of a collection (`{ ids }`, its `:rows` sibling). */
+export function enqueueDetachedWrite<Row>(
+  collection: LiveRowsCollection<Row>,
+  query: OptimisticIdsQuery,
+  info: DetachedWriteInfo,
+  fn: () => Promise<unknown>,
+): void;
+export function enqueueDetachedWrite(
+  source: object,
+  query: object | undefined,
+  info: DetachedWriteInfo,
+  fn: () => Promise<unknown>,
 ): void {
-  void enqueueResourceWrite(resource, params, fn).catch((err: unknown) => {
-    if (!(err instanceof EndpointError)) throw err;
-    optimisticRejectionSink.emit({
-      resourceKey: resource.key,
-      params: params ?? null,
-      label: info.label,
-      status: err.status,
-      message: getEndpointErrorMessage(err).slice(0, REJECTION_MESSAGE_MAX),
-      opSummary: info.describe,
-    });
-    if (info.onRejected) info.onRejected();
-  });
+  const { resource, params } = resolveOptimisticSource(source, query);
+  void enqueueResourceSend(sendLaneKey(resource.key, params), fn).catch(
+    (err: unknown) => {
+      if (!(err instanceof EndpointError)) throw err;
+      optimisticRejectionSink.emit({
+        resourceKey: resource.key,
+        params: params ?? null,
+        label: info.label,
+        status: err.status,
+        message: getEndpointErrorMessage(err).slice(0, REJECTION_MESSAGE_MAX),
+        opSummary: info.describe,
+      });
+      if (info.onRejected) info.onRejected();
+    },
+  );
 }
 
 /** Occupied lanes. Test-only introspection — pins the reclamation above. */

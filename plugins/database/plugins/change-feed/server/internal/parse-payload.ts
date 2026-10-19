@@ -180,3 +180,40 @@ export function parseLiveStatePayload(
   if (malformed) onMalformedLayout?.(change);
   return change;
 }
+
+/**
+ * A transaction's end marker: the `live_state_end` NOTIFY that
+ * `live_state_txn_end()` sends once per transaction, at commit, after every
+ * one of its `live_state` NOTIFYs. `n` is how many changelog rows (statements)
+ * the transaction wrote — an upper bound on its `live_state` NOTIFYs, since
+ * Postgres delivers one of several identical payloads.
+ */
+export interface TxnEnd {
+  xid: string;
+  n: number;
+}
+
+/**
+ * Parse a `live_state_end` payload (`{"x": "<xid8>", "n": <count>}`), STRICTLY:
+ * the router holds a transaction's changes until its end, so an end it cannot
+ * read must not be taken for some other one. `null` when the payload is not
+ * exactly that shape — the listener reports it and the transaction's changes
+ * are released by their deadline, never dropped.
+ */
+export function parseTxnEndPayload(raw: string): TxnEnd | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return null;
+  }
+  const { x, n, ...rest } = parsed as Record<string, unknown>;
+  if (Object.keys(rest).length > 0) return null;
+  if (typeof x !== "string" || !/^[0-9]+$/.test(x)) return null;
+  if (typeof n !== "number" || !Number.isSafeInteger(n) || n < 1) return null;
+  return { xid: x, n };
+}

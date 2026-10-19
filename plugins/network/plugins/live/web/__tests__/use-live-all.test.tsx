@@ -17,7 +17,10 @@
  *   - an `order` delta reorders, and every row keeps its identity — a moved
  *     one included (the cache's structural sharing keeps a reference the
  *     previous array already held);
- *   - id reads go to `:rows`, never to the whole set.
+ *   - id reads go to `:rows`, never to the whole set;
+ *   - a scoped set (`all: { by }`) is read one scope at a time: its `where`
+ *     record IS the tuple, each scope its own cache entry, and a read
+ *     without one (or a `where` on a set declared without `by`) throws.
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -338,6 +341,103 @@ describe("useLive(all)", () => {
       // @ts-expect-error — an `all` collection has no window to query
       useLive(c, { limit: 3 });
       return [whole, slice, wrong];
+    };
+    expect(typeof useTypeOnly).toBe("function");
+  });
+});
+
+describe("useLive(scoped, { where }) — a set declared `all: { by }`", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const SCOPED_FIELDS = { ...ROW_FIELDS, pageId: textField({ label: "Page" }) };
+  type ScopedRow = Row & { pageId: string };
+  function scopedCollection() {
+    return liveCollection(`test.use-live-all.scoped.${seq++}`, {
+      fields: SCOPED_FIELDS,
+      id: "id",
+      all: {
+        by: ["pageId"],
+        orderBy: [["rank", "asc"]],
+        unbounded: { reason: "one page's rows" },
+      },
+    });
+  }
+  const PA: ScopedRow[] = [{ id: "a", title: "A", rank: 1, pageId: "pa" }];
+  const PB: ScopedRow[] = [
+    { id: "b", title: "B", rank: 1, pageId: "pb" },
+    { id: "c", title: "C", rank: 2, pageId: "pb" },
+  ];
+
+  it("reads each scope as its own tuple — the `where` record is the params — plain and selected", async () => {
+    const c = scopedCollection();
+    const live = createLiveStateHarness();
+    live.queryClient.setQueryData(queryKeyFor(c.key, { pageId: "pa" }), PA);
+    live.queryClient.setQueryData(queryKeyFor(c.key, { pageId: "pb" }), PB);
+    const { result } = mount(live.Wrapper, () => ({
+      a: useLive(c, { where: { pageId: "pa" } }),
+      b: useLive(c, { where: { pageId: "pb" } }),
+      count: useLive(c, {
+        where: { pageId: "pb" },
+        select: (rows: ScopedRow[]) => rows.length,
+      }),
+    }));
+    await waitFor(() => expect(result.current.count.status).toBe("ready"));
+    expect(readyData(result.current.a)).toBe(
+      live.queryClient.getQueryData(queryKeyFor(c.key, { pageId: "pa" })),
+    );
+    expect(readyData(result.current.b)).toEqual(PB);
+    expect(readyData(result.current.count)).toBe(2);
+    // The param-less tuple was never read.
+    expect(
+      live.queryClient.getQueryState(queryKeyFor(c.key, undefined)),
+    ).toBeUndefined();
+  });
+
+  it("an untyped read without a scope, or a scope on a whole set, throws", () => {
+    const c = scopedCollection();
+    const whole = allCollection();
+    const live = createLiveStateHarness();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() =>
+      mount(live.Wrapper, () => useLive(c as unknown as typeof whole)),
+    ).toThrow(
+      /declared `all: \{ by \}` — read one scope, `\{ where: \{ pageId \} \}`/,
+    );
+    expect(() =>
+      mount(live.Wrapper, () =>
+        useLive(whole as unknown as typeof c, { where: { pageId: "pa" } }),
+      ),
+    ).toThrow(/`where` on a set declared without `all.by`/);
+  });
+
+  it("types: the scope is exactly the `by` fields, each a string; a scoped set has no param-less read", () => {
+    const c = scopedCollection();
+    const whole = allCollection();
+    // Never called — the assertions are the types and `@ts-expect-error`s.
+    const useTypeOnly = (pageId: string) => {
+      const rows: ResourceResult<ScopedRow[]> = useLive(c, {
+        where: { pageId },
+      });
+      const n: ResourceResult<number> = useLive(c, {
+        where: { pageId },
+        select: (r) => r.length,
+      });
+      // @ts-expect-error — a scoped set is read one scope at a time
+      useLive(c);
+      // @ts-expect-error — nor a select over every scope
+      useLive(c, { select: (r: ScopedRow[]) => r.length });
+      // @ts-expect-error — the scope's key is missing
+      useLive(c, { where: {} });
+      // @ts-expect-error — an op or a filter is no scope: the value is the param
+      useLive(c, { where: { pageId: { eq: pageId } } });
+      // @ts-expect-error — a field outside `by` is no part of the scope
+      useLive(c, { where: { pageId, title: "x" } });
+      // @ts-expect-error — a whole set has no scope
+      useLive(whole, { where: { pageId } });
+      // Id reads are global, whatever the scope.
+      const byId = useLive(c, { ids: ["a"] });
+      const row = useLiveRow(c, "a");
+      return [rows, n, byId, row];
     };
     expect(typeof useTypeOnly).toBe("function");
   });
