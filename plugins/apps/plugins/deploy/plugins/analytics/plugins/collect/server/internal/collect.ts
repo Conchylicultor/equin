@@ -154,6 +154,12 @@ async function visitorKeyFor(
   return { today, hash: first.hash, hashes };
 }
 
+interface ResolvedVisitor {
+  visitorId: string;
+  /** They were already linked — today or within the window — so they came before. */
+  known: boolean;
+}
+
 /**
  * The visitor's id. The newest link among the visitor's hashes under every
  * retained salt wins: today's (the common case), else the last day they came
@@ -164,7 +170,10 @@ async function visitorKeyFor(
  * Runs under the visitor's advisory lock, so a burst of first hits of the day
  * agrees on one id.
  */
-async function resolveVisitor(tx: Tx, key: VisitorKey): Promise<string> {
+async function resolveVisitor(
+  tx: Tx,
+  key: VisitorKey,
+): Promise<ResolvedVisitor> {
   const [found] = await tx
     .select({
       day: analyticsVisitorLinks.day,
@@ -179,12 +188,13 @@ async function resolveVisitor(tx: Tx, key: VisitorKey): Promise<string> {
     )
     .orderBy(desc(analyticsVisitorLinks.day))
     .limit(1);
-  if (found?.day === key.today) return found.visitorId;
+  if (found?.day === key.today)
+    return { visitorId: found.visitorId, known: true };
   const visitorId = found?.visitorId ?? randomUUID();
   await tx
     .insert(analyticsVisitorLinks)
     .values({ day: key.today, hash: key.hash, visitorId });
-  return visitorId;
+  return { visitorId, known: found !== undefined };
 }
 
 // ── visits ───────────────────────────────────────────────────────────────
@@ -225,7 +235,7 @@ async function findLiveVisitId(
 async function openVisit(
   tx: Tx,
   opts: {
-    visitorId: string;
+    visitor: ResolvedVisitor;
     host: string;
     path: string;
     referrer: string | undefined;
@@ -239,7 +249,8 @@ async function openVisit(
   const [row] = await tx
     .insert(analyticsVisits)
     .values({
-      visitorId: opts.visitorId,
+      visitorId: opts.visitor.visitorId,
+      returning: opts.visitor.known,
       day: utcDay(ctx.now),
       startedAt: ctx.now,
       lastAt: ctx.now,
@@ -274,11 +285,11 @@ async function recordPageview(
 ): Promise<CollectResponse> {
   const key = await visitorKeyFor(dbx, body.host, ctx);
   return withVisitorLock(dbx, key.hash, async (tx) => {
-    const visitorId = await resolveVisitor(tx, key);
+    const visitor = await resolveVisitor(tx, key);
     const visitId =
-      (await findLiveVisitId(tx, visitorId, ctx.now)) ??
+      (await findLiveVisitId(tx, visitor.visitorId, ctx.now)) ??
       (await openVisit(tx, {
-        visitorId,
+        visitor,
         host: body.host,
         path: body.path,
         referrer: body.referrer,
@@ -319,11 +330,11 @@ async function recordEvent(
 ): Promise<CollectResponse> {
   const key = await visitorKeyFor(dbx, body.host, ctx);
   return withVisitorLock(dbx, key.hash, async (tx) => {
-    const visitorId = await resolveVisitor(tx, key);
+    const visitor = await resolveVisitor(tx, key);
     const visitId =
-      (await findLiveVisitId(tx, visitorId, ctx.now)) ??
+      (await findLiveVisitId(tx, visitor.visitorId, ctx.now)) ??
       (await openVisit(tx, {
-        visitorId,
+        visitor,
         host: body.host,
         path: body.path,
         referrer: undefined,

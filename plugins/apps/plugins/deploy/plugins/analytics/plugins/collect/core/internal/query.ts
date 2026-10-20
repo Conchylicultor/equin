@@ -79,14 +79,18 @@ export function reportSourceFor(
  *   who came on ten days counts once. NOT additive: it is counted, never summed.
  * - `visits` / `pageviews` / `events` — counts.
  * - `bounces` — visits with exactly one pageview.
+ * - `returningVisits` — visits by a visitor who had visited before (their id
+ *   was already known when the visit opened); `visits - returningVisits` are
+ *   first visits. `null` when the site's release predates the count: the
+ *   dashboard reads reports from deployed sites of any age.
  * - `durationMs` — summed visit duration: from the visit's first page to its
  *   last page, plus the time that last page was visible.
  *
  * On a report row, counts are restricted to the row's value: for `page`,
  * `pageviews` counts views of that page, `durationMs` sums the time that page
  * was visible (time on page) and `events` counts events fired on it; for
- * `event`, `events` counts that event. `visitors` / `visits` / `bounces`
- * always count the visits that have the value.
+ * `event`, `events` counts that event. `visitors` / `visits` / `bounces` /
+ * `returningVisits` always count the visits that have the value.
  */
 export const MetricsSchema = z
   .object({
@@ -94,6 +98,8 @@ export const MetricsSchema = z
     visits: z.number().int().nonnegative(),
     pageviews: z.number().int().nonnegative(),
     bounces: z.number().int().nonnegative(),
+    // Absent from a report of an older release — read as "not counted".
+    returningVisits: z.number().int().nonnegative().nullable().default(null),
     durationMs: z.number().int().nonnegative(),
     events: z.number().int().nonnegative(),
   })

@@ -58,7 +58,7 @@ export function AnalyticsDashboard({
   const [range, setRange] = useState<AnalyticsRange>("30d");
   const [compare, setCompare] = useState(true);
   const [filters, setFilters] = useState<AnalyticsFilter[]>([]);
-  const [metric, setMetric] = useState<KpiId>("visitors");
+  const [metric, setMetric] = useState<KpiId>("visits");
   const [tabs, setTabs] = useState<Record<string, string>>({});
   const compareLabelId = useId();
 

@@ -16,6 +16,7 @@ export const ZERO_ADDITIVE_METRICS: AdditiveMetrics = {
   visits: 0,
   pageviews: 0,
   bounces: 0,
+  returningVisits: 0,
   durationMs: 0,
   events: 0,
 };
@@ -25,6 +26,7 @@ export const ZERO_METRICS: Metrics = {
   visits: 0,
   pageviews: 0,
   bounces: 0,
+  returningVisits: 0,
   durationMs: 0,
   events: 0,
 };
@@ -38,6 +40,10 @@ export function addMetrics(
     visits: a.visits + b.visits,
     pageviews: a.pageviews + b.pageviews,
     bounces: a.bounces + b.bounces,
+    returningVisits:
+      a.returningVisits === null || b.returningVisits === null
+        ? null
+        : a.returningVisits + b.returningVisits,
     durationMs: a.durationMs + b.durationMs,
     events: a.events + b.events,
   };

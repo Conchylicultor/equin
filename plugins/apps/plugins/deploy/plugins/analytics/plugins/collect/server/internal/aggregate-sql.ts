@@ -108,6 +108,7 @@ const metricColumns = sql`
   count(DISTINCT k.id)::int AS "visits",
   sum(mm.pageviews)::int AS "pageviews",
   (count(DISTINCT k.id) FILTER (WHERE k.pageviews = 1))::int AS "bounces",
+  (count(DISTINCT k.id) FILTER (WHERE k.returning))::int AS "returningVisits",
   sum(mm.duration_ms)::bigint AS "durationMs",
   sum(mm.events)::int AS "events"`;
 
@@ -115,6 +116,7 @@ const MetricsRow = {
   visits: z.coerce.number().int(),
   pageviews: z.coerce.number().int(),
   bounces: z.coerce.number().int(),
+  returningVisits: z.coerce.number().int(),
   durationMs: z.coerce.number().int(),
   events: z.coerce.number().int(),
 };
@@ -124,6 +126,7 @@ export function metricsOf(row: AdditiveMetrics): AdditiveMetrics {
     visits: row.visits,
     pageviews: row.pageviews,
     bounces: row.bounces,
+    returningVisits: row.returningVisits,
     durationMs: row.durationMs,
     events: row.events,
   };
@@ -232,7 +235,8 @@ export async function dailyTotalsRows(
     row: DailyRowSchema,
     query: sql`
       SELECT day::text AS "key", dimension, value,
-        visits, pageviews, bounces, duration_ms AS "durationMs", events
+        visits, pageviews, bounces, returning_visits AS "returningVisits",
+        duration_ms AS "durationMs", events
       FROM analytics_daily
       WHERE filter_dim = ${filterDim} AND filter_value = ${filterValue}
         AND day BETWEEN ${opts.from} AND ${opts.to}
@@ -253,7 +257,7 @@ export async function rollupDay(dbx: AnalyticsDb, day: string): Promise<void> {
       WITH ${visitsAndMemberships(sql`v.day = ${day}`)}
       INSERT INTO analytics_daily
         (day, filter_dim, filter_value, dimension, value,
-         visits, pageviews, bounces, duration_ms, events)
+         visits, pageviews, bounces, returning_visits, duration_ms, events)
       SELECT k.day, f.dim, f.value, mm.dim, mm.value, ${metricColumns}
       FROM m f
         JOIN m mm ON mm.visit_id = f.visit_id

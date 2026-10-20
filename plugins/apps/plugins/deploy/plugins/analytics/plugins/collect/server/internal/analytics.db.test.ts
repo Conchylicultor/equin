@@ -260,6 +260,13 @@ describe("collect", () => {
     });
     expect(a2).toMatchObject({ pageviews: 1, channel: "Direct" });
     expect(a1!.visitorId).toBe(a2!.visitorId);
+    // A's second visit is a return; everyone's first is not.
+    expect([a1, b, a2, c].map((v) => v!.returning)).toEqual([
+      false,
+      false,
+      true,
+      false,
+    ]);
     expect(b).toMatchObject({
       channel: "Campaign",
       utmCampaign: "launch",
@@ -323,6 +330,7 @@ describe("rollup", () => {
       visits: 4,
       pageviews: 6,
       bounces: 2, // A's second visit and B's single page
+      returningVisits: 1, // A's second visit
       events: 3,
     });
   });
@@ -601,7 +609,15 @@ describe("sliding identity", () => {
       now,
     );
     expect(year.source).toBe("totals");
-    expect(year.current.summary).toMatchObject({ visitors: 1, visits: 40 });
+    // Only the first of the 40 visits is new.
+    expect(year.current.summary).toMatchObject({
+      visitors: 1,
+      visits: 40,
+      returningVisits: 39,
+    });
+    expect(month.current.summary.returningVisits).toBe(
+      month.current.summary.visits,
+    );
     // A month bucket counts the visitor once, however many days they came.
     const october = year.current.series.find((p) => p.bucket === "2026-10-01");
     expect(october?.metrics).toMatchObject({ visitors: 1, visits: 31 });
@@ -637,6 +653,21 @@ describe("sliding identity", () => {
     );
     expect(await visitorIdsOn("/back30")).toHaveLength(1);
     expect(await visitorIdsOn("/back31")).toHaveLength(2);
+    const returns = await t.db
+      .select({
+        path: analyticsVisits.entryPath,
+        returning: analyticsVisits.returning,
+      })
+      .from(analyticsVisits)
+      .where(sql`${analyticsVisits.entryPath} IN ('/back30', '/back31')`)
+      .orderBy(analyticsVisits.startedAt, analyticsVisits.entryPath);
+    expect(returns).toEqual([
+      { path: "/back30", returning: false },
+      { path: "/back31", returning: false },
+      { path: "/back30", returning: true },
+      // Forgotten: a new visitor again.
+      { path: "/back31", returning: false },
+    ]);
 
     const today = addDays(X, 31);
     const salts = await t.db.select().from(analyticsSalts);

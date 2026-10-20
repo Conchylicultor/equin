@@ -44,6 +44,7 @@ export const RECORDED_COLUMNS = [
   "eventProps",
   // identity while the visitor keeps returning
   "visitorId",
+  "returning",
 ] as const;
 export type RecordedColumn = (typeof RECORDED_COLUMNS)[number];
 
@@ -131,8 +132,8 @@ export const RECORDED_FIELDS = [
   {
     name: "visitor_id",
     description:
-      "A random id, found again on each return through a hash of IP + browser + site + that day's salt; forgotten after 30 days without a visit",
-    columns: ["visitorId"],
+      "A random id, found again on each return through a hash of IP + browser + site + that day's salt, and whether the visit is such a return; forgotten after 30 days without a visit",
+    columns: ["visitorId", "returning"],
   },
 ] as const satisfies readonly RecordedField[];
 

@@ -127,6 +127,7 @@ Run with `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugi
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/chart --chart-1`
+    - `ui/tokens/chart --chart-3`
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --foreground`

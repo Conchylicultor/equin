@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  boolean,
   date,
   index,
   integer,
@@ -69,6 +70,12 @@ export const analyticsVisits = pgTable(
      * the sliding identity carry their daily hash here instead.
      */
     visitorId: text("visitor_id").notNull(),
+    /**
+     * The visitor had a visit before this one: their id was already linked
+     * when it opened (see {@link analyticsVisitorLinks}). Set once, never
+     * changes; a first visit is `false`.
+     */
+    returning: boolean("returning").notNull().default(false),
     /** UTC day the visit started on — the day every report attributes it to. */
     day: date("day", { mode: "string" }).notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
@@ -175,6 +182,7 @@ export const analyticsDaily = pgTable(
     visits: integer("visits").notNull(),
     pageviews: integer("pageviews").notNull(),
     bounces: integer("bounces").notNull(),
+    returningVisits: integer("returning_visits").notNull().default(0),
     durationMs: bigint("duration_ms", { mode: "number" }).notNull(),
     events: integer("events").notNull(),
   },

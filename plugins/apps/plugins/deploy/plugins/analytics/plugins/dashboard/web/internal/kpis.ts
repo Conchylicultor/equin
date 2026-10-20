@@ -18,6 +18,20 @@ export interface Kpi {
   format: (v: number) => string;
   /** Lower is better (bounce rate): a fall reads as good. */
   lowerIsBetter?: true;
+  /**
+   * Parts that add up to `value`, drawn stacked in the chart in this order
+   * (first at the bottom). A part is `null` when the report does not count it
+   * (a site whose release predates it); the chart then draws the plain line.
+   */
+  stack?: readonly KpiPart[];
+}
+
+export interface KpiPart {
+  id: string;
+  label: string;
+  value: (m: Metrics) => number | null;
+  /** A theme chart token, e.g. `var(--chart-1)`. */
+  color: string;
 }
 
 export type KpiId =
@@ -40,6 +54,21 @@ export const KPIS: readonly Kpi[] = [
     label: "Visits",
     value: (m) => m.visits,
     format: formatCount,
+    stack: [
+      {
+        id: "new",
+        label: "New visits",
+        value: (m) =>
+          m.returningVisits === null ? null : m.visits - m.returningVisits,
+        color: "var(--chart-1)",
+      },
+      {
+        id: "returning",
+        label: "Returning visits",
+        value: (m) => m.returningVisits,
+        color: "var(--chart-3)",
+      },
+    ],
   },
   {
     id: "pageviews",

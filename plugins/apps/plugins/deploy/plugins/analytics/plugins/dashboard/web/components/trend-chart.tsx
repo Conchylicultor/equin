@@ -1,16 +1,22 @@
 import type { ReactNode } from "react";
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Legend,
   Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import type { AnalyticsReport } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
-import { formatBucket, previousPeriodLabel } from "../internal/format";
+import {
+  chartPoints,
+  stackedParts,
+  type ChartPoint,
+} from "../internal/chart-points";
+import { previousPeriodLabel } from "../internal/format";
 import type { Kpi } from "../internal/kpis";
 
 // Chart chrome in theme tokens only — the pattern `stats/commits` established.
@@ -35,28 +41,6 @@ const lineCursor = {
   strokeDasharray: "3 3",
 } as const;
 
-interface ChartPoint {
-  label: string;
-  current: number | null;
-  previous: number | null;
-}
-
-/**
- * The two periods aligned bucket by bucket: point i of the previous period is
- * drawn under point i of the current one. A bucket whose rate has no
- * denominator is a gap, not a zero.
- */
-export function chartPoints(report: AnalyticsReport, kpi: Kpi): ChartPoint[] {
-  return report.current.series.map((point, i) => {
-    const prev = report.previous?.series[i];
-    return {
-      label: formatBucket(point.bucket, report.granularity),
-      current: kpi.value(point.metrics),
-      previous: prev ? kpi.value(prev.metrics) : null,
-    };
-  });
-}
-
 export function TrendChart({
   report,
   kpi,
@@ -66,10 +50,11 @@ export function TrendChart({
 }): ReactNode {
   const points = chartPoints(report, kpi);
   const hasPrevious = report.previous !== null;
+  const stack = stackedParts(kpi, points);
   return (
     <div className="h-56 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart
+        <ComposedChart
           data={points}
           margin={{ top: 8, right: 16, bottom: 0, left: 0 }}
         >
@@ -92,6 +77,14 @@ export function TrendChart({
             contentStyle={tooltipContentStyle}
             cursor={lineCursor}
             formatter={(value: number) => kpi.format(value)}
+            // Stacked, the parts are the series: the total joins the label.
+            labelFormatter={(label: string, payload) => {
+              const total = (payload[0]?.payload as ChartPoint | undefined)
+                ?.current;
+              return stack && total != null
+                ? `${label} · ${kpi.format(total)} ${kpi.label.toLowerCase()}`
+                : label;
+            }}
           />
           <Legend
             verticalAlign="top"
@@ -111,16 +104,37 @@ export function TrendChart({
               isAnimationActive={false}
             />
           )}
-          <Line
-            name={kpi.label}
-            dataKey="current"
-            stroke="var(--chart-1)"
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4 }}
-            isAnimationActive={false}
-          />
-        </LineChart>
+          {stack ? (
+            // The parts fill up to the total, first part at the bottom.
+            stack.map((part) => (
+              <Area
+                key={part.id}
+                name={part.label}
+                dataKey={(p: ChartPoint) => p.parts[part.id]}
+                stackId="kpi"
+                type="linear"
+                stroke={part.color}
+                strokeWidth={2}
+                fill={part.color}
+                fillOpacity={0.25}
+                dot={false}
+                activeDot={{ r: 4 }}
+                legendType="plainline"
+                isAnimationActive={false}
+              />
+            ))
+          ) : (
+            <Line
+              name={kpi.label}
+              dataKey="current"
+              stroke="var(--chart-1)"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+              isAnimationActive={false}
+            />
+          )}
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );

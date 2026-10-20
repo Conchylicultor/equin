@@ -1867,6 +1867,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/chart --chart-1`
+                  - `ui/tokens/chart --chart-3`
                   - `ui/tokens/color-palette --border`
                   - `ui/tokens/color-palette --destructive`
                   - `ui/tokens/color-palette --foreground`
