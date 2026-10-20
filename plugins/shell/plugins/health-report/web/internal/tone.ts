@@ -1,6 +1,6 @@
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { HealthLevel, HealthState } from "../../core";
+import type { HealthLevel, HealthState, RowLevel } from "../../core";
 
 /** The dot's fill for each level. Theme tokens only. */
 export const DOT_CLASS: Record<HealthLevel, ClassName> = {
@@ -24,11 +24,12 @@ export const DOT_HALO_CLASS: Record<HealthLevel, ClassName> = {
 };
 
 /** Summary text colour: only a row that needs a look is tinted. */
-export const SUMMARY_CLASS: Record<HealthLevel, ClassName> = {
+export const SUMMARY_CLASS: Record<RowLevel, ClassName> = {
   ok: cn("text-muted-foreground"),
   attention: cn("text-warning"),
   critical: cn("text-destructive"),
   unknown: cn("text-muted-foreground"),
+  "not-applicable": cn("text-muted-foreground"),
 };
 
 /**

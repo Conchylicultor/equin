@@ -16,15 +16,24 @@ export type HealthState = "ok" | "attention" | "critical";
  * - with a `summary` — known to be unreadable right now ("Unknown while
  *   disconnected", "This check crashed"). The dot is grey and still.
  *
+ * `not-applicable` says the check does not apply on this host at all (a
+ * machine-only check under a host without the computer): nothing to vouch for,
+ * and nothing wrong. It is left out of the merge — it neither greys nor greens
+ * the dot — and its row is drawn hollow, last, with `summary` saying why.
+ *
  * `transitioning` marks a state that is on its way somewhere else (a socket
  * reconnecting): the dot pulses while it is set.
  */
 export type HealthStatus =
   | { state: "unknown"; summary?: string }
+  | { state: "not-applicable"; summary: string }
   | { state: HealthState; summary: string; transitioning?: boolean };
 
 /** The merged verdict: the worst known state, or `unknown` when a row cannot vouch for itself. */
 export type HealthLevel = HealthState | "unknown";
+
+/** What one row shows: a level, or `not-applicable` — which the merge never sees. */
+export type RowLevel = HealthLevel | "not-applicable";
 
 /** What an info row shows: a title and a one-line summary, never a state. */
 export interface HealthInfo {

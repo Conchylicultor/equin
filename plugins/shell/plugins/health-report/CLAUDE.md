@@ -41,12 +41,17 @@ HealthReport.Row({
 
 - **`useStatus` runs all the time**, report open or not — it is what colours the
   dot. Keep it a cheap read of state that is already resident. It returns
-  `{ state: "ok" | "attention" | "critical", summary, transitioning? }` or
-  `{ state: "unknown", summary? }`.
+  `{ state: "ok" | "attention" | "critical", summary, transitioning? }`,
+  `{ state: "unknown", summary? }` or `{ state: "not-applicable", summary }`.
 - **`unknown` is a state, not a stand-in.** Without a summary it means "not
   known yet": grey and pulsing, and the report says "Checking…". With one it
   means "known to be unreadable right now" ("Unknown while disconnected"): grey
   and still. Never return `ok` because you do not know yet.
+- **`not-applicable` is "this check does not exist here"**, not "can't read
+  it": a machine-only check under a host without the computer (its read is
+  `unavailable` — return `{ state: "not-applicable", summary: result.message }`).
+  The merge leaves it out, so it neither greys nor greens the dot; the row is
+  listed last with a hollow dot and its summary saying why.
 - **Info rows cannot move the dot.** They have no field to declare a state
   through, so this holds by construction. Their `useInfo` runs only while the
   report is open.
@@ -62,6 +67,7 @@ HealthReport.Row({
 `mergeHealth` (`core/merge.ts`, pure, bun-tested): precedence
 `critical > attention > unknown > ok`, so the dot cannot claim green before
 every status row has reported. `count` is the rows in attention or critical.
+`not-applicable` rows are skipped, exactly as if unregistered.
 The dot pulses while any row is not known yet or is `transitioning`.
 
 **Zero rows is `ok`** ("All systems normal"): with nothing registered there is
@@ -73,7 +79,8 @@ accessible name: "All systems normal", "Checking…", the one non-green row's ow
 summary, or "N things need attention". When every unknown row has said why it
 is unknown, the verdict gives that reason instead of "Checking…".
 
-Row order (`sortRows`): info rows first, then status rows worst-first, ties by
+Row order (`sortRows`): info rows first, then status rows worst-first
+(`not-applicable` last), ties by
 `order`, then registration order. This is why the slot is a plain `defineSlot`
 and not a render slot: the report owns the order, so reorder middleware would
 only fight it.
@@ -181,11 +188,13 @@ detail is rendered through `renderIsolated`.
     - `HealthStatus`
     - `InfoRow`
     - `ReportedStatus`
+    - `RowLevel`
     - `SortableRow`
     - `StatusRow`
   - Exports (values):
     - `isPending`
     - `isPulsing`
+    - `isTransitioning`
     - `levelOf`
     - `mergeHealth`
     - `sortRows`

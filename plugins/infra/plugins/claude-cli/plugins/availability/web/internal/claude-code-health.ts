@@ -13,14 +13,15 @@ import { claudeCodeProblem, type ClaudeCodeStatus } from "../../core";
  * - `missing` / `signed-out` → `critical`: the app exists to run agents, and it
  *   cannot start one;
  * - `unreadable` → `unknown` with why (the check failed; Claude Code may be fine);
- * - `unavailable` (a host without the computer) → `unknown` with the sentence
- *   saying so: there is no CLI here to vouch for, and none is claimed.
+ * - `unavailable` (a host without the computer) → `not-applicable` with the
+ *   sentence saying so: there is no CLI here to vouch for, none is claimed, and
+ *   nothing is wrong — the dot is neither greyed nor greened by it.
  */
 export function claudeCodeVerdict(
   result: ResourceResult<ClaudeCodeStatus> | ResourceUnavailable,
 ): HealthStatus {
   if (result.status === "unavailable") {
-    return { state: "unknown", summary: result.message };
+    return { state: "not-applicable", summary: result.message };
   }
   if (result.status === "loading") return { state: "unknown" };
   if (result.status === "error") {

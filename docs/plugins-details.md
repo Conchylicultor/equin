@@ -44425,11 +44425,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthStatus`
           - `InfoRow`
           - `ReportedStatus`
+          - `RowLevel`
           - `SortableRow`
           - `StatusRow`
         - Exports (values):
           - `isPending`
           - `isPulsing`
+          - `isTransitioning`
           - `levelOf`
           - `mergeHealth`
           - `sortRows`

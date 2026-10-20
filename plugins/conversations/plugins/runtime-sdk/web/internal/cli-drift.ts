@@ -19,14 +19,15 @@ export interface CliDriftInputs {
  * the SDK's control protocol may have moved under it. When Claude Code itself
  * is missing or unreadable, its own row already says so: this one is
  * `unknown`, never a claim about versions it cannot read. Under a host without
- * the computer (both versions are read off it) the row is `unknown` with the
- * unavailable sentence: there is no version to compare, and none is made up.
+ * the computer (both versions are read off it) the row is `not-applicable` with
+ * the unavailable sentence: there is no version to compare, none is made up,
+ * and nothing is wrong.
  */
 export function cliDriftVerdict(
   result: ResourceResult<CliDriftInputs> | ResourceUnavailable,
 ): HealthStatus {
   if (result.status === "unavailable") {
-    return { state: "unknown", summary: result.message };
+    return { state: "not-applicable", summary: result.message };
   }
   if (result.status === "loading") return { state: "unknown" };
   if (result.status === "error") {

@@ -311,6 +311,26 @@ describe("the report", () => {
     expect(button().textContent).toBe("1");
   });
 
+  it("keeps a not-applicable row out of the dot, and lists it last, hollow", async () => {
+    renderReport([
+      status("machine", { state: "not-applicable", summary: "na-summary" }),
+      status("calm", { state: "ok", summary: "calm-summary" }),
+    ]);
+    expect(button().dataset.health).toBe("ok");
+    expect(button().getAttribute("aria-label")).toBe("All systems normal");
+    expect(dotClass()).toContain("bg-success");
+
+    await openReport();
+    const calm = summary("calm-summary");
+    const na = summary("na-summary");
+    expect(
+      calm.compareDocumentPosition(na) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("dialog").querySelector(".bg-transparent"),
+    ).toBeTruthy();
+  });
+
   it("is green with an info row alone", () => {
     renderReport([info("worktree")]);
     expect(button().dataset.health).toBe("ok");

@@ -1,5 +1,5 @@
 import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
-import type { HealthStatus } from "../../core";
+import { isTransitioning, type HealthStatus } from "../../core";
 
 /**
  * Each status row's latest status, keyed by row id. A row with no entry has not
@@ -15,9 +15,11 @@ export type HealthStatuses = Readonly<Record<string, HealthStatus>>;
 export const HealthStore = defineScopedStore<HealthStatuses>(() => ({}));
 
 function sameStatus(a: HealthStatus, b: HealthStatus): boolean {
-  if (a.state !== b.state || a.summary !== b.summary) return false;
-  if (a.state === "unknown" || b.state === "unknown") return true;
-  return (a.transitioning ?? false) === (b.transitioning ?? false);
+  return (
+    a.state === b.state &&
+    a.summary === b.summary &&
+    isTransitioning(a) === isTransitioning(b)
+  );
 }
 
 /**

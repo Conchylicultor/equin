@@ -53,9 +53,9 @@ describe("claudeCodeVerdict", () => {
     });
   });
 
-  test("is unknown with why, never ok, where no computer can answer", () => {
+  test("is not applicable, with why, where no computer can answer", () => {
     expect(
       claudeCodeVerdict({ status: "unavailable", message: "Not here." }),
-    ).toEqual({ state: "unknown", summary: "Not here." });
+    ).toEqual({ state: "not-applicable", summary: "Not here." });
   });
 });

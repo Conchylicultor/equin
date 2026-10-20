@@ -12,6 +12,10 @@ const critical = (summary = "broken"): HealthStatus => ({
   state: "critical",
   summary,
 });
+const notApplicable = (summary = "Not here."): HealthStatus => ({
+  state: "not-applicable",
+  summary,
+});
 
 describe("mergeHealth", () => {
   it("is ok, with nothing pending, over zero rows", () => {
@@ -62,6 +66,12 @@ describe("mergeHealth", () => {
     ).toBe(2);
   });
 
+  it("leaves a not-applicable row out, as if it were not registered", () => {
+    expect(mergeHealth([ok(), notApplicable()])).toEqual(mergeHealth([ok()]));
+    expect(mergeHealth([notApplicable()])).toEqual(mergeHealth([]));
+    expect(mergeHealth([attention(), notApplicable()]).count).toBe(1);
+  });
+
   it("is transitioning when any row is transitioning", () => {
     expect(mergeHealth([ok(), attention("x", true)]).transitioning).toBe(true);
     expect(mergeHealth([ok(), attention("x", false)]).transitioning).toBe(
@@ -100,6 +110,16 @@ describe("verdictOf", () => {
     expect(verdictOf([attention("Reconnecting…"), undefined])).toBe(
       "Reconnecting…",
     );
+  });
+
+  it("ignores not-applicable rows", () => {
+    expect(verdictOf([ok(), notApplicable()])).toBe("All systems normal");
+    expect(verdictOf([notApplicable(), notApplicable()])).toBe(
+      "All systems normal",
+    );
+    expect(
+      verdictOf([notApplicable(), { state: "unknown", summary: "crashed" }]),
+    ).toBe("crashed");
   });
 
   it("counts several non-green rows", () => {
@@ -141,8 +161,9 @@ describe("sortRows", () => {
         row("unknown", "status", 0, undefined),
         row("attention", "status", 0, attention()),
         row("critical", "status", 0, critical()),
+        row("n/a", "status", -1, notApplicable()),
       ]),
-    ).toEqual(["critical", "attention", "unknown", "ok"]);
+    ).toEqual(["critical", "attention", "unknown", "ok", "n/a"]);
   });
 
   it("breaks severity ties by order, then keeps registration order", () => {

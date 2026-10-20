@@ -6,11 +6,13 @@ export type {
   HealthState,
   HealthStatus,
   InfoRow,
+  RowLevel,
   StatusRow,
 } from "./types";
 export {
   isPending,
   isPulsing,
+  isTransitioning,
   levelOf,
   mergeHealth,
   sortRows,

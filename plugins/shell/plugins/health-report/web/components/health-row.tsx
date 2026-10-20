@@ -24,6 +24,7 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   isPulsing,
@@ -193,9 +194,14 @@ export function StatusRowView({
   const level = levelOf(status);
   const Glance = row.glance;
   // The dot at the header's size, so it reads at a glance beside the title.
+  // A check that does not apply here is hollow: no status, nothing live.
   const leading = (
     <ControlSizeProvider size="lg">
-      <HealthDot level={level} pulsing={isPulsing(status)} />
+      {level === "not-applicable" ? (
+        <StatusDot ringClass={cn("border-muted-foreground/50")} />
+      ) : (
+        <HealthDot level={level} pulsing={isPulsing(status)} />
+      )}
     </ControlSizeProvider>
   );
   const actions = contributedActions(row);

@@ -31,9 +31,9 @@ describe("cliDriftVerdict", () => {
     ).toBe("unknown");
   });
 
-  test("no computer to read the versions from is unknown, with why", () => {
+  test("no computer to read the versions from is not applicable, with why", () => {
     expect(
       cliDriftVerdict({ status: "unavailable", message: "Not here." }),
-    ).toEqual({ state: "unknown", summary: "Not here." });
+    ).toEqual({ state: "not-applicable", summary: "Not here." });
   });
 });
