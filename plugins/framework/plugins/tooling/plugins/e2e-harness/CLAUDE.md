@@ -190,7 +190,9 @@ and every page of a `session()` context is filmed by a CDP screencast at full
 resolution, so each step keeps the frame (JPEG q90) of the page as it ended. At teardown the
 recording is filed under the Bash tool call that launched the script — the
 conversation view shows it as a filmstrip under that call. Nothing to opt into;
-`--no-record` opts out for a profiler. See
+`--no-record` opts out for a profiler. A page that could not be filmed (still
+mid cross-site navigation when the run ended) prints `recording: not filmed —
+<url>`; it does not fail the run. See
 [`debug/browser-recordings`](../../../../../debug/plugins/browser-recordings/CLAUDE.md).
 
 ## Network idle is measured here, not by Playwright

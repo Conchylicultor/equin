@@ -145,6 +145,57 @@ export function createRecorder(
   };
   instrumentation.addListener(listener);
 
+  /** Resolves when `finish()` starts: a page still between documents stays unfilmed. */
+  let stop = (): void => undefined;
+  const stopped = new Promise<"stopped">((resolve) => {
+    stop = () => resolve("stopped");
+  });
+  /** Pages the run ended before their screencast could start, and why. */
+  const unfilmed: string[] = [];
+
+  /**
+   * Start the page's screencast, waiting out a cross-site navigation: while
+   * one is in flight Chromium refuses it ("Not attached to an active page") —
+   * the session is between the old document and the new one until the new
+   * one is live, so an immediate retry is refused too, while a retry once the
+   * new document fires DOMContentLoaded starts on the same session (measured:
+   * every time). False when the run ended first.
+   */
+  const startScreencast = async (
+    page: Page,
+    cdp: CDPSession,
+  ): Promise<boolean> => {
+    for (;;) {
+      try {
+        // The caps only bound the frame: a page at its own size fits, so
+        // frames are full resolution (the viewport in device pixels). JPEG,
+        // not PNG: Chromium encodes EVERY painted frame, and PNG encoding a
+        // full viewport per paint is heavy enough to slow the run it films; at
+        // quality 90 text stays sharp and a frame is several times smaller.
+        await cdp.send("Page.startScreencast", {
+          format: "jpeg",
+          quality: SCREENCAST_QUALITY,
+          maxWidth: 8192,
+          maxHeight: 8192,
+        });
+        return true;
+      } catch (err) {
+        if (!isBetweenDocuments(err)) throw err;
+      }
+      // A closed page rejects here; `filmPage` knows that one.
+      const next = await Promise.race([
+        page.waitForEvent("domcontentloaded", { timeout: 0 }),
+        stopped,
+      ]);
+      if (next === "stopped") {
+        unfilmed.push(
+          `${page.url()} (its navigation never reached a new document)`,
+        );
+        return false;
+      }
+    }
+  };
+
   const film = async (page: Page): Promise<void> => {
     const cdp = await page.context().newCDPSession(page);
     cdp.on("Page.screencastFrame", (frame) => {
@@ -156,18 +207,7 @@ export function createRecorder(
           if (!page.isClosed()) failures.push(err);
         });
     });
-    // The caps only bound the frame: a page at its own size fits, so frames
-    // are full resolution (the viewport in device pixels). JPEG, not PNG:
-    // Chromium encodes EVERY painted frame, and PNG encoding a full viewport
-    // per paint is heavy enough to slow the run it films; at quality 90 text
-    // stays sharp and a frame is several times smaller.
-    await cdp.send("Page.startScreencast", {
-      format: "jpeg",
-      quality: SCREENCAST_QUALITY,
-      maxWidth: 8192,
-      maxHeight: 8192,
-    });
-    screencasts.push({ page, cdp });
+    if (await startScreencast(page, cdp)) screencasts.push({ page, cdp });
   };
   const filming: Promise<void>[] = [];
 
@@ -188,7 +228,10 @@ export function createRecorder(
     async finish() {
       instrumentation.removeListener(listener);
       const t0 = performance.now();
+      stop();
       await Promise.all(filming);
+      for (const page of unfilmed)
+        console.warn(`recording: not filmed — ${page}`);
       for (const { page, cdp } of screencasts) {
         if (page.isClosed()) continue;
         await cdp.send("Page.stopScreencast");
@@ -205,6 +248,14 @@ export function createRecorder(
       );
     },
   };
+}
+
+/** Chromium's refusal of a screencast while the page is between two documents. */
+function isBetweenDocuments(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    err.message.includes("Not attached to an active page")
+  );
 }
 
 /** The one parameter of a call that says what it acted on, shortened. */
