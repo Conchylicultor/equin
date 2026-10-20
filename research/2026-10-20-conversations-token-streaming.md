@@ -156,12 +156,12 @@ render). Plus a check with streaming off (no subscriber) that (b) is unchanged.
 Built as designed, with these differences:
 
 - **Where the pieces live.** No new sub-plugin. The value
-  (`conversations.partial-message`, `PartialMessage`) is in `conversations/core`
-  and served by `conversations/server` (`partial-message.ts`) through
-  `Runtime.get(row.runtime).watchPartial`. The block is in `assistant-text`
+  (`conversations.partial-message`, `PartialMessage`) is in `conversations/core`,
+  declared `needsMachine`, and served by a new `conversations/machine` half
+  (`partial-message.ts`) through `Runtime.get(row.runtime).watchPartial`. The block is in `assistant-text`
   (`StreamingText`, a `JsonlViewer.TranscriptEnd` contribution), drawn by the
-  same `AssistantTextBody` a finished row uses. In a demo scope the value is
-  answered `null` (`conversations/web`, `Demo.Resource`): no agent runs there.
+  same `AssistantTextBody` a finished row uses. In the demo (no computer
+  behind the page) the read is `unavailable` and nothing is drawn.
 - **The wire restates the shape.** `runtime-sdk/core/partial.ts` defines its own
   `PartialMessage` schema rather than importing `conversations/core`: the agent
   loads that barrel, and the conversations barrel would add its whole closure to

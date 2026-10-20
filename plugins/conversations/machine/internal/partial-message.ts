@@ -1,10 +1,10 @@
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
   _conversations,
   getConversationRuntime,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { conversationPartialMessage, type PartialMessage } from "../../core";
-import { Runtime } from "./runtime";
+import { Runtime } from "../../server/internal/runtime";
 
 /** Each watched conversation's streaming message, as its runtime last reported it. */
 const held = new Map<string, PartialMessage | null>();

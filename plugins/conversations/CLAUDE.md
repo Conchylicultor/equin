@@ -18,6 +18,7 @@
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "held-turn-undelivered"
+    - `resource.declare` "conversations.partial-message"
   - Uses: 74 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×25
     - `conversations/turn-ledger` ×11
@@ -84,6 +85,7 @@
     - `defineJob('conversations.deliver-held-turns')`
     - `defineTriggerEvent('conversation.turn-completed')`
     - `defineJob('conversations.status-sweep')`
+  - Resources: `conversations.partial-message` (push, notified)
   - Routes:
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
@@ -113,6 +115,8 @@
     - `useHasActiveSiblingInWorktree`
     - `useHasActiveSiblings`
     - `useLiveConversation`
+- Machine:
+  - Uses: `network/live.serveValue`
 - Core:
   - Uses:
     - `config_v2.defineConfig`
@@ -124,6 +128,7 @@
     - `fields/bool/config.boolField`
     - `fields/int/config.intField`
     - `infra/endpoints.defineEndpoint`
+    - `network/live.liveValue`
     - `primitives/pane.defineRoute`
     - `tasks/tasks-core.ConversationSchema`
   - Exports (types):
@@ -134,6 +139,8 @@
     - `CutRefusal`
     - `DeleteConversationQuery`
     - `ListTurnsQuery`
+    - `PartialBlock`
+    - `PartialMessage`
     - `PostTurnBody`
     - `ResumeBlocked`
     - `ResumeBlockedReason`
@@ -145,6 +152,7 @@
     - `BackgroundWorkSchema`
     - `canSendTurn`
     - `closeConversation`
+    - `conversationPartialMessage`
     - `conversationRoute`
     - `CONVERSATIONS_CATEGORY_ID`
     - `createConversation`
@@ -161,6 +169,8 @@
     - `listConversations`
     - `listConversationTurns`
     - `ListTurnsQuerySchema`
+    - `PartialBlockSchema`
+    - `PartialMessageSchema`
     - `postConversationTurn`
     - `PostTurnBodySchema`
     - `QUESTION_WAITING_FOR`
@@ -232,7 +242,7 @@
         - Plugins:
           - **`api-error`** — Renders the CLI's own notice of a failed model request in the JSONL viewer — a usage limit with its reset time, a server error, an expired login — as a warning line, not as the agent's words.
           - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that…
-          - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
+          - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering, and the message the agent is still writing (the conversations.partial-message value) as a block at the end of the…
           - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
           - **`attachment`** [27 sub-plugins] — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
           - **`background-shells`** [exempt] — The background-shell surfaces: every background Bash shell of a conversation and its state (useConversationShells, folded from the transcript the view already holds), its live output tail…

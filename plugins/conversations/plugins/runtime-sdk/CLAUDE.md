@@ -81,6 +81,8 @@ Gotchas the spike hit:
     - `CommandReply`
     - `HelloReply`
     - `OpenRequest`
+    - `PartialFrame`
+    - `PartialMessage`
   - Exports (values):
     - `AGENT_EVENTS_FILE`
     - `AGENT_OPTIONS_FILE`
@@ -89,13 +91,18 @@ Gotchas the spike hit:
     - `AgentEventSchema`
     - `AgentLaunchOptionsSchema`
     - `AgentLifecycleSchema`
+    - `applyPartialFrame`
     - `CommandReplySchema`
     - `DismissReplySchema`
     - `HelloReplySchema`
     - `OpenRequestSchema`
+    - `partialFrameOf`
+    - `PartialFrameSchema`
+    - `PartialStreamLineSchema`
     - `PROTOCOL_VERSION`
     - `sameMajorMinor`
     - `sdkBundledCli`
+    - `SubscribeReplySchema`
     - `TurnReplySchema`
 - Cross-plugin:
   - Imported by: `apps/agent-manager/demo`

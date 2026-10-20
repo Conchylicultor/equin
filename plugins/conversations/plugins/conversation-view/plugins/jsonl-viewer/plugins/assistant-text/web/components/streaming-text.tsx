@@ -18,6 +18,9 @@ export function StreamingText({
   const partial = useLive(conversationPartialMessage, { id: conversation.id });
   const events = useTranscriptEvents();
   switch (partial.status) {
+    case "unavailable":
+      // No computer behind this page (the demo): no agent is writing.
+      return null;
     case "loading":
       // Not known yet: nothing is drawn — exactly what the transcript shows
       // until a finished row lands, so nothing reverses itself.

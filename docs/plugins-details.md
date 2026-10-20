@@ -12502,6 +12502,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "held-turn-undelivered"
+      - `resource.declare` "conversations.partial-message"
     - Uses: 74 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×25
       - `conversations/turn-ledger` ×11
@@ -12568,6 +12569,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `defineJob('conversations.deliver-held-turns')`
       - `defineTriggerEvent('conversation.turn-completed')`
       - `defineJob('conversations.status-sweep')`
+    - Resources: `conversations.partial-message` (push, notified)
     - Routes:
       - `GET /api/conversations`
       - `GET /api/conversations/:id`
@@ -12597,6 +12599,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useHasActiveSiblingInWorktree`
       - `useHasActiveSiblings`
       - `useLiveConversation`
+  - Machine:
+    - Uses: `network/live.serveValue`
   - Core:
     - Uses:
       - `config_v2.defineConfig`
@@ -12608,6 +12612,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/bool/config.boolField`
       - `fields/int/config.intField`
       - `infra/endpoints.defineEndpoint`
+      - `network/live.liveValue`
       - `primitives/pane.defineRoute`
       - `tasks/tasks-core.ConversationSchema`
     - Exports (types):
@@ -12618,6 +12623,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `CutRefusal`
       - `DeleteConversationQuery`
       - `ListTurnsQuery`
+      - `PartialBlock`
+      - `PartialMessage`
       - `PostTurnBody`
       - `ResumeBlocked`
       - `ResumeBlockedReason`
@@ -12629,6 +12636,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `BackgroundWorkSchema`
       - `canSendTurn`
       - `closeConversation`
+      - `conversationPartialMessage`
       - `conversationRoute`
       - `CONVERSATIONS_CATEGORY_ID`
       - `createConversation`
@@ -12645,6 +12653,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `listConversations`
       - `listConversationTurns`
       - `ListTurnsQuerySchema`
+      - `PartialBlockSchema`
+      - `PartialMessageSchema`
       - `postConversationTurn`
       - `PostTurnBodySchema`
       - `QUESTION_WAITING_FOR`
@@ -12687,8 +12697,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `mergeLaunchSettings`
       - Cross-plugin:
         - Imported by: `conversations/runtime-sdk`
-      - Core:
-        - Exports (values): `TMUX_HOSTED_BY_OPTION`
     - **`agent-thread`** — Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the AgentThreadSlots.StepLabel dispatch, its answer, the host's own result cards, a composer that resumes an ended conversation), the hooks a host's other surfaces read (useThreadTurns, useThreadProgress, useLatestResult), generic step labels for the common built-in tools, and useThreadRuns (a host's recent runs under its scratch profile). Serves `agent-thread.runs` — the recent conversations launched in a scratch workspace, newest first, filterable by profile — over `_conversations` with the attempt joined (routed: a conversation write refills its own row).
       - Web:
         - Slots: `AgentThreadSlots.StepLabel`
@@ -14161,14 +14169,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.Overlay`
               - `JsonlViewer.PendingPromptAction`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 58 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 59 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.ContextRole` ×31
               - `JsonlViewer.EventRenderer` ×18
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
+              - `JsonlViewer.TranscriptEnd` ×2
               - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
               - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
-              - `JsonlViewer.TranscriptEnd` ← `tasks.outcome-report`
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
@@ -14318,10 +14326,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/icons.Icon`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/shape --spacing`
-            - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
+            - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering, and the message the agent is still writing (the conversations.partial-message value) as a block at the end of the transcript until its finished row lands.
               - Web:
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "assistant-text" → `AssistantTextRow`
+                  - `JsonlViewer.TranscriptEnd` "streaming-text" → `StreamingText`
                   - `JsonlRowActions.Item` "markdown-toggle" → `MarkdownToggleAction`
                   - `JsonlRowActions.Item` "copy-assistant-text" → `CopyAssistantTextAction`
                 - Uses:
@@ -14330,11 +14339,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view.conversationPane`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
+                  - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+                  - `network/live.useLive`
                   - `primitives/css/text.Text`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/live-state.ResourceErrorInline`
                   - `primitives/markdown.Markdown`
                   - `primitives/select-scope.ContentScope`
               - Cross-plugin:
@@ -17603,6 +17615,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CommandReply`
           - `HelloReply`
           - `OpenRequest`
+          - `PartialFrame`
+          - `PartialMessage`
         - Exports (values):
           - `AGENT_EVENTS_FILE`
           - `AGENT_OPTIONS_FILE`
@@ -17611,13 +17625,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentEventSchema`
           - `AgentLaunchOptionsSchema`
           - `AgentLifecycleSchema`
+          - `applyPartialFrame`
           - `CommandReplySchema`
           - `DismissReplySchema`
           - `HelloReplySchema`
           - `OpenRequestSchema`
+          - `partialFrameOf`
+          - `PartialFrameSchema`
+          - `PartialStreamLineSchema`
           - `PROTOCOL_VERSION`
           - `sameMajorMinor`
           - `sdkBundledCli`
+          - `SubscribeReplySchema`
           - `TurnReplySchema`
       - Cross-plugin:
         - Imported by: `apps/agent-manager/demo`
@@ -24969,11 +24988,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 166 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 167 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×50
               - `primitives` ×26
               - `page` ×24
-              - `conversations` ×22
+              - `conversations` ×23
               - `debug` ×8
               - `apps-core` ×5
               - `tasks` ×5
@@ -30355,9 +30374,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 257 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 258 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×70
-          - `conversations` ×48
+          - `conversations` ×49
           - `tasks` ×27
           - `debug` ×26
           - `infra` ×15
@@ -39338,9 +39357,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 254 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 255 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×69
-          - `conversations` ×48
+          - `conversations` ×49
           - `debug` ×23
           - `ui` ×23
           - `tasks` ×22

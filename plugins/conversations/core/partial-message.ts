@@ -22,8 +22,16 @@ export const PartialMessageSchema = z.object({
 });
 export type PartialMessage = z.infer<typeof PartialMessageSchema>;
 
-/** A conversation's streaming message; null when none is being written. */
+/**
+ * A conversation's streaming message; null when none is being written.
+ * Served by `conversations/machine` through the conversation's runtime.
+ */
 export const conversationPartialMessage = liveValue(
   "conversations.partial-message",
-  { schema: PartialMessageSchema.nullable(), params: ["id"] },
+  {
+    schema: PartialMessageSchema.nullable(),
+    params: ["id"],
+    // The text lives in the agent process, on the computer.
+    needsMachine: { feature: "Showing the agent's reply as it is written" },
+  },
 );
