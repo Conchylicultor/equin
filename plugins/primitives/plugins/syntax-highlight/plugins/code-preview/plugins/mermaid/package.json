@@ -1,9 +1,10 @@
 {
   "name": "@singularity/plugin-primitives-syntax-highlight-code-preview-mermaid",
-  "description": "Mermaid as a code preview: a mermaid fence drawn as its diagram, themed from the surrounding theme tokens.",
+  "description": "Mermaid as a code preview: sequence diagrams and flowcharts drawn natively (cards, coloured numbered steps, dagre-laid-out nodes at the conversation's text size); every other diagram type drawn by Mermaid itself.",
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "mermaid": "^12.2.0"
+    "mermaid": "^12.2.0",
+    "dagre": "^0.8.5"
   }
 }

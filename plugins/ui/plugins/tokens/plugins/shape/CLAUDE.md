@@ -27,10 +27,10 @@
   - Exports (values): `shapeGroup`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --radius-chip-compact`
-  - Tokens used by: 415 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 416 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×91
     - `apps` ×82
-    - `primitives` ×69
+    - `primitives` ×70
     - `page` ×35
     - `ui` ×31
     - `debug` ×26

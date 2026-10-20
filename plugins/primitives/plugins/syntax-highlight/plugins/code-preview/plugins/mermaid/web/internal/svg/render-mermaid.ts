@@ -41,7 +41,7 @@ async function renderNow(
   try {
     await mermaid.parse(source);
     const { svg } = await mermaid.render(id, source);
-    return { ok: true, svg };
+    return { ok: true, svg: naturalWidth(svg) };
   } catch (err) {
     if (err instanceof Error) return { ok: false, message: err.message };
     // mermaid's parser throws plain objects ({ str, hash }) for syntax errors.
@@ -54,4 +54,15 @@ async function renderNow(
     document.getElementById(`d${id}`)?.remove();
     document.getElementById(id)?.remove();
   }
+}
+
+/**
+ * Mermaid writes `width="100%"` plus `max-width: <natural>px`, which in a box
+ * sized by its content resolves to almost nothing. Give the SVG its natural
+ * width instead; a wider-than-frame diagram then scrolls.
+ */
+function naturalWidth(svg: string): string {
+  const max = /max-width:\s*([\d.]+)px/.exec(svg);
+  if (!max) return svg;
+  return svg.replace(/^(<svg[^>]*?)\swidth="100%"/, `$1 width="${max[1]}"`);
 }

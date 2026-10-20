@@ -1,0 +1,147 @@
+/* The native flowchart's paint. Geometry comes from dagre (runtime numbers,
+ * placed through <Placed>); this file draws the cards, the wires and the
+ * frames, every colour read from the theme. */
+
+.mmd-flow {
+  /* A group's hue, set per group inline; this is the fallback. */
+  --mmd-hue: var(--muted-foreground);
+  /* Outlines: --border alone vanishes on a muted surface. */
+  --mmd-line: color-mix(in oklch, var(--muted-foreground) 32%, var(--border));
+  position: relative;
+  margin-inline: auto;
+  color: var(--foreground);
+}
+/* Before the first layout — and for a node or label the current layout does not
+ * know yet — labels render at their natural size only to be measured. */
+.mmd-flow:not([data-laid-out]),
+.mmd-flow [data-pending] {
+  visibility: hidden;
+}
+
+/* ── Nodes ───────────────────────────────────────────────────────────────── */
+.mmd-flow-node {
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: var(--card);
+  border: 1px solid var(--mmd-line);
+  border-radius: calc(var(--radius) + 2px);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  transition: border-color 0.15s, background 0.15s;
+}
+.mmd-flow-node[data-hot] {
+  border-color: color-mix(in oklch, var(--primary) 55%, var(--border));
+}
+.mmd-flow-node[data-shape="round"] { border-radius: 16px; }
+.mmd-flow-node:is([data-shape="stadium"], [data-shape="circle"]) { border-radius: 999px; }
+.mmd-flow-node[data-shape="subroutine"] {
+  box-shadow: inset 6px 0 0 -5px var(--border), inset -6px 0 0 -5px var(--border);
+}
+/* Outlines a border cannot draw: the SVG is the shape, the box is invisible. */
+.mmd-flow-node:is([data-shape="decision"], [data-shape="hexagon"], [data-shape="database"]) {
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+.mmd-flow-shape {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+.mmd-flow-shape path {
+  fill: var(--card);
+  stroke: var(--mmd-line);
+  stroke-width: 1.25;
+  transition: stroke 0.15s;
+}
+.mmd-flow-node[data-hot] .mmd-flow-shape path {
+  stroke: color-mix(in oklch, var(--primary) 55%, var(--border));
+}
+
+.mmd-flow-node-label {
+  position: relative;
+  display: block;
+  width: max-content;
+  max-width: 15rem;
+  padding: 10px 16px;
+  text-align: center;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  font-weight: 500;
+}
+
+/* ── Wires ───────────────────────────────────────────────────────────────── */
+.mmd-flow-wires {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: visible;
+  pointer-events: none;
+  --mmd-wire: color-mix(in oklch, var(--muted-foreground) 70%, var(--border));
+}
+.mmd-flow-wire-line {
+  fill: none;
+  stroke: var(--mmd-wire);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  transition: stroke 0.15s;
+}
+.mmd-flow-wire[data-line="dotted"] .mmd-flow-wire-line { stroke-dasharray: 2 5; }
+.mmd-flow-wire[data-line="thick"] .mmd-flow-wire-line { stroke-width: 2.75; }
+.mmd-flow-head { fill: var(--mmd-wire); transition: fill 0.15s; }
+.mmd-flow-head-ring { fill: var(--background); stroke: var(--mmd-wire); stroke-width: 1.5; }
+.mmd-flow-head-cross { stroke: var(--mmd-wire); stroke-width: 1.75; stroke-linecap: round; }
+
+.mmd-flow-wire[data-hot] { --mmd-wire: var(--primary); }
+.mmd-flow-wire[data-hot] .mmd-flow-wire-line {
+  stroke-dasharray: 6 6;
+  animation: mmd-flow-run 0.8s linear infinite;
+}
+@keyframes mmd-flow-run {
+  to { stroke-dashoffset: -12; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mmd-flow-wire[data-hot] .mmd-flow-wire-line { animation: none; }
+}
+
+.mmd-flow-edge-label-box {
+  z-index: 3;
+}
+.mmd-flow-edge-label {
+  display: block;
+  width: max-content;
+  max-width: 14rem;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--mmd-line);
+  background: var(--background);
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: calc(var(--font-size-caption) * var(--font-scale));
+  line-height: 1.4;
+  text-align: center;
+  white-space: pre-line;
+  transition: color 0.15s, border-color 0.15s;
+}
+.mmd-flow-edge-label[data-hot] {
+  color: var(--foreground);
+  border-color: color-mix(in oklch, var(--primary) 50%, var(--border));
+}
+
+/* ── Subgraphs ───────────────────────────────────────────────────────────── */
+.mmd-flow-group {
+  z-index: 0;
+  border-radius: calc(var(--radius) + 6px);
+  border: 1px solid color-mix(in oklch, var(--mmd-hue) 28%, var(--border));
+  background: color-mix(in oklch, var(--mmd-hue) 6%, transparent);
+}
+.mmd-flow-group-label {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: calc(var(--font-size-caption) * var(--font-scale));
+  font-weight: 500;
+  color: color-mix(in oklch, var(--mmd-hue) 70%, var(--muted-foreground));
+  white-space: nowrap;
+}

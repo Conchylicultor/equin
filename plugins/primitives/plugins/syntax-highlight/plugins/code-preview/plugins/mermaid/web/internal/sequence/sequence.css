@@ -1,0 +1,320 @@
+/* The native sequence diagram's paint and its internal geometry: one grid
+ * column per participant, shared by the header, the lifelines and every
+ * (sub)grid of the body, so a message drawn from column centre to column
+ * centre lands on the lifelines however deeply its block nests. Every colour
+ * reads the theme; a participant's hue (`--mmd-hue`) is mixed toward the
+ * foreground by `participantHue`. */
+
+.mmd-seq {
+  /* Set inline from the diagram (participant count, the narrowest a column may
+   * be, each participant's hue); these are the fallbacks. */
+  --mmd-n: 1;
+  --mmd-col-min: 140px;
+  --mmd-hue: var(--muted-foreground);
+  /* Outlines and rules: --border alone vanishes on a muted surface. */
+  --mmd-line: color-mix(in oklch, var(--muted-foreground) 32%, var(--border));
+  --mmd-cols: repeat(var(--mmd-n), minmax(var(--mmd-col-min), 1fr));
+  position: relative;
+  min-width: calc(var(--mmd-n) * var(--mmd-col-min));
+  padding-block: 4px 12px;
+  color: var(--foreground);
+}
+.mmd-seq-grid {
+  display: grid;
+  grid-template-columns: var(--mmd-cols);
+}
+
+/* ── Lifelines: a dashed rule down every column's centre ─────────────────── */
+.mmd-seq-lifelines {
+  position: absolute;
+  inset: 28px 0 12px;
+}
+.mmd-seq-lifelines > div {
+  position: relative;
+}
+.mmd-seq-lifelines > div::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 50%;
+  border-left: 1.5px dashed var(--mmd-line);
+}
+
+/* ── Participant cards ───────────────────────────────────────────────────── */
+.mmd-seq-actor {
+  position: relative;
+  z-index: 1;
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 12px);
+  padding: 7px 14px 7px 7px;
+  background: var(--card);
+  border: 1px solid var(--mmd-line);
+  border-radius: calc(var(--radius) + 2px);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+.mmd-seq-actor-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: calc(var(--font-size-caption) * var(--font-scale));
+  color: var(--mmd-hue);
+  background: color-mix(in oklch, var(--mmd-hue) 15%, transparent);
+}
+.mmd-seq-actor-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.mmd-seq-actor-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mmd-seq-actor-sub {
+  color: var(--muted-foreground);
+  font-size: calc(var(--font-size-caption) * var(--font-scale));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Body ────────────────────────────────────────────────────────────────── */
+.mmd-seq-body {
+  position: relative;
+  z-index: 1;
+  padding-top: 14px;
+  row-gap: 4px;
+}
+
+.mmd-seq-msg {
+  position: relative;
+  align-self: end;
+  min-height: 46px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: 8px;
+  transition: opacity 0.15s;
+}
+/* A label may be wider than the hop it names: it overflows the span both ways,
+ * on a pill of the surface colour so the lifelines it crosses pass behind it. */
+.mmd-seq-msg-label {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  margin-bottom: 6px;
+  padding: 2px 10px 2px 3px;
+  border-radius: 999px;
+  background: var(--background);
+}
+.mmd-seq-msg[data-self] .mmd-seq-msg-label {
+  align-self: flex-start;
+  margin-left: calc(50% - 10px);
+}
+.mmd-seq-step {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--background);
+  background: var(--mmd-hue);
+}
+.mmd-seq-msg-text {
+  font-family: var(--font-mono);
+  font-size: calc(var(--font-size-code) * var(--font-scale));
+  line-height: 1.35;
+  white-space: pre;
+}
+
+/* The arrow: a rule in the sender's hue, a dot where it leaves, a head where it
+ * lands. Dashed for replies; a cross / open head as the source says. */
+.mmd-seq-msg-line {
+  position: relative;
+  height: 0;
+  border-top: 1.75px solid var(--mmd-hue);
+}
+.mmd-seq-msg[data-line="dashed"] .mmd-seq-msg-line {
+  border-top-style: dashed;
+}
+.mmd-seq-msg-line::before {
+  content: "";
+  position: absolute;
+  top: -4.5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--mmd-hue);
+}
+.mmd-seq-msg-line::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  border-block: 5px solid transparent;
+}
+.mmd-seq-msg[data-dir="right"] .mmd-seq-msg-line::before { left: -3.5px; }
+.mmd-seq-msg[data-dir="left"] .mmd-seq-msg-line::before { right: -3.5px; }
+.mmd-seq-msg[data-dir="right"] .mmd-seq-msg-line::after { right: -2px; border-left: 8px solid var(--mmd-hue); }
+.mmd-seq-msg[data-dir="left"] .mmd-seq-msg-line::after { left: -2px; border-right: 8px solid var(--mmd-hue); }
+/* Open / async heads: a chevron instead of a filled triangle. */
+.mmd-seq-msg:is([data-head="open"], [data-head="async"]) .mmd-seq-msg-line::after {
+  top: -5px;
+  width: 8px;
+  height: 8px;
+  border: none;
+  border-top: 1.75px solid var(--mmd-hue);
+  border-right: 1.75px solid var(--mmd-hue);
+}
+.mmd-seq-msg[data-dir="right"]:is([data-head="open"], [data-head="async"]) .mmd-seq-msg-line::after { right: 0; transform: rotate(45deg); }
+.mmd-seq-msg[data-dir="left"]:is([data-head="open"], [data-head="async"]) .mmd-seq-msg-line::after { left: 0; transform: rotate(-135deg); }
+/* Lost message: a cross at the far end. */
+.mmd-seq-msg[data-head="cross"] .mmd-seq-msg-line::after {
+  content: "×";
+  top: -12px;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--mmd-hue);
+}
+/* Both ends: the sender's dot becomes a second head. */
+.mmd-seq-msg[data-both] .mmd-seq-msg-line::before {
+  top: -6px;
+  width: 0;
+  height: 0;
+  border-radius: 0;
+  background: none;
+  border-block: 5px solid transparent;
+}
+.mmd-seq-msg[data-both][data-dir="right"] .mmd-seq-msg-line::before { left: -2px; border-right: 8px solid var(--mmd-hue); }
+.mmd-seq-msg[data-both][data-dir="left"] .mmd-seq-msg-line::before { right: -2px; border-left: 8px solid var(--mmd-hue); }
+
+/* A message to oneself: a hook out of the lifeline and back. */
+.mmd-seq-msg[data-self] .mmd-seq-msg-line {
+  margin-left: 50%;
+  width: 36px;
+  height: 18px;
+  border: 1.75px solid var(--mmd-hue);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+}
+.mmd-seq-msg[data-self][data-line="dashed"] .mmd-seq-msg-line { border-style: dashed; border-left: none; }
+.mmd-seq-msg[data-self] .mmd-seq-msg-line::before { left: -3.5px; top: -4.5px; }
+.mmd-seq-msg[data-self] .mmd-seq-msg-line::after {
+  inset: auto auto -6px -2px;
+  border-right: 8px solid var(--mmd-hue);
+  border-left: none;
+}
+
+/* ── Notes ───────────────────────────────────────────────────────────────── */
+.mmd-seq-note-cell {
+  align-self: center;
+  display: flex;
+  justify-content: center;
+  padding-block: 6px;
+}
+.mmd-seq-note-cell[data-placement="left"] { justify-content: flex-end; padding-right: calc(50% + 10px); }
+.mmd-seq-note-cell[data-placement="right"] { justify-content: flex-start; padding-left: calc(50% + 10px); }
+.mmd-seq-note {
+  position: relative;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: calc(var(--font-size-caption) * var(--font-scale));
+  line-height: 1.4;
+  white-space: pre;
+  text-align: center;
+  color: var(--foreground);
+  background: color-mix(in oklch, var(--mmd-hue) 10%, var(--background));
+  border: 1px solid color-mix(in oklch, var(--mmd-hue) 32%, transparent);
+  transition: opacity 0.15s;
+}
+.mmd-seq-note-cell[data-wide] .mmd-seq-note {
+  flex: 1;
+}
+
+/* ── Blocks: loop / alt / opt / par / … as framed sub-grids ──────────────── */
+.mmd-seq-block,
+.mmd-seq-section,
+.mmd-seq-section-body {
+  display: grid;
+  grid-template-columns: subgrid;
+}
+.mmd-seq-block {
+  --mmd-depth: 0;
+  position: relative;
+  margin-block: 6px;
+}
+/* The frame is drawn outside the content's columns, inset from the column
+ * edges by the nesting depth, so nested frames sit inside one another without
+ * moving a single column centre. */
+.mmd-seq-block::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline: calc(6px + var(--mmd-depth) * 8px);
+  border: 1px solid var(--mmd-line);
+  border-radius: calc(var(--radius) + 2px);
+  background: color-mix(in oklch, var(--background) 45%, transparent);
+  pointer-events: none;
+}
+.mmd-seq-section {
+  grid-column: 1 / -1;
+  position: relative;
+}
+.mmd-seq-section:not([data-first])::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline: calc(6px + var(--mmd-depth) * 8px);
+  border-top: 1px dashed var(--mmd-line);
+}
+.mmd-seq-section-head {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 2px calc(14px + var(--mmd-depth) * 8px);
+}
+.mmd-seq-section-body {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  row-gap: 4px;
+  padding-bottom: 8px;
+}
+.mmd-seq-block-tag {
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  background: var(--muted);
+}
+.mmd-seq-section-label {
+  font-size: calc(var(--font-size-caption) * var(--font-scale));
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+/* ── Hover: trace one participant's messages, or one step ───────────────── */
+.mmd-seq[data-hovering] :is(.mmd-seq-msg, .mmd-seq-note):not([data-hot]) {
+  opacity: 0.3;
+}

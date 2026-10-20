@@ -35649,9 +35649,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+            - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
               - `apps` ×18
-              - `primitives` ×7
+              - `primitives` ×8
               - `debug` ×3
               - `page` ×2
               - `screenshot` ×2
@@ -36205,10 +36205,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 398 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 399 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×61
-              - `primitives` ×53
+              - `primitives` ×54
               - `debug` ×36
               - `ui` ×29
               - `page` ×24
@@ -38013,8 +38013,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useElementSize`
               - `useResizeObserver`
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
-              - `primitives` ×19
+            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+              - `primitives` ×20
               - `apps` ×8
               - `shell` ×2
               - `active-data/go`
@@ -41459,21 +41459,55 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/markdown`
               - `primitives/syntax-highlight/code-preview/mermaid`
           - Plugins:
-            - **`mermaid`** — Mermaid as a code preview: a mermaid fence (in markdown, or a page code block set to mermaid) drawn as its diagram — lazy-loaded, themed from the surrounding theme tokens, with the parse error shown in place of (or under the last good) diagram.
+            - **`mermaid`** — Mermaid as a code preview: a mermaid fence (in markdown, or a page code block set to mermaid) drawn as its diagram. Sequence diagrams and flowcharts are drawn natively from the parsed source (core: parseMermaid) — participant cards, coloured numbered steps, framed blocks; dagre-laid-out node cards with label pills and subgraph frames — in the theme's own type and colours at the text's size, scrolling rather than shrinking. Every other type (and any source the parser does not read) is drawn by Mermaid itself, lazy-loaded, with its parse error shown in place of (or under the last good) diagram.
               - Web:
                 - Contributes: `CodePreview.Renderer` "mermaid"
                 - Uses:
                   - `primitives/css/center.Center`
+                  - `primitives/css/coords.Placed`
                   - `primitives/css/scroll.Scroll`
+                  - `primitives/css/spacing.Inset`
+                  - `primitives/dom/element-size.useResizeObserver`
                   - `primitives/lazy-component.lazyComponent`
                   - `primitives/loading.Loading`
                   - `primitives/syntax-highlight.useDarkMode`
                   - `primitives/syntax-highlight/code-preview.CodePreview`
                   - `primitives/syntax-highlight/code-preview.CodePreviewError`
+                  - `ui/icons.Icon`
               - Cross-plugin:
                 - Uses tokens:
+                  - `ui/tokens/color-palette --background`
+                  - `ui/tokens/color-palette --border`
+                  - `ui/tokens/color-palette --card`
+                  - `ui/tokens/color-palette --foreground`
+                  - `ui/tokens/color-palette --muted`
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/color-palette --primary`
                   - `ui/tokens/density --space-md`
                   - `ui/tokens/density --space-sm`
+                  - `ui/tokens/font-family --font-mono`
+                  - `ui/tokens/shape --radius`
+                  - `ui/tokens/type-scale --font-scale`
+                  - `ui/tokens/type-scale --font-size-caption`
+                  - `ui/tokens/type-scale --font-size-code`
+              - Core:
+                - Exports (types):
+                  - `Flowchart`
+                  - `FlowDirection`
+                  - `FlowEdge`
+                  - `FlowGroup`
+                  - `FlowNode`
+                  - `FlowNodeShape`
+                  - `MermaidParse`
+                  - `SequenceBlock`
+                  - `SequenceBlockSection`
+                  - `SequenceBlockType`
+                  - `SequenceDiagram`
+                  - `SequenceItem`
+                  - `SequenceMessage`
+                  - `SequenceNote`
+                  - `SequenceParticipant`
+                - Exports (values): `parseMermaid`
         - **`overlay-textarea`** — Editable highlighted text: <OverlayTextarea> lays a transparent textarea (visible caret) exactly over an underlay <pre> rendering decorate(value), which sizes the box so the field grows as you type. Both layers share one metrics class, so glyphs, wrapping and the caret stay aligned.
           - Web:
             - Uses:
@@ -46676,10 +46710,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 308 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 309 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×57
-          - `primitives` ×41
+          - `primitives` ×42
           - `page` ×40
           - `fields` ×34
           - `debug` ×14
@@ -47763,10 +47797,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 490 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 491 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×109
               - `conversations` ×86
-              - `primitives` ×75
+              - `primitives` ×76
               - `debug` ×34
               - `page` ×32
               - `plugin-meta` ×26
@@ -47899,12 +47933,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 146 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 147 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×35
               - `apps` ×21
               - `plugin-meta` ×21
               - `debug` ×20
-              - `primitives` ×14
+              - `primitives` ×15
               - `reports` ×6
               - `ui` ×5
               - `tasks` ×4
@@ -48141,10 +48175,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 415 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 416 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×91
               - `apps` ×82
-              - `primitives` ×69
+              - `primitives` ×70
               - `page` ×35
               - `ui` ×31
               - `debug` ×26
@@ -48270,9 +48304,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 227 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 228 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×57
-              - `primitives` ×38
+              - `primitives` ×39
               - `conversations` ×37
               - `debug` ×16
               - `plugin-meta` ×15

@@ -5473,6 +5473,7 @@
       "name": "@singularity/plugin-primitives-syntax-highlight-code-preview-mermaid",
       "version": "0.0.1",
       "dependencies": {
+        "dagre": "^0.8.5",
         "mermaid": "^12.2.0",
       },
     },
