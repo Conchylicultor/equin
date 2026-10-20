@@ -6496,11 +6496,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `songsEntityRef`
               - `updateSong`
           - Cross-plugin:
-            - Uses tokens: 23 vars — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses tokens: 24 vars — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `ui/tokens/density` ×10
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/color-palette` ×5
               - `ui/tokens/shape` ×2
+              - `ui/tokens/shadow --shadow`
             - Imported by:
               - `active-data/song`
               - `apps/sonata/audio/engine`
@@ -48000,8 +48001,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 64 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
-              - `apps` ×26
+            - Tokens used by: 65 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+              - `apps` ×27
               - `primitives` ×17
               - `framework` ×4
               - `ui` ×4

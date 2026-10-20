@@ -113,6 +113,13 @@ state, and the `useAvailable` gate. Sonata-specific on top of it:
   Picking a rail icon opens that section (writing its card's own open state
   through `useSonataSectionOpen`) and expands the dock; the panel's × folds it
   back.
+- **The dock morphs** (`useDockMorph`): the rail stays mounted (inert, faded)
+  under the open panel, and the panel's clip runs between the rail's measured
+  pill and the whole panel. The room the dock reserves is one eased number
+  (`useDockReserve`, `web/internal/dock-motion.ts`) the display's cover and
+  the capsule are laid out from — a bleed display (the piano roll) lays its
+  keys out from it, which no CSS transition would reach. Both run on
+  `DOCK_MS` / the same curve.
 - **A collapsed card's body is unmounted**, so per-song work that must outlive
   the panel lives in a headless `Sonata.Effect` — hence the chord-grid / Ultimate
   Guitar `*PersistObserver`s and `rhythm-controls`' `RhythmObserver`.
@@ -326,11 +333,12 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `songsEntityRef`
     - `updateSong`
 - Cross-plugin:
-  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 24 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/density` ×10
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/color-palette` ×5
     - `ui/tokens/shape` ×2
+    - `ui/tokens/shadow --shadow`
   - Imported by:
     - `active-data/song`
     - `apps/sonata/audio/engine`

@@ -43,17 +43,13 @@ import { SongTitle } from "./components/song-title-field";
 import { SectionDock } from "./components/section-pane";
 import { useSectionPaneCollapsed } from "./components/panels-toggle";
 import { PlayerHeader } from "./components/player-header";
+import { useDockReserve } from "./internal/dock-motion";
 import {
   CAPSULE_MARGIN,
   CAPSULE_MAX_WIDTH,
   CAPSULE_TOP,
-  EDGE,
-  PANEL_BOTTOM,
   PANEL_RESERVE,
-  PANEL_TOP,
-  PANEL_WIDTH,
   RAIL_RESERVE,
-  RAIL_WIDTH,
 } from "./internal/player-geometry";
 import { formatBarParam, parseBarParam } from "./bar-param";
 
@@ -380,7 +376,9 @@ function SonataPlayerSurface(): ReactElement {
  */
 function ImmersivePlayer() {
   const [collapsed] = useSectionPaneCollapsed();
-  const right = collapsed ? RAIL_RESERVE : PANEL_RESERVE;
+  // Eased on the dock's clock, so the notes (and the capsule over them) give
+  // way as the panel unfolds instead of jumping.
+  const right = useDockReserve(collapsed ? RAIL_RESERVE : PANEL_RESERVE);
   return (
     <Clip className="relative isolate h-full bg-background text-foreground">
       {/* The whole window: a display that bleeds (the piano roll) runs its
@@ -417,23 +415,7 @@ function ImmersivePlayer() {
         </Glass>
       </Placed>
 
-      {collapsed ? (
-        <Placed
-          x={{ end: EDGE, size: RAIL_WIDTH }}
-          y={{ center: "50%" }}
-          layer="float"
-        >
-          <SectionDock />
-        </Placed>
-      ) : (
-        <Placed
-          x={{ end: EDGE, size: PANEL_WIDTH }}
-          y={{ start: PANEL_TOP, end: PANEL_BOTTOM }}
-          layer="float"
-        >
-          <SectionDock />
-        </Placed>
-      )}
+      <SectionDock />
     </Clip>
   );
 }
