@@ -92,9 +92,15 @@ export interface ContextRoleContribution {
  * INTO its row instead of standing as its own fold. The renderer must place it
  * (`useHostedContext()` → `<ContextFold>`); `EventRow` throws in dev when a host
  * never reads it. Only exact-string `match`es can host.
+ *
+ * `landsShown`: the event's content is already on screen before its row lands
+ * (the reply streamed in as it was written, a sent turn's echo), so the row
+ * takes its place at rest instead of easing in like a row that arrives unseen.
+ * Only exact-string `match`es are read.
  */
 export interface EventRendererMeta {
   hostsContext?: true;
+  landsShown?: true;
 }
 
 export const JsonlViewer = {

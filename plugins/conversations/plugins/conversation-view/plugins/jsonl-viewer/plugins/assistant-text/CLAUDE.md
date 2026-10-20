@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Renders assistant text events in the JSONL viewer, with optional markdown rendering, and the message the agent is still writing (the conversations.partial-message value) as a block at the end of the transcript until its finished row lands.
+- Description: Renders assistant text events in the JSONL viewer, with optional markdown rendering, and the message the agent is still writing (the conversations.partial-message value) as a block at the end of the transcript until its finished row lands — revealed at a steady pace with a soft fading edge rather than in the bursts it arrives in.
 - Web:
   - Contributes:
     - `JsonlViewer.EventRenderer` "assistant-text" → `AssistantTextRow`
@@ -23,12 +23,15 @@
     - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
     - `network/live.useLive`
     - `primitives/css/text.Text`
+    - `primitives/dom/auto-scroll.FOLLOW_MOTION_ATTR`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/markdown.Markdown`
     - `primitives/select-scope.ContentScope`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --foreground`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
 

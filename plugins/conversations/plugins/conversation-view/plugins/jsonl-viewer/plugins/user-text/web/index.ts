@@ -8,7 +8,12 @@ import { CopyUserTextAction } from "./components/copy-text-action";
 export default {
   description: "Renders user text events in the JSONL viewer.",
   contributions: [
-    JsonlViewer.EventRenderer({ match: "user-text", component: UserTextRow }),
+    JsonlViewer.EventRenderer({
+      match: "user-text",
+      component: UserTextRow,
+      // A sent turn's echo already stands where its row lands.
+      landsShown: true,
+    }),
     JsonlRowActions.Item({
       id: "copy-user-text",
       component: CopyUserTextAction,

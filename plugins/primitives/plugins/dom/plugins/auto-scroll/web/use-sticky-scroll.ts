@@ -14,6 +14,7 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { BottomSentinel } from "./internal/bottom-sentinel";
 import { scrollChildIntoView } from "./scroll-child-into-view";
+import { FOLLOW_MOTION_ATTR } from "./follow-motion";
 import {
   followAction,
   isAtBottom,
@@ -310,6 +311,57 @@ export function useStickyScroll(
       deps: [sentinelEl, threshold, writeToBottom],
     },
   );
+
+  // ---- content in motion: follow it frame by frame -------------------------
+  // The sentinel observer only fires once the content end has left its margin,
+  // so content that GROWS over an animation would be caught up in steps. While
+  // an element stamped FOLLOW_MOTION_ATTR animates, a following surface writes
+  // the bottom on every frame instead. Event-driven: the frame loop exists
+  // only between a stamped motion's start and its end.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !sentinelEl) return;
+    const moving = new Set<Element>();
+    let frame = 0;
+    const tick = () => {
+      // A row unmounted mid-animation never sends its end event.
+      for (const target of moving)
+        if (!target.isConnected) moving.delete(target);
+      if (moving.size === 0) {
+        frame = 0;
+        return;
+      }
+      if (modeRef.current.kind === "following") writeToBottom(el);
+      frame = requestAnimationFrame(tick);
+    };
+    const onStart = (e: Event) => {
+      const target = e.target;
+      if (
+        !(target instanceof Element) ||
+        !target.hasAttribute(FOLLOW_MOTION_ATTR)
+      )
+        return;
+      moving.add(target);
+      if (frame === 0) frame = requestAnimationFrame(tick);
+    };
+    const onEnd = (e: Event) => {
+      if (e.target instanceof Element) moving.delete(e.target);
+    };
+    const starts = ["animationstart", "transitionrun"] as const;
+    const ends = [
+      "animationend",
+      "animationcancel",
+      "transitionend",
+      "transitioncancel",
+    ] as const;
+    for (const type of starts) el.addEventListener(type, onStart);
+    for (const type of ends) el.addEventListener(type, onEnd);
+    return () => {
+      for (const type of starts) el.removeEventListener(type, onStart);
+      for (const type of ends) el.removeEventListener(type, onEnd);
+      if (frame !== 0) cancelAnimationFrame(frame);
+    };
+  }, [sentinelEl, writeToBottom]);
 
   // ---- intent: "a scroll I did not author" ---------------------------------
   useEffect(() => {

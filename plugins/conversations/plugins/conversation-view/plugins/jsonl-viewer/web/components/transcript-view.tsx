@@ -37,6 +37,8 @@ import { useVisibleEvents } from "../use-visible-events";
 import { useContextRuns } from "../use-context-runs";
 import type { ContextFoldPhase } from "../context-runs";
 import { ContextFold } from "./context-fold";
+import { RowEnter } from "./row-enter";
+import { JsonlViewer } from "../slots";
 import { eventKey } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 
 function StickyUserHeader({ children }: { children: ReactNode }) {
@@ -80,14 +82,29 @@ const FOLD_LABEL: Record<ContextFoldPhase, string> = {
 function EventSections({
   events,
   idOf,
+  isNew,
   answeredBefore,
 }: {
   events: JsonlEvent[];
   /** A visible event's stable row id (its position in the visible array changes as older events load). */
   idOf: (event: JsonlEvent, index: number) => string;
+  /** The event landed after the view first drew — the reader is watching it arrive. */
+  isNew: (event: JsonlEvent) => boolean;
   answeredBefore: boolean;
 }) {
   const items = useContextRuns(events, answeredBefore);
+  const renderers = JsonlViewer.EventRenderer.useContributions();
+  const shownKinds = useMemo(
+    () =>
+      new Set<string>(
+        renderers.flatMap((r) =>
+          r.landsShown && typeof r.match === "string" ? [r.match] : [],
+        ),
+      ),
+    [renderers],
+  );
+  const arrived = (event: JsonlEvent) =>
+    isNew(event) && !shownKinds.has(event.kind);
   // Sections open at each user prompt. A context run never contains one (a
   // prompt is conversation), so a prompt is always a plain event item.
   const sections = useMemo(() => {
@@ -114,25 +131,28 @@ function EventSections({
     if (item.kind === "fold") {
       const first = events[item.members[0]!]!;
       return (
-        <div
+        <RowEnter
           key={`fold:${idOf(first, item.members[0]!)}`}
-          data-event-key={eventKey(first)}
+          arrived={arrived(first)}
         >
-          <ContextFold
-            label={FOLD_LABEL[item.phase]}
-            members={membersOf(item.members)}
-          />
-        </div>
+          <div data-event-key={eventKey(first)}>
+            <ContextFold
+              label={FOLD_LABEL[item.phase]}
+              members={membersOf(item.members)}
+            />
+          </div>
+        </RowEnter>
       );
     }
     const event = events[item.index]!;
     return (
-      <EventRow
-        key={idOf(event, item.index)}
-        event={event}
-        index={item.index}
-        hosted={item.hosted && membersOf(item.hosted)}
-      />
+      <RowEnter key={idOf(event, item.index)} arrived={arrived(event)}>
+        <EventRow
+          event={event}
+          index={item.index}
+          hosted={item.hosted && membersOf(item.hosted)}
+        />
+      </RowEnter>
     );
   };
 
@@ -254,7 +274,7 @@ export interface TranscriptViewProps {
 
 function TranscriptViewInner({
   events,
-  firstSeq: _firstSeq,
+  firstSeq = 0,
   ids,
   older,
   seeking,
@@ -283,6 +303,16 @@ function TranscriptViewInner({
   );
   const idOf = (event: JsonlEvent, index: number) =>
     idByEvent?.get(event) ?? String(index);
+
+  // Every event at or past this seq landed after the view first drew, so the
+  // reader watches its row arrive. Older pages load below it and never count.
+  const [firstNewSeq] = useState(() => firstSeq + events.length);
+  const seqByEvent = useMemo(
+    () => new Map(events.map((event, i) => [event, firstSeq + i] as const)),
+    [events, firstSeq],
+  );
+  const isNew = (event: JsonlEvent) =>
+    (seqByEvent.get(event) ?? -1) >= firstNewSeq;
 
   // Destructure at the call site: react-hooks/refs taints the handle object
   // (it carries scrollRef), so member access on it during render is flagged;
@@ -383,6 +413,7 @@ function TranscriptViewInner({
               <EventSections
                 events={visibleEvents}
                 idOf={idOf}
+                isNew={isNew}
                 answeredBefore={older?.answeredBefore ?? false}
               />
             )}

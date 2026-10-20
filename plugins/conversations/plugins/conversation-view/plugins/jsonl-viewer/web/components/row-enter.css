@@ -1,0 +1,31 @@
+/* A row that arrives while the reader watches: its slot eases open (so the
+   transcript glides up instead of jumping by the row's height) while the row
+   fades in. Plugin-local per the theme rule — keyframes live in the consuming
+   plugin. The class is on only for the entry; at rest the wrapper is a plain
+   block. Reduced motion never sets it (`RowEnter`), so no entry
+   can be left unfinished. */
+@keyframes transcript-row-open {
+  from {
+    grid-template-rows: 0fr;
+  }
+}
+
+@keyframes transcript-row-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.transcript-row-enter {
+  display: grid;
+  grid-template-rows: 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  animation: transcript-row-open 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.transcript-row-enter > * {
+  min-height: 0;
+  overflow: clip;
+  animation: transcript-row-fade 180ms ease-out both;
+}
+

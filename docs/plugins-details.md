@@ -14178,10 +14178,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 49 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 50 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `primitives/live-state` ×7
+              - `primitives/dom/auto-scroll` ×5
               - `primitives/collapsible` ×4
-              - `primitives/dom/auto-scroll` ×4
               - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
               - `conversations/conversation-view/pending-turn` ×3
               - `primitives/css/ui-kit` ×3
@@ -14324,7 +14324,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/icons.Icon`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/shape --spacing`
-            - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering, and the message the agent is still writing (the conversations.partial-message value) as a block at the end of the transcript until its finished row lands.
+            - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering, and the message the agent is still writing (the conversations.partial-message value) as a block at the end of the transcript until its finished row lands — revealed at a steady pace with a soft fading edge rather than in the bursts it arrives in.
               - Web:
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "assistant-text" → `AssistantTextRow`
@@ -14343,12 +14343,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
                   - `network/live.useLive`
                   - `primitives/css/text.Text`
+                  - `primitives/dom/auto-scroll.FOLLOW_MOTION_ATTR`
+                  - `primitives/dom/element-size.useResizeObserver`
                   - `primitives/icon-button.IconButton`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/markdown.Markdown`
                   - `primitives/select-scope.ContentScope`
               - Cross-plugin:
                 - Uses tokens:
+                  - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/density --space-md`
                   - `ui/tokens/density --space-sm`
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
@@ -38154,7 +38157,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `live/no-endpoint-read` — `web/components/diff-view.tsx`, `web/use-diff-tokens.ts` (debt)
     - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
       - Plugins:
-        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.Button`
@@ -38183,6 +38186,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `captureDocumentScroll`
               - `findScrollParent`
+              - `FOLLOW_MOTION_ATTR`
               - `JumpToBottomButton`
               - `KeepAnchorAcross`
               - `keepInPlace`
@@ -38204,6 +38208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/foundations`
               - `conversations/agent-thread`
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/assistant-text`
               - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/outline`
               - `layouts/miller`
@@ -38260,11 +38265,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useElementSize`
               - `useResizeObserver`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×20
               - `apps` ×8
               - `shell` ×2
               - `active-data/go`
+              - `conversations/conversation-view/jsonl-viewer/assistant-text`
               - `reorder`
               - `screenshot`
           - Exemptions:
@@ -48084,9 +48090,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 491 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 492 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×109
-              - `conversations` ×86
+              - `conversations` ×87
               - `primitives` ×76
               - `debug` ×34
               - `page` ×32
