@@ -79,8 +79,9 @@ export function NotesArea({
           onBlur();
         }}
         placeholder="Notes…"
-        rows={2}
-        className="w-full resize-y rounded-md border border-warning/60 bg-warning/10 px-md py-sm text-caption placeholder:text-warning/70 focus:outline-none focus:ring-1 focus:ring-warning"
+        // Grows with the text (field-sizing) from ~2 to ~12 lines, then
+        // scrolls — a long note is never hidden behind a 2-line scrollbox.
+        className="field-sizing-content max-h-[12lh] min-h-[3lh] w-full resize-y rounded-md border border-warning/60 bg-warning/10 px-md py-sm text-caption placeholder:text-warning/70 focus:outline-none focus:ring-1 focus:ring-warning"
         aria-label="Conversation notes"
       />
       {isSaving && isVisible && (
