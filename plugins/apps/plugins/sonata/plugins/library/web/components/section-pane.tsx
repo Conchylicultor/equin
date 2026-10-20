@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type RefObject } from "react";
+import type { CSSProperties } from "react";
 import {
   Sonata,
   SonataSectionItem,
@@ -16,6 +16,7 @@ import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { useSectionPaneCollapsed } from "./panels-toggle";
+import { RAIL_BUTTON } from "../internal/player-geometry";
 
 const closeIcon = symbol("close");
 const sectionIcon = symbol("view-agenda");
@@ -41,10 +42,17 @@ export function SectionDock() {
   return collapsed ? <SectionRail /> : <SectionPanel />;
 }
 
+/**
+ * The rail's icon buttons are the mockup's 40px, a size past the density's
+ * largest control (`lg`): the rail re-states `lg` for itself, so its buttons
+ * still size from the ambient density and stay squares like every other.
+ */
+const railControlSize = {
+  "--control-height-lg": `${RAIL_BUTTON}px`,
+} as CSSProperties;
+
 /** The collapsed dock: a glass column of section icons. */
 function SectionRail() {
-  const stackRef = useRef<HTMLElement>(null);
-  useMarkOrphanRules(stackRef);
   return (
     <Glass className="py-xs">
       {/* One centred column of icons. The order config's dividers are this
@@ -52,10 +60,10 @@ function SectionRail() {
           inset off, so the rule spans its own 18px) and centred, as the mockup
           draws them. */}
       <Stack
-        ref={stackRef}
-        gap="xs"
+        gap="2xs"
         align="center"
-        className="rail-x-none [&>[role=separator]]:w-4.5 [&>[role=separator][data-orphan]]:hidden"
+        className="rail-x-none [&>[role=separator]]:w-4.5"
+        style={railControlSize}
       >
         <Sonata.Section.Render controlSize="lg">
           {(s) => <RailItem key={s.id} section={s} />}
@@ -63,46 +71,6 @@ function SectionRail() {
       </Stack>
     </Glass>
   );
-}
-
-/**
- * Marks (`data-orphan`) every group rule of the rail with no icon between it
- * and the previous rule (or the top), or none after it — a group whose
- * sections are all unavailable (`useAvailable`) still leaves its items'
- * empty wrappers, so without this the rail would draw a rule at its top, its
- * bottom, or two in a row. Re-marked on every change of the rail's DOM.
- */
-function useMarkOrphanRules(ref: RefObject<HTMLElement | null>) {
-  useLayoutEffect(() => {
-    const host = ref.current;
-    if (!host) return;
-    const mark = () => {
-      // A rule stays only between two icons: some icon before it, and one
-      // in its own group (before the next rule).
-      let iconBefore = false;
-      let rule: Element | null = null;
-      let groupHasIcon = false;
-      const settle = () => {
-        if (rule) rule.toggleAttribute("data-orphan", !groupHasIcon);
-      };
-      for (const child of host.children) {
-        if (child.getAttribute("role") === "separator") {
-          settle();
-          if (!iconBefore) child.toggleAttribute("data-orphan", true);
-          rule = iconBefore ? child : null;
-          groupHasIcon = false;
-        } else if (child.querySelector("button")) {
-          iconBefore = true;
-          groupHasIcon = true;
-        }
-      }
-      settle();
-    };
-    mark();
-    const observer = new MutationObserver(mark);
-    observer.observe(host, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, [ref]);
 }
 
 /** One rail icon — painted only when its section has something to show. */

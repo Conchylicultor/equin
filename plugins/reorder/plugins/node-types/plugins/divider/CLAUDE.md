@@ -14,6 +14,16 @@ host's flex direction):
   groups a toolbar's buttons (the global action bar: bell | utilities and Build
   | Improve).
 
+At rest a divider with nothing to separate hides itself (`useOrphanRule`,
+`web/internal/use-orphan-rule.ts`): no item drawn anywhere before it, or none
+between it and the next divider. A contribution that renders `null` (a gated
+section, an action with nothing to offer) still leaves its empty
+`display: contents` wrappers, so this reads what the siblings actually draw,
+re-judged by a MutationObserver on the divider's parent. A rule therefore never
+closes off an empty end of the area, and a group whose items all render nothing
+leaves one rule, not two. In edit mode it always shows (a draggable
+placeholder).
+
 The 6px is `xs` + `2xs` of the density ramp. Where a spacer pushes the items
 after it to the far end of a row, a divider only separates — it takes no
 slack.

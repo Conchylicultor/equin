@@ -7,6 +7,7 @@ import {
 import { DeferredSortableItem } from "@plugins/primitives/plugins/sortable-list/plugins/deferred-item/web";
 import { RemoveNodeButton } from "@plugins/reorder/plugins/node-types/web";
 import { ReorderAreaContext } from "@plugins/reorder/plugins/area/web";
+import { useOrphanRule } from "../internal/use-orphan-rule";
 
 // A divider renders as a hairline rule between the items either side of it,
 // turned to the area's flow (`ReorderAreaContext.orientation`, which the list
@@ -22,6 +23,12 @@ import { ReorderAreaContext } from "@plugins/reorder/plugins/area/web";
 // The 6px is `xs` + `2xs` of the density ramp, so it scales with the density
 // preset. In edit mode it becomes a draggable dashed placeholder carrying the
 // same rule, with the same delete button as a spacer.
+//
+// At rest a divider with nothing to separate — no item drawn before it, or
+// none between it and the next divider (its group's contributions all render
+// nothing) — hides itself (`useOrphanRule`), so a rule never closes off an
+// empty end of the area or doubles up. In edit mode it always shows: it is a
+// draggable placeholder there.
 const DIVIDER_GAP = "calc(var(--space-xs) + var(--space-2xs))";
 
 /** The upright rule's length, as a share of the row's control height. */
@@ -44,6 +51,7 @@ export function DividerBox({
   const ctx = useContext(ReorderAreaContext);
   const controlSize = useControlSize();
   const upright = ctx?.orientation === "horizontal";
+  const [orphan, restRef] = useOrphanRule();
 
   // The rule itself — the same element in both modes, so the edit-mode
   // placeholder carries exactly what the live divider draws.
@@ -59,15 +67,19 @@ export function DividerBox({
   if (!editMode) {
     return upright ? (
       <div
+        ref={restRef}
         role="separator"
         aria-orientation="vertical"
+        hidden={orphan}
         style={{ marginInline: DIVIDER_GAP }}
       >
         {rule}
       </div>
     ) : (
       <div
+        ref={restRef}
         role="separator"
+        hidden={orphan}
         className="rail-follow"
         style={{ paddingBlock: DIVIDER_GAP }}
       >

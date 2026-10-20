@@ -18,6 +18,8 @@ export const EDGE = 14;
 /** The section rail: its width, and the room it reserves at the right edge. */
 export const RAIL_WIDTH = 50;
 export const RAIL_RESERVE = 72;
+/** One section icon button of the rail (square). */
+export const RAIL_BUTTON = 40;
 
 /** The expanded section panel: its width, and the room it reserves. */
 export const PANEL_WIDTH = 382;
