@@ -23645,6 +23645,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrowserServerPeer`
           - `BrowserServerSocket`
           - `ComposedServer`
+          - `HostBoot`
+          - `HostBooted`
           - `PortEnd`
           - `PortServer`
         - Exports (values):
@@ -23682,6 +23684,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/browser-server/demo.DemoRoute`
                   - `primitives/live-state.NotificationsProvider`
                   - `primitives/loading.Loading`
+                  - `primitives/log-channels.clientLog`
                   - `primitives/networking.TransportProvider`
                   - `shell/toast.showToast`
                 - Exports (values): `DemoScope`
@@ -24193,6 +24196,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `BootMode`
           - `BrowserHost`
+          - `BrowserHostBoot`
           - `BrowserHostOptions`
           - `ChangeSource`
           - `DependsOnEntry`
@@ -39545,17 +39549,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×11
           - `debug` ×9
           - `database` ×7
           - `infra` ×7
           - `conversations` ×3
           - `build` ×2
+          - `framework` ×2
           - `primitives` ×2
           - `tasks` ×2
           - `backup`
-          - `framework/tooling/checks/type-check/backstop`
           - `integrations/youtube/audio-fetch`
           - `network/live`
           - `page/annotations/agent-access`

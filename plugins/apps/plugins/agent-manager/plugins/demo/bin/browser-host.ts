@@ -22,5 +22,9 @@ void serveOverPort(port, async () => {
     seed,
     onUnmatched: unmatchedApiResponse,
   });
-  return { server: runtimeBrowserServer(host), keys: new Set(host.keys) };
+  return {
+    server: runtimeBrowserServer(host),
+    keys: new Set(host.keys),
+    boot: host.boot,
+  };
 });

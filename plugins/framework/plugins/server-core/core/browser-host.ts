@@ -17,6 +17,7 @@
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import { bootPluginGraph, type ServerRegistryEntry } from "./boot-stages";
 import { hostHttpRoutes } from "./host-routes";
+import { getProfilingData } from "./profiler";
 import { notificationsWsHandler, Resource } from "./resources";
 
 export interface BrowserHostOptions {
@@ -45,11 +46,27 @@ export interface BrowserHost {
   notifications: typeof notificationsWsHandler;
   /** Every resource key the graph serves — what a page routes to this host. */
   keys: readonly string[];
+  /** Where the boot spent its time, for the page to log. */
+  boot: BrowserHostBoot;
 }
+
+/** How long one browser-host boot took, on the worker's clock. */
+export interface BrowserHostBoot {
+  /** Graph nodes booted (a plugin's server and machine halves count apart). */
+  plugins: number;
+  /** In order: `graph` (load → register → ready barrier, migrations included), `seed`. */
+  stages: { name: string; ms: number }[];
+  /** The slowest plugin hooks of the boot (`register` / `onReadyBlocking`), longest first. */
+  slowest: { label: string; ms: number }[];
+}
+
+/** How many of the slowest spans a boot reports. */
+const SLOWEST_SPANS = 5;
 
 export async function bootBrowserHost(
   opts: BrowserHostOptions,
 ): Promise<BrowserHost> {
+  const t0 = performance.now();
   const ordered = await bootPluginGraph({
     mode: "browser",
     entries: opts.entries,
@@ -70,7 +87,9 @@ export async function bootBrowserHost(
   // the page reaches this host through HTTP and the live-state socket only, and
   // its transport opens every other socket path inert (as it does central's).
 
+  const t1 = performance.now();
   await opts.seed?.();
+  const t2 = performance.now();
 
   const request = createRequestHandler({
     routes: hostHttpRoutes(ordered),
@@ -86,5 +105,19 @@ export async function bootBrowserHost(
     request,
     notifications: notificationsWsHandler,
     keys: Resource.Declare.getContributions().map((c) => c.key),
+    boot: {
+      plugins: ordered.length,
+      stages: [
+        { name: "graph", ms: Math.round(t1 - t0) },
+        { name: "seed", ms: Math.round(t2 - t1) },
+      ],
+      // Per-plugin spans only (a phase-wide span would repeat its slowest
+      // plugin), and none that took no time.
+      slowest: getProfilingData()
+        .spans.filter((s) => s.plugin !== undefined && s.durationMs > 0)
+        .toSorted((a, b) => b.durationMs - a.durationMs)
+        .slice(0, SLOWEST_SPANS)
+        .map((s) => ({ label: s.id, ms: s.durationMs })),
+    },
   };
 }

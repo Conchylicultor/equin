@@ -55,6 +55,12 @@ function farewellServer(): BrowserServer {
   });
 }
 
+const BOOT = {
+  plugins: 3,
+  stages: [{ name: "graph", ms: 12 }],
+  slowest: [{ label: "onReadyBlocking:db", ms: 9 }],
+};
+
 /** A worker-side server behind one end of a fresh channel; the page side on the other. */
 async function overChannel(worker: BrowserServer, keys: string[]) {
   const channel = new MessageChannel();
@@ -63,6 +69,7 @@ async function overChannel(worker: BrowserServer, keys: string[]) {
   void serveOverPort(channel.port2, async () => ({
     server: worker,
     keys: new Set(keys),
+    boot: BOOT,
   }));
   return portBrowserServer(channel.port1);
 }
@@ -103,10 +110,13 @@ const sub = (id: number, k: string, params: Record<string, string>) =>
 
 describe("a browser server over a port", () => {
   test("reads and subscribes like the server it carries", async () => {
-    const { server, keys } = await overChannel(greetingServer("hello"), [
-      greeting.key,
-    ]);
+    const { server, keys, boot, readyAtMs } = await overChannel(
+      greetingServer("hello"),
+      [greeting.key],
+    );
     expect([...keys]).toEqual([greeting.key]);
+    expect(boot).toEqual(BOOT);
+    expect(readyAtMs).toBeGreaterThanOrEqual(0);
 
     const res = await server.request(
       new Request(`http://x/api/resources/${greeting.key}?who=ada`),

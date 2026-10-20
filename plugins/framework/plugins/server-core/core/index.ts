@@ -43,7 +43,11 @@ export type { PhaseId, Span, MemoryCheckpoint } from "./profiler";
 export { isServerReady, markServerReady } from "./readiness";
 export { hostHttpRoutes } from "./host-routes";
 export { bootBrowserHost } from "./browser-host";
-export type { BrowserHost, BrowserHostOptions } from "./browser-host";
+export type {
+  BrowserHost,
+  BrowserHostBoot,
+  BrowserHostOptions,
+} from "./browser-host";
 export type { ServerRegistryEntry } from "./boot-stages";
 export { recordLoaderReadSet } from "./read-set";
 export { getBootMode, registeringPlugin } from "./boot-mode";

@@ -322,6 +322,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
   - Exports (types):
     - `BootMode`
     - `BrowserHost`
+    - `BrowserHostBoot`
     - `BrowserHostOptions`
     - `ChangeSource`
     - `DependsOnEntry`

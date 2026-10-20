@@ -41,6 +41,10 @@ Demo.Resource({ id: "config-v2", useBackend: useConfigDemoBackend })
   `Demo.Resource` backend, until the config_v2 split moves config into the
   host too; then the page server and the composition go. A host that fails to boot throws
   to the error boundary; unmount disposes the server and terminates the worker.
+- **Boot time** — every host boot writes one line to the `demo-host-boot` client log
+  (`~/.singularity/worktrees/<wt>/logs/demo-host-boot.jsonl`, also the page console): the wait
+  the page saw, the worker's ready instant on its own clock, its stages (`graph`: load →
+  ready barrier with migrations; `seed`), the plugin count and the slowest boot spans.
 - **A key served twice** (by two contributions) throws naming both sources, before the runtime sees it.
 - **Unserved keys** fail `loader-failed` (`DemoMissingError`), never as skew.
 - **Unmatched `/api` requests** answer `unsupportedEndpointResponse`
@@ -69,6 +73,7 @@ Tests (jsdom, the real `NotificationsClient`): `web/__tests__/demo-scope.test.ts
     - `framework/browser-server/demo.DemoRoute`
     - `primitives/live-state.NotificationsProvider`
     - `primitives/loading.Loading`
+    - `primitives/log-channels.clientLog`
     - `primitives/networking.TransportProvider`
     - `shell/toast.showToast`
   - Exports (values): `DemoScope`

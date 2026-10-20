@@ -15,6 +15,7 @@ import {
   type BrowserServe,
   type BrowserServed,
   type BrowserServer,
+  type PortServer,
 } from "@plugins/framework/plugins/browser-server/core";
 import { browserServerTransport } from "@plugins/framework/plugins/browser-server/web";
 import {
@@ -25,6 +26,7 @@ import type { RouteHandler } from "@plugins/framework/plugins/http-router/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { unsupportedEndpointResponse } from "@plugins/infra/plugins/endpoints/core";
 import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
+import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { TransportProvider } from "@plugins/primitives/plugins/networking/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
@@ -233,6 +235,27 @@ function buildServer(
   return { server, keys };
 }
 
+/** The persisted log every host boot writes one line to (`logs/<this>.jsonl`). */
+const BOOT_LOG_CHANNEL = "demo-host-boot";
+
+/**
+ * One host boot as a line: the wait the page saw (from asking for the host
+ * module to the worker's `ready`), then the worker's own account of it.
+ */
+function bootLine(
+  scenarioId: string,
+  waitedMs: number,
+  hosted: PortServer,
+): string {
+  const { boot, readyAtMs } = hosted;
+  const stages = boot.stages.map((s) => `${s.name} ${s.ms} ms`).join(", ");
+  const slowest = boot.slowest.map((s) => `${s.label} ${s.ms} ms`).join(", ");
+  return (
+    `${scenarioId}: host ready in ${Math.round(waitedMs)} ms ` +
+    `(worker ready at ${readyAtMs} ms: ${stages}; ${boot.plugins} plugins) — slowest: ${slowest}`
+  );
+}
+
 /**
  * The scope's server once the scenario's host (if any) has booted: the page
  * server alone, or — with a host — the backends' keys first, then every key
@@ -255,11 +278,15 @@ function startScopeServer(
   let worker: Worker | null = null;
   let served: BrowserServer = page.server;
   void (async () => {
+    const asked = performance.now();
     const { start } = await host();
     if (ended) return;
     worker = start();
     const hosted = await portBrowserServer(worker);
     if (ended) return;
+    const line = bootLine(scenario.id, performance.now() - asked, hosted);
+    console.info(`[demo-scope] ${line}`);
+    clientLog(BOOT_LOG_CHANNEL, line);
     served = composeBrowserServers([page, hosted], page.server);
     onReady(served);
   })().catch((err: unknown) => {

@@ -72,12 +72,14 @@ const server = createBrowserServer({
 ## core/: a server in a Web Worker (`port.ts`, `compose.ts`)
 
 - **`serveOverPort(port, boot)`** (worker side, `port` = the worker's `self`):
-  serves the `{ server, keys }` `boot` resolves to over the port — `ready`
-  with its keys, or `failed` with the error (rethrown in the worker too).
+  serves the `{ server, keys, boot }` `boot` resolves to over the port — `ready`
+  with its keys, its boot report (`HostBoot`: stages, plugin count, slowest
+  spans) and `readyAtMs` (the worker's clock, i.e. since it was created), or
+  `failed` with the error (rethrown in the worker too).
   Requests and responses cross as plain data (bodies as transferred
   `ArrayBuffer`s), notifications sockets as numbered connections carrying the
   protocol frames verbatim.
-- **`portBrowserServer(worker)`** (page side) → `Promise<{ server, keys }>`:
+- **`portBrowserServer(worker)`** (page side) → `Promise<{ server, keys, boot, readyAtMs }>`:
   a `BrowserServer` over that port, so `browserServerTransport` and the whole
   app path are unchanged. Rejects with `PortHostBootError` when the worker
   reports `failed`.
@@ -153,6 +155,8 @@ Tests: `web/__tests__/browser-server.test.tsx` drives the real
     - `BrowserServerPeer`
     - `BrowserServerSocket`
     - `ComposedServer`
+    - `HostBoot`
+    - `HostBooted`
     - `PortEnd`
     - `PortServer`
   - Exports (values):

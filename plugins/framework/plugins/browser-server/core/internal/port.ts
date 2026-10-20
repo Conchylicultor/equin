@@ -45,7 +45,7 @@ type ToHost =
 
 /** Worker → page. */
 type FromHost =
-  | { t: "ready"; keys: string[] }
+  | { t: "ready"; keys: string[]; boot: HostBoot; readyAtMs: number }
   | { t: "failed"; error: string }
   | { t: "response"; id: number; response: WireResponse }
   | { t: "deliver"; conn: number; frame: string }
@@ -74,14 +74,15 @@ async function toWireResponse(res: Response): Promise<WireResponse> {
 }
 
 /**
- * Serve a server on `port` (the worker's `self`): post `ready` with its keys —
- * or `failed`, when `boot` throws — then answer every request and socket
- * message the page sends. Boot failures are loud on both sides: the error is
- * rethrown here too, so the worker's console shows the stack.
+ * Serve a server on `port` (the worker's `self`): post `ready` with its keys
+ * and how its boot went — or `failed`, when `boot` throws — then answer every
+ * request and socket message the page sends. Boot failures are loud on both
+ * sides: the error is rethrown here too, so the worker's console shows the
+ * stack.
  */
 export async function serveOverPort(
   port: PortEnd,
-  boot: () => Promise<PortServer>,
+  boot: () => Promise<HostBooted>,
 ): Promise<void> {
   // Listen first: a message the page sends while the graph boots waits for it.
   const booted = boot();
@@ -128,7 +129,7 @@ export async function serveOverPort(
     }
   }
 
-  let host: PortServer;
+  let host: HostBooted;
   try {
     host = await booted;
   } catch (err) {
@@ -137,7 +138,14 @@ export async function serveOverPort(
     post({ t: "failed", error });
     throw err;
   }
-  post({ t: "ready", keys: [...host.keys] });
+  // A dedicated worker's clock starts when the page creates it, so this is
+  // the whole wait: the bundle's fetch and evaluation, then the boot.
+  post({
+    t: "ready",
+    keys: [...host.keys],
+    boot: host.boot,
+    readyAtMs: Math.round(performance.now()),
+  });
 }
 
 /** A server across a port that never booted: `boot` threw in the worker. */
@@ -148,10 +156,32 @@ export class PortHostBootError extends Error {
   }
 }
 
-/** A booted server across a port, with the keys it serves. */
-export interface PortServer {
+/**
+ * How a host's boot spent its time, on its own clock — the shape
+ * `server-core`'s `bootBrowserHost` reports (`BrowserHostBoot`), restated here
+ * because server-core sits above this plugin; a host passes its report
+ * through, so tsc checks the two agree.
+ */
+export interface HostBoot {
+  /** Graph nodes booted. */
+  plugins: number;
+  /** The boot's stages, in order. */
+  stages: readonly { name: string; ms: number }[];
+  /** Its slowest spans. */
+  slowest: readonly { label: string; ms: number }[];
+}
+
+/** A server booted in the worker: what `serveOverPort`'s `boot` returns. */
+export interface HostBooted {
   server: BrowserServer;
   keys: ReadonlySet<string>;
+  boot: HostBoot;
+}
+
+/** A booted server across a port, with the keys it serves and how its boot went. */
+export interface PortServer extends HostBooted {
+  /** When the worker reported ready: ms after it was created, on its clock. */
+  readyAtMs: number;
 }
 
 /**
@@ -218,7 +248,12 @@ export function portBrowserServer(port: PortEnd): Promise<PortServer> {
       const msg = event.data as FromHost;
       switch (msg.t) {
         case "ready":
-          resolve({ server, keys: new Set(msg.keys) });
+          resolve({
+            server,
+            keys: new Set(msg.keys),
+            boot: msg.boot,
+            readyAtMs: msg.readyAtMs,
+          });
           return;
         case "failed":
           reject(new PortHostBootError(msg.error));
