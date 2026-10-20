@@ -14,7 +14,7 @@ import type {
 import {
   createExemptionIndex,
   describeExemption,
-  exemptionInputPaths,
+  exemptManifestPaths,
   isInAnyCategory,
   type ExemptionIndex,
   type ResolvedExemption,
@@ -55,10 +55,11 @@ export interface CheckExemptionSession {
  * `repo()` — the RECORDING one for an input-keyed check — and `load` the
  * run's memoized exemption load.
  *
- * The manifests (and the registry listing them) are read through `repo`
+ * The manifests are listed and read through `repo`
  * before the index is built: the loaded VALUES come from the module loader,
- * but that read is what puts their bytes in the check's read-set, so editing a
- * manifest invalidates a cached PASS.
+ * but listing and reading them here is what puts their set and bytes in the
+ * check's read-set, so adding, removing or editing a manifest invalidates a
+ * cached PASS.
  */
 export function openCheckExemptions(
   check: Check,
@@ -71,7 +72,7 @@ export function openCheckExemptions(
   const ensure = (): Promise<ExemptionIndex> =>
     (index ??= (async () => {
       const files = await repo();
-      await Promise.all(exemptionInputPaths().map((p) => files.read(p)));
+      await Promise.all(exemptManifestPaths(files).map((p) => files.read(p)));
       const all = await load();
       return createExemptionIndex(all.filter((e) => e.rule in exemptable));
     })());

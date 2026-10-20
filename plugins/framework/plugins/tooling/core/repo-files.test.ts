@@ -7,7 +7,8 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
-import { loadRepoFiles, pathsUnder } from "./repo-files";
+import { pathsUnder } from "./pathspec";
+import { loadRepoFiles } from "./repo-files";
 
 /**
  * Await `p` and return the Error it rejected with; throw if it resolved.
@@ -99,6 +100,14 @@ describe("loadRepoFiles", () => {
     expect(repo.under("a/b/x.ts")).toEqual([]); // a file is not a directory
     expect(repo.under("zzz")).toEqual([]);
     expect(repo.under("")).toEqual(EXPECTED);
+  });
+
+  test("glob(pattern) is the pattern's match set", async () => {
+    const repo = await loadRepoFiles(root);
+    expect(repo.glob("a/**/*.ts")).toEqual(["a/b/x.ts", "a/b/y.ts", "a/c.ts"]);
+    expect(repo.glob("a/**")).toEqual(repo.under("a"));
+    expect(repo.glob("**/y.ts")).toEqual(["a/b/y.ts"]);
+    expect(repo.glob("ignored/**")).toEqual([]);
   });
 
   test("has() is file membership", async () => {

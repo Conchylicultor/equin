@@ -25,6 +25,7 @@ import type TsEslintParser from "@typescript-eslint/parser";
 import type { ESLint, Linter } from "eslint";
 import type ReactHooksPlugin from "eslint-plugin-react-hooks";
 import type { Program } from "typescript";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   FILE_CATEGORIES,
   NON_APP_FILE_CATEGORIES,
@@ -557,7 +558,7 @@ export async function buildLintConfig(
   const [allContributions, exemptions, tsPlugin, tsParser, reactHooks] =
     await Promise.all([
       loadLintContributions(root),
-      loadExemptions(),
+      loadRepoFiles(root).then(loadExemptions),
       loadTsPlugin(),
       loadTsParser(),
       loadReactHooks(),

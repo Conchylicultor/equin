@@ -24,9 +24,8 @@ import type { PluginFolder } from "@plugins/framework/plugins/plugin-id/core";
  *   this: an excluded plugin's contribution must not load.
  * - `"checkout"`: every plugin the checkout declares, excluded ones included.
  *   For a registry that describes SOURCE rather than the app — one whose
- *   consumers (checks, lint rules) scan every plugin on disk, so its set must
- *   be the scanned set. `exempt/` is the case: a check that scans an excluded
- *   plugin's file must be able to read that plugin's own exemption of it.
+ *   consumers act on every plugin on disk, so its set must be that set.
+ *   `guard/` is the case: guards watch the agent editing this checkout.
  */
 export type CollectedDirMembership = "composition" | "checkout";
 

@@ -7,9 +7,5 @@ export type {
   RepoFiles,
 } from "./types";
 export { CHECK_SCOPES } from "./types";
-export {
-  assertRepoPath,
-  loadRepoFiles,
-  pathsUnder,
-  repoFilesOver,
-} from "./repo-files";
+export { assertRepoPath, loadRepoFiles, repoFilesOver } from "./repo-files";
+export { globPaths, pathspecToRegex, pathsUnder } from "./pathspec";

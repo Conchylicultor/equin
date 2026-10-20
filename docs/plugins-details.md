@@ -24376,13 +24376,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `assertRepoPath`
           - `CHECK_SCOPES`
+          - `globPaths`
           - `loadRepoFiles`
+          - `pathspecToRegex`
           - `pathsUnder`
           - `repoFilesOver`
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
+          - `framework/tooling/lint`
           - `plugin-meta/plugin-tree`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/repo-files.ts` (debt)
@@ -24589,10 +24592,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons/sprites` (2 debt)
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
-            - Uses: 44 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 45 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling/exempt` ×7
               - `reports/check-thread-stall` ×7
-              - `framework/tooling` ×5
+              - `framework/tooling` ×6
               - `infra/stack-sampler` ×5
               - `infra/paths` ×3
               - `infra/spawn` ×3
@@ -24964,7 +24967,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli`
               - `framework/server-core`
               - `framework/tooling/checks`
-              - `framework/tooling/exempt`
               - `framework/tooling/guards`
               - `framework/tooling/lint`
               - `framework/tooling/provision`
@@ -25016,8 +25018,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `agent-origin-safety/no-unmarked-app-fetch` — `e2e/app-fetch.ts`, `e2e/deploy-identity.ts` (sanctioned)
         - **`exempt`** — Inverted exemptions: a plugin declares, in its own exempt/index.ts, which of its files may violate which lint rule or check — with a reason, and a task when it is debt. The manifest types, the generated rule-id union, the file-category vocabulary rule owners scope by, and the one loader + hit-recording matcher the ESLint config, the type-check worker and the check runner all read.
+          - Cross-plugin:
+            - Imported by:
+              - `framework/tooling/checks`
+              - `framework/tooling/lint`
           - Core:
-            - Uses: `framework/tooling/collected-dir.defineCollectedDir`
             - Exports (types):
               - `DebtExemption`
               - `ExemptableRuleId`
@@ -25027,6 +25032,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ExemptionMatcher`
               - `Exemptions`
               - `FileCategory`
+              - `ManifestSource`
               - `ResolvedExemption`
               - `SanctionedExemption`
             - Exports (values):
@@ -25034,9 +25040,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `covers`
               - `createExemptionIndex`
               - `describeExemption`
-              - `EXEMPT_REGISTRY_PATH`
-              - `exemptCollectedDir`
-              - `exemptionInputPaths`
+              - `exemptManifestPaths`
               - `FILE_CATEGORIES`
               - `FILE_CATEGORY_GLOBS`
               - `isInAnyCategory`
@@ -25049,10 +25053,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resolveManifest`
               - `resolveTarget`
               - `ruleIdProblems`
-          - Cross-plugin:
-            - Imported by:
-              - `framework/tooling/checks`
-              - `framework/tooling/lint`
         - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
           - Core:
             - Uses:
@@ -25153,6 +25153,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
             - Uses:
+              - `framework/tooling.loadRepoFiles`
               - `framework/tooling/collected-dir.defineCollectedDir`
               - `framework/tooling/exempt.categoryGlobs`
               - `framework/tooling/exempt.FILE_CATEGORIES`

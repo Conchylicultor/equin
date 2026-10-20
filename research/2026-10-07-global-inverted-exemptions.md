@@ -90,6 +90,9 @@ directory. A directory covers its whole subtree, and `"."` is the whole plugin.
 - Discovery uses the collected-dir pattern: `defineCollectedDir("exempt")` in the new
   plugin's `core/collected-dir.ts`, which codegen turns into `exempt.generated.ts`
   (`plugins/framework/plugins/tooling/plugins/codegen/core/plugin-registry-gen.ts`).
+  *Superseded 2026-10-20:* the registry went stale on every deleted or moved
+  manifest; manifests are now found in the repo file set on each load — see
+  `2026-10-20-tooling-exempt-manifests-from-disk.md`.
 
 ### 2. The primitive plugin: `plugins/framework/plugins/tooling/plugins/exempt`
 

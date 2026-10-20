@@ -37,6 +37,7 @@ import {
   type ContentHashMemo,
   type TscProgram,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { globPaths } from "@plugins/framework/plugins/tooling/core";
 import { loadExemptions } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import { typeAwareLintGroups } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import {
@@ -574,7 +575,10 @@ export async function openPreparation({
     // crashed, and there is nothing to assemble.
     let lintViolations: string | undefined;
     if (outcome || lintFiles.length === 0) {
-      const exemptions = await loadExemptions();
+      const exemptions = await loadExemptions({
+        root,
+        glob: (pattern) => globPaths(listing.files, pattern),
+      });
       lintViolations = lintViolationLines(
         graphs.files.map((rel) => ({
           rel,

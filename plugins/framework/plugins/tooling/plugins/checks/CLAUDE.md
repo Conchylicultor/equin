@@ -355,10 +355,10 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./singularity check
 - Core:
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling/exempt` ×7
     - `reports/check-thread-stall` ×7
-    - `framework/tooling` ×5
+    - `framework/tooling` ×6
     - `infra/stack-sampler` ×5
     - `infra/paths` ×3
     - `infra/spawn` ×3

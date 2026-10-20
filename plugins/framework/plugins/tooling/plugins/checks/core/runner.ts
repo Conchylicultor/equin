@@ -500,7 +500,7 @@ export async function runChecks(
   // `openCheckExemptions`), which is what records them in its read-set.
   let exemptionsLoad: Promise<readonly ResolvedExemption[]> | null = null;
   const loadRunExemptions = (): Promise<readonly ResolvedExemption[]> =>
-    (exemptionsLoad ??= loadExemptions());
+    (exemptionsLoad ??= repo().then(loadExemptions));
 
   // One check body: `run()` with the exemption context, then the verdict on
   // its exemptions that suppressed nothing. Both cache paths go through here,

@@ -911,7 +911,7 @@ export async function generatePluginRegistry(opts: {
       // The committed runtime registries ARE the `singularity` composition's
       // registries — `compositionRegistryFileName` says so, and this is where
       // that is made true rather than merely asserted afterwards. A `checkout`
-      // dir (source metadata, e.g. `exempt`) lists every plugin instead.
+      // dir (source metadata, e.g. `guard`) lists every plugin instead.
       content: await renderCollectedDirRegistry({
         ctx,
         def,

@@ -126,6 +126,14 @@ export interface RepoFiles {
    */
   under(dir: string): readonly string[];
   /**
+   * Every file matching git pathspec `pattern`, sorted — read SUPERSET-SAFE
+   * (`*` spans `/`; see `pathspecToRegex`), so a caller wanting an exact set
+   * filters the answer. For an input-keyed check this records the match set
+   * alone: a file added elsewhere keeps the PASS, where `under` / `all` would
+   * not.
+   */
+  glob(pattern: string): readonly string[];
+  /**
    * The working-tree content of `path` as UTF-8 text, read asynchronously
    * (bounded concurrency), or null if the file is not in the set / vanished.
    * For an input-keyed check the read is recorded in its read-set.

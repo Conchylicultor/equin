@@ -1,4 +1,3 @@
-export { exemptCollectedDir } from "./collected-dir";
 export type {
   DebtExemption,
   Exemption,
@@ -25,11 +24,11 @@ export {
   resolveTarget,
 } from "./resolve";
 export {
-  EXEMPT_REGISTRY_PATH,
-  exemptionInputPaths,
+  exemptManifestPaths,
   isLintRuleId,
   loadExemptions,
   ruleIdProblems,
 } from "./load";
+export type { ManifestSource } from "./load";
 export { createExemptionIndex, describeExemption } from "./matcher";
 export type { ExemptionIndex, ExemptionMatcher } from "./matcher";

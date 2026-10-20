@@ -21,6 +21,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import { globPaths, pathsUnder } from "./pathspec";
 import type { RepoFiles } from "./types";
 
 // Wedge-breaker for a metadata-only git read, not a latency budget: what these
@@ -73,39 +74,6 @@ export function assertRepoPath(
   );
 }
 
-/**
- * First index in `sorted` whose path is `>= key`, comparing UTF-16 code units
- * — the order `Array.prototype.sort()` produces, which every path source uses.
- */
-function lowerBound(sorted: readonly string[], key: string): number {
-  let lo = 0;
-  let hi = sorted.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >>> 1;
-    if (sorted[mid]! < key) lo = mid + 1;
-    else hi = mid;
-  }
-  return lo;
-}
-
-/**
- * Every path in `sorted` under directory `dir` (no trailing slash; "" = all of
- * it), recursive, in order, as a fresh array. `sorted` must be in
- * `Array.prototype.sort()` order. Two binary searches and a slice — never a
- * scan of the list.
- *
- * In a lexicographically sorted list a directory's files are one contiguous
- * run, `[dir + "/", dir + "0")`: "0" is the code unit right after "/", so a
- * path sorts inside that range iff it starts with `dir/`.
- */
-export function pathsUnder(sorted: readonly string[], dir: string): string[] {
-  if (dir === "") return sorted.slice();
-  return sorted.slice(
-    lowerBound(sorted, `${dir}/`),
-    lowerBound(sorted, `${dir}0`),
-  );
-}
-
 async function readWorkingTree(
   root: string,
   path: string,
@@ -146,6 +114,7 @@ export function repoFilesOver(
       assertRepoPath("under", dir, true);
       return pathsUnder(paths, dir);
     },
+    glob: (pattern) => globPaths(paths, pattern),
     read: async (path) => {
       assertRepoPath("read", path, false);
       if (!members.has(path)) return null;

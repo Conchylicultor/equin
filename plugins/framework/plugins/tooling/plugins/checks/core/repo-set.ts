@@ -32,6 +32,7 @@ import type { FileSystemView, TreeSnapshot } from "./read-set";
  *   - `under(dir)` → `view.glob("<dir>/**")`: the subtree's membership, so a
  *                    file added under it or removed from it is a MISS. The
  *                    snapshot answers that pattern with two binary searches.
+ *   - `glob(pat)`  → `view.glob(pat)`: that pattern's match set.
  *   - `all()`      → `view.glob("**")`: the whole tree's membership.
  *   - `read(p)`    → `view.recordFile(p)`, then `base.read(p)` off the working
  *                    tree. Not `view.readFile`, which reads the blob with one
@@ -59,6 +60,7 @@ export function recordingRepoFiles(
       assertRepoPath("under", dir, true);
       return view.glob(dir === "" ? "**" : `${dir}/**`);
     },
+    glob: (pattern) => view.glob(pattern),
     read: async (path) => {
       assertRepoPath("read", path, false);
       view.recordFile(path);

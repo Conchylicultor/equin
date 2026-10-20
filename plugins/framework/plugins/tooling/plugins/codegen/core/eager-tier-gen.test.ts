@@ -9,7 +9,10 @@
 
 import { test, expect, describe } from "bun:test";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import {
+  globPaths,
+  type RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
 import { classifyEdges } from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
@@ -334,6 +337,7 @@ function memRepo(root: string, files: Record<string, string>): RepoFiles {
     has: (p) => Object.hasOwn(files, p),
     under: (dir) =>
       dir === "" ? paths : paths.filter((p) => p.startsWith(`${dir}/`)),
+    glob: (pattern) => globPaths(paths, pattern),
     read: (p) => Promise.resolve(Object.hasOwn(files, p) ? files[p]! : null),
   };
 }

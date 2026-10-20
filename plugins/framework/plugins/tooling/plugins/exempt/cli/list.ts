@@ -1,4 +1,6 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   loadExemptions,
   type ResolvedExemption,
@@ -25,7 +27,9 @@ const run: CliAction<
   [],
   { rule?: string; plugin?: string; debt?: boolean }
 > = async (opts) => {
-  const all = await loadExemptions();
+  const all = await loadExemptions(
+    await loadRepoFiles(await getWorktreeRoot()),
+  );
   const plugin = opts.plugin?.replace(/^plugins\//, "").replace(/\/$/, "");
   const selected = all.filter(
     (e) =>

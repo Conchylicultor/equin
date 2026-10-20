@@ -129,6 +129,7 @@ its disable does not cover. Parameters and imports have no in-file value.
 - Description: Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
 - Core:
   - Uses:
+    - `framework/tooling.loadRepoFiles`
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `framework/tooling/exempt.categoryGlobs`
     - `framework/tooling/exempt.FILE_CATEGORIES`

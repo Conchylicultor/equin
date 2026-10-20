@@ -5,7 +5,10 @@
  */
 
 import { test, expect } from "bun:test";
-import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import {
+  globPaths,
+  type RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
 import { collectImportGraph, resolveImportSpecifier } from "./import-graph";
 
 // Fixture paths go through `pj(rel)` rather than bare `plugins/<seg>/…`
@@ -35,6 +38,7 @@ function memRepo(
     },
     under: (dir) =>
       dir === "" ? paths : paths.filter((p) => p.startsWith(`${dir}/`)),
+    glob: (pattern) => globPaths(paths, pattern),
     read: (p) => {
       reads.push(p);
       return Promise.resolve(Object.hasOwn(files, p) ? files[p]! : null);

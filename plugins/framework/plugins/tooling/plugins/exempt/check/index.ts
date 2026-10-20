@@ -16,7 +16,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import {
   describeExemption,
-  exemptionInputPaths,
+  exemptManifestPaths,
   loadExemptions,
   ruleIdProblems,
   type ResolvedExemption,
@@ -45,11 +45,11 @@ const ruleIdsInSync: Check = {
 /** Each problem with the loaded manifests; empty when they are all valid. */
 async function manifestProblems(ctx: CheckContext): Promise<string[]> {
   const repo = await ctx.repo();
-  await Promise.all(exemptionInputPaths().map((p) => repo.read(p)));
+  await Promise.all(exemptManifestPaths(repo).map((p) => repo.read(p)));
 
   let exemptions: ResolvedExemption[];
   try {
-    exemptions = await loadExemptions();
+    exemptions = await loadExemptions(repo);
   } catch (err) {
     // A manifest that fails validation (an escaping path, a missing reason,
     // a debt entry without a task) is THE finding here, not a crash.
