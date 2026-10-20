@@ -12,7 +12,7 @@ import { RowActionButton } from "@plugins/conversations/plugins/conversation-vie
 import { useGoBackToMessage } from "@plugins/conversations/plugins/conversation-view/plugins/rewind/web";
 import { restoreAnswerDraft } from "./answer-draft";
 import { type AskUserQuestionInput } from "./answer-model";
-import { findAnswerTurn } from "./awaiting";
+import { findAnswerTurn } from "./question-state";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 

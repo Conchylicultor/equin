@@ -5,22 +5,31 @@ Renderer for `AskUserQuestion` tool calls in the JSONL viewer.
 Collapsed: blue header badge(s) showing each question's `header` field, plus the first question's text truncated.
 Expanded: for each question, shows the full question text and a vertical option list. An "Other" row appears if the answer doesn't match any predefined option label.
 
-## Two answer paths
+## Where a question stands — `questionState`
 
-- **Relay (primary)** — `conversations/question-relay` holds the call in a
-  `PreToolUse` hook and answers it as the tool's own input. The CLI writes a real
-  `Your questions have been answered: …` result, like a terminal answer. The
-  answered view reads the answer from the line's structured `toolUseResult`
-  (carried as `result.questionAnswer` by transcript-watcher, read with
-  `answersFromRecord`) — never from the result's prose, whose wording the CLI
-  changes across versions. That plugin owns the `"question"`
-  pending prompt and composes this plugin's `AnswerForm` (presentational: it
-  hands structured selections to `onSubmit`) and `AnswerHereButton`.
-- **Flush (fallback)** — a session without the hook, or a question released to
-  the terminal: "Answer here" Escapes the menu, the cancelled call's card shows
-  `MarkerAnswerForm`, and the answer is pasted as an `Answering your questions:`
-  turn. The marker / interrupt `EventFilter`s, `findAnswerTurn` and *Change
-  answers* serve this path only.
+One pure derivation (`web/components/question-state.ts`) from the transcript
+plus the conversation row decides what the card draws. A question is answerable
+as the tool's real result only through its **holder** — the agent process's
+parked `canUseTool` — which lives in that process's memory alone: a process
+that dies with the question open takes it along, and a resumed session never
+re-asks a call already in its transcript.
+
+- **held** — a live holder waits (`waitingFor: "question"`): the card renders
+  nothing; `conversations/question-relay` owns the `"question"` pending prompt
+  and composes this plugin's `QuestionCard` + `AnswerForm` (presentational: it
+  hands structured selections to `onSubmit`). The answer becomes a real
+  `Your questions have been answered: …` result, read back from the line's
+  structured `toolUseResult` (`result.questionAnswer`, `answersFromRecord`) —
+  never from the result's prose, whose wording the CLI changes across versions.
+- **asking** — the agent is mid-turn and the hold is not registered yet:
+  read-only.
+- **orphaned** — unresolved (no result, or the tmux-era interrupt sentinel),
+  the latest thing in the transcript, nothing holds it, and the conversation
+  can take a turn: `MarkerAnswerForm` sends the answer as an
+  `Answering your questions:` turn. The marker / interrupt `EventFilter`s,
+  `findAnswerTurn` and *Change answers* serve this path.
+- **settled** — answered, superseded, failed, or a conversation that can take
+  no turn: read-only.
 
 ## `OptionRow` owns the selected look — for both states of the card
 
@@ -55,8 +64,8 @@ fork — and the question's form reopens with the previous answer filled in.
 It reuses the rewind plugin's `useGoBackToMessage`, cutting at the answer turn.
 That turn is hidden from the transcript by this plugin's EventFilter, so the
 transcript's own per-message rewind button never appears for it. After the cut
-the question is back in its awaiting state (last tool call, interrupt result, no
-answer turn), so the ordinary form renders; `restoreAnswerDraft` writes the
+the question is orphaned again (the latest call, unresolved, no answer turn),
+so the ordinary form renders; `restoreAnswerDraft` writes the
 parsed old answer into that form's draft first (`answer-draft.ts`).
 
 Only answers sent through the flush path can be changed: a terminal or relay

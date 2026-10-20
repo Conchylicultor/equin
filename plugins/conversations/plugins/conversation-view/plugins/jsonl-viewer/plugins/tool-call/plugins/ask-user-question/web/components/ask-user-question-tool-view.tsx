@@ -8,11 +8,10 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { useConversation } from "@plugins/conversations/web";
-import { QUESTION_WAITING_FOR } from "@plugins/conversations/core";
 import { MarkerAnswerForm } from "./marker-answer-form";
 import { OptionBody, OptionRow } from "./option-row";
 import { summaryFor } from "./question-card";
-import { findAnswerTurn, isAwaitingAnswer } from "./awaiting";
+import { findAnswerTurn, questionState } from "./question-state";
 import {
   answersFromRecord,
   parseMarkerAnswer,
@@ -43,53 +42,52 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
     );
 
   const events = eventsResult.data;
-  const lastToolCall = events.findLast((e) => e.kind === "tool-call");
-
-  // State machine derived from the JSONL event stream alone (no `waitingFor`).
-  // When answered from the web, the tool is cancelled first, so its result is
-  // the interrupt sentinel (not the answer); the real answer arrives later as a
-  // separate `Answering your questions:` user turn.
+  const state = questionState(
+    events,
+    event,
+    conversation.status === "ready" ? conversation.data : null,
+  );
+  // The interrupt/rejection result is the tmux-era cancel-to-flush mechanism,
+  // not a failure — only style the card as an error for a genuine error.
   const resultIsInterrupt =
     event.result != null &&
     event.result.isError === true &&
     isInterruptContent(event.result.content);
-  // The interrupt/rejection result is the cancel-to-flush answer mechanism, not a
-  // failure — only style the card as an error for a genuine (non-interrupt) error.
   const showAsError = !resultIsInterrupt && (event.result?.isError ?? false);
-  const isLastToolCall =
-    lastToolCall?.kind === "tool-call" &&
-    lastToolCall.toolUseId === event.toolUseId;
   const answerTurn = findAnswerTurn(events, event.toolUseId);
 
-  // still being asked: no result yet, the latest tool call, and the
-  // conversation waiting on a question. The `"question"` pending prompt draws
-  // the question then (its owner decides how it is answered — a held call's
-  // form, or the flush fallback), so the transcript leaves it to that one card.
-  // Whether the call reaches the transcript before its answer depends on the
-  // host (the SDK writes it at once; the interactive CLI only once answered).
-  // A stale conversation row keeps the card: hiding is only for a live ask.
-  const waitingOnQuestion =
-    conversation.status === "ready" &&
-    conversation.data?.waitingFor === QUESTION_WAITING_FOR;
-  if (event.result == null && isLastToolCall && waitingOnQuestion) return null;
-
-  // awaiting: cancelled (interrupt) + most recent question + no answer yet,
-  // and no message sent in its place.
-  if (isAwaitingAnswer(events, event)) {
-    return (
-      <ToolCallCard
-        event={event}
-        summary={summaryFor(questions, [])}
-        defaultOpen
-        isError={showAsError}
-      >
-        <MarkerAnswerForm
-          questions={questions}
-          convId={convId}
-          toolUseId={event.toolUseId}
-        />
-      </ToolCallCard>
-    );
+  switch (state.kind) {
+    case "held":
+      // The `"question"` pending prompt draws a held question (the relay form,
+      // answered as the tool's real result); the transcript leaves it to that
+      // one card.
+      return null;
+    case "orphaned":
+      // Nothing holds the call any more: the answer goes in as a message.
+      return (
+        <ToolCallCard
+          event={event}
+          summary={summaryFor(questions, [])}
+          defaultOpen
+          isError={showAsError}
+        >
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the form from the question card above (no named margin utility) */}
+          <Stack gap="sm" className="mt-2">
+            <Text as="p" variant="caption" tone="muted">
+              The agent stopped while asking, so your answer is sent as a
+              message.
+            </Text>
+            <MarkerAnswerForm
+              questions={questions}
+              convId={convId}
+              toolUseId={event.toolUseId}
+            />
+          </Stack>
+        </ToolCallCard>
+      );
+    case "asking":
+    case "settled":
+      break;
   }
 
   // answerMap selection:

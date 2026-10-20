@@ -9,10 +9,10 @@ import {
 } from "./answer-model";
 
 /**
- * The answer form for a question the terminal already cancelled (the flush
- * path: hookless sessions, or a question released to the terminal and then
- * pulled back with "Answer here"). The answer reaches the agent as a pasted
- * turn, after the cancelled call.
+ * The answer form for an orphaned question (`questionState`): nothing holds
+ * the call any more — the agent process died with it open, or the tmux-era
+ * terminal cancelled it — so the answer reaches the agent as a turn, after the
+ * unresolved call.
  */
 export function MarkerAnswerForm({
   questions,
