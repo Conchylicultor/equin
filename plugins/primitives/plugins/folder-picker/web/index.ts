@@ -5,10 +5,9 @@ export {
   FolderPickerPopover,
   type FolderPickerPopoverProps,
 } from "./internal/folder-picker-popover";
-export { useHostDir } from "./internal/use-host-dir";
 
 export default {
   description:
-    "Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory.",
+    "Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser, both reading host-fs's live listing.",
   contributions: [],
 } satisfies PluginDefinition;

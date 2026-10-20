@@ -1,20 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
-import {
-  EndpointError,
-  fetchEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
-import { getImageContent } from "@plugins/code-explorer/plugins/code-api/core";
-import { hostFsRaw } from "@plugins/infra/plugins/host-fs/core";
-import { fileRefKey, type FileRef } from "../../core";
-import { useRefetchOnFileChange } from "./use-file-revision";
+import { unavailableMessage } from "@plugins/infra/plugins/endpoints/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { fileBytes, type FileRef } from "../../core";
 
 /**
  * Why a file has no bytes to hand over — a determinate answer about the file,
- * not a failed read. `unsupported` is the source declining the format (a
- * workspace file is served for image formats only today).
+ * not a failed read. `unsupported` is the source declining to serve them (a
+ * folder, an unreadable archive member, a workspace file today);
+ * `needs-machine` a read where no computer is behind the app (the in-browser
+ * demo): nothing is read.
  */
 export type FileBytesUnavailable =
-  "too-large" | "missing" | "denied" | "unsupported";
+  "too-large" | "missing" | "denied" | "unsupported" | "needs-machine";
 
 export type FileBytesState =
   | { kind: "loading" }
@@ -22,71 +18,40 @@ export type FileBytesState =
   | { kind: "unavailable"; reason: FileBytesUnavailable }
   | { kind: "error"; message: string };
 
-// Both raw routes answer a file they will not serve with a status code.
-const UNAVAILABLE_BY_STATUS: Record<number, FileBytesUnavailable> = {
-  403: "denied",
-  404: "missing",
-  413: "too-large",
-  415: "unsupported",
-};
-
-function readBlob(file: FileRef, signal: AbortSignal): Promise<Blob> {
-  switch (file.source) {
-    case "host":
-      return fetchEndpoint(
-        hostFsRaw,
-        {},
-        { query: { path: file.path }, signal },
-      );
-    case "workspace":
-      return fetchEndpoint(
-        getImageContent,
-        { worktree: file.workspace },
-        {
-          query: {
-            path: file.path,
-            ...(file.ref !== undefined ? { ref: file.ref } : {}),
-          },
-          signal,
-        },
-      );
-  }
-}
-
 /**
  * A file's raw bytes, whichever source holds it — the binary twin of
  * `useFileText`, for a renderer that decodes the format itself (a MIDI file, an
- * archive listing). A host file through host-fs's `raw` route, a checkout file
- * through code-api's (as of the ref's revision when it names one). A refusal by
- * status is an `unavailable` answer, never retried; anything else is an
- * `error`. Re-read in place whenever the file changes on disk.
+ * archive listing). One read of file-viewer's `file-viewer.bytes` live value,
+ * which the server invalidates when a host file changes on disk (from a watch
+ * of its folder while it is read). A refusal that is an answer about the file
+ * is `unavailable`, never retried; anything else is an `error`.
  */
 export function useFileBytes(file: FileRef): FileBytesState {
-  const read = useQuery<ArrayBuffer, Error>({
-    queryKey: ["file-viewer", "bytes", fileRefKey(file)],
-    queryFn: async ({ signal }) => (await readBlob(file, signal)).arrayBuffer(),
-    // A status the source answered is the file's answer, not a blip.
-    retry: (failures, error) =>
-      !(error instanceof EndpointError && error.status < 500) && failures < 3,
-  });
-  useRefetchOnFileChange(file, read.refetch);
-  if (read.error) {
-    const error = read.error;
-    if (error instanceof EndpointError) {
-      const reason = UNAVAILABLE_BY_STATUS[error.status];
-      if (reason) return { kind: "unavailable", reason };
-      return {
-        kind: "error",
-        message:
-          typeof error.body === "string" && error.body
-            ? error.body
-            : `HTTP ${error.status}`,
-      };
+  const read = useLive(fileBytes, file);
+  switch (read.status) {
+    case "unavailable":
+      return { kind: "unavailable", reason: "needs-machine" };
+    case "loading":
+      return { kind: "loading" };
+    case "ready":
+      return { kind: "ok", bytes: read.data };
+    case "error": {
+      const { error } = read;
+      if (error.kind === "refused") {
+        switch (error.code) {
+          case "too-large":
+          case "missing":
+          case "denied":
+          case "unsupported":
+            return { kind: "unavailable", reason: error.code };
+          case "invalid-path":
+          case undefined:
+            return { kind: "error", message: error.message };
+        }
+      }
+      return { kind: "error", message: error.message };
     }
-    return { kind: "error", message: error.message };
   }
-  if (read.data === undefined) return { kind: "loading" };
-  return { kind: "ok", bytes: read.data };
 }
 
 /** The sentence a renderer shows for a file with no bytes to hand over. */
@@ -102,5 +67,7 @@ export function fileBytesUnavailableMessage(
       return "Permission denied — this file cannot be read.";
     case "unsupported":
       return "This file cannot be read from its source.";
+    case "needs-machine":
+      return unavailableMessage(fileBytes.needsMachine);
   }
 }

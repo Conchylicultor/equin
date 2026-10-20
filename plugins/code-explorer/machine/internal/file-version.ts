@@ -45,7 +45,6 @@ export const codeFileVersionServed = serveValue(codeFileVersion, {
     const abs = root === null ? null : resolveInsideRoot(root, path);
     // A refused tuple (the loader says why) has nothing to watch.
     if (abs === null) return () => {};
-    const watch = await watchHostPath(abs, () => notify());
-    return watch.kind === "watching" ? watch.release : () => {};
+    return watchHostPath(abs, () => notify());
   },
 });

@@ -1,11 +1,7 @@
-import {
-  fetchEndpoint,
-  useEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   hostFsComplete,
   hostFsStat,
-  hostFsVolume,
   isBrowsable,
 } from "@plugins/infra/plugins/host-fs/core";
 import { hostHome } from "@plugins/infra/plugins/host-account/core";
@@ -47,17 +43,10 @@ export function useHomeDir(): HomeDir {
   }
 }
 
-/** The name of the volume mounted at `/` ("Macintosh HD"), once known. */
-export function useRootVolumeName(): string | undefined {
-  const query = useEndpoint(
-    hostFsVolume,
-    {},
-    { query: { path: "/" }, staleTime: Number.POSITIVE_INFINITY },
-  );
-  return query.data?.kind === "ok" ? query.data.name : undefined;
-}
-
-/** A crumb's label: "Home" for `~`, the volume's name for `/`. */
+/**
+ * A crumb's label: "Home" for `~`, the volume's name for `/` (`rootName`,
+ * once `host-fs.volume` has named it; the path itself until then).
+ */
 export function crumbLabel(path: string, rootName: string | undefined): string {
   if (path === HOME) return "Home";
   if (path === "/") return rootName ?? "/";

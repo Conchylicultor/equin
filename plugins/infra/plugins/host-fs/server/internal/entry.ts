@@ -1,12 +1,16 @@
 import type { Stats } from "node:fs";
 import { lstat, readlink, stat } from "node:fs/promises";
-import type { HostFsEntry, HostFsEntryKind } from "../../core";
+import {
+  compareHostFsNames,
+  type HostFsEntry,
+  type HostFsEntryKind,
+} from "../../core";
 import { archiveFormatFor } from "./archive/registry";
 import { classifyFsError, isHiddenName } from "./path";
 
-/** How every listing orders its entries: by name, numbers compared as numbers. */
+/** How every listing orders its entries: `compareHostFsNames` of their names. */
 export const byName = (a: { name: string }, b: { name: string }): number =>
-  a.name.localeCompare(b.name, undefined, { numeric: true });
+  compareHostFsNames(a.name, b.name);
 
 function kindOf(st: Stats): HostFsEntryKind {
   if (st.isDirectory()) return "dir";

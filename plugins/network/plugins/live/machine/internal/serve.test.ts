@@ -37,6 +37,40 @@ describe("live/machine serve", () => {
     expect(await served.load({})).toEqual({ n: 1 });
   });
 
+  test("a machine paged value is served here, its meta sibling needing the computer too", async () => {
+    const value = liveValue(key("paged"), {
+      query: z.object({ dir: z.string() }),
+      paged: {
+        item: z.object({ name: z.string() }),
+        id: "name",
+        key: { of: (i) => [i.name], order: ["asc"] },
+        limit: 2,
+        maxLimit: 4,
+        meta: z.object({ total: z.number() }),
+      },
+      needsMachine: { feature: "Counting" },
+    });
+    expect(value.needsMachine).toEqual({ feature: "Counting" });
+    expect(value.meta.needsMachine).toEqual({ feature: "Counting" });
+    const served = serveValue(value, {
+      source: "external",
+      changes: FIXED,
+      loader: () => [{ name: "a" }],
+      meta: () => ({ total: 1 }),
+    });
+    expect(served.declare).toHaveLength(2);
+    // Never run: the portable host refuses it.
+    const _check = () =>
+      // @ts-expect-error live/server never serves a needsMachine paged value
+      servePortableValue(value, {
+        source: "external",
+        changes: FIXED,
+        loader: () => [{ name: "a" }],
+        meta: () => ({ total: 1 }),
+      });
+    expect(typeof _check).toBe("function");
+  });
+
   test("each barrel's serve is a tsc error on the other's declaration", () => {
     const machine = liveValue(key("types-machine"), {
       schema: Count,

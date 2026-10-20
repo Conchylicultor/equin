@@ -234,7 +234,7 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
     - `infra/git/remotes` (2 debt)
     - `infra/host-account` (1 debt)
     - `infra/host-fs` (16 debt)
-    - `infra/host-fs/image` (3 debt)
+    - `infra/host-fs/image` (2 debt)
     - `infra/host-fs/zip` (1 debt)
     - `infra/host/contention` (1 debt)
     - `infra/host/duress/latch` (1 debt)

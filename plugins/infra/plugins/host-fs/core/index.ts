@@ -2,19 +2,14 @@ export {
   HOST_FS_COMPLETE_LIMIT,
   HOST_FS_MOVE_MAX_SOURCES,
   HOST_FS_PEEK_MAX_NAMES,
-  HOST_FS_PEEK_MAX_PATHS,
   HOST_FS_TEXT_MAX_BYTES,
   hostFileUrl,
   hostFsComplete,
   hostFsExtract,
-  hostFsList,
   hostFsMove,
   hostFsOpen,
-  hostFsPeek,
   hostFsRaw,
   hostFsStat,
-  hostFsText,
-  hostFsVolume,
   isBrowsable,
 } from "./internal/endpoints";
 export type {
@@ -46,3 +41,19 @@ export {
   hostFsVersion,
   type FileVersion,
 } from "./internal/version";
+export { compareHostFsNames } from "./internal/names";
+export {
+  HOST_FS_MACHINE,
+  HostFsListingQuerySchema,
+  hostFsArchiveReasonMessage,
+  hostFsDirPeek,
+  hostFsFileText,
+  hostFsListing,
+  hostFsPathStat,
+  hostFsVolumeInfo,
+  type HostFsDirPeek,
+  type HostFsFileText,
+  type HostFsListingMeta,
+  type HostFsPathStat,
+  type HostFsVolumeInfo,
+} from "./internal/live";

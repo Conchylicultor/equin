@@ -3,11 +3,7 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "boundaries/no-platform-api",
-    paths: [
-      "server/internal/resize.ts",
-      "server/internal/sizes.ts",
-      "server/internal/sweep.ts",
-    ],
+    paths: ["server/internal/resize.ts", "server/internal/sweep.ts"],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",

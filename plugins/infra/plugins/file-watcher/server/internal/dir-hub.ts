@@ -34,19 +34,36 @@ export type DirWatchRelease = () => void;
 
 export interface DirWatchHub {
   /**
-   * Watch `dir` until the returned release runs. Resolves once the watch is
-   * live; rejects when it cannot be opened (a missing dir), holding nothing.
+   * Watch `dir` until the returned release runs. Resolves once the native
+   * watch is open; rejects when it cannot be opened (a missing dir), holding
+   * nothing. A recursive (`subtree`) watch, or a `children` one riding it, is
+   * live then. A `children` watch with no root above it is open but not yet
+   * live: Bun arms a single-directory watch on its own thread a moment later,
+   * and a change landing in that gap is never reported.
    */
   acquire(request: DirWatchRequest): Promise<DirWatchRelease>;
-  /** The roots with a native watch open, or opening. */
+  /** The roots with a native recursive watch open, or opening. */
   roots(): string[];
+  /** The dirs with a native single-directory watch open, or opening. */
+  shallowDirs(): string[];
 }
 
-/** Opens one native recursive watch on `root`, batching its changes. */
+/**
+ * Opens one native watch on `root`, batching its changes — recursive
+ * (`subtree`), or of its direct entries only (`children`).
+ */
 export type StartRootWatch = (
   root: string,
   onChange: (events: FileChangeEvent[]) => void,
 ) => Promise<{ stop(): Promise<void> }>;
+
+/** The two native watches the hub opens. */
+export interface DirWatchStarts {
+  /** A recursive watch: a root other watchers below it may ride. */
+  subtree: StartRootWatch;
+  /** A single-directory watch: what a `children` request opens on its own. */
+  children: StartRootWatch;
+}
 
 function isUnder(dir: string, path: string): boolean {
   return dir === "/" ? path.startsWith("/") : path.startsWith(`${dir}/`);
@@ -77,7 +94,12 @@ interface Holder {
  *
  * An acquire for a dir that an open root already covers (the dir itself or an
  * ancestor of it) rides that root's watch, filtered to its own dir and scope;
- * any other opens a new root at the dir. When a root opens ABOVE roots already
+ * any other `subtree` acquire opens a new root at the dir. A `children`
+ * acquire never opens a recursive root: with no root above it, it shares a
+ * single-directory watch of its dir (refcounted per dir), so listing `~` or
+ * `/` holds one directory handle, not a watch of everything below it. Such a
+ * watch is never a root (nothing rides it) and never moves: a recursive root
+ * opening above it later leaves it where it is. When a root opens ABOVE roots already
  * open (a checkout watch after a child listing), it takes their watchers over:
  * each is re-attached to the new root, then its old hold is released once that
  * root is open, so the descendant's native watch stops and one tree never
@@ -88,10 +110,42 @@ interface Holder {
  * above it opened moves up then, so the order the two opened in does not
  * matter.
  */
-export function createDirWatchHub(start: StartRootWatch): DirWatchHub {
+export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
   const hub = createRefcountHub<FileChangeEvent[]>(async (root, emit) => {
-    const watch = await start(root, emit);
+    const watch = await starts.subtree(root, emit);
     return () => watch.stop();
+  });
+  // A single-directory watch, keyed by `${dir}\0${generation}`. Once it
+  // reports its own dir gone (removed, moved, replaced, or the watch failed)
+  // it is dead — it hears nothing more of whatever folder lands at that path
+  // — so it is retired: `shallowKeys` forgets it, and the holder re-arming on
+  // that delete opens a fresh watch rather than joining the dead one (which
+  // its previous hold, released only once the new one is open, still keeps).
+  const shallowKeys = new Map<string, string>();
+  let shallowGeneration = 0;
+  const shallowKeyFor = (dir: string): string => {
+    let key = shallowKeys.get(dir);
+    if (key === undefined) {
+      key = `${dir}\0${++shallowGeneration}`;
+      shallowKeys.set(dir, key);
+    }
+    return key;
+  };
+  const retireShallow = (dir: string, key: string): void => {
+    if (shallowKeys.get(dir) === key) shallowKeys.delete(dir);
+  };
+  const shallowDirOf = (key: string): string => key.slice(0, key.indexOf("\0"));
+  const shallow = createRefcountHub<FileChangeEvent[]>(async (key, emit) => {
+    const dir = shallowDirOf(key);
+    const watch = await starts.children(dir, (events) => {
+      const gone = events.some((e) => e.type === "delete" && e.path === dir);
+      if (gone) retireShallow(dir, key);
+      emit(events);
+    });
+    return () => {
+      retireShallow(dir, key);
+      return watch.stop();
+    };
   });
   const holders = new Set<Holder>();
 
@@ -151,16 +205,27 @@ export function createDirWatchHub(start: StartRootWatch): DirWatchHub {
           `[file-watcher] a dir watch needs an absolute, normalized dir: ${dir}`,
         );
       }
-      const root = coveringRoot(dir) ?? dir;
+      const covering = coveringRoot(dir);
+      let released = false;
       // This watcher's own reaction queue: the native fan-out stays
       // synchronous, while a slow reaction holds only its own later batches.
       const reaction = createCoalescer<FileChangeEvent>({
-        run: (events) => (h.released ? undefined : onChange(events)),
+        run: (events) => (released ? undefined : onChange(events)),
       });
       const listener = (events: FileChangeEvent[]) => {
         const mine = events.filter((e) => inScope(dir, scope, e.path));
         if (mine.length > 0) reaction.trigger(mine);
       };
+      if (scope === "children" && covering === undefined) {
+        const hold = shallow.acquire(shallowKeyFor(dir), listener);
+        await hold.ready;
+        return () => {
+          if (released) return;
+          released = true;
+          hold.release();
+        };
+      }
+      const root = covering ?? dir;
       const h: Holder = {
         dir,
         root,
@@ -186,6 +251,7 @@ export function createDirWatchHub(start: StartRootWatch): DirWatchHub {
       return () => {
         if (h.released) return;
         h.released = true;
+        released = true;
         holders.delete(h);
         h.hold.release();
         h.previous?.release();
@@ -193,5 +259,6 @@ export function createDirWatchHub(start: StartRootWatch): DirWatchHub {
       };
     },
     roots: () => hub.keys(),
+    shallowDirs: () => shallow.keys().map(shallowDirOf),
   };
 }

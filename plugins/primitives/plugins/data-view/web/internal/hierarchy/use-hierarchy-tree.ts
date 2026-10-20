@@ -303,6 +303,14 @@ export function useHierarchyTree(args: {
             hasChildren: (p) => !p.alias && hierLazy.hasChildren(p.__row),
             state: (p) => hierLazy.state(p.__row),
             load: (p) => hierLazy.load(p.__row),
+            ...(hierLazy.onOpenChange
+              ? {
+                  onOpenChange: (open: readonly ProjectedRow<unknown>[]) =>
+                    hierLazy.onOpenChange?.(
+                      open.filter((p) => !p.alias).map((p) => p.__row),
+                    ),
+                }
+              : {}),
           }
         : undefined,
     [hierLazy],

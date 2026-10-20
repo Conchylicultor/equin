@@ -1,16 +1,8 @@
 import { readdir } from "node:fs/promises";
-import { implement } from "@plugins/infra/plugins/endpoints/server";
-import {
-  HOST_FS_PEEK_MAX_NAMES,
-  hostFsPeek,
-  type HostFsPeekResult,
-} from "../../core";
+import { HOST_FS_PEEK_MAX_NAMES, type HostFsPeekResult } from "../../core";
 import { locateHostDir } from "./archive/locate";
 import { listArchiveDir } from "./archive/read";
-import { classifyFsError, isHiddenName, resolveHostPath } from "./path";
-
-/** How many folders one request reads at a time. */
-const PEEK_CONCURRENCY = 8;
+import { classifyFsError, isHiddenName } from "./path";
 
 type Child = { name: string; hidden: boolean };
 
@@ -54,25 +46,3 @@ export async function peekHostDir(path: string): Promise<HostFsPeekResult> {
     return { kind: classifyFsError(err), path };
   }
 }
-
-/** Peek every path, at most {@link PEEK_CONCURRENCY} at once, in order. */
-export async function peekHostDirs(
-  paths: readonly string[],
-): Promise<HostFsPeekResult[]> {
-  const results: HostFsPeekResult[] = new Array(paths.length);
-  let next = 0;
-  const worker = async () => {
-    while (next < paths.length) {
-      const i = next++;
-      results[i] = await peekHostDir(paths[i]!);
-    }
-  };
-  await Promise.all(
-    Array.from({ length: Math.min(PEEK_CONCURRENCY, paths.length) }, worker),
-  );
-  return results;
-}
-
-export const handlePeek = implement(hostFsPeek, async ({ body }) => ({
-  results: await peekHostDirs(body.paths.map((p) => resolveHostPath(p))),
-}));

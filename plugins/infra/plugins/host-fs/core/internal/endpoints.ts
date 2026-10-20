@@ -95,16 +95,14 @@ const UnreadableArchive = z.object({
   reason: HostFsArchiveReasonSchema,
 });
 
-/**
- * Every host-fs read takes an absolute path or one starting with `~`
- * (expanded to the user's home). A relative path, or one carrying a NUL, is a
- * 400 — there is no working directory a host path could be relative to.
- *
- * A path may cross into an archive (`~/Downloads/x.zip/photos/a.jpg`): `list`,
- * `stat`, `text` and `raw` read the member; `complete` and `volume` stay on
- * disk.
- */
-const PathQuery = z.object({ path: z.string().optional() });
+// Every host-fs read takes an absolute path or one starting with `~`
+// (expanded to the user's home). A relative path, or one carrying a NUL, is a
+// 400 (a live read's `invalid-path` refusal) — there is no working directory a
+// host path could be relative to.
+//
+// A path may cross into an archive (`~/Downloads/x.zip/photos/a.jpg`): `stat`
+// and `raw` read the member; `complete` stays on disk. (The list / text /
+// volume results below are what the live reads in `./live.ts` answer.)
 
 // ── list ─────────────────────────────────────────────────────────────────────
 
@@ -126,21 +124,7 @@ export const HostFsListResultSchema = z.discriminatedUnion("kind", [
 ]);
 export type HostFsListResult = z.infer<typeof HostFsListResultSchema>;
 
-/**
- * List a host directory. With no `path`, lists the user's home directory.
- * A symlink to a directory lists the directory it points at; an archive file
- * (an entry carrying `archive`) lists the archive's root.
- */
-export const hostFsList = defineEndpoint({
-  route: "GET /api/host-fs/list",
-  query: PathQuery,
-  response: HostFsListResultSchema,
-});
-
 // ── peek ─────────────────────────────────────────────────────────────────────
-
-/** How many folders one `peek` request reads at most. */
-export const HOST_FS_PEEK_MAX_PATHS = 500;
 
 /**
  * How many child names `peek` returns for one folder at most. A fuller folder
@@ -171,22 +155,12 @@ export const HostFsPeekResultSchema = z.discriminatedUnion("kind", [
   NotADir,
   UnreadableArchive,
 ]);
-export type HostFsPeekResult = z.infer<typeof HostFsPeekResultSchema>;
-
 /**
- * The child names of several folders at once — what a folder holds without
- * describing it: one `readdir` per folder on disk, the cached index for a
- * folder inside an archive. For counting a folder's items without listing it
- * (each child's `hidden` lets the caller apply its own visibility rules).
- * `results` is aligned with `paths`; each path is read like `list` reads one.
+ * What one folder holds, by name — the machine half's own answer, which the
+ * `host-fs.peek` live value (`hostFsDirPeek`) serves with its failures as
+ * refusals.
  */
-export const hostFsPeek = defineEndpoint({
-  route: "POST /api/host-fs/peek",
-  body: z.object({
-    paths: z.array(z.string()).max(HOST_FS_PEEK_MAX_PATHS),
-  }),
-  response: z.object({ results: z.array(HostFsPeekResultSchema) }),
-});
+export type HostFsPeekResult = z.infer<typeof HostFsPeekResultSchema>;
 
 // ── stat ─────────────────────────────────────────────────────────────────────
 
@@ -269,13 +243,6 @@ export const HostFsTextResultSchema = z.discriminatedUnion("kind", [
 ]);
 export type HostFsTextResult = z.infer<typeof HostFsTextResultSchema>;
 
-/** Read a host file as UTF-8 text, capped and binary-sniffed. */
-export const hostFsText = defineEndpoint({
-  route: "GET /api/host-fs/text",
-  query: z.object({ path: z.string() }),
-  response: HostFsTextResultSchema,
-});
-
 // ── raw ──────────────────────────────────────────────────────────────────────
 
 /**
@@ -316,14 +283,12 @@ export const HostFsVolumeResultSchema = z.discriminatedUnion("kind", [
   Missing,
   Denied,
 ]);
+/**
+ * The storage of the volume holding a path — the machine half's own answer,
+ * which the `host-fs.volume` live value (`hostFsVolumeInfo`) serves with its
+ * failures as refusals.
+ */
 export type HostFsVolumeResult = z.infer<typeof HostFsVolumeResultSchema>;
-
-/** The storage of the volume holding `path` (home by default). */
-export const hostFsVolume = defineEndpoint({
-  route: "GET /api/host-fs/volume",
-  query: PathQuery,
-  response: HostFsVolumeResultSchema,
-});
 
 // ── open ─────────────────────────────────────────────────────────────────────
 

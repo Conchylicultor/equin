@@ -469,18 +469,32 @@ export function useLive<
  *   0's (a preview) and the step `loadMore()` grows by. `null` reads nothing.
  *   The per-question meta sibling is `useLive(pagedValue.meta, query)`.
  */
-export function useLive<Item, Meta, Q, QIn, C extends string = never>(
-  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C> | null,
+export function useLive<
+  Item,
+  Meta,
+  Q,
+  QIn,
+  C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
+>(
+  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM> | null,
   query: NoInfer<QIn> | null,
   options: LivePagesOptions,
-): LivePagesResult<Item, NoInfer<C>>;
-export function useLive<Item, Meta, Q, QIn, C extends string = never>(
-  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C>,
+): WithMachine<NM, LivePagesResult<Item, NoInfer<C>>>;
+export function useLive<
+  Item,
+  Meta,
+  Q,
+  QIn,
+  C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
+>(
+  value: LivePagedValue<Item, Meta, Q, QIn, LiveValueOrigin, C, NM>,
   query: NoInfer<QIn> | null,
   options?: LiveValuePagesOptions,
   // `NoInfer`: `C` is the declaration's — never widened by the result's
   // annotation (`LiveListResult<Item>` would infer `string`).
-): LiveListResult<Item, NoInfer<C>>;
+): WithMachine<NM, LiveListResult<Item, NoInfer<C>>>;
 /**
  * - `useLive(queryValue, query)` — a typed-query value
  *   (`liveValue(key, { query })`): the question is the schema's INPUT, encoded

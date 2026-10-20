@@ -2,20 +2,21 @@ import {
   useEndpoint,
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
+import { unavailableMessage } from "@plugins/infra/plugins/endpoints/core";
 import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
-import {
-  hostFsText,
-  type HostFsTextResult,
-} from "@plugins/infra/plugins/host-fs/core";
+import { hostFsFileText } from "@plugins/infra/plugins/host-fs/core";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { FileRef } from "../../core";
 import { useRefetchOnFileChange } from "./use-file-revision";
 
 /**
  * Why a file has no text to show — a determinate answer about the file, not a
  * failed read: the renderer says so in words ("Binary file", "too large")
- * rather than as an error.
+ * rather than as an error. `needs-machine` is a host file read where no
+ * computer is behind the app (the in-browser demo): nothing is read.
  */
-export type FileTextUnavailable = "too-large" | "binary" | "missing" | "denied";
+export type FileTextUnavailable =
+  "too-large" | "binary" | "missing" | "denied" | "needs-machine";
 
 export type FileTextState =
   | { kind: "loading" }
@@ -47,33 +48,14 @@ function failureState(error: Error): FileTextState {
   return { kind: "error", message: String(error) };
 }
 
-// host-fs's `text` route answers the same cases as a discriminated body.
-function hostState(result: HostFsTextResult): FileTextState {
-  switch (result.kind) {
-    case "ok":
-      return { kind: "ok", content: result.content };
-    case "too-large":
-    case "binary":
-    case "missing":
-    case "denied":
-      return { kind: "unavailable", reason: result.kind };
-    case "not-a-file":
-      return { kind: "error", message: `Not a file: ${result.path}` };
-    case "unreadable-archive":
-      return {
-        kind: "error",
-        message: `Unreadable archive member (${result.reason}): ${result.path}`,
-      };
-  }
-}
-
 /**
  * A file's text, whichever source holds it: a workspace file through code-api's
- * `file` route (as of the ref's revision when it names one), a host file
- * through host-fs's `text` route. Both reads are declared every render (hooks
- * cannot be conditional) and the one for the other source stays disabled.
- * Re-read in place whenever the file changes on disk (`useFileRevision`): the
- * text on screen stays until the new one lands.
+ * `file` route (as of the ref's revision when it names one) — re-read in place
+ * whenever the file changes on disk (`useFileRevision`), the text on screen
+ * staying until the new one lands — and a host file through host-fs's
+ * `host-fs.text` live value, which the server invalidates from a watch of the
+ * file's folder while it is read. Both reads are declared every render (hooks
+ * cannot be conditional) and the one for the other source reads nothing.
  */
 export function useFileText(file: FileRef): FileTextState {
   const ws = file.source === "workspace" ? file : null;
@@ -90,21 +72,46 @@ export function useFileText(file: FileRef): FileTextState {
       enabled: ws !== null,
     },
   );
-  const hostRead = useEndpoint(
-    hostFsText,
-    {},
-    { query: { path: host?.path ?? "" }, enabled: host !== null },
+  useRefetchOnFileChange(ws, wsRead.refetch);
+  const hostRead = useLive(
+    hostFsFileText,
+    host === null ? null : { path: host.path },
   );
-  useRefetchOnFileChange(file, ws !== null ? wsRead.refetch : hostRead.refetch);
 
   if (ws !== null) {
     if (wsRead.error) return failureState(wsRead.error);
     if (!wsRead.data) return { kind: "loading" };
     return { kind: "ok", content: wsRead.data.content };
   }
-  if (hostRead.error) return failureState(hostRead.error);
-  if (!hostRead.data) return { kind: "loading" };
-  return hostState(hostRead.data);
+  // host-fs refuses the cases it will not read: the ones that are an answer
+  // about the file are `unavailable`, the rest (a malformed path, a folder, an
+  // unreadable archive) an error carrying the server's own words.
+  switch (hostRead.status) {
+    case "unavailable":
+      return { kind: "unavailable", reason: "needs-machine" };
+    case "loading":
+      return { kind: "loading" };
+    case "ready":
+      return { kind: "ok", content: hostRead.data.content };
+    case "error": {
+      const { error } = hostRead;
+      if (error.kind === "refused") {
+        switch (error.code) {
+          case "too-large":
+          case "binary":
+          case "missing":
+          case "denied":
+            return { kind: "unavailable", reason: error.code };
+          case "invalid-path":
+          case "not-a-file":
+          case "unreadable-archive":
+          case undefined:
+            return { kind: "error", message: error.message };
+        }
+      }
+      return { kind: "error", message: error.message };
+    }
+  }
 }
 
 /** The sentence a renderer shows for a file with no text to show. */
@@ -120,5 +127,7 @@ export function fileTextUnavailableMessage(
       return "File not found.";
     case "denied":
       return "Permission denied — this file cannot be read.";
+    case "needs-machine":
+      return unavailableMessage(hostFsFileText.needsMachine);
   }
 }

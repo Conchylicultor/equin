@@ -1,11 +1,18 @@
 import { useMemo } from "react";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { hostFsList } from "@plugins/infra/plugins/host-fs/core";
 import {
-  hostFsImageSizes,
+  compareHostFsNames,
+  HOST_FS_PEEK_MAX_NAMES,
+  hostFsListing,
+  type HostFsEntry,
+} from "@plugins/infra/plugins/host-fs/core";
+import {
+  hostFsFolderImageSizes,
   hostResizedUrl,
+  type FolderImageSize,
   isResizableName,
 } from "@plugins/infra/plugins/host-fs/plugins/image/core";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { listCodeDir } from "@plugins/code-explorer/plugins/code-api/core";
 import {
   fileRefName,
@@ -51,14 +58,23 @@ function viewerImage(file: FileRef, host: HostFacts | null): ViewerImage {
   };
 }
 
+/** By name as host-fs shows a folder. */
+const byName = compareHostFsNames;
+
+// A host folder's listing and sizes are read whole, in one page: the viewer
+// steps through every image of the folder. Bounded by the values' `maxLimit`
+// (the same cap past which host-fs's `peek` stops naming children).
+const HOST_READ = { limit: HOST_FS_PEEK_MAX_NAMES };
+
 /**
  * Every image in `file`'s folder, by name — what the viewer steps through
  * with ← / →. Until the folder is listed (or when it cannot be: missing,
- * denied), the set is the file alone (`pending` says which); a failed request
- * throws.
+ * denied, no computer behind the app), the set is the file alone (`pending`
+ * says which); a failed read throws.
  *
- * A host folder's raster images also carry resized copies (thumbnails, and a
- * screen-sized stage) and, once their headers are read, their pixel sizes.
+ * A host folder (host-fs's live `host-fs.list` and `host-fs.image-sizes`,
+ * pushed while read) gives its raster images resized copies (thumbnails, and
+ * a screen-sized stage) and, once their headers are read, their pixel sizes.
  */
 export function useFolderImages(file: FileRef): {
   images: readonly ViewerImage[];
@@ -67,16 +83,9 @@ export function useFolderImages(file: FileRef): {
   pending: boolean;
 } {
   const dir = parentDir(file);
-  const host = useEndpoint(
-    hostFsList,
-    {},
-    { query: { path: dir }, enabled: file.source === "host" },
-  );
-  const sizes = useEndpoint(
-    hostFsImageSizes,
-    {},
-    { query: { path: dir }, enabled: file.source === "host" },
-  );
+  const hostQuery = file.source === "host" ? { path: dir } : null;
+  const host = useLive(hostFsListing, hostQuery, HOST_READ);
+  const sizes = useLive(hostFsFolderImageSizes, hostQuery, HOST_READ);
   const inWorkspace = useEndpoint(
     listCodeDir,
     { worktree: file.source === "workspace" ? file.workspace : "" },
@@ -88,26 +97,56 @@ export function useFolderImages(file: FileRef): {
       enabled: file.source === "workspace",
     },
   );
-  const query = file.source === "host" ? host : inWorkspace;
 
+  // A host folder's entries, once listed; `null` while they are not known
+  // (`pending` says so), when the folder cannot be listed, or with no computer
+  // behind the app — the set is then the file alone.
+  let hostEntries: readonly HostFsEntry[] | null;
+  switch (host.status) {
+    case "ready":
+      hostEntries = host.data;
+      break;
+    case "loading":
+    case "error":
+    case "unavailable":
+      hostEntries = null;
+      break;
+  }
+  const workspaceData = inWorkspace.data;
   const names = useMemo((): readonly string[] | null => {
-    const result = query.data;
-    if (result?.kind !== "ok") return null;
-    return result.entries
+    const entries =
+      file.source === "host"
+        ? hostEntries
+        : workspaceData?.kind === "ok"
+          ? workspaceData.entries
+          : null;
+    if (entries === null) return null;
+    return entries
       .filter((e) => e.kind === "file" && supportsImage(e.name) !== false)
-      .map((e) => e.name);
-  }, [query.data]);
+      .map((e) => e.name)
+      .sort(byName);
+  }, [file.source, hostEntries, workspaceData]);
 
+  // The sizes measured so far; none while they are on their way (`pending`),
+  // refused or unreadable here — the images then carry no size.
+  let sizesData: readonly FolderImageSize[] | null;
+  switch (sizes.status) {
+    case "ready":
+      sizesData = sizes.data;
+      break;
+    case "loading":
+    case "error":
+    case "unavailable":
+      sizesData = null;
+      break;
+  }
   const facts = useMemo((): ReadonlyMap<string, HostFacts> | null => {
-    const listed = host.data;
-    if (file.source !== "host" || listed?.kind !== "ok") return null;
+    if (hostEntries === null) return null;
     const known = new Map<string, { width: number; height: number }>();
-    if (sizes.data?.kind === "ok") {
-      for (const { name, size } of sizes.data.images)
-        if (size.kind === "known") known.set(name, size);
-    }
+    for (const { name, size } of sizesData ?? [])
+      if (size.kind === "known") known.set(name, size);
     const out = new Map<string, HostFacts>();
-    for (const e of listed.entries) {
+    for (const e of hostEntries) {
       if (e.kind !== "file" || !isResizableName(e.name)) continue;
       out.set(e.name, {
         version: { mtimeMs: e.mtimeMs, size: e.size },
@@ -115,7 +154,7 @@ export function useFolderImages(file: FileRef): {
       });
     }
     return out;
-  }, [file.source, host.data, sizes.data]);
+  }, [hostEntries, sizesData]);
 
   // Memoized by the React Compiler (a manual useMemo here cannot be kept).
   const self = fileRefName(file);
@@ -125,10 +164,17 @@ export function useFolderImages(file: FileRef): {
       : names.map((name) =>
           viewerImage(siblingRef(file, dir, name), facts?.get(name) ?? null),
         );
-  if (query.isError) throw query.error;
-  if (sizes.isError) throw sizes.error;
+  // A refusal (missing, denied, …) is the folder's answer — the file alone;
+  // any other failure is a bug to surface.
+  if (host.status === "error" && host.error.kind !== "refused")
+    throw host.error;
+  if (sizes.status === "error" && sizes.error.kind !== "refused")
+    throw sizes.error;
+  if (inWorkspace.isError) throw inWorkspace.error;
   return {
     images,
-    pending: file.source === "host" && (host.isPending || sizes.isPending),
+    pending:
+      file.source === "host" &&
+      (host.status === "loading" || sizes.status === "loading"),
   };
 }

@@ -1,6 +1,7 @@
 import type * as parcel from "@parcel/watcher";
-import { readdirSync } from "node:fs";
-import { basename, extname, join } from "node:path";
+import { type FSWatcher, readdirSync, watch as fsWatch } from "node:fs";
+import { stat } from "node:fs/promises";
+import { basename, dirname, extname, join } from "node:path";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 // Pure-JS wrapper: this import loads NO native code — `wrapper.js` only defines
@@ -105,6 +106,20 @@ interface FileWatcherBaseOptions {
    */
   writesWhileOpen?: boolean;
   /**
+   * How deep each watched dir is heard. `"subtree"` (the default) is
+   * parcel's native recursive watch: every path at any depth. `"children"` is
+   * the platform's single-directory watch (`fs.watch` without `recursive`) —
+   * the dir's direct entries created, written, renamed or removed, and the
+   * dir itself going (heard through a second single-directory watch, of its
+   * parent) — so watching a huge folder (`~`, `/`) costs two handles, not a
+   * watch of everything below it. It goes live a moment after `start`
+   * resolves, not at it: Bun opens the native watch on its own thread (on
+   * macOS, one FSEvents stream shared by every directory watch of the
+   * process, restarted from "now" whenever one opens or closes). No `ignore`
+   * and no `writesWhileOpen` beside it (a throw).
+   */
+  depth?: WatchDepth;
+  /**
    * Label for the `bg` span each dispatch (`onChange` / `onReconcile`) runs
    * under, so a watcher callback's synchronous main-thread cost is attributed to
    * `watch:<name>` in the profiler instead of vanishing. Defaults to the first
@@ -186,9 +201,21 @@ export interface FileWatcher {
  * activity catalog reports it.
  */
 export type WatcherBackend =
-  "fs-events" | "kqueue" | "inotify" | "windows" | "platform-default";
+  | "fs-events"
+  | "kqueue"
+  | "inotify"
+  | "windows"
+  | "platform-default"
+  | "fs-watch";
 
-export function watcherBackend(writesWhileOpen: boolean): WatcherBackend {
+/** How deep a watch hears each watched dir — see `depth` on the options. */
+export type WatchDepth = "subtree" | "children";
+
+export function watcherBackend(
+  writesWhileOpen: boolean,
+  depth: WatchDepth = "subtree",
+): WatcherBackend {
+  if (depth === "children") return "fs-watch";
   const platform = process.platform;
   if (platform === "darwin") return writesWhileOpen ? "kqueue" : "fs-events";
   if (platform === "linux") return "inotify";
@@ -209,10 +236,16 @@ export async function createFileWatcher(
     extensions,
     ignore,
     writesWhileOpen = false,
+    depth = "subtree",
     name = basename(dirs[0] ?? "file-watcher"),
   } = opts;
+  if (depth === "children" && (ignore !== undefined || writesWhileOpen)) {
+    throw new Error(
+      `[file-watcher] ${name}: a children-depth watch takes no ignore and no writesWhileOpen`,
+    );
+  }
 
-  const subscriptions: parcel.AsyncSubscription[] = [];
+  const subscriptions: { unsubscribe(): Promise<void> }[] = [];
   let pending: parcel.Event[] = [];
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let ceilingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -277,32 +310,39 @@ export async function createFileWatcher(
         }
       : undefined;
 
-  const parcelWatcher = await getParcelWatcher();
+  const take = (events: parcel.Event[]): void => {
+    const filtered = extensions
+      ? events.filter((e) => extensions.includes(extname(e.path)))
+      : events;
+    if (filtered.length === 0) return;
+
+    if (debounceMs === 0) {
+      changes.trigger(filtered);
+    } else {
+      pending.push(...filtered);
+      schedule();
+    }
+  };
+
+  const parcelWatcher = depth === "subtree" ? await getParcelWatcher() : null;
 
   for (const dir of dirs) {
     if (useKqueue) assertKqueueSized(dir);
     try {
-      const sub = await parcelWatcher.subscribe(
-        dir,
-        (err, events) => {
-          if (err) {
-            console.error(`[file-watcher] error on ${dir}`, err);
-            return;
-          }
-          const filtered = extensions
-            ? events.filter((e) => extensions.includes(extname(e.path)))
-            : events;
-          if (filtered.length === 0) return;
-
-          if (debounceMs === 0) {
-            changes.trigger(filtered);
-          } else {
-            pending.push(...filtered);
-            schedule();
-          }
-        },
-        parcelOptions,
-      );
+      const sub =
+        parcelWatcher === null
+          ? await watchChildren(dir, take)
+          : await parcelWatcher.subscribe(
+              dir,
+              (err, events) => {
+                if (err) {
+                  console.error(`[file-watcher] error on ${dir}`, err);
+                  return;
+                }
+                take(events);
+              },
+              parcelOptions,
+            );
       subscriptions.push(sub);
     } catch (err: unknown) {
       console.error(`[file-watcher] failed to subscribe to ${dir}`, err);
@@ -332,6 +372,126 @@ export async function createFileWatcher(
       pending = [];
       await Promise.all(subscriptions.map((s) => s.unsubscribe()));
       subscriptions.length = 0;
+    },
+  };
+}
+
+/** Whether `path` is there now; a missing (or no longer a dir's) entry is not. */
+async function entryExists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return false;
+    throw err;
+  }
+}
+
+/**
+ * The `"children"` depth: a single-directory `fs.watch` of `dir`, its events
+ * turned into parcel's shape. `fs.watch` says only `rename` (an entry came or
+ * went) or `change` (written) and a name, so a rename is classified by
+ * looking: there now is a `create`, gone a `delete`.
+ *
+ * The dir itself going — removed, moved away, or replaced by another (its
+ * inode changed) — is reported as a `delete` of `dir`, as is the watch
+ * failing (it hears nothing from then on): the holder re-arms on it. The
+ * dir's own watch cannot hear that — Bun's single-directory watch reports
+ * nothing when its dir is removed or moved (measured on macOS: no event, no
+ * error, no close) — so a second single-directory watch, of the PARENT, is
+ * held beside it, listening only for entries named `basename(dir)`: the dir
+ * going is a `rename` of an entry there, checked against the inode. `/` has
+ * no parent and cannot go. Two directory handles per dir, never a watch of
+ * the tree below either.
+ *
+ * Rejects when `dir` (or its parent) cannot be watched — `dir` missing —
+ * holding nothing.
+ */
+async function watchChildren(
+  dir: string,
+  onEvents: (events: parcel.Event[]) => void,
+): Promise<{ unsubscribe(): Promise<void> }> {
+  const ino = (await stat(dir)).ino;
+  let closed = false;
+  let gone = false;
+  const dirGone = async (): Promise<boolean> => {
+    try {
+      return (await stat(dir)).ino !== ino;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "ENOENT" || code === "ENOTDIR") return true;
+      throw err;
+    }
+  };
+  const deliver = (events: parcel.Event[]): void => {
+    if (!closed && events.length > 0) onEvents(events);
+  };
+  const reportGone = (events: parcel.Event[]): void => {
+    if (gone) return;
+    gone = true;
+    events.push({ type: "delete", path: dir });
+  };
+  const checkGone = async (events: parcel.Event[]): Promise<void> => {
+    if (await dirGone()) reportGone(events);
+  };
+  const classify = async (type: string, name: string | null): Promise<void> => {
+    const events: parcel.Event[] = [];
+    if (name !== null && name !== "") {
+      const path = join(dir, name);
+      if (type === "change") events.push({ type: "update", path });
+      else {
+        events.push({
+          type: (await entryExists(path)) ? "create" : "delete",
+          path,
+        });
+      }
+    }
+    if (type === "rename" || name === null) await checkGone(events);
+    deliver(events);
+  };
+  const onError = (on: string) => (err: Error) => {
+    console.error(`[file-watcher] error on ${on}`, err);
+    const events: parcel.Event[] = [];
+    reportGone(events);
+    deliver(events);
+  };
+  const watchers: FSWatcher[] = [];
+  const closeAll = (): void => {
+    closed = true;
+    for (const w of watchers) w.close();
+  };
+  try {
+    const own = fsWatch(dir, { persistent: false }, (type, filename) => {
+      // A stat that fails for any reason but absence rejects here, unhandled
+      // — loud, never swallowed.
+      void classify(type, filename ?? null);
+    });
+    watchers.push(own);
+    own.on("error", onError(dir));
+    const parent = dirname(dir);
+    if (parent !== dir) {
+      const self = basename(dir);
+      const above = fsWatch(
+        parent,
+        { persistent: false },
+        (_type, filename) => {
+          // Only this dir's own entry in its parent; a nameless event may be it.
+          if (filename !== null && filename !== self) return;
+          const events: parcel.Event[] = [];
+          void checkGone(events).then(() => deliver(events));
+        },
+      );
+      watchers.push(above);
+      above.on("error", onError(parent));
+    }
+  } catch (err) {
+    closeAll();
+    throw err;
+  }
+  return {
+    unsubscribe: async () => {
+      closeAll();
     },
   };
 }

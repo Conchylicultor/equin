@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 
 /**
@@ -57,16 +56,26 @@ export const GitCheckoutSchema = z.discriminatedUnion("kind", [
 ]);
 export type GitCheckout = z.infer<typeof GitCheckoutSchema>;
 
-/** The git checkout holding an absolute folder, if any. */
-export const fileExplorerGitCheckout = defineEndpoint({
-  route: "GET /api/file-explorer/git/checkout",
-  query: z.object({ path: z.string() }),
-  response: GitCheckoutSchema,
-});
+/**
+ * The git checkout holding the absolute folder `path`, if any — a SNAPSHOT:
+ * a folder's checkout changes only when a repository is created or removed
+ * around it, which nothing signals, so it is asked again on every mount (a
+ * `git init` shows up on the next visit) and on `refresh()`. Refused:
+ * `invalid-path` (not absolute).
+ */
+export const fileExplorerGitCheckoutValue = liveValue(
+  "file-explorer.git-checkout",
+  {
+    schema: GitCheckoutSchema,
+    params: ["path"],
+    load: "snapshot",
+    refusals: ["invalid-path"],
+  },
+);
 
 /**
- * The live git status of the checkout at `root` (a toplevel the checkout
- * endpoint answered). Pushed while subscribed, from a watcher on the checkout
+ * The live git status of the checkout at `root` (a toplevel
+ * `file-explorer.git-checkout` answered). Pushed while subscribed, from a watcher on the checkout
  * and its git dir.
  */
 export const fileExplorerGitStatus = liveValue("file-explorer.git-status", {

@@ -1,14 +1,9 @@
 import { readFile, stat } from "node:fs/promises";
-import { implement } from "@plugins/infra/plugins/endpoints/server";
-import {
-  HOST_FS_TEXT_MAX_BYTES,
-  hostFsText,
-  type HostFsTextResult,
-} from "../../core";
+import { HOST_FS_TEXT_MAX_BYTES, type HostFsTextResult } from "../../core";
 import { locateHostPath } from "./archive/locate";
 import { readArchiveText } from "./archive/read";
 import { decodeTextBytes } from "./decode";
-import { classifyFsError, resolveHostPath } from "./path";
+import { classifyFsError } from "./path";
 
 /** Read the absolute host file `path` as text. The size gate runs before the read. */
 export async function readHostText(path: string): Promise<HostFsTextResult> {
@@ -36,7 +31,3 @@ export async function readHostPathText(
     ? readArchiveText(path, located)
     : readHostText(path);
 }
-
-export const handleText = implement(hostFsText, ({ query }) =>
-  readHostPathText(resolveHostPath(query.path)),
-);

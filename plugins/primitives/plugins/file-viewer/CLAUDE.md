@@ -9,11 +9,40 @@ file to host-fs's readers, so a scratch workspace reads like a worktree; with
 `ref` it is a git read, which only a checkout answers. Renderers
 receive the `FileRef` and read it through `useFileText(file)` /
 `useFileBytes(file)` (the raw bytes, for a renderer that decodes its format
-itself) / `fileUrl(file)`, which dispatch to infra/host-fs or code-api — a
-renderer never branches on the source to read. A workspace's raw route serves
-image formats only today, so `useFileBytes` answers `unsupported` for any other
-workspace file.
+itself) / `fileUrl(file)` — a renderer never branches on the source to read.
+`useFileText` and `fileUrl` dispatch to infra/host-fs or code-api;
+`useFileBytes` reads host files only for now (a workspace file is refused
+`unsupported` until B6, below).
 
+- **The reads.** `useFileBytes` is one `useLive(fileBytes, file)` (below):
+  host files only — every workspace `FileRef` is refused `unsupported`
+  (B6). `useFileText` reads a host file through host-fs's live
+  `hostFsFileText` (`host-fs.text`, invalidated from a watch of the file's
+  folder while read) and a workspace file through code-api's `file` endpoint,
+  re-read whenever code-api's `codeFileVersion` moves (`useRefetchOnFileChange`,
+  workspace only) — that half moves onto a live value with code-api (B6 of
+  research/2026-10-11-global-endpoint-reads-onto-live.md). Both hooks keep their
+  own state shape (`loading` / `ok` / `unavailable` with a reason / `error`):
+  a refusal that is an answer about the file (`missing`, `denied`, `too-large`,
+  `binary`, `unsupported`) is `unavailable`, worded by
+  `fileTextUnavailableMessage` / `fileBytesUnavailableMessage`; a read where no
+  computer is behind the app (the in-browser demo — both values are
+  `needsMachine`) is `unavailable` with reason `needs-machine`; any other
+  refusal (`invalid-path`, `not-a-file`, `unreadable-archive`) or failure is
+  `error` with the server's message.
+
+- **`fileBytes` (`file-viewer.bytes`, core; served by `machine/`)** is the live
+  form of `useFileBytes`' read: `useLive(fileBytes, file)` →
+  `ResourceResult<ArrayBuffer>` (a `bytes` value, on demand, `needsMachine`),
+  the question being the `FileRef` itself. A host file is read through
+  host-fs (`openHostFile`: a disk file or an archive member), capped at
+  `FILE_BYTES_MAX` (64 MiB) before the read, and invalidated from a watch of
+  its folder while read. Refused: `missing`, `denied`, `too-large`,
+  `unsupported` (a folder, an unreadable archive member — and, for now, EVERY
+  workspace file: code-api's byte read has no live form yet, B6 of
+  research/2026-10-11-global-endpoint-reads-onto-live.md; today's only
+  `useFileBytes` reader, the MIDI preview, already got `unsupported` for a
+  workspace file, as code-api serves image formats only), `invalid-path`.
 - `FileViewer.Renderer` is the tiered registry: each renderer's `supports({ file,
   gitStatus? })` answers `native` / `contextual` / `fallback` / `last-resort` / `false`, and every
   offered renderer is a tab, best tier first. Each renderer is one sub-plugin
@@ -30,7 +59,7 @@ workspace file.
 
 ## Plugin reference
 
-- Description: Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText / useFileBytes reading a FileRef's text or raw bytes from the host (infra/host-fs) or a git checkout (code-api).
+- Description: Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, useFileText reading a FileRef's text from the host (infra/host-fs) or a git checkout (code-api), and useFileBytes its raw bytes — host files only for now (a workspace file is refused unsupported until code-api's byte read has a live form).
 - Web:
   - Slots: `FileViewer.Renderer`
   - Slot contributors:
@@ -43,8 +72,10 @@ workspace file.
     - `FileViewer.Renderer` ← `primitives.file-viewer.markdown`
     - `FileViewer.Renderer` ← `primitives.file-viewer.media`
     - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/endpoints` ×4
+  - Uses:
+    - `infra/endpoints.EndpointError`
+    - `infra/endpoints.useEndpoint`
+    - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
@@ -82,20 +113,32 @@ workspace file.
     - `FileViewer`
     - `NoPreview`
     - `resolveRenderers`
+    - `useArchiveMembership`
     - `useFileBytes`
     - `useFileRenderers`
     - `useFileText`
-    - `useIsInArchive`
     - `useOpenHostFile`
+- Server:
+  - Contributes: `resource.declare` "file-viewer.bytes"
+  - Resources: `file-viewer.bytes` (invalidate, notified)
+- Machine:
+  - Uses:
+    - `infra/host-fs.resolvedOrNull`
+    - `infra/host-fs.resolveOrRefuse`
+    - `infra/host-fs.watchHostPath`
+    - `network/live.serveValue`
 - Core:
   - Uses:
     - `code-explorer/code-api.codeImageUrl`
     - `infra/host-fs.hostFileUrl`
+    - `network/live.liveValue`
   - Exports (types):
     - `FileGitStatus`
     - `FileRef`
     - `FileViewerGit`
   - Exports (values):
+    - `FILE_BYTES_MAX`
+    - `fileBytes`
     - `fileExtension`
     - `fileRefForPath`
     - `fileRefKey`
@@ -124,7 +167,7 @@ workspace file.
     - `primitives/file-viewer/media`
     - `primitives/file-viewer/pdf`
 - Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/components/no-preview.tsx`, `web/internal/use-file-bytes.ts`, `web/internal/use-file-text.ts` (debt)
+  - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-file-text.ts` (debt)
 - Sub-plugins:
   - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
   - **`diff`** — Side-by-side diff of a changed file vs its checkout's base — a contextual tab, offered only when the host passes git context (checkout, path, status) with a non-clean status, wherever the file's…

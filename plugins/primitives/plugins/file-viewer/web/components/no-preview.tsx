@@ -2,11 +2,12 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
-  useEndpoint,
-  useEndpointMutation,
-} from "@plugins/infra/plugins/endpoints/web";
-import { hostFsOpen, hostFsStat } from "@plugins/infra/plugins/host-fs/core";
+  hostFsOpen,
+  hostFsPathStat,
+} from "@plugins/infra/plugins/host-fs/core";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -84,20 +85,44 @@ export function useOpenHostFile(): (
 }
 
 /**
- * Whether the host path `path` lies inside an archive (its stat says so):
- * there is no file on disk to open with a default app. `false` until known.
+ * Whether a host path is a file on disk a default app can open, or a member of
+ * an archive (there is no file to open), as its live `host-fs.stat` says.
+ * `loading` until the stat lands — never a guess either way; `unknown` when it
+ * was refused, failed, or no computer is behind the app.
  */
-export function useIsInArchive(path: string): boolean {
-  const stat = useEndpoint(hostFsStat, {}, { query: { path } });
-  return stat.data?.kind === "ok" && stat.data.within !== undefined;
+export type ArchiveMembership =
+  | { kind: "loading" }
+  | { kind: "known"; inArchive: boolean }
+  | { kind: "unknown"; message: string };
+
+/** {@link ArchiveMembership} of the host path `path`. */
+export function useArchiveMembership(path: string): ArchiveMembership {
+  const stat = useLive(hostFsPathStat, { path });
+  switch (stat.status) {
+    case "loading":
+      return { kind: "loading" };
+    case "unavailable":
+      return { kind: "unknown", message: stat.message };
+    case "error":
+      return { kind: "unknown", message: stat.error.message };
+    case "ready":
+      return { kind: "known", inArchive: stat.data.within !== undefined };
+  }
 }
 
 function OpenWithDefaultApp({ path }: { path: string }) {
   const openHostFile = useOpenHostFile();
-  const inArchive = useIsInArchive(path);
-  if (inArchive) return null;
+  const membership = useArchiveMembership(path);
+  // Nothing on disk to open (an archive member), or no telling: no button.
+  if (membership.kind === "unknown") return null;
+  if (membership.kind === "known" && membership.inArchive) return null;
   return (
-    <Button variant="outline" onClick={() => openHostFile(path)}>
+    <Button
+      variant="outline"
+      // Not known yet: drawn, but not pressable until the stat lands.
+      disabled={membership.kind === "loading"}
+      onClick={() => openHostFile(path)}
+    >
       <Icon icon={navIcons.hostApp} />
       Open with default app
     </Button>

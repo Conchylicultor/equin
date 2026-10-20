@@ -1754,7 +1754,11 @@ const r = useLive(checkoutStatus);   // ResourceResult<T> | { status: "unavailab
   served by their own plugins — a throw for an untyped caller). The
   declaration's type carries it per def, as `origin` does: `LiveMachineDecl`
   (`needsMachine: MachineFeature`) or `LivePortableDecl` (`needsMachine?:
-  undefined`); a paged value's meta sibling inherits it.
+  undefined`); a paged value carries it as `LivePagedValue`'s own `NM` type
+  argument (so a serve or read still infers `Item` / `Meta` from the
+  declaration), and its meta sibling inherits it (`host-fs.list`). A reader
+  of a paged value that does not take `NM` (data-view's
+  `useLivePagedValuePaging`) accepts only a portable one (tsc).
 - **Serve.** `live/server`'s `serveValue` / `serveCollection` take only a
   portable declaration; `live/machine`'s — the SAME overload set
   (`ServeValueOverloads<H>` / `ServeCollectionOverloads<H>`, `H` intersected
@@ -2172,15 +2176,15 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 254 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 257 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×70
     - `conversations` ×48
     - `tasks` ×27
     - `debug` ×26
-    - `infra` ×14
+    - `infra` ×15
     - `active-data` ×12
     - `page` ×10
-    - `primitives` ×7
+    - `primitives` ×9
     - `build` ×6
     - `plugin-meta` ×4
     - `auth` ×3
@@ -2209,9 +2213,6 @@ never add one.
   - Exempted by:
     - `apps/deploy/analytics/dashboard` (1 debt)
     - `apps/desktop/wallpaper` (1 debt)
-    - `apps/file-explorer/browser` (4 debt)
-    - `apps/file-explorer/git` (1 debt)
-    - `apps/file-explorer/places` (2 debt)
     - `apps/mail/reading-pane` (1 debt)
     - `apps/mail/search` (1 debt)
     - `build/build-commits` (1 debt)
@@ -2237,9 +2238,8 @@ never add one.
     - `plugin-meta/plugin-health` (1 debt)
     - `primitives/data-view` (0 debt)
     - `primitives/diff-view` (3 debt)
-    - `primitives/file-viewer` (3 debt)
+    - `primitives/file-viewer` (1 debt)
     - `primitives/file-viewer/image` (1 debt)
-    - `primitives/folder-picker` (1 debt)
     - `primitives/live-state` (0 debt)
     - `primitives/optimistic-mutation` (0 debt)
     - `review/code-review` (1 debt)

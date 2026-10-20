@@ -6,11 +6,14 @@ fields of the browser's row kind) and `FileBrowserSlots.Lens` — the browser ne
 names git. Outside a checkout the fields exist with no value (an empty cell, not a
 missing column). Plan: `research/2026-10-02-apps-file-explorer-git-and-code-explorer-replacement.md` §D.
 
-- **Checkout.** `GET /api/file-explorer/git/checkout?path` answers which
-  checkout holds a folder (`rev-parse --show-toplevel --show-prefix`), as git
-  spells its toplevel (`root`, the code-api checkout id and the status param)
-  and as the asked path spells it (`rootAsGiven`, what the browser's paths are
-  made relative to). Missing, denied or non-repo folders are `none`.
+- **Checkout.** `file-explorer.git-checkout` (`{ path }`, external, a
+  snapshot — a folder's checkout changes only on `git init` / removal, which
+  nothing signals, so it is measured on every mount; `invalid-path` refused)
+  answers which checkout holds a folder (`rev-parse --show-toplevel
+  --show-prefix`), as git spells its toplevel (`root`, the code-api checkout
+  id and the status param) and as the asked path spells it (`rootAsGiven`,
+  what the browser's paths are made relative to). Missing, denied or non-repo
+  folders are `none`.
 - **Status.** `file-explorer.git-status` (`{ root }`, external, pushed): one
   `status --porcelain=v2 --ignored=matching --untracked-files=normal` plus one
   `diff -M --name-status <merge-base main HEAD>`. Untracked and ignored folders
@@ -33,7 +36,7 @@ missing column). Plan: `research/2026-10-02-apps-file-explorer-git-and-code-expl
 
 ## Plugin reference
 
-- Description: Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field (client fields of the file-entry row kind, empty outside a checkout), ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (GET /api/file-explorer/git/checkout, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from the shared checkout watch (infra/git/checkout-watch: working tree + git dir) while subscribed.
+- Description: Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field (client fields of the file-entry row kind, empty outside a checkout), ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (the file-explorer.git-checkout snapshot value, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from the shared checkout watch (infra/git/checkout-watch: working tree + git dir) while subscribed.
 - Web:
   - Contributes:
     - `ClientFields.Resolve` "client:file-explorer.entry:git" → `GitFieldsResolver`
@@ -52,11 +55,11 @@ missing column). Plan: `research/2026-10-02-apps-file-explorer-git-and-code-expl
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceError`
     - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useEndpointResource`
 - Server:
-  - Contributes: `resource.declare` "file-explorer.git-status"
+  - Contributes:
+    - `resource.declare` "file-explorer.git-checkout"
+    - `resource.declare` "file-explorer.git-status"
   - Uses:
-    - `infra/endpoints.implement`
     - `infra/git/checkout-watch.acquireCheckoutWatch`
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/host/host-read-pool.withHeavyReadSlot`
@@ -65,8 +68,9 @@ missing column). Plan: `research/2026-10-02-apps-file-explorer-git-and-code-expl
     - `primitives/commit-list.parseDiffNameStatusZ`
     - `primitives/commit-list.runGit`
     - `primitives/commit-list.tryRunGit`
-  - Resources: `file-explorer.git-status` (push, notified)
-  - Routes: `GET /api/file-explorer/git/checkout`
+  - Resources:
+    - `file-explorer.git-checkout` (invalidate, snapshot)
+    - `file-explorer.git-status` (push, notified)
 - Core:
   - Uses:
     - `apps/file-explorer/browser.fileEntry`
@@ -81,7 +85,6 @@ missing column). Plan: `research/2026-10-02-apps-file-explorer-git-and-code-expl
   - Uses tokens: `ui/tokens/color-palette --warning`
 - Exemptions:
   - Exempts itself from:
-    - `live/no-endpoint-read` — `web/internal/use-git.ts` (debt)
     - `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/checkout.ts`, `server/internal/status.ts` (debt)
 

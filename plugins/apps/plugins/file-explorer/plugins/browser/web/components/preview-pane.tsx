@@ -14,14 +14,15 @@ import {
 import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { hostFsStat } from "@plugins/infra/plugins/host-fs/core";
+import { hostFsPathStat } from "@plugins/infra/plugins/host-fs/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import {
   FileContent,
   FileTabs,
   useFileRenderers,
-  useIsInArchive,
+  useArchiveMembership,
   useOpenHostFile,
 } from "@plugins/primitives/plugins/file-viewer/web";
 import type { FileViewerGit } from "@plugins/primitives/plugins/file-viewer/core";
@@ -68,7 +69,7 @@ export function PreviewPane({
     ...(git !== undefined ? { git } : {}),
   });
   const openHostFile = useOpenHostFile();
-  const inArchive = useIsInArchive(path);
+  const membership = useArchiveMembership(path);
   const name = displayName ?? baseName(path);
   return (
     <Column
@@ -105,11 +106,15 @@ export function PreviewPane({
             </Stack>
           </Fill>
           {renderers.resolved.length > 1 && <FileTabs {...renderers} />}
-          {!inArchive && (
+          {/* No button for an archive member (nothing on disk to open) or
+              when there is no telling; pending until the stat lands. */}
+          {(membership.kind === "loading" ||
+            (membership.kind === "known" && !membership.inArchive)) && (
             <IconButton
               icon={navIcons.hostApp}
               label="Open with default app"
               variant="ghost"
+              disabled={membership.kind === "loading"}
               onClick={() => openHostFile(path)}
             />
           )}
@@ -142,7 +147,11 @@ export function PreviewPane({
   );
 }
 
-/** `parent · size · modified`, from the file's own stat. */
+/**
+ * `parent · size · modified`, from the file's own stat (`host-fs.stat`,
+ * pushed while read, so an edit on disk moves them). Only the parent until
+ * the stat answers; a refusal says why in its place.
+ */
 function PreviewMeta({
   path,
   home,
@@ -150,28 +159,48 @@ function PreviewMeta({
   path: string;
   home: string;
 }): ReactNode {
-  const stat = useEndpoint(hostFsStat, {}, { query: { path } });
+  const stat = useLive(hostFsPathStat, { path });
   const [now] = useState(() => Date.now());
   const parent = parentPath(path, home) ?? "/";
   const parts = [parent];
-  if (stat.data?.kind === "ok") {
+  if (stat.status === "ready") {
     parts.push(
       formatSize(stat.data.entry.size),
       formatModified(stat.data.entry.mtimeMs, now),
     );
-  } else if (stat.data?.kind === "missing") {
-    parts.push("no longer exists");
-  } else if (stat.data?.kind === "denied") {
-    parts.push("permission denied");
-  } else if (stat.data?.kind === "unreadable-archive") {
-    parts.push(`unreadable archive (${stat.data.reason})`);
+  } else if (stat.status === "error") {
+    switch (stat.error.code) {
+      case "missing":
+        parts.push("no longer exists");
+        break;
+      case "denied":
+        parts.push("permission denied");
+        break;
+      case "unreadable-archive":
+      case "invalid-path":
+        parts.push(stat.error.message);
+        break;
+      case undefined:
+        // A read that failed (not a refusal): said, with its Retry, below.
+        break;
+    }
   }
+  const failed =
+    stat.status === "error" && stat.error.kind !== "refused" ? stat : null;
   return (
     // The small caption rung (`2xs`), faint.
     <ControlSizeProvider size="xs">
       <Text variant="caption" tone="faint" className="truncate">
         {parts.join(" · ")}
       </Text>
+      {failed !== null && (
+        <ResourceErrorInline
+          variant="inline"
+          error={failed.error}
+          refetch={failed.refetch}
+          subject="its size"
+        />
+      )}
     </ControlSizeProvider>
   );
 }

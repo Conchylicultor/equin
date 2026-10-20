@@ -1,8 +1,6 @@
 import type {
-  HostFsArchiveReason,
+  HostFsDirPeek,
   HostFsEntry,
-  HostFsListResult,
-  HostFsPeekResult,
 } from "@plugins/infra/plugins/host-fs/core";
 import { joinPath } from "./paths";
 
@@ -17,6 +15,22 @@ export type EntryFilter = (
   path: string,
 ) => boolean;
 
+/**
+ * Why a host-fs folder read (`host-fs.list` / `host-fs.peek`) refused, as its
+ * declared refusal code and the server's message.
+ */
+export interface FolderRefusal {
+  kind: "refused";
+  code:
+    "invalid-path" | "missing" | "denied" | "not-a-dir" | "unreadable-archive";
+  message: string;
+}
+
+/** A folder's own listing, as far as counting it goes. */
+export type ListedFolder =
+  | { kind: "listed"; entries: readonly Pick<HostFsEntry, "name" | "hidden">[] }
+  | FolderRefusal;
+
 /** How many items a folder holds, as its Size cell shows it. */
 export type ItemCount =
   /** The visible items, by the browser's current visibility rules. */
@@ -24,7 +38,8 @@ export type ItemCount =
   /** Too many to ship the names: every item, visibility rules not applied. */
   | { kind: "many"; total: number }
   | { kind: "denied" }
-  | { kind: "unreadable"; reason: HostFsArchiveReason }
+  /** An archive that cannot be read (or a path no read takes): why, in words. */
+  | { kind: "unreadable"; message: string }
   /** Gone since its parent was listed, or no longer a folder. */
   | { kind: "gone" }
   | { kind: "loading" };
@@ -32,16 +47,17 @@ export type ItemCount =
 /**
  * The item count of the folder at `path`. Its own listing wins when it is
  * listed (an expanded folder costs no read); otherwise its peek (child names
- * only). `listed` is the folder's listing result if it was asked for (`null`
- * while it loads), `peek` its peek result once one arrived.
+ * only). `listed` is what the folder's listing answered, if it was asked for
+ * and has answered; `peek` its peek's answer once one arrived. Neither yet is
+ * loading — never a 0.
  */
 export function itemCount(
   path: string,
-  listed: HostFsListResult | null | undefined,
-  peek: HostFsPeekResult | undefined,
+  listed: ListedFolder | undefined,
+  peek: HostFsDirPeek | FolderRefusal | undefined,
   shows: EntryFilter,
 ): ItemCount {
-  if (listed?.kind === "ok") {
+  if (listed?.kind === "listed") {
     return {
       kind: "count",
       n: listed.entries.filter((e) => shows(e, joinPath(path, e.name))).length,
@@ -60,42 +76,22 @@ export function itemCount(
       // A folder row whose path is now an archive file: replaced since listed.
       case "archive":
         return { kind: "gone" };
-      case "denied":
-      case "missing":
-      case "not-a-dir":
-      case "unreadable-archive":
+      case "refused":
         return failed(peek);
     }
   }
-  return listed == null ? { kind: "loading" } : failed(listed);
+  return listed === undefined ? { kind: "loading" } : failed(listed);
 }
 
-function failed(
-  result:
-    | Exclude<HostFsListResult, { kind: "ok" }>
-    | Exclude<HostFsPeekResult, { kind: "ok" | "too-many" | "archive" }>,
-): ItemCount {
-  switch (result.kind) {
+function failed(refusal: FolderRefusal): ItemCount {
+  switch (refusal.code) {
     case "denied":
       return { kind: "denied" };
     case "unreadable-archive":
-      return { kind: "unreadable", reason: result.reason };
+    case "invalid-path":
+      return { kind: "unreadable", message: refusal.message };
     case "missing":
     case "not-a-dir":
       return { kind: "gone" };
-  }
-}
-
-/** Why an archive cannot be read, in the user's terms. */
-export function archiveReasonMessage(reason: HostFsArchiveReason): string {
-  switch (reason) {
-    case "corrupt":
-      return "This archive is damaged or not in a format it claims";
-    case "encrypted":
-      return "This archive is encrypted";
-    case "unsupported-method":
-      return "This archive uses a compression method that cannot be read";
-    case "too-many-entries":
-      return "This archive has too many entries to browse";
   }
 }

@@ -13,7 +13,7 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { completeHostDir, splitPrefix } from "./complete";
 import { listHostDir } from "./list";
 import { isAppOrigin, openArgv } from "./open";
-import { peekHostDir, peekHostDirs } from "./peek";
+import { peekHostDir } from "./peek";
 import { classifyFsError, expandTilde, resolveHostPath } from "./path";
 import { parseRange, serveHostFile } from "./raw";
 import { statHostPath } from "./stat";
@@ -99,12 +99,11 @@ describe("peek", () => {
   });
   test("denied, missing and not-a-dir are their own answers, never an empty folder", async () => {
     expect(
-      await peekHostDirs([
-        join(root, "locked"),
-        join(root, "nope"),
-        join(root, "notes.txt"),
-        join(root, "Alpha"),
-      ]),
+      await Promise.all(
+        ["locked", "nope", "notes.txt", "Alpha"].map((name) =>
+          peekHostDir(join(root, name)),
+        ),
+      ),
     ).toEqual([
       { kind: "denied", path: join(root, "locked") },
       { kind: "missing", path: join(root, "nope") },

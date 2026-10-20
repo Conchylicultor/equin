@@ -3786,12 +3786,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 63 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 62 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×9
               - `primitives/css/ui-kit` ×8
-              - `infra/endpoints` ×6
               - `primitives/file-viewer` ×5
               - `primitives/pane` ×4
+              - `infra/endpoints` ×3
+              - `primitives/live-state` ×3
               - `network/live` ×2
               - `primitives/path-bar` ×2
               - `primitives/persistent-draft` ×2
@@ -3811,7 +3812,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/file-type.FileTypeIcon`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.activationProps`
-              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/scope/dom-scope.defineDomScope`
@@ -3847,11 +3847,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EntryRow`
               - `ExplorerLens`
               - `ExplorerLocation`
+              - `FolderRefusal`
               - `ItemCount`
               - `LensHideRule`
+              - `ListedFolder`
             - Exports (values):
               - `absolutePath`
-              - `archiveReasonMessage`
               - `baseName`
               - `decodeOpenParam`
               - `displayPath`
@@ -3889,11 +3890,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/places`
               - `conversations/conversation-view/explorer`
               - `plugin-meta/plugin-view/file-tree`
-          - Exemptions:
-            - Exempts itself from:
-              - `live/no-endpoint-read` — `web/components/preview-pane.tsx`, `web/internal/folder-peek.ts`, `web/internal/listings.ts` (debt)
-              - `live/no-endpoint-read` — `web/internal/host-path-source.ts` (debt)
-        - **`git`** — Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field (client fields of the file-entry row kind, empty outside a checkout), ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (GET /api/file-explorer/git/checkout, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from the shared checkout watch (infra/git/checkout-watch: working tree + git dir) while subscribed.
+        - **`git`** — Git awareness for the file explorer: inside a git checkout the tree gains a git status badge (M / A / D / R / C / ?, a dot on a folder holding changes; pending until the status is known) and a Changed vs main filter field (client fields of the file-entry row kind, empty outside a checkout), ignored files hide behind a Show ignored files toggle, and a changed file's preview gets its git context (the Diff tab). Git awareness for the file explorer, server half: which checkout holds a folder (the file-explorer.git-checkout snapshot value, git rev-parse) and the checkout's status as the file-explorer.git-status live value — each path's status vs HEAD and vs the main merge-base, untracked and ignored folders collapsed — memoized behind a content signature and pushed from the shared checkout watch (infra/git/checkout-watch: working tree + git dir) while subscribed.
           - Web:
             - Contributes:
               - `ClientFields.Resolve` "client:file-explorer.entry:git" → `GitFieldsResolver`
@@ -3912,11 +3909,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.mapResource`
               - `primitives/live-state.ResourceError`
               - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useEndpointResource`
           - Server:
-            - Contributes: `resource.declare` "file-explorer.git-status"
+            - Contributes:
+              - `resource.declare` "file-explorer.git-checkout"
+              - `resource.declare` "file-explorer.git-status"
             - Uses:
-              - `infra/endpoints.implement`
               - `infra/git/checkout-watch.acquireCheckoutWatch`
               - `infra/git/git-read-cache.createSignedMemo`
               - `infra/host/host-read-pool.withHeavyReadSlot`
@@ -3925,8 +3922,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/commit-list.parseDiffNameStatusZ`
               - `primitives/commit-list.runGit`
               - `primitives/commit-list.tryRunGit`
-            - Resources: `file-explorer.git-status` (push, notified)
-            - Routes: `GET /api/file-explorer/git/checkout`
+            - Resources:
+              - `file-explorer.git-checkout` (invalidate, snapshot)
+              - `file-explorer.git-status` (push, notified)
           - Core:
             - Uses:
               - `apps/file-explorer/browser.fileEntry`
@@ -3941,7 +3939,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/color-palette --warning`
           - Exemptions:
             - Exempts itself from:
-              - `live/no-endpoint-read` — `web/internal/use-git.ts` (debt)
               - `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
               - `boundaries/no-platform-api` — `server/internal/checkout.ts`, `server/internal/status.ts` (debt)
         - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the user's pinned favorites, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Host paths dragged onto Favorites (HOST_PATHS_MIME) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. Where the file explorer's Singularity place leads: serves the file-explorer.main-checkout value, the main checkout's path; registers the pinned-favorites config.
@@ -3960,12 +3957,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "config"
               - `row-actions` "remove-favorite" → `RemoveFavoriteAction`
               - `FileBrowserSlots.RowActions` "add-to-favorites" → `AddToFavoritesAction`
-            - Uses: 31 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md)
+            - Uses: 29 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/places/REFERENCE.md)
               - `primitives/data-view` ×6
               - `apps/file-explorer/browser` ×4
-              - `infra/endpoints` ×4
               - `apps/file-explorer/shell` ×3
               - `config_v2` ×3
+              - `infra/endpoints` ×2
               - `primitives/css/ui-kit` ×2
               - `network/live.useLive`
               - `primitives/css/clip.Clip`
@@ -4004,10 +4001,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-label`
-          - Exemptions:
-            - Exempts itself from:
-              - `live/no-endpoint-read` — `web/components/storage-meter.tsx` (debt)
-              - `live/no-endpoint-read` — `web/internal/places.ts` (debt)
         - **`shell`** — App shell for Files (the file explorer): registers the /files app entry with its outline-folder mark, contributes the app's own theme (files: the prototype's zinc palette, blue accent, Lucide icons and metrics), lays the Places sidebar beside one full-surface browser pane, and defines the FileExplorer.Sidebar / Toolbar / Places slots.
           - Web:
             - Slots:
@@ -24522,7 +24515,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/git/remotes` (2 debt)
               - `infra/host-account` (1 debt)
               - `infra/host-fs` (16 debt)
-              - `infra/host-fs/image` (3 debt)
+              - `infra/host-fs/image` (2 debt)
               - `infra/host-fs/zip` (1 debt)
               - `infra/host/contention` (1 debt)
               - `infra/host/duress/latch` (1 debt)
@@ -26679,14 +26672,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 205 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×55
+        - Imported by: 203 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×54
           - `conversations` ×29
           - `debug` ×17
           - `infra` ×16
           - `page` ×14
-          - `primitives` ×13
           - `tasks` ×13
+          - `primitives` ×12
           - `build` ×8
           - `ui` ×6
           - `auth` ×5
@@ -27119,7 +27112,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readTail`
           - `sanitizeChannel`
           - `statHistory`
-    - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope.
+    - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
       - Cross-plugin:
         - Imported by: 25 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `debug` ×7
@@ -27137,6 +27130,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `detached-work-safety/no-raw-set-interval` — `shared/engine.ts` (sanctioned)
           - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
+          - `watcher-safety/no-raw-fs-watch` — `shared/engine.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/dir-hub.ts`, `shared/engine.ts` (debt)
       - Server:
         - Exports (types):
@@ -27163,7 +27157,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listFileWatchers`
           - `onWatcherActivity`
           - `WRITES_WHILE_OPEN_MAX_ENTRIES`
-        - Register: `defineFileWatcher('file-watcher.dirs')`
+        - Register:
+          - `defineFileWatcher('file-watcher.dirs')`
+          - `defineFileWatcher('file-watcher.dir-entries')`
       - Cli:
         - Exports (types):
           - `FileWatcher`
@@ -27553,9 +27549,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `apps/pages/shell`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/read-account.ts` (debt)
-    - **`host-fs`** — The one host-filesystem API: list / peek / stat / complete / text / raw / volume reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it: replace / keep-both / skip), all three refused unless the Origin is the app's own *.localhost.
+    - **`host-fs`** — The one host-filesystem API: stat / complete / raw reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it: replace / keep-both / skip), all three refused unless the Origin is the app's own *.localhost.
       - Server:
-        - Contributes: `resource.declare` "host-fs.version"
+        - Contributes:
+          - `resource.declare` "host-fs.list"
+          - `resource.declare` "host-fs.list:meta"
+          - `resource.declare` "host-fs.peek"
+          - `resource.declare` "host-fs.stat"
+          - `resource.declare` "host-fs.text"
+          - `resource.declare` "host-fs.version"
+          - `resource.declare` "host-fs.volume"
         - Uses:
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
@@ -27572,28 +27575,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `decodeTextBytes`
           - `defineArchiveFormat`
           - `inertHeaders`
-          - `listHostPath`
           - `openHostFile`
           - `readHostPathText`
           - `resolveHostPath`
           - `serveHostPath`
-        - Resources: `host-fs.version` (push, notified)
+        - Resources:
+          - `host-fs.list` (keyed, window, notified)
+          - `host-fs.list:meta` (push, notified)
+          - `host-fs.peek` (push, notified)
+          - `host-fs.stat` (push, notified)
+          - `host-fs.text` (invalidate, notified)
+          - `host-fs.version` (push, notified)
+          - `host-fs.volume` (invalidate, snapshot)
         - Routes:
-          - `GET /api/host-fs/list`
           - `GET /api/host-fs/stat`
           - `GET /api/host-fs/complete`
-          - `GET /api/host-fs/text`
           - `GET /api/host-fs/raw`
-          - `GET /api/host-fs/volume`
-          - `POST /api/host-fs/peek`
           - `POST /api/host-fs/open`
           - `POST /api/host-fs/extract`
           - `POST /api/host-fs/move`
       - Machine:
         - Uses: `network/live.serveValue`
-        - Exports (types): `HostPathWatch`
+        - Exports (types): `HostFsFailure`
         - Exports (values):
           - `hostPathVersion`
+          - `listHostPath`
+          - `refusalFor`
+          - `resolvedOrNull`
+          - `resolveOrRefuse`
+          - `watchHostDir`
           - `watchHostPath`
       - Core:
         - Uses:
@@ -27604,41 +27614,50 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileVersion`
           - `HostFsArchiveReason`
           - `HostFsCompleteResult`
+          - `HostFsDirPeek`
           - `HostFsEntry`
           - `HostFsEntryKind`
           - `HostFsExtractResult`
+          - `HostFsFileText`
+          - `HostFsListingMeta`
           - `HostFsListResult`
           - `HostFsMoveOutcome`
           - `HostFsMoveResolution`
           - `HostFsMoveResult`
           - `HostFsOpenResult`
+          - `HostFsPathStat`
           - `HostFsPeekResult`
           - `HostFsStatResult`
           - `HostFsTextResult`
+          - `HostFsVolumeInfo`
           - `HostFsVolumeResult`
           - `HostFsWithin`
           - `ReadHostPathsResult`
         - Exports (values):
+          - `compareHostFsNames`
           - `FileVersionSchema`
           - `hasHostPaths`
           - `HOST_FS_COMPLETE_LIMIT`
+          - `HOST_FS_MACHINE`
           - `HOST_FS_MOVE_MAX_SOURCES`
           - `HOST_FS_PEEK_MAX_NAMES`
-          - `HOST_FS_PEEK_MAX_PATHS`
           - `HOST_FS_TEXT_MAX_BYTES`
           - `HOST_PATHS_MIME`
           - `hostFileUrl`
+          - `hostFsArchiveReasonMessage`
           - `hostFsComplete`
+          - `hostFsDirPeek`
           - `hostFsExtract`
-          - `hostFsList`
+          - `hostFsFileText`
+          - `hostFsListing`
+          - `HostFsListingQuerySchema`
           - `hostFsMove`
           - `hostFsOpen`
-          - `hostFsPeek`
+          - `hostFsPathStat`
           - `hostFsRaw`
           - `hostFsStat`
-          - `hostFsText`
           - `hostFsVersion`
-          - `hostFsVolume`
+          - `hostFsVolumeInfo`
           - `isBrowsable`
           - `readHostPaths`
           - `writeHostPaths`
@@ -27652,33 +27671,42 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/archive/locate.ts`, `server/internal/archive/tree.ts`, `server/internal/complete.ts`, `server/internal/entry.ts`, `server/internal/extract.ts`, `server/internal/free-path.ts`, `server/internal/list.ts`, `server/internal/move.ts`, `server/internal/open-file.ts`, `server/internal/open.ts`, `server/internal/path.ts`, `server/internal/peek.ts`, `server/internal/raw.ts`, `server/internal/stat.ts`, `server/internal/text.ts`, `server/internal/volume.ts` (debt)
       - Plugins:
-        - **`image`** — Images on the host filesystem: GET resized (a copy with a long edge from a closed set, EXIF-rotated, never enlarged — JPEG, or WebP with transparency — made with sharp, cached host-wide and served immutable for the file version the URL names; 415 when undecodable) and GET sizes (the upright pixel size of every resizable image in a folder, from the headers only). The daily host-fs-image.sweep keeps the cache within 30 days unused and 1 GB.
+        - **`image`** — Images on the host filesystem: GET resized (a copy with a long edge from a closed set, EXIF-rotated, never enlarged — JPEG, or WebP with transparency — made with sharp, cached host-wide and served immutable for the file version the URL names; 415 when undecodable). The daily host-fs-image.sweep keeps the cache within 30 days unused and 1 GB.
           - Server:
+            - Contributes: `resource.declare` "host-fs.image-sizes"
             - Uses:
               - `infra/endpoints.HttpError`
-              - `infra/endpoints.implement`
               - `infra/host-fs.HostFileOpen`
               - `infra/host-fs.inertHeaders`
-              - `infra/host-fs.listHostPath`
               - `infra/host-fs.openHostFile`
-              - `infra/host-fs.resolveHostPath`
               - `infra/jobs.defineJob`
               - `primitives/log-channels.Log`
             - Register: `defineJob('host-fs-image.sweep')`
-            - Routes:
-              - `GET /api/host-fs/image/resized`
-              - `GET /api/host-fs/image/sizes`
+            - Resources: `host-fs.image-sizes` (keyed, window, notified)
+            - Routes: `GET /api/host-fs/image/resized`
+          - Machine:
+            - Uses:
+              - `infra/host-fs.listHostPath`
+              - `infra/host-fs.refusalFor`
+              - `infra/host-fs.resolvedOrNull`
+              - `infra/host-fs.resolveOrRefuse`
+              - `infra/host-fs.watchHostDir`
+              - `network/live.serveValue`
           - Core:
             - Uses:
               - `infra/endpoints.blob`
               - `infra/endpoints.defineEndpoint`
+              - `infra/host-fs.HOST_FS_MACHINE`
+              - `infra/host-fs.HOST_FS_PEEK_MAX_NAMES`
+              - `infra/host-fs.HostFsListingQuerySchema`
+              - `network/live.liveValue`
             - Exports (types):
-              - `HostFsImageSizesResult`
+              - `FolderImageSize`
               - `ImageSize`
               - `ResizedEdge`
             - Exports (values):
+              - `hostFsFolderImageSizes`
               - `hostFsImageResized`
-              - `hostFsImageSizes`
               - `hostResizedUrl`
               - `isResizableName`
               - `parseEdge`
@@ -27687,7 +27715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resizedVersion`
               - `snapEdge`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/resize.ts`, `server/internal/sizes.ts`, `server/internal/sweep.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/resize.ts`, `server/internal/sweep.ts` (debt)
         - **`zip`** — Zip as a host-fs archive format: a native reader of the zip central directory (zip64, UTF-8 / CP437 / Info-ZIP Unicode names, extended timestamps) registered through defineArchiveFormat, so a .zip browses like a folder — members stored or deflated, encrypted and other methods typed as unreadable.
           - Server:
             - Uses:
@@ -30327,15 +30355,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 254 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 257 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×70
           - `conversations` ×48
           - `tasks` ×27
           - `debug` ×26
-          - `infra` ×14
+          - `infra` ×15
           - `active-data` ×12
           - `page` ×10
-          - `primitives` ×7
+          - `primitives` ×9
           - `build` ×6
           - `plugin-meta` ×4
           - `auth` ×3
@@ -30364,9 +30392,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempted by:
           - `apps/deploy/analytics/dashboard` (1 debt)
           - `apps/desktop/wallpaper` (1 debt)
-          - `apps/file-explorer/browser` (4 debt)
-          - `apps/file-explorer/git` (1 debt)
-          - `apps/file-explorer/places` (2 debt)
           - `apps/mail/reading-pane` (1 debt)
           - `apps/mail/search` (1 debt)
           - `build/build-commits` (1 debt)
@@ -30392,9 +30417,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-health` (1 debt)
           - `primitives/data-view` (0 debt)
           - `primitives/diff-view` (3 debt)
-          - `primitives/file-viewer` (3 debt)
+          - `primitives/file-viewer` (1 debt)
           - `primitives/file-viewer/image` (1 debt)
-          - `primitives/folder-picker` (1 debt)
           - `primitives/live-state` (0 debt)
           - `primitives/optimistic-mutation` (0 debt)
           - `review/code-review` (1 debt)
@@ -38541,7 +38565,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/file-viewer`
           - `primitives/file-viewer/media`
           - `primitives/text-editor/paste-images`
-    - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, and useFileText / useFileBytes reading a FileRef's text or raw bytes from the host (infra/host-fs) or a git checkout (code-api).
+    - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, useFileText reading a FileRef's text from the host (infra/host-fs) or a git checkout (code-api), and useFileBytes its raw bytes — host files only for now (a workspace file is refused unsupported until code-api's byte read has a live form).
       - Web:
         - Slots: `FileViewer.Renderer`
         - Slot contributors:
@@ -38554,8 +38578,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileViewer.Renderer` ← `primitives.file-viewer.markdown`
           - `FileViewer.Renderer` ← `primitives.file-viewer.media`
           - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
-        - Uses: 21 symbols — full list in [`plugins/primitives/plugins/file-viewer/REFERENCE.md`](../plugins/primitives/plugins/file-viewer/REFERENCE.md)
-          - `infra/endpoints` ×4
+        - Uses:
+          - `infra/endpoints.EndpointError`
+          - `infra/endpoints.useEndpoint`
+          - `infra/endpoints.useEndpointMutation`
           - `network/live.useLive`
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
@@ -38593,20 +38619,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileViewer`
           - `NoPreview`
           - `resolveRenderers`
+          - `useArchiveMembership`
           - `useFileBytes`
           - `useFileRenderers`
           - `useFileText`
-          - `useIsInArchive`
           - `useOpenHostFile`
+      - Server:
+        - Contributes: `resource.declare` "file-viewer.bytes"
+        - Resources: `file-viewer.bytes` (invalidate, notified)
+      - Machine:
+        - Uses:
+          - `infra/host-fs.resolvedOrNull`
+          - `infra/host-fs.resolveOrRefuse`
+          - `infra/host-fs.watchHostPath`
+          - `network/live.serveValue`
       - Core:
         - Uses:
           - `code-explorer/code-api.codeImageUrl`
           - `infra/host-fs.hostFileUrl`
+          - `network/live.liveValue`
         - Exports (types):
           - `FileGitStatus`
           - `FileRef`
           - `FileViewerGit`
         - Exports (values):
+          - `FILE_BYTES_MAX`
+          - `fileBytes`
           - `fileExtension`
           - `fileRefForPath`
           - `fileRefKey`
@@ -38635,7 +38673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/file-viewer/media`
           - `primitives/file-viewer/pdf`
       - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/no-preview.tsx`, `web/internal/use-file-bytes.ts`, `web/internal/use-file-text.ts` (debt)
+        - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-file-text.ts` (debt)
       - Plugins:
         - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
           - Web:
@@ -38677,6 +38715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `FileViewer.Renderer` "Image" → `ImageView`
             - Uses:
               - `infra/endpoints.useEndpoint`
+              - `network/live.useLive`
               - `primitives/css/center.Center`
               - `primitives/file-viewer.FileViewer`
               - `primitives/loading.Loading`
@@ -38769,11 +38808,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/studio/contributions`
           - `apps/website/pages/apps`
-    - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory.
+    - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser, both reading host-fs's live listing.
       - Web:
         - Uses:
-          - `infra/endpoints.getEndpointErrorMessage`
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
@@ -38787,6 +38825,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit.Input`
           - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
           - `primitives/icon-button.IconButton`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
           - `ui/icons.Icon`
@@ -38796,7 +38835,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `FolderPicker`
           - `FolderPickerPopover`
-          - `useHostDir`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -38808,8 +38846,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
         - Imported by: `fields/directory-path/config`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-host-dir.ts` (debt)
     - **`graph-canvas`** — Generic dagre+xyflow graph canvas primitive: a pan/zoom/fit viewer with HTML/Tailwind nodes and solid/dashed directed edges, behind a domain-agnostic node/edge API. Read-only by default, with opt-in editor affordances (hover connect handles + onConnect, node/edge action overlays, group-background layers, smoothstep edges).
       - Web:
         - Uses:
@@ -39302,14 +39338,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 253 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 254 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×69
           - `conversations` ×48
           - `debug` ×23
           - `ui` ×23
           - `tasks` ×22
           - `page` ×12
-          - `primitives` ×10
+          - `primitives` ×11
           - `active-data` ×7
           - `infra` ×7
           - `plugin-meta` ×5

@@ -65,6 +65,27 @@ const inBrowser: Transport = { ...originTransport, machine: false };
 describe("useLive of a needsMachine declaration", () => {
   afterEach(() => vi.restoreAllMocks());
 
+  it("a paged value and its meta are unavailable too, subscribing nothing", () => {
+    const observe = vi.spyOn(NotificationsClient.prototype, "observe");
+    const read = renderHook(() => useLive(typedPaged, { dir: "/" }), {
+      wrapper: wrapperFor(inBrowser),
+    });
+    const meta = renderHook(() => useLive(typedPaged.meta, { dir: "/" }), {
+      wrapper: wrapperFor(inBrowser),
+    });
+    expect(read.result.current).toEqual({
+      status: "unavailable",
+      message: MESSAGE,
+    });
+    expect(meta.result.current).toEqual({
+      status: "unavailable",
+      message: MESSAGE,
+    });
+    expect(
+      observe.mock.calls.filter(([key]) => key.startsWith(typedPaged.key)),
+    ).toEqual([]);
+  });
+
   it("is unavailable under a transport with no computer, and subscribes nothing", () => {
     const observe = vi.spyOn(NotificationsClient.prototype, "observe");
     const value = machineValue();
@@ -120,7 +141,29 @@ const typedRows = liveCollection("test.use-live-machine.types.rows", {
   needsMachine: { feature: "Reading the checkout" },
 });
 
+const typedPaged = liveValue("test.use-live-machine.types.paged", {
+  query: z.object({ dir: z.string() }),
+  paged: {
+    item: z.object({ name: z.string() }),
+    id: "name",
+    key: { of: (i) => [i.name], order: ["asc"] },
+    limit: 2,
+    maxLimit: 4,
+    meta: z.object({ total: z.number() }),
+  },
+  needsMachine: { feature: "Reading the checkout" },
+});
+
 function useTypeChecks() {
+  // A paged machine value: its pages and its meta sibling both add the arm.
+  const pages = useLive(typedPaged, { dir: "/" });
+  if (pages.status === "ready") void pages.data;
+  // @ts-expect-error a machine paged read may be unavailable: `data` only when ready
+  void pages.data;
+  const meta = useLive(typedPaged.meta, { dir: "/" });
+  // @ts-expect-error a machine meta read may be unavailable: not a ResourceResult
+  const asMeta: ResourceResult<{ total: number }> = meta;
+
   const read = useLive(typedValue);
   // @ts-expect-error a machine read may be unavailable: not a ResourceResult
   const asResult: ResourceResult<{ n: number }> = read;
@@ -136,7 +179,7 @@ function useTypeChecks() {
   // @ts-expect-error a machine row read may be unavailable: not a LiveRowResult
   const asRow: LiveRowResult<{ id: string }> = row;
   if (row.status === "ready" && row.found) void row.row.id;
-  return [asResult, portable, asRow];
+  return [asResult, portable, asRow, asMeta];
 }
 
 describe("useLive needsMachine types", () => {

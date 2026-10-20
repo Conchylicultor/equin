@@ -9,6 +9,7 @@
   - Contributes: `FileViewer.Renderer` "Image" → `ImageView`
   - Uses:
     - `infra/endpoints.useEndpoint`
+    - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/file-viewer.FileViewer`
     - `primitives/loading.Loading`

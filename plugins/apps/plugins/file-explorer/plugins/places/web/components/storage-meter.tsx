@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { hostFsVolume } from "@plugins/infra/plugins/host-fs/core";
+import { hostFsVolumeInfo } from "@plugins/infra/plugins/host-fs/core";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -14,12 +14,22 @@ const METER_INSET = {
 
 /**
  * The startup volume's storage, at the foot of the Places sidebar: its name,
- * a bar filled to the used fraction, and "X GB free of Y GB". Renders nothing until the volume
- * has answered — a meter at zero would claim an empty disk.
+ * a bar filled to the used fraction, and "X GB free of Y GB". Free space is
+ * a `host-fs.volume` snapshot — measured as the sidebar mounts (nothing
+ * signals a change). Renders nothing until the volume has answered — a meter
+ * at zero would claim an empty disk — nor when it cannot (the startup-volume
+ * place above says why).
  */
 export function StorageMeter(): ReactNode {
-  const volume = useEndpoint(hostFsVolume, {}, { query: { path: "/" } });
-  if (volume.data?.kind !== "ok") return null;
+  const volume = useLive(hostFsVolumeInfo, { path: "/" });
+  switch (volume.status) {
+    case "loading":
+    case "error":
+    case "unavailable":
+      return null;
+    case "ready":
+      break;
+  }
   const { name, total, free } = volume.data;
   const used = Math.max(0, total - free);
   const fraction = total > 0 ? used / total : 0;

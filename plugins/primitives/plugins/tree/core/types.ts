@@ -65,6 +65,15 @@ export interface LazyChildren<TRow> {
   /** Request this node's children. Called at most once per `unloaded` spell —
    *  the tree re-asks only after the state has left `unloaded` and returned. */
   load: (row: TRow) => void;
+  /**
+   * The nodes that are open and visible and may have children — every one
+   * whose listing the tree is drawing — each time that set changes (on mount
+   * too, the restored expand map included). Optional: a source that keeps a
+   * listing live (a subscription per folder) drives its liveness from it, so
+   * a node collapsed, or folded away under a collapsed parent, stops costing
+   * anything while the source keeps its last listing for an instant re-open.
+   */
+  onOpenChange?: (open: readonly TRow[]) => void;
 }
 
 /** One entry of a tree row's `⋯` menu. */

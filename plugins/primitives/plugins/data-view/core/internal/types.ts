@@ -155,8 +155,10 @@ export interface HierarchyConfig<TRow> {
    * tree renders as a placeholder child row; `load` is called by the tree for
    * every OPEN, visible, `unloaded` row — after a chevron click, expand-all,
    * reveal, or an expand map restored on reload alike — so the consumer fetches
-   * on first expand without watching the expand map itself. Absent → every
-   * row's children are already in `rows`.
+   * on first expand without watching the expand map itself; `onOpenChange`,
+   * when given, is told the open rows each time that set changes, so a source
+   * keeping listings live lets go of a collapsed one. Absent → every row's
+   * children are already in `rows`.
    */
   lazyChildren?: LazyChildren<TRow>;
 }

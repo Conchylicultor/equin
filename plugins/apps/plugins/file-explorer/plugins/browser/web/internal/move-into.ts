@@ -4,10 +4,7 @@ import {
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
-  hostFsList,
   hostFsMove,
-  hostFsPeek,
-  hostFsStat,
   type HostFsMoveOutcome,
   type HostFsMoveResolution,
   type HostFsMoveResult,
@@ -65,17 +62,16 @@ function destinationRefusal(
  * Move host paths into a folder, the Finder's way: what does not collide moves
  * at once; each name already taken there asks (Replace / Keep both / Skip,
  * optionally for every remaining one; Cancel skips the rest), and only those
- * are sent again with their answers. Every listing, peek and stat is re-read
- * after each request. Refusals (into itself, missing, …) are said in one
- * toast. Resolves with the sources that moved, as given.
+ * are sent again with their answers. Listings, peeks and stats are live
+ * (pushed from a watch of each folder), so nothing is re-read by hand. Refusals (into
+ * itself, missing, …) are said in one toast. Resolves with the sources that
+ * moved, as given.
  */
 export function useMoveInto(): (
   sources: readonly string[],
   destDir: string,
 ) => Promise<readonly string[]> {
-  const move = useEndpointMutation(hostFsMove, {
-    invalidates: [hostFsList, hostFsPeek, hostFsStat],
-  });
+  const move = useEndpointMutation(hostFsMove);
   const { mutateAsync } = move;
   return useCallback(
     async (sources, destDir) => {

@@ -16,6 +16,13 @@ export default [
       "The single sanctioned chokepoint for loading @parcel/watcher: the file-watcher engine (`shared/engine.ts`) and its siblings own the native-addon loader.",
   },
   {
+    rule: "watcher-safety/no-raw-fs-watch",
+    paths: ["shared/engine.ts"],
+    kind: "sanctioned",
+    reason:
+      "The engine's `children` depth: a single-directory watch is the platform's `fs.watch` without `recursive` (parcel only watches recursively). It is opened only through the engine, so every instance is a declared, catalogued `defineFileWatcher` like a parcel one.",
+  },
+  {
     rule: "boundaries/no-platform-api",
     paths: ["server/internal/dir-hub.ts", "shared/engine.ts"],
     kind: "debt",

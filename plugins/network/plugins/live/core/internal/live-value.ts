@@ -450,11 +450,6 @@ export interface LivePagedValueSpec<
   load?: never;
   /** `"central"`: served by the central runtime (see {@link LiveValueOrigin}). */
   origin?: O;
-  /**
-   * None yet: a paged value's pages are keyed windows read through the page
-   * planner, which has no unavailable arm (tsc, and a throw).
-   */
-  needsMachine?: never;
 }
 
 /**
@@ -560,7 +555,9 @@ export type LiveQueryValue<
  * page's items), with its codec, its paging and — declared `paged.meta` — its
  * per-question sibling — and, as every value form, the non-snapshot brand
  * and its declared refusal codes (`C`, `never` without any; one alias, so a
- * serve or read of it infers `Item` / `Meta` from its type arguments).
+ * serve or read of it infers `Item` / `Meta` from its type arguments) — and
+ * its `needsMachine` (`NM`: `undefined` for a portable value), a type argument
+ * too, so a read infers it the same way.
  */
 export type LivePagedValue<
   Item,
@@ -569,10 +566,12 @@ export type LivePagedValue<
   QIn = Q,
   O extends LiveValueOrigin = "worktree",
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 > = LivePagedPages<Item, Q, QIn, O> &
   LivePagedMeta<Meta, Q, QIn, O, C> &
   LiveSnapshotBrand<"push"> &
-  LiveRefusalsBrand<C>;
+  LiveRefusalsBrand<C> &
+  LivePagedMachineBrand<NM, Meta>;
 
 /**
  * A paged value without its meta sibling — what a read of its pages needs,
@@ -631,6 +630,15 @@ type LivePagedMeta<
         refusals?: readonly NoInfer<C>[];
       };
     };
+
+/**
+ * What a paged declaration's `needsMachine` adds to its type: the
+ * {@link LiveMachineBrand} on the pages, and — declared `paged.meta` — on the
+ * meta sibling too (it answers the same question, from the same server half),
+ * so a read of either adds the `unavailable` arm.
+ */
+export type LivePagedMachineBrand<NM, Meta> = LiveMachineBrand<NM> &
+  ([Meta] extends [undefined] ? unknown : { meta: LiveMachineBrand<NM> });
 
 /**
  * A value read by a params tuple — neither a typed-query nor a paged one. The
@@ -764,24 +772,28 @@ export function liveValue<
   QIn,
   O extends LiveValueOrigin = "worktree",
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
   spec: LivePagedValueSpec<Item, Meta, Q, QIn, O> & {
     paged: { meta: ZodParser<Meta> };
-  } & LiveRefusalsSpec<C>,
-): LivePagedValue<Item, Meta, Q, QIn, O, C>;
+  } & LiveRefusalsSpec<C> &
+    LiveMachineSpec<NM>,
+): LivePagedValue<Item, Meta, Q, QIn, O, C, NM>;
 export function liveValue<
   Item,
   Q,
   QIn,
   O extends LiveValueOrigin = "worktree",
   C extends string = never,
+  NM extends MachineFeature | undefined = undefined,
 >(
   key: string,
   spec: LivePagedValueSpec<Item, undefined, Q, QIn, O> & {
     paged: { meta?: undefined };
-  } & LiveRefusalsSpec<C>,
-): LivePagedValue<Item, undefined, Q, QIn, O, C>;
+  } & LiveRefusalsSpec<C> &
+    LiveMachineSpec<NM>,
+): LivePagedValue<Item, undefined, Q, QIn, O, C, NM>;
 export function liveValue<
   T,
   Q,
@@ -1254,12 +1266,6 @@ function pagedValue(
         `declare \`paged.item\` (and \`paged.meta\`), not \`schema\`.`,
     );
   }
-  if (common.needsMachine !== undefined) {
-    // Unreachable from typed code (`needsMachine` is `never` beside `paged`).
-    throw new Error(
-      `liveValue("${key}"): a paged value cannot be \`needsMachine\` yet — its pages are read through the page planner, which has no unavailable arm.`,
-    );
-  }
   if (common.load !== undefined) {
     // Unreachable from typed code (`load` is `never` beside `paged`).
     throw new Error(
@@ -1331,6 +1337,11 @@ function pagedValue(
               // The meta loader answers the same question, so it refuses it
               // with the same codes as the pages.
               ...(s.refusals !== undefined ? { refusals: s.refusals } : {}),
+              // …and needs the computer exactly when the pages do: one
+              // question, one server half answering it.
+              ...(common.needsMachine !== undefined
+                ? { needsMachine: common.needsMachine }
+                : {}),
             },
             {},
           ),

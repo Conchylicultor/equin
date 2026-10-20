@@ -1,15 +1,10 @@
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { implement } from "@plugins/infra/plugins/endpoints/server";
-import {
-  hostFsList,
-  type HostFsEntry,
-  type HostFsListResult,
-} from "../../core";
+import { type HostFsEntry, type HostFsListResult } from "../../core";
 import { locateHostDir } from "./archive/locate";
 import { listArchiveDir } from "./archive/read";
 import { byName, describeEntry } from "./entry";
-import { classifyFsError, parentOf, resolveHostPath } from "./path";
+import { classifyFsError, parentOf } from "./path";
 
 /**
  * List the absolute directory `path`. A symlink to a directory lists its
@@ -66,7 +61,3 @@ export async function listHostPath(path: string): Promise<HostFsListResult> {
     ? listArchiveDir(path, located)
     : listHostDir(path);
 }
-
-export const handleList = implement(hostFsList, ({ query }) =>
-  listHostPath(resolveHostPath(query.path)),
-);

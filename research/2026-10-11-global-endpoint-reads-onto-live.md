@@ -583,3 +583,107 @@ Eleven verified review findings were all applied. None was skipped.
 - **Re-read on every mount** (review fix). The deleted endpoint read used `refetchOnMount: "always"`; a snapshot `useLive` read did not, so a remount within the 30 s subscription keep-alive showed the cached read (`staleTime: Infinity`) as `ready` without asking. network/live's `useSnapshotRead` now re-measures once on a mount that finds a cached read (the cached read stays on screen meanwhile), so every plain snapshot value reader — not only this pane — measures on mount. The list read (`useLive(value, [...])`) is unchanged.
 - **Pane:** `useLive(slowOpsValue)` through `matchResource`. Loading shows `<Loading />` and an error shows `ResourceErrorInline` (block, with retry). When ready, the existing DataView is unchanged and gets the Refresh button through its `actions` toolbar slot.
 - **Verdicts:** `./singularity check` failed only `no-db-backed-notify` (the dead exemption, fixed) and `web-artifacts:map-in-sync` (cleared by the build). `./singularity test plugins/debug/plugins/slow-ops plugins/network/plugins/live`: 534 bun:test and 100 vitest pass, 0 fail. `./singularity build` succeeded (build-1791868788-8ssbxp), with its checks included.
+
+## Result (B5)
+
+Batch B5 covers the host filesystem and the file viewer. Every B5 reader in scope now reads through `useLive`, except the git/workspace halves of two file-viewer hooks, which wait for B6. Verdicts:
+
+- **Check:** `./singularity check` before the first build failed three checks: `web-artifacts:map-in-sync`, `web-artifacts:no-vendored-state-inlined` (both threw because `.generated/composition-modules/config-layer.singularity.ts` did not exist yet) and `layout-geometry`. None of them was caused by B5. All three passed once this checkout had been built.
+- **Test:** `./singularity test` over file-explorer, host-fs, network/live, file-viewer and folder-picker gave 768 bun:test and 107 vitest passes, 0 fail. After the integration edits, file-explorer + host-fs gave 133 passes, 0 fail.
+- **Build:** `./singularity build` is green, checks included (build-1792511406-5yaqj3).
+
+### Per site
+
+| Site | Value key | Source / changes | Endpoint | Debt entry |
+|---|---|---|---|---|
+| file-explorer `listings.tsx` (was `.ts`) | `host-fs.list` + `:meta` | external, notified (`watchHostDir`, 1 s throttle) | **`hostFsList` deleted** (integration) | removed |
+| file-explorer `folder-peek.ts` (deleted) | `host-fs.peek` | external, notified | **`hostFsPeek` deleted** | removed |
+| file-explorer `file-browser.tsx` (root crumb name; `useRootVolumeName` in `host-path-source.ts` deleted, which now takes `rootName`) | `host-fs.volume` `{path:"/"}` | external, snapshot | **`hostFsVolume` deleted** | removed |
+| file-explorer `preview-pane.tsx` | `host-fs.stat` | external, notified (`watchHostPath`) | `hostFsStat` kept: imperative `fetchEndpoint` in `host-path-source.ts` (path-bar validate) and `places/favorites.ts` | removed |
+| places `storage-meter.tsx`, `places.ts` | `host-fs.volume` `{path:"/"}` | external, snapshot | (deleted above) | removed (manifest deleted) |
+| file-explorer/git `use-git.ts` | `file-explorer.git-checkout` | external, snapshot (re-asked on mount) | **`fileExplorerGitCheckout` deleted** | removed |
+| file-viewer `use-file-bytes.ts` | `file-viewer.bytes` | external, notified, `bytes: true`, 64 MiB | raw GET routes kept (URL builders) | removed |
+| file-viewer `no-preview.tsx` | `host-fs.stat` | notified | — | removed |
+| file-viewer `use-file-text.ts` (host half) | `host-fs.text` | notified, ≤ 2 MiB | **`hostFsText` deleted** (integration) | **kept**: the workspace half is B6 |
+| image `use-folder-images.ts` (host half) | `host-fs.list` + `host-fs.image-sizes` | notified | **`hostFsImageSizes` deleted** (integration) | **kept**: the workspace half is B6 |
+| folder-picker (`use-host-dir.ts` deleted) | `host-fs.list` + `:meta` | notified, 500-entry pages with Show more | — | removed (manifest deleted) |
+
+### Integration fixes
+- **Deleted endpoints with no reader left:**
+  - `hostFsText` and its handler, route and table row. `readHostPathText` / `HostFsTextResult` stay for the machine read.
+  - `hostFsImageSizes`, with its handler, `imageSizesIn`, `HostFsImageSizesResult(Schema)` and route. `sizeOf` stays. The resize test now checks `sizeOf` per file instead of `imageSizesIn`.
+  - `hostFsList`, with its handler and route (its last references were dead `invalidates:`), plus the unused `PathQuery`.
+- **Dead `invalidates:` removed** from `ExtractAction` (`row-actions.tsx`) and `useMoveInto` (`move-into.ts`). No surface holds an endpoint listing any more; every listing, peek and stat is pushed.
+- **A no-longer-needed debt exemption removed:** `boundaries/no-platform-api` on `host-fs/image/server/internal/sizes.ts` (flagged `unused-exemption`).
+- Docs (host-fs, host-fs/image `CLAUDE.md`) were updated, and the generated registries, exempt registry and docs were regenerated.
+
+### Live evidence
+Every check below ran on `http://att-1791598784-yegtlr.localhost:9000`, against the test folder `/private/tmp/b5-fe`. Shots are in `/tmp/live-migration-shots/B5-*`.
+
+- **Listing, peek, text preview, stat, storage meter and startup volume** (`B5-text-before.png`):
+  - The listing shows 4 rows: sub-a, sub-b, notes.txt, pic.png.
+  - The Size column shows the peek counts: "2 items" and "0 items".
+  - The text preview shows notes.txt's two lines.
+  - The preview meta (from stat) reads "/private/tmp/b5-fe · 23 B · Today".
+  - The sidebar meter reads "692 GB free of 995 GB", and the Locations place is named "Macintosh HD".
+- **Image preview** (`B5-image-before.png`): pic.png renders, with the meta "21 KB · Today".
+- **Folder picker** (`B5-picker-open.png`, Settings → Config → sonata midi folders → Browse folders):
+  - The breadcrumb reads Users › epot › __A__ › midi.
+  - Three subfolders are listed (beethoven, chopin, lessons).
+  - The validity check is green, and the "Select this folder" button is shown.
+- **`/api/resources/_debug`:** every new key is `external` with the declared freshness:
+  - `notified`: host-fs.list, list:meta, peek, stat, text, image-sizes and file-viewer.bytes.
+  - `snapshot`, with its reason: host-fs.volume and file-explorer.git-checkout.
+- **Freshness — verified** after `fseventsd` was restarted (0–12 % CPU, 13 MB RSS; load average ~12). Build `build-1792517674-xgryp4`, with the file-watcher fix below. A temporary e2e script (since deleted) opened `/files/at/<folder>` on a fresh `/private/tmp/b5-fresh-*` folder (`sub/a.txt`, `notes.txt`) and changed the disk with node `fs`. No reload happened: a `window` sentinel set after boot was still there at the end. The only route change was the `/notes.txt` pushState from clicking the file. Shots are in `/tmp/live-migration-shots/B5-fresh-*`. 9 of 9 checks passed; timings are from the last of three runs, and the earlier two were within ~0.3 s of them.
+  - **Create in the open folder** (`B5-fresh-2-created.png`): the `created.txt` row appears in 1.4 s (1.3–1.6 s across runs). That is consistent with the 1 s listing throttle plus the 200 ms watcher debounce.
+  - **Delete it** (`B5-fresh-3-deleted.png`): the row goes in 1.1 s (1.1–1.4 s).
+  - **Expanded subfolder** (`B5-fresh-4-subfolder.png`): `b.txt` written into an expanded `sub` shows as a row in 1.3 s. The `sub` row's count was "1 item" before. It reads "2 items" in `B5-fresh-6-preview-after.png`. The script's 7 ms timing for the count is not meaningful: in shot 4 the hovered row's Size cell is covered by its hover actions.
+  - **Text preview** (`B5-fresh-5-preview-before.png` → `B5-fresh-6-preview-after.png`): `notes.txt` was rewritten on disk. The preview shows the new line in 0.3 s, and the stat meta follows (27 B → 34 B).
+  - **The open folder removed** (`B5-fresh-7-folder-removed.png`): with `rm -rf` on the open folder, the explorer shows "“/private/tmp/b5-fresh-…” does not exist." with Try again in 0.36 s, and no stale rows remain. The preview pane shows "File not found." and its meta reads "no longer exists". The 422 responses logged at that moment are the runtime's typed refusals from the re-reads of `host-fs.list`, `list:meta`, `stat` and `text` (not errors).
+  - `./singularity test` over file-watcher + host-fs: 125 pass, 0 fail. This includes the three suites that wait for a real FSEvents delivery.
+
+### Deviations (from the implementers, accepted)
+- `useLive(v, [...])` does not take paged values. The explorer mounts one `<ListingReader>` per open folder, each reporting up through an effect. Peek is one `useLive` per visible Size cell, not the list form (only the cell knows it is on screen).
+- network/live: paged values may be `needsMachine` (an `NM` type argument on `LivePagedValue`). data-view's `useLivePagedValuePaging` does not take it yet.
+- Pages arrive in code-point order. Readers re-sort by name — since the review fixes through host-fs core's one `compareHostFsNames`.
+- `file-explorer.git-checkout` is a `snapshot` value (`changes: { snapshot }`, `load: "snapshot"`), not pushed from the dir hub as the per-batch decision said. Reason: what it answers — is this folder inside a git checkout, and which — moves when a `.git` appears or goes in ANY ancestor of the folder, which a children-scope watch of the folder never hears; a dir-hub notify would need a watch of every ancestor. Cost: one `git rev-parse` per mount of a reader (the explorer re-asks on mount).
+- Folder listings in the explorer and the image viewer read one window of `HOST_FS_PEEK_MAX_NAMES` (10 000). Past that the root says "N items not listed"; an expanded subfolder is cut off silently.
+- `file-viewer.bytes` refuses workspace `FileRef`s as `unsupported`. Its only reader (MIDI preview) already got that.
+
+### Review fixes (B5)
+
+Nineteen review findings, all judged applicable; every one applied, two of them in their reviewer-offered alternative form (marked). Verdicts after the fixes: `./singularity build` green, checks included (build-1792514440-ntjevl); `./singularity test` over file-watcher, host-fs, file-explorer, tree, data-view, file-viewer, folder-picker and code-explorer: 611 bun:test + 300 vitest pass, 3 fail — the three that wait for a real FSEvents delivery, on a wedged `fseventsd`. After the file-watcher fix below and the `fseventsd` restart, file-watcher + host-fs give 125 pass, 0 fail (see *Freshness — verified*). Re-shot: `/tmp/live-migration-shots/B5-review-before.png` (the listing, the peeks "2 items" / "0 items", the storage meter "690 GB free of 995 GB") and `B5-review-preview-before.png` (notes.txt's text, its stat meta "/private/tmp/b5-fe · 12 B · Today", the Open with default app button enabled once the stat landed).
+
+- **No recursive watch for a listing (high).** The dir hub never opens a NEW recursive root for a `children` request: with no root above it, it opens a single-directory watch of the folder (refcounted per dir), so `~` and `/` cost one handle. file-watcher's engine gains `depth: "children"` (one `fs.watch` without `recursive` per dir; a `rename` is classified by a stat as `create` / `delete`, the dir itself going — removed, moved, replaced, or the watch erroring — reported as a `delete` of the dir), declared as `file-watcher.dir-entries` (backend `fs-watch` in Background activity), and `createDirWatchHub` takes both starts (`{ subtree, children }`). A children request still rides a recursive root already open above it; a single-directory watch is never a root and never moves. `watcher-safety/no-raw-fs-watch` is exempted for `shared/engine.ts` (sanctioned).
+- **No arm-time re-read.** The runtime awaits `whileSubscribed` before a tuple's first read (pages and meta included), so the watch is live before anything is read: `watchHostDir` / `watchHostPath` no longer call `onChange` when armed, which re-listed every folder and re-fetched every text (2 MiB) and bytes (64 MiB) read right after its first load. A real change to a watched entry now notifies once, after the re-arm (not twice). The `revalidate` alternative was not needed.
+- **Peek bounded again:** `dirPeek` runs under a module `createSemaphore(8)` — a scroll costs at most 8 concurrent `readdir`s, as the batched endpoint did.
+- **Archive membership is a state.** `useIsInArchive` → `useArchiveMembership(path)`: `loading` / `known { inArchive }` / `unknown { message }`. The fallback renderer's Open button and the preview pane's icon button render disabled while loading, are hidden for an archive member and when unknown (findings 4 and 14).
+- **A failed refresh keeps the folder.** `ListingReader`: an `error` read (not a refusal) with `stale` rows and meta reports `ok` with `refreshError`; the explorer shows an inline notice above the kept rows. A refusal (the folder gone or unreadable) still replaces it — that is the server's answer, not a failed refresh.
+- **Re-arm failure is reported and retried.** One `rearmable` (`host-fs/machine/internal/watch-entry.ts`) for every re-arming watch: each re-arm chains from a settled base; a failure is reported once (`console.error` + `reportServerError`), the watch keeps what it held, and the next event tries again.
+- **Collapsed folders let go.** The tree's lazy-children contract gains `onOpenChange(open)` (primitives/tree, through data-view's hierarchy): the set of open, visible nodes, each time it changes. The explorer reads a folder while it is open; a collapsed one unmounts its reader (subscription, held listing, watch), keeps its last listing for an instant re-open, and a re-opened folder shows it until its new read lands.
+- **Child-folder metadata (partial, by the reviewer's alternative).** A depth-2 watch (or a `subtree` acquire) would reintroduce the recursive watch the high finding removes, so the listing does not claim it: `watchHostDir`'s doc and host-fs's CLAUDE.md now say a child folder's modified time and size are as of the folder's last read. A folder's OWN stat (`host-fs.stat`) does follow its entries now: `watchHostPath` adds a children-scope watch of a folder it is asked about.
+- **Symlinks watched where they point.** `watchHostPath` also watches the target's entry (`realpath`) when the path is a link, re-resolving when the link entry changes. Listings document that a symlinked child row's target is not live.
+- **Missing folders are waited for.** `watchEntryOver` climbs to the nearest existing ancestor and moves down one level each time the next missing folder appears (reading again once re-armed); `watchHostPath` always returns a live release (`HostPathWatch` / `no-folder` deleted), and the callers in `reads.ts`, `bytes.ts`, `version.ts` and code-explorer's `file-version.ts` lost their no-op arm.
+- **Docs:** host-fs CLAUDE.md's intro and *Live reads* rewritten (no `useEndpoint(hostFsList…)`, stat the only read with both forms, the watch semantics); `core/internal/live.ts`'s header and `endpoints.ts`'s path comment no longer name deleted endpoints; file-viewer's CLAUDE.md and web description say `useFileBytes` reads host files only until B6.
+- **File-watcher fix: a single-directory watch hears its folder go, and is live before it is trusted.** Measured on macOS with Bun 1.4.3: Bun's `fs.watch` of a dir reports nothing when that dir is removed or moved away (no event, no error, no close). An open listing of a deleted folder therefore stayed stale. Fixes:
+  - The engine's `depth: "children"` (`watchChildren` in `shared/engine.ts`) also holds a single-directory watch of the PARENT, filtered to the dir's own name. An inode check turns a `rename` there into a `delete` of the dir (removed, moved, or replaced). A watch error reports the same `delete`. `/` has no parent.
+  - The hub keys each shallow watch by `dir` + generation and retires one that reported its dir gone. The holder's re-arm then opens a fresh watch of whatever now sits at the path, instead of joining the dead one.
+  - The hub's `acquire` doc and file-watcher's CLAUDE.md (new section *`depth: "children"`*) record two Bun behaviours. First, a single-directory watch goes live a moment after it resolves, so a change in that gap is lost. Second, every directory watch of the process shares one FSEvents stream, restarted from "now" on each open/close (72 of 300 writes missed under constant churn).
+  - The real-engine tests in `dir-hub.test.ts` wait for a probe entry (`untilLive`) before writing.
+  - The verified freshness run above is the live evidence.
+- **One name order:** `compareHostFsNames` (host-fs core) — `entry.ts`'s `byName`, folder-picker, the image viewer's folder and the explorer tree use it (the tree's `sensitivity: "base"` copy dropped; case now breaks ties instead of input order).
+- **One machine feature:** `HOST_FS_MACHINE` (host-fs core), used by `hostFsFolderImageSizes`.
+- **Plan doc:** the git-checkout snapshot is a recorded deviation; the volume row names `file-browser.tsx`.
+- **Debt (the reviewer's alternative):** `peek.ts` / `volume.ts` / image `sizeOf` stay in `server/` — reason under Open; `listHostPath` moved from the server barrel to the machine barrel.
+
+### Open (B5)
+- **List form for paged values** (`useLive(paged, [...])`), so the explorer's per-folder reader components go away. Also: `useLivePagedValuePaging` does not accept `needsMachine`.
+- **Subfolder listings past 10 000 entries** are truncated with no notice.
+- **Workspace bytes for `file-viewer.bytes`** need a code-explorer workspace byte read (B6).
+- **`peek.ts` / `volume.ts` stay in host-fs `server/internal/`** (and image's `sizeOf` in `image/server/internal/sizes.ts`) under the `boundaries/no-platform-api` debt entry, though only `machine/` reads them now. Moving them splits the suites that test them beside the other server reads (`host-fs.test.ts`, `archive.test.ts`, image `resize.test.ts`) across two folders — `server/` tests may not import `machine/` — for two files of a debt task (task-1792338443-riwqev) that splits the whole `server/internal`. `listHostPath` is now exported by the machine barrel (its only cross-plugin reader is image's machine half), not the server barrel.
+- **`hostFsStat` is still a GET endpoint**, called imperatively (`fetchEndpoint`) by path-bar validation and favorites. It is not flagged by `live/no-endpoint-read`. It could become a one-shot read of `host-fs.stat`.
+- **`file-explorer/e2e/item-count-verify.ts` uses a stale selector** (`[data-aligned-cell=size]`, which nothing renders any more). It fails at its first Size read, so it needs a new way to aim at the Size cell. Found during the freshness run; not run since.
+- **Observed and not caused by B5:**
+  - The health dot shows attention while slow-op reports accumulate on the loaded host.
+  - Settings shows "5 saved settings no longer apply".
+- `./singularity exempt list --rule live/no-endpoint-read --debt`: **49** exemptions remain (60 before B5), all debt. The two B5-adjacent ones left (`file-viewer/use-file-text.ts`, `file-viewer/image/use-folder-images.ts`) are their B6 workspace halves.

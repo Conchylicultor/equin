@@ -31,8 +31,9 @@ export {
 } from "./internal/entry-kind";
 export type { ExplorerLens, LensHideRule } from "./internal/lens";
 export {
-  archiveReasonMessage,
   itemCount,
   type EntryFilter,
+  type FolderRefusal,
   type ItemCount,
+  type ListedFolder,
 } from "./internal/item-count";

@@ -102,29 +102,3 @@ export const ImageSizeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("unreadable") }),
 ]);
 export type ImageSize = z.infer<typeof ImageSizeSchema>;
-
-export const HostFsImageSizesResultSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("ok"),
-    /** One per {@link isResizableName} file in the folder, by name. */
-    images: z.array(z.object({ name: z.string(), size: ImageSizeSchema })),
-  }),
-  z.object({
-    kind: z.enum(["missing", "denied", "not-a-dir", "unreadable-archive"]),
-    path: z.string(),
-  }),
-]);
-export type HostFsImageSizesResult = z.infer<
-  typeof HostFsImageSizesResultSchema
->;
-
-/**
- * The upright pixel size of every resizable image in a host folder, read from
- * the file headers only. What a viewer showing a resized copy needs to fit,
- * zoom and label the original.
- */
-export const hostFsImageSizes = defineEndpoint({
-  route: "GET /api/host-fs/image/sizes",
-  query: z.object({ path: z.string() }),
-  response: HostFsImageSizesResultSchema,
-});

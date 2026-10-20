@@ -50,9 +50,11 @@ import { z } from "zod";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   hasHostPaths,
+  hostFsVolumeInfo,
   readHostPaths,
   type HostFsEntry,
 } from "@plugins/infra/plugins/host-fs/core";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { RowSelectionState } from "@plugins/primitives/plugins/tree/core";
 import { DROP_TARGET_RING } from "@plugins/primitives/plugins/data-view/web";
 import {
@@ -68,12 +70,13 @@ import {
   type EntryRow,
   type LensHideRule,
 } from "../../core";
+import { hostPathSource, useHomeDir } from "../internal/host-path-source";
 import {
-  hostPathSource,
-  useHomeDir,
-  useRootVolumeName,
-} from "../internal/host-path-source";
-import { isOnDisk, useListings, type Listings } from "../internal/listings";
+  isOnDisk,
+  unlistedCount,
+  useListings,
+  type Listings,
+} from "../internal/listings";
 import { useMoveInto } from "../internal/move-into";
 import {
   useLocalNavigator,
@@ -296,12 +299,25 @@ function Listing({
   }));
   const selected = selection.anchor;
   const treeRef = useRef<HTMLElement | null>(null);
-  const rootName = useRootVolumeName();
+  // The name of the volume mounted at `/` ("Macintosh HD") for its crumb —
+  // which reads "/" itself until the volume names it, or when it cannot.
+  const rootVolume = useLive(hostFsVolumeInfo, { path: "/" });
+  let rootName: string | undefined;
+  switch (rootVolume.status) {
+    case "ready":
+      rootName = rootVolume.data.name;
+      break;
+    case "loading":
+    case "error":
+    case "unavailable":
+      rootName = undefined;
+      break;
+  }
   const source = useMemo(
     () => hostPathSource(home, rootName, root),
     [home, rootName, root],
   );
-  const { listings, request } = useListings(dir);
+  const { listings, request, setOpen, readers } = useListings(dir);
   const moveInto = useMoveInto();
   // The paths this listing is dragging right now: dropping them back into
   // the folder they sit in is no move, so the pane does not offer it.
@@ -438,30 +454,38 @@ function Listing({
   });
 
   const rootListing = listings.get(dir);
-  const result = rootListing?.result ?? null;
   const entries =
-    result?.kind === "ok"
-      ? result.entries.filter((e) => shows(e, joinPath(dir, e.name)))
+    rootListing?.kind === "ok"
+      ? rootListing.entries.filter((e) => shows(e, joinPath(dir, e.name)))
       : null;
 
   let body: ReactNode;
-  if (rootListing?.error && result === null) {
-    body = (
-      <ListingProblem message={rootListing.error} retry={rootListing.retry} />
-    );
-  } else if (rootListing === undefined || result === null) {
+  if (rootListing === undefined || rootListing.kind === "loading") {
     body = <Loading variant="rows" />;
-  } else if (result.kind !== "ok") {
+  } else if (rootListing.kind === "unavailable") {
+    body = <ListingProblem message={rootListing.message} />;
+  } else if (rootListing.kind === "failed") {
+    body = (
+      <ResourceErrorInline
+        variant="block"
+        error={rootListing.error}
+        refetch={rootListing.refetch}
+        subject="this folder"
+      />
+    );
+  } else if (rootListing.kind === "refused") {
     body = (
       <ListingProblem
         message={
-          result.kind === "denied"
+          rootListing.code === "denied"
             ? `You don't have permission to see the contents of “${baseName(dir)}”.`
-            : result.kind === "missing"
+            : rootListing.code === "missing"
               ? `“${dir}” does not exist.`
-              : `“${dir}” is not a folder.`
+              : rootListing.code === "not-a-dir"
+                ? `“${dir}” is not a folder.`
+                : rootListing.message
         }
-        retry={rootListing.retry}
+        retry={() => void rootListing.refetch()}
       />
     );
   } else {
@@ -470,6 +494,7 @@ function Listing({
         root={dir}
         listings={listings}
         request={request}
+        setOpen={setOpen}
         shows={shows}
         query={query}
         onQueryChange={setQuery}
@@ -579,6 +604,17 @@ function Listing({
             background.over && cn(DROP_TARGET_RING, "ring-inset"),
           )}
         >
+          {readers}
+          {rootListing?.kind === "ok" &&
+          rootListing.refreshError !== undefined ? (
+            // A re-read failed: the rows below are the last ones read.
+            <ResourceErrorInline
+              variant="inline"
+              error={rootListing.refreshError.error}
+              refetch={rootListing.refreshError.refetch}
+              subject="this folder's latest contents"
+            />
+          ) : null}
           {body}
         </Scroll>
       }
@@ -586,6 +622,7 @@ function Listing({
         <StatusBar
           dir={dir}
           count={entries?.length ?? null}
+          unlisted={unlistedCount(rootListing)}
           selected={selected}
           selectedCount={selection.selected.size}
         />
@@ -622,7 +659,8 @@ function ListingProblem({
   retry,
 }: {
   message: string;
-  retry: () => void;
+  /** Ask again; absent where asking again cannot help (no computer). */
+  retry?: () => void;
 }): ReactNode {
   return (
     <Center axis="both" className="h-full p-lg">
@@ -630,28 +668,37 @@ function ListingProblem({
         <Text as="p" variant="body" className="text-muted-foreground">
           {message}
         </Text>
-        <Button variant="outline" onClick={retry}>
-          Try again
-        </Button>
+        {retry !== undefined && (
+          <Button variant="outline" onClick={retry}>
+            Try again
+          </Button>
+        )}
       </Stack>
     </Center>
   );
 }
 
-/** "N items · “name” selected", in the faint small type. */
+/**
+ * "N items · “name” selected", in the faint small type — and, for a folder
+ * holding more entries than one listing reads, how many are not shown.
+ */
 function StatusBar({
   dir,
   count,
+  unlisted,
   selected,
   selectedCount,
 }: {
   dir: string;
   count: number | null;
+  /** Entries past the listing's cap, not shown (0: every entry is listed). */
+  unlisted: number;
   selected: string | null;
   selectedCount: number;
 }): ReactNode {
   const left = [
     count === null ? null : formatCount(count),
+    unlisted > 0 ? `${formatCount(unlisted)} not listed` : null,
     selectedCount > 1
       ? `${selectedCount} selected`
       : selected !== null && isWithin(selected, dir)
@@ -705,9 +752,9 @@ function only(path: string): (s: RowSelectionState) => RowSelectionState {
 function isFile(listings: Listings, path: string, home: string): boolean {
   const parent = parentPath(path, home);
   if (parent === null) return false;
-  const result = listings.get(parent)?.result;
-  if (result?.kind !== "ok") return false;
-  const entry = result.entries.find((e) => e.name === baseName(path));
+  const listing = listings.get(parent);
+  if (listing?.kind !== "ok") return false;
+  const entry = listing.entries.find((e) => e.name === baseName(path));
   return (
     entry !== undefined && entry.kind !== "dir" && entry.archive === undefined
   );

@@ -7,7 +7,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { FolderPicker, UNAVAILABLE_MESSAGE } from "./folder-picker";
-import { useHostDir } from "./use-host-dir";
+import { hostFsListing } from "@plugins/infra/plugins/host-fs/core";
+import { useLive } from "@plugins/network/plugins/live/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -48,18 +49,35 @@ export function FolderPickerPopover({
   // The field holds an ABSOLUTE path: host-fs would also accept `~/…`, but
   // whoever reads the value need not expand it, so it is not offered as valid.
   const absolute = value.startsWith("/");
-  const { data: validity } = useHostDir(value, {
-    enabled: hasValue && absolute,
-  });
+  // Whether the path is a folder host-fs can list: its listing's meta sibling
+  // (the folder's own facts) is read, never its entries.
+  const validity = useLive(
+    hostFsListing.meta,
+    hasValue && absolute ? { path: value } : null,
+  );
+  // Listable is valid, a refusal names why; not known yet, no computer behind
+  // the app, or a failed read (which the browser below reports): no verdict.
+  let listed: Verdict | undefined;
+  switch (validity.status) {
+    case "ready":
+      listed = { valid: true };
+      break;
+    case "error":
+      listed =
+        validity.error.kind === "refused" && validity.error.code !== undefined
+          ? { valid: false, reason: UNAVAILABLE_MESSAGE[validity.error.code] }
+          : undefined;
+      break;
+    case "loading":
+    case "unavailable":
+      listed = undefined;
+      break;
+  }
   const verdict: Verdict | undefined = !hasValue
     ? undefined
     : !absolute
       ? { valid: false, reason: "Use an absolute path (starting with /)." }
-      : validity === undefined
-        ? undefined
-        : validity.kind === "ok"
-          ? { valid: true }
-          : { valid: false, reason: UNAVAILABLE_MESSAGE[validity.kind] };
+      : listed;
 
   return (
     <Stack direction="row" gap="xs" align="center">

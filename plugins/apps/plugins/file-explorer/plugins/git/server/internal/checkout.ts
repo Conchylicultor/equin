@@ -1,11 +1,11 @@
 import { stat } from "node:fs/promises";
-import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
   runGit,
   tryRunGit,
 } from "@plugins/primitives/plugins/commit-list/server";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import {
-  fileExplorerGitCheckout,
+  fileExplorerGitCheckoutValue,
   type GitCheckout,
 } from "../../shared/resources";
 
@@ -90,7 +90,22 @@ export async function assertCheckoutRoot(root: string): Promise<void> {
   throw new Error(`${root} is not the toplevel of a git checkout`);
 }
 
-export const handleGitCheckout = implement(
-  fileExplorerGitCheckout,
-  ({ query }) => resolveCheckout(query.path),
-);
+/** Which checkout holds a folder, measured on every mount (see the declaration). */
+export const gitCheckoutServed = serveValue(fileExplorerGitCheckoutValue, {
+  source: "external",
+  changes: {
+    snapshot: {
+      reason:
+        "a folder's checkout changes only when a repository is created or removed around it, which nothing signals; asked again on every mount",
+    },
+  },
+  loader: ({ path }) => {
+    if (!path.startsWith("/")) {
+      throw fileExplorerGitCheckoutValue.refuse(
+        "invalid-path",
+        `Not an absolute path: ${path}`,
+      );
+    }
+    return resolveCheckout(path);
+  },
+});

@@ -11,6 +11,7 @@ import {
   type FileWatcherOptions,
   type WatchReaction,
   type WatchReconcile,
+  type WatchDepth,
   type WatcherBackend,
 } from "./engine";
 
@@ -40,6 +41,12 @@ export interface FileWatcherSpec {
    * `WRITES_WHILE_OPEN_MAX_ENTRIES`). See the engine's `writesWhileOpen`.
    */
   writesWhileOpen?: boolean;
+  /**
+   * How deep each instance hears its dirs: `"subtree"` (default, parcel's
+   * recursive watch) or `"children"` (one single-directory `fs.watch` per
+   * dir — its direct entries only). See the engine's `depth`.
+   */
+  depth?: WatchDepth;
   /**
    * Re-derive state a dropped fsevent could have missed, every this many ms.
    * Declaring it makes `onReconcile` REQUIRED on every `start()`; leaving it
@@ -247,6 +254,7 @@ export function defineFileWatcherIn<R extends number | undefined = undefined>(
         debounceMs: spec.debounceMs,
         ceilingMs: spec.ceilingMs,
         writesWhileOpen: spec.writesWhileOpen,
+        depth: spec.depth,
         onChange: (events: FileChangeEvent[]) => {
           noteBatch(state, events);
           return dispatch(state, () => onChange(events));
@@ -385,7 +393,7 @@ export function listFileWatchers(): FileWatcherSnapshot[] {
     declaredIn: s.declaredIn,
     scope: s.runtime.scope,
     runsHere: s.runtime.runsHere,
-    backend: watcherBackend(s.spec.writesWhileOpen ?? false),
+    backend: watcherBackend(s.spec.writesWhileOpen ?? false, s.spec.depth),
     reconcileMs: s.spec.reconcileMs ?? null,
     // Spread: a snapshot reads each instance's live fold count now.
     instances: [...s.instances.values()].map((i) => ({ ...i })),

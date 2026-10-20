@@ -15,6 +15,10 @@ import type { TreeItem } from "./types";
  * folded away inside a collapsed parent is not shown, so it is not fetched, and
  * a search (which force-opens its matches) never fans out listings.
  *
+ * The same walk tells the source which nodes are open (`onOpenChange`, when it
+ * has one), each time that set changes, so a source keeping listings live can
+ * let go of a node once it closes.
+ *
  * Each node is asked at most once per `unloaded` spell: the set of asked ids is
  * pruned as soon as a node's state leaves `unloaded`, so a source that later
  * drops a listing back to `unloaded` (invalidation) is asked again.
@@ -24,21 +28,33 @@ export function useLazyLoadRequests<T extends TreeItem>(
   lazy: LazyChildren<T> | undefined,
 ): void {
   const asked = useRef(new Set<string>());
+  /** The open set last handed to `onOpenChange`, by id (null: never). */
+  const lastOpen = useRef<string | null>(null);
   useEffect(() => {
     if (!lazy) return;
     const due: TreeNode<T>[] = [];
+    const open: TreeNode<T>[] = [];
     const stillUnloaded = new Set<string>();
     const walk = (nodes: readonly TreeNode<T>[]) => {
       for (const node of nodes) {
         if (!node.expanded) continue;
-        if (lazy.hasChildren(node) && lazy.state(node).kind === "unloaded") {
-          stillUnloaded.add(node.id);
-          if (!asked.current.has(node.id)) due.push(node);
+        if (lazy.hasChildren(node)) {
+          open.push(node);
+          if (lazy.state(node).kind === "unloaded") {
+            stillUnloaded.add(node.id);
+            if (!asked.current.has(node.id)) due.push(node);
+          }
         }
         walk(node.children);
       }
     };
     walk(forest);
+    const openKey = open.map((n) => n.id).join("\n");
+    if (lazy.onOpenChange && openKey !== lastOpen.current) {
+      lastOpen.current = openKey;
+      // open-set-sync: the source's liveness follows the tree's open state, which only the tree knows — told once per change of the set, before any load it asks for
+      lazy.onOpenChange(open);
+    }
     for (const id of asked.current) {
       if (!stillUnloaded.has(id)) asked.current.delete(id);
     }

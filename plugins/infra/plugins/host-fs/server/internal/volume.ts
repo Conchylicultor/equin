@@ -1,8 +1,7 @@
 import { lstat, readdir, readlink, statfs } from "node:fs/promises";
 import { join } from "node:path";
-import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { hostFsVolume, type HostFsVolumeResult } from "../../core";
-import { classifyFsError, resolveHostPath } from "./path";
+import type { HostFsVolumeResult } from "../../core";
+import { classifyFsError } from "./path";
 
 const VOLUMES_DIR = "/Volumes";
 
@@ -55,7 +54,3 @@ export async function hostVolume(path: string): Promise<HostFsVolumeResult> {
     return { kind: classifyFsError(err), path };
   }
 }
-
-export const handleVolume = implement(hostFsVolume, ({ query }) =>
-  hostVolume(resolveHostPath(query.path)),
-);

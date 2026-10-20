@@ -1,8 +1,4 @@
-import {
-  getEndpointErrorMessage,
-  useEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
-import { hostFsVolume } from "@plugins/infra/plugins/host-fs/core";
+import { hostFsVolumeInfo } from "@plugins/infra/plugins/host-fs/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useHomeDir } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import { displayPath } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
@@ -62,37 +58,42 @@ function useSingularityPlace(): PlacesState {
   };
 }
 
-/** The startup volume, named as the system names it ("Macintosh HD"). */
+/**
+ * The startup volume, named as the system names it ("Macintosh HD") by
+ * `host-fs.volume` — the same tuple the storage meter reads.
+ */
 function useStartupVolumePlace(): PlacesState {
-  const volume = useEndpoint(hostFsVolume, {}, { query: { path: "/" } });
-  if (volume.isError) {
-    return {
-      kind: "failed",
-      label: "/",
-      icon: driveIcon,
-      message: getEndpointErrorMessage(volume.error),
-    };
-  }
-  if (!volume.data) return { kind: "pending" };
-  if (volume.data.kind !== "ok") {
-    return {
-      kind: "failed",
-      label: "/",
-      icon: driveIcon,
-      message: `/ is ${volume.data.kind}`,
-    };
-  }
-  return {
-    kind: "ready",
-    places: [
-      {
-        id: "startup-volume",
-        label: volume.data.name,
-        path: "/",
+  const volume = useLive(hostFsVolumeInfo, { path: "/" });
+  switch (volume.status) {
+    case "loading":
+      return { kind: "pending" };
+    case "unavailable":
+      return {
+        kind: "failed",
+        label: "/",
         icon: driveIcon,
-      },
-    ],
-  };
+        message: volume.message,
+      };
+    case "error":
+      return {
+        kind: "failed",
+        label: "/",
+        icon: driveIcon,
+        message: volume.error.message,
+      };
+    case "ready":
+      return {
+        kind: "ready",
+        places: [
+          {
+            id: "startup-volume",
+            label: volume.data.name,
+            path: "/",
+            icon: driveIcon,
+          },
+        ],
+      };
+  }
 }
 
 /** The place sources this plugin contributes, in sidebar order within each group. */

@@ -101,8 +101,30 @@ async function expand(page: Page, name: string): Promise<void> {
   await row(page, name).locator("button[aria-label='Expand']").click();
 }
 
-/** Every folder path a peek request has asked for, deduplicated. */
+/** Every folder path a `host-fs.peek` subscription has asked for, deduplicated. */
 const peeked = new Set<string>();
+
+/** The `host-fs.peek` paths one client socket frame subscribes (a sub or a replay). */
+function peekPaths(payload: string | Buffer): string[] {
+  if (typeof payload !== "string") return [];
+  const frame = JSON.parse(payload) as {
+    op?: string;
+    key?: string;
+    params?: { path?: string };
+    entries?: { key: string; params: { path?: string } }[];
+  };
+  const subs =
+    frame.op === "sub"
+      ? [{ key: frame.key, params: frame.params }]
+      : frame.op === "sub-batch"
+        ? (frame.entries ?? [])
+        : [];
+  return subs.flatMap((sub) =>
+    sub.key === "host-fs.peek" && sub.params?.path !== undefined
+      ? [sub.params.path]
+      : [],
+  );
+}
 const r = report("file explorer folder counts");
 
 try {
@@ -110,10 +132,10 @@ try {
     const { page } = await h.session({
       viewport: { width: 1600, height: 960 },
     });
-    page.on("request", (req) => {
-      if (!req.url().includes("/api/host-fs/peek")) return;
-      const body = req.postDataJSON() as { paths: string[] };
-      for (const p of body.paths) peeked.add(p);
+    page.on("websocket", (ws) => {
+      ws.on("framesent", ({ payload }) => {
+        for (const p of peekPaths(payload)) peeked.add(p);
+      });
     });
 
     // 1. Counts without expanding.

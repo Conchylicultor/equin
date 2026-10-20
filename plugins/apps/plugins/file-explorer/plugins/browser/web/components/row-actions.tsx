@@ -4,18 +4,13 @@ import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboar
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
+  hostFsArchiveReasonMessage,
   hostFsExtract,
-  hostFsList,
   type HostFsExtractResult,
 } from "@plugins/infra/plugins/host-fs/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import {
-  absolutePath,
-  archiveReasonMessage,
-  baseName,
-  type EntryRow,
-} from "../../core";
+import { absolutePath, baseName, type EntryRow } from "../../core";
 import { useHomeDir } from "../internal/host-path-source";
 
 const unarchiveIcon = symbol("unarchive");
@@ -46,7 +41,7 @@ function extractToast(result: HostFsExtractResult): void {
     case "unreadable-archive":
       showToast({
         variant: "error",
-        description: archiveReasonMessage(result.reason),
+        description: hostFsArchiveReasonMessage(result.reason),
       });
       return;
   }
@@ -55,14 +50,12 @@ function extractToast(result: HostFsExtractResult): void {
 /**
  * Extract here: an archive file (a zip) extracted beside itself — its one
  * top-level folder or file as itself, several entries into a new folder named
- * after the archive (host-fs decides, and never overwrites). Every listing is
- * re-read on success, so the new entry appears in place. Offered on archive
- * files on disk only.
+ * after the archive (host-fs decides, and never overwrites). Every
+ * listing is live (pushed from a watch of the folder), so the new entry
+ * appears in place. Offered on archive files on disk only.
  */
 export function ExtractAction({ row }: ItemActionProps<EntryRow>): ReactNode {
-  const extract = useEndpointMutation(hostFsExtract, {
-    invalidates: [hostFsList],
-  });
+  const extract = useEndpointMutation(hostFsExtract);
   if (row.archive === undefined) return null;
   return (
     <IconButton

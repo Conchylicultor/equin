@@ -21,6 +21,7 @@ const BACKEND_WORDS: Record<WatcherBackend, string> = {
   inotify: "inotify",
   windows: "ReadDirectoryChangesW",
   "platform-default": "@parcel/watcher's default for this platform",
+  "fs-watch": "fs.watch — one directory each, its direct entries only",
 };
 
 function clock(d: Date, seconds: boolean): string {

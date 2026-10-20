@@ -3,6 +3,7 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "live/no-endpoint-read",
+    // The workspace half of useFolderImages (code-api's `dir` route) — B6.
     paths: ["web/internal/use-folder-images.ts"],
     kind: "debt",
     task: "task-1791560308-woqgfi",

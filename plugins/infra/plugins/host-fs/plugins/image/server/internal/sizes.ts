@@ -1,19 +1,7 @@
-import { join } from "node:path";
 import sharp from "sharp";
-import { implement } from "@plugins/infra/plugins/endpoints/server";
-import {
-  listHostPath,
-  openHostFile,
-  resolveHostPath,
-} from "@plugins/infra/plugins/host-fs/server";
+import { openHostFile } from "@plugins/infra/plugins/host-fs/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import {
-  hostFsImageSizes,
-  isResizableName,
-  resizedVersion,
-  type HostFsImageSizesResult,
-  type ImageSize,
-} from "../../core";
+import { resizedVersion, type ImageSize } from "../../core";
 
 /** Header reads are a few ms each; bounded so a big folder cannot open hundreds of files at once. */
 const reads = createSemaphore(8);
@@ -49,7 +37,7 @@ export function uprightSize(meta: {
 }
 
 /** The upright size of one image, or `null` when it vanished meanwhile. */
-async function sizeOf(path: string): Promise<ImageSize | null> {
+export async function sizeOf(path: string): Promise<ImageSize | null> {
   const file = await openHostFile(path);
   if (file.kind !== "ok") return null;
   const key = `${file.path}\0${resizedVersion(file)}`;
@@ -68,28 +56,3 @@ async function sizeOf(path: string): Promise<ImageSize | null> {
     }
   });
 }
-
-export async function imageSizesIn(
-  dir: string,
-): Promise<HostFsImageSizesResult> {
-  const listed = await listHostPath(resolveHostPath(dir));
-  if (listed.kind !== "ok") return { kind: listed.kind, path: listed.path };
-  const names = listed.entries
-    .filter((e) => e.kind === "file" && isResizableName(e.name))
-    .map((e) => e.name);
-  const sizes = await Promise.all(
-    names.map((name) => sizeOf(join(listed.path, name))),
-  );
-  return {
-    kind: "ok",
-    images: names.flatMap((name, i) => {
-      const size = sizes[i];
-      // A file deleted between the listing and its read is no longer there.
-      return size ? [{ name, size }] : [];
-    }),
-  };
-}
-
-export const handleSizes = implement(hostFsImageSizes, ({ query }) =>
-  imageSizesIn(query.path),
-);

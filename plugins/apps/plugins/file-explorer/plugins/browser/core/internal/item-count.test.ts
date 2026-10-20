@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import type {
-  HostFsEntry,
-  HostFsListResult,
-} from "@plugins/infra/plugins/host-fs/core";
-import { itemCount, type EntryFilter } from "./item-count";
+import type { HostFsEntry } from "@plugins/infra/plugins/host-fs/core";
+import {
+  itemCount,
+  type EntryFilter,
+  type FolderRefusal,
+  type ListedFolder,
+} from "./item-count";
 
 const DIR = "~/src";
 
@@ -14,12 +16,14 @@ const entry = (name: string): HostFsEntry => ({
   mtimeMs: 0,
   hidden: name.startsWith("."),
 });
-const listing = (...names: string[]): HostFsListResult => ({
-  kind: "ok",
-  path: "/srv/src",
-  parent: "/srv",
+const listing = (...names: string[]): ListedFolder => ({
+  kind: "listed",
   entries: names.map(entry),
 });
+const refused = (
+  code: FolderRefusal["code"],
+  message = `${code}: /x`,
+): FolderRefusal => ({ kind: "refused", code, message });
 
 const showAll: EntryFilter = () => true;
 const hideDotfiles: EntryFilter = (e) => !e.hidden;
@@ -61,7 +65,7 @@ describe("itemCount", () => {
     });
   });
 
-  test("an empty folder is a real 0; a failure never is", () => {
+  test("an empty folder is a real 0; a refusal never is", () => {
     expect(
       itemCount(
         DIR,
@@ -70,25 +74,26 @@ describe("itemCount", () => {
         showAll,
       ),
     ).toEqual({ kind: "count", n: 0 });
-    expect(
-      itemCount(DIR, undefined, { kind: "denied", path: "/x" }, showAll),
-    ).toEqual({ kind: "denied" });
-    expect(
-      itemCount(DIR, undefined, { kind: "missing", path: "/x" }, showAll),
-    ).toEqual({ kind: "gone" });
+    expect(itemCount(DIR, undefined, refused("denied"), showAll)).toEqual({
+      kind: "denied",
+    });
+    expect(itemCount(DIR, undefined, refused("missing"), showAll)).toEqual({
+      kind: "gone",
+    });
+    expect(itemCount(DIR, undefined, refused("not-a-dir"), showAll)).toEqual({
+      kind: "gone",
+    });
     expect(
       itemCount(
         DIR,
         undefined,
-        {
-          kind: "unreadable-archive",
-          path: "/x",
-          archive: "/a",
-          reason: "corrupt",
-        },
+        refused("unreadable-archive", "This archive is encrypted: /a.zip"),
         showAll,
       ),
-    ).toEqual({ kind: "unreadable", reason: "corrupt" });
+    ).toEqual({
+      kind: "unreadable",
+      message: "This archive is encrypted: /a.zip",
+    });
   });
 
   test("a folder with too many names reports its raw total", () => {
@@ -102,12 +107,15 @@ describe("itemCount", () => {
     ).toEqual({ kind: "many", total: 12_345 });
   });
 
-  test("a failed listing is its failure; neither listed nor peeked is loading", () => {
+  test("a folder row that became an archive file is gone", () => {
     expect(
-      itemCount(DIR, { kind: "denied", path: "/x" }, undefined, showAll),
-    ).toEqual({ kind: "denied" });
-    expect(itemCount(DIR, null, undefined, showAll)).toEqual({
-      kind: "loading",
+      itemCount(DIR, undefined, { kind: "archive", path: "/x" }, showAll),
+    ).toEqual({ kind: "gone" });
+  });
+
+  test("a refused listing is its refusal; neither answered is loading", () => {
+    expect(itemCount(DIR, refused("denied"), undefined, showAll)).toEqual({
+      kind: "denied",
     });
     expect(itemCount(DIR, undefined, undefined, showAll)).toEqual({
       kind: "loading",

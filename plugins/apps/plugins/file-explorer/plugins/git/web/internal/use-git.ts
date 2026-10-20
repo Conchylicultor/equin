@@ -2,31 +2,18 @@ import { useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
-  useEndpointResource,
   type ResourceError,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
-  fileExplorerGitCheckout,
+  fileExplorerGitCheckoutValue,
   fileExplorerGitStatus,
   type GitCheckout,
 } from "../../shared/resources";
 import { indexGitStatus, type GitStatusIndex } from "../../shared/status-index";
 
-/** A folder in a checkout, as the checkout endpoint names it. */
+/** A folder in a checkout, as `file-explorer.git-checkout` names it. */
 export type Checkout = Extract<GitCheckout, { kind: "checkout" }>;
-
-/**
- * The checkout holding the absolute folder `dir`. Asked once per folder per
- * session: a folder's checkout only changes when a repo is created around it.
- */
-export function useGitCheckout(dir: string): ResourceResult<GitCheckout> {
-  return useEndpointResource(
-    fileExplorerGitCheckout,
-    {},
-    { query: { path: dir }, staleTime: Number.POSITIVE_INFINITY },
-  );
-}
 
 /**
  * The live status of the checkout at `root`, indexed for any path below it.
@@ -50,12 +37,15 @@ export type GitView =
   | { kind: "ready"; checkout: Checkout; index: GitStatusIndex };
 
 /**
- * What git knows of the absolute folder `dir`: its checkout, then its status.
+ * What git knows of the absolute folder `dir`: its checkout (the
+ * `file-explorer.git-checkout` snapshot, measured as the folder's view mounts
+ * — a folder's checkout only changes when a repo is created around it, which
+ * nothing signals), then its live status.
  * The view keeps its identity while neither answer changes (it is memoized on
  * the answers, not on the reads' wrappers), so a lens built from it does too.
  */
 export function useGitView(dir: string): GitView {
-  const checkout = useGitCheckout(dir);
+  const checkout = useLive(fileExplorerGitCheckoutValue, { path: dir });
   const checkoutKnown = checkout.status === "ready";
   const found =
     checkoutKnown && checkout.data.kind === "checkout" ? checkout.data : null;

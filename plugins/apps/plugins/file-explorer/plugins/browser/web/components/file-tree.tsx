@@ -16,19 +16,22 @@ import type {
 } from "@plugins/primitives/plugins/data-view/core";
 import type { TreeChildrenState } from "@plugins/primitives/plugins/tree/core";
 import {
+  compareHostFsNames,
   hasHostPaths,
+  hostFsDirPeek,
   isBrowsable,
   writeHostPaths,
+  type HostFsDirPeek,
   type HostFsEntry,
-  type HostFsListResult,
 } from "@plugins/infra/plugins/host-fs/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import {
   absolutePath,
-  archiveReasonMessage,
   ENTRY_CATEGORY_OPTIONS,
   entryCategory,
   entryExtension,
@@ -42,18 +45,18 @@ import {
   joinPath,
   type EntryFilter,
   type EntryRow,
+  type FolderRefusal,
+  type ListedFolder,
 } from "../../core";
 import { isOnDisk, type Listing, type Listings } from "../internal/listings";
-import { useFolderPeek } from "../internal/folder-peek";
 import { FileBrowserSlots } from "../slots";
 import { ExplorerControlsSlot } from "../internal/controls-slot";
 
 const FILE_TREE_VIEW = defineDataView("file-explorer.tree");
 
-/** What a listing's failure says, in the user's terms. */
-function listingFailure(listing: Listing): string | null {
-  if (listing.error !== null) return listing.error;
-  switch (listing.result?.kind) {
+/** What a folder's refused listing says, in the user's terms. */
+function refusalMessage(refusal: FolderRefusal): string {
+  switch (refusal.code) {
     case "denied":
       return "Permission denied";
     case "missing":
@@ -61,10 +64,8 @@ function listingFailure(listing: Listing): string | null {
     case "not-a-dir":
       return "Not a folder";
     case "unreadable-archive":
-      return archiveReasonMessage(listing.result.reason);
-    case "ok":
-    case undefined:
-      return null;
+    case "invalid-path":
+      return refusal.message;
   }
 }
 
@@ -81,12 +82,7 @@ function visibleEntries(
 ): HostFsEntry[] {
   return entries
     .filter((e) => shows(e, joinPath(dir, e.name)))
-    .sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, {
-        numeric: true,
-        sensitivity: "base",
-      }),
-    );
+    .sort((a, b) => compareHostFsNames(a.name, b.name));
 }
 
 /**
@@ -103,9 +99,9 @@ function buildRows(
   const rows: EntryRow[] = [];
   const walk = (dir: string, parentId: string | null) => {
     const listing = listings.get(dir);
-    if (listing?.result?.kind !== "ok") return;
+    if (listing?.kind !== "ok") return;
     let rank: Rank | null = null;
-    for (const entry of visibleEntries(dir, listing.result.entries, shows)) {
+    for (const entry of visibleEntries(dir, listing.entries, shows)) {
       rank = Rank.between(rank, null);
       const path = joinPath(dir, entry.name);
       rows.push({
@@ -139,12 +135,28 @@ function buildRows(
 function childrenState(listings: Listings, path: string): TreeChildrenState {
   const listing = listings.get(path);
   if (listing === undefined) return { kind: "unloaded" };
-  const failure = listingFailure(listing);
-  if (failure !== null) {
-    return { kind: "failed", message: failure, retry: listing.retry };
+  switch (listing.kind) {
+    case "loading":
+      return { kind: "loading" };
+    case "ok":
+      return { kind: "loaded" };
+    // Never under a listed root (the root is unavailable too, and no tree is
+    // drawn); nothing to retry without a computer.
+    case "unavailable":
+      return { kind: "failed", message: listing.message, retry: () => {} };
+    case "refused":
+      return {
+        kind: "failed",
+        message: refusalMessage(listing),
+        retry: () => void listing.refetch(),
+      };
+    case "failed":
+      return {
+        kind: "failed",
+        message: listing.error.message,
+        retry: () => void listing.refetch(),
+      };
   }
-  if (listing.result === null) return { kind: "loading" };
-  return { kind: "loaded" };
 }
 
 /**
@@ -250,45 +262,71 @@ function muted(text: string, title: string): ReactNode {
   );
 }
 
+/** A listing as far as counting its folder goes: listed, refused, or not yet. */
+function listedFolder(listing: Listing | undefined): ListedFolder | undefined {
+  switch (listing?.kind) {
+    case "ok":
+      return { kind: "listed", entries: listing.entries };
+    case "refused":
+      return { kind: "refused", code: listing.code, message: listing.message };
+    // Not answered yet, or a read that failed (the peek counts it instead).
+    case "loading":
+    case "failed":
+    case "unavailable":
+    case undefined:
+      return undefined;
+  }
+}
+
 /**
  * A folder's Size cell: how many items it holds, by the browser's visibility
  * rules (Show hidden files, every lens hide rule), expanded or not. An
- * expanded folder counts its listing; any other is peeked (its child names,
- * one directory read) by this cell — so only folders on screen are read, as
- * the tree renders only the rows it shows. Never a 0 that is really a failure.
+ * expanded folder counts its listing; any other is peeked (`host-fs.peek`:
+ * its child names, one directory read, pushed while read) by this cell — so
+ * only folders on screen are read, as the tree renders only the rows it
+ * shows. Never a 0 that is really a failure.
  */
 function FolderSize({
   path,
-  listed,
+  listing,
   shows,
-  visit,
 }: {
   path: string;
-  listed: HostFsListResult | null | undefined;
+  listing: Listing | undefined;
   shows: EntryFilter;
-  visit: string;
 }): ReactNode {
-  const peek = useFolderPeek(path, visit, listed?.kind !== "ok");
-  if (peek.kind === "failed" && listed?.kind !== "ok") {
+  const listed = listedFolder(listing);
+  const peek = useLive(
+    hostFsDirPeek,
+    listed?.kind === "listed" ? null : { path },
+  );
+  if (peek.status === "unavailable") {
+    return muted("—", peek.message);
+  }
+  if (
+    peek.status === "error" &&
+    peek.error.kind !== "refused" &&
+    listed?.kind !== "listed"
+  ) {
     return (
-      <Button
-        variant="ghost"
-        tooltip={`${peek.message} — click to retry`}
-        onClick={(e) => {
-          e.stopPropagation();
-          peek.retry();
-        }}
-      >
-        Retry
-      </Button>
+      <ResourceErrorInline
+        variant="icon"
+        error={peek.error}
+        refetch={peek.refetch}
+        subject="this folder's items"
+      />
     );
   }
-  const count = itemCount(
-    path,
-    listed,
-    peek.kind === "ok" ? peek.result : undefined,
-    shows,
-  );
+  let peeked: HostFsDirPeek | FolderRefusal | undefined;
+  if (peek.status === "ready") peeked = peek.data;
+  else if (peek.status === "error" && peek.error.code !== undefined) {
+    peeked = {
+      kind: "refused",
+      code: peek.error.code,
+      message: peek.error.message,
+    };
+  }
+  const count = itemCount(path, listed, peeked, shows);
   switch (count.kind) {
     case "count":
       return formatCount(count.n);
@@ -300,7 +338,7 @@ function FolderSize({
     case "denied":
       return muted("No access", "Permission denied");
     case "unreadable":
-      return muted("Unreadable", archiveReasonMessage(count.reason));
+      return muted("Unreadable", count.message);
     case "gone":
       return muted("—", "This folder no longer exists");
     case "loading":
@@ -314,6 +352,8 @@ export interface FileTreeProps {
   listings: Listings;
   /** Ask for a folder's listing (when the tree opens it). */
   request: (path: string) => void;
+  /** The folders the tree has open now: what is read live. */
+  setOpen: (paths: readonly string[]) => void;
   shows: EntryFilter;
   query: string;
   onQueryChange: (q: string) => void;
@@ -347,6 +387,7 @@ export function FileTree({
   root,
   listings,
   request,
+  setOpen,
   shows,
   query,
   onQueryChange,
@@ -360,11 +401,8 @@ export function FileTree({
   onDragPaths,
   onDropInto,
 }: FileTreeProps): ReactNode {
-  // "Today" is today as of this listing: the folder is re-listed on every visit.
+  // "Today" is today as of this visit to the folder.
   const [now] = useState(() => Date.now());
-  // Folder counts are cached for this visit: scrolling back costs nothing, and
-  // the next visit re-reads them, as it re-lists the folder.
-  const [visit] = useState(() => crypto.randomUUID());
   const rows = useMemo(
     () => buildRows(listings, root, shows),
     [listings, root, shows],
@@ -378,9 +416,10 @@ export function FileTree({
         hasChildren: (r) => r.browsable,
         state: (r) => childrenState(listings, r.path),
         load: (r) => request(r.path),
+        onOpenChange: (open) => setOpen(open.map((r) => r.path)),
       },
     }),
-    [listings, request],
+    [listings, request, setOpen],
   );
 
   // Rows drag as host paths (the selection when the grabbed row is in it), so
@@ -430,9 +469,8 @@ export function FileTree({
           r.kind === "dir" ? (
             <FolderSize
               path={r.path}
-              listed={listings.get(r.path)?.result}
+              listing={listings.get(r.path)}
               shows={shows}
-              visit={visit}
             />
           ) : (
             formatSize(r.size)
@@ -466,7 +504,7 @@ export function FileTree({
         value: (r) => r.symlinkTarget ?? null,
       },
     ],
-    [now, shows, listings, visit],
+    [now, shows, listings],
   );
 
   // A nested outline table (its config row) with its column labels: the

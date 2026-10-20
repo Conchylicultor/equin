@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
 import { makeResizedHandler } from "./resize";
-import { imageSizesIn, uprightSize } from "./sizes";
+import { sizeOf, uprightSize } from "./sizes";
 
 let root: string;
 let cache: string;
@@ -104,22 +104,24 @@ describe("resized", () => {
 });
 
 describe("sizes", () => {
-  test("upright sizes of the folder's resizable images", async () => {
-    expect(await imageSizesIn(root)).toEqual({
-      kind: "ok",
-      images: [
-        { name: "alpha.png", size: { kind: "known", width: 50, height: 50 } },
-        { name: "garbage.jpg", size: { kind: "unreadable" } },
-        {
-          name: "turned.jpg",
-          size: { kind: "known", width: 200, height: 400 },
-        },
-      ],
+  test("upright sizes, read from the headers", async () => {
+    expect(await sizeOf(join(root, "alpha.png"))).toEqual({
+      kind: "known",
+      width: 50,
+      height: 50,
+    });
+    expect(await sizeOf(join(root, "garbage.jpg"))).toEqual({
+      kind: "unreadable",
+    });
+    expect(await sizeOf(join(root, "turned.jpg"))).toEqual({
+      kind: "known",
+      width: 200,
+      height: 400,
     });
   });
 
-  test("a missing folder is missing", async () => {
-    expect((await imageSizesIn(join(root, "nope"))).kind).toBe("missing");
+  test("a missing file has no size", async () => {
+    expect(await sizeOf(join(root, "nope.jpg"))).toBeNull();
   });
 
   test("uprightSize", () => {

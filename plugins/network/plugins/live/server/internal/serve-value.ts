@@ -25,6 +25,7 @@ import {
   type LiveValueOrigin,
   type LivePortableDecl,
 } from "@plugins/network/plugins/live/core";
+import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
 import { serveValueOn } from "../../core/internal/serve-on";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import type {
@@ -168,12 +169,15 @@ interface PreloadParamsOption<P> {
 }
 
 /**
- * A paged value is never `needsMachine` (its pages have no unavailable arm), so
- * only the portable host serves one. A conditional on the HOST, resolved where
- * the overloads are instantiated — an intersection with `H` would cost the
- * paged overload its inference of `Item` / `Meta`.
+ * The `needsMachine` a host serves paged values of, as every value: `live/server`
+ * a portable one (`undefined`), `live/machine` one declared `needsMachine`. A
+ * conditional on the HOST, resolved where the overloads are instantiated and
+ * passed as the declaration's own type argument — an intersection with `H`
+ * would cost the paged overload its inference of `Item` / `Meta`.
  */
-type PagedFor<H, V> = [H] extends [LivePortableDecl] ? V : never;
+type PagedMachine<H> = [H] extends [LivePortableDecl]
+  ? undefined
+  : MachineFeature;
 
 /**
  * `serveValue`'s overloads, over the declarations a host serves (`H`,
@@ -192,7 +196,7 @@ export interface ServeValueOverloads<H> {
     C extends PagedChanges = "notified",
     K extends string = never,
   >(
-    value: PagedFor<H, LivePagedValue<Item, Meta, Q, QIn, "worktree", K>>,
+    value: LivePagedValue<Item, Meta, Q, QIn, "worktree", K, PagedMachine<H>>,
     opts: ServePagedValueOptions<
       NoInfer<Item>,
       NoInfer<Meta>,

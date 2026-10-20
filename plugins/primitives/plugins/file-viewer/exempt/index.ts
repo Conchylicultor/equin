@@ -3,11 +3,8 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "live/no-endpoint-read",
-    paths: [
-      "web/components/no-preview.tsx",
-      "web/internal/use-file-bytes.ts",
-      "web/internal/use-file-text.ts",
-    ],
+    // The workspace half of useFileText (code-api's `file` route) — B6.
+    paths: ["web/internal/use-file-text.ts"],
     kind: "debt",
     task: "task-1791560308-woqgfi",
     reason:
