@@ -37,13 +37,18 @@ export interface LyricLineTextProps {
    * - `columns` (default) — the songbook: a monospace chord row over a
    *   monospace lyric row, each chord pinned to its character column.
    * - `words` — in the surface's own font: the line flows as words that wrap,
-   *   and each word a chord starts on carries that chord just above it. While one
-   *   of the line's chords sounds, every word says where it stands against
-   *   it (`data-phase`, for the caller's CSS): `sung` before it (the words
-   *   ahead of the line's first chord included), `now` under it, `coming`
-   *   after it.
+   *   and each word a chord starts on carries that chord just above it.
+   *   While the line is being sung (`singing`), every word says where it
+   *   stands against the piece being sung (`data-phase`, for the caller's
+   *   CSS): `sung`, `now` or `coming`.
    */
   layout?: "columns" | "words";
+  /** The `words` layout's progress through the line: the piece of its words
+   *  being sung — a chord index (the words under that chord), `-1` for the
+   *  lead-in before the first chord — or null (the default) when the line is
+   *  not the one being sung. A position in the words, not the sounding chord:
+   *  the lead-in is sung while the previous line's chord still sounds. */
+  singing?: number | null;
 }
 
 function symbolLabel(chord: LyricChord): string {
@@ -91,6 +96,7 @@ export function LyricLineText({
   chordLabel = symbolLabel,
   variant = "body",
   layout = "columns",
+  singing = null,
 }: LyricLineTextProps) {
   if (layout === "words") {
     return (
@@ -100,6 +106,7 @@ export function LyricLineText({
         chordStyle={chordStyle}
         chordLabel={chordLabel}
         variant={variant}
+        singing={singing}
       />
     );
   }
@@ -210,18 +217,18 @@ function lyricWords(
 }
 
 /**
- * Where a word stands against the sounding chord: before it (words ahead of
- * the line's first chord sit under no chord, so before every one), under it,
- * or after it. None while no chord of the line sounds.
+ * Where a word stands against the piece being sung: before it, in it, or
+ * after it. Words ahead of the line's first chord sit under no chord — the
+ * lead-in, piece `-1`. None while the line is not being sung.
  */
 function wordPhase(
   under: number | null,
-  activeChord: number | null,
+  singing: number | null,
 ): "sung" | "now" | "coming" | undefined {
-  if (activeChord === null) return undefined;
+  if (singing === null) return undefined;
   const at = under ?? -1;
-  if (at < activeChord) return "sung";
-  return at === activeChord ? "now" : "coming";
+  if (at < singing) return "sung";
+  return at === singing ? "now" : "coming";
 }
 
 /** The `words` layout — see {@link LyricLineTextProps.layout}. */
@@ -231,6 +238,7 @@ function LyricWords({
   chordStyle,
   chordLabel,
   variant,
+  singing,
 }: Required<Omit<LyricLineTextProps, "layout">>) {
   const { text, chords } = lyric.data;
   const words = lyricWords(text, chords, chords.map(chordLabel));
@@ -247,7 +255,7 @@ function LyricWords({
               <span
                 key={i}
                 className="sonata-lyric-word"
-                data-phase={wordPhase(w.under, activeChord)}
+                data-phase={wordPhase(w.under, singing)}
               >
                 {/* The chord row, empty over a word no chord starts on — it
                     still holds the row's height. */}

@@ -5,7 +5,12 @@ import {
   type LyricChord,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { activeLyricChord, lyricLines, sameActiveChord } from "./lyric-lines";
+import {
+  activeLyricChord,
+  lyricLines,
+  lyricPosition,
+  sameActiveChord,
+} from "./lyric-lines";
 
 /** A lyric line over `[start, end)` with chords at the given beats. */
 function line(
@@ -89,5 +94,26 @@ describe("sameActiveChord", () => {
     );
     expect(sameActiveChord({ line: 1, chord: 2 }, null)).toBe(false);
     expect(sameActiveChord(null, null)).toBe(true);
+  });
+});
+
+describe("lyricPosition", () => {
+  const lines = [
+    line(0, 8, "one two", [
+      ["C", 0],
+      ["G", 4],
+    ]),
+    line(8, 16, "lead in then", [["Am", 10]]),
+  ];
+  it("is null before the first line", () => {
+    expect(lyricPosition(lines, -1)).toBeNull();
+  });
+  it("names the piece under the last chord at or before the beat", () => {
+    expect(lyricPosition(lines, 5)).toEqual({ line: 0, piece: 1 });
+  });
+  it("is the lead-in (-1) before a line's first chord", () => {
+    // The previous line's G still sounds, but the singing is on line 1.
+    expect(lyricPosition(lines, 9)).toEqual({ line: 1, piece: -1 });
+    expect(lyricPosition(lines, 10)).toEqual({ line: 1, piece: 0 });
   });
 });

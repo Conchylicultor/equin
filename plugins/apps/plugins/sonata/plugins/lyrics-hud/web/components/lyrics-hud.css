@@ -81,8 +81,9 @@
   transform: scale(var(--lyrics-now-scale));
 }
 /* The line in progress: full strength, scaled up, with the accent bar beside
- * it; only the words under the sounding chord stay lit — those already sung and
- * those still to come recede, chords with them. */
+ * it; only the piece of words being sung stays lit (the lead-in before the
+ * line's first chord included) — those already sung and those still to come
+ * recede, chords with them. */
 .lyrics-hud-line {
   padding-left: 10px;
   margin-left: -10px;

@@ -164,6 +164,45 @@ describe("alignedScore", () => {
     ]);
   });
 
+  it("starts a line early enough to sing the words before its first chord", () => {
+    const base = parsedSheet([{ name: "Verse", lines: VERSE }]);
+    // The second line sings four columns before its first chord (C), at its
+    // own pace: 24 columns over the 16 beats from C to the line's end.
+    const lyricSheet = {
+      ...base,
+      sections: base.sections.map((section) => ({
+        ...section,
+        lines: section.lines.map((line, i) =>
+          i === 0
+            ? { ...line, lyric: "la ".repeat(8) }
+            : {
+                lyric: "la ".repeat(9) + "l",
+                chords: line.chords.map((c, ci) => ({
+                  ...c,
+                  charOffset: 4 + ci * 6,
+                })),
+              },
+        ),
+      })),
+    };
+    const record = alignChords(
+      lyricSheet,
+      synthFeatures(played(VERSE_PLAYED)),
+      {
+        capo: 0,
+        sheetHash: "h",
+        settingsKey: "test",
+      },
+    );
+    const n = 1;
+    const lyrics = ofType<LyricData>(alignedScore(lyricSheet, record), "lyric");
+    // 4 columns at 16/24 beats each: 2⅔ beats before its C, on beat 16.
+    expect(lyrics[1]!.start - n).toBeCloseTo(16 - 8 / 3, 6);
+    expect(lyrics[1]!.data.chords[0]!.beat - n).toBe(16);
+    // The line before ends where it starts.
+    expect(lyrics[0]!.end).toBeCloseTo(lyrics[1]!.start, 6);
+  });
+
   it("names a gap 'Not in sheet'", () => {
     const features = synthFeatures(
       played([

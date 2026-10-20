@@ -11,8 +11,9 @@
  * - **Annotations, in performance order** (the shapes of `synthesizeScore`):
  *   one chord annotation per chord segment; one lyric annotation per line
  *   occurrence (a line looped "x2" appears twice), with the line's chords at
- *   the beats they were found on; lyric-only lines share the span of the chord
- *   line above them; one section annotation per section occurrence, and one
+ *   the beats they were found on — starting early enough to sing the words
+ *   before its first chord ({@link leadInStart}); lyric-only lines share the
+ *   span of the chord line above them; one section annotation per section occurrence, and one
  *   named "Not in sheet" per gap. A tab with no named section gets its stanzas'
  *   inferred labels instead (`inferSections`), one annotation per run of line
  *   occurrences through one stanza.
@@ -149,6 +150,29 @@ function width(line: ParsedLine): number {
 }
 
 /**
+ * Where a line starts: before its first chord by the time its lead-in takes —
+ * the words ahead of that chord, sung under the previous line's last chord. The
+ * recording times chords, not words, so the lead-in is sung at the line's own
+ * pace: the columns from its first chord to its end over the beats they take.
+ * Never before `floor` (half-way into the line before it, so that one keeps
+ * time of its own).
+ */
+function leadInStart(line: {
+  firstChord: number;
+  firstColumn: number;
+  end: number;
+  width: number;
+  floor: number;
+}): number {
+  const beatsPerColumn =
+    (line.end - line.firstChord) / Math.max(1, line.width - line.firstColumn);
+  return Math.max(
+    line.floor,
+    line.firstChord - line.firstColumn * beatsPerColumn,
+  );
+}
+
+/**
  * Build the aligned `Score` of `parsed` from `record`. The caller checks
  * {@link fitsSheet} first; a record whose indices do not fit the sheet throws.
  */
@@ -210,6 +234,10 @@ export function alignedScore(
       last.lines.push({ line: seg.line, segments: [seg] });
     else occ.segments.push(seg);
   }
+
+  // The last lyric annotation pushed: a line's lead-in starts within it, so
+  // it ends where the lead-in starts.
+  let prevLyric: { start: number; end: number } | null = null;
 
   const inferred = inferSections(parsed);
   const stanzaOf = (section: number, line: number) =>
@@ -314,24 +342,37 @@ export function alignedScore(
           beat: seg ? n + seg.startBeat : end,
         };
       });
-      annotations.push({
+      const lineStart = leadInStart({
+        firstChord: start,
+        firstColumn: line.chords[occ.segments[0]!.chord]!.charOffset,
+        end: split,
+        width: width(line),
+        floor: prevLyric === null ? 0 : (prevLyric.start + start) / 2,
+      });
+      if (prevLyric !== null && prevLyric.end > lineStart)
+        prevLyric.end = lineStart;
+      const chordLine = {
         type: "lyric",
-        start,
+        start: lineStart,
         end: split,
         data: { text: line.lyric, chords },
         source: "authored",
-      } satisfies Annotation<"lyric", LyricData>);
+      } satisfies Annotation<"lyric", LyricData>;
+      annotations.push(chordLine);
+      prevLyric = chordLine;
       const rest = carried.reduce((s, l) => s + width(l), 0);
       let cursor = split;
       for (const l of carried) {
         const next = cursor + ((end - split) * width(l)) / rest;
-        annotations.push({
+        const carriedLine = {
           type: "lyric",
           start: cursor,
           end: next,
           data: { text: l.lyric, chords: [] },
           source: "authored",
-        } satisfies Annotation<"lyric", LyricData>);
+        } satisfies Annotation<"lyric", LyricData>;
+        annotations.push(carriedLine);
+        prevLyric = carriedLine;
         cursor = next;
       }
     }

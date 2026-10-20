@@ -80,6 +80,42 @@ export function currentLyricLine(
   return current;
 }
 
+/**
+ * Where the singing is: the line in progress ({@link currentLyricLine}) and
+ * the piece of its words being sung — `piece` is the index of the line's last
+ * chord at or before the beat, `-1` for the lead-in, the words before its
+ * first chord (sung while the previous line's chord still sounds). Compared by
+ * value ({@link sameLyricPosition}).
+ */
+export interface LyricPosition {
+  /** Index of the line in the list the position was looked up in. */
+  line: number;
+  /** The piece of that line's words being sung: a chord index, or `-1`. */
+  piece: number;
+}
+
+/** The {@link LyricPosition} at `beat`; `null` before the first line. */
+export function lyricPosition(
+  lines: readonly LyricAnnotation[],
+  beat: number,
+): LyricPosition | null {
+  const line = currentLyricLine(lines, beat);
+  if (line < 0) return null;
+  let piece = -1;
+  lines[line]!.data.chords.forEach((c, i) => {
+    if (c.beat <= beat + EPS) piece = i;
+  });
+  return { line, piece };
+}
+
+/** Value equality for {@link LyricPosition}, for a cursor selector's `equals`. */
+export function sameLyricPosition(
+  a: LyricPosition | null,
+  b: LyricPosition | null,
+): boolean {
+  return a?.line === b?.line && a?.piece === b?.piece;
+}
+
 /** Consecutive lyric lines under one section header (or under none). */
 export interface LyricLineGroup {
   /** The section, or null for lines before/outside any section. */

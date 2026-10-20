@@ -1,8 +1,9 @@
 // Opens a song with lyrics (`--song`, a song id) in the piano roll, turns on
-// the View popover's "Lyrics" and photographs the lyrics corner — at rest,
-// while playing (the current line must move to the top of the corner) and
-// after clicking a later line (which must seek there). Turns the option back
-// off afterwards when this run turned it on.
+// "Lyrics" in the piano roll's View options (the player toolbar's active
+// display chip) and photographs the lyrics corner — at rest, while playing (the
+// current line must move to the top of the corner, and only the piece of its
+// words being sung stays lit) and after clicking a later line (which must seek
+// there). Turns the option back off afterwards when this run turned it on.
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/sonata/plugins/lyrics-hud/e2e/lyrics-hud-verify.ts \
@@ -16,7 +17,8 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const SONG = arg("song", "song-4bb02a98-f04a-413c-802c-8ddb6c94e85d");
+/** Là-Bas — a songsheet whose lines start before their first chord. */
+const SONG = arg("song", "song-1791710976-b16ii1");
 const SCHEME = arg("color-scheme", "dark") === "light" ? "light" : "dark";
 const OUT = arg("out", "/tmp/lyrics-hud");
 
@@ -28,19 +30,19 @@ await withBrowser(async (h) => {
   const r = report(`sonata lyrics corner (${SCHEME})`);
 
   await page.goto(pathUrl(`/sonata/song/${SONG}`));
-  // The piano roll is the default display; its HUD mounts once it has drawn.
-  await page
-    .getByRole("button", { name: "Display options", exact: true })
-    .waitFor({ timeout: 60000 });
+  // The player toolbar's display picker: the lens on screen is the checked
+  // radio, and opens its View options; any other lens is a radio to switch to.
+  const displays = page.getByRole("radiogroup", { name: "Display" });
+  await displays.waitFor({ timeout: 60000 });
+  const roll = displays.getByRole("radio", { name: "Piano roll" });
+  if ((await roll.getAttribute("aria-checked")) !== "true") await roll.click();
+  // The roll's HUD mounts once it has drawn.
+  await page.waitForSelector("canvas", { timeout: 60000 });
   await page.waitForTimeout(1000);
 
   const corner = page.locator(".lyrics-hud");
-  const viewChip = page.getByRole("button", {
-    name: "Display options",
-    exact: true,
-  });
   const toggle = async () => {
-    await viewChip.click();
+    await displays.locator("[role=radio][aria-checked=true]").click();
     await page.waitForTimeout(600);
     await page
       .locator(".cp-panel [role=switch]")
@@ -56,8 +58,9 @@ await withBrowser(async (h) => {
   r.ok("it lists the song's lines", (await rows.count()) > 3);
   await snap(page, OUT, "1-rest");
 
-  const chipTop = async () => (await viewChip.boundingBox())?.y ?? -1;
-  const chipAtRest = await chipTop();
+  // Seeking scrolls the corner's own list, never the corner itself.
+  const cornerTop = async () => (await corner.boundingBox())?.y ?? -1;
+  const cornerAtRest = await cornerTop();
   const clock = async () =>
     (
       await page.locator("text=/^\\d+:\\d\\d\\.\\d$/").first().innerText()
@@ -72,9 +75,9 @@ await withBrowser(async (h) => {
     (await rows.nth(1).getAttribute("data-now")) !== null,
   );
   r.ok(
-    "the HUD chips stay put",
-    (await chipTop()) === chipAtRest,
-    `View chip top ${chipAtRest} -> ${await chipTop()}`,
+    "the corner stays put",
+    (await cornerTop()) === cornerAtRest,
+    `corner top ${cornerAtRest} -> ${await cornerTop()}`,
   );
   await snap(page, OUT, "2-seeked");
 
@@ -96,14 +99,26 @@ await withBrowser(async (h) => {
     (await page.locator(".lyrics-hud-row[data-now]").count()) === 1,
   );
   r.ok(
-    "the HUD chips stay put while playing",
-    (await chipTop()) === chipAtRest,
+    "the corner stays put while playing",
+    (await cornerTop()) === cornerAtRest,
   );
   r.ok(
-    "the sounding chord is marked",
+    "only the piece being sung is lit",
+    await page.locator(".lyrics-hud-row[data-now]").evaluate((row) => {
+      const phases = [...row.querySelectorAll(".sonata-lyric-word")].map((w) =>
+        w.getAttribute("data-phase"),
+      );
+      const now = phases.filter((p) => p === "now").length;
+      return now > 0 && phases.every((p) => p !== null);
+    }),
+  );
+  // At most one: in a line's lead-in the chord sounding is the previous
+  // line's, which is no longer the current one.
+  r.ok(
+    "at most the sounding chord is marked",
     (await page
       .locator(".lyrics-hud-row[data-now] .lyrics-hud-chord-now")
-      .count()) === 1,
+      .count()) <= 1,
   );
   r.ok(
     "no chord is clipped at the corner's edge",

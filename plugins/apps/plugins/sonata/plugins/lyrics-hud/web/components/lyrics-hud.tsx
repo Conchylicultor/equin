@@ -10,10 +10,11 @@ import type {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   activeLyricChord,
-  currentLyricLine,
   lyricChordReadings,
   lyricLines,
+  lyricPosition,
   sameActiveChord,
+  sameLyricPosition,
   type ActiveChord,
 } from "@plugins/apps/plugins/sonata/plugins/lyric-line/core";
 import {
@@ -89,11 +90,14 @@ function LyricsCorner({ lines }: { lines: LyricAnnotation[] }) {
   const lane =
     SONATA_LOOK_STYLES[asSonataLook(useConfig(sonataLookConfig).look)];
 
-  // Re-render only when the playhead crosses into another line / chord.
-  const current = useCursorSelector(
-    (beat) => currentLyricLine(lines, beat),
+  // Re-render only when the playhead crosses into another line, piece of its
+  // words, or chord.
+  const position = useCursorSelector(
+    (beat) => lyricPosition(lines, beat),
     [lines],
+    sameLyricPosition,
   );
+  const current = position?.line ?? -1;
   const activeChord = useCursorSelector<ActiveChord | null>(
     (beat) => activeLyricChord(lines, beat),
     [lines],
@@ -201,6 +205,7 @@ function LyricsCorner({ lines }: { lines: LyricAnnotation[] }) {
                   chordStyle={chordStyle}
                   variant="caption"
                   layout="words"
+                  singing={now && position ? position.piece : null}
                 />
               </div>
             </button>

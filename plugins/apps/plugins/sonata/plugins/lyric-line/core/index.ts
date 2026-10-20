@@ -7,6 +7,7 @@ export type {
   ActiveChord,
   LyricChordReading,
   LyricLineGroup,
+  LyricPosition,
 } from "./lyric-lines";
 export {
   activeLyricChord,
@@ -14,5 +15,7 @@ export {
   groupLyricLines,
   lyricChordReadings,
   lyricLines,
+  lyricPosition,
   sameActiveChord,
+  sameLyricPosition,
 } from "./lyric-lines";

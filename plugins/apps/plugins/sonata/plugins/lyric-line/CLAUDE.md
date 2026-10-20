@@ -32,13 +32,16 @@
     - `ActiveChord`
     - `LyricChordReading`
     - `LyricLineGroup`
+    - `LyricPosition`
   - Exports (values):
     - `activeLyricChord`
     - `currentLyricLine`
     - `groupLyricLines`
     - `lyricChordReadings`
     - `lyricLines`
+    - `lyricPosition`
     - `sameActiveChord`
+    - `sameLyricPosition`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --primary-text`
