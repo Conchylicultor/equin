@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import {
   Sonata,
   SonataSectionItem,
@@ -42,13 +43,19 @@ export function SectionDock() {
 
 /** The collapsed dock: a glass column of section icons. */
 function SectionRail() {
+  const stackRef = useRef<HTMLElement>(null);
+  useMarkOrphanRules(stackRef);
   return (
-    <Glass className="p-2xs">
-      {/* The order config's dividers are this rail's group rules: short and
-          centred, as the mockup draws them. */}
+    <Glass className="py-xs">
+      {/* One centred column of icons. The order config's dividers are this
+          rail's group rules: short (`rail-x-none` takes the divider's inline
+          inset off, so the rule spans its own 18px) and centred, as the mockup
+          draws them. */}
       <Stack
-        gap="2xs"
-        className="[&_[role=separator]]:mx-auto [&_[role=separator]]:w-4.5"
+        ref={stackRef}
+        gap="xs"
+        align="center"
+        className="rail-x-none [&>[role=separator]]:w-4.5 [&>[role=separator][data-orphan]]:hidden"
       >
         <Sonata.Section.Render controlSize="lg">
           {(s) => <RailItem key={s.id} section={s} />}
@@ -56,6 +63,46 @@ function SectionRail() {
       </Stack>
     </Glass>
   );
+}
+
+/**
+ * Marks (`data-orphan`) every group rule of the rail with no icon between it
+ * and the previous rule (or the top), or none after it — a group whose
+ * sections are all unavailable (`useAvailable`) still leaves its items'
+ * empty wrappers, so without this the rail would draw a rule at its top, its
+ * bottom, or two in a row. Re-marked on every change of the rail's DOM.
+ */
+function useMarkOrphanRules(ref: RefObject<HTMLElement | null>) {
+  useLayoutEffect(() => {
+    const host = ref.current;
+    if (!host) return;
+    const mark = () => {
+      // A rule stays only between two icons: some icon before it, and one
+      // in its own group (before the next rule).
+      let iconBefore = false;
+      let rule: Element | null = null;
+      let groupHasIcon = false;
+      const settle = () => {
+        if (rule) rule.toggleAttribute("data-orphan", !groupHasIcon);
+      };
+      for (const child of host.children) {
+        if (child.getAttribute("role") === "separator") {
+          settle();
+          if (!iconBefore) child.toggleAttribute("data-orphan", true);
+          rule = iconBefore ? child : null;
+          groupHasIcon = false;
+        } else if (child.querySelector("button")) {
+          iconBefore = true;
+          groupHasIcon = true;
+        }
+      }
+      settle();
+    };
+    mark();
+    const observer = new MutationObserver(mark);
+    observer.observe(host, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [ref]);
 }
 
 /** One rail icon — painted only when its section has something to show. */
