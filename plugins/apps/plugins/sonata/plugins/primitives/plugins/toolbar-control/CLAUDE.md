@@ -21,7 +21,8 @@ by the same rule, owned here so it is never re-spelled:
 - `hoverExpandHost(held?)` — spread onto the box whose hover opens the fold (the
   whole control). `ToolbarControl` does it for you with `hoverExpand={{ held }}`.
 - `<HoverExpandPanel>` — the folded part. Open while the host is hovered, has
-  focus within, has a pointer pressed inside it (`:active` — a native slider
+  keyboard focus within (`:focus-visible` — a click's leftover focus, e.g. a
+  menu handing focus back to its trigger, never holds it open), has a pointer pressed inside it (`:active` — a native slider
   drag), or is `held` (a jog wheel passes "drag not idle", so a flick or a coast
   never snaps it shut). It animates to its content's own width (a `0fr → 1fr`
   grid track), so the caller sizes the content and restates no width.

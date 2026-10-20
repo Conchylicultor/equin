@@ -169,11 +169,19 @@ function PresetReadout({
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={`${label} presets`}
-        className="cursor-pointer rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        // A chip on the hovered pill, held while its menu is open, so the
+        // readout reads as the button it is.
+        className="cursor-pointer rounded-sm px-2xs outline-none transition-colors hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring data-[popup-open]:bg-foreground/10"
       >
         <Readout readout={readout} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent
+        align="end"
+        // Hand focus back to the readout only after a keyboard close: focus a
+        // pointer pick left on it would hold the hover-expand face open after
+        // the pointer has gone.
+        finalFocus={(closeType) => closeType === "keyboard"}
+      >
         <DropdownMenuRadioGroup
           value={picked?.label ?? null}
           onValueChange={(value: string) => {

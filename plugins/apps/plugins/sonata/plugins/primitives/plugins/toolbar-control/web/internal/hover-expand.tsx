@@ -29,7 +29,8 @@ export function hoverExpandHost(held = false): {
 
 /**
  * The part of a toolbar control that is folded away at rest and opens out while
- * its host ({@link hoverExpandHost}) is hovered, has focus within, has a
+ * its host ({@link hoverExpandHost}) is hovered, has keyboard focus within
+ * (`:focus-visible`, so a click's leftover focus never holds it open), has a
  * pointer pressed inside it, or is held. The ONE open/closed rule every
  * collapsible Sonata toolbar control uses — the jog wheels' ribbed face and the
  * volume slider — so they all open and close alike.
@@ -48,7 +49,11 @@ export function HoverExpandPanel({ children }: { children: ReactNode }) {
         // move together, so nothing invisible can be pressed.
         "pointer-events-none grid grid-cols-[0fr] opacity-0 transition-[grid-template-columns,opacity] duration-200 ease-out motion-reduce:transition-none",
         "group-hover/hover-expand:pointer-events-auto group-hover/hover-expand:grid-cols-[1fr] group-hover/hover-expand:opacity-100",
-        "group-focus-within/hover-expand:pointer-events-auto group-focus-within/hover-expand:grid-cols-[1fr] group-focus-within/hover-expand:opacity-100",
+        // Keyboard focus inside: `:focus-visible`, never `:focus-within` — a
+        // click focuses its target too (the readout's preset menu hands focus
+        // back to its trigger on close), and that focus would hold the panel
+        // open after the pointer has left.
+        "[[data-hover-expand-host]:has(:focus-visible)_&]:pointer-events-auto [[data-hover-expand-host]:has(:focus-visible)_&]:grid-cols-[1fr] [[data-hover-expand-host]:has(:focus-visible)_&]:opacity-100",
         // Pressed inside: `[host]:has(:active) <this panel>`, never Tailwind's
         // `group-has-*`, whose `:is(.group:has(…) *)` makes Chrome restyle the
         // whole subtree under every `:has()`-flagged ancestor on each DOM

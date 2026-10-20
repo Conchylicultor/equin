@@ -7022,6 +7022,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --primary`
                   - `ui/tokens/color-palette --ring`
+                  - `ui/tokens/density --space-2xs`
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-bold`
@@ -47622,9 +47623,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 312 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 313 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `apps` ×65
               - `primitives` ×65
-              - `apps` ×64
               - `conversations` ×47
               - `debug` ×27
               - `page` ×20
