@@ -15,17 +15,45 @@ type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
 export function AssistantTextRow({ event }: { event: JsonlEvent }) {
   const e = event as AssistantTextEvent;
   const { markdownMode } = useRowMarkdown();
+  return (
+    <AssistantTextBody
+      text={e.text}
+      messageId={e.messageId ?? null}
+      markdown={markdownMode}
+      rowActions
+    />
+  );
+}
+
+/**
+ * How the agent's words look: a finished message's row, and the message it is
+ * still writing (`StreamingText`) — one body, so the two cannot differ when
+ * the finished row replaces the streaming one.
+ */
+export function AssistantTextBody({
+  text,
+  messageId,
+  markdown,
+  rowActions = false,
+}: {
+  text: string;
+  /** The API message id, which identifies active-data blocks; null when unknown. */
+  messageId: string | null;
+  markdown: boolean;
+  /** The row's action strip (a transcript row's; a message still being written has none). */
+  rowActions?: boolean;
+}) {
   const { convId } = conversationPane.useParams();
-  const segments = useActiveDataSegments(e.text);
+  const segments = useActiveDataSegments(text);
   // First in the text so the prose wraps around it rather than running under it.
-  const actions = <EventRowActions float />;
+  const actions = rowActions ? <EventRowActions float /> : null;
 
   return (
     <ContentScope>
       {/* flow-root contains the floated actions, so a one-line message never
           lets them hang into the next row. */}
       <div className="flow-root px-md py-sm">
-        {markdownMode ? (
+        {markdown ? (
           <Text as="div" variant="body">
             {actions}
             {(() => {
@@ -39,12 +67,12 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
                 const block = (
                   <seg.component content={seg.content} attrs={seg.attrs} />
                 );
-                if (!e.messageId) return <span key={i}>{block}</span>;
+                if (!messageId) return <span key={i}>{block}</span>;
                 return (
                   <ActiveDataIdentityProvider
                     key={i}
                     conversationId={convId}
-                    messageId={e.messageId}
+                    messageId={messageId}
                     tag={seg.tag}
                     occurrenceIndex={idx}
                   >
@@ -61,7 +89,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
             className="whitespace-pre-wrap break-words"
           >
             {actions}
-            {e.text}
+            {text}
           </Text>
         )}
       </div>

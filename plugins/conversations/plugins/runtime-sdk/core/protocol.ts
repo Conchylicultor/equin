@@ -15,6 +15,10 @@ import { z } from "zod";
 // v2: `answer` carries the AskUserQuestion tool's whole answer shape, `dismiss`
 // withdraws a question, `turn_started` / `ready` events, `toolUseId` on a
 // permission request, `cliVersion` and `ready` in `hello`.
+//
+// Additions that an older peer can ignore do not bump the version (every
+// running agent would then refuse every command): an agent advertises them in
+// `hello` (`stream`), and a backend uses them only when advertised.
 export const PROTOCOL_VERSION = 2;
 
 /**
@@ -53,6 +57,13 @@ export const AgentCommandSchema = z.discriminatedUnion("type", [
   /** Restores the worktree's files to their state before that user message. */
   z.object({ type: z.literal("rewindFiles"), userMessageId: z.string() }),
   z.object({ type: z.literal("shutdown") }),
+  /**
+   * Stream the partial message (core/partial.ts): the reply is the message
+   * being written now (`SubscribeReply`), then the connection stays open and
+   * carries one `PartialStreamLine` per change until either side closes it.
+   * Only sent to an agent whose `hello` says `stream: true`.
+   */
+  z.object({ type: z.literal("subscribe") }),
 ]);
 export type AgentCommand = z.infer<typeof AgentCommandSchema>;
 
@@ -83,6 +94,8 @@ export const HelloReplySchema = z.object({
   /** The CLI's version (its initialize reply), null until `ready`. */
   cliVersion: z.string().nullable(),
   openRequests: z.array(OpenRequestSchema),
+  /** The agent takes `subscribe`. Absent from an agent started before it existed. */
+  stream: z.literal(true).optional(),
 });
 export type HelloReply = z.infer<typeof HelloReplySchema>;
 

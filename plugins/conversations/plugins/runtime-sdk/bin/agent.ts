@@ -5,6 +5,7 @@
 //   options   → <dir>/launch.json   (AgentLaunchOptions, written by the backend)
 //   commands  → --socket            (newline-delimited JSON, core/protocol.ts)
 //   events    ← <dir>/events.jsonl  (every SDK message, numbered, unchanged)
+//   partial   ← --socket, `subscribe` (the text being streamed, never on disk)
 //   stdout    → a human-readable log: what the terminal button shows
 //
 // A dumb relay: it never interprets Claude's messages beyond what it needs for
@@ -31,12 +32,16 @@ import {
   AgentCommandSchema,
   AgentLaunchOptionsSchema,
   PROTOCOL_VERSION,
+  applyPartialFrame,
+  partialFrameOf,
   type AgentAnswer,
   type AgentCommand,
   type AgentEvent,
   type CommandReply,
   type HelloReply,
   type OpenRequest,
+  type PartialFrame,
+  type PartialMessage,
 } from "../core";
 
 const { values: args } = parseArgs({
@@ -142,12 +147,28 @@ function logMessage(msg: SDKMessage): void {
     case "conversation_reset":
     case "prompt_suggestion":
     case "rate_limit_event":
-    case "stream_event":
+    case "stream_event": // the partial message, streamed to subscribers
     case "tool_progress":
     case "tool_use_summary":
       // Recorded in events.jsonl; nothing a human reading the pane needs.
       return;
   }
+}
+
+// ── partial message: the text being streamed, to `subscribe` connections ──
+// Never written to events.jsonl: it is useless on replay, and the finished
+// message lands in the transcript anyway. Kept in memory so a subscriber
+// joining mid-message starts from what is already written.
+let partial: PartialMessage | null = null;
+const subscribers = new Set<Socket>();
+function pushFrame(frame: PartialFrame): void {
+  partial = applyPartialFrame(partial, frame);
+  const line = JSON.stringify({ frame }) + "\n";
+  for (const conn of subscribers) conn.write(line);
+}
+/** The message will never land (interrupted, failed): drop its text. */
+function clearPartial(): void {
+  if (partial !== null) pushFrame({ type: "clear" });
 }
 
 // ── input queue: socket turns → the SDK's streaming input ─────────────────
@@ -274,6 +295,9 @@ const session = query({
     permissionMode: "bypassPermissions",
     allowDangerouslySkipPermissions: true,
     canUseTool,
+    // Stream events carry the text as the model writes it (the partial
+    // message); they are folded here and never written to events.jsonl.
+    includePartialMessages: true,
     enableFileCheckpointing: true,
     pathToClaudeCodeExecutable: options.claudeBin,
     ...(options.model ? { model: options.model } : {}),
@@ -334,12 +358,14 @@ async function run(cmd: AgentCommand): Promise<unknown> {
         ready,
         cliVersion,
         openRequests: [...openRequests.values()],
+        stream: true,
       };
       return reply;
     }
     case "turn":
       return { promptUuid: pushInput(cmd.text, cmd.turnId) };
     case "interrupt":
+      clearPartial();
       return session.interrupt();
     case "answer": {
       const resolve = parked.get(cmd.requestId);
@@ -359,32 +385,56 @@ async function run(cmd: AgentCommand): Promise<unknown> {
     case "shutdown":
       setTimeout(() => shutdown("shutdown command"), 0);
       return;
+    case "subscribe":
+      throw new Error("subscribe is answered by the connection, not run");
   }
 }
 
 function serve(conn: Socket): void {
   let buf = "";
+  // Replies go out in command order — the backend matches the n-th reply to
+  // its n-th command — so each command waits for the one before it. A
+  // `subscribe` joins the stream at its turn in that order: its snapshot
+  // follows every earlier reply, and every frame follows the snapshot.
+  let previous: Promise<void> = Promise.resolve();
+  const reply = (r: CommandReply) => conn.write(JSON.stringify(r) + "\n");
+  async function answer(line: string): Promise<void> {
+    let json: unknown;
+    try {
+      json = JSON.parse(line);
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
+      reply({ ok: false, error: `not JSON: ${err.message}` });
+      return;
+    }
+    const parsed = AgentCommandSchema.safeParse(json);
+    if (!parsed.success) {
+      reply({ ok: false, error: parsed.error.message });
+      return;
+    }
+    if (parsed.data.type === "subscribe") {
+      reply({ ok: true, result: partial });
+      subscribers.add(conn);
+      return;
+    }
+    try {
+      reply({ ok: true, result: await run(parsed.data) });
+    } catch (err) {
+      reply({
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
   conn.on("data", (chunk) => {
     buf += chunk.toString();
     for (let nl = buf.indexOf("\n"); nl >= 0; nl = buf.indexOf("\n")) {
       const line = buf.slice(0, nl);
       buf = buf.slice(nl + 1);
-      const reply = (r: CommandReply) => conn.write(JSON.stringify(r) + "\n");
-      const parsed = AgentCommandSchema.safeParse(JSON.parse(line));
-      if (!parsed.success) {
-        reply({ ok: false, error: parsed.error.message });
-        continue;
-      }
-      run(parsed.data).then(
-        (result) => reply({ ok: true, result }),
-        (err: unknown) =>
-          reply({
-            ok: false,
-            error: err instanceof Error ? err.message : String(err),
-          }),
-      );
+      previous = previous.then(() => answer(line));
     }
   });
+  conn.on("close", () => subscribers.delete(conn));
   conn.on("error", (err) => log(dim(`socket client error: ${err.message}`)));
 }
 
@@ -421,7 +471,15 @@ log(`● agent ${process.pid} · ${dir}`);
 if (options.prompt !== null) pushInput(options.prompt, null);
 
 for await (const msg of session) {
+  if (msg.type === "stream_event") {
+    const frame = partialFrameOf(msg);
+    if (frame) pushFrame(frame);
+    continue;
+  }
   emit({ kind: "sdk", payload: msg });
   logMessage(msg);
+  // A failed turn's message never lands in the transcript. A successful one
+  // does, a few ms later: its text stays until the page sees it there.
+  if (msg.type === "result" && msg.is_error) clearPartial();
 }
 shutdown("SDK stream ended");

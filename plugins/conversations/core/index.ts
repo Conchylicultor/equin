@@ -52,3 +52,9 @@ export type {
 } from "./endpoints";
 export { CONVERSATIONS_CATEGORY_ID } from "./task-category";
 export { canSendTurn, QUESTION_WAITING_FOR } from "./turn-gate";
+export {
+  conversationPartialMessage,
+  PartialBlockSchema,
+  PartialMessageSchema,
+} from "./partial-message";
+export type { PartialBlock, PartialMessage } from "./partial-message";

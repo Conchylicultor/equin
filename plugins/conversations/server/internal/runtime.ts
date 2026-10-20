@@ -8,6 +8,7 @@ import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugi
 import { readTurnsFromChain, type Turn } from "./claude-transcript";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import type { ConversationRuntimeId } from "@plugins/conversations/plugins/runtime-catalog/core";
+import type { PartialMessage } from "../../core";
 
 export type { Turn };
 
@@ -132,6 +133,18 @@ export interface ConversationRuntime {
     conversationId: string,
     signal: AbortSignal,
   ): Promise<"ready" | "timeout">;
+  /**
+   * Hear the message the agent is streaming (null when none) until the
+   * returned stop — the text as the model writes it, before the finished
+   * message reaches the transcript. Called once per watched conversation (the
+   * `conversations.partial-message` value refcounts its readers). A runtime
+   * that cannot stream reports null; an agent not running is null too, and
+   * the runtime starts reporting again on its own when one starts.
+   */
+  watchPartial(
+    conversationId: string,
+    onChange: (message: PartialMessage | null) => void,
+  ): () => void;
 }
 
 const registry = new Map<string, ConversationRuntime>();

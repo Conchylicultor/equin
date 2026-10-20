@@ -55,6 +55,7 @@ import {
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 
+import { partialMessageServed } from "./internal/partial-message";
 export { maybeLaunchTaskJob, launchTaskNow } from "./internal/auto-start-jobs";
 export type {
   IfAlreadyStarted,
@@ -148,6 +149,7 @@ export default {
     claudeCodeUnavailableAtSpawnKind,
     autoStartModelUnavailableKind,
     heldTurnUndeliveredKind,
+    ...partialMessageServed.declare,
   ],
   register: [
     maybeLaunchTaskJob,

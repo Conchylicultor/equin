@@ -15,7 +15,6 @@ import {
   agentSessionArgs,
   agentSessionEnv,
 } from "@plugins/conversations/plugins/agent-launch/server";
-import { TMUX_HOSTED_BY_OPTION } from "@plugins/conversations/plugins/agent-launch/core";
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import {
@@ -56,6 +55,7 @@ import {
   commandAgent,
   helloAgent,
 } from "./socket-client";
+import { watchPartialMessage } from "./partial-stream";
 import { hasTmuxSession, tmux } from "./tmux";
 
 // The sdk runtime: one Agent SDK process per conversation (bin/agent.ts),
@@ -100,10 +100,7 @@ function shellWord(value: string): string {
 
 /**
  * Start the agent process for `id` in a new tmux session, from the options
- * file already written in its directory. The session carries the
- * `@singularity-host sdk` option — set in the same tmux invocation — so a
- * backend still running the retired tmux runtime's pane listing never adopts
- * it as one of its own panes.
+ * file already written in its directory.
  */
 async function startAgentSession(
   id: string,
@@ -139,12 +136,6 @@ async function startAgentSession(
       claudeBin: options.claudeBin,
       command,
     }),
-    ";",
-    "set-option",
-    "-t",
-    id,
-    TMUX_HOSTED_BY_OPTION,
-    "sdk",
   ]);
   if (r.exitCode !== 0) {
     throw new Error(
@@ -362,4 +353,6 @@ export const sdkRuntime: ConversationRuntime = {
     }
     return "timeout";
   },
+
+  watchPartial: watchPartialMessage,
 };

@@ -7,12 +7,12 @@ spike: [`research/2026-10-19-conversations-sdk-agent-spike.md`](../../../../rese
 the default flip and the tmux runtime's removal:
 [`research/2026-10-20-conversations-sdk-default-and-tmux-removal.md`](../../../../research/2026-10-20-conversations-sdk-default-and-tmux-removal.md).
 
-- `machine/` — the runtime (`sdkRuntime`): launch in tmux (marked
-  `@singularity-host sdk`, so a backend still on Phase-1 code — whose tmux
-  poller skips marked sessions — leaves it alone; drop the mark once no
-  checkout is on Phase-1 code), liveness = the socket answers `hello`, the
-  `events.jsonl` consumer (one file watcher, DB cursor, reads rotated
-  generations, reports a seq gap), questions into question-relay.
+- `machine/` — the runtime (`sdkRuntime`): launch in tmux, liveness = the
+  socket answers `hello`, the `events.jsonl` consumer (one file watcher, DB
+  cursor, reads rotated generations, reports a seq gap), questions into
+  question-relay, and the partial message (`partial-stream.ts`: one
+  `subscribe` connection per watched conversation, reconnected when the
+  consumer sees the agent's `ready`).
 - `server/` — the `conversations_ext_sdk_agent` side table, the pure event
   reducer, the launch → options-file mapping.
 - Conversations left on the retired tmux runtime were moved by the data
@@ -25,6 +25,11 @@ the default flip and the tmux runtime's removal:
   `state/sdk-agents/<id>/events.jsonl`, a readable log on stdout (the terminal
   button's view). Launched inside tmux, which only supervises and shows it.
 - `core/protocol.ts` — the wire: commands, replies, event lines, `PROTOCOL_VERSION`.
+- `core/partial.ts` — token streaming: the agent folds the SDK's
+  `stream_event`s (`includePartialMessages`) into frames — never written to
+  `events.jsonl` — and streams them on `subscribe` connections; the backend
+  folds the same frames into the `conversations.partial-message` value.
+  Design: [`research/2026-10-20-conversations-token-streaming.md`](../../../../research/2026-10-20-conversations-token-streaming.md).
 - `bin/spike.ts <scenario>` — the experiments (restart, ask, auth, rewind,
   terminal, latency), run with `./singularity run`; results land
   in `state/sdk-agents/_spike/results/`.

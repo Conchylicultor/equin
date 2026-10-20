@@ -28,6 +28,7 @@ import {
   writeProjection,
 } from "../../server/internal/rows";
 import { readAgentEvents, type ReadPosition } from "./event-reader";
+import { agentReady } from "./partial-stream";
 import { agentEventsPath } from "./paths";
 import {
   AgentNotRunningError,
@@ -173,6 +174,11 @@ async function catchUp(id: string): Promise<void> {
   if (state.cursorSeq !== row.cursorSeq) await writeProjection(id, state);
   positions.set(id, read.position);
   if (read.events.length === 0) return;
+  // A (re)started agent takes `subscribe` now: a watched partial reconnects.
+  if (
+    read.events.some((e) => e.kind === "agent" && e.payload.event === "ready")
+  )
+    agentReady(id);
   signal?.({ conversationIds: [id] });
   for (const w of [...(waiters.get(id) ?? [])]) {
     if (w.until(state)) w.resolve(state);

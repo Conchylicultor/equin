@@ -3,9 +3,13 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
   CommandReplySchema,
   HelloReplySchema,
+  PartialStreamLineSchema,
   PROTOCOL_VERSION,
+  applyPartialFrame,
+  SubscribeReplySchema,
   type AgentCommand,
   type HelloReply,
+  type PartialMessage,
 } from "../../core";
 import { agentSocketPath } from "./paths";
 
@@ -118,4 +122,124 @@ export async function commandAgent<T>(
 ): Promise<T> {
   const [, reply] = await exchange(conversationId, [hello, command]);
   return schema.parse(reply);
+}
+
+/** An open `subscribe` connection. */
+export interface PartialSubscription {
+  close(): void;
+}
+
+/**
+ * Open a `subscribe` connection (after its `hello`): resolves once the agent
+ * replied. `onMessage` hears the message being streamed — first the agent's
+ * snapshot, then the fold of every frame after it (in order, from the same
+ * buffer, so no frame can overtake the snapshot) — and `onClose` the
+ * connection ending, once: with null when the agent exited or `close()` was
+ * called, with the error when the stream broke (a line that did not parse, a
+ * frame that does not apply) — the connection is then closed, never left
+ * half-read.
+ * Rejects like a command: {@link AgentNotRunningError} when nobody listens.
+ * Only for an agent whose `hello` advertised `stream`.
+ */
+export function subscribeAgent(
+  conversationId: string,
+  onMessage: (message: PartialMessage | null) => void,
+  onClose: (broken: Error | null) => void,
+): Promise<PartialSubscription> {
+  return new Promise((resolve, reject) => {
+    const conn = connect(agentSocketPath(conversationId));
+    let buf = "";
+    let replies = 0;
+    let open = false;
+    let message: PartialMessage | null = null;
+    let broken: Error | null = null;
+    const timer = setTimeout(
+      () =>
+        fail(
+          new Error(
+            `SDK agent ${conversationId}: no reply to subscribe within ${COMMAND_TIMEOUT_MS}ms`,
+          ),
+        ),
+      COMMAND_TIMEOUT_MS,
+    );
+    function fail(err: Error): void {
+      clearTimeout(timer);
+      conn.destroy();
+      reject(err);
+    }
+    conn.on("connect", () => {
+      conn.write(
+        [hello, { type: "subscribe" } satisfies AgentCommand]
+          .map((c) => JSON.stringify(c) + "\n")
+          .join(""),
+      );
+    });
+    /** One line off the socket; false once the connection is done with. */
+    function take(text: string): boolean {
+      const line: unknown = JSON.parse(text);
+      if (open) {
+        message = applyPartialFrame(
+          message,
+          PartialStreamLineSchema.parse(line).frame,
+        );
+        onMessage(message);
+        return true;
+      }
+      const reply = CommandReplySchema.parse(line);
+      if (!reply.ok) {
+        fail(
+          new AgentCommandError(
+            conversationId,
+            replies === 0 ? "hello" : "subscribe",
+            reply.error,
+          ),
+        );
+        return false;
+      }
+      if (++replies < 2) return true;
+      message = SubscribeReplySchema.parse(reply.result);
+      open = true;
+      clearTimeout(timer);
+      onMessage(message);
+      resolve({ close: () => conn.destroy() });
+      return true;
+    }
+    conn.on("data", (chunk) => {
+      buf += chunk.toString();
+      for (let nl = buf.indexOf("\n"); nl >= 0; nl = buf.indexOf("\n")) {
+        const text = buf.slice(0, nl);
+        buf = buf.slice(nl + 1);
+        try {
+          if (!take(text)) return;
+        } catch (err) {
+          // Thrown here it would take the whole backend down with it.
+          const error = err instanceof Error ? err : new Error(String(err));
+          if (!open) {
+            fail(error);
+            return;
+          }
+          broken = error;
+          conn.destroy();
+          return;
+        }
+      }
+    });
+    conn.on("error", (err: NodeJS.ErrnoException) => {
+      if (open) return; // `close` follows, and reports the end
+      fail(
+        err.code === "ENOENT" || err.code === "ECONNREFUSED"
+          ? new AgentNotRunningError(conversationId)
+          : err,
+      );
+    });
+    conn.on("close", () => {
+      if (open) onClose(broken);
+      else
+        fail(
+          new Error(
+            `SDK agent ${conversationId} closed the connection before replying`,
+          ),
+        );
+    });
+  });
 }

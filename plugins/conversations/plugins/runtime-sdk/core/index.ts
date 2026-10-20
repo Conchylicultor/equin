@@ -24,3 +24,11 @@ export type {
   OpenRequest,
 } from "./protocol";
 export { sdkBundledCli, sameMajorMinor } from "./cli-version";
+export {
+  applyPartialFrame,
+  partialFrameOf,
+  PartialFrameSchema,
+  PartialStreamLineSchema,
+  SubscribeReplySchema,
+} from "./partial";
+export type { PartialFrame, PartialMessage } from "./partial";
