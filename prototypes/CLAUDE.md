@@ -55,6 +55,10 @@ never create a `.git` inside a prototype folder.
   is the whole page height.
 - Make the smallest thing that shows the idea: a button, a card or a full app.
   React is optional.
+- Avoid instructions written in the UI. A well-designed UI is intuitive and
+  explains itself, so the page carries no plain-text "how to use this" copy.
+  If more info is really needed, put it in a tooltip or surface it only when
+  the user actually needs it.
 
 ## Metadata (in `<head>`)
 
