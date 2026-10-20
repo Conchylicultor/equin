@@ -277,7 +277,15 @@ const session = query({
     enableFileCheckpointing: true,
     pathToClaudeCodeExecutable: options.claudeBin,
     ...(options.model ? { model: options.model } : {}),
-    ...(options.effort ? { extraArgs: { effort: options.effort } } : {}),
+    // Thinking text is requested explicitly: under the SDK the CLI ignores
+    // the `showThinkingSummaries` setting (the interactive CLI honours it), so
+    // without the flag the API omits it and every thinking block arrives
+    // empty. The flag, not `thinking: { display }`, so the CLI still picks
+    // the thinking type per model.
+    extraArgs: {
+      "thinking-display": "summarized",
+      ...(options.effort ? { effort: options.effort } : {}),
+    },
     ...(options.resume ? { resume: options.resume } : {}),
     ...(options.resumeAt ? { resumeSessionAt: options.resumeAt } : {}),
     ...(options.resumeDropsTurn
