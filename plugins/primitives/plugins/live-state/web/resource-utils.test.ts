@@ -11,9 +11,8 @@
  */
 
 import { test, expect, describe } from "bun:test";
-import { ResourceError } from "../core";
+import { ResourceError, type ResourceUnavailable } from "../core";
 import {
-  type GateUnavailable,
   combineResources,
   foldResource,
   mapResource,
@@ -38,12 +37,12 @@ const failed = <T>(error: ResourceError, stale?: T): ResourceResult<T> =>
     : { status: "error", error, stale, refetch };
 
 const boom = new ResourceError("loader-failed", "boom", null);
-const unavailable = (message = "not here"): GateUnavailable => ({
+const unavailable = (message = "not here"): ResourceUnavailable => ({
   status: "unavailable",
   message,
 });
 /** A needsMachine read's result type: the read's arms plus `unavailable`. */
-type MachineRead<T> = ResourceResult<T> | GateUnavailable;
+type MachineRead<T> = ResourceResult<T> | ResourceUnavailable;
 /** Widen to the machine-read type (a typed `const` would narrow on assignment). */
 const asMachine = <T>(r: MachineRead<T>): MachineRead<T> => r;
 

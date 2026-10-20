@@ -25,4 +25,5 @@ export type {
   ResourceStatus,
   ResourceErrorKind,
   ResourceReadiness,
+  ResourceUnavailable,
 } from "./resource-status";

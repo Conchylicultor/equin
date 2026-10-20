@@ -162,3 +162,26 @@ describe("pinnedView", () => {
     expect(screen.queryByTestId("body")).toBeNull();
   });
 });
+
+describe("unavailable", () => {
+  it("renders the read's message in place of every instance, keeping the title", () => {
+    render(
+      <PluginProvider plugins={[plugin]}>
+        <DataViewShellFrame
+          storageKey={STORAGE_KEY}
+          viewModel={model("active")}
+          title="Automations"
+          unavailable="Automations isn't available in this version of the app."
+        >
+          {() => <div data-testid="body">rows</div>}
+        </DataViewShellFrame>
+      </PluginProvider>,
+    );
+
+    expect(screen.getByText(/isn't available/)).toBeTruthy();
+    expect(screen.getByText("Automations")).toBeTruthy();
+    // No body — so no view, no search box over rows that will never arrive.
+    expect(screen.queryByTestId("body")).toBeNull();
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+});

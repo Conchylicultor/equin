@@ -3,7 +3,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   mapResource,
-  type GateUnavailable,
+  type ResourceUnavailable,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useConversation } from "@plugins/conversations/web";
@@ -20,7 +20,8 @@ import { opsOfSlug, slugOf } from "./op-lines";
  * this machine's (`needsMachine`): under a host without the computer the read
  * is `unavailable` — its own arm, never an empty "nothing in flight".
  */
-export function useOpsInFlight(): ResourceResult<OpRow[]> | GateUnavailable {
+export function useOpsInFlight():
+  ResourceResult<OpRow[]> | ResourceUnavailable {
   return useLive(opsInFlight);
 }
 
@@ -33,7 +34,7 @@ export function useOpsInFlight(): ResourceResult<OpRow[]> | GateUnavailable {
  */
 export function useWorktreeOp(
   conversationId: string,
-): ResourceResult<OpRow | null> | GateUnavailable {
+): ResourceResult<OpRow | null> | ResourceUnavailable {
   const conv = useConversation(conversationId);
   const ops = useOpsInFlight();
   return useMemo(

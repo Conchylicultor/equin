@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
+import type { ResourceUnavailable } from "@plugins/primitives/plugins/live-state/core";
 import type {
   DataViewDensity,
   DataViewGroupHeaders,
@@ -78,8 +79,22 @@ export type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
  * DISTRIBUTIVE over the data-origin union: a plain `Omit` would merge its arms
  * into one object type, and `{ source, rows }` would type-check again on the
  * `DataViewSwitcher` path.
+ *
+ * Its `readiness` is never `unavailable`: that arm replaces the whole surface,
+ * which the `DataView` shell renders before any body mounts — a body (and a
+ * `DataViewSwitcher` source, whose body sits under the shell's switcher)
+ * only ever sees the three states of a read that can arrive.
  */
-export type DataViewSourceBundle<TRow> = DistributiveOmit<
+export type DataViewSourceBundle<TRow> = WithoutUnavailable<
+  DataViewSurfaceBundle<TRow>
+>;
+
+/** `readiness` minus its `unavailable` arm, per member of the origin union. */
+type WithoutUnavailable<T> = T extends { readiness?: infer R }
+  ? Omit<T, "readiness"> & { readiness?: Exclude<R, ResourceUnavailable> }
+  : T;
+
+type DataViewSurfaceBundle<TRow> = DistributiveOmit<
   DataViewProps<TRow>,
   | "storageKey"
   | "title"

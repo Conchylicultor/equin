@@ -8,6 +8,7 @@ import {
   type ResourceDescriptor,
   type ResourceError,
   type ResourceResult,
+  type ResourceUnavailable,
 } from "@plugins/primitives/plugins/live-state/web";
 import type {
   LiveAllCollection,
@@ -106,10 +107,7 @@ interface SnapshotDecl {
  * `message` is the sentence to show in its place. A state of its own — never
  * `loading` (it will not arrive) nor `error` (nothing failed).
  */
-export interface LiveUnavailable {
-  status: "unavailable";
-  message: string;
-}
+export type LiveUnavailable = ResourceUnavailable;
 
 /**
  * A declaration's `needsMachine`, as the parameter side of an overload infers

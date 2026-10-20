@@ -1,5 +1,5 @@
 import type {
-  GateUnavailable,
+  ResourceUnavailable,
   ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
@@ -23,7 +23,7 @@ export interface CliDriftInputs {
  * unavailable sentence: there is no version to compare, and none is made up.
  */
 export function cliDriftVerdict(
-  result: ResourceResult<CliDriftInputs> | GateUnavailable,
+  result: ResourceResult<CliDriftInputs> | ResourceUnavailable,
 ): HealthStatus {
   if (result.status === "unavailable") {
     return { state: "unknown", summary: result.message };

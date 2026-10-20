@@ -129,7 +129,7 @@ finish and report.
     - `Automations.Section` "sidequest-autopilot" → `LaunchListSection`
     - `Automations.Section` "sidequest-autopilot" → `RunUntilSection`
     - `Automations.Section` "sidequest-autopilot" → `TriageSection`
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `primitives/data-view` ×3
     - `primitives/live-state` ×3
@@ -141,7 +141,6 @@ finish and report.
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
-    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/selection-indicator.CheckboxIndicator`
     - `primitives/css/spacing.Stack`

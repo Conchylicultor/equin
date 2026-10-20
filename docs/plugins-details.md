@@ -30117,6 +30117,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/live-state.ResourceError`
           - `primitives/live-state.ResourceResult`
           - `primitives/live-state.ResourceTupleResult`
+          - `primitives/live-state.ResourceUnavailable`
           - `primitives/live-state.useResource`
           - `primitives/live-state.useResources`
           - `primitives/log-channels.clientLog`
@@ -36186,7 +36187,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-            - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
               - `apps` ×29
               - `debug` ×19
               - `primitives` ×13
@@ -36195,7 +36196,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×2
               - `config_v2` ×2
               - `plugin-meta` ×2
-              - `tasks` ×2
               - `code-explorer/commit-detail`
               - `history/dialog`
               - `infra/background/catalog`
@@ -36203,6 +36203,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review/code-review`
               - `search/quick-find`
               - `stats/commits`
+              - `tasks/automations`
         - **`radio-group`** — Native radio-group control: <RadioGroup options value onChange> mints its own HTML `name` per mount (useId) so two groups on one page are structurally two groups, plus the no-adhoc-radio lint rule keeping raw <input type="radio"> out of feature code.
           - Web:
             - Uses:
@@ -37164,11 +37165,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 108 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 109 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×18
           - `primitives/css/ui-kit` ×14
           - `primitives/data-view/view-core` ×8
-          - `primitives/live-state` ×5
+          - `primitives/live-state` ×6
           - `primitives/css/control-panel` ×4
           - `primitives/slot-render` ×4
           - `primitives/tree` ×3
@@ -39285,7 +39286,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GateDataOf`
           - `GateInput`
           - `GateStatus`
-          - `GateUnavailable`
           - `HttpStaleDropReport`
           - `LiveStateSocketKind`
           - `MatchResourceHandlers`
@@ -39309,6 +39309,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceResult`
           - `ResourceStatus`
           - `ResourceTupleResult`
+          - `ResourceUnavailable`
           - `ResourceViewProps`
           - `SlowResourceInfo`
           - `TransportInfo`
@@ -39401,6 +39402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourcePreload`
           - `ResourceReadiness`
           - `ResourceStatus`
+          - `ResourceUnavailable`
           - `WindowParams`
           - `WindowResourceDescriptor`
           - `WindowSelector`
@@ -45680,7 +45682,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Automations.Section` "sidequest-autopilot" → `LaunchListSection`
           - `Automations.Section` "sidequest-autopilot" → `RunUntilSection`
           - `Automations.Section` "sidequest-autopilot" → `TriageSection`
-        - Uses: 38 symbols — full list in [`plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md`](../plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md)
+        - Uses: 37 symbols — full list in [`plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md`](../plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `primitives/data-view` ×3
           - `primitives/live-state` ×3
@@ -45692,7 +45694,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
-          - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/selection-indicator.CheckboxIndicator`
           - `primitives/css/spacing.Stack`

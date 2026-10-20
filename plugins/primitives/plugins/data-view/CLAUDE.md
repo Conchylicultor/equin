@@ -70,6 +70,11 @@ so a failure would render as a skeleton forever (or, set false, as empty).
 Without `readiness` the rows are taken as ready (a static list). An endpoint read
 becomes a result through `useEndpointResource`.
 
+A needsMachine read's `unavailable` arm is taken too: the shell renders its
+`message` in place of every instance (title/actions kept, no view controls), so
+bodies only see the three states. Don't branch on it before a DataView. A
+`DataViewSwitcher` source's bundle cannot carry it (tsc).
+
 ### Config is the single source of truth (fail by default)
 
 There is **no code synthesis** of default view-instances (view-core owns the
@@ -2679,11 +2684,11 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 108 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 109 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
     - `primitives/css/ui-kit` ×14
     - `primitives/data-view/view-core` ×8
-    - `primitives/live-state` ×5
+    - `primitives/live-state` ×6
     - `primitives/css/control-panel` ×4
     - `primitives/slot-render` ×4
     - `primitives/tree` ×3

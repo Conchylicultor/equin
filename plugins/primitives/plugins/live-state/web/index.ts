@@ -44,7 +44,6 @@ export {
 export type {
   GateInput,
   PortableGateInput,
-  GateUnavailable,
   GateStatus,
   GateDataOf,
   CombinedResources,
@@ -87,6 +86,7 @@ export type {
   ResourceDescriptor,
   ResourceErrorKind,
   ResourceReadiness,
+  ResourceUnavailable,
   ResourceStatus,
   ResourceOrigin,
   WindowResourceDescriptor,

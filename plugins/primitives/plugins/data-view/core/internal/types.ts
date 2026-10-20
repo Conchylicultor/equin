@@ -13,7 +13,10 @@ import type {
   NotCollectionRow,
 } from "@plugins/network/plugins/live/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
+import type {
+  ResourceReadiness,
+  ResourceUnavailable,
+} from "@plugins/primitives/plugins/live-state/core";
 import type {
   ExpandChange,
   LazyChildren,
@@ -1538,8 +1541,13 @@ interface DataViewInMemoryRows<TRow> extends DataViewHeldRowProps<TRow> {
    * renders `errorState` (default: the failure with Retry), and only `ready`
    * renders the view — so neither a loading nor a failed list can masquerade
    * as a confirmed-empty one (`emptyState` needs `ready` and zero rows).
+   *
+   * A needsMachine read's `unavailable` arm (a host without the computer)
+   * renders its `message` in place of the whole surface — the title and
+   * actions stay, the view and its controls do not: nothing will arrive to
+   * search, sort or show, and an empty view would claim "nothing here".
    */
-  readiness?: ResourceReadiness;
+  readiness?: ResourceReadiness | ResourceUnavailable;
   source?: never;
 }
 

@@ -1917,6 +1917,7 @@ never add one.
     - `primitives/live-state.ResourceError`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.ResourceTupleResult`
+    - `primitives/live-state.ResourceUnavailable`
     - `primitives/live-state.useResource`
     - `primitives/live-state.useResources`
     - `primitives/log-channels.clientLog`

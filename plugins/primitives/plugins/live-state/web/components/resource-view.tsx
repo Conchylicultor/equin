@@ -6,8 +6,8 @@ import {
   statusOf,
   type GateDataOf,
   type GateInput,
-  type GateUnavailable,
 } from "../resource-utils";
+import type { ResourceUnavailable } from "../../core";
 import { ResourceErrorInline } from "./resource-error-inline";
 
 export interface MatchResourceHandlers<R extends GateInput> {
@@ -62,7 +62,7 @@ export function matchResource<R extends GateInput>(
     case "loading":
       return handlers.loading ? handlers.loading() : <Loading />;
     case "unavailable": {
-      const { message } = result as GateUnavailable;
+      const { message } = result as ResourceUnavailable;
       return handlers.unavailable ? (
         handlers.unavailable(message)
       ) : (

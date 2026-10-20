@@ -77,3 +77,16 @@ export type ResourceReadiness =
   | { status: "loading" }
   | { status: "error"; error: ResourceError; refetch: () => Promise<void> }
   | { status: "ready" };
+
+/**
+ * The arm of a read that will not arrive here: its declaration needs the
+ * computer (`needsMachine`) and the host has none behind it (an in-browser
+ * server). Not `loading` (it never lands) and not `error` (nothing failed):
+ * `message` is the sentence to show in its place. network/live's `useLive`
+ * adds it to a needsMachine read; DataView's `readiness` and every readiness
+ * gate take it.
+ */
+export interface ResourceUnavailable {
+  status: "unavailable";
+  message: string;
+}

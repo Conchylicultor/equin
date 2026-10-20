@@ -1,6 +1,6 @@
 import { useLive } from "@plugins/network/plugins/live/web";
 import type {
-  GateUnavailable,
+  ResourceUnavailable,
   ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import { editedFiles } from "../core";
@@ -14,7 +14,7 @@ import type { EditedFilesPayload } from "../core";
 // `unavailable` — its own arm, never an empty list.
 export function useEditedFiles(
   conversationId: string | null,
-): ResourceResult<EditedFilesPayload> | GateUnavailable {
+): ResourceResult<EditedFilesPayload> | ResourceUnavailable {
   return useLive(
     editedFiles,
     conversationId === null ? null : { id: conversationId },

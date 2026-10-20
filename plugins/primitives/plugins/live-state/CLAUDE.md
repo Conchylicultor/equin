@@ -1095,7 +1095,6 @@ keeps every row's identity rather than re-minting each moved row.
     - `GateDataOf`
     - `GateInput`
     - `GateStatus`
-    - `GateUnavailable`
     - `HttpStaleDropReport`
     - `LiveStateSocketKind`
     - `MatchResourceHandlers`
@@ -1119,6 +1118,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `ResourceResult`
     - `ResourceStatus`
     - `ResourceTupleResult`
+    - `ResourceUnavailable`
     - `ResourceViewProps`
     - `SlowResourceInfo`
     - `TransportInfo`
@@ -1211,6 +1211,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `ResourcePreload`
     - `ResourceReadiness`
     - `ResourceStatus`
+    - `ResourceUnavailable`
     - `WindowParams`
     - `WindowResourceDescriptor`
     - `WindowSelector`

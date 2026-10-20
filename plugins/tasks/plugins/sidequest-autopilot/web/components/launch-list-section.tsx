@@ -22,7 +22,6 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -187,7 +186,7 @@ export function LaunchListSection(): ReactElement {
       foldResource(result, {
         loading: () => NO_ROWS,
         error: () => NO_ROWS,
-        // Never reaches the view: the message renders instead (below).
+        // Never reaches the view: DataView renders the message instead.
         unavailable: () => NO_ROWS,
         ready: (d) => {
           const description = new Map(
@@ -230,13 +229,6 @@ export function LaunchListSection(): ReactElement {
   const selected = rows.filter(
     (r) => (r.lane === "proposed" || r.lane === "obsolete") && ticked(r),
   );
-
-  // The automations catalog is the machine half's: an in-browser server has
-  // none, so nothing here can say what the autopilot would launch. Said as
-  // what it is — never "No sidequest is ready to start".
-  if (result.status === "unavailable") {
-    return <Placeholder>{result.message}</Placeholder>;
-  }
 
   return (
     <Stack gap="sm">

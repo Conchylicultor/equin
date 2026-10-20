@@ -26,32 +26,21 @@
  * For a select-based readiness read, pass `gate: true` to useResource instead.
  */
 
-import { ResourceError } from "../core";
+import { ResourceError, type ResourceUnavailable } from "../core";
 import type { ResourceResult } from "./use-resource";
-
-/**
- * The arm of a read that will not arrive here: its declaration needs the
- * computer and the host has none behind it (network/live's `LiveUnavailable`,
- * structurally). Not `loading` (it never lands) and not `error` (nothing
- * failed): `message` is the sentence to show in its place.
- */
-export interface GateUnavailable {
-  status: "unavailable";
-  message: string;
-}
 
 /**
  * Anything gateable on readiness: a `useResource` / `useLive` / `useLiveRow`
  * result, a `combineResources` result, a `useOptimisticResource` result — any
  * value naming its state by `status`, whose `error` arm carries the failure
  * (and, for a gate that reads values, whose `ready` arm carries `data`). A
- * needsMachine read adds the {@link GateUnavailable} arm.
+ * needsMachine read adds the {@link ResourceUnavailable} arm.
  */
 export type GateInput =
   | { status: "loading" }
   | { status: "error"; error: Error }
   | { status: "ready" }
-  | GateUnavailable;
+  | ResourceUnavailable;
 
 /**
  * A gate that is never `unavailable`: a portable read's, or one a caller builds
@@ -59,13 +48,13 @@ export type GateInput =
  * hand-built gate with this, not {@link GateInput}, or every combine and fold
  * it feeds gains the `unavailable` arm it can never be in.
  */
-export type PortableGateInput = Exclude<GateInput, GateUnavailable>;
+export type PortableGateInput = Exclude<GateInput, ResourceUnavailable>;
 
 /** The state a gateable result names: the three of a read, plus `unavailable`. */
 export type GateStatus = GateInput["status"];
 
 /** True when the gateable type `R` carries the `unavailable` arm. */
-type HasUnavailable<R> = [Extract<R, GateUnavailable>] extends [never]
+type HasUnavailable<R> = [Extract<R, ResourceUnavailable>] extends [never]
   ? false
   : true;
 
@@ -157,7 +146,7 @@ export function combineResources<T extends Record<string, GateInput>>(
     const status = statusOf(r);
     if (status === "error" && error === null) error = errorOf(r);
     if (status === "unavailable" && unavailable === null) {
-      unavailable = (r as GateUnavailable).message;
+      unavailable = (r as ResourceUnavailable).message;
     }
     if (status === "loading") loading = true;
     const refetch = refetchOf(r);
@@ -214,13 +203,13 @@ export function mapResource<T, U>(
   fn: (data: T) => U,
 ): ResourceResult<U>;
 export function mapResource<T, U>(
-  result: ResourceResult<T> | GateUnavailable,
+  result: ResourceResult<T> | ResourceUnavailable,
   fn: (data: T) => U,
-): ResourceResult<U> | GateUnavailable;
+): ResourceResult<U> | ResourceUnavailable;
 export function mapResource<T, U>(
-  result: ResourceResult<T> | GateUnavailable,
+  result: ResourceResult<T> | ResourceUnavailable,
   fn: (data: T) => U,
-): ResourceResult<U> | GateUnavailable {
+): ResourceResult<U> | ResourceUnavailable {
   switch (result.status) {
     case "unavailable":
       return result;
@@ -275,13 +264,13 @@ export function refuseResource<T>(
   refuse: (data: T) => ResourceError | null,
 ): ResourceResult<T>;
 export function refuseResource<T>(
-  result: ResourceResult<T> | GateUnavailable,
+  result: ResourceResult<T> | ResourceUnavailable,
   refuse: (data: T) => ResourceError | null,
-): ResourceResult<T> | GateUnavailable;
+): ResourceResult<T> | ResourceUnavailable;
 export function refuseResource<T>(
-  result: ResourceResult<T> | GateUnavailable,
+  result: ResourceResult<T> | ResourceUnavailable,
   refuse: (data: T) => ResourceError | null,
-): ResourceResult<T> | GateUnavailable {
+): ResourceResult<T> | ResourceUnavailable {
   switch (result.status) {
     case "unavailable":
     case "loading":
@@ -350,7 +339,7 @@ export function foldResource<R extends GateInput, U>(
           "foldResource: the result is unavailable but no `unavailable` handler was given",
         );
       }
-      return unavailable((result as GateUnavailable).message);
+      return unavailable((result as ResourceUnavailable).message);
     }
   }
 }

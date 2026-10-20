@@ -8,7 +8,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  type ResourceUnavailable,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
   type CreateOption,
@@ -33,7 +36,10 @@ import {
   type ReadyViewModel,
   type ViewModel,
 } from "../internal/use-data-view-model";
-import type { DataViewShellChrome } from "../internal/body-types";
+import type {
+  DataViewShellChrome,
+  DataViewSourceBundle,
+} from "../internal/body-types";
 import { useDataViewDevGuards } from "../internal/use-dev-guards";
 import { useOrphanViewTypeGuard } from "../internal/use-orphan-view-type-guard";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
@@ -75,6 +81,9 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     <DataViewShellFrame
       storageKey={props.storageKey}
       viewModel={viewModel}
+      // A needsMachine read on a host without the computer: the shell says so
+      // in place of every instance, so a body only sees a read that can arrive.
+      unavailable={isUnavailable(props) ? props.readiness.message : undefined}
       title={props.title}
       actions={props.actions}
       creators={props.creators}
@@ -88,7 +97,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       pinnedView={props.pinnedView}
       renderSections={(instances, chrome, readyModel) => (
         <DataViewSectionsBody<TRow>
-          {...props}
+          {...availableProps(props)}
           viewModel={readyModel}
           instances={instances}
           chrome={chrome}
@@ -97,7 +106,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     >
       {(activeInstance, chrome, readyModel) => (
         <DataViewBody<TRow>
-          {...props}
+          {...availableProps(props)}
           viewModel={readyModel}
           activeInstance={activeInstance}
           chrome={chrome}
@@ -105,6 +114,29 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       )}
     </DataViewShellFrame>
   );
+}
+
+type UnavailableProps<TRow> = DataViewProps<TRow> & {
+  readiness: ResourceUnavailable;
+};
+
+function isUnavailable<TRow>(
+  props: DataViewProps<TRow>,
+): props is UnavailableProps<TRow> {
+  return props.readiness?.status === "unavailable";
+}
+
+/** The props a body renders from — reached only once the shell has rendered
+ *  the `unavailable` arm itself (`DataViewShellFrame`'s `unavailable`). */
+function availableProps<TRow>(
+  props: DataViewProps<TRow>,
+): DataViewSourceBundle<TRow> & DataViewProps<TRow> {
+  if (isUnavailable(props)) {
+    throw new Error(
+      `DataView(${props.storageKey}): a body mounted for an unavailable read — the shell renders that arm`,
+    );
+  }
+  return props as DataViewSourceBundle<TRow> & DataViewProps<TRow>;
 }
 
 /**
@@ -136,6 +168,12 @@ export function DataViewShellFrame(props: {
   reserve?: DataViewReserve;
   /** Present → this host shows one named instance and paints no switcher. */
   pinnedView?: string;
+  /**
+   * The sentence a needsMachine read's `unavailable` arm carries: present →
+   * the surface shows it in place of every instance (the stand-in chrome
+   * around it), and neither `children` nor `renderSections` is called.
+   */
+  unavailable?: string;
   /** Renders the per-active-instance body. Receives the SETTLED model — the
    *  shell is the one place that narrowed the union, so a host never re-derives
    *  (or forgets) that narrowing at its own call site. */
@@ -171,6 +209,7 @@ export function DataViewShellFrame(props: {
     backdrop,
     reserve,
     pinnedView,
+    unavailable,
     children,
     renderSections,
   } = props;
@@ -257,6 +296,10 @@ export function DataViewShellFrame(props: {
         <div className="rail-follow py-md">{content}</div>
       </Stack>
     );
+
+  if (unavailable !== undefined) {
+    return withoutInstance(<Placeholder>{unavailable}</Placeholder>);
+  }
 
   if (!viewModel.ready) {
     const { failure } = viewModel;

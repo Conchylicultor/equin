@@ -1,5 +1,5 @@
 import type {
-  GateUnavailable,
+  ResourceUnavailable,
   ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
@@ -17,7 +17,7 @@ import { claudeCodeProblem, type ClaudeCodeStatus } from "../../core";
  *   saying so: there is no CLI here to vouch for, and none is claimed.
  */
 export function claudeCodeVerdict(
-  result: ResourceResult<ClaudeCodeStatus> | GateUnavailable,
+  result: ResourceResult<ClaudeCodeStatus> | ResourceUnavailable,
 ): HealthStatus {
   if (result.status === "unavailable") {
     return { state: "unknown", summary: result.message };
