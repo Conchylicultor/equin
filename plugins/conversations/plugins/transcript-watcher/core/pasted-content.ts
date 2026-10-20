@@ -14,10 +14,8 @@
  * a user turn against the queue row that carried it, where the queue stores the
  * raw draft and only the turn is wrapped.
  *
- * The app no longer produces these itself — it types turns instead of pasting
- * them (see runtime-tmux's typed-keys.ts) — but they arrive anyway: from every
- * transcript written before that, and whenever the person pastes into the
- * terminal by hand.
+ * The app no longer produces these itself — it sends turns through the Agent
+ * SDK — but they arrive anyway: from every transcript written before that.
  *
  * The grammar is the CLI's own, read off its parser rather than guessed: the id
  * is exactly four lowercase-hex characters, the opening tag is followed

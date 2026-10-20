@@ -109,3 +109,33 @@ export async function writeProjection(
 ): Promise<void> {
   await sdkAgents.update(id, state);
 }
+
+/**
+ * This DB's conversations still on the retired `tmux` runtime — every status:
+ * a `done` one is moved too, so a fork of it (which inherits its source's
+ * runtime) never asks for a runtime that no longer exists.
+ */
+export async function listTmuxConversations(): Promise<
+  { id: string; status: string; hibernatedAt: Date | null }[]
+> {
+  return db
+    .select({
+      id: _conversations.id,
+      status: _conversations.status,
+      hibernatedAt: _conversations.hibernatedAt,
+    })
+    .from(_conversations)
+    .where(eq(_conversations.runtime, "tmux"));
+}
+
+/**
+ * Hand a conversation to the sdk runtime. Its process (if any) is already
+ * gone; the next resume — `ensureResumed` on the next Send, or Resume —
+ * starts it on sdk from its transcript.
+ */
+export async function moveToSdkRuntime(id: string): Promise<void> {
+  await db
+    .update(_conversations)
+    .set({ runtime: "sdk" })
+    .where(and(eq(_conversations.id, id), eq(_conversations.runtime, "tmux")));
+}

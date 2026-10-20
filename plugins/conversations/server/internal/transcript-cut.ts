@@ -143,39 +143,6 @@ export function cutTranscriptAt(
   return conversationLeft ? cut : { ok: false, reason: "nothing-before" };
 }
 
-/**
- * Cut just before the most recent prompt the agent has NOT begun answering, or
- * null when there is none — the Stop button's "give me my prompt back".
- *
- * The prompt is rarely the literal last line: Claude Code appends
- * non-conversation lines (`file-history-snapshot` / `system` / `ai-title` / …)
- * and an interrupt sentinel (`[Request interrupted by user]`) after it. So scan
- * backwards over the live conversation, skipping that trailing noise, and stop
- * at an assistant turn or a tool result: a prompt the agent has already begun
- * answering must not be popped back.
- */
-export function cutTranscriptAtUnansweredPrompt(
-  rawLines: readonly string[],
-): Extract<CutResult, { ok: true }> | null {
-  // The Stop button pops a prompt the agent never started on, so — unlike a
-  // rewind — an empty remainder is fine: the live process still holds the
-  // session and nothing is resumed from this file.
-  const parsed = parseLines(rawLines);
-  const active = activeLineUuids(parsed.map((p) => p.obj));
-  for (let i = parsed.length - 1; i >= 0; i--) {
-    const p = parsed[i]!;
-    if (p.uuid && !active.has(p.uuid)) continue; // abandoned rewind branch
-    if (p.obj.type === "assistant") return null; // agent already responding
-    if (p.obj.type !== "user") continue; // file-history-snapshot / system / …
-    // A tool result means the agent is mid-turn; nothing to pop.
-    if (blocksOf(p.obj).some((b) => b.type === "tool_result")) return null;
-    const messageText = userPromptText(p.obj);
-    if (messageText === null) continue; // interrupt sentinel, meta turn, …
-    return cutAt(rawLines, parsed, active, p, messageText).cut;
-  }
-  return null;
-}
-
 function cutAt(
   rawLines: readonly string[],
   parsed: readonly ParsedLine[],

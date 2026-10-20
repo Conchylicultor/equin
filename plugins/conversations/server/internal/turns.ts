@@ -11,23 +11,16 @@ import {
   hasPromptHook,
   holdIfStarting,
   listHeldTurns,
-  reportInputNotEmpty,
   returnTurnByText,
   type TurnRow,
 } from "@plugins/conversations/plugins/turn-ledger/server";
 import { QUESTION_WAITING_FOR } from "../../core/turn-gate";
 import { ensureResumed, ResumeBlockedError } from "./lifecycle";
-import { releaseQuestionHolds } from "./question-hold";
-import {
-  conversationRuntime,
-  InputNotEmptyError,
-  withTerminal,
-  type TypedTurn,
-} from "./runtime";
+import { conversationRuntime, withTerminal, type TypedTurn } from "./runtime";
 
-// Every turn the app types into an agent goes through here, and every one gets
+// Every turn the app sends to an agent goes through here, and every one gets
 // a row in the turn ledger (conversations/turn-ledger) first. The ledger says
-// where the turn stands; the CLI's own UserPromptSubmit hook says whether it
+// where the turn stands; the agent's own `turn_started` event says whether it
 // went in. See research/2026-10-15-conversations-turn-ledger.md.
 //
 // A held turn — sent while its conversation was `starting` — is delivered by
@@ -230,10 +223,9 @@ export async function launchWithHeldTurn(
 
 /**
  * Stop: the runtime interrupts the turn and, when it got no reply, takes it
- * back out of the session (`ConversationRuntime.stop` — for tmux, rewinding the
- * transcript and emptying the input box the CLI put the turn back in). The
- * web's draft becomes the turn's only copy, and its ledger row is `returned`.
- * Returns the text taken back.
+ * back out of the session (`ConversationRuntime.stop`). The web's draft
+ * becomes the turn's only copy, and its ledger row is `returned`. Returns the
+ * text taken back.
  */
 export async function stopTurn(conversationId: string): Promise<string | null> {
   return withTerminal(conversationId, async () => {
@@ -256,9 +248,8 @@ function messageOf(err: unknown): string {
  *
  * A hibernated conversation is resumed first, which puts it back in
  * `starting`; the row is then held like any turn sent while starting, and the
- * flush delivers it once the input box is drawn — never typed into a TUI
- * still booting. A resume that is refused fails the turn: falling through would
- * type it into whatever pane answers to this id.
+ * flush delivers it once the agent answers. A resume that is refused fails the
+ * turn: falling through would send it to an agent that is not there.
  */
 async function deliverLocked(turn: TurnRow): Promise<TurnRow> {
   const conversationId = turn.conversationId;
@@ -274,18 +265,8 @@ async function deliverLocked(turn: TurnRow): Promise<TurnRow> {
     typed = await typeInto(turn);
   } catch (err) {
     await applyTurnEvent(turn.id, { kind: "failed", error: messageOf(err) });
-    if (err instanceof InputNotEmptyError) {
-      await reportInputNotEmpty({
-        conversationId,
-        turnId: turn.id,
-        during: turn.kind === "answer" ? "answer" : "send",
-        draft: err.draft,
-      });
-    }
     throw err;
   }
-  // Absent `cleared`: the runtime has no input box, so nothing was cleared.
-  if (typed.cleared) await noteClearedDraft(conversationId, typed.cleared);
   const hookless = !(await hasPromptHook(conversationId));
   return applyTurnEvent(
     turn.id,
@@ -296,37 +277,15 @@ async function deliverLocked(turn: TurnRow): Promise<TurnRow> {
 }
 
 /**
- * Type the row's text. An answer goes through `answerPrompt` (dismiss the
- * question's menu, then type). So does a turn sent while a question waits: the
- * user chose to say something else, and typed into the live menu it would pick
- * an option instead — so the question is dismissed first, as Escape in the
- * terminal would, a held one being handed back to the CLI to draw.
+ * Send the row's text. An answer goes through `answerPrompt` (withdraw the
+ * question, then send). So does a turn sent while a question waits: the user
+ * chose to say something else, and the agent would otherwise read it as the
+ * answer.
  */
 async function typeInto(turn: TurnRow): Promise<TypedTurn> {
   const id = turn.conversationId;
   const { waitingFor, runtime } = await conversationRuntime(id);
-  if (turn.kind === "answer") return runtime.answerPrompt(id, turn.typedText);
-  if (waitingFor === QUESTION_WAITING_FOR) {
-    await releaseQuestionHolds([id]);
+  if (turn.kind === "answer" || waitingFor === QUESTION_WAITING_FOR)
     return runtime.answerPrompt(id, turn.typedText);
-  }
   return runtime.send(id, turn.typedText);
-}
-
-/**
- * The input box held a draft the send cleared before typing. When it is a turn
- * the CLI already took, the CLI gave it back (Escape in the terminal restores
- * it) and the row is `returned`. Anything else — a hand-typed draft, or the
- * unexplained leftover behind the 2026-10-15 merge — is logged with its text,
- * the evidence the root cause still needs.
- */
-async function noteClearedDraft(
-  conversationId: string,
-  draft: string,
-): Promise<void> {
-  if (await returnTurnByText(conversationId, draft)) return;
-  console.warn(
-    `[turns] ${conversationId}: cleared a draft from the input box before typing ` +
-      `(${draft.length} chars): ${JSON.stringify(draft.slice(0, 500))}`,
-  );
 }

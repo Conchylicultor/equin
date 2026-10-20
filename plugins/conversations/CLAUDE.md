@@ -6,32 +6,8 @@
 
 - Description: Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 - Load-bearing: yes
-- Web:
-  - Contributes:
-    - `ConfigV2.WebRegister` "auto-answer"
-    - `ConfigV2.WebRegister` "conversation-runtime"
-  - Uses:
-    - `config_v2.ConfigV2`
-    - `network/live.mapRow`
-    - `network/live.useLive`
-    - `network/live.useLiveRow`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useCombinedResources`
-  - Exports (values):
-    - `useActiveConversations`
-    - `useConversation`
-    - `useConversationById`
-    - `useConversations`
-    - `useConversationTitleBySlug`
-    - `useHasActiveSiblingInWorktree`
-    - `useHasActiveSiblings`
-    - `useLiveConversation`
 - Server:
   - Contributes:
-    - `ConfigV2.Register` "auto-answer"
-    - `ConfigV2.Register` "conversation-runtime"
     - `trigger` "conversations.notify-created"
     - `trigger` "conversations.turn-emitter.reconcile"
     - `trigger` "conversations.turn-emitter.reconcile"
@@ -42,14 +18,13 @@
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "held-turn-undelivered"
-  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×27
-    - `conversations/turn-ledger` ×13
+  - Uses: 74 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×24
+    - `conversations/turn-ledger` ×12
     - `conversations/transcript-watcher` ×7
     - `conversations/workspace` ×3
     - `infra/claude-cli/availability` ×3
     - `reports` ×3
-    - `config_v2` ×2
     - `conversations/session-chain` ×2
     - `conversations/spawn-failure` ×2
     - `database` ×2
@@ -59,7 +34,6 @@
     - `tasks/task-category` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `conversations/preprompts.resolvePreprompt`
-    - `conversations/runtime-launch-option.getTaskRuntime`
     - `conversations/workspace/launch-option.getTaskWorkspace`
     - `infra/attachments.getAttachment`
     - `infra/jobs.defineJob`
@@ -78,25 +52,20 @@
     - `QuestionHold`
     - `QuestionHoldSource`
     - `RuntimeInfo`
-    - `RuntimeScreen`
     - `RuntimeSignal`
     - `SubmitOutcome`
     - `SubmitVerdict`
-    - `TerminalMenuChoice`
     - `Turn`
     - `TurnSubmission`
     - `TypedTurn`
   - Exports (values):
     - `afterTurn`
-    - `answerTerminalMenu`
     - `conversationCreated`
     - `conversationTurnCompleted`
     - `createConversation`
     - `deleteConversation`
     - `ensureResumed`
-    - `flushInteractivePrompt`
     - `getConversationRow`
-    - `InputNotEmptyError`
     - `interruptConversation`
     - `launchTaskNow`
     - `maybeLaunchTaskJob`
@@ -107,7 +76,6 @@
     - `ResumeBlockedError`
     - `resumeConversation`
     - `rewindConversationAt`
-    - `rewindConversationTurn`
     - `Runtime`
     - `submitTurn`
     - `TranscriptCutError`
@@ -132,6 +100,24 @@
     - `POST /api/conversations/:id/turns/:turnId/withdraw`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
+- Web:
+  - Uses:
+    - `network/live.mapRow`
+    - `network/live.useLive`
+    - `network/live.useLiveRow`
+    - `primitives/live-state.foldResource`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.useCombinedResources`
+  - Exports (values):
+    - `useActiveConversations`
+    - `useConversation`
+    - `useConversationById`
+    - `useConversations`
+    - `useConversationTitleBySlug`
+    - `useHasActiveSiblingInWorktree`
+    - `useHasActiveSiblings`
+    - `useLiveConversation`
 - Core:
   - Uses:
     - `config_v2.defineConfig`
@@ -191,8 +177,8 @@
     - `stopConversation`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×49
+  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×47
     - `tasks` ×4
     - `apps` ×3
     - `review` ×3
@@ -316,24 +302,18 @@
       - **`queue`** — Queue classification + reorder logic (classifyQueue / applyReorder) consumed by the DataView Queue tab. Ranks seeded once on creation (newest first); a user-set pin lifts a waiting task group into…
   - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
   - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation policy: a scheduled idle-kill job, the viewed/resume endpoint, and…
-  - **`menu-relay`** — Answers the numbered menu open in a conversation's terminal from the web: owns the transcript's `"menu"` pending prompt — a card with the menu's title and one button per option, plus Cancel — and…
-    - Plugins:
-      - **`usage-limit`** — Claude Code's usage-limit menu, drawn by the terminal-menu card: when the limit resets (with a countdown) and Wait & continue automatically / Stop / Use usage credits buttons that answer it.
   - **`model-provider`** — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's…
     - Plugins:
       - **`catalog`** [exempt] — The host-global model catalog: getModelCatalog() (catalog.json in memory, re-read by a file watcher, the baseline until the first discovery), the model-provider.catalog live value, and the…
   - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
   - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a…
-  - **`question-relay`** [exempt] — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form (answered as the tool's real result) with an Answer in terminal release…
+  - **`question-relay`** — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form, answered as the tool's real result. The AskUserQuestion relay's backend…
   - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
   - **`runtime-catalog`**
-  - **`runtime-launch-option`** — Runtime picker as a launch option: which runtime the task's conversations start on — the configured default, the interactive CLI in tmux, or a headless Agent SDK session — on the task-draft composer…
   - **`runtime-sdk`** — The health report's Agent SDK row: attention when the system Claude Code the sdk runtime runs differs in major.minor from the CLI version the pinned Agent SDK was built for. The sdk runtime's…
-  - **`runtime-tmux`** [exempt] — Runs Claude CLI sessions inside tmux panes.
   - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has…
   - **`spawn-failure`** — Answers the conversation-spawn-failures collection inside a demo scope (no launch failed), so the surfaces that read a conversation's spawn failure render in the demo. Per-conversation spawn…
   - **`summary`** [exempt] — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags…
-  - **`terminal-menu`** — The shape of an interactive numbered menu a conversation's terminal has open (title, options, highlighted option, footer): the value the runtime reads off the screen, the conversation row carries as…
   - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the ordered on-disk JSONL paths of a conversation's Claude session chain.
   - **`transcript-retention`** [exempt] — Keeps retained conversations' Claude session JSONL alive by refreshing their mtime daily — active rows plus every conversation of a held task — so Claude Code's cleanupPeriodDays sweep never deletes…
   - **`transcript-watcher`** [exempt] — Foreign-session report renderer: a one-line Debug, Reports summary for the conversation-foreign-session kind — which conversation holds a session id that belongs to another, and how it was seen.…

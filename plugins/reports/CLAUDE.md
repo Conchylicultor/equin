@@ -84,8 +84,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
 - Web:
   - Slots: `Reports.KindView`
-  - Slot contributors: 29 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Reports.KindView` ×29
+  - Slot contributors: 28 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Reports.KindView` ×28
   - Contributes:
     - `IdKinds.Kind` "report"
     - `ConfigV2.WebRegister` "reports"
@@ -197,10 +197,10 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
 - Cross-plugin:
-  - Imported by: 57 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×21
-    - `debug` ×16
-    - `conversations` ×7
+    - `debug` ×15
+    - `conversations` ×6
     - `database` ×3
     - `framework` ×2
     - `infra` ×2

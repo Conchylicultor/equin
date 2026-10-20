@@ -29,7 +29,7 @@ export {
 export type { TrailerCommit } from "./internal/trailers";
 
 export { ConversationStatusSchema } from "./conversation-status";
-export { ADOPTED_SPAWNED_BY, isAdoptedConversation } from "./adopted";
+export { isAdoptedConversation } from "./adopted";
 export type { ConversationStatus } from "./conversation-status";
 export { ConversationSummarySchema } from "./schemas";
 export type { ConversationSummary, AttemptWithConversations } from "./schemas";

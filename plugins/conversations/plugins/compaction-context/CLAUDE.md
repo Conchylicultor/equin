@@ -13,7 +13,7 @@ gate, believing them received, never re-sent them.
 **The mechanism.**
 
 - Every app-launched agent carries a `SessionStart` hook on the `compact` source
-  (runtime-tmux's `launch-settings.ts`; entry built by `compactionHookEntry()`,
+  (agent-launch's `agentLaunchHooks()`; entry built by `compactionHookEntry()`,
   `core/hook.ts`). It runs `bin/compaction-context.ts`.
 - The script POSTs `/api/conversations/:id/compaction-context` on the backend the
   pane dials (`SINGULARITY_PARENT_HOST`), retrying a backend mid-restart for

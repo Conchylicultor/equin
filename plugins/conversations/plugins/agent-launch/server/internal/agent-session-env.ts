@@ -2,8 +2,8 @@ import { runtimeShimsDir } from "@plugins/infra/plugins/launcher/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
 // What environment does an agent's shell start from? (Every app-launched agent
-// runs as a tmux session — the tmux runtime's pane, or the session another
-// runtime hosts its agent process in — so both start here.)
+// runs in a tmux session the sdk runtime hosts its agent process in, so it
+// starts here.)
 //
 // Not ours. The tmux server is started by whichever process first talks to the
 // default socket — in practice the main backend, after a machine restart — and
@@ -26,10 +26,6 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 // set of things a backend's ambient environment may carry is open-ended, so
 // naming the bad ones only ever catches the last leak somebody noticed. An
 // allowlist makes the tmux server's environment irrelevant by construction.
-//
-// TMUX_PANE is load-bearing and must stay in the list: tier-1 pane ownership
-// (see runtime-tmux's CLAUDE.md) matches a Claude session file's `tmux` stamp
-// against the pane it claims, and the CLI can only stamp what it inherits.
 
 /**
  * The variables the launch delivers with `tmux new-session -e`, valued by
@@ -97,7 +93,7 @@ export const AGENT_SESSION_ENV_ALLOWLIST = [
   "LANG",
   "LC_ALL",
   "LC_CTYPE",
-  // tmux's own injection. TMUX_PANE is how a Claude session claims its pane.
+  // tmux's own injection.
   "TMUX",
   "TMUX_PANE",
   // What the launch delivers with `-e` (`agentSessionEnv`).

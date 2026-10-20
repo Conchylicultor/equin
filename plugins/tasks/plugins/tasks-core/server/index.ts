@@ -111,7 +111,6 @@ export {
 
 export {
   listConversationsForInfra,
-  listExistingConversationIds,
   listConversationsForDisplay,
   listConversationIdsForAttempt,
   listActiveConversations,
@@ -229,11 +228,7 @@ export type { OrphanedAttempt } from "./internal/sweep-orphaned-attempts";
 
 export type { DbExecutor } from "./internal/status-batch";
 
-export {
-  adoptOrphanConversation,
-  dropTaskIfNoActiveSibling,
-} from "./internal/mutations/cross-table";
-export type { AdoptOrphanInput } from "./internal/mutations/cross-table";
+export { dropTaskIfNoActiveSibling } from "./internal/mutations/cross-table";
 
 export default {
   portable: true,

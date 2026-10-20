@@ -3,7 +3,7 @@
 // its verdict and writes a results JSON under <sdk-agents>/_spike/results/.
 //
 //   ./singularity run plugins/conversations/plugins/runtime-sdk/bin/spike.ts <scenario>
-//   scenarios: restart | ask | auth | rewind | terminal | latency | all
+//   scenarios: restart | ask | auth | rewind | terminal | latency | latency-ab | cold-start | all
 //
 // The "backend" is `spike.ts observe …`, run as its own process so it can be
 // SIGKILLed mid-turn: it tails events.jsonl from a cursor file (standing in
@@ -14,6 +14,7 @@ import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -212,6 +213,8 @@ function launch(opts: {
   cwd: string;
   args?: string[];
   freshDir?: boolean;
+  /** Fields set over the options the flags map to. */
+  options?: Partial<AgentLaunchOptions>;
 }): Agent {
   const dir = join(spikeRoot(), opts.id);
   if (opts.freshDir !== false) rmSync(dir, { recursive: true, force: true });
@@ -230,7 +233,10 @@ function launch(opts: {
   );
   writeFileSync(
     join(dir, AGENT_OPTIONS_FILE),
-    JSON.stringify(optionsFromFlags(opts.cwd, opts.args ?? [])),
+    JSON.stringify({
+      ...optionsFromFlags(opts.cwd, opts.args ?? []),
+      ...opts.options,
+    }),
   );
   const argv = [
     process.execPath,
@@ -258,6 +264,14 @@ function launch(opts: {
     "/bin/sh",
     "-c",
     cmd,
+    // Marked like a production agent session, so no backend still running the
+    // retired tmux runtime's pane listing adopts it.
+    ";",
+    "set-option",
+    "-t",
+    opts.id,
+    "@singularity-host",
+    "spike",
   ]);
   return { id: opts.id, dir, cwd: opts.cwd, launchedAt, launchSeq };
 }
@@ -274,7 +288,9 @@ async function ready(agent: Agent): Promise<Record<string, unknown>> {
   await waitForEvent(
     agent.dir,
     (e) => e.kind === "agent" && e.payload.event === "ready",
-    30_000,
+    // The CLI's initialize takes ~1 s in a scratch dir, but in a checkout it
+    // can take 30 s+ (its MCP servers come up first).
+    90_000,
     agent.launchSeq,
   );
   // The socket is listening once `started` is written; `ready` is the CLI's initialize.
@@ -938,6 +954,209 @@ async function scenarioLatency() {
   save("latency", runs);
 }
 
+/**
+ * Each model request of a transcript: the CLI's own `api-request` entry to the
+ * first assistant entry after it — the model call alone, whatever delivered the
+ * turn.
+ */
+function requestTimes(path: string): number[] {
+  const out: number[] = [];
+  let requestAt: number | null = null;
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    if (!line) continue;
+    const e = JSON.parse(line) as { type?: string; timestamp?: string };
+    if (!e.timestamp) continue;
+    if (e.type === "api-request") requestAt = Date.parse(e.timestamp);
+    else if (e.type === "assistant" && requestAt !== null) {
+      out.push(Date.parse(e.timestamp) - requestAt);
+      requestAt = null;
+    }
+  }
+  return out;
+}
+
+const percentiles = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b);
+  return {
+    n: s.length,
+    p50: s[Math.floor(s.length / 2)],
+    p90: s[Math.floor(s.length * 0.9)],
+    min: s[0],
+    max: s.at(-1),
+  };
+};
+
+/**
+ * The model request on the sdk agent vs the interactive CLI in tmux, turns
+ * interleaved in the same cwd (this checkout) on Haiku, both timed from their
+ * own transcript (`requestTimes`) — so the arms differ only in how the CLI runs.
+ */
+async function scenarioLatencyAb() {
+  const TURNS = 12;
+  const TEXT = "Reply with exactly OK.";
+  const cwd = process.cwd();
+  const tmuxId = "spike-ab-tmux";
+  if (tmuxHas(tmuxId)) execFileSync("tmux", ["kill-session", "-t", tmuxId]);
+  const projectDir = dirname(transcriptPath(cwd, "x"));
+  const before = new Set(existsSync(projectDir) ? readdirSync(projectDir) : []);
+  const q = (v: string) => `'${v.replaceAll("'", `'\\''`)}'`;
+  execFileSync("tmux", [
+    "new-session",
+    "-d",
+    "-s",
+    tmuxId,
+    "-x",
+    "200",
+    "-y",
+    "50",
+    "-c",
+    cwd,
+    `exec ${q(claudeBin())} --model haiku --permission-mode bypassPermissions --settings ${q(JSON.stringify({ promptSuggestionEnabled: false }))}`,
+    ";",
+    "set-option",
+    "-t",
+    tmuxId,
+    "@singularity-host",
+    "spike",
+  ]);
+  const agent = launch({ id: "spike-ab-sdk", cwd, args: HAIKU });
+  await ready(agent);
+  // The interactive CLI draws its input box within a few seconds.
+  await sleep(8_000);
+  for (let i = 0; i < TURNS; i++) {
+    execFileSync("tmux", ["send-keys", "-t", tmuxId, "-l", TEXT]);
+    await sleep(300);
+    execFileSync("tmux", ["send-keys", "-t", tmuxId, "Enter"]);
+    await sleep(4_000);
+    const t = await turn(agent, TEXT);
+    await untilResult(agent, t.afterSeq);
+  }
+  await sleep(4_000);
+  execFileSync("tmux", ["kill-session", "-t", tmuxId]);
+  const sdkTranscript = transcriptPath(cwd, sessionId(agent));
+  await stop(agent);
+  const tmuxTranscript = readdirSync(projectDir)
+    .filter((f) => f.endsWith(".jsonl") && !before.has(f))
+    .map((f) => join(projectDir, f))
+    .find((f) => f !== sdkTranscript);
+  if (!tmuxTranscript) throw new Error("no transcript for the tmux arm");
+  // The first request of each arm builds its cache: steady state only.
+  const sdk = requestTimes(sdkTranscript).slice(1);
+  const tmux = requestTimes(tmuxTranscript).slice(1);
+  save("latency-ab", {
+    model: "haiku",
+    cwd,
+    sdk: { ...percentiles(sdk), times: sdk },
+    tmux: { ...percentiles(tmux), times: tmux },
+  });
+}
+
+/** When each prompt reached the transcript and when its reply did, in order. */
+function promptTimeline(path: string): { userAt: number; replyAt: number }[] {
+  const out: { userAt: number; replyAt: number }[] = [];
+  let userAt: number | null = null;
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    if (!line) continue;
+    const e = JSON.parse(line) as {
+      type?: string;
+      timestamp?: string;
+      isMeta?: boolean;
+      message?: { content?: unknown };
+    };
+    if (!e.timestamp) continue;
+    if (
+      e.type === "user" &&
+      !e.isMeta &&
+      typeof e.message?.content === "string" &&
+      e.message.content.includes("Reply with exactly")
+    )
+      userAt = Date.parse(e.timestamp);
+    else if (e.type === "assistant" && userAt !== null) {
+      out.push({ userAt, replyAt: Date.parse(e.timestamp) });
+      userAt = null;
+    }
+  }
+  return out;
+}
+
+async function untilTranscript(path: string, replies: number) {
+  const deadline = Date.now() + 180_000;
+  while (
+    !existsSync(path) ||
+    promptTimeline(path).length < replies
+  ) {
+    if (Date.now() > deadline)
+      throw new Error(`no reply ${replies} in ${path} after 180 s`);
+    await sleep(200);
+  }
+  return promptTimeline(path);
+}
+
+/**
+ * A cold start in this checkout, the way each runtime launched it: the first
+ * prompt rides the launch (the sdk options file / the interactive CLI's
+ * argument), the second is sent the moment the first reply lands — where a
+ * conversation once waited 32 s for the CLI's MCP servers to connect.
+ */
+async function scenarioColdStart() {
+  const ROUNDS = 2;
+  const cwd = process.cwd();
+  const projectDir = dirname(transcriptPath(cwd, "x"));
+  const q = (v: string) => `'${v.replaceAll("'", `'\\''`)}'`;
+  const rounds: Record<string, unknown>[] = [];
+  for (let r = 0; r < ROUNDS; r++) {
+    // sdk: the first prompt in the options file, as runtime-sdk launches it.
+    const sid = crypto.randomUUID();
+    const agent = launch({
+      id: `spike-cold-sdk-${r}`,
+      cwd,
+      args: HAIKU,
+      options: { sessionId: sid, prompt: "Reply with exactly ONE." },
+    });
+    const sdkPath = transcriptPath(cwd, sid);
+    const s1 = await untilTranscript(sdkPath, 1);
+    const sdkSecondAt = Date.now();
+    await turn(agent, "Reply with exactly TWO.");
+    const s2 = await untilTranscript(sdkPath, 2);
+    await stop(agent);
+
+    // interactive: the first prompt as the CLI argument, the second typed.
+    const tmuxId = `spike-cold-tmux-${r}`;
+    if (tmuxHas(tmuxId)) execFileSync("tmux", ["kill-session", "-t", tmuxId]);
+    const tsid = crypto.randomUUID();
+    const tmuxLaunchedAt = Date.now();
+    execFileSync("tmux", [
+      "new-session", "-d", "-s", tmuxId, "-x", "200", "-y", "50", "-c", cwd,
+      `exec ${q(claudeBin())} --model haiku --session-id ${tsid} --permission-mode bypassPermissions --settings ${q(JSON.stringify({ promptSuggestionEnabled: false }))} ${q("Reply with exactly ONE.")}`,
+      ";", "set-option", "-t", tmuxId, "@singularity-host", "spike",
+    ]);
+    const tmuxPath = join(projectDir, `${tsid}.jsonl`);
+    const t1 = await untilTranscript(tmuxPath, 1);
+    const tmuxSecondAt = Date.now();
+    execFileSync("tmux", ["send-keys", "-t", tmuxId, "-l", "Reply with exactly TWO."]);
+    await sleep(300);
+    execFileSync("tmux", ["send-keys", "-t", tmuxId, "Enter"]);
+    const t2 = await untilTranscript(tmuxPath, 2);
+    execFileSync("tmux", ["kill-session", "-t", tmuxId]);
+
+    rounds.push({
+      sdk: {
+        launchToPrompt1: s1[0]!.userAt - agent.launchedAt,
+        launchToReply1: s1[0]!.replyAt - agent.launchedAt,
+        sendToPrompt2: s2[1]!.userAt - sdkSecondAt,
+        sendToReply2: s2[1]!.replyAt - sdkSecondAt,
+      },
+      tmux: {
+        launchToPrompt1: t1[0]!.userAt - tmuxLaunchedAt,
+        launchToReply1: t1[0]!.replyAt - tmuxLaunchedAt,
+        sendToPrompt2: t2[1]!.userAt - tmuxSecondAt,
+        sendToReply2: t2[1]!.replyAt - tmuxSecondAt,
+      },
+    });
+  }
+  save("cold-start", { model: "haiku", cwd, rounds });
+}
+
 const scenarios: Record<string, () => Promise<void>> = {
   restart: scenarioRestart,
   ask: scenarioAsk,
@@ -945,6 +1164,8 @@ const scenarios: Record<string, () => Promise<void>> = {
   rewind: scenarioRewind,
   terminal: scenarioTerminal,
   latency: scenarioLatency,
+  "latency-ab": scenarioLatencyAb,
+  "cold-start": scenarioColdStart,
 };
 
 const SCENARIO_CEILING_MS = 10 * 60_000;

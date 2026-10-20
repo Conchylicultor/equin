@@ -1,14 +1,5 @@
-export {
-  abandonRelayQuestion,
-  answerRelayQuestion,
-  AWAIT_HOLD_MS,
-  awaitRelayQuestion,
-  registerRelayQuestion,
-  releaseRelayQuestion,
-} from "./endpoints";
+export { answerRelayQuestion } from "./endpoints";
 export { pendingQuestions } from "./resources";
-export { RELAY_HOOK_TIMEOUT_S, RELAY_STATUS_MESSAGE } from "./hook";
-export type { RelayHookEntry } from "./hook";
 export {
   AnswerQuestionBodySchema,
   CliAnswerSchema,

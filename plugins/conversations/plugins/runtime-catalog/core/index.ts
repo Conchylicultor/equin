@@ -2,6 +2,6 @@ export {
   CONVERSATION_RUNTIMES,
   CONVERSATION_RUNTIME_IDS,
   ConversationRuntimeIdSchema,
-  conversationRuntimeInfo,
+  DEFAULT_CONVERSATION_RUNTIME,
 } from "./runtimes";
 export type { ConversationRuntimeId } from "./runtimes";

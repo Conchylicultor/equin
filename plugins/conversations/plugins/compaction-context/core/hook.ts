@@ -1,7 +1,8 @@
 // The compaction hook's Claude Code entry, as data: this plugin owns the one
 // place its command, matcher and timeout are spelled. The server resolves the
 // script's absolute path (server/internal/hook-entry.ts) and the launch
-// (runtime-tmux) merges the entry into its one `--settings` object.
+// (agent-launch's `agentLaunchHooks`) merges the entry into its one settings
+// object.
 
 /** The SessionStart source the hook runs on: right after a compaction. */
 export const COMPACTION_HOOK_MATCHER = "compact";

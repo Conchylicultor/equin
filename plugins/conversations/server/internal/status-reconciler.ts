@@ -1,43 +1,20 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
-import { CONVERSATIONS_CATEGORY_ID } from "../../core/task-category";
 import { dirname } from "node:path";
 import { z } from "zod";
 import {
   listConversationsForInfra,
-  listExistingConversationIds,
   updateConversation,
-  updateTaskTitle,
-  adoptOrphanConversation,
   markConversationGone,
   markConversationClosed,
   setConversationHibernated,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import {
-  ADOPTED_SPAWNED_BY,
-  type Conversation,
-} from "@plugins/tasks/plugins/tasks-core/core";
-import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
-import { Workspace } from "@plugins/conversations/plugins/workspace/server";
+import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { recordReport } from "@plugins/reports/server";
 import { isTransientDbError } from "@plugins/database/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { getConfig } from "@plugins/config_v2/server";
-import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
-import {
-  DEFAULT_MODEL_CHOICE,
-  requireModel,
-} from "@plugins/conversations/plugins/model-provider/core";
-import {
-  Runtime,
-  flushInteractivePrompt,
-  type RuntimeInfo,
-  type RuntimeSignal,
-} from "./runtime";
-import { autoAnswerConfig } from "../../shared/config";
-import type { EmitTx } from "@plugins/infra/plugins/events/server";
-import { conversationCreated } from "./tables-created-event";
+import { Runtime, type RuntimeInfo, type RuntimeSignal } from "./runtime";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import {
   readQuestionHolds,
@@ -47,7 +24,6 @@ import {
 import {
   planConversationUpdate,
   sessionCandidate,
-  UNINFORMATIVE_TITLES,
   type Liveness,
   type UpdatePlan,
 } from "./plan-update";
@@ -66,18 +42,17 @@ import {
   recordSessionId,
 } from "@plugins/conversations/plugins/session-chain/server";
 
-// Keeps every conversation row's status, waitingFor, title and session id in
-// step with its live agent session — from PUSH SIGNALS, not a poll.
+// Keeps every conversation row's status, waitingFor and session id in step
+// with its live agent session — from PUSH SIGNALS, not a poll.
 //
-//   - Each runtime delivers signals (`ConversationRuntime.subscribe`): for tmux,
-//     a sessions-file write, a tmux session hook, an agent's question hook, an
-//     op marker. A signal only names WHO may have changed; it accumulates in a
+//   - Each runtime delivers signals (`ConversationRuntime.subscribe`): for sdk,
+//     a new line in an agent's event log. A signal only names WHO may have
+//     changed; it accumulates in a
 //     pending set and one batch at a time is reconciled: one `inspect()` per
 //     runtime for the whole batch, the rows by id, then the pure decision
 //     (plan-update.ts) per row. A burst of signals costs one batch, not N.
 //   - Recovery from a missed signal (a watcher dropped an event, the backend was
-//     down, a state with no signal — a pane title, a "starting" row that never
-//     came up): one `reconcileAll()` at boot, and the every-minute
+//     down, a state with no signal — a "starting" row that never came up): one `reconcileAll()` at boot, and the every-minute
 //     `conversations.status-sweep` job.
 //
 // Every reconcile — batches, the boot one, the sweep — runs through one
@@ -251,96 +226,10 @@ async function planFor(
   return { plan, liveness };
 }
 
-/**
- * The live ids with no row in ANY status — the orphan candidates. The active
- * row set excludes terminal (`done`) rows, so filtering on it alone would
- * re-classify a lingering `done` session as an orphan and re-adopt it (a
- * zero-row INSERT … ON CONFLICT DO NOTHING) on every reconcile, churning the
- * change-feed. Main-only: nothing else adopts.
- */
-async function orphansOf(
-  live: LiveSnapshot,
-  activeIds: ReadonlySet<string>,
-): Promise<string[]> {
-  if (!isMain()) return [];
-  const candidates = [...live.next.keys()].filter((id) => !activeIds.has(id));
-  const existing = await listExistingConversationIds(candidates);
-  return candidates.filter((id) => !existing.has(id));
-}
-
-async function adopt(
-  id: string,
-  info: LiveEntry,
-  plan: Extract<UpdatePlan, { kind: "adopt" }>,
-): Promise<void> {
-  try {
-    // Never adopt a session whose cwd is not a workspace of a registered kind
-    // (`<root of its kind>/<id>`). Stray sessions started in /tmp or the repo
-    // root are not Singularity attempts; adopting them would synthesize a
-    // phantom attempt row no reaper can ever act on.
-    const workspace = await Workspace.resolvePath(info.worktreePath);
-    if (workspace === "none") return;
-    const adopted = await adoptOrphanConversation({
-      id,
-      workspace: {
-        attemptId: workspace.attemptId,
-        path: info.worktreePath,
-        // A worktree is fully described by its kind; a scratch workspace's
-        // profile and input live only on its attempt row.
-        spec: workspace.kind === "worktree" ? { kind: "worktree" } : null,
-      },
-      runtimeId: info.runtime,
-      status: plan.status,
-      title: plan.title,
-      // What a stray session runs is not known; record the default family's
-      // current version.
-      model: requireModel(DEFAULT_MODEL_CHOICE, getModelCatalog()),
-      // An adopted conversation is created like any other: announce it on the
-      // adoption's tx, so its subscribers (queue rank, title generation, …) run
-      // for it too — without a rank the sidebar queue has no section to put it in.
-      onAdopted: (tx, { conversation, taskId }) =>
-        conversationCreated.emit(
-          {
-            conversationId: conversation.id,
-            taskId,
-            model: conversation.model,
-            spawnedBy: ADOPTED_SPAWNED_BY,
-            createdAt: conversation.createdAt.toISOString(),
-            kind: conversation.kind,
-          },
-          // Same narrow cast as lifecycle's `commitConversation`: a
-          // PgTransaction is structurally the facade EmitTx names.
-          { tx: tx as EmitTx },
-        ),
-    });
-    // Adoption synthesized a fresh root task — stamp it like every other
-    // auto-created conversation task. Linked-to-existing-attempt adoptions keep
-    // the task's original category.
-    if (adopted?.createdTaskId) {
-      await setTaskCategory(adopted.createdTaskId, CONVERSATIONS_CATEGORY_ID);
-    }
-  } catch (err) {
-    console.error(`[conversations.status] adopt orphan "${id}" failed`, err);
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    await recordReport({
-      kind: "crash",
-      source: "server-caught",
-      message: `Failed to adopt orphan conversation ${id}: ${err instanceof Error ? err.message : String(err)}`,
-      data: {
-        errorType: "OrphanAdoptionError",
-        label: "conversations.status.adoptOrphan",
-      },
-    }).catch((e) => {
-      console.error("[conversations.status] recordReport failed", e);
-    });
-  }
-}
-
 async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
   const { id } = row;
   switch (plan.kind) {
     case "noop":
-    case "adopt": // only ever planned for a row-less id (see `orphansOf`)
       return;
     case "closed":
       await markConversationClosed(id);
@@ -412,60 +301,15 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
     // 30s watcher reconcile.
     await refreshConversationChain(id);
   }
-
-  if (plan.taskTitle) {
-    await updateTaskTitle(row.taskId, plan.taskTitle, UNINFORMATIVE_TITLES);
-  }
-
-  // Auto-open question prompts: the moment a conversation enters the
-  // interactive-question wait, optionally dismiss the terminal menu for the
-  // user — exactly what clicking "Answer here" does, just done on detection.
-  // Gated on the transition so it fires once per question: the flush clears the
-  // menu, the next reconcile reads idle, and waitingFor goes null.
-  // Fire-and-forget — the self-healing Escape loop must not hold the reconcile
-  // gate. On failure the row stays at "question" and the manual "Answer here"
-  // button remains as the fallback.
-  if (plan.menuOpened && getConfig(autoAnswerConfig).enabled) {
-    void runTracked("conversations:flush-interactive-prompt", () =>
-      flushInteractivePrompt(id).catch((err) => {
-        void recordReport({
-          kind: "crash",
-          source: "server-caught",
-          message: `Auto-open question prompt for ${id} failed: ${err instanceof Error ? err.message : String(err)}`,
-          data: {
-            errorType: "AutoAnswerFlushError",
-            label: "conversations.status.autoAnswerFlush",
-          },
-        });
-      }),
-    );
-  }
 }
 
-/** Reconcile `rows` (active rows) plus the orphans in `live`. Inside the gate. */
+/** Reconcile `rows` (active rows). Inside the gate. */
 async function reconcileRows(
   rows: Conversation[],
   live: LiveSnapshot,
 ): Promise<void> {
-  const activeIds = new Set(rows.map((r) => r.id));
-  for (const id of await orphansOf(live, activeIds)) {
-    const info = live.next.get(id)!;
-    const plan = planConversationUpdate(
-      null,
-      { kind: "live", info },
-      {
-        onMain: true,
-        now: Date.now(),
-        sessionAccepted: false,
-        questionHold: null,
-        lastSubmitAt: null,
-      },
-    );
-    if (plan.kind === "adopt") await adopt(id, info, plan);
-  }
-  // Held questions first retire the ones whose holder died (Escape in the
-  // terminal SIGTERMs the hook, the agent or pane can die), then are read once
-  // for the whole batch.
+  // Held questions first retire the ones whose holder died (the agent process
+  // can die mid-question), then are read once for the whole batch.
   const ids = rows.map((r) => r.id);
   await reapQuestionHolds(ids);
   const holds = await readQuestionHolds(ids);
@@ -489,22 +333,14 @@ function reconcileAll(): Promise<void> {
 
 /**
  * Reconcile just `ids`: the rows by id, then one inspect per runtime for the
- * batch. tmux is host-wide, so most ids a signal names are other backends'
- * conversations: only this backend's own rows — plus, on main, ids with no row
- * in any status (orphan candidates) — are inspected, and a batch naming none
- * of them spawns nothing.
+ * batch. Only this backend's own rows are inspected, so a batch naming none of
+ * them spawns nothing.
  */
 function reconcileIds(ids: readonly string[]): Promise<void> {
   return reconcileGate.run(async () => {
     const rows = await listConversationsForInfra({ ids });
-    const inspected = new Set(rows.map((r) => r.id));
-    if (isMain()) {
-      const missing = ids.filter((id) => !inspected.has(id));
-      const existing = await listExistingConversationIds(missing);
-      for (const id of missing) if (!existing.has(id)) inspected.add(id);
-    }
-    if (inspected.size === 0) return;
-    const live = await collectLive([...inspected]);
+    if (rows.length === 0) return;
+    const live = await collectLive(rows.map((r) => r.id));
     await reconcileRows(rows, live);
   });
 }
@@ -512,7 +348,6 @@ function reconcileIds(ids: readonly string[]): Promise<void> {
 // Signals accumulate here between batches. A signal that arrives while a batch
 // is draining joins the next one, so a burst of N signals costs one batch.
 const pendingIds = new Set<string>();
-const pendingWorktrees = new Set<string>();
 let pendingAll = false;
 let draining = false;
 
@@ -528,8 +363,6 @@ export function requestStatusReconcile(conversationIds: string[]): void {
 function onSignal(signal: RuntimeSignal): void {
   if ("conversationIds" in signal) {
     for (const id of signal.conversationIds) pendingIds.add(id);
-  } else if ("worktreeName" in signal) {
-    pendingWorktrees.add(signal.worktreeName);
   } else {
     pendingAll = true;
   }
@@ -550,20 +383,12 @@ function onSignal(signal: RuntimeSignal): void {
 
 async function drain(): Promise<void> {
   try {
-    while (pendingAll || pendingIds.size > 0 || pendingWorktrees.size > 0) {
+    while (pendingAll || pendingIds.size > 0) {
       if (pendingAll) {
         pendingAll = false;
         pendingIds.clear();
-        pendingWorktrees.clear();
         await reconcileAll();
         continue;
-      }
-      const worktrees = [...pendingWorktrees];
-      pendingWorktrees.clear();
-      for (const worktreeName of worktrees) {
-        for (const row of await listConversationsForInfra({ worktreeName })) {
-          pendingIds.add(row.id);
-        }
       }
       const ids = [...pendingIds];
       pendingIds.clear();
@@ -590,8 +415,8 @@ export async function startStatusReconciler(): Promise<void> {
     const conversationIds = awaitingAny(sessionIds);
     if (conversationIds.length > 0) onSignal({ conversationIds });
   });
-  // A turn the CLI just confirmed submitting is working before its session
-  // file says busy (see `liveStatusFor`): reconcile on the hook's arrival.
+  // A turn the ledger just confirmed submitting is working whatever the
+  // runtime's last status write said (see `liveStatusFor`).
   onTurnSubmitted((conversationId) => {
     onSignal({ conversationIds: [conversationId] });
   });
@@ -599,8 +424,7 @@ export async function startStatusReconciler(): Promise<void> {
 }
 
 // The missed-signal backstop, and the one path for the states that have no
-// signal at all (a pane title change, a "starting" row whose pane never came
-// up). Every backend reconciles its own rows, so it runs per worktree.
+// signal at all (a "starting" row whose agent never came up). Every backend reconciles its own rows, so it runs per worktree.
 export const conversationsStatusSweepJob = defineJob({
   name: "conversations.status-sweep",
   description:

@@ -1,9 +1,8 @@
 import type { RelayResolution } from "../../core/schemas";
 
-// The in-process side of a question being resolved: the hook's long poll is
-// woken through `waiters.ts`; an agent that holds the question in-process (the
-// sdk runtime's `canUseTool`) listens here instead. Every settle (answer,
-// release, abandon) notifies, once, after its row is written.
+// The in-process side of a question being answered: the agent that holds the
+// question (the sdk runtime's `canUseTool`) listens here. The answer endpoint
+// notifies, once, after its row is written.
 
 export interface ResolvedQuestion {
   conversationId: string;

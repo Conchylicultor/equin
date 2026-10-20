@@ -5,7 +5,7 @@
  * high-water mark (`max(pushes.created_at) - 24h`) on the reasoning that anything
  * older is already recorded. It is not: `plan.ts` cannot attribute a commit whose
  * conversation is absent from THIS database, and that absence is not permanent —
- * `adoptOrphanConversation` can synthesise the conversation row later, at which
+ * the conversation row can still appear later, at which
  * point the commit becomes attributable. By then the ledger's newest row has
  * moved past it, so a walk bounded by insertions never offers it again and the
  * row can never be written.

@@ -1,4 +1,4 @@
-// @hash 9a0952b4791f
+// @hash 27d233df3d36
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,7 +7,6 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "conversations.runtime-launch-option:runtime",
     "conversations.workspace.launch-option:workspace",
     "tasks.auto-start.launch-option:auto-start",
     "tasks.task-effort:effort",

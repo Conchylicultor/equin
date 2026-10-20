@@ -1,12 +1,11 @@
 import { requestStatusReconcile } from "@plugins/conversations/server";
 import { RelayQuestionsSchema, type RelayResolution } from "../../core/schemas";
 import { abandonIfOpen, registerQuestion as upsertQuestion } from "./store";
-import { wakeQuestion } from "./waiters";
 
 // The relay for a runtime that holds the AskUserQuestion call in-process (the
-// sdk runtime's `canUseTool`) rather than through the PreToolUse hook script:
-// the same `pending_questions` row, web form and question hold — registered,
-// answered (through `onQuestionResolved`) and retired by direct calls.
+// sdk runtime's `canUseTool`): a `pending_questions` row, the web form and the
+// question hold — registered, answered (through `onQuestionResolved`) and
+// retired by direct calls.
 
 /**
  * Hold `toolUseId`'s question for the web form, its liveness tied to `pid`
@@ -20,8 +19,8 @@ export async function holdQuestion(
 ): Promise<RelayResolution> {
   const resolution = await upsertQuestion(conversationId, {
     toolUseId: question.toolUseId,
-    // The tool input as the model wrote it: parsed (defaults filled in) here,
-    // as the hook endpoint's body schema does — a malformed one throws.
+    // The tool input as the model wrote it: parsed (defaults filled in) here —
+    // a malformed one throws.
     questions: RelayQuestionsSchema.parse(question.questions),
     pid: question.pid,
   });
@@ -35,7 +34,6 @@ export async function retireQuestion(
   toolUseId: string,
 ): Promise<void> {
   if (await abandonIfOpen(conversationId, toolUseId)) {
-    wakeQuestion(toolUseId);
     requestStatusReconcile([conversationId]);
   }
 }

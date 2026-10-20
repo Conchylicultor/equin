@@ -998,7 +998,7 @@ describe("C39 — a tab on the legacy `attempts` descriptor", () => {
 // `conversations_v` row), restated as a
 // LITERAL frozen at step 22 — never derived from the live schema (see
 // `LegacyRowsSchema` above). Not `strict` (see there): an additive key such as
-// `waitingMenu` or `$columns` is stripped, as the old tab's schema did.
+// `$columns` is stripped, as the old tab's schema did.
 // `model` is the stored version as text.
 const LegacyConversationsSchema = z.array(
   z.object({

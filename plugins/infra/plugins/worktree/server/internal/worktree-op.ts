@@ -5,7 +5,6 @@ import {
   openSync,
   renameSync,
   rmSync,
-  writeFileSync,
   writeSync,
 } from "node:fs";
 import { type FileHandle, open, readdir, stat } from "node:fs/promises";
@@ -17,7 +16,6 @@ import {
 } from "@plugins/infra/plugins/paths/server";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { OP_KIND_IDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
-import { opSignalsDir } from "../../data-dirs";
 
 // A per-op, crash-safe liveness marker for a long-running operation (build,
 // push, check, test, e2e — the `OpKind` vocabulary declared once in this
@@ -36,10 +34,8 @@ import { opSignalsDir } from "../../data-dirs";
 // One file per op (not per (worktree, kind)): two checks in one worktree are two
 // markers, so neither overwrites the other and every reader sees both.
 //
-// Consumers: the tmux status reconciler (a pane in the CLI "shell" state reads
-// as `working` only while one of these is live for its worktree — woken by the
-// per-slug touch in `opSignalsDir`, see `touchOpSignal`), `./singularity
-// await`, the stop guard, and the op-store orphan reconciler. Markers are keyed
+// Consumers: `./singularity await`, the stop guard, and the op-store orphan
+// reconciler. Markers are keyed
 // on the checkout's namespace, which every writer (`build` / `push` / direct
 // ops) and reader agrees on.
 export type WorktreeOp = OpKind;
@@ -69,18 +65,6 @@ function opsDir(slug: string): string {
 
 function opFile(slug: string, opId: string): string {
   return join(opsDir(slug), `${opId}.json`);
-}
-
-/**
- * Touch `<opSignalsDir>/<slug>`: the one wake-up a watcher needs to learn that
- * this worktree's set of live ops may have changed. Called after every marker
- * publish, release and reap — never before, so a woken reader always finds the
- * new state on disk. The directory is ensured on every touch (a cheap
- * `mkdir -p`), so a pruned or wiped directory is no failure; anything else that
- * fails here is real and propagates.
- */
-function touchOpSignal(slug: string): void {
-  writeFileSync(join(opSignalsDir.ensure(), slug), "");
 }
 
 // A marker in the making: written, locked, then renamed into place. Readers
@@ -147,15 +131,6 @@ export function markWorktreeOpStart(
     rmSync(tmp, { force: true });
     throw err;
   }
-  try {
-    touchOpSignal(slug);
-  } catch (err) {
-    // No wake-up means no watcher learns of this op: fail the start rather
-    // than run an op the status reconciler cannot see.
-    rmSync(path, { force: true });
-    closeSync(fd);
-    throw err;
-  }
   let released = false;
   return {
     path,
@@ -167,7 +142,6 @@ export function markWorktreeOpStart(
       // path.
       rmSync(path, { force: true });
       closeSync(fd);
-      touchOpSignal(slug);
     },
   };
 }
@@ -263,7 +237,6 @@ async function probeMarker(slug: string, path: string): Promise<Probe> {
   } finally {
     if (reap) rmSync(path, { force: true });
     await handle.close();
-    if (reap) touchOpSignal(slug);
   }
 }
 

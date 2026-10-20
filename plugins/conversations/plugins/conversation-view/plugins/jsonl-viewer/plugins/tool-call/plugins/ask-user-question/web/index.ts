@@ -8,12 +8,10 @@ import { ChangeAnswersAction } from "./components/change-answers-action";
 import { ANSWER_MARKER } from "../shared";
 
 // The answer surfaces another plugin composes: the question relay
-// (conversations/question-relay) owns the `"question"` pending prompt, renders
-// its held question as a `QuestionCard` holding an `AnswerForm`, and falls back to `AnswerHereButton`
-// (the flush path) when nothing is held.
+// (conversations/question-relay) owns the `"question"` pending prompt and
+// renders its held question as a `QuestionCard` holding an `AnswerForm`.
 export { AnswerForm } from "./components/answer-form";
 export { QuestionCard } from "./components/question-card";
-export { AnswerHereButton } from "./components/answer-here-button";
 export { answerDraftScope } from "./components/answer-draft";
 export type {
   AnswerSelections,

@@ -21,11 +21,12 @@ export const RelayQuestionsSchema = z.array(RelayQuestionSchema).min(1);
 
 /**
  * A held question's lifecycle: `open` until exactly one of
- * - `answered` — the web answered; the relay hands the answer to the CLI;
- * - `released` — "Answer in terminal": the relay exits silently and the CLI
- *   draws its own menu;
- * - `abandoned` — the relay is gone (Escape in the terminal SIGTERMs it, or the
- *   agent/pane died); the CLI already wrote its own result.
+ * - `answered` — the web answered; the holder hands the answer to the agent;
+ * - `abandoned` — the holder stopped waiting (the agent withdrew the question,
+ *   or died).
+ *
+ * `released` is history: "Answer in terminal" on the retired tmux runtime,
+ * kept so the rows it wrote still parse. Nothing writes it any more.
  */
 export const RelayStateSchema = z.enum([
   "open",
@@ -48,7 +49,7 @@ export const CliAnswerSchema = z.object({
 });
 export type CliAnswer = z.infer<typeof CliAnswerSchema>;
 
-/** Where a held question stands, as the relay reads it. */
+/** Where a held question stands, as its holder reads it. */
 export const RelayResolutionSchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("open") }),
   z.object({ state: z.literal("answered"), answer: CliAnswerSchema }),
@@ -60,7 +61,7 @@ export type RelayResolution = z.infer<typeof RelayResolutionSchema>;
 export const RegisterQuestionBodySchema = z.object({
   toolUseId: z.string().min(1),
   questions: RelayQuestionsSchema,
-  /** The relay's own pid — its liveness is how a dead hold is noticed. */
+  /** The holder's pid — its liveness is how a dead hold is noticed. */
   pid: z.number().int().positive(),
 });
 export type RegisterQuestionBody = z.infer<typeof RegisterQuestionBodySchema>;

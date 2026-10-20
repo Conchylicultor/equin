@@ -72,7 +72,6 @@ hand-rolled its own checkmarks.
     - `ui/tokens/density --space-lg`
     - `ui/tokens/shape --spacing`
   - Imported by:
-    - `conversations/runtime-launch-option`
     - `conversations/workspace/launch-option`
     - `primitives/text-editor/composer`
     - `tasks/auto-start/launch-option`

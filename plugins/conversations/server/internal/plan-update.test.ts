@@ -9,7 +9,6 @@ import {
   type PlanRow,
 } from "./plan-update";
 import type { RuntimeInfo } from "./runtime";
-import type { TerminalMenu } from "@plugins/conversations/plugins/terminal-menu/core";
 
 const NOW = Date.parse("2026-10-02T12:00:00Z");
 const SESSION = "a4ee9684-418d-4661-b372-2960760538a7";
@@ -19,10 +18,8 @@ function row(overrides: Partial<PlanRow> = {}): PlanRow {
   return {
     status: "waiting",
     closeRequested: false,
-    title: "Fix the thing",
     claudeSessionId: SESSION,
     waitingFor: null,
-    waitingMenu: null,
     createdAt: new Date(NOW - 60 * 60_000),
     hibernatedAt: null,
     ...overrides,
@@ -33,13 +30,9 @@ function live(overrides: Partial<RuntimeInfo> = {}): Liveness {
   return {
     kind: "live",
     info: {
-      title: "Fix the thing",
       working: false,
       dead: false,
       claudeSessionId: SESSION,
-      worktreePath: "/wt",
-      waitingFor: null,
-      menu: null,
       statusWrittenAt: null,
       ...overrides,
     },
@@ -59,40 +52,6 @@ function ctx(overrides: Partial<PlanContext> = {}): PlanContext {
     ...overrides,
   };
 }
-
-describe("planConversationUpdate — orphans (no row in any status)", () => {
-  test("a live session is adopted on main, with its status and title", () => {
-    expect(
-      planConversationUpdate(null, live({ working: true, title: "T" }), ctx()),
-    ).toEqual({ kind: "adopt", status: "working", title: "T" });
-  });
-
-  test("never adopted off main — every worktree sees every tmux session", () => {
-    expect(
-      planConversationUpdate(null, live(), ctx({ onMain: false })),
-    ).toEqual({ kind: "noop" });
-  });
-
-  test("a dead pane, a pane with no worktree, or no session is not adopted", () => {
-    expect(planConversationUpdate(null, live({ dead: true }), ctx())).toEqual({
-      kind: "noop",
-    });
-    expect(
-      planConversationUpdate(null, live({ worktreePath: "" }), ctx()),
-    ).toEqual({ kind: "noop" });
-    expect(planConversationUpdate(null, ABSENT, ctx())).toEqual({
-      kind: "noop",
-    });
-  });
-
-  test("an empty pane title adopts as no title", () => {
-    expect(planConversationUpdate(null, live({ title: "" }), ctx())).toEqual({
-      kind: "adopt",
-      status: "waiting",
-      title: null,
-    });
-  });
-});
 
 describe("planConversationUpdate — done is never overwritten", () => {
   test.each([
@@ -120,69 +79,28 @@ describe("planConversationUpdate — live session", () => {
     ).toMatchObject({ kind: "patch", patch: { status: "working" } });
   });
 
-  test("working → waiting carries waitingFor", () => {
+  test("working → waiting", () => {
     expect(
-      planConversationUpdate(
-        row({ status: "working" }),
-        live({ waitingFor: "permission prompt" }),
-        ctx(),
-      ),
+      planConversationUpdate(row({ status: "working" }), live(), ctx()),
     ).toEqual({
       kind: "patch",
-      patch: { status: "waiting", waitingFor: "permission prompt" },
+      patch: { status: "waiting" },
       adoptedSessionId: null,
-      taskTitle: null,
-      menuOpened: false,
     });
   });
 
-  test("working clears a stale waitingFor", () => {
-    expect(
-      planConversationUpdate(
-        row({ waitingFor: "question" }),
-        live({ working: true, waitingFor: "question" }),
-        ctx(),
-      ),
-    ).toMatchObject({
-      kind: "patch",
-      patch: { status: "working", waitingFor: null },
-      menuOpened: false,
-    });
-  });
-
-  test("the question override opens a question exactly on the transition", () => {
-    expect(
-      planConversationUpdate(row(), live({ waitingFor: "question" }), ctx()),
-    ).toMatchObject({
-      kind: "patch",
-      patch: { waitingFor: "question" },
-      menuOpened: true,
-    });
-    // Already open: nothing to write, nothing to re-open.
-    expect(
-      planConversationUpdate(
-        row({ waitingFor: "question" }),
-        live({ waitingFor: "question" }),
-        ctx(),
-      ),
-    ).toEqual({ kind: "noop" });
-  });
-
-  test("a held question waits on a question with no menu — and never flushes", () => {
-    // The relay holds the call: no menu, so the pane reads idle (or busy).
-    for (const pane of [live(), live({ working: true })]) {
+  test("a held question waits on a question", () => {
+    for (const agent of [live(), live({ working: true })]) {
       expect(
         planConversationUpdate(
           row({ status: "working" }),
-          pane,
+          agent,
           ctx({ questionHold: "open" }),
         ),
       ).toEqual({
         kind: "patch",
         patch: { status: "waiting", waitingFor: "question" },
         adoptedSessionId: null,
-        taskTitle: null,
-        menuOpened: false,
       });
     }
     // Already showing the held question: nothing to write.
@@ -195,7 +113,7 @@ describe("planConversationUpdate — live session", () => {
     ).toEqual({ kind: "noop" });
   });
 
-  test("a held question resolving hands the status back to the pane", () => {
+  test("a held question resolving hands the status back to the agent", () => {
     expect(
       planConversationUpdate(
         row({ waitingFor: "question" }),
@@ -205,71 +123,8 @@ describe("planConversationUpdate — live session", () => {
     ).toMatchObject({
       kind: "patch",
       patch: { status: "working", waitingFor: null },
-      menuOpened: false,
     });
   });
-
-  test("the menu of a released question is shown, never auto-flushed", () => {
-    // The user picked "Answer in terminal": the menu that opens is the one
-    // they asked for, so auto-open must leave it alone.
-    expect(
-      planConversationUpdate(
-        row(),
-        live({ waitingFor: "question" }),
-        ctx({ questionHold: "released" }),
-      ),
-    ).toMatchObject({
-      kind: "patch",
-      patch: { waitingFor: "question" },
-      menuOpened: false,
-    });
-    // Released and the menu not drawn yet: the pane decides (nothing waits).
-    expect(
-      planConversationUpdate(
-        row({ waitingFor: "question" }),
-        live(),
-        ctx({ questionHold: "released" }),
-      ),
-    ).toMatchObject({ kind: "patch", patch: { waitingFor: null } });
-  });
-
-  test("only the pane's own menu opening triggers the flush", () => {
-    expect(
-      planConversationUpdate(
-        row({ status: "working" }),
-        live({ waitingFor: "question" }),
-        ctx(),
-      ),
-    ).toMatchObject({ kind: "patch", menuOpened: true });
-    // A menu while a held question is still open (cannot normally happen —
-    // the hold suppresses it): the hold wins, nothing flushes.
-    expect(
-      planConversationUpdate(
-        row({ status: "working" }),
-        live({ waitingFor: "question" }),
-        ctx({ questionHold: "open" }),
-      ),
-    ).toMatchObject({ kind: "patch", menuOpened: false });
-  });
-
-  test("an informative title is written and carried onto the task", () => {
-    expect(
-      planConversationUpdate(row(), live({ title: "Better title" }), ctx()),
-    ).toMatchObject({
-      kind: "patch",
-      patch: { title: "Better title" },
-      taskTitle: "Better title",
-    });
-  });
-
-  test.each(["Claude Code", "Untitled", "Untitled conversation", ""])(
-    "an uninformative title (%p) never overwrites the stored one",
-    (title) => {
-      expect(planConversationUpdate(row(), live({ title }), ctx())).toEqual({
-        kind: "noop",
-      });
-    },
-  );
 
   test("a live session on a gone row resurrects it (endedAt cleared)", () => {
     expect(
@@ -328,7 +183,7 @@ describe("planConversationUpdate — live session", () => {
   });
 });
 
-describe("planConversationUpdate — dead pane", () => {
+describe("planConversationUpdate — dead agent", () => {
   test("→ gone", () => {
     expect(planConversationUpdate(row(), live({ dead: true }), ctx())).toEqual({
       kind: "gone",
@@ -414,8 +269,6 @@ describe("planConversationUpdate — no live session", () => {
       kind: "patch",
       patch: { status: "waiting", waitingFor: null },
       adoptedSessionId: null,
-      taskTitle: null,
-      menuOpened: false,
     });
   });
 
@@ -469,7 +322,7 @@ describe("planConversationUpdate — no live session", () => {
       );
     });
 
-    test("past it, with a session (a resume whose pane died) → hibernate, not a crash", () => {
+    test("past it, with a session (a resume whose agent died) → hibernate, not a crash", () => {
       expect(
         planConversationUpdate(
           row({ status: "starting", createdAt: new Date(NOW - 45_000) }),
@@ -495,84 +348,6 @@ describe("planConversationUpdate — no live session", () => {
   });
 });
 
-describe("planConversationUpdate — a terminal menu on screen", () => {
-  const MENU: TerminalMenu = {
-    title: "What do you want to do?",
-    body: "",
-    options: [
-      { n: 1, label: "Stop and wait for limit to reset", description: null },
-      { n: 2, label: "Switch to usage credits", description: null },
-    ],
-    highlighted: 1,
-    footer: "Enter to confirm · Esc to cancel",
-  };
-
-  test("records the menu and waits on it, over the CLI's own reason", () => {
-    expect(
-      planConversationUpdate(
-        row({ status: "working" }),
-        live({ waitingFor: "input needed", menu: MENU }),
-        ctx(),
-      ),
-    ).toMatchObject({
-      kind: "patch",
-      patch: { status: "waiting", waitingFor: "menu", waitingMenu: MENU },
-      menuOpened: false,
-    });
-  });
-
-  test("the same menu again is a noop", () => {
-    expect(
-      planConversationUpdate(
-        row({ waitingFor: "menu", waitingMenu: MENU }),
-        live({
-          menu: { ...MENU, options: MENU.options.map((o) => ({ ...o })) },
-        }),
-        ctx(),
-      ),
-    ).toEqual({ kind: "noop" });
-  });
-
-  test("a moved highlight updates the menu alone", () => {
-    expect(
-      planConversationUpdate(
-        row({ waitingFor: "menu", waitingMenu: MENU }),
-        live({ menu: { ...MENU, highlighted: 2 } }),
-        ctx(),
-      ),
-    ).toMatchObject({
-      kind: "patch",
-      patch: { waitingMenu: { ...MENU, highlighted: 2 } },
-    });
-  });
-
-  test("a menu that left the screen clears both", () => {
-    expect(
-      planConversationUpdate(
-        row({ waitingFor: "menu", waitingMenu: MENU }),
-        live({ working: true }),
-        ctx(),
-      ),
-    ).toMatchObject({
-      kind: "patch",
-      patch: { status: "working", waitingFor: null, waitingMenu: null },
-    });
-  });
-
-  test("a held question wins over a menu", () => {
-    expect(
-      planConversationUpdate(
-        row(),
-        live({ menu: MENU }),
-        ctx({ questionHold: "open" }),
-      ),
-    ).toMatchObject({
-      kind: "patch",
-      patch: { waitingFor: "question" },
-    });
-  });
-});
-
 describe("liveStatusFor — a confirmed submit is evidence of work", () => {
   const SUBMIT = new Date(NOW);
   const info = (o: Partial<RuntimeInfo>): RuntimeInfo =>
@@ -592,7 +367,7 @@ describe("liveStatusFor — a confirmed submit is evidence of work", () => {
     ).toBe("waiting");
   });
 
-  test("no CLI write to weigh (dead pane, a menu) — the submit overrides nothing", () => {
+  test("no status write to weigh (a dead agent, no event yet) — the submit overrides nothing", () => {
     expect(liveStatusFor(info({ statusWrittenAt: null }), SUBMIT)).toBe(
       "waiting",
     );

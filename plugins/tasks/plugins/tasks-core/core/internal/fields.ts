@@ -10,10 +10,6 @@ import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { rankField } from "@plugins/fields/plugins/rank/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import {
-  TerminalMenuSchema,
-  type TerminalMenu,
-} from "@plugins/conversations/plugins/terminal-menu/core";
-import {
   FALLBACK_MODEL,
   StoredModelSchema,
 } from "@plugins/conversations/plugins/model-provider/core";
@@ -173,12 +169,4 @@ export const conversationFields = {
   // Hibernation lifecycle (orthogonal to `status`).
   hibernatedAt: nullable(dateField()),
   lastViewedAt: nullable(dateField()),
-  // The terminal menu the conversation is waiting on, read off its screen —
-  // set exactly while `waitingFor` is the terminal-menu key, null otherwise.
-  // A `jsonField` of `TerminalMenu | null` rather than `nullable(jsonField(…))`,
-  // which would demand a stand-in menu as the (discarded) inner default.
-  waitingMenu: jsonField<TerminalMenu | null>({
-    schema: TerminalMenuSchema.nullable(),
-    default: null,
-  }),
 } satisfies FieldsRecord;

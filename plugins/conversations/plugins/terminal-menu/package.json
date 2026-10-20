@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-conversations-terminal-menu",
-  "private": true,
-  "version": "0.0.1",
-  "description": "The shape of an interactive numbered menu a conversation's terminal has open (title, options, highlighted option, footer): the value the runtime reads off the screen, the conversation row carries as waitingMenu, and the web's menu card answers."
-}

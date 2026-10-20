@@ -95,30 +95,13 @@ function queryConversations(
 // filter the query scans every conversation ever created (unbounded history
 // growth) on every reconcile. UI must never call this.
 //
-// `scope` narrows the read to what one push signal names: a set of conversation
-// ids (a PK read), or every conversation running in a worktree, matched on the
-// worktree path's last segment — the namespace an op marker is keyed on.
-export function listConversationsForInfra(
-  scope?: { ids: readonly string[] } | { worktreeName: string },
-): Promise<Conversation[]> {
-  if (scope && "ids" in scope && scope.ids.length === 0)
-    return Promise.resolve([]);
+// `scope` narrows the read to what one push signal names: a set of
+// conversation ids (a PK read).
+export function listConversationsForInfra(scope?: {
+  ids: readonly string[];
+}): Promise<Conversation[]> {
+  if (scope && scope.ids.length === 0) return Promise.resolve([]);
   const order = { col: conversations.createdAt, dir: "desc" } as const;
-  if (scope && "worktreeName" in scope) {
-    return db
-      .select()
-      .from(conversations)
-      .where(
-        and(
-          buildWhere({ includeSystem: true, active: true }),
-          eq(
-            sql`regexp_replace(${conversations.worktreePath}, '^.*/', '')`,
-            scope.worktreeName,
-          ),
-        ),
-      )
-      .orderBy(desc(order.col));
-  }
   return queryConversations(
     {
       includeSystem: true,
@@ -127,25 +110,6 @@ export function listConversationsForInfra(
     },
     order,
   );
-}
-
-// Which of the given conversation ids already exist in the table, in ANY status
-// (including terminal `done`). The status reconciler's orphan-adoption path needs this:
-// `listConversationsForInfra` is scoped to active rows, so a `done` conversation
-// whose tmux session lingers host-wide is absent from that list and would be
-// re-classified as an orphan — and re-adopted via INSERT … ON CONFLICT DO
-// NOTHING — on every reconcile. Checking existence against the full table (cheap:
-// bounded by the candidate id count, hits the PK) keeps terminal conversations
-// terminal. Returns a Set for O(1) membership.
-export async function listExistingConversationIds(
-  ids: readonly string[],
-): Promise<Set<string>> {
-  if (ids.length === 0) return new Set();
-  const rows = await db
-    .select({ id: _conversations.id })
-    .from(_conversations)
-    .where(inArray(_conversations.id, [...ids]));
-  return new Set(rows.map((r) => r.id));
 }
 
 // User-visible list, newest-first. Sidebar / list endpoint. Pass `taskIds` to

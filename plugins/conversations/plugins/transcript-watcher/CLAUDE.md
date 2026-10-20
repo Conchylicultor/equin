@@ -39,9 +39,9 @@ A refusal files a `conversation-foreign-session` report (kind + emitter in
 `server/internal/`, schema in `core/`, renderer in `web/`), debounced 5 min per
 `(conversation, session)` — the read path runs on every push, so the debounce is
 in *front* of `recordReport`, and the emitter never throws into the read. The
-read self-heals; the DB row does not, which is what the report is for. Its
-`shared-session-id` arm is filed by `debug/session-divergence`'s pure-SQL
-detector — same corruption, two discovery routes. Design:
+read self-heals; the DB row does not, which is what the report is for. (Its
+`shared-session-id` arm was filed by the retired `debug/session-divergence`
+detector; old rows still render.) Design:
 [`research/2026-08-19-global-pane-session-ownership.md`](../../../../research/2026-08-19-global-pane-session-ownership.md).
 
 ## The chain signature, and why a listener gets `{ events, signature }`
@@ -131,7 +131,6 @@ memo degrades to a full chain re-read on every push.
     - `conversations/transcript-api`
     - `conversations/transcript-retention`
     - `conversations/usage`
-    - `debug/session-divergence`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
 - Core:

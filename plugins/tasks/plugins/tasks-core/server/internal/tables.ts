@@ -184,7 +184,6 @@ const conversationsEntity = defineEntity(conversationsEntityRef, {
       closeRequested: false,
       hibernatedAt: false,
       lastViewedAt: false,
-      waitingMenu: false,
     },
   },
   columns: {
@@ -195,7 +194,7 @@ const conversationsEntity = defineEntity(conversationsEntityRef, {
       },
     },
     status: { default: "starting" },
-    runtime: { default: "tmux" },
+    runtime: { default: "sdk" },
     kind: { default: "user" },
     createdAt: { default: defaultNow() },
     updatedAt: { default: defaultNow() },

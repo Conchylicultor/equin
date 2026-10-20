@@ -112,8 +112,8 @@ itself (it would capture every concurrent request's writes) — that throws.
 ### A deferral is not a skip
 
 A commit whose conversation is absent here is *deferred*, not skipped: it may
-become attributable later, because `adoptOrphanConversation` can synthesise that
-conversation row. So the walk bound is a **coverage** frontier, not an insertion
+become attributable later, because that conversation row can still appear here
+(the retired tmux runtime's orphan adoption synthesised such rows). So the walk bound is a **coverage** frontier, not an insertion
 one — bounding on `max(pushes.created_at)` alone meant the ledger's own newest row
 moved past a deferred commit and no later walk ever reached it again, losing it
 permanently. Do not "optimise" the bound back to the watermark, and do not sign
@@ -322,7 +322,6 @@ serves them.
     - `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
   - Exports (types):
-    - `AdoptOrphanInput`
     - `Attempt`
     - `AttemptStatus`
     - `AttemptWithConversations`
@@ -356,7 +355,6 @@ serves them.
     - `_taskStatusChangedTriggers`
     - `_taskTitleChangedTriggers`
     - `addTaskDependency`
-    - `adoptOrphanConversation`
     - `AttemptSchema`
     - `AttemptStatusSchema`
     - `clusterLabelOf`
@@ -394,7 +392,6 @@ serves them.
     - `listConversationsForDisplay`
     - `listConversationsForInfra`
     - `listDependentIds`
-    - `listExistingConversationIds`
     - `listHibernationCandidates`
     - `listPushesByPushId`
     - `listPushesForAttempt`
@@ -451,12 +448,11 @@ serves them.
     - `tasks` (keyed)
     - `tasks:rows` (keyed, point)
 - Core:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/workspace` ×3
     - `fields/text/config` ×3
     - `fields` ×3
     - `conversations/model-provider` ×2
-    - `conversations/terminal-menu` ×2
     - `fields/rank/config` ×2
     - `network/live` ×2
     - `fields/bool/config.boolField`
@@ -482,7 +478,6 @@ serves them.
     - `TaskStatus`
     - `TrailerCommit`
   - Exports (values):
-    - `ADOPTED_SPAWNED_BY`
     - `attemptDeliveriesEntityRef`
     - `attemptRows`
     - `AttemptSchema`
@@ -523,11 +518,11 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 74 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×33
+  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×31
     - `tasks` ×17
     - `active-data` ×5
-    - `debug` ×5
+    - `debug` ×4
     - `page` ×3
     - `apps` ×2
     - `infra` ×2
@@ -555,7 +550,6 @@ serves them.
     - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
     - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
     - `page/prompt/link` (table `tasks_ext_prompt_block`)
-    - `conversations/runtime-launch-option` (table `tasks_ext_runtime`)
     - `tasks/task-title` (table `tasks_ext_short_title`)
     - `tasks/sidequest-autopilot` (table `tasks_ext_sidequest_triage`)
     - `tasks/task-source-url` (table `tasks_ext_source_url`)

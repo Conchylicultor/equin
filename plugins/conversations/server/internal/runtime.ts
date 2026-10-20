@@ -2,48 +2,26 @@ import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { getConversationRuntime } from "@plugins/tasks/plugins/tasks-core/server";
-import type { TerminalMenu } from "@plugins/conversations/plugins/terminal-menu/core";
 import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
 import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugins/transcript-watcher/server";
-import {
-  readTurnsFromChain,
-  rewindLastUserTurn,
-  type Turn,
-} from "./claude-transcript";
+import { readTurnsFromChain, type Turn } from "./claude-transcript";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import type { ConversationRuntimeId } from "@plugins/conversations/plugins/runtime-catalog/core";
 
 export type { Turn };
 
 export interface RuntimeInfo {
-  title: string;
   working: boolean;
   dead: boolean;
   claudeSessionId: string | null;
-  worktreePath: string;
-  waitingFor: string | null;
   /**
-   * The numbered menu open on the session's screen, other than the question
-   * menu (which has its own flow and reads as `waitingFor: "question"`). While
-   * one is open the reconciler records it and the session waits on it.
-   */
-  menu: TerminalMenu | null;
-  /**
-   * When the CLI itself wrote the status `working` rests on, or null when the
-   * verdict does not rest on the CLI's write (a dead pane, a menu on screen, no
-   * session file). A turn the CLI confirmed submitting AFTER this makes the
-   * session working whatever the write said — see `liveStatusFor`.
+   * When the agent's event `working` rests on was written, or null when the
+   * verdict does not rest on one (a dead agent, no event yet). A turn the
+   * ledger confirmed submitting AFTER this makes the session working whatever
+   * the write said — see `liveStatusFor`.
    */
   statusWrittenAt: Date | null;
 }
-
-/**
- * Which way to answer an open terminal menu: an option, named by its number
- * AND its label so a menu that changed since the user saw it is refused rather
- * than answered with whatever now sits at that number — or cancel it.
- */
-export type TerminalMenuChoice =
-  { kind: "option"; n: number; label: string } | { kind: "cancel" };
 
 /**
  * A runtime's push signal: "the live state of these conversations may have
@@ -52,50 +30,22 @@ export type TerminalMenuChoice =
  * spurious signal lands on the same answer.
  *
  * - `conversationIds` — the runtime knows exactly whose state moved.
- * - `worktreeName` — something moved for every conversation running in this
- *   worktree (named by its directory's last path segment, the namespace an op
- *   marker is keyed on), and the runtime cannot tell which one.
  * - `all` — the runtime lost track (its watcher dropped events); reconcile
  *   everything.
  */
-export type RuntimeSignal =
-  { conversationIds: string[] } | { worktreeName: string } | { all: true };
+export type RuntimeSignal = { conversationIds: string[] } | { all: true };
 
 /**
- * The submit check's verdict on a typed turn: `submitted` — the box emptied
- * after Enter; `unverified` — it never did (or the box could not be read), so
- * only the CLI's own report can say whether the turn went in.
+ * The runtime's verdict on a sent turn: `submitted` — the agent took it;
+ * `unverified` — the runtime cannot tell, so only the agent's own report
+ * (the turn ledger's confirmation) can say whether the turn went in.
  */
 export type SubmitVerdict =
   { kind: "submitted" } | { kind: "unverified"; reason: string };
 
-/** What typing one turn found and did. */
+/** What sending one turn did. */
 export interface TypedTurn {
-  /**
-   * The draft the box held before typing, cleared first — `""` when it was
-   * empty, `null` when the box could not be read. Absent: this runtime has no
-   * input box, so there was nothing to clear.
-   */
-  cleared?: string | null;
   verdict: SubmitVerdict;
-}
-
-/**
- * The input box still held text after it was cleared and the bound ran out.
- * Nothing was typed: typing now would submit that text and the turn as one
- * prompt.
- */
-export class InputNotEmptyError extends Error {
-  constructor(
-    readonly conversationId: string,
-    readonly draft: string,
-  ) {
-    super(
-      `The input box of ${conversationId} still holds text after clearing it; ` +
-        "refusing to type after it",
-    );
-    this.name = "InputNotEmptyError";
-  }
 }
 
 export interface ConversationRuntime {
@@ -144,44 +94,29 @@ export interface ConversationRuntime {
    */
   subscribe(onSignal: (signal: RuntimeSignal) => void): Promise<() => void>;
   /**
-   * Type `text` into the session's input box and submit it. A terminal runtime MUST
-   * leave the box empty before typing — clear any draft and verify it is gone
-   * ({@link RuntimeScreen.clearInput}), throwing {@link InputNotEmptyError} when it will not
-   * empty — because the CLI submits whatever the box holds plus the typed text
-   * as ONE prompt. Resolves with what was cleared and the submit check's
-   * verdict; throws only when the text provably never reached the box.
+   * Send `text` to the session as one user turn. Resolves with the runtime's
+   * verdict; throws only when the text provably never reached the agent.
    */
   send(conversationId: string, text: string): Promise<TypedTurn>;
   interrupt(conversationId: string): Promise<void>;
   /**
    * Stop the running turn: interrupt it and, when it got no reply, take it back
    * out of the session — the transcript no longer holds it and nothing of it is
-   * left for the next turn to ride on (a terminal runtime empties the input box
-   * the CLI put it back in). Resolves with the text taken back, which the web
-   * hands back to the composer, or null when the turn stays (it had a reply, or
-   * there was none). Runs as the conversation's terminal writer.
+   * left for the next turn to ride on. Resolves with the text taken back, which
+   * the web hands back to the composer, or null when the turn stays (it had a
+   * reply, or there was none). Runs as the conversation's terminal writer.
    */
   stop(conversationId: string): Promise<{ returnedText: string | null }>;
   /**
-   * Answer a pending interactive prompt form (e.g. AskUserQuestion) by
-   * sending `text` as a turn. This is a single ATOMIC operation:
-   *   1. dismiss the active prompt form,
-   *   2. WAIT until the form has actually cleared,
-   *   3. send `text` as a normal turn — into a box verified empty, exactly
-   *      as {@link send}.
-   *
-   * The wait in step 2 is load-bearing and the whole reason this is a
-   * dedicated runtime method rather than a back-to-back interrupt()+send():
-   * dismissing the form is not instantaneous, and if the still-live form is
-   * fed the keystrokes it auto-selects a wrong option and fabricates an
-   * answer (losing the user's text). Implementers MUST verify the form has
-   * cleared before sending, and MUST throw if it never clears rather than
-   * sending into a live form.
+   * Reply to an open question (AskUserQuestion) with `text` instead of an
+   * answer, as ONE operation: dismiss the question, then send `text` as a
+   * normal turn — exactly as {@link send}. Implementers MUST NOT send while the
+   * question is still open: the agent would read the text as its answer.
    */
   answerPrompt(conversationId: string, text: string): Promise<TypedTurn>;
   /**
-   * Wait, bounded, until the session can take a typed turn — for a session that
-   * was just started, until the agent has drawn its input box. Resolves
+   * Wait, bounded, until the session can take a turn — for a session that was
+   * just started, until the agent answers. Resolves
    * `"timeout"` (never throws for it) when the bound or `signal` elapses first,
    * so the caller decides what an agent that never became ready means. Used to
    * deliver turns held while the conversation was starting (turns.ts).
@@ -190,67 +125,6 @@ export interface ConversationRuntime {
     conversationId: string,
     signal: AbortSignal,
   ): Promise<"ready" | "timeout">;
-  /**
-   * The methods that exist only because the runtime drives a terminal UI — an
-   * input box, menus drawn on a screen. Absent for a runtime without one; the
-   * callers ({@link flushInteractivePrompt}, {@link answerTerminalMenu}) then
-   * throw, which cannot happen in practice: only a screen runtime reports a
-   * menu ({@link RuntimeInfo.menu}) or a drawn question to flush.
-   */
-  readonly screen?: RuntimeScreen;
-}
-
-/** A terminal runtime's screen: its input box and the menus drawn on it. */
-export interface RuntimeScreen {
-  /**
-   * Empty the input box and verify it is empty; throws
-   * {@link InputNotEmptyError} when it still holds text after the bound.
-   * `awaitRestore` first waits (bounded) for a draft to APPEAR — the CLI puts a
-   * turn interrupted before its reply back into the box asynchronously, and
-   * Stop must clear that copy, not race it. Resolves with the draft it cleared
-   * (`""` when there was none, `null` when the box could not be read).
-   */
-  clearInput(
-    conversationId: string,
-    opts?: { awaitRestore?: boolean },
-  ): Promise<string | null>;
-  /**
-   * Dismiss a pending interactive prompt form (e.g. AskUserQuestion) WITHOUT
-   * sending any answer. Cancelling the form forces the CLI to flush the
-   * buffered assistant `tool_use` to the JSONL transcript so the web UI can
-   * render it; the user can then answer from the web form (which goes through
-   * {@link ConversationRuntime.answerPrompt}). Implementers MUST verify the
-   * form has cleared and MUST throw if it never clears, exactly like
-   * `answerPrompt`'s dismissal step — they share the same self-healing Escape
-   * loop, this method simply stops after the form clears (no answer is sent).
-   */
-  flushInteractivePrompt(conversationId: string): Promise<void>;
-  /**
-   * Answer the terminal menu reported as {@link RuntimeInfo.menu}. Implementers
-   * MUST re-read the menu first and throw unless it is still open and, for an
-   * option, still offers that label at that number — a key sent into a changed
-   * menu, or into an idle prompt, picks something the user never chose. Resolves
-   * once the menu has left the screen; throws if it never does.
-   */
-  answerMenu(conversationId: string, choice: TerminalMenuChoice): Promise<void>;
-}
-
-/**
- * `runtime`'s screen, for an operation only a terminal UI has; throws when the
- * runtime has none (see {@link ConversationRuntime.screen}).
- */
-function screenOf(
-  runtime: ConversationRuntime,
-  conversationId: string,
-  operation: string,
-): RuntimeScreen {
-  if (!runtime.screen) {
-    throw new Error(
-      `${operation} on ${conversationId}: runtime "${runtime.id}" has no ` +
-        "terminal screen — only a screen runtime reports a menu or a drawn question",
-    );
-  }
-  return runtime.screen;
 }
 
 const registry = new Map<string, ConversationRuntime>();
@@ -282,12 +156,11 @@ export const Runtime = {
   },
 };
 
-// One writer per terminal. Everything that sends keys to an agent's pane —
-// a turn, an answer, an interrupt, Stop, a menu answer — runs here, so two of
-// them can never interleave their keystrokes into one input box (two sends
-// raced into one concatenated prompt). In-process is enough: the HTTP handlers
-// and the jobs that type (the held-turn flush, the spawn's launch) run in the
-// same backend process.
+// One writer per agent. Everything that drives an agent — a turn, an answer,
+// an interrupt, Stop — runs here, so two of them never interleave (a Stop's
+// relaunch racing a turn into the old process). In-process is enough: the HTTP
+// handlers and the jobs that send (the held-turn flush, the spawn's launch)
+// run in the same backend process.
 const terminals = createKeyedMutex();
 
 /** Run `fn` as the conversation's only terminal writer. */
@@ -311,17 +184,6 @@ export async function interruptConversation(id: string): Promise<void> {
   });
 }
 
-export async function flushInteractivePrompt(id: string): Promise<void> {
-  await withTerminal(id, async () => {
-    const { runtime } = await conversationRuntime(id);
-    await screenOf(
-      runtime,
-      id,
-      "flushInteractivePrompt",
-    ).flushInteractivePrompt(id);
-  });
-}
-
 export async function waitUntilReady(
   id: string,
   signal: AbortSignal,
@@ -329,16 +191,6 @@ export async function waitUntilReady(
   const row = await getConversationRuntime(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
   return Runtime.get(row.runtime).waitUntilReady(id, signal);
-}
-
-export async function answerTerminalMenu(
-  id: string,
-  choice: TerminalMenuChoice,
-): Promise<void> {
-  await withTerminal(id, async () => {
-    const { runtime } = await conversationRuntime(id);
-    await screenOf(runtime, id, "answerMenu").answerMenu(id, choice);
-  });
 }
 
 export async function getConversationRow(id: string): Promise<{
@@ -357,17 +209,4 @@ export async function readConversationTurns(
     await resolveConversationTranscriptPaths(id),
     since,
   );
-}
-
-export async function rewindConversationTurn(
-  id: string,
-): Promise<string | null> {
-  const paths = await resolveConversationTranscriptPaths(id);
-  // The LIVE TAIL ONLY. `rewindLastUserTurn` truncates the file it is handed, and
-  // the Stop button calls this on every stopped turn; truncating an ancestor would
-  // destroy the history the merged read path now depends on. An empty chain means
-  // there is no transcript to rewind.
-  const tail = paths.at(-1);
-  if (!tail) return null;
-  return rewindLastUserTurn(tail);
 }

@@ -5,9 +5,8 @@ import { answerAskUserQuestion } from "../../shared/endpoints";
 export const handleAnswer = implement(
   answerAskUserQuestion,
   async ({ params, body }) => {
-    // An `answer` ledger turn: the runtime dismisses the AskUserQuestion form,
-    // waits for it to clear, then types the answers — all atomic inside its
-    // answerPrompt() (see its contract).
+    // An `answer` ledger turn: the runtime withdraws any open question, then
+    // sends the answers — atomic inside its answerPrompt() (see its contract).
     const outcome = await submitTurn(params.id, {
       id: body.turnId,
       kind: "answer",

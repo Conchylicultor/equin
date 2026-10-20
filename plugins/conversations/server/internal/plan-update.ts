@@ -3,10 +3,6 @@ import type {
   ConversationStatus,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import type { UpdateConversationPatch } from "@plugins/tasks/plugins/tasks-core/server";
-import {
-  sameTerminalMenu,
-  TERMINAL_MENU_WAITING_FOR,
-} from "@plugins/conversations/plugins/terminal-menu/core";
 import { decideMissingProcessAction } from "./hibernation-decision";
 import type { RuntimeInfo } from "./runtime";
 import type { QuestionHold } from "./question-hold";
@@ -17,34 +13,21 @@ import type { QuestionHold } from "./question-hold";
 // shell (status-reconciler.ts), which applies the plan this returns.
 
 /**
- * Grace window between insertConversation and the tmux pane becoming visible
- * to `list-panes`. Within this window, a "starting" row with no live session
- * is normal (worktree git fork, claude warmup). Past it, assume the runtime
- * never came up (crash mid-create, server restart, claude exited before the
- * first reconcile) and mark gone so the UI moves off "Starting…".
+ * Grace window between insertConversation and the runtime reporting a live
+ * session. Within this window, a "starting" row with no live session is normal
+ * (worktree git fork, agent warmup). Past it, assume the runtime never came up
+ * (crash mid-create, server restart, the agent exited before the first
+ * reconcile) and mark gone so the UI moves off "Starting…".
  */
 export const STARTING_TIMEOUT_MS = 30_000;
-
-/**
- * Pane titles that carry no information (e.g. the literal "Claude Code" the CLI
- * sets right after resume): read as "no title", so they never overwrite a
- * previously synthesised, meaningful one.
- */
-export const UNINFORMATIVE_TITLES = [
-  "Untitled",
-  "Untitled conversation",
-  "Claude Code",
-];
 
 /** The fields of a conversation row the decision reads. */
 export type PlanRow = Pick<
   Conversation,
   | "status"
   | "closeRequested"
-  | "title"
   | "claudeSessionId"
   | "waitingFor"
-  | "waitingMenu"
   | "createdAt"
   | "hibernatedAt"
 >;
@@ -67,12 +50,8 @@ export interface PlanContext {
    */
   sessionAccepted: boolean;
   /**
-   * The conversation's question held outside the pane (question-hold.ts), or
-   * null when nothing holds one. Kept apart from the pane's own verdict
-   * (`RuntimeInfo.waitingFor`): an `open` hold says a question is waiting
-   * while NO menu is on screen, so it may set `waitingFor` but must never
-   * trigger the auto-open flush — that sends Escape, which would cancel the
-   * held call.
+   * The conversation's open question (question-hold.ts), or null when nothing
+   * holds one: an `open` hold is what the conversation waits on.
    */
   questionHold: QuestionHold | null;
   /**
@@ -84,8 +63,6 @@ export interface PlanContext {
 
 export type UpdatePlan =
   | { kind: "noop" }
-  /** A live session with no row in any status: adopt it (main only). */
-  | { kind: "adopt"; status: ConversationStatus; title: string | null }
   | { kind: "closed" }
   /**
    * Mark gone. `stuckStartingMs` is set when a "starting" row never came up —
@@ -103,22 +80,13 @@ export type UpdatePlan =
       patch: UpdateConversationPatch;
       /** A new session id to append to the chain (behind the gate). */
       adoptedSessionId: string | null;
-      /** An informative new title to carry onto the task. */
-      taskTitle: string | null;
-      /**
-       * The pane's own menu just turned into a question that nothing holds —
-       * the auto-open trigger. Never set by a held question: a held question
-       * has no menu, and a released one is the menu the user asked for.
-       */
-      menuOpened: boolean;
     };
 
 /**
- * Working when the CLI says so — or when it confirmed submitting a turn after
- * its last status write. The hook fires at Enter, before the CLI flips its
- * session file to busy, so an idle written BEFORE the submit is stale evidence;
- * one written after it (the turn ended, or was interrupted) is current. Causal
- * order, not a grace timer: a hook drained late still carries the CLI's moment.
+ * Working when the runtime says so — or when the turn ledger confirmed a turn
+ * submitted after the runtime's last status write: an idle written BEFORE the
+ * submit is stale evidence; one written after it (the turn ended, or was
+ * interrupted) is current. Causal order, not a grace timer.
  */
 export function liveStatusFor(
   info: RuntimeInfo,
@@ -144,43 +112,22 @@ export function sessionCandidate(row: PlanRow, live: Liveness): string | null {
   return id && id !== row.claudeSessionId ? id : null;
 }
 
-/**
- * Decide what one reconcile writes for one conversation.
- *
- * `row` is null only when NO row exists in any status — the shell checks the
- * full table, so a terminal (`done`) conversation whose tmux session lingers is
- * never mistaken for an orphan.
- */
+/** Decide what one reconcile writes for one conversation. */
 export function planConversationUpdate(
-  row: PlanRow | null,
+  row: PlanRow,
   live: Liveness,
   ctx: PlanContext,
 ): UpdatePlan {
-  if (row === null) {
-    // Orphan adoption is main-only: tmux is global (one server per host), so
-    // every worktree backend sees every other worktree's sessions. Without this
-    // guard each non-main worktree's DB would phantom-clone every conversation
-    // it didn't spawn into its own task/attempt/conversation rows.
-    if (!ctx.onMain || live.kind !== "live") return { kind: "noop" };
-    const { info } = live;
-    if (info.dead || !info.worktreePath) return { kind: "noop" };
-    return {
-      kind: "adopt",
-      status: liveStatusFor(info, null),
-      title: info.title || null,
-    };
-  }
-
   // "done" means a deliberate close (exit_clean / toolbar Exit) — never
-  // overwrite it back to working/waiting just because the tmux session hasn't
-  // been reaped yet.
+  // overwrite it back to working/waiting just because the agent's session
+  // hasn't been reaped yet.
   if (row.status === "done") return { kind: "noop" };
 
   switch (live.kind) {
     case "live":
       return planLive(row, live.info, ctx);
     case "unknown":
-      // Runtime failed to answer (e.g. tmux unreachable under FD pressure). We
+      // Runtime failed to answer (e.g. a socket error under FD pressure). We
       // can't tell whether the session is alive, so leave status alone and wait
       // for a reconcile where the runtime answers — better than declaring every
       // working/waiting conversation gone on a transient hiccup.
@@ -202,16 +149,11 @@ function planLive(
       : { kind: "gone", stuckStartingMs: null };
   }
 
-  const informativeNew =
-    info.title && !UNINFORMATIVE_TITLES.includes(info.title);
-  const desiredTitle = informativeNew ? info.title : row.title;
-  // A held question: the agent is blocked on it, and the pane — showing no
-  // menu — reads as an ordinary idle prompt (or, mid-hook, as busy).
+  // A held question: the agent is blocked on it, whatever its turn state says.
   const heldOpen = ctx.questionHold === "open";
   const desiredStatus = heldOpen
     ? "waiting"
     : liveStatusFor(info, ctx.lastSubmitAt);
-  const titleChanged = desiredTitle !== row.title;
   // Only adopt a new claudeSessionId once the shell's gate accepted it (a
   // transcript exists, in THIS conversation's own projects directory).
   const candidate = sessionCandidate(row, { kind: "live", info });
@@ -219,60 +161,29 @@ function planLive(
     candidate && ctx.sessionAccepted ? candidate : row.claudeSessionId;
   const sessionChanged = desiredSessionId !== row.claudeSessionId;
   const statusChanged = desiredStatus !== row.status;
-  // A terminal menu on screen is what the conversation waits on, whatever
-  // the CLI's own (opaque) reason says: its key is derived here from the menu,
-  // so `waitingFor` names the menu exactly while `waitingMenu` carries one.
-  const desiredMenu =
-    !heldOpen && desiredStatus === "waiting" ? info.menu : null;
-  const desiredWaitingFor = heldOpen
-    ? "question"
-    : desiredMenu
-      ? TERMINAL_MENU_WAITING_FOR
-      : desiredStatus === "waiting"
-        ? (info.waitingFor ?? null)
-        : null;
+  const desiredWaitingFor = heldOpen ? "question" : null;
   const waitingForChanged =
     (desiredWaitingFor ?? null) !== (row.waitingFor ?? null);
-  const menuChanged = !sameTerminalMenu(desiredMenu, row.waitingMenu);
-  if (
-    !titleChanged &&
-    !sessionChanged &&
-    !statusChanged &&
-    !waitingForChanged &&
-    !menuChanged
-  )
+  if (!sessionChanged && !statusChanged && !waitingForChanged)
     return { kind: "noop" };
 
   const patch: UpdateConversationPatch = {};
-  if (titleChanged) patch.title = desiredTitle;
   if (sessionChanged) patch.claudeSessionId = desiredSessionId;
   if (statusChanged) patch.status = desiredStatus;
   if (waitingForChanged) patch.waitingFor = desiredWaitingFor;
-  if (menuChanged) patch.waitingMenu = desiredMenu;
   // A live session on a `gone` row resurrects it.
   if (row.status === "gone") patch.endedAt = null;
   return {
     kind: "patch",
     patch,
     adoptedSessionId: sessionChanged ? desiredSessionId : null,
-    taskTitle:
-      titleChanged &&
-      desiredTitle &&
-      !UNINFORMATIVE_TITLES.includes(desiredTitle)
-        ? desiredTitle
-        : null,
-    // `desiredWaitingFor` is the pane's verdict whenever nothing holds.
-    menuOpened:
-      ctx.questionHold === null &&
-      waitingForChanged &&
-      desiredWaitingFor === "question",
   };
 }
 
 function planAbsent(row: PlanRow, ctx: PlanContext): UpdatePlan {
   if (row.status === "gone") return { kind: "noop" };
   // A "starting" row inside the grace window is normal (worktree checkout, DB
-  // fork, claude warmup) — the pane simply isn't visible to `list-panes` yet.
+  // fork, agent warmup) — the runtime simply has no session to report yet.
   const startingAgeMs =
     row.status === "starting" ? ctx.now - row.createdAt.getTime() : null;
   if (startingAgeMs !== null && startingAgeMs < STARTING_TIMEOUT_MS)
@@ -283,7 +194,7 @@ function planAbsent(row: PlanRow, ctx: PlanContext): UpdatePlan {
   // Suspend-instead-of-gone: a resumable conversation whose process is missing
   // (idle-killed, lost to a reboot, or a resume that never came up) becomes
   // hibernated rather than gone — it keeps showing as a normal conversation and
-  // is silently resumed on open. A missing pane never moves a row to a
+  // is silently resumed on open. A missing process never moves a row to a
   // terminal status; only an explicit close (above) does. The reconciler NEVER clears `hibernatedAt` —
   // only `ensureResumed` does. See `decideMissingProcessAction` for why coupling
   // status to process absence deleted users' worktrees.
@@ -325,7 +236,5 @@ function settleToWaiting(): UpdatePlan {
     kind: "patch",
     patch: { status: "waiting", waitingFor: null },
     adoptedSessionId: null,
-    taskTitle: null,
-    menuOpened: false,
   };
 }

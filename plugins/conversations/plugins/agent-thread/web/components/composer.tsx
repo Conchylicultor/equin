@@ -136,7 +136,7 @@ export function ThreadComposer({
   const resumable = ended && conversation.claudeSessionId !== null;
   const disabled = ended
     ? !resumable || resume.isPending
-    : !canSendTurn({ status, waitingFor: conversation.waitingFor });
+    : !canSendTurn({ status });
 
   const send = useCallback(() => {
     const text = draftRef.current;

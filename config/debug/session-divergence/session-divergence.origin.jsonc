@@ -1,7 +1,0 @@
-// @hash 6ccc1a5bc2a7
-{
-  // When off, the monitor job returns early and files no session-divergence reports.
-  "enabled": true,
-  // How far a subtree session's transcript may lead the chain tail's before the divergence is reported. Absorbs the legitimate window where a freshly-forked session is already writing but the poller has not yet appended it to the chain.
-  "graceMinutes": 2
-}

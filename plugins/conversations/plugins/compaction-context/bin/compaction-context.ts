@@ -2,8 +2,8 @@
 // The compaction hook: a Claude Code SessionStart hook (matcher `compact`) that
 // runs right after the agent's context is compacted, asks the backend for what
 // plugins had handed the agent and the summary dropped, and prints it as
-// `additionalContext`. Launched by runtime-tmux's launch settings (core/hook.ts
-// builds the entry).
+// `additionalContext`. Every agent launch carries it (agent-launch's
+// `agentLaunchHooks`; core/hook.ts builds the entry).
 //
 // Exit contract with the CLI:
 //   - context → the SessionStart JSON on stdout, exit 0;

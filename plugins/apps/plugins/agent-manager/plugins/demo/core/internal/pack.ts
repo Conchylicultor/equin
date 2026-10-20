@@ -46,7 +46,7 @@ export default definePack(({ ago }) => {
     status: s.status,
     model: s.model,
     kind: "user" as const,
-    runtime: "tmux",
+    runtime: "sdk",
     createdAt: at(s.startedAgo),
     updatedAt: at(s.updatedAgo),
     endedAt: s.endedAgo === undefined ? null : at(s.endedAgo),
@@ -58,7 +58,6 @@ export default definePack(({ ago }) => {
     closeRequested: false,
     hibernatedAt: null,
     lastViewedAt: at(s.updatedAgo),
-    waitingMenu: null,
     active: s.status !== "done",
   });
   const live = STORIES.filter((s) => s.status !== "done");

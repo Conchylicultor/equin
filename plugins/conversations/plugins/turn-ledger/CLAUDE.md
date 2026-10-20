@@ -6,9 +6,11 @@ itself. Design and the CLI experiments behind it:
 
 It replaces a browser-side guess — "did the CLI accept these exact bytes?",
 answered by matching transcript text, only while one view was mounted, against
-a 90 s deadline — with facts: the runtime's own submit check, the CLI's
-`UserPromptSubmit` hook (which carries the exact prompt it submitted, and fires
-at Enter even while the agent is busy), and Stop.
+a 90 s deadline — with facts: the runtime's verdict on the send, the agent's
+own confirmation (the sdk runtime's `turn_started` event, which carries the
+exact prompt it took), and Stop. The code still calls that confirmation "the
+hook" — it was the CLI's `UserPromptSubmit` hook under the retired tmux
+runtime.
 
 ## The row — `conversation_turns`
 
@@ -21,7 +23,7 @@ at Enter even while the agent is busy), and Stop.
 | `state` | below |
 | `hookless` | no hook will ever confirm it (see below) |
 | `submitted_text`, `extra_text` | `merged` only: the hook's whole prompt, and the part that was not this turn |
-| `submitted_at` | `accepted` / `merged`: when the CLI submitted it — the mailbox file's mtime, so a late drain still records the CLI's moment |
+| `submitted_at` | `accepted` / `merged`: when the agent took it — the event's own time, so a late replay still records the agent's moment |
 | `error` | `failed` / `unverified`: why |
 
 ## States — one pure function
@@ -66,10 +68,10 @@ final and means delivered:
 
 - the text starts with `/` or `!` — the CLI reports neither a slash command nor
   a shell line to `UserPromptSubmit` (finding E8);
-- the session was launched without the ledger's hook. Every launch through
-  runtime-tmux's `create()` (a resume included) records the conversation in
-  `conversation_prompt_hooks`; a session from before the hook existed has no row
-  until it is resumed.
+- the session was launched without a confirmation. Every launch through the
+  sdk runtime's `create()` (a resume included) records the conversation in
+  `conversation_prompt_hooks`; a session from before that has no row until it is
+  resumed.
 
 ## Matching the hook
 
@@ -80,25 +82,15 @@ never reached the box to be merged. Equality is byte-exact save for edge
 whitespace (the launch message reaches the CLI with a space before a leading
 `/`). `prompt_id` is no turn id: a busy agent's queued turn carries the running
 turn's. Sends are serialized per conversation, so the candidates are few and in
-order. A prompt matching nothing — typed in the terminal, a launch's own task
-prompt — is not ours and is dropped.
+order. A prompt matching nothing — a launch's own task prompt — is not ours and
+is dropped.
 
-## The mailbox (hook → server, no network)
+## Where the confirmation comes from
 
-runtime-tmux merges `promptSubmitHookEntry()` into every launch's
-`UserPromptSubmit` hooks. Its command writes the hook's stdin to
-`~/.singularity/state/prompt-submits/<namespace>/<conversationId>.<epoch>.<pid>.json`
-(through a `.tmp` + rename, so a reader never sees half a file), always exits 0
-and prints nothing (a UserPromptSubmit hook's stdout becomes model context). The
-namespace is `$SINGULARITY_PARENT_HOST`, the backend that launched the pane, so
-each backend watches only its own folder: a worktree's DB fork holds a copy of
-main's conversations and must never consume main's files.
-
-`startPromptSubmitMailbox` (this plugin's `onReady`) drains whatever is already
-there — files written while no backend ran — then the
-`turn-ledger.prompt-submits` watcher drains on every change, one drain at a
-time. Each file is matched and deleted; one that does not parse is reported and
-deleted. A file whose backend is gone ages out with the data dir's 7-day TTL.
+The sdk runtime's event consumer calls `resolvePromptSubmit(conversationId,
+prompt, at)` for each `turn_started` its agent writes — replayed from its event
+cursor after a backend restart, so a confirmation is never lost while the
+backend is down.
 
 ## Who writes rows
 
@@ -114,10 +106,9 @@ wins.
 
 ## Status: the confirmed submit is the reconciler's evidence
 
-The hook fires at Enter, before the CLI writes `busy` to its session file. The
-status reconciler (conversations server) reads `latestSubmitAt` per
-conversation and counts the agent `working` when the CLI confirmed a submit
-after its last status write (`liveStatusFor`): an idle written before the submit
+The status reconciler (conversations server) reads `latestSubmitAt` per
+conversation and counts the agent `working` when it confirmed a turn after the
+runtime's last status write (`liveStatusFor`): an idle written before the submit
 is stale, one written after it (the turn ended, or was interrupted) stands. A
 resolved hook signals `onTurnSubmitted`, which the reconciler subscribes to, so
 the status follows the hook's arrival. The browser's optimistic status stops at
@@ -135,11 +126,9 @@ cutMessageAt)` plus `returnTurnByText` for the cut message itself make them
 - `conversation.userTurnSent` (owned here, read by task-title) is emitted when a
   `turn` row is accepted or merged, or reaches `typed` while hookless — the
   moment the agent got it.
-- `turn-merged` (with the extra text), `turn-unverified` and
-  `turn-input-not-empty` are filed where the fact is learned: the merge by the
-  mailbox, the unverified verdict by the transition write, the box that would
-  not empty by the send path or Stop. They replace the browser's
-  `turn-unconfirmed`.
+- `turn-merged` (with the extra text) and `turn-unverified` are filed where the
+  fact is learned: the merge by the confirmation, the unverified verdict by the
+  transition write. They replace the browser's `turn-unconfirmed`.
 
 ## Reading it from the web
 
@@ -155,7 +144,7 @@ removes settled rows (accepted, merged, returned, withdrawn).
 
 ## Plugin reference
 
-- Description: Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, the prompt-submit mailbox (each agent's UserPromptSubmit hook drops the submitted prompt in a file; a watcher matches it to the oldest unconfirmed turn and deletes it), the turn-ledger.turns live collection, the conversation.userTurnSent event (emitted once the CLI confirmed a user's turn), the turn-merged / turn-unverified / turn-input-not-empty report kinds and a 7-day retention sweep of settled rows.
+- Description: Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, resolvePromptSubmit (the agent's confirmation that it took a turn, matched to the oldest unconfirmed one), the turn-ledger.turns live collection, the conversation.userTurnSent event (emitted once the agent confirmed a user's turn), the turn-merged / turn-unverified report kinds and a 7-day retention sweep of settled rows.
 - Web:
   - Contributes: `IdKinds.Kind` "turn"
   - Uses: `ids.IdKinds`
@@ -165,7 +154,6 @@ removes settled rows (accepted, merged, returned, withdrawn).
     - `resource.declare` "turn-ledger.turns"
     - `resource.declare` "turn-ledger.turns:groups"
     - `resource.declare` "turn-ledger.turns:rows"
-    - `report-kind` "turn-input-not-empty"
     - `report-kind` "turn-merged"
     - `report-kind` "turn-unverified"
   - Uses:
@@ -174,8 +162,6 @@ removes settled rows (accepted, merged, returned, withdrawn).
     - `infra/entities.defineEntity`
     - `infra/entities.sqlDefault`
     - `infra/events.defineTriggerEvent`
-    - `infra/file-watcher.defineFileWatcher`
-    - `infra/file-watcher.FileWatcher`
     - `infra/retention.defineRetention`
     - `network/live.serveCollection`
     - `reports.recordReport`
@@ -189,7 +175,6 @@ removes settled rows (accepted, merged, returned, withdrawn).
   - Exports (types):
     - `AcceptOutcome`
     - `NewTurn`
-    - `PromptSubmitHookEntry`
     - `TurnEvent`
     - `TurnRow`
     - `UserTurnSentPayload`
@@ -203,15 +188,12 @@ removes settled rows (accepted, merged, returned, withdrawn).
     - `latestSubmitAt`
     - `listHeldTurns`
     - `onTurnSubmitted`
-    - `promptSubmitHookEntry`
     - `recordPromptHookLaunch`
-    - `reportInputNotEmpty`
     - `resolvePromptSubmit`
     - `returnTurnByText`
     - `returnTurnsSince`
     - `userTurnSent`
   - Register:
-    - `defineFileWatcher('turn-ledger.prompt-submits')`
     - `defineJob('retention.conversation_turns')`
     - `defineTriggerEvent('conversation.userTurnSent')`
   - Resources:
@@ -248,11 +230,8 @@ removes settled rows (accepted, merged, returned, withdrawn).
 - Cross-plugin:
   - Imported by:
     - `conversations`
-    - `conversations/runtime-tmux`
     - `tasks/task-title`
 - Exemptions:
-  - Exempts itself from:
-    - `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
-    - `boundaries/no-platform-api` — `server/internal/mailbox.ts` (debt)
+  - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
 
 <!-- AUTOGENERATED:END -->

@@ -49,7 +49,7 @@ async function requireRow(
 }
 
 /**
- * Upsert the held question. A re-registration (the relay reconnecting after a
+ * Upsert the held question. A re-registration (the holder reconnecting after a
  * restart) only refreshes the holder's pid, and only while the question is
  * still open; either way it answers where the question stands.
  */
@@ -81,13 +81,6 @@ export async function registerQuestion(
   return resolutionOf(await requireRow(conversationId, body.toolUseId));
 }
 
-export async function readResolution(
-  conversationId: string,
-  toolUseId: string,
-): Promise<RelayResolution> {
-  return resolutionOf(await requireRow(conversationId, toolUseId));
-}
-
 export async function readOpenQuestions(
   conversationId: string,
   toolUseId: string,
@@ -101,7 +94,7 @@ export async function readOpenQuestions(
 
 /**
  * Move an open question to `to`. 409 when it already left `open` — two
- * answers racing, or an answer after "Answer in terminal".
+ * answers racing, or an answer after the agent withdrew the question.
  */
 export async function resolveQuestion(
   conversationId: string,
@@ -156,8 +149,8 @@ export async function latestHolds(
 }
 
 /**
- * Retire the open questions of `conversationIds` whose relay is gone. Returns
- * the retired rows (to wake their awaits).
+ * Retire the open questions of `conversationIds` whose holder is gone. Returns
+ * the retired rows.
  */
 export async function abandonDeadHolds(
   conversationIds: readonly string[],
@@ -181,23 +174,6 @@ export async function abandonDeadHolds(
         ),
         eq(t.state, "open"),
       ),
-    )
-    .returning({ toolUseId: t.toolUseId });
-}
-
-/**
- * Release every open question of `conversationIds` (the user is sending a
- * message instead of answering). Returns the released rows (to wake their
- * awaits).
- */
-export async function releaseOpenHolds(
-  conversationIds: readonly string[],
-): Promise<{ toolUseId: string }[]> {
-  return db
-    .update(t)
-    .set({ state: "released", resolvedAt: sql`now()` })
-    .where(
-      and(inArray(t.conversationId, [...conversationIds]), eq(t.state, "open")),
     )
     .returning({ toolUseId: t.toolUseId });
 }

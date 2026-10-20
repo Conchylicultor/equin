@@ -16,7 +16,7 @@ export const CreateConversationBodySchema = z
     taskId: z.string().optional(),
     attemptId: z.string().optional(),
     prompt: z.string().optional(),
-    // Omitted: the fork source's, else the task's pick, else the default.
+    // Omitted: the fork source's, else the default (runtime-catalog).
     runtime: ConversationRuntimeIdSchema.optional(),
     // Strict enum — an unknown/typo model id is rejected loudly at the endpoint
     // boundary (400) rather than silently coerced to the default. A family

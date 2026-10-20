@@ -370,8 +370,9 @@ export async function returnTurnByText(
 }
 
 /**
- * Record that the conversation's session was just launched with the ledger's
- * `UserPromptSubmit` hook (runtime-tmux's `create`, a resume included).
+ * Record that the conversation's session was just launched reporting every
+ * turn it takes (the sdk runtime's `create`, a resume included: its agent's
+ * `turn_started` event).
  */
 export async function recordPromptHookLaunch(
   conversationId: string,

@@ -4,7 +4,7 @@ import { RelayQuestionCard } from "./components/relay-question-card";
 
 export default {
   description:
-    "Answers a held AskUserQuestion from the web: owns the transcript's `\"question\"` pending prompt — the held question's form (answered as the tool's real result) with an Answer in terminal release, falling back to the Answer here flush when nothing is held.",
+    "Answers a held AskUserQuestion from the web: owns the transcript's `\"question\"` pending prompt — the held question's form, answered as the tool's real result.",
   contributions: [
     JsonlViewer.PendingPrompt({
       match: "question",

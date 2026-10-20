@@ -265,7 +265,6 @@ presence only — **no re-exports**; import from `core/`.
     - `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)
     - `boundaries/no-platform-api` — `core/internal/git-roots.ts`, `core/internal/spawn-captured.ts`, `core/internal/spawn-passthrough.ts` (debt)
   - Exempted by:
-    - `conversations/runtime-tmux` (0 debt)
     - `framework/cli/migrations` (0 debt)
     - `framework/tooling/checks/bun-runtime` (0 debt)
     - `infra/jobs/supervised-job` (0 debt)

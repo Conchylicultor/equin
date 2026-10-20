@@ -78,8 +78,8 @@ export type PromptMatch =
  * Compare the hook's `prompt` with what was typed. Byte-exact (Step 1, E1: the
  * hook's prompt is the box's text verbatim — multi-line, a leading `>`, `@`
  * tokens), save for whitespace at the two ends: the launch message reaches the
- * CLI with a leading space before a `/` (runtime-tmux's launch-message.ts), and
- * nothing else about a turn depends on edge whitespace.
+ * CLI with a leading space before a `/` (the retired tmux runtime's
+ * launch-message.ts did that), and nothing else about a turn depends on edge whitespace.
  *
  * `contains` is the incident's shape: a stale draft the box still held, with
  * the turn typed after it, submitted as ONE prompt.

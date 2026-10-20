@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-debug-session-divergence",
-  "description": "Session-divergence monitor: files a deduped Debug → Reports signal when a live conversation's Claude session (as seen in its tmux pane's process subtree) is absent from the recorded session chain while its transcript leads the chain tail's — i.e. the agent is talking in a session the UI cannot see.",
-  "private": true,
-  "version": "0.0.1"
-}

@@ -56,7 +56,7 @@ export async function seedConversations(
   ] as const) {
     await db.query(
       `INSERT INTO conversations (id, attempt_id, title, status, runtime, model, kind, ended_at)
-       VALUES ($1, $2, $3, 'done', 'tmux', $4, $5, now())`,
+       VALUES ($1, $2, $3, 'done', 'sdk', $4, $5, now())`,
       [conv.id, attemptId, conv.title, FALLBACK_MODEL, kind],
     );
   }

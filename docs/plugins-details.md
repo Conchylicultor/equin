@@ -11997,8 +11997,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 89 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×89
+    - Slot contributors: 87 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×87
     - Contributes: `Demo.Resource` "config-v2"
     - Uses:
       - `framework/browser-server/demo.Demo`
@@ -12165,11 +12165,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 113 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 112 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×32
       - `backup` ×13
       - `conversations` ×13
-      - `debug` ×13
+      - `debug` ×12
       - `ui` ×11
       - `auth` ×6
       - `tasks` ×4
@@ -12434,32 +12434,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shape --spacing`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
-  - Web:
-    - Contributes:
-      - `ConfigV2.WebRegister` "auto-answer"
-      - `ConfigV2.WebRegister` "conversation-runtime"
-    - Uses:
-      - `config_v2.ConfigV2`
-      - `network/live.mapRow`
-      - `network/live.useLive`
-      - `network/live.useLiveRow`
-      - `primitives/live-state.foldResource`
-      - `primitives/live-state.mapResource`
-      - `primitives/live-state.ResourceResult`
-      - `primitives/live-state.useCombinedResources`
-    - Exports (values):
-      - `useActiveConversations`
-      - `useConversation`
-      - `useConversationById`
-      - `useConversations`
-      - `useConversationTitleBySlug`
-      - `useHasActiveSiblingInWorktree`
-      - `useHasActiveSiblings`
-      - `useLiveConversation`
   - Server:
     - Contributes:
-      - `ConfigV2.Register` "auto-answer"
-      - `ConfigV2.Register` "conversation-runtime"
       - `trigger` "conversations.notify-created"
       - `trigger` "conversations.turn-emitter.reconcile"
       - `trigger` "conversations.turn-emitter.reconcile"
@@ -12470,14 +12446,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "held-turn-undelivered"
-    - Uses: 81 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `tasks/tasks-core` ×27
-      - `conversations/turn-ledger` ×13
+    - Uses: 74 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `tasks/tasks-core` ×24
+      - `conversations/turn-ledger` ×12
       - `conversations/transcript-watcher` ×7
       - `conversations/workspace` ×3
       - `infra/claude-cli/availability` ×3
       - `reports` ×3
-      - `config_v2` ×2
       - `conversations/session-chain` ×2
       - `conversations/spawn-failure` ×2
       - `database` ×2
@@ -12487,7 +12462,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/task-category` ×2
       - `conversations/model-provider/catalog.getModelCatalog`
       - `conversations/preprompts.resolvePreprompt`
-      - `conversations/runtime-launch-option.getTaskRuntime`
       - `conversations/workspace/launch-option.getTaskWorkspace`
       - `infra/attachments.getAttachment`
       - `infra/jobs.defineJob`
@@ -12506,25 +12480,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `QuestionHold`
       - `QuestionHoldSource`
       - `RuntimeInfo`
-      - `RuntimeScreen`
       - `RuntimeSignal`
       - `SubmitOutcome`
       - `SubmitVerdict`
-      - `TerminalMenuChoice`
       - `Turn`
       - `TurnSubmission`
       - `TypedTurn`
     - Exports (values):
       - `afterTurn`
-      - `answerTerminalMenu`
       - `conversationCreated`
       - `conversationTurnCompleted`
       - `createConversation`
       - `deleteConversation`
       - `ensureResumed`
-      - `flushInteractivePrompt`
       - `getConversationRow`
-      - `InputNotEmptyError`
       - `interruptConversation`
       - `launchTaskNow`
       - `maybeLaunchTaskJob`
@@ -12535,7 +12504,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ResumeBlockedError`
       - `resumeConversation`
       - `rewindConversationAt`
-      - `rewindConversationTurn`
       - `Runtime`
       - `submitTurn`
       - `TranscriptCutError`
@@ -12560,6 +12528,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `POST /api/conversations/:id/turns/:turnId/withdraw`
       - `GET /api/conversations/:id/turns`
       - `POST /api/conversations/:id/close`
+  - Web:
+    - Uses:
+      - `network/live.mapRow`
+      - `network/live.useLive`
+      - `network/live.useLiveRow`
+      - `primitives/live-state.foldResource`
+      - `primitives/live-state.mapResource`
+      - `primitives/live-state.ResourceResult`
+      - `primitives/live-state.useCombinedResources`
+    - Exports (values):
+      - `useActiveConversations`
+      - `useConversation`
+      - `useConversationById`
+      - `useConversations`
+      - `useConversationTitleBySlug`
+      - `useHasActiveSiblingInWorktree`
+      - `useHasActiveSiblings`
+      - `useLiveConversation`
   - Core:
     - Uses:
       - `config_v2.defineConfig`
@@ -12619,8 +12605,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `stopConversation`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 64 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×49
+    - Imported by: 62 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×47
       - `tasks` ×4
       - `apps` ×3
       - `review` ×3
@@ -12649,9 +12635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LAUNCH_CLI_SETTINGS`
           - `mergeLaunchSettings`
       - Cross-plugin:
-        - Imported by:
-          - `conversations/runtime-sdk`
-          - `conversations/runtime-tmux`
+        - Imported by: `conversations/runtime-sdk`
       - Core:
         - Exports (values): `TMUX_HOSTED_BY_OPTION`
     - **`agent-thread`** — Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the AgentThreadSlots.StepLabel dispatch, its answer, the host's own result cards, a composer that resumes an ended conversation), the hooks a host's other surfaces read (useThreadTurns, useThreadProgress, useLatestResult), generic step labels for the common built-in tools, and useThreadRuns (a host's recent runs under its scratch profile). Serves `agent-thread.runs` — the recent conversations launched in a scratch workspace, newest first, filterable by profile — over `_conversations` with the attempt joined (routed: a conversation write refills its own row).
@@ -14077,13 +14061,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.Overlay`
               - `JsonlViewer.PendingPromptAction`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 58 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 57 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.ContextRole` ×31
               - `JsonlViewer.EventRenderer` ×17
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
-              - `JsonlViewer.PendingPrompt` ×2
               - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
+              - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
               - `JsonlViewer.TranscriptEnd` ← `tasks.outcome-report`
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
@@ -14169,8 +14153,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 44 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×42
+            - Imported by: 43 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×41
               - `apps/agent-manager/demo`
               - `tasks/outcome-report`
           - Exemptions:
@@ -15444,11 +15428,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: 35 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
+                    - Uses: 33 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
                       - `primitives/css/ui-kit` ×9
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                       - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
-                      - `infra/endpoints` ×2
                       - `primitives/css/selection-indicator` ×2
                       - `primitives/persistent-draft` ×2
                       - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
@@ -15456,6 +15439,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/rewind.useGoBackToMessage`
                       - `conversations/conversation-view.conversationPane`
                       - `conversations.useConversation`
+                      - `infra/endpoints.fetchEndpoint`
                       - `network/live.useLive`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/fill.Fill`
@@ -15464,7 +15448,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/live-state.ResourceErrorInline`
-                      - `shell/notifications.toast`
                       - `ui/icons.Icon`
                     - Exports (types):
                       - `AnswerSelections`
@@ -15474,18 +15457,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Exports (values):
                       - `answerDraftScope`
                       - `AnswerForm`
-                      - `AnswerHereButton`
                       - `QuestionCard`
                   - Server:
                     - Uses:
-                      - `conversations.flushInteractivePrompt`
                       - `conversations.submitTurn`
                       - `infra/endpoints.HttpError`
                       - `infra/endpoints.implement`
-                      - `tasks/tasks-core.updateConversation`
-                    - Routes:
-                      - `POST /api/conversations/:id/answer-question`
-                      - `POST /api/conversations/:id/flush-question`
+                    - Routes: `POST /api/conversations/:id/answer-question`
                   - Cross-plugin:
                     - Uses tokens:
                       - `ui/tokens/color-palette --foreground`
@@ -15493,7 +15471,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --muted`
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/color-palette --primary`
-                      - `ui/tokens/color-palette --warning`
                       - `ui/tokens/density --space-2xs`
                       - `ui/tokens/density --space-sm`
                       - `ui/tokens/density --space-xs`
@@ -15512,7 +15489,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ANSWER_MARKER`
                       - `answerAskUserQuestion`
                       - `AnswerAskUserQuestionBodySchema`
-                      - `flushQuestion`
                 - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Bash" → `BashToolView`
@@ -17019,49 +16995,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/agent-thread`
           - `conversations/conversation-view`
-    - **`menu-relay`** — Answers the numbered menu open in a conversation's terminal from the web: owns the transcript's `"menu"` pending prompt — a card with the menu's title and one button per option, plus Cancel — and the MenuRelay.Variant slot, through which a plugin gives a menu it knows its own look. Answers a conversation's open terminal menu from the web: the answer endpoint, which re-reads the menu, refuses one that changed, and drives the terminal to the chosen option.
-      - Web:
-        - Slots: `MenuRelay.Variant`
-        - Slot contributors: `MenuRelay.Variant` ← `conversations.menu-relay.usage-limit`
-        - Contributes: `JsonlViewer.PendingPrompt` "menu" → `TerminalMenuCard`
-        - Uses:
-          - `conversations.useConversation`
-          - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-          - `infra/endpoints.useEndpointMutation`
-          - `primitives/css/card.Card`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.Button`
-          - `primitives/live-state.foldResource`
-          - `primitives/live-state.ResourceErrorInline`
-          - `primitives/loading.Loading`
-          - `primitives/slot-render.defineDispatchSlot`
-        - Exports (types): `MenuVariantProps`
-        - Exports (values): `MenuRelay`
-      - Server:
-        - Uses:
-          - `conversations.answerTerminalMenu`
-          - `conversations.requestStatusReconcile`
-          - `infra/endpoints.implement`
-        - Routes: `POST /api/conversations/:id/menu/answer`
-      - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
-        - Exports (types): `AnswerMenuBody`
-        - Exports (values):
-          - `AnswerMenuBodySchema`
-          - `answerTerminalMenu`
-      - Cross-plugin:
-        - Imported by: `conversations/menu-relay/usage-limit`
-      - Plugins:
-        - **`usage-limit`** — Claude Code's usage-limit menu, drawn by the terminal-menu card: when the limit resets (with a countdown) and Wait & continue automatically / Stop / Use usage credits buttons that answer it.
-          - Web:
-            - Contributes: `MenuRelay.Variant` → `UsageLimitMenu`
-            - Uses:
-              - `conversations/menu-relay.MenuRelay`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/relative-time.useNow`
     - **`model-provider`** — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's version as a hint, pinned versions the user turned on), and the corruption reporter for malformed stored models. Model ids, families and choices: the id grammar every concrete version follows (flag, label and family derive from the id alone), the catalog shape and its pure readers (resolveModel, choiceHint, selectableChoices), and the model-provider config.
       - Web:
         - Contributes:
@@ -17269,20 +17202,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-preprompt`
       - Shared:
         - Exports (values): `prepromptsConfig`
-    - **`question-relay`** — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form (answered as the tool's real result) with an Answer in terminal release, falling back to the Answer here flush when nothing is held. The AskUserQuestion relay's backend: the pending_questions table (one row per held call: open → answered | released | abandoned), the register / await (a push-woken long-poll) / answer / release / abandon endpoints, the open-questions live collection, the question-hold source that tells the status reconciler a held question is waiting (and retires holds whose relay died), and a 7-day retention sweep of resolved rows.
+    - **`question-relay`** — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form, answered as the tool's real result. The AskUserQuestion relay's backend: the pending_questions table (one row per held call: open → answered | abandoned), holdQuestion / retireQuestion for the runtime holding the call in-process, the answer endpoint and onQuestionResolved, the open-questions live collection, the question-hold source that tells the status reconciler a held question is waiting (and retires holds whose holder died), and a 7-day retention sweep of resolved rows.
       - Web:
         - Contributes: `JsonlViewer.PendingPrompt` "question" → `RelayQuestionCard`
         - Uses:
           - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.answerDraftScope`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerForm`
-          - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerHereButton`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.FormAnswer`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.QuestionCard`
           - `infra/endpoints.useEndpointMutation`
           - `network/live.useLive`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.Button`
           - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
       - Server:
@@ -17307,19 +17238,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `holdQuestion`
           - `onQuestionResolved`
-          - `relayHookEntry`
           - `retireQuestion`
         - Register: `defineJob('retention.pending_questions')`
         - Resources:
           - `question-relay.pending` (keyed, window)
           - `question-relay.pending:groups` (push)
           - `question-relay.pending:rows` (keyed, point)
-        - Routes:
-          - `POST /api/conversations/:id/questions`
-          - `GET /api/conversations/:id/questions/:toolUseId/await`
-          - `POST /api/conversations/:id/questions/:toolUseId/answer`
-          - `POST /api/conversations/:id/questions/:toolUseId/release`
-          - `POST /api/conversations/:id/questions/:toolUseId/abandon`
+        - Routes: `POST /api/conversations/:id/questions/:toolUseId/answer`
       - Core:
         - Uses:
           - `fields/date/config.dateField`
@@ -17334,33 +17259,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PendingQuestion`
           - `QuestionSelection`
           - `RegisterQuestionBody`
-          - `RelayHookEntry`
           - `RelayQuestion`
           - `RelayResolution`
           - `RelayState`
         - Exports (values):
-          - `abandonRelayQuestion`
           - `AnswerQuestionBodySchema`
           - `answerRelayQuestion`
-          - `AWAIT_HOLD_MS`
-          - `awaitRelayQuestion`
           - `CliAnswerSchema`
           - `pendingQuestions`
           - `PendingQuestionSchema`
           - `QuestionSelectionSchema`
           - `RegisterQuestionBodySchema`
-          - `registerRelayQuestion`
-          - `RELAY_HOOK_TIMEOUT_S`
-          - `RELAY_STATUS_MESSAGE`
           - `RelayQuestionSchema`
           - `RelayQuestionsSchema`
           - `RelayResolutionSchema`
           - `RelayStateSchema`
-          - `releaseRelayQuestion`
-      - Cross-plugin:
-        - Imported by: `conversations/runtime-tmux`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/relay-hook.ts` (debt)
     - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
       - Web:
         - Slots: `recoveryPane.Actions`
@@ -17413,64 +17326,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RestoreBatchBodySchema`
     - **`runtime-catalog`**
       - Cross-plugin:
-        - Imported by:
-          - `conversations`
-          - `conversations/runtime-launch-option`
+        - Imported by: `conversations`
       - Core:
         - Exports (types): `ConversationRuntimeId`
         - Exports (values):
           - `CONVERSATION_RUNTIME_IDS`
           - `CONVERSATION_RUNTIMES`
           - `ConversationRuntimeIdSchema`
-          - `conversationRuntimeInfo`
-    - **`runtime-launch-option`** — Runtime picker as a launch option: which runtime the task's conversations start on — the configured default, the interactive CLI in tmux, or a headless Agent SDK session — on the task-draft composer (a pill) and the task detail's Prompt card. Owns the tasks_ext_runtime side-table: the runtime (tmux or the Agent SDK) a task's conversations start on, read when one is launched — absent, the configured default.
-      - Web:
-        - Contributes: `TaskLaunch.Option` "Runtime" → `RuntimeLaunchControl`
-        - Uses:
-          - `infra/endpoints.fetchEndpoint`
-          - `network/live.mapRow`
-          - `network/live.useLiveRow`
-          - `primitives/css/ui-kit.Select`
-          - `primitives/css/ui-kit.SelectContent`
-          - `primitives/css/ui-kit.SelectItem`
-          - `primitives/css/ui-kit.SelectTrigger`
-          - `primitives/css/ui-kit.SelectValue`
-          - `primitives/text-editor/composer/picker-pill.PickerPill`
-          - `shell/notifications.toast`
-          - `tasks/launch-options.TaskLaunch`
-      - Server:
-        - Contributes:
-          - `resource.declare` "task-runtimes:rows"
-          - `taskLaunchServer` "runtime"
-        - Uses:
-          - `infra/endpoints.implement`
-          - `infra/entity-extensions.defineExtension`
-          - `network/live.serveCollection`
-          - `tasks/launch-options.TaskLaunchServer`
-          - `tasks/tasks-core._tasks`
-        - DB schema: `plugins/conversations/plugins/runtime-launch-option/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_runtime`)
-        - Exports (values): `getTaskRuntime`
-        - Resources: `task-runtimes:rows` (keyed, point)
-        - Routes:
-          - `PUT /api/task-runtimes/:taskId`
-          - `DELETE /api/task-runtimes/:taskId`
-      - Core:
-        - Uses:
-          - `conversations/runtime-catalog.ConversationRuntimeId`
-          - `conversations/runtime-catalog.ConversationRuntimeIdSchema`
-          - `tasks/launch-options.defineLaunchOption`
-        - Exports (values): `runtimeLaunchOption`
-      - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: `conversations`
-      - Shared:
-        - Exports (types): `TaskRuntime`
-        - Exports (values):
-          - `deleteTaskRuntime`
-          - `putTaskRuntime`
-          - `taskRuntimes`
-          - `taskRuntimeShape`
+          - `DEFAULT_CONVERSATION_RUNTIME`
     - **`runtime-sdk`** — The health report's Agent SDK row: attention when the system Claude Code the sdk runtime runs differs in major.minor from the CLI version the pinned Agent SDK was built for. The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file.
       - Web:
         - Contributes: `HealthReport.Row` "Agent SDK"
@@ -17519,40 +17382,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TurnReplySchema`
       - Machine:
         - Register: `defineFileWatcher('runtime-sdk.events')`
-    - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
-      - Server:
-        - Uses: 33 symbols — full list in [`plugins/conversations/plugins/runtime-tmux/REFERENCE.md`](../plugins/conversations/plugins/runtime-tmux/REFERENCE.md)
-          - `conversations` ×9
-          - `conversations/agent-launch` ×5
-          - `conversations/turn-ledger` ×3
-          - `infra/file-watcher` ×3
-          - `infra/paths` ×3
-          - `infra/worktree` ×3
-          - `reports` ×3
-          - `conversations/question-relay.relayHookEntry`
-          - `infra/claude-cli/availability.requireClaudeBin`
-          - `infra/jobs.defineJob`
-          - `packages/spawn-priority.backgroundPrefix`
-        - Exports (types):
-          - `PaneRef`
-          - `ProcessLister`
-          - `ProcessTree`
-          - `TmuxPane`
-        - Exports (values):
-          - `captureProcessTree`
-          - `listPanes`
-          - `subtreePids`
-        - Register:
-          - `defineFileWatcher('runtime-tmux.session-files')`
-          - `defineFileWatcher('runtime-tmux.tmux-signals')`
-          - `defineFileWatcher('runtime-tmux.op-signals')`
-          - `defineJob('runtime-tmux.prune-signals')`
-      - Cross-plugin:
-        - Imported by: `debug/session-divergence`
-      - Exemptions:
-        - Exempts itself from:
-          - `spawn-safety/no-raw-bun-spawn` — `server/internal/tmux-runtime.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/claude-session.ts`, `server/internal/prune-signals-job.ts`, `server/internal/signals.ts`, `server/internal/tmux-runtime.ts` (debt)
     - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
       - Web:
         - Contributes: `IdKinds.Kind` "sess"
@@ -17593,7 +17422,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations`
           - `conversations/transcript-watcher`
           - `conversations/usage`
-          - `debug/session-divergence`
     - **`spawn-failure`** — Answers the conversation-spawn-failures collection inside a demo scope (no launch failed), so the surfaces that read a conversation's spawn failure render in the demo. Per-conversation spawn failure: the latest error of a conversation's spawn job (the failed step and its message), stored in conversations_ext_spawn_failure by the job on every failed attempt and deleted once a session starts, served as a lookup-only collection.
       - Web:
         - Contributes: `Demo.Resource` "conversation-spawn-failures"
@@ -17731,20 +17559,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-generate.ts` (debt)
       - Shared:
         - Exports (values): `generateConversationSummary`
-    - **`terminal-menu`** — The shape of an interactive numbered menu a conversation's terminal has open (title, options, highlighted option, footer): the value the runtime reads off the screen, the conversation row carries as waitingMenu, and the web's menu card answers.
-      - Core:
-        - Uses: `infra/endpoints.HttpError`
-        - Exports (types):
-          - `TerminalMenu`
-          - `TerminalMenuOption`
-        - Exports (values):
-          - `sameTerminalMenu`
-          - `TERMINAL_MENU_WAITING_FOR`
-          - `TerminalMenuChangedError`
-          - `TerminalMenuOptionSchema`
-          - `TerminalMenuSchema`
-      - Cross-plugin:
-        - Imported by: `tasks/tasks-core`
     - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the ordered on-disk JSONL paths of a conversation's Claude session chain.
       - Server:
         - Uses:
@@ -17820,7 +17634,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/transcript-api`
           - `conversations/transcript-retention`
           - `conversations/usage`
-          - `debug/session-divergence`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
       - Core:
@@ -17856,7 +17669,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unwrapRelayEnvelopes`
           - `userPromptText`
           - `wrapPreprompt`
-    - **`turn-ledger`** — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, the prompt-submit mailbox (each agent's UserPromptSubmit hook drops the submitted prompt in a file; a watcher matches it to the oldest unconfirmed turn and deletes it), the turn-ledger.turns live collection, the conversation.userTurnSent event (emitted once the CLI confirmed a user's turn), the turn-merged / turn-unverified / turn-input-not-empty report kinds and a 7-day retention sweep of settled rows.
+    - **`turn-ledger`** — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, resolvePromptSubmit (the agent's confirmation that it took a turn, matched to the oldest unconfirmed one), the turn-ledger.turns live collection, the conversation.userTurnSent event (emitted once the agent confirmed a user's turn), the turn-merged / turn-unverified report kinds and a 7-day retention sweep of settled rows.
       - Web:
         - Contributes: `IdKinds.Kind` "turn"
         - Uses: `ids.IdKinds`
@@ -17866,7 +17679,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "turn-ledger.turns"
           - `resource.declare` "turn-ledger.turns:groups"
           - `resource.declare` "turn-ledger.turns:rows"
-          - `report-kind` "turn-input-not-empty"
           - `report-kind` "turn-merged"
           - `report-kind` "turn-unverified"
         - Uses:
@@ -17875,8 +17687,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.defineEntity`
           - `infra/entities.sqlDefault`
           - `infra/events.defineTriggerEvent`
-          - `infra/file-watcher.defineFileWatcher`
-          - `infra/file-watcher.FileWatcher`
           - `infra/retention.defineRetention`
           - `network/live.serveCollection`
           - `reports.recordReport`
@@ -17890,7 +17700,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `AcceptOutcome`
           - `NewTurn`
-          - `PromptSubmitHookEntry`
           - `TurnEvent`
           - `TurnRow`
           - `UserTurnSentPayload`
@@ -17904,15 +17713,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `latestSubmitAt`
           - `listHeldTurns`
           - `onTurnSubmitted`
-          - `promptSubmitHookEntry`
           - `recordPromptHookLaunch`
-          - `reportInputNotEmpty`
           - `resolvePromptSubmit`
           - `returnTurnByText`
           - `returnTurnsSince`
           - `userTurnSent`
         - Register:
-          - `defineFileWatcher('turn-ledger.prompt-submits')`
           - `defineJob('retention.conversation_turns')`
           - `defineTriggerEvent('conversation.userTurnSent')`
         - Resources:
@@ -17949,12 +17755,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `conversations`
-          - `conversations/runtime-tmux`
           - `tasks/task-title`
       - Exemptions:
-        - Exempts itself from:
-          - `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
-          - `boundaries/no-platform-api` — `server/internal/mailbox.ts` (debt)
+        - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
     - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — counted incrementally from the transcripts (the anchored session chain plus every sub-agent), stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose).
       - Web:
         - Contributes: `FieldPresentation.Register` "exposure:conversations_ext_usage"
@@ -20982,50 +20785,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SIGNAL_KEYS`
               - `SignalKeySchema`
               - `SignalVitalSchema`
-    - **`session-divergence`** — Session-divergence report renderer: a one-line Debug → Reports summary for the conversation-session-divergence kind, plus the enabled/grace config registration. Session-divergence monitor: a per-worktree scheduled job that takes one process-table snapshot (sharing runtime-tmux's own captureProcessTree), reads every Claude session id reachable from each live conversation pane — its process subtree plus the parked-background-job pointers out of it — and files one deduped conversation-session-divergence report per conversation whose live session is absent from the recorded session chain while its transcript leads the chain tail's by more than the grace window — i.e. the agent is talking where the UI cannot see.
-      - Web:
-        - Contributes:
-          - `ConfigV2.WebRegister` "session-divergence"
-          - `Reports.KindView` → `SessionDivergenceSummary`
-        - Uses:
-          - `config_v2.ConfigV2`
-          - `primitives/css/badge.Badge`
-          - `primitives/css/inline.Inline`
-          - `reports.Reports`
-      - Server:
-        - Contributes:
-          - `ConfigV2.Register` "session-divergence"
-          - `report-kind` "conversation-session-divergence"
-        - Uses:
-          - `config_v2.ConfigV2`
-          - `config_v2.getConfig`
-          - `conversations/runtime-tmux.captureProcessTree`
-          - `conversations/runtime-tmux.listPanes`
-          - `conversations/runtime-tmux.ProcessTree`
-          - `conversations/runtime-tmux.subtreePids`
-          - `conversations/session-chain.listSessionChain`
-          - `conversations/session-chain.listSharedClaudeSessionIds`
-          - `conversations/session-chain.SharedSessionId`
-          - `conversations/transcript-watcher.AnchoredChain`
-          - `conversations/transcript-watcher.findTranscriptPath`
-          - `conversations/transcript-watcher.resolveAnchoredChain`
-          - `infra/jobs.defineJob`
-          - `infra/paths.CLAUDE_SESSIONS_DIR`
-          - `reports.recordReport`
-          - `reports.ReportKind`
-          - `tasks/tasks-core.listActiveConversations`
-        - Register: `defineJob('debug.session-divergence-monitor')`
-      - Core:
-        - Uses:
-          - `config_v2.defineConfig`
-          - `fields/bool/config.boolField`
-          - `fields/int/config.intField`
-        - Exports (types): `SessionDivergencePayload`
-        - Exports (values):
-          - `sessionDivergenceConfig`
-          - `SessionDivergencePayloadSchema`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/detect.ts` (debt)
     - **`slow-ops`** — Records slow client operations (page load, element appearance, and every client latency signal — a live update applied, an optimistic write confirmed — split into its phases) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates and their callers (one row per op × caller), both written through change producers, plus the slow-op report kind and the live collections the pane reads (slow-ops.ops list, slow-ops.op detail, slow-ops.callers). Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
       - Web:
         - Contributes:
@@ -21992,8 +21751,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
-              - `debug` ×12
+            - Imported by: 29 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+              - `debug` ×11
               - `apps` ×6
               - `conversations` ×4
               - `tasks` ×2
@@ -22691,8 +22450,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
-              - `debug` ×13
+            - Imported by: 37 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+              - `debug` ×12
               - `apps` ×8
               - `infra` ×4
               - `conversations` ×3
@@ -24473,12 +24232,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer/subagents` (1 debt)
               - `conversations/conversation-view/rewind` (1 debt)
               - `conversations/model-provider/catalog` (2 debt)
-              - `conversations/question-relay` (1 debt)
-              - `conversations/runtime-tmux` (4 debt)
               - `conversations/summary` (1 debt)
               - `conversations/transcript-retention` (1 debt)
               - `conversations/transcript-watcher` (4 debt)
-              - `conversations/turn-ledger` (1 debt)
               - `conversations/usage` (1 debt)
               - `conversations/workspace` (1 debt)
               - `conversations/workspace/scratch` (3 debt)
@@ -24507,7 +24263,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/scratch-hello` (1 debt)
               - `debug/sentinel` (4 debt)
               - `debug/sentinel/status-file` (3 debt)
-              - `debug/session-divergence` (1 debt)
               - `debug/timeline` (2 debt)
               - `debug/trace/engine` (1 debt)
               - `debug/worktree-cleanup` (3 debt)
@@ -26303,7 +26058,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/agents`
               - `conversations/model-provider/catalog`
               - `conversations/runtime-sdk`
-              - `conversations/runtime-tmux`
               - `infra/claude-cli`
               - `primitives/launch`
               - `tasks`
@@ -26702,9 +26456,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unavailableMessage`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 206 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 203 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×55
-          - `conversations` ×31
+          - `conversations` ×28
           - `debug` ×17
           - `infra` ×16
           - `page` ×14
@@ -26858,10 +26612,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 41 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×16
           - `tasks` ×11
-          - `conversations` ×10
+          - `conversations` ×9
           - `page` ×3
           - `plugin-meta/plugin-health`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger(). Contributes a BackgroundTriggerSource so the Background activity catalog names the events that start each job.
@@ -27144,10 +26898,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `statHistory`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope.
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `debug` ×7
           - `infra` ×7
-          - `conversations` ×6
+          - `conversations` ×4
           - `apps` ×2
           - `build`
           - `config_v2`
@@ -27884,11 +27638,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 71 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 69 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×19
-          - `conversations` ×14
+          - `conversations` ×13
           - `infra` ×13
-          - `debug` ×9
+          - `debug` ×8
           - `tasks` ×4
           - `database` ×3
           - `page` ×3
@@ -28409,12 +28163,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 56 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `debug` ×10
+        - Imported by: 54 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `debug` ×9
           - `infra` ×8
           - `build` ×7
-          - `conversations` ×5
           - `backup` ×4
+          - `conversations` ×4
           - `framework` ×4
           - `primitives` ×3
           - `release` ×3
@@ -28950,7 +28704,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)
           - `boundaries/no-platform-api` — `core/internal/git-roots.ts`, `core/internal/spawn-captured.ts`, `core/internal/spawn-passthrough.ts` (debt)
         - Exempted by:
-          - `conversations/runtime-tmux` (0 debt)
           - `framework/cli/migrations` (0 debt)
           - `framework/tooling/checks/bun-runtime` (0 debt)
           - `infra/jobs/supervised-job` (0 debt)
@@ -29216,15 +28969,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreePathFor`
           - `writeWorktreeSpec`
       - Cross-plugin:
-        - Imported by: 23 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
+        - Imported by: 22 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
           - `debug` ×5
           - `infra` ×5
           - `tasks` ×3
           - `build` ×2
-          - `conversations` ×2
           - `stats` ×2
           - `backup/sources/databases`
           - `code-explorer`
+          - `conversations/workspace/worktree`
           - `plugin-meta/plugin-health`
           - `release/source-checkout`
       - Exemptions:
@@ -30342,9 +30095,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 251 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 250 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×70
-          - `conversations` ×45
+          - `conversations` ×44
           - `tasks` ×27
           - `debug` ×26
           - `infra` ×14
@@ -30748,7 +30501,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Cross-plugin:
         - Imported by:
-          - `conversations/runtime-tmux`
           - `infra/host/host-admission`
           - `infra/spawn`
       - Exemptions:
@@ -35527,9 +35279,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 166 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 165 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
-              - `debug` ×36
+              - `debug` ×35
               - `conversations` ×24
               - `reports` ×12
               - `primitives` ×10
@@ -35589,11 +35341,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/density --pad-card`
               - `ui/tokens/shadow --shadow`
-            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
+            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
               - `apps` ×12
               - `primitives` ×4
-              - `conversations` ×3
               - `page` ×3
+              - `conversations` ×2
               - `active-data/task`
               - `debug/trace/contention`
               - `plugin-meta/exhibits`
@@ -35941,9 +35693,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×16
-              - `debug` ×15
+              - `debug` ×14
               - `reports` ×13
               - `conversations` ×9
               - `primitives` ×9
@@ -36398,9 +36150,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 398 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 396 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×105
-              - `conversations` ×63
+              - `conversations` ×61
               - `primitives` ×51
               - `debug` ×36
               - `ui` ×29
@@ -36618,9 +36370,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 372 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 370 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×104
-              - `conversations` ×72
+              - `conversations` ×70
               - `primitives` ×42
               - `debug` ×35
               - `page` ×21
@@ -36903,10 +36655,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 418 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 414 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×106
               - `apps` ×93
-              - `conversations` ×57
+              - `conversations` ×53
               - `page` ×25
               - `debug` ×22
               - `ui` ×20
@@ -39210,9 +38962,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 250 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 249 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×69
-          - `conversations` ×45
+          - `conversations` ×44
           - `debug` ×23
           - `ui` ×23
           - `tasks` ×22
@@ -39302,10 +39054,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 192 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 191 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×63
           - `ui` ×20
-          - `conversations` ×19
+          - `conversations` ×18
           - `debug` ×18
           - `primitives` ×17
           - `tasks` ×13
@@ -40995,10 +40747,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 64 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×23
           - `debug` ×13
-          - `conversations` ×8
+          - `conversations` ×7
           - `infra` ×4
           - `tasks` ×4
           - `build` ×3
@@ -41391,9 +41143,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDispatchOutcome`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/density --control-height-sm`
-        - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×27
-          - `conversations` ×14
+          - `conversations` ×13
           - `primitives` ×13
           - `ui` ×5
           - `shell` ×4
@@ -41767,7 +41519,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-lg`
                   - `ui/tokens/shape --spacing`
                 - Imported by:
-                  - `conversations/runtime-launch-option`
                   - `conversations/workspace/launch-option`
                   - `primitives/text-editor/composer`
                   - `tasks/auto-start/launch-option`
@@ -42901,8 +42652,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 29 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×29
+    - Slot contributors: 28 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×28
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -43014,10 +42765,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:
-    - Imported by: 57 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 55 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×21
-      - `debug` ×16
-      - `conversations` ×7
+      - `debug` ×15
+      - `conversations` ×6
       - `database` ×3
       - `framework` ×2
       - `infra` ×2
@@ -44314,8 +44065,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×7
           - `ui/tokens/density` ×4
           - `ui/tokens/shape --spacing`
-        - Imported by: 35 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
-          - `conversations` ×16
+        - Imported by: 33 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+          - `conversations` ×14
           - `tasks` ×6
           - `apps` ×2
           - `build` ×2
@@ -45286,7 +45037,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Slots: `TaskLaunch.Option`
         - Slot contributors:
-          - `TaskLaunch.Option` ← `conversations.runtime-launch-option`
           - `TaskLaunch.Option` ← `conversations.workspace.launch-option`
           - `TaskLaunch.Option` ← `tasks.auto-start.launch-option`
           - `TaskLaunch.Option` ← `tasks.task-effort`
@@ -45329,7 +45079,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/type-scale --font-weight-medium`
         - Imported by:
           - `apps/agent-manager/welcome`
-          - `conversations/runtime-launch-option`
           - `conversations/workspace/launch-option`
           - `plugin-meta/plugin-health`
           - `primitives/launch`
@@ -46351,7 +46100,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
         - Exports (types):
-          - `AdoptOrphanInput`
           - `Attempt`
           - `AttemptStatus`
           - `AttemptWithConversations`
@@ -46385,7 +46133,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_taskStatusChangedTriggers`
           - `_taskTitleChangedTriggers`
           - `addTaskDependency`
-          - `adoptOrphanConversation`
           - `AttemptSchema`
           - `AttemptStatusSchema`
           - `clusterLabelOf`
@@ -46423,7 +46170,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listConversationsForDisplay`
           - `listConversationsForInfra`
           - `listDependentIds`
-          - `listExistingConversationIds`
           - `listHibernationCandidates`
           - `listPushesByPushId`
           - `listPushesForAttempt`
@@ -46480,12 +46226,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` (keyed)
           - `tasks:rows` (keyed, point)
       - Core:
-        - Uses: 24 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Uses: 22 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations/workspace` ×3
           - `fields/text/config` ×3
           - `fields` ×3
           - `conversations/model-provider` ×2
-          - `conversations/terminal-menu` ×2
           - `fields/rank/config` ×2
           - `network/live` ×2
           - `fields/bool/config.boolField`
@@ -46511,7 +46256,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatus`
           - `TrailerCommit`
         - Exports (values):
-          - `ADOPTED_SPAWNED_BY`
           - `attemptDeliveriesEntityRef`
           - `attemptRows`
           - `AttemptSchema`
@@ -46552,11 +46296,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 74 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×33
+        - Imported by: 71 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×31
           - `tasks` ×17
           - `active-data` ×5
-          - `debug` ×5
+          - `debug` ×4
           - `page` ×3
           - `apps` ×2
           - `infra` ×2
@@ -46584,7 +46328,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/outcome-report` (table `tasks_ext_outcome_report`)
           - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
           - `page/prompt/link` (table `tasks_ext_prompt_block`)
-          - `conversations/runtime-launch-option` (table `tasks_ext_runtime`)
           - `tasks/task-title` (table `tasks_ext_short_title`)
           - `tasks/sidequest-autopilot` (table `tasks_ext_sidequest_triage`)
           - `tasks/task-source-url` (table `tasks_ext_source_url`)
@@ -48190,8 +47933,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 415 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×91
+            - Tokens used by: 414 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×90
               - `apps` ×82
               - `primitives` ×69
               - `page` ×35

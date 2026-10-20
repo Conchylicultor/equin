@@ -1,5 +1,4 @@
 import { useCallback, useRef } from "react";
-import { TERMINAL_MENU_WAITING_FOR } from "@plugins/conversations/plugins/terminal-menu/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import {
@@ -71,13 +70,9 @@ export function PromptInput({
   }, [conversation.id, disabled, clearDraft]);
 
   const placeholder = disabled
-    ? live.waitingFor === TERMINAL_MENU_WAITING_FOR
-      ? "Answer the menu above"
-      : live.waitingFor
-        ? "Waiting for your answer in the terminal"
-        : live.status === "done"
-          ? "Conversation is done"
-          : "Conversation is disconnected"
+    ? live.status === "done"
+      ? "Conversation is done"
+      : "Conversation is disconnected"
     : live.waitingFor === QUESTION_WAITING_FOR
       ? "Answer above, or send a message to skip the question"
       : live.status === "starting"

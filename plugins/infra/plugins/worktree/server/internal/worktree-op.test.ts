@@ -22,7 +22,6 @@ import {
   markWorktreeOpStart,
   probeWorktreeOp,
 } from "./worktree-op";
-import { opSignalsDir } from "../../data-dirs";
 
 // The marker functions resolve their path from the real worktreeDataDir(slug);
 // there is no path injection. So each test uses a throwaway random slug (never
@@ -39,7 +38,6 @@ async function withTempSlug(
     await fn(slug);
   } finally {
     rmSync(worktreeDataDir(slug), { recursive: true, force: true });
-    rmSync(opSignalsDir.file(slug), { force: true });
   }
 }
 
@@ -49,37 +47,6 @@ function writeRaw(slug: Namespace, file: string, data: unknown): string {
   writeFileSync(path, typeof data === "string" ? data : JSON.stringify(data));
   return path;
 }
-
-// --- the op signal ----------------------------------------------------------
-
-test("publishing, releasing and reaping a marker each touch the slug's op signal", async () => {
-  await withTempSlug(async (slug) => {
-    const signal = opSignalsDir.file(slug);
-    const marker = markWorktreeOpStart(slug, "build", "op-1");
-    expect(existsSync(signal)).toBe(true);
-
-    rmSync(signal);
-    marker.release();
-    expect(existsSync(signal)).toBe(true);
-
-    // A dead (unlocked) v2 marker: the reaping read touches it too.
-    rmSync(signal);
-    writeRaw(slug, "op-2.json", {
-      v: 2,
-      kind: "push",
-      opId: "op-2",
-      pid: process.pid,
-      startedAt: new Date().toISOString(),
-    });
-    expect(await listWorktreeOps(slug)).toEqual([]);
-    expect(existsSync(signal)).toBe(true);
-
-    // A read that reaps nothing does not.
-    rmSync(signal);
-    expect(await listWorktreeOps(slug)).toEqual([]);
-    expect(existsSync(signal)).toBe(false);
-  });
-});
 
 // --- the held marker --------------------------------------------------------
 

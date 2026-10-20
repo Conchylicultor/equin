@@ -85,7 +85,7 @@ async function seedConversation(status: string): Promise<string> {
   `);
   await t.db.execute(sql`
     INSERT INTO conversations (id, attempt_id, status, runtime, model, spawned_by)
-    VALUES (${conversationId}, ${attemptId}, ${status}, 'tmux', ${FALLBACK_MODEL}, 'test')
+    VALUES (${conversationId}, ${attemptId}, ${status}, 'sdk', ${FALLBACK_MODEL}, 'test')
   `);
   return conversationId;
 }

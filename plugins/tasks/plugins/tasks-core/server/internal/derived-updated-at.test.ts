@@ -55,7 +55,7 @@ async function seedConversation(
   `);
   await t.db.execute(sql`
     INSERT INTO conversations (id, attempt_id, title, status, runtime, model, kind, created_at, updated_at)
-    VALUES (${id}, ${attemptId}, 'a', ${status}, 'tmux', 'opus', 'user', ${OLD}, ${OLD})
+    VALUES (${id}, ${attemptId}, 'a', ${status}, 'sdk', 'opus', 'user', ${OLD}, ${OLD})
   `);
   return id;
 }

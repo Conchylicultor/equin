@@ -109,7 +109,7 @@ async function seedAttemptWithConversation(
   `);
   await t.db.execute(sql`
     INSERT INTO conversations (id, attempt_id, status, runtime, model, spawned_by)
-    VALUES (${conversationId}, ${attemptId}, 'working', 'tmux', ${MODEL}, 'test')
+    VALUES (${conversationId}, ${attemptId}, 'working', 'sdk', ${MODEL}, 'test')
   `);
   return attemptId;
 }
@@ -117,7 +117,7 @@ async function seedAttemptWithConversation(
 function prepared(taskId: string): PreparedConversation {
   const attemptId = nextId("att");
   return {
-    runtimeId: "tmux",
+    runtimeId: "sdk",
     conversationId: nextId("conv"),
     model: MODEL,
     spawnedBy: "test",

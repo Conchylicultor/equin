@@ -388,7 +388,7 @@ async function insertConversation(
     attemptId,
     title: opts.title,
     status: opts.status,
-    runtime: "tmux",
+    runtime: "sdk",
     model: FALLBACK_MODEL,
     kind: opts.kind,
     createdAt: at,
@@ -407,7 +407,7 @@ async function seedOverCap(tag: string): Promise<void> {
   await testDb.db.execute(
     sql.raw(
       `INSERT INTO conversations (id, attempt_id, title, status, runtime, model, kind, created_at, updated_at)
-         SELECT '${tag}-conversation-' || g, '${tag}-att', '${tag} ' || g, 'working', 'tmux', '${FALLBACK_MODEL}', 'user',
+         SELECT '${tag}-conversation-' || g, '${tag}-att', '${tag} ' || g, 'working', 'sdk', '${FALLBACK_MODEL}', 'user',
                 now() + (g || ' seconds')::interval, now()
            FROM generate_series(1, 520) g`,
     ),

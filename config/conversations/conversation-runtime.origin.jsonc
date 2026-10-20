@@ -1,6 +1,0 @@
-// @hash a7a4ea5c8604
-{
-  // What a new conversation runs on unless its task picks one: the interactive CLI in a terminal (tmux), or a headless Agent SDK session (sdk).
-  // Allowed values: "tmux", "sdk"
-  "defaultRuntime": "tmux"
-}

@@ -26,7 +26,7 @@ export interface LedgerPlan {
    * NAMED, not dropped. From inside this database "foreign, this instance will
    * never own it" and "not mine yet — the conversation row has not been adopted
    * here" are the same observation, so a caller may never treat a deferral as
-   * covered: `adoptOrphanConversation` can turn the second into a row later. What
+   * covered: a conversation row can still appear for the second later. What
    * re-offers these commits to a later walk is the walk bound, not this function;
    * see ./walk-bound.ts for the policy and the horizon it stops at.
    */

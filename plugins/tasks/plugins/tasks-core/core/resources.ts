@@ -288,7 +288,6 @@ const CONVERSATION_QUEUE_CARRY = {
     "closeRequested",
     "hibernatedAt",
     "lastViewedAt",
-    "waitingMenu",
   ],
   fields: { taskId: textField(), active: boolField() },
 } as const;

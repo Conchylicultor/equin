@@ -172,7 +172,7 @@ describe('unresolvable worktree — one consistent (unresolved, "no-worktree") p
     await insertConversation({
       id: convId,
       attemptId,
-      runtime: "tmux",
+      runtime: "sdk",
       model: FALLBACK_MODEL,
       spawnedBy: "edited-files-signature-test",
     });

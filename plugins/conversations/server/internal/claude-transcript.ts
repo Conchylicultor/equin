@@ -3,7 +3,6 @@ import {
   unwrapPastedContent,
 } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { readChainLines } from "@plugins/conversations/plugins/transcript-watcher/server";
-import { cutTranscriptAtUnansweredPrompt } from "./transcript-cut";
 
 export type TurnRole = "user" | "assistant";
 
@@ -17,23 +16,6 @@ export interface Turn {
   stopReason?: string;
   /** Assistant-only message id; equal-id events are merged into one turn. */
   messageId?: string;
-}
-
-/**
- * Pop the most recent *live* user prompt out of the transcript so a stopped
- * turn can restore it to the prompt editor. Returns the text (and truncates the
- * file from that turn onward) or null when there is nothing to rewind.
- *
- * Which prompt, and what is kept, is `cutTranscriptAtUnansweredPrompt`'s call —
- * the same cut "Rewind to here" and "Fork from here" make at a chosen message.
- */
-export async function rewindLastUserTurn(path: string): Promise<string | null> {
-  const file = Bun.file(path);
-  if (!(await file.exists())) return null;
-  const cut = cutTranscriptAtUnansweredPrompt((await file.text()).split("\n"));
-  if (!cut) return null;
-  await Bun.write(path, serializeTranscript(cut.keptLines));
-  return cut.messageText;
 }
 
 /** Transcript lines → file content. One home so every writer ends the file the same way. */

@@ -89,7 +89,7 @@ describe("planLedger", () => {
 
   // The adoption case the watermark used to lose: the very same commit, deferred
   // while the conversation was unknown here, becomes a row once
-  // `adoptOrphanConversation` has synthesised it. Nothing about the commit
+  // its conversation row has appeared. Nothing about the commit
   // changed — only this database's attribution set did.
   test("a deferred commit becomes a row once its conversation exists here", () => {
     const landed = commit({ sha: "adopted", conversationId: "conv-orphan" });

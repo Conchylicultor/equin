@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { conversationRuntimeInfo } from "@plugins/conversations/plugins/runtime-catalog/core";
 import { terminalPane } from "@plugins/primitives/plugins/terminal/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 
@@ -12,39 +11,26 @@ export function TerminalPaneBody() {
   const conversation = useConversationById(convId ?? null);
   if (!conversation) return null;
   return (
-    <TerminalPaneInner
-      convId={conversation.id}
-      status={conversation.status}
-      readOnly={
-        conversationRuntimeInfo(conversation.runtime).terminal === "read-only"
-      }
-    />
+    <TerminalPaneInner convId={conversation.id} status={conversation.status} />
   );
 }
 
 function TerminalPaneInner({
   convId,
   status,
-  readOnly,
 }: {
   convId: string;
   status: string;
-  readOnly: boolean;
 }) {
   const TerminalComponent = useMemo(
     () =>
       terminalPane({
-        command: [
-          TMUX,
-          "-u",
-          "attach",
-          ...(readOnly ? ["-r"] : []),
-          "-t",
-          convId,
-        ],
+        // The pane only shows the agent's log: attached read-only, so a
+        // Ctrl-C typed into it never reaches the agent process.
+        command: [TMUX, "-u", "attach", "-r", "-t", convId],
         title: convId,
       }).component,
-    [convId, readOnly],
+    [convId],
   );
 
   // After Resume re-spawns the tmux session, the existing PTY (which exited

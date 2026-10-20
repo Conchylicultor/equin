@@ -1,102 +1,71 @@
 # question-relay
 
-Answers `AskUserQuestion` from the web as the tool's **real** answer. Design:
-[`research/2026-10-06-conversations-askuserquestion-hook-relay.md`](../../../../research/2026-10-06-conversations-askuserquestion-hook-relay.md).
+Answers `AskUserQuestion` from the web as the tool's **real** answer.
 
-Every agent the app launches carries a `PreToolUse` hook on `AskUserQuestion`
-(runtime-tmux's `launch-settings.ts`, entry built by `relayHookEntry()`) that
-runs `bin/ask-relay.ts`. The relay **holds the tool call** while the web shows
-the question; the web's answer goes back to the CLI as `updatedInput`, so the
-CLI skips its menu and writes `Your questions have been answered: …` — the same
-result a terminal answer writes, rendered by ask-user-question from the line's
-structured `toolUseResult` (`answersFromRecord`)
-with no correlation and no hidden turns.
+The sdk runtime's agent process holds the tool call in its `canUseTool`
+callback and writes the request as an event; the runtime's consumer registers
+it here (`holdQuestion`). The web's answer goes back through
+`onQuestionResolved` to the agent, which resolves `canUseTool` with the answer
+as `updatedInput` — so the CLI writes `Your questions have been answered: …`,
+rendered by ask-user-question from the line's structured `toolUseResult`
+(`answersFromRecord`). (The original design held the call in a `PreToolUse`
+hook script for the tmux runtime:
+[`research/2026-10-06-conversations-askuserquestion-hook-relay.md`](../../../../research/2026-10-06-conversations-askuserquestion-hook-relay.md).)
 
 ## Lifecycle — `pending_questions.state`
 
 ```
-open ──answer (web)──────────▶ answered   relay prints the allow + answer, exit 0
-     ──release ("Answer in     released   relay exits silently → the CLI draws its menu
-        terminal", or a
-        message sent instead)─▶
-     ──relay gone────────────▶ abandoned  Escape SIGTERMs the relay (it POSTs abandon);
-                                          a relay pid found dead on reconcile, too
+open ──answer (web)──────────▶ answered   the holder hands the answer to the agent
+     ──holder stops waiting──▶ abandoned  the agent withdrew the question (a message
+                                          sent instead, Stop), or its pid is found
+                                          dead on reconcile
 ```
 
-- **Register** is an idempotent upsert on the tool-use id: a relay that
-  reconnects after a backend restart re-registers and learns where the question
-  stands.
-- **Await** is a long-poll held ≤ 45 s (under Bun's 60 s `idleTimeout`), woken
-  in-process by the write that resolves the question (`waiters.ts`). No timer
-  loop; at the cap it re-reads the row, so a write that landed on another
-  backend (a hot swap mid-hold) is still seen.
-- **A message sent instead of an answer** skips the question. The conversations
-  server's `submitTurn` sees `waitingFor: "question"`, releases the hold through the
-  question-hold seam (`QuestionHoldSource.release`), and types the turn with the
-  runtime's `answerPrompt` — which waits for the menu the release lets the CLI
-  draw, Escapes it, and sends the turn into the idle input, exactly what Escape +
-  typing does in the terminal. The prompt input stays enabled for a waiting
-  question (`canSendTurn` in conversations core).
+- **Register** (`holdQuestion`) is an idempotent upsert on the tool-use id: a
+  holder that reconnects after a backend restart re-registers and learns where
+  the question stands.
+- **A message sent instead of an answer** skips the question: the conversations
+  server's `submitTurn` sees `waitingFor: "question"` and sends the turn with
+  the runtime's `answerPrompt`, which withdraws the question first. The prompt
+  input stays enabled for a waiting question (`canSendTurn` in conversations
+  core).
 - **The transcript is the authority.** The row is only the early copy of the
   question: once the CLI writes the `tool_use` and its result, the transcript
   says what happened.
+- `released` rows are history from the retired tmux runtime's "Answer in
+  terminal"; nothing writes the state any more.
 
-## The relay never gives up on a timer
+## Status
 
-The user's decision: the web is the primary answer surface, so the relay holds
-until something *ends* the question. Its hook `timeout` is 2 000 000 s (the CLI
-does not clamp it — Phase 0). It lets go only when:
-
-- the question is answered, released or abandoned;
-- the backend has been **unreachable for 5 consecutive minutes** — a connection
-  error or a 5xx is a restart or a build swapping the backend, retried with a
-  doubling backoff capped at 5 s (a reconnect, not a poll); 5 minutes of it means
-  the app is down, and an agent must not hang on a dead app.
-
-A 4xx other than a lost row (404 on await → re-register) is a refusal: the relay
-exits 1 (a non-blocking hook error — the menu is drawn). It never exits 2, which
-would block the tool.
-
-## Status: a held question has no menu
-
-While the relay holds the call no menu is on screen, so the pane reads idle.
 This plugin registers a **question-hold source** with the conversations status
 reconciler (`QuestionHolds.define`): a conversation whose latest held question is
-`open` (and whose relay is alive) is `waiting` on a `question`. The reconciler
-keeps that apart from the pane's own menu verdict: only a pane menu nothing holds
-triggers the auto-open flush — an Escape into a held call would cancel it, and a
-`released` question's menu is the one the user asked for. `reap` retires open
-rows whose relay pid is dead (`abandoned`).
+`open` (and whose holder is alive) is `waiting` on a `question`. `reap` retires
+open rows whose holder pid is dead (`abandoned`).
 
 ## Web
 
 `RelayQuestionCard` owns the transcript's `"question"` pending prompt
 (`JsonlViewer.PendingPrompt`). With an open row it renders ask-user-question's
 `QuestionCard` — the same tool-call card the transcript draws the question
-with — holding its `AnswerForm` (structured selections; the server validates them against the
-stored questions and joins a multi-select with `", "`) and an *Answer in
-terminal* release. With none it renders ask-user-question's `AnswerHereButton` —
-the flush path, kept for sessions launched without the hook and for released
-questions.
+with — holding its `AnswerForm` (structured selections; the server validates them
+against the stored questions and joins a multi-select with `", "`).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form (answered as the tool's real result) with an Answer in terminal release, falling back to the Answer here flush when nothing is held. The AskUserQuestion relay's backend: the pending_questions table (one row per held call: open → answered | released | abandoned), the register / await (a push-woken long-poll) / answer / release / abandon endpoints, the open-questions live collection, the question-hold source that tells the status reconciler a held question is waiting (and retires holds whose relay died), and a 7-day retention sweep of resolved rows.
+- Description: Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form, answered as the tool's real result. The AskUserQuestion relay's backend: the pending_questions table (one row per held call: open → answered | abandoned), holdQuestion / retireQuestion for the runtime holding the call in-process, the answer endpoint and onQuestionResolved, the open-questions live collection, the question-hold source that tells the status reconciler a held question is waiting (and retires holds whose holder died), and a 7-day retention sweep of resolved rows.
 - Web:
   - Contributes: `JsonlViewer.PendingPrompt` "question" → `RelayQuestionCard`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.answerDraftScope`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerForm`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.AnswerHereButton`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.FormAnswer`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question.QuestionCard`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
 - Server:
@@ -121,19 +90,13 @@ questions.
   - Exports (values):
     - `holdQuestion`
     - `onQuestionResolved`
-    - `relayHookEntry`
     - `retireQuestion`
   - Register: `defineJob('retention.pending_questions')`
   - Resources:
     - `question-relay.pending` (keyed, window)
     - `question-relay.pending:groups` (push)
     - `question-relay.pending:rows` (keyed, point)
-  - Routes:
-    - `POST /api/conversations/:id/questions`
-    - `GET /api/conversations/:id/questions/:toolUseId/await`
-    - `POST /api/conversations/:id/questions/:toolUseId/answer`
-    - `POST /api/conversations/:id/questions/:toolUseId/release`
-    - `POST /api/conversations/:id/questions/:toolUseId/abandon`
+  - Routes: `POST /api/conversations/:id/questions/:toolUseId/answer`
 - Core:
   - Uses:
     - `fields/date/config.dateField`
@@ -148,32 +111,20 @@ questions.
     - `PendingQuestion`
     - `QuestionSelection`
     - `RegisterQuestionBody`
-    - `RelayHookEntry`
     - `RelayQuestion`
     - `RelayResolution`
     - `RelayState`
   - Exports (values):
-    - `abandonRelayQuestion`
     - `AnswerQuestionBodySchema`
     - `answerRelayQuestion`
-    - `AWAIT_HOLD_MS`
-    - `awaitRelayQuestion`
     - `CliAnswerSchema`
     - `pendingQuestions`
     - `PendingQuestionSchema`
     - `QuestionSelectionSchema`
     - `RegisterQuestionBodySchema`
-    - `registerRelayQuestion`
-    - `RELAY_HOOK_TIMEOUT_S`
-    - `RELAY_STATUS_MESSAGE`
     - `RelayQuestionSchema`
     - `RelayQuestionsSchema`
     - `RelayResolutionSchema`
     - `RelayStateSchema`
-    - `releaseRelayQuestion`
-- Cross-plugin:
-  - Imported by: `conversations/runtime-tmux`
-- Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/relay-hook.ts` (debt)
 
 <!-- AUTOGENERATED:END -->

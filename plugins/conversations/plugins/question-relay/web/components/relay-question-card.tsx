@@ -4,10 +4,8 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   AnswerForm,
-  AnswerHereButton,
   QuestionCard,
   answerDraftScope,
   type FormAnswer,
@@ -15,28 +13,23 @@ import {
 import {
   answerRelayQuestion,
   pendingQuestions,
-  releaseRelayQuestion,
   type PendingQuestion,
 } from "../../core";
 
 /**
- * The `"question"` pending prompt. A question the relay is holding is answered
- * right here, as the tool's real answer — no Escape, no pasted turn. With no
- * held question (a session launched without the relay hook, or one released to
- * the terminal) it is the "Answer here" flush affordance.
+ * The `"question"` pending prompt: the question the agent holds, answered right
+ * here as the tool's real answer.
  */
 export function RelayQuestionCard({
   conversationId,
-  waitingFor,
 }: {
   conversationId: string;
-  waitingFor: string;
 }) {
   const held = useLive(pendingQuestions, { where: { conversationId } });
   // The question this card answered: its row leaves the collection at once,
   // while the conversation stays "waiting on a question" until the reconciler
   // sees the agent move on (which unmounts this card). Say the answer is on its
-  // way meanwhile, rather than flashing the "Answer here" fallback.
+  // way meanwhile.
   const [answered, setAnswered] = useState<string | null>(null);
 
   if (held.status === "loading") return <Loading label="Loading question…" />;
@@ -61,15 +54,15 @@ export function RelayQuestionCard({
       />
     );
   }
-  if (answered !== null) {
-    return (
-      <Text as="p" variant="caption" tone="muted">
-        Answer sent — the agent is reading it.
-      </Text>
-    );
-  }
+  // No open row while the conversation still waits on a question: answered
+  // here, or from another tab, and the reconciler has not seen the agent move
+  // on yet.
   return (
-    <AnswerHereButton conversationId={conversationId} waitingFor={waitingFor} />
+    <Text as="p" variant="caption" tone="muted">
+      {answered !== null
+        ? "Answer sent — the agent is reading it."
+        : "The question was answered — the agent is reading it."}
+    </Text>
   );
 }
 
@@ -85,7 +78,6 @@ function HeldQuestion({
     toolUseId: question.toolUseId,
   };
   const answer = useEndpointMutation(answerRelayQuestion);
-  const release = useEndpointMutation(releaseRelayQuestion);
 
   // Not a turn: the answer is the tool's own input, so there is no pending-turn
   // record — the tool result landing in the transcript is the confirmation. A
@@ -106,8 +98,7 @@ function HeldQuestion({
       );
 
   // The same card the transcript draws an AskUserQuestion with, so the held
-  // question reads as the tool call it is (its own Answer in terminal action
-  // says the terminal is the other way to answer).
+  // question reads as the tool call it is.
   return (
     <QuestionCard questions={question.questions}>
       <AnswerForm
@@ -117,15 +108,6 @@ function HeldQuestion({
           question.toolUseId,
         )}
         onSubmit={submit}
-        secondaryAction={
-          <Button
-            variant="ghost"
-            loading={release.isPending}
-            onClick={() => release.mutate({ params })}
-          >
-            Answer in terminal
-          </Button>
-        }
       />
     </QuestionCard>
   );

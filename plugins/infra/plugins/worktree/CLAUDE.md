@@ -108,16 +108,6 @@ Ordering is the caller's job, and every op command does it the same way:
 publish the marker → append `requested` → … → append `completed` → `release()`.
 So a reader that sees the marker gone always finds the verdict already written.
 
-**Op signal.** After every publish, release and reap, the writer/reader also
-touches `~/.singularity/state/worktree-op-signals/<slug>` (`opSignalsDir`, this
-plugin's `data-dirs` barrel — usable from CLI processes too, since it is plain
-`node:fs` path resolution). The file's content means nothing; it is a wake-up for
-a watcher wanting "this worktree's live ops may have changed" (the tmux status
-reconciler) without watching every worktree dir recursively, where builds write
-thousands of output files. The directory is ensured on each touch, and any
-other failure propagates (a failed touch at publish fails the op's start).
-`conversations/runtime-tmux`'s daily prune deletes day-old files.
-
 Transition (until phase 5 of `research/2026-09-29-global-unified-op-status.md`):
 legacy per-kind `ops/<kind>.json` markers from an older CLI are still read, with
 pid liveness.
@@ -172,15 +162,15 @@ pid liveness.
     - `worktreePathFor`
     - `writeWorktreeSpec`
 - Cross-plugin:
-  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×5
     - `infra` ×5
     - `tasks` ×3
     - `build` ×2
-    - `conversations` ×2
     - `stats` ×2
     - `backup/sources/databases`
     - `code-explorer`
+    - `conversations/workspace/worktree`
     - `plugin-meta/plugin-health`
     - `release/source-checkout`
 - Exemptions:

@@ -18,8 +18,6 @@ import {
 import { TMUX_HOSTED_BY_OPTION } from "@plugins/conversations/plugins/agent-launch/core";
 import { recordPromptHookLaunch } from "@plugins/conversations/plugins/turn-ledger/server";
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
-import { TMUX } from "@plugins/infra/plugins/paths/server";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import {
   AgentLaunchOptionsSchema,
@@ -59,6 +57,7 @@ import {
   commandAgent,
   helloAgent,
 } from "./socket-client";
+import { hasTmuxSession, tmux } from "./tmux";
 
 // The sdk runtime: one Agent SDK process per conversation (bin/agent.ts),
 // hosted in a tmux session named after the conversation — tmux supervises it
@@ -77,17 +76,6 @@ const INTERRUPT_SETTLE_MS = 30_000;
 const EXIT_TIMEOUT_MS = 15_000;
 
 const UnknownReplySchema = z.unknown();
-
-async function tmux(
-  args: string[],
-): Promise<{ exitCode: number; stderr: string }> {
-  const r = await spawnCaptured([TMUX, ...args], { timeoutMs: 10_000 });
-  return { exitCode: r.exitCode, stderr: r.stderr };
-}
-
-async function hasTmuxSession(id: string): Promise<boolean> {
-  return (await tmux(["has-session", "-t", id])).exitCode === 0;
-}
 
 /** Whether the agent answers on its socket. Any other failure throws (state unknown). */
 async function answersHello(id: string): Promise<boolean> {
@@ -114,8 +102,9 @@ function shellWord(value: string): string {
 /**
  * Start the agent process for `id` in a new tmux session, from the options
  * file already written in its directory. The session carries the
- * `@singularity-host sdk` option — set in the same tmux invocation — so the
- * tmux runtime's listing never adopts it as one of its own panes.
+ * `@singularity-host sdk` option — set in the same tmux invocation — so a
+ * backend still running the retired tmux runtime's pane listing never adopts
+ * it as one of its own panes.
  */
 async function startAgentSession(
   id: string,
@@ -212,15 +201,9 @@ async function inspectAgents(
     const row = rows.get(id);
     if (!alive[i] || !row) return;
     out.set(id, {
-      // The agent draws no title worth reading; the task's own title stands.
-      title: "",
       working: row.working,
       dead: false,
       claudeSessionId: row.sessionId,
-      worktreePath: row.worktreePath,
-      // Questions arrive through the question relay's holds, menus never.
-      waitingFor: null,
-      menu: null,
       statusWrittenAt: row.statusAt,
     });
   });

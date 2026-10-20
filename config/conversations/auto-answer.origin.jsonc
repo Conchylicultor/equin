@@ -1,5 +1,0 @@
-// @hash 6e322ece5c0c
-{
-  // When an agent asks a question, automatically dismiss the terminal menu and surface the inline answer form in the conversation — no need to click "Answer here" first. You still type the answer yourself.
-  "enabled": false
-}

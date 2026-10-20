@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  cutTranscriptAt,
-  cutTranscriptAtUnansweredPrompt,
-} from "./transcript-cut";
+import { cutTranscriptAt } from "./transcript-cut";
 
 // Transcript lines shaped like Claude Code's: a uuid/parentUuid chain, with
 // uuid-less bookkeeping lines interleaved.
@@ -283,37 +280,5 @@ describe("cutTranscriptAt", () => {
       lostReports: [],
       unreported: [],
     });
-  });
-});
-
-describe("cutTranscriptAtUnansweredPrompt", () => {
-  test("pops the last prompt, past trailing noise and the interrupt sentinel", () => {
-    const cut = cutTranscriptAtUnansweredPrompt(
-      lines([
-        user("u1", null, "first"),
-        assistant("a1", "u1", "one"),
-        user("u2", "a1", "my prompt"),
-        user("i1", "u2", "[Request interrupted by user]"),
-        { type: "file-history-snapshot" },
-      ]),
-    );
-    expect(cut?.messageText).toBe("my prompt");
-    expect(labelsOf(cut?.keptLines ?? [])).toEqual(["u1", "a1"]);
-  });
-
-  test("nothing to pop once the agent has begun answering", () => {
-    expect(
-      cutTranscriptAtUnansweredPrompt(
-        lines([
-          user("u1", null, "my prompt"),
-          assistant("a1", "u1", "working on it"),
-        ]),
-      ),
-    ).toBeNull();
-    expect(
-      cutTranscriptAtUnansweredPrompt(
-        lines([user("u1", null, "my prompt"), receipt("r1", "u1", "toolu_x")]),
-      ),
-    ).toBeNull();
   });
 });

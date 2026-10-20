@@ -6,10 +6,9 @@ import {
 } from "../../core";
 
 // Re-alert the bell at most once per ~6h while a foreign entry stays in a chain.
-// It is a standing data-loss condition — `rewindLastUserTurn` targets the chain
-// tail, so a foreign tail makes the Stop button truncate a stranger's live
-// transcript — so it should resurface periodically without spamming. Matches the
-// session-divergence 6h re-arm.
+// It is a standing data-loss condition — a rewind or fork of the conversation
+// would cut a stranger's transcript — so it should resurface periodically
+// without spamming.
 const FOREIGN_SESSION_NOTIF_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 /**
@@ -74,9 +73,8 @@ function renderDescription(row: ReportRow, d: ForeignSessionPayload): string {
   lines.push(
     `**Why it matters.** The read path drops the foreign file, so the ` +
       `transcript renders correctly. The stored row does not self-heal: writes ` +
-      `target the chain tail, so while a foreign id is the tail, ` +
-      `\`rewindLastUserTurn\` (the Stop button) truncates another agent's live ` +
-      `transcript, and \`claude --resume\` on the stored ` +
+      `target the chain tail, so while a foreign id is the tail, a rewind ` +
+      `cuts another agent's transcript, and \`claude --resume\` on the stored ` +
       `\`conversations.claude_session_id\` attaches to that agent's session.`,
   );
   lines.push("");

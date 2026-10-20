@@ -52,7 +52,7 @@ the bulk work below default, and raise main's event-loop thread above it.
   option goes through it.
 
 Mechanism: darwinbg (`/usr/sbin/taskpolicy -b`), inherited by all children.
-Every agent session runs under it (`conversations/runtime-tmux`), so all an agent
+Every agent session runs under it (`conversations/runtime-sdk`), so all an agent
 spawns starts darwinbg whether or not the spawn asks for `tier: "background"`.
 On Apple Silicon this pins the subtree to the efficiency cores and applies the
 background disk-IO throttle tier (which only bites under IO contention).
@@ -82,7 +82,6 @@ re-exports what server consumers use (same-plugin re-export), and
 - Description: OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
 - Cross-plugin:
   - Imported by:
-    - `conversations/runtime-tmux`
     - `infra/host/host-admission`
     - `infra/spawn`
 - Exemptions:

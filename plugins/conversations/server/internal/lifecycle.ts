@@ -17,10 +17,10 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { Runtime } from "./runtime";
-import type { ConversationRuntimeId } from "@plugins/conversations/plugins/runtime-catalog/core";
-import { runtimeConfig } from "../../shared/config";
-import { getConfig } from "@plugins/config_v2/server";
-import { getTaskRuntime } from "@plugins/conversations/plugins/runtime-launch-option/server";
+import {
+  DEFAULT_CONVERSATION_RUNTIME,
+  type ConversationRuntimeId,
+} from "@plugins/conversations/plugins/runtime-catalog/core";
 import {
   assertClaudeCodeReady,
   checkClaudeCode,
@@ -76,18 +76,12 @@ import { locateTranscriptCut, type LocateCutRefusal } from "./locate-cut";
 import type { RewindOutcome, RewindPreview } from "../../core/rewind";
 
 // The runtime a launch starts on: the caller's, else the source's for a fork
-// (its transcript and session are that runtime's), else the launching task's
-// pick (the Runtime launch option), else the configured default.
-async function resolveRuntimeId(
+// (its transcript and session are that runtime's), else the default.
+function resolveRuntimeId(
   explicit: ConversationRuntimeId | undefined,
   forkSource: ConversationRuntimeId | undefined,
-  taskId: string | undefined,
-): Promise<ConversationRuntimeId> {
-  const id =
-    explicit ??
-    forkSource ??
-    (taskId ? await getTaskRuntime(taskId) : null) ??
-    getConfig(runtimeConfig).defaultRuntime;
+): ConversationRuntimeId {
+  const id = explicit ?? forkSource ?? DEFAULT_CONVERSATION_RUNTIME;
   // Resolve now so an unregistered runtime throws before anything is written.
   return Runtime.get(id).id;
 }
@@ -356,11 +350,7 @@ export async function prepareConversation(
   // Threaded to the runtime as CLI args; no prompt mutation (unlike preprompt,
   // ultracode rides --settings, not the transcript).
   const effort = await resolveTaskEffort(effectiveTaskId);
-  const runtimeId = await resolveRuntimeId(
-    opts.runtimeId,
-    inheritedRuntime,
-    effectiveTaskId,
-  );
+  const runtimeId = resolveRuntimeId(opts.runtimeId, inheritedRuntime);
 
   return {
     runtimeId,

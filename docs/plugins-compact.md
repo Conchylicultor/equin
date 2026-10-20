@@ -65,7 +65,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`config_v2`** [test helpers] [exempt] [5 sub-plugins] — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 
-- **`conversations`** [load-bearing] [test helpers] [exempt] [169 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
+- **`conversations`** [load-bearing] [test helpers] [exempt] [164 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 
 - **`database`** [load-bearing] [exempt] — Core database infrastructure: the app's `db` over the host's DatabaseDriver, DB readiness and the boot schema layer.
   - Plugins:
@@ -94,7 +94,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`sql-projection`** [exempt] — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no…
     - **`sql-rows`** [exempt] — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>()…
 
-- **`debug`** [exempt] [61 sub-plugins] — Debug tools umbrella plugin.
+- **`debug`** [exempt] [60 sub-plugins] — Debug tools umbrella plugin.
 
 - **`fields`** [test helpers] [98 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 

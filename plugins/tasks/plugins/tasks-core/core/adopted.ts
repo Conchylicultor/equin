@@ -1,14 +1,11 @@
 /**
- * The `spawnedBy` of a conversation main ADOPTED: a live agent session it found
- * running with no conversation row — one an agent started outside the
- * conversation launcher (a `tmux new-session` from its checkout), or one whose
- * row was lost. Nothing launched it on purpose, so the queue shows it in its
- * own Lost section rather than ranking it among the user's work.
- *
- * The value is "poller" for history: adoption was done by the retired 1 s
- * poller, and existing rows carry it.
+ * The `spawnedBy` of a conversation main ADOPTED: a live tmux session the
+ * retired tmux runtime found running with no conversation row. Nothing
+ * launched it on purpose, so the queue shows it in its own Lost section rather
+ * than ranking it among the user's work. Nothing adopts any more; the rows it
+ * made keep the value ("poller", from the 1 s poller that adopted first).
  */
-export const ADOPTED_SPAWNED_BY = "poller";
+const ADOPTED_SPAWNED_BY = "poller";
 
 /** Was this conversation adopted (see {@link ADOPTED_SPAWNED_BY})? */
 export function isAdoptedConversation(conv: {
