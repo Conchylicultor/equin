@@ -11,11 +11,10 @@ import {
   usePrototypeDetail,
   type FrameId,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
-import { PresentOverlay, type PresentPlacement } from "./present-overlay";
+import { PresentOverlay } from "./present-overlay";
 
 interface Presenting {
   frameId: FrameId;
-  placement: PresentPlacement;
   /** Bumped by every `present`, so each one mounts a fresh overlay. */
   n: number;
 }
@@ -23,7 +22,7 @@ interface Presenting {
 interface PresentationValue {
   /** What is presented, or `null`. */
   presenting: Presenting | null;
-  present: (frameId: FrameId, placement: PresentPlacement) => void;
+  present: (frameId: FrameId) => void;
 }
 
 const PresentationContext = createContext<PresentationValue | null>(null);
@@ -39,14 +38,13 @@ export function usePresentation(): PresentationValue {
 
 /**
  * Holds the canvas's one open presentation and draws its overlay — a
- * `PrototypeDetailWrap`, so it sits above every frame. A frame's Present menu
- * only asks for it: the menu lives in its frame's header, which a layout
+ * `PrototypeDetailWrap`, so it sits above every frame. A frame's Full screen
+ * button only asks for it: the button lives in its frame's header, which a layout
  * change remounts (`+` leaving Swipe, Compare entering it), and that must not
  * close the presentation that made the change.
  *
- * Each `present` remounts the overlay (keyed by `n`): a new destination is an
- * explicit remount rather than a portal-container swap React would reconcile
- * into a half-move.
+ * Each `present` remounts the overlay (keyed by `n`), so each one requests
+ * full screen afresh.
  */
 export function PresentationHost({
   children,
@@ -56,8 +54,8 @@ export function PresentationHost({
   const { name } = usePrototypeDetail();
   const [presenting, setPresenting] = useState<Presenting | null>(null);
   const present = useCallback(
-    (frameId: FrameId, placement: PresentPlacement) =>
-      setPresenting((prev) => ({ frameId, placement, n: (prev?.n ?? 0) + 1 })),
+    (frameId: FrameId) =>
+      setPresenting((prev) => ({ frameId, n: (prev?.n ?? 0) + 1 })),
     [],
   );
   // Stable: the overlay's fullscreen effect keys on it.
@@ -71,7 +69,6 @@ export function PresentationHost({
           key={presenting.n}
           name={name}
           frameId={presenting.frameId}
-          placement={presenting.placement}
           onClose={close}
         />
       ) : null}

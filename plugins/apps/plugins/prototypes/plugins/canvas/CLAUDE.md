@@ -276,7 +276,7 @@ other.
   button; `gallery` the Done toggle. Order: `config/apps/prototypes/canvas/`.
 - **`PrototypeFrameActions`** — a frame's header actions, handed
   `{ frame, meta }`. The canvas ships Keep only, Duplicate and Close; `present`
-  adds its Present menu.
+  adds Open in a new tab and Full screen.
 - **`FrameSource`** — a dispatch slot keyed on the source id: `{ match: "<id>",
   addLabel, component }`. The component is handed `{ source, meta, children }`
   and its only output is `children(resolution)` — `loading`, `unresolved
@@ -348,7 +348,6 @@ navigation, so it starts from nothing remembered.
     - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`
     - `prototypeDetailPane.Actions` ← `apps.prototypes.copy-id`
     - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`
-    - `prototypeDetailPane.Actions` ← `apps.prototypes.present`
     - `prototypeDetailPane.Actions` ← `primitives.pane`
     - `PrototypeFrameActions` ← `apps.prototypes.canvas`
     - `PrototypeFrameActions` ← `apps.prototypes.present`

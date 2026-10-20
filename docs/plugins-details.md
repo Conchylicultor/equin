@@ -5561,7 +5561,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`
               - `prototypeDetailPane.Actions` ← `apps.prototypes.copy-id`
               - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`
-              - `prototypeDetailPane.Actions` ← `apps.prototypes.present`
               - `prototypeDetailPane.Actions` ← `primitives.pane`
               - `PrototypeFrameActions` ← `apps.prototypes.canvas`
               - `PrototypeFrameActions` ← `apps.prototypes.present`
@@ -5975,7 +5974,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/color-palette --success`
             - Imported by: `apps/home/app-cards`
-        - **`present`** — Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays), In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame); beside it, an Open responsive in a new tab button (the chromeless present page at the Responsive size, filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both turning the presentation into the whole canvas, full screen — and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas. In the canvas header, Open the canvas in a new tab opens the whole canvas (frames, versions, picks, size, zoom, layout, encoded in present-canvas/<id>/<canvas>) chromeless in a new browser tab, so the frames get the whole screen to compare, with the same Exit.
+        - **`present`** — Two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href) and Full screen (F, which presents the selected frame; the browser's Fullscreen API). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both turning the presentation into the whole canvas — and the left and right arrow keys flip through the canvas's frames. The new tab is present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas; its + / Compare navigate to present-canvas/<id>/<canvas>, the whole canvas as a chromeless page.
           - Web:
             - Slots:
               - `prototypes-present.actions`
@@ -5986,21 +5985,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "prototypes-present"
               - `Pane.Register` "prototypes-present-canvas"
-              - `prototypeDetailPane.Actions` "open-canvas" → `OpenCanvasAction`
               - `PrototypeDetailWrap` → `PresentationHost`
-              - `PrototypeFrameActions` "present" → `PresentMenu`
-              - `PrototypeFrameActions` "open-responsive" → `OpenResponsiveAction`
-            - Uses: 66 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
-              - `apps/prototypes/canvas` ×28
-              - `primitives/css/ui-kit` ×8
+              - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
+              - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
+            - Uses: 56 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
+              - `apps/prototypes/canvas` ×27
+              - `primitives/css/ui-kit` ×3
               - `apps-core/tabs` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/latest-ref` ×2
-              - `primitives/link-gesture/new-tab` ×2
               - `primitives/pane` ×2
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
-              - `primitives/css/fill.fillClasses`
               - `primitives/css/pin.Pin`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -6010,19 +6006,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/movable.Movable`
               - `primitives/embed.embedUrl`
               - `primitives/icon-button.IconButton`
+              - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/live-state.matchResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/popup-open.PopupOpenScope`
               - `primitives/overlay/portal-host.PortalHost`
-              - `primitives/overlay/surface-overlay.SurfaceOverlay`
               - `primitives/overlay/tooltip.Kbd`
               - `primitives/shortcuts.useSurfaceShortcuts`
-              - `ui/icons.Icon`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --background`
               - `ui/tokens/color-palette --border`
-              - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-2xs`
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-xs`
@@ -35972,8 +35966,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 164 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
-              - `apps` ×49
+            - Imported by: 163 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+              - `apps` ×48
               - `primitives` ×29
               - `conversations` ×25
               - `debug` ×17
@@ -40619,9 +40613,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SurfaceOverlay`
               - `SurfaceOverlayHost`
           - Cross-plugin:
-            - Imported by:
-              - `apps-core/tab-surface`
-              - `apps/prototypes/present`
+            - Imported by: `apps-core/tab-surface`
           - Exemptions:
             - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/surface-overlay.tsx` (sanctioned)
         - **`tooltip`** — <TooltipDoc> documenting tooltip body (name + what it does), and <Kbd> keyboard shortcut badge.
@@ -47050,8 +47042,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 308 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×71
+        - Imported by: 307 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×70
           - `conversations` ×56
           - `primitives` ×42
           - `page` ×40

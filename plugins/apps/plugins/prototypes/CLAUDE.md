@@ -47,9 +47,8 @@ other content lives in sub-plugins:
   is a child plugin — `exhibit` (one real component from the exhibit catalog)
   and `route` (the running app, framed at a path).
   Also `e2e/compare-diff.ts`, the pixel and colour diff of mock vs app.
-- **`present`** — shows one canvas frame without the app around it (this app
-  tab, this browser tab, full screen, or a new tab), a frame action on every
-  frame.
+- **`present`** — shows one canvas frame without the app around it: Open in a
+  new tab and Full screen, two frame actions on every frame.
 - **`copy-id`** — the copy-id button in the canvas's header.
 - **`thumbnails`** — the rendered PNG behind each gallery card: a
   content-addressed cache, a headless-chromium render job driven by `files`'
@@ -81,7 +80,7 @@ whose app surface still stands).
   - **`copy-id`** — Copy prototype ID button in the prototype detail header: copies the open prototype's id (its minted folder name) to the clipboard.
   - **`files`** [exempt] — Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by…
   - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, grouped (Pinned / In progress / Done) and filterable by a pin and a Done checkbox on every card (and in the detail…
-  - **`present`** — Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays), In this browser tab plus a new-browser-tab icon, and Full…
+  - **`present`** — Two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href)…
   - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) full-surface: opening a prototype replaces the gallery…
   - **`thumbnails`** [exempt] — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the…
 

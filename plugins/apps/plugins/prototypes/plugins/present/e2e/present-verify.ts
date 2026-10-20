@@ -1,10 +1,10 @@
-// Verifies the per-frame Present menu on a prototype's canvas: each
-// destination takes frame A somewhere (this app tab keeps the tab bar, this
-// browser tab and full screen cover it), the chrome comes along (the tag with
-// its version stepper, the options pill, the size chip), ← / → flip to the
-// other frame in place, `F` presents the selected frame in full screen, Escape
-// brings it back, and the new-browser-tab icon opens the chromeless present
-// page. Manual only — nothing runs this automatically.
+// Verifies a prototype frame's two frame actions. Full screen takes frame A
+// over the whole screen with its chrome (the tag with its version stepper, the
+// options pill, the size chip), ← / → flip to the other frame in place,
+// leaving full screen brings it back, and `F` presents the selected
+// frame; Open in a new tab opens the chromeless present page at the
+// Responsive size, filling the tab. Manual only — nothing runs this
+// automatically.
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/prototypes/plugins/present/e2e/present-verify.ts \
@@ -81,19 +81,25 @@ await withBrowser(async (h) => {
 
   const frameA = page.locator(canvasFrameSelector({ letter: "A" }));
   const dialog = page.getByRole("dialog", { name: "Prototype presentation" });
-  // One chip of the app tab strip — the thing "In this app tab" must NOT
-  // cover, and the thing every other destination does cover.
-  const tabChip = page.locator("[data-app-tab]").first();
   const viewport = page.viewportSize();
 
-  /** Frame A's own Present menu: hover its screen, click its Present button. */
-  async function openMenuOfA() {
+  /** Frame A's own Full screen: hover its screen, click its button. */
+  async function fullScreenA() {
     await frameA.hover();
-    // Frame A's header comes first, so its Present button is the first one.
+    // Frame A's header comes first, so its button is the first one.
     await page
-      .getByRole("button", { name: "Present", exact: true })
+      .getByRole("button", { name: "Full screen", exact: true })
       .first()
       .click();
+    await dialog.waitFor({ state: "visible", timeout: 5000 });
+  }
+
+  /** Leave full screen; the presentation closes with it. */
+  async function leaveFullScreen() {
+    await page.evaluate(async () => {
+      if (document.fullscreenElement) await document.exitFullscreen();
+    });
+    await dialog.waitFor({ state: "detached", timeout: 5000 });
   }
 
   /** The chrome shows on hover: the tag's stepper, the size chip, the pill. */
@@ -116,67 +122,42 @@ await withBrowser(async (h) => {
     }
   }
 
-  // --- In this app tab ---------------------------------------------------
-  await openMenuOfA();
-  r.ok(
-    "the menu is headed Present",
-    await page
-      .getByText("Present", { exact: true })
-      .waitFor({ state: "visible", timeout: 5000 })
-      .then(
-        () => true,
-        () => false,
-      ),
-  );
-  await page.getByRole("menuitem", { name: /^In this app tab/ }).click();
-  await dialog.waitFor({ state: "visible", timeout: 5000 });
-  const surfaceBox = await dialog.boundingBox();
-  r.ok(
-    "in-this-app-tab fills the surface, not the viewport",
-    surfaceBox != null &&
-      viewport != null &&
-      // Starts strictly below the top of the page: the tab bar is still on
-      // screen above it.
-      surfaceBox.y > 1 &&
-      surfaceBox.height < viewport.height - 1,
-    `dialog ${JSON.stringify(surfaceBox)} viewport ${JSON.stringify(viewport)}`,
-  );
-  r.ok(
-    "the presentation shows the prototype",
-    (await dialog.locator("iframe").count()) >= 1,
-  );
-  r.ok("the app tab bar is still visible", await tabChip.isVisible());
-  await chromeIsThere("in-this-app-tab");
-  await snap(page, out, "in-this-app-tab");
-
-  await page.keyboard.press("Escape");
-  await dialog.waitFor({ state: "detached", timeout: 5000 });
-  r.ok("Escape leaves the surface presentation", (await dialog.count()) === 0);
-
-  // --- In this browser tab, with two frames: ← / → flip -------------------
+  // --- Full screen, with two frames: ← / → flip ---------------------------
   await page.getByRole("button", { name: "Frame", exact: true }).click();
   await page
     .locator(canvasFrameSelector({ letter: "B", status: "found" }))
     .waitFor({ state: "visible", timeout: 10_000 });
-  await openMenuOfA();
-  await page.getByRole("menuitem", { name: /^In this browser tab/ }).click();
-  await dialog.waitFor({ state: "visible", timeout: 5000 });
+  await fullScreenA();
+  // The fullscreen transition is async — poll rather than sampling once.
+  const fullscreened = await page
+    .waitForFunction(() => document.fullscreenElement !== null, null, {
+      timeout: 5000,
+    })
+    .then(
+      () => true,
+      () => false,
+    );
+  r.ok("full screen hands the stage to the browser", fullscreened);
   const box = await dialog.boundingBox();
   r.ok(
-    "in-this-browser-tab fills the viewport",
+    "the presentation fills the viewport",
     box != null &&
       viewport != null &&
       box.width >= viewport.width - 1 &&
       box.height >= viewport.height - 1,
     `dialog ${JSON.stringify(box)} viewport ${JSON.stringify(viewport)}`,
   );
+  r.ok(
+    "the presentation shows the prototype",
+    (await dialog.locator("iframe").count()) >= 1,
+  );
   await dialog.hover();
   r.ok(
     "the tag says 1 of 2",
     await dialog.getByText("1 of 2 · ← →").isVisible(),
   );
-  await chromeIsThere("in-this-browser-tab");
-  await snap(page, out, "in-this-browser-tab");
+  await chromeIsThere("full-screen");
+  await snap(page, out, "full-screen");
   // Keys go to the app document, not the prototype's iframe.
   await dialog.getByText("1 of 2 · ← →").click();
   await page.keyboard.press("ArrowRight");
@@ -206,9 +187,11 @@ await withBrowser(async (h) => {
     .getByText("2 of 2 · ← →")
     .waitFor({ state: "visible", timeout: 5000 });
 
-  await page.keyboard.press("Escape");
-  await dialog.waitFor({ state: "detached", timeout: 5000 });
-  r.ok("Escape leaves the presentation", (await dialog.count()) === 0);
+  await leaveFullScreen();
+  r.ok(
+    "leaving full screen closes the presentation",
+    (await dialog.count()) === 0,
+  );
 
   // --- F presents the selected frame --------------------------------------
   // Leaving selected B (the frame last on show), so F presents B.
@@ -228,26 +211,10 @@ await withBrowser(async (h) => {
     `frames in the presentation: ${String(await dialog.locator("[data-canvas-frame]").count())}`,
   );
   await page.waitForTimeout(500);
-  await page.evaluate(async () => {
-    if (document.fullscreenElement) await document.exitFullscreen();
-  });
-  await dialog.waitFor({ state: "detached", timeout: 5000 });
+  await leaveFullScreen();
 
-  // --- Full screen, from the menu ----------------------------------------
-  await openMenuOfA();
-  await page.getByRole("menuitem", { name: /^Full screen/ }).click();
-  await dialog.waitFor({ state: "visible", timeout: 5000 });
-  // The fullscreen transition is async — poll rather than sampling once.
-  const fullscreened = await page
-    .waitForFunction(() => document.fullscreenElement !== null, null, {
-      timeout: 5000,
-    })
-    .then(
-      () => true,
-      () => false,
-    );
-  r.ok("full screen hands the stage to the browser", fullscreened);
-  await chromeIsThere("full-screen");
+  // --- Full screen keeps its popups working -------------------------------
+  await fullScreenA();
   // The load-bearing one: the options pill still WORKS inside the
   // fullscreened element — its popover opens there, and a chip reloads the
   // frame on the picked variant.
@@ -291,27 +258,23 @@ await withBrowser(async (h) => {
   r.ok("the version list opens inside the full-screen presentation", listShown);
   await snap(page, out, "full-screen-version-list");
   await versionLabel.click();
-  await page.evaluate(async () => {
-    if (document.fullscreenElement) await document.exitFullscreen();
-  });
-  await dialog.waitFor({ state: "detached", timeout: 5000 });
-  r.ok(
-    "leaving full screen closes the presentation",
-    (await dialog.count()) === 0,
-  );
+  await leaveFullScreen();
 
-  // --- New browser tab ---------------------------------------------------
-  await openMenuOfA();
+  // --- Open in a new tab: the Responsive present page --------------------
   const opened = context.waitForEvent("page", { timeout: 5000 });
+  await frameA.hover();
+  // Frame A's header comes first, so its button is the first one.
   await page
-    .getByRole("menuitem", { name: "Open in a new browser tab" })
+    .getByRole("button", { name: "Open in a new tab", exact: true })
+    .first()
     .click();
   const tab = await opened;
+  await tab.setViewportSize({ width: 1111, height: 777 });
   await tab.waitForLoadState("domcontentloaded");
   const tabUrl = new URL(tab.url());
   r.ok(
-    "the new tab opens frame A's present page (live, shared picks), chromeless",
-    tabUrl.pathname === `/prototypes/present/${name}/live/declared` &&
+    "the new tab opens frame A's present page (live, shared picks) at the Responsive size, chromeless",
+    tabUrl.pathname === `/prototypes/present/${name}/live/responsive` &&
       tabUrl.searchParams.get("embed") === "1",
     tab.url(),
   );
@@ -319,12 +282,18 @@ await withBrowser(async (h) => {
     .locator(canvasFrameSelector({ letter: "A", status: "found" }))
     .waitFor({ state: "attached", timeout: 15_000 });
   r.ok(
-    "the new tab shows the prototype",
-    (await tab.locator("iframe").count()) >= 1,
-  );
-  r.ok(
     "the new tab draws no app tab bar",
     (await tab.locator("[data-app-tab]").count()) === 0,
+  );
+  const fills = await waitFor(
+    async () => (await tab.locator("iframe").first().boundingBox())?.width,
+    (w) => w !== undefined && Math.abs(w - 1111) <= 2,
+    { timeoutMs: 10_000 },
+  );
+  r.ok(
+    "the new tab's frame fills the tab's width",
+    fills.ok,
+    String(fills.value),
   );
   if (option) {
     await tab.locator(canvasFrameSelector({ letter: "A" })).hover();
@@ -364,41 +333,6 @@ await withBrowser(async (h) => {
     await snap(tab, out, "new-tab");
   }
   await tab.close();
-
-  // --- Open responsive in a new tab (its own button, beside Present) -------
-  const openedResponsive = context.waitForEvent("page", { timeout: 5000 });
-  await frameA.hover();
-  // Frame A's header comes first, so its button is the first one.
-  await page
-    .getByRole("button", { name: "Open responsive in a new tab" })
-    .first()
-    .click();
-  const rTab = await openedResponsive;
-  await rTab.setViewportSize({ width: 1111, height: 777 });
-  await rTab.waitForLoadState("domcontentloaded");
-  const rUrl = new URL(rTab.url());
-  r.ok(
-    "the responsive tab opens frame A's present page at the Responsive size, chromeless",
-    rUrl.pathname === `/prototypes/present/${name}/live/responsive` &&
-      rUrl.searchParams.get("embed") === "1",
-    rTab.url(),
-  );
-  const rFrame = rTab.locator(
-    canvasFrameSelector({ letter: "A", status: "found" }),
-  );
-  await rFrame.waitFor({ state: "attached", timeout: 15_000 });
-  const fills = await waitFor(
-    async () => (await rTab.locator("iframe").first().boundingBox())?.width,
-    (w) => w !== undefined && Math.abs(w - 1111) <= 2,
-    { timeoutMs: 10_000 },
-  );
-  r.ok(
-    "the responsive tab's frame fills the tab's width",
-    fills.ok,
-    String(fills.value),
-  );
-  await snap(rTab, out, "responsive-tab");
-  await rTab.close();
 
   r.ok(
     "no page errors",

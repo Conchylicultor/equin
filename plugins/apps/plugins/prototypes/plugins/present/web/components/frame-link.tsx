@@ -6,10 +6,7 @@ import {
   type FrameResolution,
   type PrototypeFrame,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
-import type {
-  PrototypeMeta,
-  PrototypeViewport,
-} from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { presentPath } from "../internal/routes";
 
 /** What a prototype frame's page shows: its version, and its own picks (not A's). */
@@ -25,19 +22,17 @@ function frameTarget(frame: PrototypeFrame, meta: PrototypeMeta) {
 
 /**
  * Where a frame opens in a new browser tab, handed to `children` as an href —
- * `undefined` when it cannot. A prototype frame opens its present page chromeless, at
- * `size` (the size it declares when omitted); a source frame opens its own
- * `href`, which is already the page at the tab's size, whatever `size` says.
+ * `undefined` when it cannot. A prototype frame opens its present page
+ * chromeless at the Responsive size, so it fills the tab at the tab's own
+ * width; a source frame opens its own `href`, which already is that.
  */
 export function BrowserTabOpener({
   frame,
   meta,
-  size,
   children,
 }: {
   frame: CanvasFrame;
   meta: PrototypeMeta;
-  size?: PrototypeViewport;
   children: (href: string | undefined) => ReactNode;
 }) {
   if (frame.kind === "prototype") {
@@ -45,7 +40,7 @@ export function BrowserTabOpener({
       embedUrl(
         presentPath({
           ...frameTarget(frame, meta),
-          ...(size === undefined ? {} : { size }),
+          size: { kind: "responsive" },
         }),
         "chromeless",
       ),

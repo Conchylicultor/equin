@@ -52,16 +52,6 @@ import {
 import { presentCanvasPath } from "../internal/routes";
 import { usePresentChrome, usePresentRoot } from "./present-box";
 
-/** The Exit button, and which top corner it takes. */
-export interface PresentExit {
-  onExit: () => void;
-  /**
-   * `left` puts it beside the tag, top-left — for a presentation that leaves
-   * the app's floating chrome (the global action bar, top-right) above it.
-   */
-  side: "left" | "right";
-}
-
 /**
  * What every presentation shows — the in-app overlays and the new-tab page
  * alike: ONE canvas frame, sized by the canvas-wide size, zoom and Whole page
@@ -77,17 +67,17 @@ export interface PresentExit {
 export function PresentStage({
   name,
   frameId,
-  exit,
+  onExit,
   onExtend,
 }: {
   name: string;
   /** The frame on show — frame A when absent or gone. */
   frameId?: FrameId;
   /**
-   * Absent on the new-tab page, which instead offers Exit back to the
-   * prototype's canvas (at the start of the tag's pill).
+   * The overlay's Exit (top-right). Absent on the new-tab page, which instead
+   * offers Exit back to the prototype's canvas (at the start of the tag's pill).
    */
-  exit?: PresentExit;
+  onExit?: () => void;
   /**
    * What the right edge's `+` / Compare do. Absent on the new-tab page, where
    * each opens the canvas page on the canvas the action leads to; an overlay
@@ -110,7 +100,7 @@ export function PresentStage({
         <PresentedFrame
           meta={meta}
           frameId={frameId}
-          exit={exit}
+          onExit={onExit}
           onExtend={onExtend}
         />
       );
@@ -121,12 +111,12 @@ export function PresentStage({
 function PresentedFrame({
   meta,
   frameId,
-  exit,
+  onExit,
   onExtend,
 }: {
   meta: PrototypeMeta;
   frameId: FrameId | undefined;
-  exit: PresentExit | undefined;
+  onExit: (() => void) | undefined;
   onExtend: ((action: CanvasAddAction) => void) | undefined;
 }): ReactElement {
   const { canvas } = usePrototypeDetail();
@@ -195,23 +185,18 @@ function PresentedFrame({
           </Scroll>
           <Pin to="top-left" offset="md" {...chrome}>
             <Movable bounds={root}>
-              <Stack direction="row" gap="sm" align="center">
-                <FrameTag
+              <FrameTag
                   frame={frame}
                   index={index}
                   count={canvas.frames.length}
                   meta={meta}
                   resolution={resolution}
                   leading={
-                    exit === undefined ? (
+                  onExit === undefined ? (
                       <LeaveToCanvasButton name={meta.name} />
                     ) : undefined
                   }
-                />
-                {exit?.side === "left" ? (
-                  <ExitButton onExit={exit.onExit} />
-                ) : null}
-              </Stack>
+              />
             </Movable>
           </Pin>
           {frame.kind === "prototype" ? (
@@ -219,10 +204,10 @@ function PresentedFrame({
               <ExtendActions meta={meta} onExtend={onExtend} />
             </Pin>
           ) : null}
-          {exit?.side === "right" ? (
+          {onExit !== undefined ? (
             <Pin to="top-right" offset="md" {...chrome}>
               <Movable bounds={root}>
-                <ExitButton onExit={exit.onExit} />
+                <ExitButton onExit={onExit} />
               </Movable>
             </Pin>
           ) : null}

@@ -1,4 +1,4 @@
-// @hash cc98dc3e3131
+// @hash 1493d46db499
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,7 +10,7 @@
     "apps.prototypes.canvas:keep-only",
     "apps.prototypes.canvas:duplicate",
     "apps.prototypes.canvas:close",
-    "apps.prototypes.present:present",
-    "apps.prototypes.present:open-responsive"
+    "apps.prototypes.present:open-new-tab",
+    "apps.prototypes.present:full-screen"
   ]
 }

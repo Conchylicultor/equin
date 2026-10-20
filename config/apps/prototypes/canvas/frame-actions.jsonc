@@ -1,4 +1,4 @@
-// @hash cc98dc3e3131
+// @hash 1493d46db499
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -19,8 +19,8 @@
 //
 // A frame's hover actions, at the right end of its header, read left to
 // right: the two that reshape the canvas around THIS frame (keep only it,
-// duplicate it), then the two that show it alone (the Present menu, and Open
-// responsive in a new tab), and Close on the outer edge —
+// duplicate it), then the two that show it alone (Open in a new tab, and Full
+// screen), and Close on the outer edge —
 // the one that removes something, where a stray click is least likely.
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
@@ -31,8 +31,8 @@
   "items": [
     "apps.prototypes.canvas:keep-only",
     "apps.prototypes.canvas:duplicate",
-    "apps.prototypes.present:present",
-    "apps.prototypes.present:open-responsive",
+    "apps.prototypes.present:open-new-tab",
+    "apps.prototypes.present:full-screen",
     "apps.prototypes.canvas:close"
   ]
 }

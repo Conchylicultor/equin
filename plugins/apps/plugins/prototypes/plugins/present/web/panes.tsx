@@ -8,9 +8,9 @@ import {
 } from "./internal/routes";
 
 /**
- * One frame presented as a page of its own: what the Present menu's
- * new-browser-tab icon opens, chromeless (`?embed=1`). It draws the same stage as the in-app
- * presentations, options pill and size chip included.
+ * One frame presented as a page of its own: what a frame's Open in a new tab
+ * opens, chromeless (`?embed=1`). It draws the same stage as the full-screen
+ * presentation, options pill and size chip included.
  *
  * A root route, not a child of the gallery: opened alone it is the only column,
  * so it fills the surface.
@@ -24,9 +24,9 @@ export const prototypePresentPane = Pane.define({
 });
 
 /**
- * The canvas as a page of its own: what "Open the canvas in a new tab" opens,
- * chromeless (`?embed=1`), so every frame gets the whole browser tab to compare
- * in. A root route, like the one-frame page, so opened alone it fills the
+ * The canvas as a page of its own, chromeless (`?embed=1`): where the one-frame
+ * page's `+` / Compare lead, so every frame gets the whole browser tab to
+ * compare in. A root route, like the one-frame page, so opened alone it fills the
  * surface.
  */
 export const prototypePresentCanvasPane = Pane.define({

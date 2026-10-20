@@ -1,38 +1,26 @@
 # present
 
-**Present** shows one canvas frame with none of the app around it. It is a
-frame action (`PrototypeFrameActions`), so every frame of the prototype canvas
-gets its own Present button, and the canvas knows nothing about it.
+**Present** shows one canvas frame with none of the app around it. It
+contributes two frame actions (`PrototypeFrameActions`), so every frame of the
+prototype canvas gets both, and the canvas knows nothing about them:
 
-The menu, headed "Present B", has three rows, ordered by how much they cover:
-
-- **In this app tab** — a `<SurfaceOverlay>` filling the tab's surface. The
-  Singularity tab bar and app rail stay visible and clickable, so the user can
-  leave a frame presented and keep working in other tabs. It has no new-tab
-  icon: "new tab" means a new browser tab, so the one new-tab icon is the next
-  row's.
-- **In this browser tab** — a `<ViewportOverlay layer="max">`: the whole page,
-  app chrome included. Its trailing icon, **Open in a new browser tab**, opens
-  the frame's present page chromeless (`embedUrl(…, "chromeless")`, so no tab
-  bar, rail or action bar). For a source frame (the real app) it opens the
-  source's own `href` instead, and is disabled when the source has none.
-- **Full screen** (`F`) — the viewport overlay, also handed to the browser's
-  Fullscreen API. Escape exits fullscreen (the browser handles it), and the
-  resulting `fullscreenchange` closes the overlay, so one key still leaves.
-
-**Open responsive in a new tab** is a second frame action of its own, beside
-the menu (`OpenResponsiveAction`): one click opens the new-browser-tab page at
-the Responsive size (`present/<id>/<version>/responsive`) whatever size the
-canvas is at — at Fit that is the page laid out at the tab's own width, filling
-it. A source frame opens its own `href`, which already is that, and the button
-is disabled when it has none. Both it and the menu's new-browser-tab icon take
-their href from `BrowserTabOpener` (`components/frame-link.tsx`) and open it as a
-`NewTabButton` / `NewTabMenuItem`.
+- **Open in a new tab** (`OpenNewTabAction`) — opens the frame's present page
+  (below) chromeless (`embedUrl(…, "chromeless")`, so no tab bar, rail or
+  action bar) in a new browser tab, at the Responsive size
+  (`present/<id>/<version>/responsive`) whatever size the canvas is at — at Fit
+  that is the page laid out at the tab's own width, filling it. A source frame
+  (the real app) opens its own `href`, which already is that, and the button is
+  disabled when it has none. The href comes from `BrowserTabOpener`
+  (`components/frame-link.tsx`), opened as a `NewTabButton`.
+- **Full screen** (`F`, `FullScreenAction`) — a `<ViewportOverlay layer="max">`
+  over the whole page, handed to the browser's Fullscreen API. Escape exits
+  fullscreen (the browser handles it), and the resulting `fullscreenchange`
+  closes the overlay, so one key still leaves.
 
 **`F` presents the selected frame** in full screen. Only the selected frame's
-menu registers the key (a surface-scoped shortcut, silent in text fields), and
-it stands down while that menu's presentation is open. Presenting selects the
-frame first, so the menu holding `F` is always the one presenting.
+button registers the key (a surface-scoped shortcut, silent in text fields),
+and it stands down while a presentation is open. Presenting selects the frame
+first, so the button holding `F` is always the one presenting.
 
 ## While presenting
 
@@ -47,9 +35,7 @@ Hovering shows the chrome (`PresentStage`):
 - top-left, the frame's **tag**: its letter, its name, its version stepper (or a
   source frame's tag), and "2 of 3 · ← →" when the canvas has more than one
   frame;
-- **Exit `Esc`** — top-right, except in the app-tab placement, where it sits
-  beside the tag: the app's floating action bar is portaled above us at the
-  top-right, and would land on it;
+- **Exit `Esc`** — top-right;
 - the frame's **options pill**, bottom centre;
 - the canvas's **size & zoom chip**, bottom right. Changing it changes the
   canvas too: there is one size for the whole canvas.
@@ -82,24 +68,24 @@ so the frame is still there on leaving — and then presents the whole canvas
 box, so full screen stays full screen. The new-tab page navigates instead
 (below).
 
-**Escape is gated on `useSurfaceFocused()`.** Tabs are keep-alive — a background
-tab is still mounted, and under the floating placement still on screen — so an
-ungated `window` keydown would close a presentation the user is not looking at.
+**Our own Escape handler is gated on `useSurfaceFocused()`.** Tabs are
+keep-alive — a background tab is still mounted, and under the floating
+placement still on screen — so an ungated `window` keydown would close a
+presentation the user is not looking at.
 
 **The overlay's stage box is a `PortalHost`**: every popup opened inside the
 presentation (the version list, the size menu, the options popover, a tooltip)
 is drawn inside the box instead of under `body`. Under the Fullscreen API only
-the fullscreened subtree is painted, and a viewport presentation sits above the
-popup layer, so without it those popups would be invisible.
+the fullscreened subtree is painted, and the overlay sits above the popup
+layer, so without it those popups would be invisible.
 
 **The open presentation is held above the frames** (`PresentationHost`, a
 `PrototypeDetailWrap` contribution — inside every `PrototypeDetailProvider`):
-the menu only asks for it (`usePresentation`). The menu lives in its frame's
-header, which a layout change remounts (`+` leaving Swipe, Compare entering
-it), and that must not close the presentation that made the change. Each
-request remounts the overlay (keyed by a counter), so switching destination is
-an explicit remount rather than a portal-container swap React would reconcile
-into a half-move.
+the Full screen button only asks for it (`usePresentation`). The button lives
+in its frame's header, which a layout change remounts (`+` leaving Swipe,
+Compare entering it), and that must not close the presentation that made the
+change. Each request remounts the overlay (keyed by a counter), so each one
+requests full screen afresh.
 
 ## The present page
 
@@ -134,13 +120,11 @@ page chrome of its own instead of the overlays' Exit:
 The routes live in `internal/routes.ts`, apart from the panes, so a page's
 components can link to the other page without an import cycle.
 
-## The whole canvas in a new tab
+## The whole canvas as a page
 
-**Open the canvas in a new tab** is a header action of the canvas pane
-(`prototypeDetailPane.Actions`, `components/open-canvas-action.tsx`): it opens
-the canvas exactly as it is — every frame with its version and own picks, the
-size, zoom, Whole page, layout and selection — chromeless in a new browser tab,
-so the frames get the whole screen to compare options in.
+Where the one-frame page's `+` / Compare lead: the canvas they compute, every
+frame with its version and own picks, the size, zoom, Whole page, layout and
+selection, chromeless, so the frames get the whole tab to compare options in.
 
 The page is `present-canvas/<id>/<canvas>` (`prototypePresentCanvasPane`, a
 root route), where `canvas` is the canvas's own url encoding (`encodeCanvas` /
@@ -157,7 +141,7 @@ embedded document): a reload reopens the canvas the link carries.
 
 ## Plugin reference
 
-- Description: Present one canvas frame without the app around it: a per-frame Present menu (a frame action) with In this app tab (the tab bar stays), In this browser tab plus a new-browser-tab icon, and Full screen (F, which presents the selected frame); beside it, an Open responsive in a new tab button (the chromeless present page at the Responsive size, filling the tab at its own width). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both turning the presentation into the whole canvas, full screen — and the left and right arrow keys flip through the canvas's frames. A new tab opens present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas. In the canvas header, Open the canvas in a new tab opens the whole canvas (frames, versions, picks, size, zoom, layout, encoded in present-canvas/<id>/<canvas>) chromeless in a new browser tab, so the frames get the whole screen to compare, with the same Exit.
+- Description: Two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href) and Full screen (F, which presents the selected frame; the browser's Fullscreen API). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both turning the presentation into the whole canvas — and the left and right arrow keys flip through the canvas's frames. The new tab is present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas; its + / Compare navigate to present-canvas/<id>/<canvas>, the whole canvas as a chromeless page.
 - Web:
   - Slots:
     - `prototypes-present.actions`
@@ -168,21 +152,18 @@ embedded document): a reload reopens the canvas the link carries.
   - Contributes:
     - `Pane.Register` "prototypes-present"
     - `Pane.Register` "prototypes-present-canvas"
-    - `prototypeDetailPane.Actions` "open-canvas" → `OpenCanvasAction`
     - `PrototypeDetailWrap` → `PresentationHost`
-    - `PrototypeFrameActions` "present" → `PresentMenu`
-    - `PrototypeFrameActions` "open-responsive" → `OpenResponsiveAction`
-  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/prototypes/canvas` ×28
-    - `primitives/css/ui-kit` ×8
+    - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
+    - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
+  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/prototypes/canvas` ×27
+    - `primitives/css/ui-kit` ×3
     - `apps-core/tabs` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/latest-ref` ×2
-    - `primitives/link-gesture/new-tab` ×2
     - `primitives/pane` ×2
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
-    - `primitives/css/fill.fillClasses`
     - `primitives/css/pin.Pin`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
@@ -192,19 +173,17 @@ embedded document): a reload reopens the canvas the link carries.
     - `primitives/dom/movable.Movable`
     - `primitives/embed.embedUrl`
     - `primitives/icon-button.IconButton`
+    - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/live-state.matchResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/popup-open.PopupOpenScope`
     - `primitives/overlay/portal-host.PortalHost`
-    - `primitives/overlay/surface-overlay.SurfaceOverlay`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/shortcuts.useSurfaceShortcuts`
-    - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --border`
-    - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-xs`

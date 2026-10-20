@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
-import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
 import { useSurfaceFocused } from "@plugins/apps-core/plugins/tabs/web";
 import {
   usePrototypeDetail,
@@ -14,17 +13,8 @@ import { PresentBox } from "./present-box";
 import { ExitButton, PresentStage } from "./present-stage";
 
 /**
- * How much of the screen the presentation covers, smallest first:
- *
- * - `surface` — the app tab's surface. The Singularity tab bar and app rail stay
- *   visible, so the user can keep switching tabs with a prototype presented.
- * - `viewport` — the whole browser page, app chrome included.
- * - `screen` — the same, handed to the browser's Fullscreen API.
- */
-export type PresentPlacement = "surface" | "viewport" | "screen";
-
-/**
- * One canvas frame alone, with none of the app around it: the same live frame
+ * One canvas frame alone, full screen (the whole page, handed to the browser's
+ * Fullscreen API), with none of the app around it: the same live frame
  * the canvas shows (so an agent's edit still reloads it), at the canvas's size
  * and zoom fitted to the space it now has. ← / → flip through the canvas's
  * frames in place.
@@ -33,20 +23,18 @@ export type PresentPlacement = "surface" | "viewport" | "screen";
  * still there on leaving — and the overlay then presents the whole canvas, in
  * the same box (so full screen stays full screen).
  *
- * Escape leaves from any placement: in `surface`/`viewport` our own key handler
- * closes; in `screen` the browser exits fullscreen first and the resulting
- * `fullscreenchange` closes.
+ * Escape leaves: the browser exits fullscreen and the resulting
+ * `fullscreenchange` closes (our own key handler closes too, should the
+ * browser have refused full screen).
  */
 export function PresentOverlay({
   name,
   frameId,
-  placement,
   onClose,
 }: {
   name: string;
   /** The canvas frame presented first; ← / → flip to the others in place. */
   frameId: FrameId;
-  placement: PresentPlacement;
   /** Stable identity required — the fullscreen effect keys on it. */
   onClose: () => void;
 }) {
@@ -118,10 +106,9 @@ export function PresentOverlay({
   }, [exit, surfaceFocused]);
 
   useEffect(() => {
-    if (placement !== "screen") return;
     const el = rootRef.current;
     if (!el) return;
-    // Still inside the menu click's (or the F key's) user activation, so the
+    // Still inside the button click's (or the F key's) user activation, so the
     // request is granted.
     const onChange = () => {
       if (document.fullscreenElement === null) exit();
@@ -132,49 +119,30 @@ export function PresentOverlay({
       document.removeEventListener("fullscreenchange", onChange);
       if (document.fullscreenElement === el) void document.exitFullscreen();
     };
-  }, [placement, exit]);
+  }, [exit]);
 
-  const stageBox = (
-    /* The stage box: the element handed to the Fullscreen API, and the
-       positioning context the chrome pins to (so it is inside the fullscreened
-       subtree and stays visible there). */
-    <PresentBox boxRef={rootRef}>
-      {/* Exit goes top-LEFT, beside the tag, when we only cover the surface:
-          the app's own floating chrome (the global action bar) sits at the
-          top-right and is portaled above us. Covering the viewport puts it
-          underneath, so the top-right corner is free again. */}
-      {wholeCanvas ? (
-        <CanvasStage exit={<ExitButton onExit={exit} />} />
-      ) : (
-        <PresentStage
-          name={name}
-          frameId={shown}
-          exit={{
-            onExit: exit,
-            side: placement === "surface" ? "left" : "right",
-          }}
-          onExtend={extend}
-        />
-      )}
-    </PresentBox>
-  );
-
-  // `aria-modal` only where it is true: covering the viewport really does make
-  // everything else unreachable, but the surface placement deliberately leaves
-  // the tab bar and rail clickable — claiming modality there would tell a screen
-  // reader to hide chrome the user can still use.
-  return placement === "surface" ? (
-    <SurfaceOverlay role="dialog" aria-label="Prototype presentation">
-      {stageBox}
-    </SurfaceOverlay>
-  ) : (
+  return (
     <ViewportOverlay
       layer="max"
       role="dialog"
       aria-modal="true"
       aria-label="Prototype presentation"
     >
-      {stageBox}
+      {/* The stage box: the element handed to the Fullscreen API, and the
+          positioning context the chrome pins to (so it is inside the fullscreened
+          subtree and stays visible there). */}
+      <PresentBox boxRef={rootRef}>
+        {wholeCanvas ? (
+          <CanvasStage exit={<ExitButton onExit={exit} />} />
+        ) : (
+          <PresentStage
+            name={name}
+            frameId={shown}
+            onExit={exit}
+            onExtend={extend}
+          />
+        )}
+      </PresentBox>
     </ViewportOverlay>
   );
 }

@@ -98,9 +98,7 @@ had been rendered there. The same idiom — and the same reason — as
     - `SurfaceOverlay`
     - `SurfaceOverlayHost`
 - Cross-plugin:
-  - Imported by:
-    - `apps-core/tab-surface`
-    - `apps/prototypes/present`
+  - Imported by: `apps-core/tab-surface`
 - Exemptions:
   - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/surface-overlay.tsx` (sanctioned)
 

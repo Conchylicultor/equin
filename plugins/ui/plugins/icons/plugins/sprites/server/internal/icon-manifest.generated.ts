@@ -303,7 +303,6 @@ export const ICON_MANIFEST: {
     "swap-vert",
     "sync",
     "sync-problem",
-    "tab",
     "tab-move",
     "tab-new-right",
     "table",

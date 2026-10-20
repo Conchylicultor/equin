@@ -25,7 +25,7 @@ export type FrameResolution =
       tag: string;
       /**
        * A URL that opens what the frame shows on its own — for a source that is
-       * a page (Present's "new browser tab"). Absent for one that is not.
+       * a page (present's Open in a new tab). Absent for one that is not.
        */
       href?: string;
       /**

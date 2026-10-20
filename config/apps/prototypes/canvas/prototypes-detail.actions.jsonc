@@ -1,4 +1,4 @@
-// @hash 11df3c8abebc
+// @hash 6309558f7169
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -18,8 +18,7 @@
 // After the spacer, the canvas's own actions, which take no vertical room from
 // the canvas by living here: `layout` (`Side by side | Swipe`, shown only with
 // exactly two frames) and `add` (`+ Frame`, then one `+ <source>` per frame
-// source — `+ Real app`), and last `open-canvas` (the canvas as it is, in a
-// chromeless new browser tab, for the whole screen to compare in).
+// source — `+ Real app`).
 {
   "items": [
     "primitives.pane:title",
@@ -28,7 +27,6 @@
     "apps.prototypes.gallery:done",
     { "type": "spacer", "id": "spacer-1" },
     "apps.prototypes.canvas:layout",
-    "apps.prototypes.canvas:add",
-    "apps.prototypes.present:open-canvas"
+    "apps.prototypes.canvas:add"
   ]
 }
