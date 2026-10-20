@@ -483,26 +483,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
-        - **`demo`** — The Agent Manager's demo scenario (core: agentManagerDemo — the app, the route /c/conv-demo-dark-mode and its pack: a queue of agents and one conversation fixing a bug, every id carrying `demo`) and its exhibit, the app rendered in-process on that pack.
+        - **`demo`** — The Agent Manager's demo scenario (core: agentManagerDemo — the app, the route /c/conv-demo-dark-mode and its browser host: real server code in a Web Worker on PGlite, seeded with a queue of agents and one conversation fixing a bug, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
           - Core:
-            - Uses: 22 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/demo/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/demo/REFERENCE.md)
-              - `tasks/tasks-core` ×8
-              - `framework/browser-server/demo` ×5
+            - Uses:
               - `apps/deploy.DEPLOY_CATEGORY_ID`
               - `apps/home.APPS_CATEGORY_ID`
               - `apps/prototypes.PROTOTYPES_CATEGORY_ID`
-              - `conversations/conversation-view/jsonl-viewer.jsonlEvents`
-              - `conversations/conversations-view/queue.queueRanks`
               - `conversations/model-provider.ConversationModelSchema`
-              - `primitives/rank.Rank`
-              - `tasks/attempt-work.attemptWork`
-              - `tasks/task-source-url.attemptSourceUrl`
             - Exports (types): `DemoStory`
             - Exports (values):
               - `agentManagerDemo`
-              - `DEMO_CONVERSATION_ID`
               - `DEMO_STORIES`
+              - `demoAttemptId`
+              - `demoConversationId`
               - `demoTaskId`
+              - `demoTranscriptJsonl`
+              - `demoWorktreePath`
         - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
           - Web:
             - Contributes: `Conversation.ActionBar` → `PagesTreeButton`
@@ -12468,8 +12464,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "held-turn-undelivered"
-    - Uses: 74 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `tasks/tasks-core` ×24
+    - Uses: 75 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `tasks/tasks-core` ×25
       - `conversations/turn-ledger` ×12
       - `conversations/transcript-watcher` ×7
       - `conversations/workspace` ×3
@@ -12490,11 +12486,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `shell/notifications.recordNotification`
       - `tasks/task-effort.getTaskEffort`
       - `tasks/task-preprompt.getTaskPreprompt`
-    - DB schema:
-      - `plugins/conversations/server/internal/tables-created-event.ts`
-      - `plugins/conversations/server/internal/tables-turn-completed-event.ts`
+    - DB schema: `plugins/conversations/server/internal/tables-turn-completed-event.ts`
     - Exports (types):
-      - `ConversationCreatedPayload`
       - `ConversationRuntime`
       - `ConversationTurnCompletedPayload`
       - `IfAlreadyStarted`
@@ -12510,7 +12503,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `TypedTurn`
     - Exports (values):
       - `afterTurn`
-      - `conversationCreated`
       - `conversationTurnCompleted`
       - `createConversation`
       - `deleteConversation`
@@ -12536,7 +12528,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `defineJob('conversations.turn-emitter.reconcile')`
       - `defineJob('conversations.spawn')`
       - `defineJob('conversations.deliver-held-turns')`
-      - `defineTriggerEvent('conversation.created')`
       - `defineTriggerEvent('conversation.turn-completed')`
       - `defineJob('conversations.status-sweep')`
     - Routes:
@@ -12628,21 +12619,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `stopConversation`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 62 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×47
-      - `tasks` ×4
+    - Imported by: 58 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×45
       - `apps` ×3
       - `review` ×3
+      - `tasks` ×3
       - `active-data` ×2
       - `debug/profiling/ops`
-      - `improve`
       - `page/annotations/agent-notes/agent-page`
     - Endpoint callers:
       - `compaction-context`
       - `transcript-api`
   - Exemptions:
     - Exempts itself from:
-      - `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
+      - `ids:pk-declared` — `server/internal/tables-turn-completed-event.ts` (debt)
       - `boundaries/no-platform-api` — `server/internal/lifecycle.ts`, `server/internal/locate-cut.ts`, `server/internal/status-reconciler.ts` (debt)
   - Plugins:
     - **`agent-launch`** — What every app-launched agent starts with, whatever runtime hosts it: the tmux session's allowlisted environment (the env -i wrapper, the -e values it delivers, its PATH and login shell — agentSessionArgs), the fixed CLI settings, the hooks every runtime runs (the compaction hook) and the one merge of the launch's settings fragments.
@@ -13229,7 +13219,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "conversation-preprompts:rows"
           - `trigger` "conversation-preprompt.record"
         - Uses:
-          - `conversations.conversationCreated`
           - `conversations/preprompts.resolvePrepromptItem`
           - `database.db`
           - `database/sql-projection.nullable`
@@ -13240,6 +13229,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveCollection`
           - `tasks/task-preprompt.getTaskPreprompt`
           - `tasks/tasks-core._conversations`
+          - `tasks/tasks-core.conversationCreated`
           - `tasks/tasks-core.getConversation`
           - `ui/icons/sprites.defineSavedIconSource`
         - DB schema: `plugins/conversations/plugins/conversation-preprompt/server/internal/tables.ts`
@@ -13913,6 +13903,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.useLive`
               - `primitives/css/ui-kit.DropdownMenuItem`
               - `primitives/live-state.foldResource`
+              - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useCombinedResources`
               - `shell/notifications.toast`
               - `ui/icons.Icon`
@@ -14074,7 +14065,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shape --spacing`
           - Shared:
             - Exports (values): `holdAndExit`
-        - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
+        - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Streams a conversation's transcript as structured events via the jsonl-events resource, read from the host's TranscriptSource (Claude's JSONL session log on the desktop).
           - Web:
             - Slots:
               - `JsonlViewer.EventRenderer`
@@ -14154,17 +14145,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `resource.declare` "jsonl-events"
             - Uses:
-              - `conversations/transcript-watcher.readJsonlEventsFromChain`
-              - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-              - `conversations/transcript-watcher.transcriptChainReads`
-              - `conversations/transcript-watcher.transcriptChainSignature`
-              - `conversations/transcript-watcher.watchTranscript`
+              - `conversations/transcript-source.transcriptChainReads`
+              - `conversations/transcript-source.TranscriptSource`
               - `infra/git/git-read-cache.createSignedMemo`
               - `network/live.serveValue`
             - Resources: `jsonl-events` (push, notified)
           - Core:
             - Uses:
-              - `conversations/transcript-watcher.JsonlEventSchema`
+              - `conversations/transcript-source.JsonlEventSchema`
               - `network/live.liveValue`
             - Exports (values):
               - `eventKey`
@@ -14176,9 +14164,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 43 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Imported by: 42 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `conversations` ×41
-              - `apps/agent-manager/demo`
               - `tasks/outcome-report`
           - Exemptions:
             - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
@@ -14722,9 +14709,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Contributes: `resource.declare` "background-shell-output"
                 - Uses:
+                  - `conversations/transcript-source.transcriptChainReads`
                   - `conversations/transcript-watcher.readJsonlEventsFromChain`
                   - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-                  - `conversations/transcript-watcher.transcriptChainReads`
                   - `conversations/transcript-watcher.transcriptChainSignature`
                   - `infra/file-watcher.defineFileWatcher`
                   - `infra/git/git-read-cache.createSignedMemo`
@@ -15120,11 +15107,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `resource.declare` "subagent-activity"
                   - `resource.declare` "subagent-transcript"
                 - Uses:
+                  - `conversations/transcript-source.transcriptChainReads`
                   - `conversations/transcript-watcher.conversationChainTag`
                   - `conversations/transcript-watcher.readChainLines`
                   - `conversations/transcript-watcher.readJsonlEventsFromChain`
                   - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-                  - `conversations/transcript-watcher.transcriptChainReads`
                   - `conversations/transcript-watcher.transcriptChainSignature`
                   - `conversations/transcript-watcher.watchPaths`
                   - `infra/git/git-read-cache.createSignedMemo`
@@ -15140,11 +15127,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations.hasLiveProcess`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.parseWorkflowResult`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.WORKFLOW_TOOL_NAME`
-                  - `conversations/transcript-watcher.JsonlEvent`
-                  - `conversations/transcript-watcher.JsonlEventSchema`
-                  - `conversations/transcript-watcher.TokenUsage`
-                  - `conversations/transcript-watcher.tokenUsageOf`
-                  - `conversations/transcript-watcher.TokenUsageSchema`
+                  - `conversations/transcript-source.JsonlEvent`
+                  - `conversations/transcript-source.JsonlEventSchema`
+                  - `conversations/transcript-source.TokenUsage`
+                  - `conversations/transcript-source.tokenUsageOf`
+                  - `conversations/transcript-source.TokenUsageSchema`
                   - `network/live.liveValue`
                 - Exports (types):
                   - `DescribedSubagent`
@@ -16351,7 +16338,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/prompt-input.CONVERSATION_PROMPT_DRAFT_KEY`
               - `network/live.useLive`
               - `primitives/latest-ref.useLatestRef`
-              - `primitives/live-state.useCombinedResources`
+              - `primitives/live-state.combineResources`
               - `primitives/persistent-draft.useDraft`
               - `primitives/prompt-editor.PromptEditorSlots`
               - `shell/notifications.toast`
@@ -16877,7 +16864,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `trigger` "queue.seed-rank"
               - `trigger` "queue.task-status-rerank"
             - Uses:
-              - `conversations.conversationCreated`
               - `database.currentTxId`
               - `database.db`
               - `infra/endpoints.HttpError`
@@ -16888,6 +16874,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.serveCollection`
               - `tasks/tasks-core._attempts`
               - `tasks/tasks-core._conversations`
+              - `tasks/tasks-core.conversationCreated`
               - `tasks/tasks-core.getConversation`
               - `tasks/tasks-core.listBlockingDepIds`
               - `tasks/tasks-core.listDependentIds`
@@ -16955,9 +16942,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `rerankQueue`
               - `stepDownQueue`
           - Cross-plugin:
-            - Imported by:
-              - `apps/agent-manager/demo`
-              - `conversations/conversations-view/data-view/queue`
+            - Imported by: `conversations/conversations-view/data-view/queue`
     - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
       - Web:
         - Uses:
@@ -17444,6 +17429,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `conversations`
+          - `conversations/transcript-source`
           - `conversations/transcript-watcher`
           - `conversations/usage`
     - **`spawn-failure`** — Answers the conversation-spawn-failures collection inside a demo scope (no launch failed), so the surfaces that read a conversation's spawn failure render in the demo. Per-conversation spawn failure: the latest error of a conversation's spawn job (the failed step and its message), stored in conversations_ext_spawn_failure by the job on every failed attempt and deleted once a session starts, served as a lookup-only collection.
@@ -17603,63 +17589,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `defineJob('conversations.transcript-touch')`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/touch-job.ts` (debt)
-    - **`transcript-watcher`** — Foreign-session report renderer: a one-line Debug, Reports summary for the conversation-foreign-session kind — which conversation holds a session id that belongs to another, and how it was seen. Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
-      - Web:
-        - Contributes: `Reports.KindView` → `ForeignSessionSummary`
-        - Uses:
-          - `primitives/css/badge.Badge`
-          - `primitives/css/inline.Inline`
-          - `reports.Reports`
+    - **`transcript-source`** — A conversation's transcript as a host service: TranscriptSource (its events, a signature that moves with them, and a watch), with the Claude Code JSONL parser every provider runs. The desktop's provider reads the session files (transcript-watcher#machine); a host without them provides its own (plugins/memory).
       - Server:
-        - Contributes: `report-kind` "conversation-foreign-session"
         - Uses:
           - `conversations/session-chain._conversationSessions`
-          - `conversations/session-chain.listSessionChain`
-          - `infra/file-watcher.defineFileWatcher`
-          - `infra/file-watcher.FileWatcher`
-          - `infra/paths.CLAUDE_PROJECTS_DIR`
-          - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
-          - `reports.recordReportDebounced`
-          - `reports.ReportKind`
           - `tasks/tasks-core._conversations`
-          - `tasks/tasks-core.getConversationClaudeSessionId`
         - Exports (types):
-          - `AnchoredChain`
-          - `AnchoredEntry`
-          - `PathsSnapshot`
+          - `TranscriptImageReader`
           - `TranscriptSnapshot`
-          - `WatchSpec`
-          - `WatchTargets`
+          - `TranscriptSourceImpl`
         - Exports (values):
-          - `conversationChainTag`
-          - `findTranscriptPath`
-          - `onSessionTranscriptWritten`
-          - `onTranscriptWritten`
-          - `readChainLines`
-          - `readJsonlEvents`
-          - `readJsonlEventsFromChain`
-          - `refreshConversationChain`
-          - `resolveAnchoredChain`
-          - `resolveConversationTranscriptPaths`
+          - `buildJsonlEvents`
+          - `mergeChainLines`
           - `transcriptChainReads`
-          - `transcriptChainSignature`
-          - `watchPaths`
-          - `watchTranscript`
-          - `watchTranscriptFile`
-        - Register: `defineFileWatcher('transcript-watcher.transcripts')`
+          - `TranscriptSource`
       - Cross-plugin:
         - Imported by:
-          - `apps/prototypes/checkpoints`
-          - `backup/sources/transcripts`
-          - `conversations`
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/subagents`
-          - `conversations/transcript-api`
-          - `conversations/transcript-retention`
-          - `conversations/usage`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
+          - `conversations/transcript-source/memory`
+          - `conversations/transcript-watcher`
       - Core:
         - Exports (types):
           - `ForeignSessionPayload`
@@ -17693,6 +17643,74 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unwrapRelayEnvelopes`
           - `userPromptText`
           - `wrapPreprompt`
+      - Plugins:
+        - **`memory`** (excluded) — Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it. Never booted by the desktop.
+          - Server:
+            - Contributes: `host-service:conversations.transcript-source` "conversations.transcript-source"
+            - Uses:
+              - `conversations/transcript-source.buildJsonlEvents`
+              - `conversations/transcript-source.mergeChainLines`
+              - `conversations/transcript-source.TranscriptSnapshot`
+              - `conversations/transcript-source.TranscriptSource`
+              - `conversations/transcript-source.TranscriptSourceImpl`
+            - Exports (values): `writeTranscript`
+    - **`transcript-watcher`** — Foreign-session report renderer: a one-line Debug, Reports summary for the conversation-foreign-session kind — which conversation holds a session id that belongs to another, and how it was seen. Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
+      - Web:
+        - Contributes: `Reports.KindView` → `ForeignSessionSummary`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.Reports`
+      - Server:
+        - Contributes:
+          - `report-kind` "conversation-foreign-session"
+          - `host-service:conversations.transcript-source` "conversations.transcript-source"
+        - Uses:
+          - `conversations/session-chain.listSessionChain`
+          - `conversations/transcript-source.buildJsonlEvents`
+          - `conversations/transcript-source.mergeChainLines`
+          - `infra/file-watcher.defineFileWatcher`
+          - `infra/file-watcher.FileWatcher`
+          - `infra/paths.CLAUDE_PROJECTS_DIR`
+          - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
+          - `reports.recordReportDebounced`
+          - `reports.ReportKind`
+          - `tasks/tasks-core.getConversationClaudeSessionId`
+        - Exports (types):
+          - `AnchoredChain`
+          - `AnchoredEntry`
+          - `PathsSnapshot`
+          - `TranscriptSnapshot`
+          - `WatchSpec`
+          - `WatchTargets`
+        - Exports (values):
+          - `conversationChainTag`
+          - `findTranscriptPath`
+          - `onSessionTranscriptWritten`
+          - `onTranscriptWritten`
+          - `readChainLines`
+          - `readJsonlEvents`
+          - `readJsonlEventsFromChain`
+          - `refreshConversationChain`
+          - `resolveAnchoredChain`
+          - `resolveConversationTranscriptPaths`
+          - `transcriptChainSignature`
+          - `watchPaths`
+          - `watchTranscript`
+          - `watchTranscriptFile`
+        - Register: `defineFileWatcher('transcript-watcher.transcripts')`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/prototypes/checkpoints`
+          - `backup/sources/transcripts`
+          - `conversations`
+          - `conversations/conversation-view/jsonl-viewer/background-shells`
+          - `conversations/conversation-view/jsonl-viewer/subagents`
+          - `conversations/transcript-api`
+          - `conversations/transcript-retention`
+          - `conversations/usage`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
     - **`turn-ledger`** — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent, its state moved only by applyTurnEvent's pure transition), the accept that holds a turn while its conversation starts, resolvePromptSubmit (the agent's confirmation that it took a turn, matched to the oldest unconfirmed one), the turn-ledger.turns live collection, the conversation.userTurnSent event (emitted once the agent confirmed a user's turn), the turn-merged / turn-unverified report kinds and a 7-day retention sweep of settled rows.
       - Web:
         - Contributes: `IdKinds.Kind` "turn"
@@ -23387,7 +23405,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by: `framework/browser-server/demo/scope`
       - Plugins:
-        - **`demo`** — Demo packs (core) and the two slots a plugin answers its own keys in every demo scope through (web): Demo.Resource (a useBackend hook returning a plugin's per-scope backend: a browser server serve function plus endpoint routes sharing its state) and Demo.Route (a stateless [ep.route, implement(ep, handler)]). A leaf: the scope that reads them lives in demo/scope, so a low plugin (config_v2) can contribute without depending on the scope's UI.
+        - **`demo`** — Demo scenarios (core) and the two slots a plugin answers its own keys in every demo scope through (web): Demo.Resource (a useBackend hook returning a plugin's per-scope backend: a browser server serve function plus endpoint routes sharing its state) and Demo.Route (a stateless [ep.route, implement(ep, handler)]). A leaf: the scope that reads them lives in demo/scope, so a low plugin (config_v2) can contribute without depending on the scope's UI.
           - Web:
             - Slots:
               - `Demo.Resource`
@@ -23415,57 +23433,42 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `DemoBackend`
               - `DemoRoute`
-              - `DemoServe`
             - Exports (values):
               - `Demo`
               - `demoResource`
-          - Core:
-            - Uses:
-              - `network/live.LIVE_COLUMNS_KEY`
-              - `packages/canonical-params.canonicalJson`
-              - `packages/canonical-params.canonicalParams`
-            - Exports (types):
-              - `DemoPack`
-              - `DemoPackContext`
-              - `DemoScenario`
-              - `PackEntry`
-              - `PackWindowOptions`
-              - `ServePackOptions`
-            - Exports (values):
-              - `definePack`
-              - `DemoMissingError`
-              - `DemoPackError`
-              - `packAll`
-              - `packRows`
-              - `packValue`
-              - `packWindow`
-              - `servePack`
           - Cross-plugin:
-            - Imported by: 21 plugins — full list in [`plugins/framework/plugins/browser-server/plugins/demo/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/REFERENCE.md)
-              - `conversations` ×11
-              - `infra` ×2
-              - `tasks` ×2
-              - `apps/agent-manager/demo`
+            - Imported by:
               - `config_v2`
+              - `conversations/agents`
+              - `conversations/conversation-preprompt`
+              - `conversations/conversation-progress`
+              - `conversations/conversation-view/allow-monitor`
+              - `conversations/conversation-view/code`
+              - `conversations/conversation-view/jsonl-viewer/subagents`
+              - `conversations/conversation-view/notes`
+              - `conversations/conversation-view/turn-summary`
+              - `conversations/hibernation`
+              - `conversations/model-provider`
+              - `conversations/spawn-failure`
               - `debug/profiling/op-log/op-store`
               - `framework/browser-server/demo/scope`
+              - `infra/claude-cli/availability`
+              - `infra/host/machine-sleep`
               - `plugin-meta/plugin-view`
               - `primitives/usage-rank`
-          - Test helpers:
-            - Core: `@plugins/framework/plugins/browser-server/plugins/demo/core/testing`
-              - `definePack` — Declare a pack — lazily: nothing is evaluated until `servePack` loads it, so `ago` is relative to load time, and a pack module costs nothing to import.
-              - `packAll` — Every row of a collection declared `all` (its `key`, and its `:rows`).
-              - `packValue` — A value's answer at one tuple: its params (a typed-query value: its question), exactly as a reader passes them to `useLive`.
-              - Types: `DemoPack`
+              - `tasks/outcome-report`
+              - `tasks/task-track`
+          - Core:
+            - Exports (types): `DemoScenario`
+            - Exports (values): `DemoMissingError`
           - Plugins:
-            - **`scope`** — <DemoScope scenario>: renders its subtree against a browser server of its own, built once the scenario's pack loads — the pack's recorded answers, every Demo.Resource contribution's serves (a plugin answering its own live keys, e.g. config from code defaults) and every Demo.Route handler. Any other live key fails loader-failed; any other /api request is refused as unsupported with one deduped 'Not available in the demo' toast; a pack that fails to parse, or a key served twice, throws to the error boundary.
+            - **`scope`** — <DemoScope scenario>: renders its subtree against a browser server of its own: the scenario's browser host (real server code in a worker, on the scenario's seed), every Demo.Resource contribution's serves (a plugin answering its own live keys, e.g. config from code defaults) and every Demo.Route handler. Any other live key fails loader-failed; any other /api request is refused as unsupported with one deduped 'Not available in the demo' toast; a host that fails to boot, or a key served twice, throws to the error boundary.
               - Web:
                 - Uses:
                   - `framework/browser-server.browserServerTransport`
                   - `framework/browser-server/demo.Demo`
                   - `framework/browser-server/demo.DemoBackend`
                   - `framework/browser-server/demo.DemoRoute`
-                  - `framework/browser-server/demo.DemoServe`
                   - `primitives/live-state.NotificationsProvider`
                   - `primitives/loading.Loading`
                   - `primitives/networking.TransportProvider`
@@ -23475,7 +23478,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `apps/demo/shell`
               - Test helpers:
                 - Web: `@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web/testing`
-                  - `DemoScope` — Renders `children` against a browser server of its own, built once the scenario's pack has loaded: the pack's recorded answers, every `Demo.Resource` contribution's backend (its serves and its routes) and every `Demo.Route` handler.
+                  - `DemoScope` — Renders `children` against a browser server of its own: the scenario's host (real server code in a worker, on the scenario's seed), every `Demo.Resource` contribution's backend (its serves and its routes) and every `Demo.Route` handler.
     - **`central-core`**
       - Core:
         - Uses:
@@ -25521,12 +25524,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `trigger` "improve.apply-group"
       - `taskCategory` "improvements"
     - Uses:
-      - `conversations.conversationCreated`
       - `conversations/conversations-view/grouped.addMemberToGroup`
       - `database.db`
       - `infra/events.Trigger`
       - `infra/jobs.defineJob`
       - `tasks/task-category.TaskCategory`
+      - `tasks/tasks-core.conversationCreated`
     - DB schema: `plugins/improve/server/internal/tables.ts`
     - Exports (values): `_improvePendingGroups`
     - Register: `defineJob('improve.apply-group')`
@@ -30119,7 +30122,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 250 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 249 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×70
           - `conversations` ×44
           - `tasks` ×27
@@ -30135,7 +30138,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review` ×3
           - `apps-core` ×2
           - `config_v2` ×2
-          - `framework` ×2
           - `history` ×2
           - `integrations` ×2
           - `release` ×2
@@ -30143,6 +30145,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup/runs-arm`
           - `database/query-deadline`
           - `fields/secret/config`
+          - `framework/browser-server`
           - `reports`
           - `runs`
           - `shell/notifications`
@@ -30288,7 +30291,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`canonical-params`** — One spelling per live-resource params tuple: canonicalParams drops an undefined param and a "" for a declared-optional one, and canonicalJson spells a structured param (a typed-query value's q) one way — keys sorted at every depth, non-JSON refused. The single rule both ends of the live-state wire apply (the browser's useResource and the resource runtime), so they cannot drift.
       - Cross-plugin:
         - Imported by:
-          - `framework/browser-server/demo`
           - `framework/resource-runtime`
           - `network/live`
       - Core:
@@ -40733,7 +40735,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withRank`
       - Cross-plugin:
         - Imported by:
-          - `apps/agent-manager/demo`
           - `apps/studio/explorer`
           - `config_v2`
           - `conversations/agents`
@@ -44762,31 +44763,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `active-data/attempt`
           - `debug/profiling/ops`
-    - **`attempt-work`** — The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger, as one live resource plus a direct read for the server-side exit-drop guard.
+    - **`attempt-work`** — The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger — the direct read for the server-side exit-drop guard and the git measurements commits-graph shares. The live value is served by the machine half.
       - Server:
         - Contributes: `resource.declare` "attempt-work"
         - Uses:
           - `infra/git/git-read-cache.createSignedMemo`
           - `infra/git/git-watcher.lastKnownMainSha`
-          - `infra/git/git-watcher.refHeadServed`
           - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/worktree.ensureMainWorktreeRoot`
-          - `network/live.serveValue`
           - `primitives/commit-list.GitError`
           - `primitives/commit-list.runGit`
           - `primitives/commit-list.tryRunGit`
           - `primitives/commit-list.WorktreeGoneError`
-          - `tasks/tasks-core._attemptDeliveries`
-          - `tasks/tasks-core._attempts`
-          - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.getAttemptRow`
           - `tasks/tasks-core.hasAttemptDelivery`
           - `tasks/tasks-core.listConversationIdsForAttempt`
           - `tasks/tasks-core.listPushesForAttempt`
-          - `tasks/tasks-core.pushes`
         - Exports (values):
           - `attemptWorkEtag`
-          - `attemptWorkServed`
           - `attemptWorkSignature`
           - `deltaEtag`
           - `evictAttemptWork`
@@ -44802,6 +44796,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readPendingInWorktree`
           - `refExists`
         - Resources: `attempt-work` (push)
+      - Machine:
+        - Uses: `network/live.serveValue`
       - Core:
         - Uses:
           - `network/live.liveValue`
@@ -44819,7 +44815,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `standingOf`
       - Cross-plugin:
         - Imported by:
-          - `apps/agent-manager/demo`
           - `conversations/conversation-view/commits-graph`
           - `conversations/conversation-view/drop-and-exit`
           - `tasks/outcome-report`
@@ -45945,7 +45940,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskSourceUrlShape`
       - Cross-plugin:
         - Imported by:
-          - `apps/agent-manager/demo`
           - `conversations/conversation-view/open-app`
           - `tasks`
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
@@ -46026,7 +46020,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `trigger` "task-title.on-user-turn-sent"
           - `trigger` "task-title.short-on-title-changed"
         - Uses:
-          - `conversations.conversationCreated`
           - `conversations/turn-ledger.userTurnSent`
           - `database.db`
           - `infra/claude-cli.runClaudePrint`
@@ -46039,6 +46032,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core._attempts`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core._tasks`
+          - `tasks/tasks-core.conversationCreated`
           - `tasks/tasks-core.getTask`
           - `tasks/tasks-core.taskTitleChanged`
           - `tasks/tasks-core.updateConversationsTitleForTask`
@@ -46189,6 +46183,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AttemptStatus`
           - `AttemptWithConversations`
           - `Conversation`
+          - `ConversationCreatedPayload`
           - `ConversationKind`
           - `ConversationStatusChangedPayload`
           - `ConversationSummary`
@@ -46211,6 +46206,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `_attemptDeliveries`
           - `_attempts`
+          - `_conversationCreatedTriggers`
           - `_conversations`
           - `_conversationStatusChangedTriggers`
           - `_pushLandedTriggers`
@@ -46222,6 +46218,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AttemptStatusSchema`
           - `clusterLabelOf`
           - `conversationAttachments`
+          - `conversationCreated`
           - `ConversationKindSchema`
           - `conversationOwnerColumns`
           - `conversationOwnerJoins`
@@ -46291,6 +46288,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTriggerEvent('tasks.statusChanged')`
           - `defineTriggerEvent('tasks.titleChanged')`
           - `defineTriggerEvent('conversation.statusChanged')`
+          - `defineTriggerEvent('conversation.created')`
         - Resources:
           - `attempt-workspaces:rows` (keyed, point)
           - `attempts` (keyed)
@@ -46383,18 +46381,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 71 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×31
+        - Imported by: 72 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×32
           - `tasks` ×17
           - `active-data` ×5
           - `debug` ×4
           - `page` ×3
-          - `apps` ×2
           - `infra` ×2
           - `stats` ×2
+          - `apps/sonata/transcription`
           - `backup/sources/transcripts`
           - `code-explorer`
           - `database/query`
+          - `improve`
           - `plugin-meta/plugin-health`
           - `review/plugin-changes`
         - Extended by:

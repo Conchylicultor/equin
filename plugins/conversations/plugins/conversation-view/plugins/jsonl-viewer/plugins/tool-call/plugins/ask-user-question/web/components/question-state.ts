@@ -1,5 +1,5 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import { isInterruptContent } from "@plugins/conversations/plugins/transcript-source/core";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { canSendTurn, QUESTION_WAITING_FOR } from "@plugins/conversations/core";
 import { ANSWER_MARKER } from "../../shared";
