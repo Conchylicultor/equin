@@ -201,7 +201,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
   `lint/index.ts` or an inline
   `// eslint-disable-next-line endpoints/no-void-fetch-endpoint -- <why>`.
 - **JSON server responses must go through `implement()`.** A raw
-  `Response.json()` in a server/central handler is forbidden — enforced by
+  `Response.json()` in a server/machine/central handler is forbidden — enforced by
   `endpoints:no-raw-json-handlers`. Raw `new Response(...)` handlers remain
   allowed only for binary / stream / custom-status responses (where
   `implement()`'s 200/204 contract doesn't fit).

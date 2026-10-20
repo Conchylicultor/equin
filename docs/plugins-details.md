@@ -13194,9 +13194,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources: `conversation-categories:rows` (keyed, point)
         - Routes: `DELETE /api/conversation-category/:conversationId/:categoryId`
       - Machine:
-        - Uses:
-          - `infra/endpoints.implementMachine`
-          - `infra/endpoints.machineHandler`
+        - Uses: `infra/endpoints.implementMachine`
         - Register: `defineJob('conversation-category.classify')`
         - Routes:
           - `POST /api/conversation-category/:conversationId/classify`
@@ -27065,7 +27063,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `jobs:no-raw-addjob` — `server/internal/cron-dedup.ts` (sanctioned)
-          - `endpoints:no-raw-json-handlers` — `server/internal` (sanctioned)
+          - `endpoints:no-raw-json-handlers` — `server/internal`, `machine/internal` (sanctioned)
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `live/no-endpoint-read` — `web/components/events-test-view.tsx` (debt)
           - `boundaries/no-platform-api` — `server/internal/serial-queue.ts` (debt)

@@ -10,7 +10,7 @@ export default [
   },
   {
     rule: "endpoints:no-raw-json-handlers",
-    paths: ["server/internal"],
+    paths: ["server/internal", "machine/internal"],
     kind: "sanctioned",
     reason:
       "Long-poll / onDeadline test handlers with custom statuses and timeouts.",

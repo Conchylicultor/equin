@@ -1,55 +1,27 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
+import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import {
-  implementMachine,
-  machineHandler,
-} from "@plugins/infra/plugins/endpoints/machine";
-import {
-  ClassifyBodySchema,
+  classifyConversation,
   setConversationCategory,
 } from "../../shared/endpoints";
 import { upsertCategoryRows } from "../../server/internal/store";
 import { findCategory } from "./categories";
 import { classifyConversationJob } from "./classify-job";
 
-// Returns 202 Accepted — implementMachine() always returns 200, so use a raw
-// handler here (`classifyConversation` is still declared `needsMachine`, so a
-// client on a host without the computer gets the unavailable arm).
-export const handleClassify = machineHandler(async (req, params) => {
-  const conversationId = params.conversationId;
-  if (!conversationId) {
-    return Response.json(
-      { error: "Missing conversationId in path" },
-      { status: 400 },
-    );
-  }
-
-  // An absent body means "every category"; a `categoryIds` list restricts the
-  // run to those, which is how one chip re-classifies only its own category.
-  const text = await req.text();
-  let body: unknown = {};
-  if (text) {
-    try {
-      body = JSON.parse(text);
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err;
-      return Response.json(
-        { error: `Body is not valid JSON: ${err.message}` },
-        { status: 400 },
-      );
-    }
-  }
-  const parsed = ClassifyBodySchema.safeParse(body);
-  if (!parsed.success) {
-    return Response.json({ error: parsed.error.message }, { status: 400 });
-  }
-
-  await classifyConversationJob.enqueue({
-    conversationId,
-    categoryIds: parsed.data.categoryIds,
-    force: true,
-  });
-  return Response.json({ ok: true }, { status: 202 });
-});
+// Enqueues the run and answers 204 at once: the classification lands through
+// the conversation-categories collection when the job finishes. Without
+// `categoryIds` every category is re-classified; a list restricts the run to
+// those categories.
+export const handleClassify = implementMachine(
+  classifyConversation,
+  async ({ params, body }) => {
+    await classifyConversationJob.enqueue({
+      conversationId: params.conversationId,
+      categoryIds: body.categoryIds,
+      force: true,
+    });
+  },
+);
 
 export const handleSetCategory = implementMachine(
   setConversationCategory,
