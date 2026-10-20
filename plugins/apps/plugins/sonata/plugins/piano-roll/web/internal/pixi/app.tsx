@@ -33,6 +33,7 @@ import type { SonataLook } from "@plugins/apps/plugins/sonata/plugins/look/core"
 import type { NoteVisual } from "../../components/geometry";
 import type { BarMarker } from "./grid";
 import { createPianoRollScene, type PianoRollScene } from "./scene";
+import { loadLabelFonts } from "./labels";
 import { watchThemeColors } from "./css-color";
 
 export interface PianoRollCanvasProps {
@@ -202,6 +203,8 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
           wheel: false,
         },
       });
+      // The label atlas is baked once from the note-name face — wait for it.
+      await loadLabelFonts();
       if (disposed) return true;
       const host = hostRef.current;
       if (!host) {

@@ -1,7 +1,7 @@
 /**
  * Tests for the pure parts of the label layer: the `noteLabelFontPx` sizing
- * rules (moved verbatim from the DOM renderer — these tests pin the exact
- * behaviour the visual design was tuned against) and the `createLabelWindow`
+ * rules (the prototype's 11–17px band — these tests pin the exact behaviour
+ * the visual design was tuned against) and the `createLabelWindow`
  * binary-search windowing.
  */
 import { expect, test } from "bun:test";
@@ -9,45 +9,34 @@ import { createLabelWindow, noteLabelFontPx } from "./labels";
 
 // --- noteLabelFontPx ------------------------------------------------------------
 
-test("returns null below the legible floor", () => {
-  // FLOOR=7, LETTER_EM=0.7, FILL=0.94 ⇒ widthFit = w·0.94/0.7 < 7 ⇔ w < ~5.21.
-  expect(noteLabelFontPx(5, 100, false)).toBeNull();
-  expect(noteLabelFontPx(5.2, 100, false)).toBeNull();
-  // Just past the cutoff it returns a size (>= FLOOR).
-  expect(noteLabelFontPx(5.3, 100, false)).not.toBeNull();
-  expect(noteLabelFontPx(5.3, 100, false)!).toBeGreaterThanOrEqual(7);
+test("skips a bar too short to hold a label", () => {
+  expect(noteLabelFontPx(20, 11, false)).toBeNull();
+  expect(noteLabelFontPx(20, 11.5, false)).not.toBeNull();
 });
 
-test("width-fit drives the size: wider keys get larger labels", () => {
-  const narrow = noteLabelFontPx(10, 1000, false)!;
-  const wide = noteLabelFontPx(20, 1000, false)!;
-  expect(wide).toBeGreaterThan(narrow);
-  // Exact formula: width × FILL / LETTER_EM when unconstrained by height/ceiling.
-  expect(narrow).toBeCloseTo((10 * 0.94) / 0.7, 10);
-  expect(wide).toBeCloseTo((20 * 0.94) / 0.7, 10);
+test("skips a column too narrow for the floor", () => {
+  // widthFit = w·0.78 (natural) / w·0.72 (accidental) < 7 ⇒ null.
+  expect(noteLabelFontPx(8.9, 100, false)).toBeNull();
+  expect(noteLabelFontPx(9, 100, false)).toBe(11);
+  expect(noteLabelFontPx(9.5, 100, true)).toBeNull();
 });
 
-test("an accidental widens the em budget, shrinking the label", () => {
-  const natural = noteLabelFontPx(12, 1000, false)!;
-  const accidental = noteLabelFontPx(12, 1000, true)!;
-  expect(accidental).toBeLessThan(natural);
-  expect(accidental).toBeCloseTo((12 * 0.94) / (0.7 + 0.34), 10);
-  // The wider budget also raises the null cutoff: a width that fits a natural
-  // can fail for an accidental.
-  expect(noteLabelFontPx(6, 1000, false)).not.toBeNull();
-  expect(noteLabelFontPx(6, 1000, true)).toBeNull();
+test("width drives the size inside the 11–17px band", () => {
+  expect(noteLabelFontPx(18, 1000, false)).toBeCloseTo(18 * 0.78, 10);
+  expect(noteLabelFontPx(12, 1000, false)).toBe(11);
+  expect(noteLabelFontPx(60, 1000, false)).toBe(17);
+  expect(noteLabelFontPx(500, 1000, true)).toBe(17);
+});
+
+test("an accidental shrinks the width fraction", () => {
+  expect(noteLabelFontPx(20, 1000, true)).toBeCloseTo(20 * 0.72, 10);
+  expect(noteLabelFontPx(20, 1000, true)!).toBeLessThan(
+    noteLabelFontPx(20, 1000, false)!,
+  );
 });
 
 test("short bars cap the size at 85% of the bar height", () => {
-  // Width would allow ~26.9px, but a 10px bar caps it to 8.5px.
-  expect(noteLabelFontPx(20, 10, false)).toBeCloseTo(8.5, 10);
-  // Even the height cap never dips below the floor once width fits.
-  expect(noteLabelFontPx(20, 2, false)).toBe(7);
-});
-
-test("28px ceiling for very wide keys", () => {
-  expect(noteLabelFontPx(60, 1000, false)).toBe(28);
-  expect(noteLabelFontPx(500, 1000, true)).toBe(28);
+  expect(noteLabelFontPx(20, 14, false)).toBeCloseTo(14 * 0.85, 10);
 });
 
 // --- createLabelWindow ------------------------------------------------------------

@@ -15,15 +15,17 @@
  * (largest-fontPx-first, i.e. most-legible-first) bounds the worst case —
  * a simple priority that's deliberately v1 (no spatial de-clutter).
  *
- * ACCIDENTAL APPROACH (documented decision): the DOM rendered the accidental
- * as a nested span at 0.7em, tucked -0.12em into the letter. We mirror that
- * with TWO BitmapTexts per pooled label (step + accidental) laid out manually
- * from measured widths — chosen over a single concatenated string because the
- * full-size unicode ♯/♭ advance would overflow the narrow black-key columns
- * that `noteLabelFontPx`'s accidental budget was tuned for.
+ * ACCIDENTAL APPROACH (documented decision): the accidental sits RAISED, like
+ * a superscript, at 0.66× the letter — so a narrow black-key note still reads
+ * C♯ and not "Cs". TWO BitmapTexts per pooled label (step + accidental) laid
+ * out manually from measured widths, so the pair centres as one mark — chosen
+ * over a single concatenated string, whose full-size ♯/♭ would sit on the
+ * baseline and overflow the narrow black-key columns.
  *
  * Fonts are runtime-installed BitmapFonts (glyphs rasterized once, then every
- * label is a couple of quads): TWO note-name faces — white-with-a-dark-halo for
+ * label is a couple of quads), in the app's own face (bold Manrope) — so
+ * `loadLabelFonts()` must settle before the first label layer, or the atlas
+ * bakes the fallback face: TWO note-name faces — white-with-a-dark-halo for
  * the dark lane, graphite-with-a-paper-halo for the drawn one — plus one
  * shadowless face for bar numbers (tinted per look).
  *
@@ -46,31 +48,38 @@ import type { BarMarker } from "./grid";
 // --- pure sizing / windowing (unit-tested, no Pixi/DOM needed at runtime) ------
 
 /**
- * Font size (px) for a falling-bar note name, sized so the whole label fits
- * *inside* the bar — no overflow into neighbouring columns. The width budget is
- * the label's intrinsic advance in em: one cap letter (≈0.70em in Inter
- * semibold) plus, when present, the compact accidental rendered at 0.7em and
- * tucked in (net ≈0.34em). Dividing the bar width by that budget makes a bare
- * natural on a wide white key large, while a flat/sharp on the narrower black
- * key (blackW ≈ 0.62·whiteW) plus its extra glyph comes out smaller — exactly
- * the desired "black-key names are smaller" behaviour. Capped by the bar height
- * so short notes don't get oversized text, and by a tasteful ceiling. Returns
- * null when even the legible floor won't fit, so the caller skips the label.
+ * Font size (px) for a falling-bar note name: a fraction of the key width
+ * (0.78 for a bare letter, 0.72 when a raised accidental rides along), held in
+ * a narrow 11–17px band so every name reads at about one size — a wide white
+ * key does not get a shouting letter, a black key's name stays legible — and
+ * capped at 85% of the bar height. Returns null when the label is skipped: a
+ * bar too short to hold one (≤ 11px), or a column so narrow (zoomed far out)
+ * that even the band's floor would spill well past it.
  */
 export function noteLabelFontPx(
   keyWidth: number,
   barHeight: number,
   hasAccidental: boolean,
 ): number | null {
-  const FLOOR = 7;
-  const LETTER_EM = 0.7;
-  const ACCIDENTAL_EM = 0.34;
-  const FILL = 0.94;
-  const emWidth = LETTER_EM + (hasAccidental ? ACCIDENTAL_EM : 0);
-  const widthFit = (keyWidth * FILL) / emWidth;
-  if (widthFit < FLOOR) return null;
-  return Math.max(FLOOR, Math.min(widthFit, barHeight * 0.85, 28));
+  const MIN_BAR_PX = 11;
+  const FLOOR = 11;
+  const CEILING = 17;
+  /** Below this width-fit the floor would overflow the column — skip. */
+  const LEGIBLE_FIT = 7;
+  if (barHeight <= MIN_BAR_PX) return null;
+  const widthFit = keyWidth * (hasAccidental ? 0.72 : 0.78);
+  if (widthFit < LEGIBLE_FIT) return null;
+  return Math.min(
+    Math.max(FLOOR, Math.min(CEILING, widthFit)),
+    barHeight * 0.85,
+  );
 }
+
+/** The accidental's size relative to the letter, and how far (in letter-px)
+ *  its baseline rises above the letter's. */
+const ACCIDENTAL_SCALE = 0.66;
+const ACCIDENTAL_MIN_PX = 8;
+const ACCIDENTAL_RISE = 0.38;
 
 /**
  * Windowing helper: given notes SORTED ASCENDING by onset (`y0Sec`), returns a
@@ -138,12 +147,28 @@ const BAR_NUMBER_ALPHA = 0.7;
  *  them un-prettified. */
 const LABEL_CHARS: (string | string[])[] = [["A", "G"], ["0", "9"], "♭♯#b"];
 
+/** The note-name family: the Sonata theme's Manrope, falling back to the
+ *  system face for the glyphs it lacks (the music accidentals). */
+const LABEL_FAMILY = "Manrope, ui-sans-serif, system-ui, sans-serif";
+const LABEL_WEIGHT = "700";
+
+/**
+ * Wait for the note-name face to be ready to rasterize. The theme loads
+ * Manrope from Google Fonts with `display=swap`, so on a cold page it is
+ * usually still in flight when the roll mounts; `document.fonts.load` joins
+ * (or starts) that fetch. Resolves either way — a face that never arrives
+ * (offline) leaves the fallback, which is the CSS behaviour too.
+ */
+export async function loadLabelFonts(): Promise<void> {
+  await document.fonts.load(`${LABEL_WEIGHT} 32px Manrope`, "ABCDEFG");
+}
+
 let fontsInstalled = false;
 
 /**
  * Install every bitmap face once per page (BitmapFont registries are global;
  * a second install with the same name would throw). Rasterized at 2× a 32px
- * base so the 7–28px labels stay crisp on hiDPI.
+ * base so the 8–17px labels stay crisp on hiDPI.
  */
 function ensureFonts(): void {
   if (fontsInstalled) return;
@@ -151,18 +176,18 @@ function ensureFonts(): void {
   BitmapFont.install({
     name: LABEL_FONT_LIGHT,
     style: {
-      fontFamily: "Inter, sans-serif",
-      fontWeight: "500",
+      fontFamily: LABEL_FAMILY,
+      fontWeight: LABEL_WEIGHT,
       fontSize: 32,
       fill: 0xffffff,
-      // A flat dark outline (no blur) around each white glyph: a crisp border
-      // reads more sharply than a soft halo and keeps the letter legible on
-      // every palette hue without per-note luminance math. Width is in the
-      // 32px raster space (≈1px at a 9px label).
+      // A soft-dark outline (no blur) around each bold white glyph, ~0.2em
+      // wide: it keeps the letter legible on every palette hue without
+      // per-note luminance math, and light enough not to read as a black ring.
       stroke: {
         color: 0x000000,
-        width: 2,
-        alpha: 0.8,
+        width: 6,
+        alpha: 0.45,
+        join: "round",
       },
     },
     chars: LABEL_CHARS,
@@ -171,8 +196,8 @@ function ensureFonts(): void {
   BitmapFont.install({
     name: LABEL_FONT_INK,
     style: {
-      fontFamily: "Inter, sans-serif",
-      fontWeight: "500",
+      fontFamily: LABEL_FAMILY,
+      fontWeight: LABEL_WEIGHT,
       fontSize: 32,
       // Graphite on paper: the letter is ink, and the halo is the PAPER colour,
       // so the name stays legible where it crosses a note's own ink without the
@@ -183,8 +208,9 @@ function ensureFonts(): void {
       fill: 0x2c2926,
       stroke: {
         color: 0xf7f2e5,
-        width: 2,
+        width: 5,
         alpha: 0.85,
+        join: "round",
       },
     },
     chars: LABEL_CHARS,
@@ -205,7 +231,7 @@ function ensureFonts(): void {
 
 // --- pooled, windowed label layer -------------------------------------------------
 
-/** One pooled label: a step letter plus an optional tucked accidental. */
+/** One pooled label: a step letter plus an optional raised accidental. */
 interface PooledLabel {
   root: Container;
   step: BitmapText;
@@ -310,12 +336,11 @@ export function createLabelLayer(): LabelLayerHandle {
   };
 
   /**
-   * Place one label exactly where the DOM put it. The DOM note div spanned
-   * top = -y1·px with height h-1, so its bottom edge sat at -y0·px - 1; the
-   * label span was inset a further 2px (`bottom-0.5`) ⇒ label BOTTOM at
-   * -y0·px - 3, centered on the key column. The accidental renders at 0.7×
-   * the letter size and is tucked -0.12em (of its own size) into the letter,
-   * matching the DOM's negative margin.
+   * Place one label at the foot of its bar, centred on the key column: the
+   * letter's box bottom sits 3px above the bar's bottom edge (-y0·px - 1).
+   * The accidental, at 0.66× the letter, rides raised like a superscript —
+   * its baseline ACCIDENTAL_RISE letter-px above the letter's — and the
+   * letter + accidental pair centres as one mark.
    */
   const place = (pooled: PooledLabel, e: LabelEntry, fontPx: number): void => {
     const { root, step, accidental } = pooled;
@@ -324,8 +349,13 @@ export function createLabelLayer(): LabelLayerHandle {
     const stepW = step.width;
     let totalW = stepW;
     if (e.accidental !== "") {
-      const accPx = fontPx * 0.7;
-      const tuck = accPx * 0.12;
+      const accPx = Math.max(ACCIDENTAL_MIN_PX, fontPx * ACCIDENTAL_SCALE);
+      // Both texts hang from their box bottoms, which sit a descent below
+      // each baseline; the descent scales with the size, so lifting the
+      // accidental by the rise PLUS the difference of the two descents puts
+      // its baseline exactly ACCIDENTAL_RISE·fontPx above the letter's.
+      const descent = (px: number): number => px * 0.24;
+      const tuck = 0.5;
       accidental.visible = true;
       accidental.style.fontSize = accPx;
       accidental.text = e.accidental;
@@ -333,7 +363,11 @@ export function createLabelLayer(): LabelLayerHandle {
       totalW = stepW + accW - tuck;
       step.x = -totalW / 2;
       accidental.x = step.x + stepW - tuck;
-      accidental.y = 0;
+      accidental.y = -(
+        fontPx * ACCIDENTAL_RISE +
+        descent(fontPx) -
+        descent(accPx)
+      );
     } else {
       accidental.visible = false;
       step.x = -stepW / 2;
