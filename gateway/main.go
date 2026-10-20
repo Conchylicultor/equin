@@ -284,7 +284,7 @@ func main() {
 	go func() {
 		defer close(shutdownDone)
 		<-ctx.Done()
-		logSigtermSender(cfg.ChildEnv)
+		slog.Info("shutdown signal received")
 		shutCtx, shutCancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer shutCancel()
 		_ = srv.Shutdown(shutCtx)

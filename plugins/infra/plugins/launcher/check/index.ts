@@ -224,6 +224,45 @@ const gatewayEnvExplicitCheck: Check = {
   },
 };
 
+// ── launcher:gateway-pure-go ───────────────────────────────────────────────
+//
+// The gateway builds with CGO_ENABLED=0 (`gateway-binary`, ../deps), so an
+// install needs Go and nothing else — no clang, no SDK. Under that flag Go
+// drops every file importing "C" from the build WITHOUT a word: a cgo file
+// whose symbols nothing else names (an `init()` shim) simply never runs, and
+// one that something does name fails the install on the user's machine rather
+// than here. So a cgo import is refused at check time, tests included (a cgo
+// test would be just as silently skipped).
+const CGO_IMPORT_RE = /^\s*import\s+(?:\(\s*)?"C"/m;
+
+const gatewayPureGoCheck: Check = {
+  id: "launcher:gateway-pure-go",
+  description:
+    'No gateway Go file imports "C": the gateway builds with CGO_ENABLED=0, which would silently leave a cgo file out',
+  async run() {
+    const root = await getWorktreeRoot();
+    const sources = await listCandidateSources({
+      root,
+      grepArg: '"C"',
+      fixed: true,
+      pathspecs: [":(glob)gateway/**/*.go"],
+    });
+    const offenders = sources
+      .filter(({ src }) => CGO_IMPORT_RE.test(src))
+      .map(({ rel }) => rel);
+
+    if (offenders.length === 0) return { ok: true };
+
+    return {
+      ok: false,
+      message: `${offenders.length} gateway file(s) import "C":\n    ${offenders.join("\n    ")}`,
+      hint:
+        'The gateway is pure Go so installing it needs no C toolchain: with cgo, a darwin build links through clang + ld against the Command Line Tools SDK, and an ld older than its SDK fails every install ("tapi error: unknown architecture"). ' +
+        "Rewrite it in Go (golang.org/x/sys/unix for a syscall). Native code that only a CLI op needs belongs in a fail-open build dependency, like packages/signal-origin's shim.",
+    };
+  },
+};
+
 // ── launcher:per-process-env-on-argv ───────────────────────────────────────
 //
 // Some values belong to ONE process: a backend's socket path is the socket
@@ -319,5 +358,6 @@ const perProcessEnvOnArgvCheck: Check = {
 export default [
   runtimeEnvDeclaredCheck,
   gatewayEnvExplicitCheck,
+  gatewayPureGoCheck,
   perProcessEnvOnArgvCheck,
 ];

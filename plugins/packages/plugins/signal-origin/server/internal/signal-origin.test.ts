@@ -204,7 +204,7 @@ describe("armSignalOrigin / readSignalOrigin", () => {
   }, 60_000);
 
   test("armed with no process.on, the SIG_DFL chain still kills the process", async () => {
-    // Guards the `gateway/sigterm_darwin.go` defect: it chains only when the
+    // Guards the old gateway shim's (`sigterm_darwin.go`) defect: it chained only when the
     // previous handler is neither SIG_DFL nor SIG_IGN. Under Bun's lazy install
     // that arm sees SIG_DFL, so copying it verbatim would make this process
     // ignore SIGTERM forever.

@@ -31,7 +31,7 @@ const path = builtFile(ready);
 - **Targets.** The declaration's own source builds for this host.
   `forTarget(target)` (what `sealDep` calls to seal a release bundle for its
   platform) builds for another one when `targets` says the toolchain can:
-  `"any"` (Go: `run` maps `ctx.target` to `GOOS`/`GOARCH`/`CGO_ENABLED` —
+  `"any"` (Go: `run` maps `ctx.target` to `GOOS`/`GOARCH`, cgo off —
   `infra/launcher`'s `gateway-binary`), or a function answering per target with
   a reason when not. Omitted means this host only, so a build that never said
   it cross-compiles is never asked to. `output` may be a function of the target

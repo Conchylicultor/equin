@@ -13,8 +13,9 @@ and nothing else; the kernel knew the sender (`siginfo_t.si_pid`) all along.
 - `formatSignalOrigin(origin)` — pure, in `core/`
 
 Design + the incident that produced it:
-`research/2026-08-07-global-signal-origin-attribution.md`. The precedent is
-`gateway/sigterm_darwin.go`, which already does this in production here.
+`research/2026-08-07-global-signal-origin-attribution.md`. The precedent was the
+gateway's cgo `sigterm_darwin.go`, since removed so the gateway builds as pure Go
+(no C toolchain at install) — this tap is the only one left.
 
 ## Four contracts
 

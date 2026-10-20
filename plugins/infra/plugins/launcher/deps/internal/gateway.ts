@@ -24,14 +24,16 @@ function goTarget(target: DepTarget): { GOOS: string; GOARCH: string } {
  * beside the old one, and `./singularity start` picks it up with no flag.
  *
  * Cross-compiles to every release platform (`targets: "any"`), which is how a
- * release seals it for a Linux server from a Mac. cgo is a function of the
- * TARGET OS, not a blanket 0: the darwin sigaction shim
- * (`gateway/sigterm_darwin.go`) is a cgo file whose pure-Go twin is
- * `//go:build !darwin`, so CGO_ENABLED=0 on a darwin target compiles NEITHER
- * (`undefined: logSigtermSender`) — and Go turns cgo off whenever GOOS/GOARCH
- * differ from the host, so even darwin-arm64 → darwin-x64 needs it explicitly
- * on. Linux takes the pure-Go twin and gets 0: a static binary that depends on
- * no glibc version on the production host.
+ * release seals it for a Linux server from a Mac. It is pure Go on every
+ * target (CGO_ENABLED=0), so building it needs Go and nothing else: Go's own
+ * linker writes the binary, never the host's C toolchain. With cgo on, a
+ * darwin build links through `clang` + `ld` against the Command Line Tools
+ * SDK, and an install fails outright whenever those disagree — an `ld` older
+ * than its SDK rejects the SDK's `.tbd` stubs (`tapi error: unknown
+ * architecture arm64e.x1`), on a machine where Go itself is fine. On Linux it
+ * also makes a static binary that depends on no glibc version on the
+ * production host. So the gateway module must stay cgo-free: a file importing
+ * "C" is silently left out of this build.
  *
  * Admitted like any install (one background unit): a cold `go build` is tens
  * of seconds of CPU.
@@ -53,7 +55,7 @@ export const gatewayBinary = defineDep({
         env: {
           ...process.env,
           ...goTarget(ctx.target),
-          CGO_ENABLED: ctx.target.platform === "linux" ? "0" : "1",
+          CGO_ENABLED: "0",
         },
         timeoutMs: 15 * 60_000,
       }),

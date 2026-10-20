@@ -117,7 +117,7 @@ switch (mode) {
   /**
    * The trap the gateway precedent would have walked into: armed with NO
    * `process.on`, so the captured previous disposition is SIG_DFL. If the tap
-   * chained the way `sigterm_darwin.go` does, this process would ignore SIGTERM
+   * chained the way the old gateway shim did, this process would ignore SIGTERM
    * forever. It must still die.
    */
   case "default-arm": {

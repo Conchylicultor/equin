@@ -5,9 +5,9 @@
  * kernel *does* know the sender (`siginfo_t.si_pid`), but no Node/Bun API
  * surfaces it, and on darwin there is no `sigwaitinfo`/`sigtimedwait` and
  * kqueue's EVFILT_SIGNAL carries no sender — so an SA_SIGINFO handler is the
- * only route. `gateway/sigterm_darwin.go` already does the same thing in
- * production in this repo; this is that, reachable from a Bun process, with the
- * ancestry walk added and the SIG_DFL swallow fixed (see `so_chain`).
+ * only route. The gateway's cgo `sigterm_darwin.go` (since removed: the gateway
+ * is pure Go) did the same thing; this is that, reachable from a Bun process,
+ * with the ancestry walk added and the SIG_DFL swallow fixed (see `so_chain`).
  *
  * THE BOUNDARY: this file owns the struct AND its serialization. `so_snapshot`
  * runs in NORMAL context (never in-handler), so it may format freely, and the
@@ -328,8 +328,8 @@ static void so_sender_path(int32_t pid, char *dst, size_t cap)
 /*
  * Hand the signal on to whoever held the disposition before we armed.
  *
- * THE SIG_DFL ARM IS THE LOAD-BEARING ONE. `gateway/sigterm_darwin.go` chains
- * only when the previous handler is neither SIG_DFL nor SIG_IGN and does
+ * THE SIG_DFL ARM IS THE LOAD-BEARING ONE. The old gateway shim chained
+ * only when the previous handler is neither SIG_DFL nor SIG_IGN and did
  * nothing otherwise — safe in Go, whose runtime always installs a handler
  * before init(). Bun installs its handler LAZILY, on the first
  * `process.on(sig)`. A tap armed before that would capture SIG_DFL as `prev`,
