@@ -57,6 +57,17 @@ function takeBack(conversationId: string, turn: PendingTurn): Promise<void> {
 }
 
 /**
+ * What an echo says where its turn is: `held` before the agent is up, `typed`
+ * while it sits in the agent's input queue (a busy agent takes it when its
+ * current step ends — the transcript shows it there as Queued); every other
+ * echo state is still on its way.
+ */
+const ECHO_CAPTION: Partial<Record<PendingTurn["state"], string>> = {
+  held: "Waiting for the agent to start…",
+  typed: "Waiting for the agent to take it…",
+};
+
+/**
  * One turn's card at the end of the transcript, by state (replace, never
  * duplicate — a turn the transcript shows has no card; see `pendingTurnsOf`
  * for which turns get one):
@@ -93,9 +104,7 @@ export function PendingTurnCard({
         <UserMessageCard>
           <UserMessageText text={turn.text} />
           <Text as="div" variant="caption" className="text-muted-foreground/60">
-            {turn.state === "held"
-              ? "Waiting for the agent to start…"
-              : "Sending…"}
+            {ECHO_CAPTION[turn.state] ?? "Sending…"}
           </Text>
         </UserMessageCard>
         <Stack direction="row" gap="sm" align="center" className="px-xs py-xs">

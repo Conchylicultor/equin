@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import { index } from "drizzle-orm/pg-core";
 import { nullable } from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import {
   defineEntity,
   sqlDefault,
@@ -32,10 +31,6 @@ export const conversationTurnsEntity = defineEntity(
     // `merged` only: the confirmed whole prompt, and the part of it that was
     // not this turn (`extraText`).
     submittedText: nullable(textField()),
-    // `accepted` / `merged`: when the agent took it — its `turn_started`
-    // event's own time, so a late replay still records the agent's moment. The
-    // status reconciler weighs it against the agent's own idle/busy write.
-    submittedAt: nullable(dateField()),
   },
   {
     primaryKey: "id",

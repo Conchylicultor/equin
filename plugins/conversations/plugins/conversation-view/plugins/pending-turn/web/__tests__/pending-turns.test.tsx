@@ -79,6 +79,11 @@ function row(
     state,
     extraText: null,
     error: null,
+    // The agent's confirmation, a confirmed turn's only.
+    submittedAt:
+      state === "accepted" || state === "merged"
+        ? new Date(Date.now() - 60_000)
+        : null,
     createdAt: new Date(Date.now() - 60_000),
     updatedAt: new Date(Date.now() - 60_000),
     ...over,
@@ -184,12 +189,50 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
 
   it("an echo stands until the transcript shows the turn — whatever the ledger says", () => {
     const sentAt = new Date(Date.now() - 1_000);
-    const accepted = row("c", "t1", "accepted", { createdAt: sentAt });
+    const accepted = row("c", "t1", "accepted", {
+      createdAt: sentAt,
+      submittedAt: sentAt,
+    });
     expect(pendingTurnsOf([accepted], [], NO_EVENTS)).toEqual([
+      expect.objectContaining({ id: "t1", state: "accepted" }),
+    ]);
+    // The transcript lags the confirmation: still the echo.
+    const lagging = [prompt("older", new Date(sentAt.getTime() - 5_000))];
+    expect(pendingTurnsOf([accepted], [], lagging)).toEqual([
       expect.objectContaining({ id: "t1", state: "accepted" }),
     ]);
     const landed = [prompt("text of t1", new Date())];
     expect(pendingTurnsOf([accepted], [], landed)).toEqual([]);
+  });
+
+  it("an unconfirmed turn echoes however much the transcript moves on", () => {
+    // No confirmation names it: nothing in the transcript can retire it.
+    for (const state of ["typing", "typed"] as const) {
+      const stuck = row("c", "t1", state);
+      const later = [prompt("typed in the terminal", new Date())];
+      expect(pendingTurnsOf([stuck], [], later)).toEqual([
+        expect.objectContaining({ id: "t1", state }),
+      ]);
+    }
+  });
+
+  it("a long ledger over a transcript tail: every confirmed turn the tail reaches retires", () => {
+    // The window holds only the newest events (none of the older turns'
+    // prompts), yet each confirmed turn is shown — the tail reaches past it.
+    const at = (ago: number) => new Date(Date.now() - ago);
+    const confirmed = (id: string, ago: number) =>
+      row("c", id, "accepted", { createdAt: at(ago), submittedAt: at(ago) });
+    const ledger = [
+      confirmed("t4", 10_000),
+      confirmed("t3", 20_000),
+      confirmed("t2", 9_000_000),
+      confirmed("t1", 9_500_000),
+    ];
+    const tail = [
+      prompt("text of t3", at(20_000)),
+      prompt("text of t4", at(10_000)),
+    ];
+    expect(pendingTurnsOf(ledger, [], tail)).toEqual([]);
   });
 
   it("a slash command echoes until the agent takes it, then draws nothing", () => {

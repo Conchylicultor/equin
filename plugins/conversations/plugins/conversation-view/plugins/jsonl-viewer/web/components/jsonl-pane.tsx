@@ -220,8 +220,8 @@ export function JsonlPane({
 }) {
   const windowResult = useTranscriptWindow(conversation.id);
   // The pending cards are read against the transcript this pane renders: an
-  // echo stands until the transcript shows its turn — which lands at its end,
-  // inside the window.
+  // echo stands until the transcript reaches its turn's confirmation — read
+  // from the newest event, which the tail window always holds.
   const eventsResult = useMemo(
     () => mapResource(windowResult, (w) => w.events),
     [windowResult],

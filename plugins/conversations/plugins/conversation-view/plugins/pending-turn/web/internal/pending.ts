@@ -18,7 +18,7 @@ import type {
   ConversationWorkingOn,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { isTurnRunning } from "@plugins/conversations/core";
-import { isSlashCommand, landedTurnIds } from "./landed";
+import { isSlashCommand, transcriptReachedAt, transcriptShows } from "./landed";
 import { settleSentTurns, useSentTurns, type SentTurn } from "./send";
 
 /**
@@ -47,9 +47,9 @@ export type PendingCard = "echo" | "merged" | "failure";
 /**
  * The card each state draws — a Record, so a new state cannot be left out:
  * - `sending` (tab only) / `held` / `typing` / `typed` / `accepted` — the
- *   echo, until the TRANSCRIPT shows the turn (`landedTurnIds`): the echo
- *   stands in for the message, so only the message retires it — never the
- *   ledger's word, which reaches the tab on another channel;
+ *   echo, until the agent confirmed the turn AND the transcript reached that
+ *   moment (`transcriptShows`): the echo stands in for the message, so it
+ *   retires only once the message is on screen — never on a guess;
  * - `merged` — the warning naming the other text (see `pendingTurnsOf`);
  * - `failed` / `unverified` / `unsent` (tab only) — Retry and Copy to draft.
  *
@@ -76,13 +76,15 @@ function draws(turn: { kind: TurnKind; state: PendingTurnState }): boolean {
 
 /**
  * Whether a ledger row's echo has nothing left to stand in for: the transcript
- * shows it, or — a slash command, which lands as no prompt row — the agent
- * confirmed taking it, which is all anything will ever say about it.
+ * (reaching `reachedAt`) shows it, or — a slash command, which lands as no
+ * prompt row — the agent confirmed taking it, which is all anything will ever
+ * say about it.
  */
-function echoRetired(row: LedgerTurn, landed: ReadonlySet<string>): boolean {
+function echoRetired(row: LedgerTurn, reachedAt: number | null): boolean {
   if (CARD_OF[row.state] !== "echo") return false;
   return (
-    landed.has(row.id) || (isSlashCommand(row) && row.state === "accepted")
+    transcriptShows(row, reachedAt) ||
+    (isSlashCommand(row) && row.state === "accepted")
   );
 }
 
@@ -103,12 +105,12 @@ export function pendingTurnsOf(
   const ledgerIds = new Set(newestFirst.map((row) => row.id));
   const unseen = sent.filter((turn) => !ledgerIds.has(turn.id));
   const newestId = unseen.length ? null : (newestFirst[0]?.id ?? null);
-  const landed = landedTurnIds(newestFirst, events);
+  const reachedAt = transcriptReachedAt(events);
   const fromLedger: PendingTurn[] = newestFirst
     .filter(
       (row) =>
         CARD_OF[row.state] !== null &&
-        !echoRetired(row, landed) &&
+        !echoRetired(row, reachedAt) &&
         (row.state !== "merged" || row.id === newestId),
     )
     .map((row) => ({

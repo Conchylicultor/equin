@@ -39,22 +39,27 @@ until then, and shows a ledger read error inline where the cards go.
 
 | State | Card |
 |---|---|
-| `sending` (tab only) / `held` / `typing` / `typed` / `accepted` | dimmed echo, **until the transcript shows the turn** — "Waiting for the agent to start…" when held |
-| `typed` + `hookless` | nothing: the box took a slash command / `!` line, and nothing will say more |
+| `sending` (tab only) / `held` / `typing` / `typed` / `accepted` | dimmed echo, **until the agent confirmed it and the transcript reached that moment** — "Waiting for the agent to start…" when held, "Waiting for the agent to take it…" when typed (queued behind a busy agent) |
+| `accepted` slash command | nothing: the CLI ran it, no prompt row will come |
 | `returned` / `withdrawn` | nothing: the draft has it |
 | `merged` | warning naming the other text (`extraText`) — only while it is the newest turn |
 | `failed` / `unverified` / `unsent` (tab only) | Retry + Copy to draft, with the error |
 
-**The transcript retires the echo, never the ledger.** The echo stands in for
-the message, and the two reach the tab on different channels (the ledger's
-change feed, the transcript watcher): retiring it on the ledger's `typed` left
-the turn on screen nowhere for as long as the transcript lagged.
-`landedTurnIds` (`internal/landed.ts`) joins them causally and ordinally — a
-turn's transcript entry (its user row, or a busy agent's enqueue) is written
-after its ledger row's `createdAt`, and sends are serialized, so the k-th turn
-on its way is the k-th prompt landing after the oldest. There is no shared id
-for a queued turn (see the file). Ambiguity errs toward retiring one landing
-early, never toward an echo held forever.
+**An echo retires on the agent's confirmation AND the transcript, never on a
+guess.** The echo stands in for the message, and the two reach the tab on
+different channels (the ledger's change feed, the transcript watcher).
+`transcriptShows` (`internal/landed.ts`): the row is `accepted` / `merged` —
+the agent itself named this exact turn as taken, at `submittedAt` — and the
+transcript's newest event is at or after `submittedAt`, so the prompt the agent
+wrote when it took it is on screen. Retiring on the confirmation alone left the
+turn on screen nowhere while the transcript lagged; matching transcript prompts
+to rows by order (the former `landedTurnIds`) retired an unconfirmed turn's
+echo whenever any other prompt landed after it — and, once the transcript
+became a paged tail, left confirmed turns echoing forever. A turn nothing
+confirmed keeps its echo until its row moves (confirmed, failed, returned);
+the error left is a turn shown twice for a moment, never one shown nowhere.
+Only the newest event is read, so how much of the past the tail holds does not
+matter.
 
 An `answer` draws no in-flight echo (its question card is its in-flight state)
 but its failure card like any other. A ledger row's Retry is

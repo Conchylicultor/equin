@@ -31,6 +31,13 @@ export const ledgerTurnFields = {
   extraText: nullable(textField()),
   /** `failed` / `unverified` (and kept by `withdrawn`): why. */
   error: nullable(textField()),
+  /**
+   * `accepted` / `merged`: when the agent took it — its `turn_started` event's
+   * own time, so a late replay still records the agent's moment. The status
+   * reconciler weighs it against the agent's own idle/busy write; the web
+   * retires the turn's echo once the transcript reaches it.
+   */
+  submittedAt: nullable(dateField()),
   createdAt: dateField(),
   updatedAt: dateField(),
 } satisfies FieldsRecord;

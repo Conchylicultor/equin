@@ -1,34 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import type {
-  LedgerTurn,
-  TurnId,
-  TurnState,
-} from "@plugins/conversations/plugins/turn-ledger/core";
-import { landedTurnIds, promptLandings } from "./landed";
+import type { TurnState } from "@plugins/conversations/plugins/turn-ledger/core";
+import { transcriptReachedAt, transcriptShows } from "./landed";
 
 const T0 = Date.parse("2026-10-18T15:53:08Z");
 const at = (ms: number) => new Date(T0 + ms).toISOString();
-
-function row(
-  id: string,
-  sentMs: number,
-  state: TurnState = "accepted",
-  over: Partial<LedgerTurn> = {},
-): LedgerTurn {
-  return {
-    id: id as TurnId,
-    conversationId: "c",
-    kind: "turn",
-    text: id,
-    state,
-    extraText: null,
-    error: null,
-    createdAt: new Date(T0 + sentMs),
-    updatedAt: new Date(T0 + sentMs),
-    ...over,
-  };
-}
 
 const typed = (text: string, ms: number): JsonlEvent => ({
   kind: "user-text",
@@ -36,64 +12,42 @@ const typed = (text: string, ms: number): JsonlEvent => ({
   text,
   uuid: `u-${text}-${ms}`,
 });
-const queue = (
-  operation: string,
-  ms: number,
-  content?: string,
-): JsonlEvent => ({ kind: "queue-operation", at: at(ms), operation, content });
 
-describe("promptLandings", () => {
-  test("a typed prompt lands as its user row; a relayed user line does not", () => {
-    expect(
-      promptLandings([
-        typed("go", 900),
-        { kind: "user-text", at: at(950), text: "report remainder" },
-      ]),
-    ).toEqual([T0 + 900]);
-  });
+const turn = (state: TurnState, submittedMs: number | null) => ({
+  state,
+  submittedAt: submittedMs === null ? null : new Date(T0 + submittedMs),
+});
 
-  test("a busy agent's queued prompt lands at its enqueue, once", () => {
-    // Injected into the running turn: enqueue, then remove — no user row.
-    expect(
-      promptLandings([
-        queue("enqueue", 100, "then push"),
-        queue("remove", 200, "then push"),
-      ]),
-    ).toEqual([T0 + 100]);
-    // Dequeued at the turn's end: its own user row follows — the same prompt.
-    expect(
-      promptLandings([
-        queue("enqueue", 100, "then push"),
-        queue("dequeue", 300),
-        typed("then push", 310),
-      ]),
-    ).toEqual([T0 + 100]);
+describe("transcriptReachedAt", () => {
+  test("is the newest event's time, or null for an empty transcript", () => {
+    expect(transcriptReachedAt([])).toBeNull();
+    expect(transcriptReachedAt([typed("a", 100), typed("b", 900)])).toBe(
+      T0 + 900,
+    );
   });
 });
 
-describe("landedTurnIds", () => {
-  test("nothing in the transcript yet: nothing landed", () => {
-    expect(landedTurnIds([row("t1", 0)], [])).toEqual(new Set());
+describe("transcriptShows", () => {
+  test("a confirmed turn, once the transcript reaches its confirmation", () => {
+    for (const state of ["accepted", "merged"] as const) {
+      expect(transcriptShows(turn(state, 500), T0 + 499)).toBe(false);
+      expect(transcriptShows(turn(state, 500), T0 + 500)).toBe(true);
+      expect(transcriptShows(turn(state, 500), null)).toBe(false);
+    }
   });
 
-  test("the k-th turn on its way is the k-th prompt landing after the oldest", () => {
-    const rows = [row("t2", 2_000), row("t1", 0)];
-    const before = typed("older turn", -5_000);
-    expect(landedTurnIds(rows, [before, typed("t1", 900)])).toEqual(
-      new Set(["t1"]),
-    );
-    expect(
-      landedTurnIds(rows, [before, typed("t1", 900), typed("t2", 2_500)]),
-    ).toEqual(new Set(["t1", "t2"]));
-  });
-
-  test("turns that do not land as a prompt are never matched nor counted", () => {
-    const rows = [
-      row("answer", 0, "accepted", { kind: "answer" }),
-      row("slash", 100, "typed", { text: "/compact" }),
-      row("cut", 200, "returned"),
-      row("t1", 300),
+  test("never a turn the agent has not confirmed, however far the transcript goes", () => {
+    const unconfirmed: TurnState[] = [
+      "held",
+      "typing",
+      "typed",
+      "failed",
+      "unverified",
+      "returned",
+      "withdrawn",
     ];
-    expect(landedTurnIds(rows, [typed("t1", 900)])).toEqual(new Set(["t1"]));
+    for (const state of unconfirmed) {
+      expect(transcriptShows(turn(state, null), T0 + 1e9)).toBe(false);
+    }
   });
 });
