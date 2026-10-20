@@ -2,15 +2,29 @@ import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web"
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import type { AgentBrowserStatus } from "../../core";
 
-/** How recent a host error must be to put the row in attention. */
-const RECENT_ERROR_MS = 10 * 60_000;
+/** How recent a host error must be to put the row in attention (and show). */
+export const RECENT_ERROR_MS = 10 * 60_000;
+
+/** A session this close to its idle close is flagged (it is about to go). */
+const CLOSES_SOON_MS = 2 * 60_000;
+
+/** `4 min` / `30 s` / `now` — the time left until a deadline, from `now`. */
+export function durationText(iso: string, now: number): string {
+  const ms = Date.parse(iso) - now;
+  if (ms <= 0) return "now";
+  if (ms < 60_000) return `${Math.ceil(ms / 1000)} s`;
+  return `${Math.ceil(ms / 60_000)} min`;
+}
 
 /** `in 4 min` / `in 30 s` / `now` — a deadline, from `now`. */
 export function untilText(iso: string, now: number): string {
-  const ms = Date.parse(iso) - now;
-  if (ms <= 0) return "now";
-  if (ms < 60_000) return `in ${Math.ceil(ms / 1000)} s`;
-  return `in ${Math.ceil(ms / 60_000)} min`;
+  const left = durationText(iso, now);
+  return left === "now" ? left : `in ${left}`;
+}
+
+/** Whether a session's idle close is near enough to flag. */
+export function closesSoon(iso: string, now: number): boolean {
+  return Date.parse(iso) - now < CLOSES_SOON_MS;
 }
 
 function plural(n: number, one: string): string {
@@ -22,7 +36,7 @@ function plural(n: number, one: string): string {
  *
  * - loading → `unknown` ("Checking…"), never `ok`;
  * - no host (never launched, or exited) → `ok`: it starts on the first call;
- * - running → `ok` with its sessions and tabs (and calls queued for a
+ * - running → `ok` with its session count (and calls queued for a
  *   browser slot), or `attention` while a failure it hit on its own (an idle
  *   close, a revert, a write drain that timed out) is recent;
  * - a status naming a dead pid → `attention`: the host died without closing
@@ -80,14 +94,13 @@ export function agentBrowserVerdict(
           summary: `Idle — exits ${idleExitAt === null ? "soon" : untilText(idleExitAt, now)}`,
         };
       }
-      const tabs = sessions.reduce((n, x) => n + x.tabs.length, 0);
       const queued =
         drives.waiting === 0
           ? ""
-          : `, ${plural(drives.waiting, "call")} waiting for a browser slot`;
+          : ` · ${plural(drives.waiting, "call")} waiting for a browser slot`;
       return {
         state: "ok",
-        summary: `${plural(sessions.length, "session")}, ${plural(tabs, "tab")}${queued}`,
+        summary: `${plural(sessions.length, "session")}${queued}`,
       };
     }
   }

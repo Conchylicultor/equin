@@ -1,9 +1,10 @@
 import {
   installHeapReader,
   installMemoryProbe,
+  installPeerMemoryProbe,
   installSnapHash,
 } from "@plugins/framework/plugins/server-core/core";
-import { macProcMemory } from "./phys-footprint";
+import { macPeerProcMemory, macProcMemory } from "./phys-footprint";
 
 // ── The desktop host's native probes, installed into the portable `core` ─────
 //
@@ -15,6 +16,7 @@ import { macProcMemory } from "./phys-footprint";
 // without them.
 
 installMemoryProbe(macProcMemory);
+installPeerMemoryProbe(macPeerProcMemory);
 installHeapReader(() => process.memoryUsage());
 // Native wyhash on the keyed-delta hot path (the runtime's portable default is
 // plain-JS `hash64`); the length fold kills every different-length collision.

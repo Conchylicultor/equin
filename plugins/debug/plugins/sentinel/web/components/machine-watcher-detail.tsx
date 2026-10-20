@@ -9,6 +9,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { MachineUsageBreakdown } from "@plugins/debug/plugins/sentinel/plugins/machine-usage/web";
 import { sentinelVitals, type SentinelVitals } from "../../core";
 import { FILL_CLASS, STALE_CLASS, VALUE_CLASS } from "../internal/vitals-tone";
 import {
@@ -19,7 +20,8 @@ import {
 
 // The Machine watcher row's expanded detail: one line per signal that can put
 // the machine under duress — a bar toward its limit and the words "X of LIMIT"
-// — then one sentence of context. Mounted only while the row is expanded.
+// — then where the machine's CPU and memory go (machine-usage), then one
+// sentence of context. Mounted only while the row is expanded.
 //
 // Not a DataView: five fixed signals are a closed set, not domain records, and
 // nothing here is clickable.
@@ -79,6 +81,16 @@ export function RecordedDetail({ view }: { view: VitalsView }) {
         {view.signals.map((line) => (
           <SignalLine key={line.key} line={line} stale={view.stale} />
         ))}
+      </Stack>
+      <Stack gap="xs" className="border-t border-border pt-sm">
+        <Text
+          variant="caption"
+          tone="faint"
+          className="uppercase tracking-wide"
+        >
+          Where it goes
+        </Text>
+        <MachineUsageBreakdown />
       </Stack>
       <Text variant="caption" tone="muted" data-vitals-footer>
         {view.footer}

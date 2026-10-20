@@ -12665,13 +12665,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `stopConversation`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 54 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Imported by: 55 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `conversations` ×41
       - `apps` ×3
       - `review` ×3
       - `tasks` ×3
       - `active-data` ×2
       - `debug/profiling/ops`
+      - `infra/mcp/browser`
       - `page/annotations/agent-notes/agent-page`
     - Endpoint callers:
       - `compaction-context`
@@ -20928,7 +20929,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `mcpTool('scratch_hello_where')`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/profile.ts` (debt)
-    - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone or the disk is nearly full, attention while it restarts, the machine is under duress or the disk is low or filling fast, read from the sentinel.status push resource), with its stats — load per core, free memory, free disk and builds at a glance, and each signal that can trip duress against its limit when expanded — read from the sentinel.vitals push resource. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
+    - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone or the disk is nearly full, attention while it restarts, the machine is under duress or the disk is low or filling fast, read from the sentinel.status push resource), with its stats — load per core, free memory, free disk and builds at a glance, and, when expanded, each signal that can trip duress against its limit — read from the sentinel.vitals push resource — and where the machine's CPU and memory go (machine-usage). Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "sentinel"
@@ -20937,6 +20938,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` "Machine watcher" → `MachineWatcherDetail`
         - Uses:
           - `config_v2.ConfigV2`
+          - `debug/sentinel/machine-usage.MachineUsageBreakdown`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/clip.Clip`
@@ -21018,12 +21020,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SentinelVitalsSchema`
       - Cross-plugin:
         - Uses tokens:
+          - `ui/tokens/color-palette --border`
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/color-palette --warning`
           - `ui/tokens/density --space-md`
+          - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
@@ -21033,6 +21037,52 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/status-resource.ts`, `server/internal/worker-host.ts`, `server/internal/worker/pg.ts`, `server/internal/worker/sample.ts` (debt)
       - Plugins:
+        - **`machine-usage`** — The Machine watcher card's "Where it goes" block (MachineUsageBreakdown): the machine's CPU and memory as two bars split into your Chrome, agent ops, the agent browser and other, then one line per bucket — read from the sentinel.machine-usage value, sampled when the card opens.
+          - Server:
+            - Contributes: `resource.declare` "sentinel.machine-usage"
+            - Resources: `sentinel.machine-usage` (push, notified)
+          - Web:
+            - Uses:
+              - `network/live.useLive`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/live-state.ResourceErrorInline`
+              - `primitives/loading.Loading`
+            - Exports (values): `MachineUsageBreakdown`
+          - Core:
+            - Uses: `network/live.liveValue`
+            - Exports (types):
+              - `MachineUsage`
+              - `MachineUsageBucket`
+              - `MachineUsageGroup`
+              - `PsProcess`
+              - `UsageRoots`
+            - Exports (values):
+              - `attributeProcesses`
+              - `MACHINE_USAGE_BUCKET_HINT`
+              - `MACHINE_USAGE_BUCKET_LABEL`
+              - `MACHINE_USAGE_BUCKETS`
+              - `machineUsage`
+              - `MachineUsageBucketSchema`
+              - `MachineUsageGroupSchema`
+              - `MachineUsageSchema`
+              - `parsePs`
+              - `PS_COLUMNS`
+              - `sumByBucket`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/chart --chart-1`
+              - `ui/tokens/chart --chart-2`
+              - `ui/tokens/chart --chart-4`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/density --space-md`
+              - `ui/tokens/shape --spacing`
+            - Imported by: `debug/sentinel`
         - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status files (one per watcher host, the newest claim reported): their schemas, the writer main's watcher host uses, the per-tick vitals file the watcher's worker writes (the latest reading, limits and trip state), the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
           - Cross-plugin:
             - Imported by: `debug/sentinel`
@@ -24208,6 +24258,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MachinePluginDefinition`
           - `MemoryCheckpoint`
           - `MemoryProbe`
+          - `PeerMemory`
+          - `PeerMemoryProbe`
           - `PersistedBase`
           - `PersistedValueCheck`
           - `PersistMeta`
@@ -24256,6 +24308,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hostHttpRoutes`
           - `installHeapReader`
           - `installMemoryProbe`
+          - `installPeerMemoryProbe`
           - `installSnapHash`
           - `isServerReady`
           - `keptSnapshotValue`
@@ -24268,6 +24321,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `onDeferredResourcesBound`
           - `onResourceDelivery`
           - `onResourcePush`
+          - `peerProcMemory`
           - `persistedDefinitions`
           - `persistedKeys`
           - `physFootprintBytes`
@@ -28244,25 +28298,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Shared:
         - Exports (values): `mcpRequest`
       - Plugins:
-        - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (conversation, target, tabs) and when each closes if left idle, and a host that died without closing them — read from the agent-browser.status push value. Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) forwarded to one detached host process per machine that owns the shared headless Chromium — an isolated session per conversation targeted at that conversation's own worktree build, tabs that stay open across calls and across backend restarts, frozen between calls — plus the agent-browser.status value (host, sessions, tabs, deadlines) pushed from the host's status file, and the agent-browser.usage value (the host's and Chromium's CPU and memory by process role) sampled on subscribe.
+        - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (what each is for — its task's title — its tab count, and how long until it closes if left idle), a recent failure the host hit on its own, and a host that died without closing them — read from the agent-browser.status push value. Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) forwarded to one detached host process per machine that owns the shared headless Chromium — an isolated session per conversation targeted at that conversation's own worktree build, tabs that stay open across calls and across backend restarts, frozen between calls — plus the agent-browser.status value (host, sessions, tabs, deadlines) pushed from the host's status file.
           - Web:
             - Contributes: `HealthReport.Row` "Agent browser" → `AgentBrowserDetail`
             - Uses:
+              - `conversations.useConversationById`
               - `network/live.useLive`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
               - `primitives/live-state.foldResource`
-              - `primitives/live-state.ResourceErrorInline`
               - `primitives/relative-time.useNow`
               - `shell/health-report.HealthReport`
           - Server:
             - Contributes:
               - `trigger` "mcp-browser.conversation-ended"
               - `resource.declare` "agent-browser.status"
-              - `resource.declare` "agent-browser.usage"
             - Uses:
               - `infra/deps.requestDep`
               - `infra/events.Trigger`
@@ -28276,6 +28333,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.serveValue`
               - `tasks/tasks-core.conversationStatusChanged`
               - `tasks/tasks-core.getConversation`
+            - Exports (values): `readAgentBrowserStatus`
             - Register:
               - `mcpTool('browser_tabs')`
               - `mcpTool('browser_navigate')`
@@ -28294,33 +28352,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('mcp-browser.conversation-ended')`
               - `defineDaemon('mcp-browser.host')`
               - `defineFileWatcher('mcp-browser.host-status')`
-            - Resources:
-              - `agent-browser.status` (push, notified)
-              - `agent-browser.usage` (push, notified)
+            - Resources: `agent-browser.status` (push, notified)
           - Core:
             - Uses: `network/live.liveValue`
             - Exports (types):
               - `AgentBrowserHostError`
               - `AgentBrowserHostStatus`
-              - `AgentBrowserProcessRole`
               - `AgentBrowserSession`
               - `AgentBrowserStatus`
               - `AgentBrowserTab`
-              - `AgentBrowserUsage`
-              - `AgentBrowserUsageGroup`
               - `AttachTicket`
             - Exports (values):
               - `AgentBrowserHostStatusSchema`
               - `agentBrowserStatus`
               - `AgentBrowserStatusSchema`
-              - `agentBrowserUsage`
-              - `AgentBrowserUsageSchema`
               - `attachMarker`
               - `decodeAttachTicket`
               - `encodeAttachTicket`
               - `MAX_HOST_ERRORS`
               - `MAX_SESSIONS`
               - `MAX_TABS`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --warning`
+              - `ui/tokens/density --space-md`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/host-client.ts`, `shared/code-id.ts` (debt)
     - **`namespace`** — Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
@@ -30375,11 +30431,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 258 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 259 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×70
           - `conversations` ×49
+          - `debug` ×27
           - `tasks` ×27
-          - `debug` ×26
           - `infra` ×15
           - `active-data` ×12
           - `page` ×10
@@ -35671,11 +35727,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `clipClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 64 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×11
+              - `debug` ×8
               - `conversations` ×7
-              - `debug` ×7
               - `page` ×5
               - `fields` ×2
               - `review` ×2
@@ -35899,15 +35955,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 162 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 164 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×49
               - `primitives` ×29
               - `conversations` ×25
-              - `debug` ×16
+              - `debug` ×17
               - `page` ×10
               - `ui` ×9
               - `tasks` ×6
-              - `infra` ×3
+              - `infra` ×4
               - `plugin-meta` ×3
               - `review` ×3
               - `config_v2` ×2
@@ -36065,19 +36121,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 111 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 113 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×32
               - `primitives` ×17
               - `conversations` ×16
-              - `debug` ×7
+              - `debug` ×8
               - `page` ×6
               - `ui` ×6
               - `tasks` ×5
               - `plugin-meta` ×4
               - `review` ×4
+              - `infra` ×3
               - `apps-core` ×2
               - `build` ×2
-              - `infra` ×2
               - `reorder` ×2
               - `shell` ×2
               - `auth`
@@ -36253,20 +36309,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 120 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 122 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×28
               - `conversations` ×22
               - `primitives` ×17
-              - `debug` ×11
+              - `debug` ×12
               - `page` ×7
               - `tasks` ×6
               - `ui` ×6
               - `plugin-meta` ×4
               - `review` ×4
               - `build` ×3
+              - `infra` ×3
               - `backup` ×2
               - `config_v2` ×2
-              - `infra` ×2
               - `shell` ×2
               - `auth`
               - `code-explorer/commit-detail`
@@ -36434,11 +36490,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 400 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 401 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×62
               - `primitives` ×54
-              - `debug` ×36
+              - `debug` ×37
               - `ui` ×29
               - `page` ×24
               - `plugin-meta` ×15
@@ -36654,11 +36710,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 372 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 373 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×104
               - `conversations` ×71
               - `primitives` ×43
-              - `debug` ×35
+              - `debug` ×36
               - `page` ×21
               - `plugin-meta` ×14
               - `ui` ×14
@@ -36938,12 +36994,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 415 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 417 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×108
               - `apps` ×93
               - `conversations` ×52
               - `page` ×25
-              - `debug` ×22
+              - `debug` ×23
               - `ui` ×20
               - `tasks` ×15
               - `fields` ×11
@@ -36954,8 +37010,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review` ×5
               - `auth` ×4
               - `config_v2` ×4
+              - `infra` ×4
               - `shell` ×4
-              - `infra` ×3
               - `integrations` ×3
               - `active-data` ×2
               - `backup` ×2
@@ -39360,10 +39416,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 255 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 256 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×69
           - `conversations` ×49
-          - `debug` ×23
+          - `debug` ×24
           - `ui` ×23
           - `tasks` ×22
           - `page` ×12
@@ -39453,11 +39509,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 192 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 193 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×63
           - `ui` ×20
+          - `debug` ×19
           - `conversations` ×18
-          - `debug` ×18
           - `primitives` ×18
           - `tasks` ×13
           - `page` ×8
@@ -47997,6 +48053,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/primitives/rhythm-circle`
               - `apps/website/landing/screenshot`
               - `apps/website/shell`
+              - `debug/sentinel/machine-usage`
               - `primitives/css/ui-kit`
         - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key), with their customizer section.
           - Web:
@@ -48066,11 +48123,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 493 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 495 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×109
               - `conversations` ×88
               - `primitives` ×76
-              - `debug` ×34
+              - `debug` ×35
               - `page` ×32
               - `plugin-meta` ×26
               - `ui` ×23
@@ -48082,9 +48139,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×6
               - `stats` ×6
               - `apps-core` ×5
+              - `infra` ×5
               - `review` ×5
               - `auth` ×4
-              - `infra` ×4
               - `shell` ×4
               - `backup` ×2
               - `code-explorer` ×2
@@ -48125,11 +48182,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 314 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 316 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×66
               - `apps` ×65
               - `conversations` ×47
-              - `debug` ×27
+              - `debug` ×28
               - `page` ×20
               - `ui` ×16
               - `plugin-meta` ×13
@@ -48137,9 +48194,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reorder` ×7
               - `tasks` ×6
               - `review` ×5
+              - `infra` ×4
               - `apps-core` ×3
               - `build` ×3
-              - `infra` ×3
               - `shell` ×3
               - `stats` ×3
               - `active-data` ×2
@@ -48444,13 +48501,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 416 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 417 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×91
               - `apps` ×82
               - `primitives` ×70
               - `page` ×35
               - `ui` ×31
-              - `debug` ×26
+              - `debug` ×27
               - `plugin-meta` ×11
               - `fields` ×9
               - `tasks` ×9

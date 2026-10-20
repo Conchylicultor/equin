@@ -2483,6 +2483,10 @@
       "name": "@singularity/plugin-debug-sentinel",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/sentinel/plugins/machine-usage": {
+      "name": "@singularity/plugin-debug-sentinel-machine-usage",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/sentinel/plugins/status-file": {
       "name": "@singularity/plugin-debug-sentinel-status-file",
       "version": "0.0.1",
@@ -8104,6 +8108,8 @@
     "@singularity/plugin-debug-scratch-hello": ["@singularity/plugin-debug-scratch-hello@workspace:plugins/debug/plugins/scratch-hello"],
 
     "@singularity/plugin-debug-sentinel": ["@singularity/plugin-debug-sentinel@workspace:plugins/debug/plugins/sentinel"],
+
+    "@singularity/plugin-debug-sentinel-machine-usage": ["@singularity/plugin-debug-sentinel-machine-usage@workspace:plugins/debug/plugins/sentinel/plugins/machine-usage"],
 
     "@singularity/plugin-debug-sentinel-status-file": ["@singularity/plugin-debug-sentinel-status-file@workspace:plugins/debug/plugins/sentinel/plugins/status-file"],
 

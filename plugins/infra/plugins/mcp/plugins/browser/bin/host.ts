@@ -47,7 +47,6 @@ import {
 } from "./host-session";
 import { drivesSnapshot, wireDrives } from "./host-drives";
 import { runTool } from "./host-tools";
-import { sampleUsage } from "./host-usage";
 
 const dir = agentBrowserDir.ensure();
 const file = (name: string) => agentBrowserDir.file(name);
@@ -143,8 +142,6 @@ async function route(req: Request): Promise<Response> {
       const { conversationId } = HostCloseBodySchema.parse(body);
       return json({ closed: await closeSession(conversationId) });
     }
-    case "/usage":
-      return json(await sampleUsage());
     case "/shutdown": {
       const { reason } = HostShutdownBodySchema.parse(body);
       // Answer first: the caller waits for the exit on the status file.

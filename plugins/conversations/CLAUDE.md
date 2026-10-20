@@ -183,13 +183,14 @@
     - `stopConversation`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 54 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×41
     - `apps` ×3
     - `review` ×3
     - `tasks` ×3
     - `active-data` ×2
     - `debug/profiling/ops`
+    - `infra/mcp/browser`
     - `page/annotations/agent-notes/agent-page`
   - Endpoint callers:
     - `compaction-context`

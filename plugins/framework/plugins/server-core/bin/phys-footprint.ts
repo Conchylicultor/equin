@@ -1,5 +1,8 @@
 import { dlopen, ptr } from "bun:ffi";
-import type { ProcMemory } from "@plugins/framework/plugins/server-core/core";
+import type {
+  PeerMemory,
+  ProcMemory,
+} from "@plugins/framework/plugins/server-core/core";
 
 // macOS phys_footprint — the real per-process memory the kernel charges against
 // the memory-pressure limit, and the number Activity Monitor shows. This is the
@@ -49,6 +52,18 @@ function bind(): typeof procPidRusage {
   return procPidRusage;
 }
 
+/** One `proc_pid_rusage` read; `null` when the kernel refused it. */
+function readRusage(pid: number): ProcMemory | null {
+  const buf = new Uint8Array(BUF_BYTES);
+  const rc = bind()!(pid, RUSAGE_INFO_V0, ptr(buf));
+  if (rc !== 0) return null;
+  const view = new DataView(buf.buffer);
+  return {
+    physFootprintBytes: Number(view.getBigUint64(PHYS_FOOTPRINT_OFFSET, true)),
+    residentSizeBytes: Number(view.getBigUint64(RESIDENT_SIZE_OFFSET, true)),
+  };
+}
+
 /**
  * Physical memory metrics of `pid` (defaults to this process) from one
  * `proc_pid_rusage` syscall — the desktop's memory probe, installed into
@@ -60,14 +75,23 @@ function bind(): typeof procPidRusage {
  */
 export function macProcMemory(pid: number = process.pid): ProcMemory | null {
   if (process.platform !== "darwin") return null;
-  const buf = new Uint8Array(BUF_BYTES);
-  const rc = bind()!(pid, RUSAGE_INFO_V0, ptr(buf));
-  if (rc !== 0) {
-    throw new Error(`proc_pid_rusage(${pid}) failed with code ${rc}`);
+  const read = readRusage(pid);
+  if (read === null) {
+    throw new Error(`proc_pid_rusage(${pid}) failed`);
   }
-  const view = new DataView(buf.buffer);
-  return {
-    physFootprintBytes: Number(view.getBigUint64(PHYS_FOOTPRINT_OFFSET, true)),
-    residentSizeBytes: Number(view.getBigUint64(RESIDENT_SIZE_OFFSET, true)),
-  };
+  return read;
+}
+
+/**
+ * Another process's metrics — `core`'s `peerProcMemory()`. The kernel refuses
+ * another account's process (EPERM) and one that exited since it was listed
+ * (ESRCH): both are answers here. A broken binding still fails loudly through
+ * `macProcMemory` on this process, which every caller reads first.
+ */
+export function macPeerProcMemory(pid: number): PeerMemory {
+  if (process.platform !== "darwin") return { kind: "unsupported" };
+  const read = readRusage(pid);
+  return read === null
+    ? { kind: "unreadable" }
+    : { kind: "read", memory: read };
 }

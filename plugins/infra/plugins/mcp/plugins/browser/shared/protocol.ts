@@ -5,8 +5,9 @@ import { z } from "zod";
  * HTTP server on a Unix socket in the host's data dir. Bump on any change to
  * the routes or bodies below — a backend never talks to a host speaking
  * another protocol. The one exception is an ADDED read route whose absence the
- * backend reads as an answer (`/usage`: a 404 is `unsupported`), so adding it
- * does not lock every other checkout out of the running host.
+ * backend reads as an answer (a 404 it handles), so adding it does not lock
+ * every other checkout out of the running host; a REMOVED route no backend
+ * calls any more needs no bump either.
  */
 export const HOST_PROTOCOL = 2;
 

@@ -169,6 +169,16 @@ proto-1789664064-nr56).
   it; then "N worktrees running · Updated 3s ago") read `sentinel.vitals`, so
   only an open report receives it. A reading older than 3 ticks, or not
   `current`, greys out. The view model is pure: `web/internal/vitals-view.ts`.
+- **Where it goes** (`plugins/machine-usage`): inside the expanded card,
+  between the signals and the footer, the machine's CPU (share of all cores)
+  and memory (share of RAM) as two bars split into Your Chrome, Agent ops,
+  Agent browser and Other, then one line per bucket. Its own value,
+  `sentinel.machine-usage`, sampled on subscribe by its `machine/` half (one `ps` per opening, never
+  on a timer, never in the worker): a process belongs to the agent browser
+  host's tree, else a running op marker's tree (`listActiveWorktreeOps`),
+  else Chrome's app bundle, else other; memory is each process's physical
+  footprint (`peerProcMemory`), its resident size where the kernel will not
+  report one.
 - Tests: `status-file/server/internal/vitals-file.test.ts`,
   `server/internal/status-resource.test.ts` (current + routing),
   `web/__tests__/vitals-view.test.ts`, the duress branch in
@@ -294,7 +304,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
 
 ## Plugin reference
 
-- Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone or the disk is nearly full, attention while it restarts, the machine is under duress or the disk is low or filling fast, read from the sentinel.status push resource), with its stats — load per core, free memory, free disk and builds at a glance, and each signal that can trip duress against its limit when expanded — read from the sentinel.vitals push resource. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
+- Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone or the disk is nearly full, attention while it restarts, the machine is under duress or the disk is low or filling fast, read from the sentinel.status push resource), with its stats — load per core, free memory, free disk and builds at a glance, and, when expanded, each signal that can trip duress against its limit — read from the sentinel.vitals push resource — and where the machine's CPU and memory go (machine-usage). Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "sentinel"
@@ -303,6 +313,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `HealthReport.Row` "Machine watcher" → `MachineWatcherDetail`
   - Uses:
     - `config_v2.ConfigV2`
+    - `debug/sentinel/machine-usage.MachineUsageBreakdown`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/clip.Clip`
@@ -384,12 +395,14 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `SentinelVitalsSchema`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
@@ -399,6 +412,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/status-resource.ts`, `server/internal/worker-host.ts`, `server/internal/worker/pg.ts`, `server/internal/worker/sample.ts` (debt)
 - Sub-plugins:
+  - **`machine-usage`** — The Machine watcher card's "Where it goes" block (MachineUsageBreakdown): the machine's CPU and memory as two bars split into your Chrome, agent ops, the agent browser and other, then one line per…
   - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status files (one per watcher host, the newest claim reported): their schemas, the writer main's watcher host uses, the per-tick vitals file…
 
 <!-- AUTOGENERATED:END -->

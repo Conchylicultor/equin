@@ -5,7 +5,7 @@ import { useAgentBrowserHealth } from "./internal/use-agent-browser";
 
 export default {
   description:
-    "The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (conversation, target, tabs) and when each closes if left idle, and a host that died without closing them — read from the agent-browser.status push value.",
+    "The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (what each is for — its task's title — its tab count, and how long until it closes if left idle), a recent failure the host hit on its own, and a host that died without closing them — read from the agent-browser.status push value.",
   contributions: [
     HealthReport.Row({
       kind: "status",

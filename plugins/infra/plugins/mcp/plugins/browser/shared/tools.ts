@@ -217,7 +217,7 @@ export const browserToolSpecs = {
   ),
   browser_close: spec(
     "read",
-    "Close this conversation's whole session (every tab) and revert the durable writes it made. Sessions also close after 30 idle minutes and when the conversation ends.",
+    "Close this conversation's whole session (every tab) and revert the durable writes it made. Sessions also close after 10 idle minutes and when the conversation ends.",
     {},
   ),
 };

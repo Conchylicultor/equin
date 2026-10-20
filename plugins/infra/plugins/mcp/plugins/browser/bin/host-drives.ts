@@ -9,7 +9,7 @@ import type { HostToolResult } from "../shared/protocol";
  * scripts driving their own browsers share one bound on headless pages driven
  * at once, instead of the interactive half going uncounted.
  *
- * Per call, not per session: a session lives 30 idle minutes, and holding a
+ * Per call, not per session: a session lives 10 idle minutes, and holding a
  * slot that long would starve every script. No op marker or op-log record: a
  * call is ~0.2 s, and would flood the banner. A call that queued says so in
  * its result, and the status counts what runs and waits.

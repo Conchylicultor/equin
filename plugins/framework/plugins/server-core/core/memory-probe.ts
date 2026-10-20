@@ -52,6 +52,36 @@ export function physFootprintBytes(pid?: number): number | null {
   return procMemory(pid)?.physFootprintBytes ?? null;
 }
 
+/**
+ * Another process's memory, read the same way, where refusal is an ANSWER: the
+ * kernel will not tell one account about another account's process, and a pid
+ * listed a moment ago may have exited since. Distinct from `procMemory`, whose
+ * failure on its own process means a broken probe and throws.
+ */
+export type PeerMemory =
+  | { kind: "read"; memory: ProcMemory }
+  /** Not this account's process, or gone since it was listed. */
+  | { kind: "unreadable" }
+  /** This host has no phys_footprint equivalent (or installed no probe). */
+  | { kind: "unsupported" };
+
+export type PeerMemoryProbe = (pid: number) => PeerMemory;
+
+let peerProbe: PeerMemoryProbe | null = null;
+
+/** Install this host's peer memory probe. Once per process, before boot. */
+export function installPeerMemoryProbe(fn: PeerMemoryProbe): void {
+  if (peerProbe !== null) {
+    throw new Error("[memory-probe] a peer memory probe is already installed.");
+  }
+  peerProbe = fn;
+}
+
+/** Physical memory metrics of another process — see `PeerMemory`. */
+export function peerProcMemory(pid: number): PeerMemory {
+  return peerProbe === null ? { kind: "unsupported" } : peerProbe(pid);
+}
+
 /** The JS engine's view of this process's memory — `process.memoryUsage()`'s shape. */
 export interface HeapMemory {
   rss: number;

@@ -50,7 +50,7 @@ import { trackWrites, type WriteDrain } from "./write-drain";
  * min, which restarts the backend) → look again, and the tabs must still be
  * there for the second look.
  */
-export const SESSION_IDLE_MS = 30 * 60_000;
+export const SESSION_IDLE_MS = 10 * 60_000;
 export const HOST_IDLE_MS = 5 * 60_000;
 /**
  * A tab renders only while an agent uses it. Headless Chromium has no GPU, so

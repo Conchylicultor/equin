@@ -28,10 +28,14 @@ export {
   heapMemory,
   installHeapReader,
   installMemoryProbe,
+  installPeerMemoryProbe,
+  peerProcMemory,
   physFootprintBytes,
   procMemory,
   type HeapMemory,
   type MemoryProbe,
+  type PeerMemory,
+  type PeerMemoryProbe,
   type ProcMemory,
 } from "./memory-probe";
 export {
