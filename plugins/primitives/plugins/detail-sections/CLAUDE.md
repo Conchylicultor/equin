@@ -102,6 +102,8 @@ DataView dropped in is inset once, by the card. See `data-view/CLAUDE.md`
   - Uses:
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`
+    - `primitives/dom/web-storage.defineStore`
+    - `primitives/persistent-draft.DEFAULT_DRAFT_TTL`
     - `primitives/persistent-draft.useDraft`
     - `primitives/section-card.SectionCard`
     - `primitives/slot-render.defineRenderSlot`

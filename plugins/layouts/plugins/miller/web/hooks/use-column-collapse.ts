@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { z } from "zod";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import {
   type PaneStore,
   usePaneStore,
@@ -26,8 +28,19 @@ function stateFor(store: PaneStore): SurfaceCollapse {
   return s;
 }
 
-const KEY = (tabId: string, paneId: string) =>
-  `miller.collapse.${tabId}.${paneId}`;
+const collapsedColumns = defineStore({
+  owner: "miller.column-collapse",
+  label: "Collapsed columns",
+  area: "session",
+  cap: "32 KB",
+  ttl: Infinity,
+  whenFull: "evict-oldest",
+  schema: z.boolean(),
+  // Pre-store keys (`miller.collapse.<tabId>.<paneId>`): dropped, not adopted.
+  legacy: { match: (key) => key.startsWith("miller.collapse.") },
+});
+
+const storeId = (tabId: string, paneId: string) => `${tabId}.${paneId}`;
 
 function read(
   s: SurfaceCollapse,
@@ -37,12 +50,8 @@ function read(
   if (s.state.has(paneId)) return s.state.get(paneId)!;
   let v = false;
   if (tabId !== undefined && typeof window !== "undefined") {
-    try {
-      v = sessionStorage.getItem(KEY(tabId, paneId)) === "true";
-    } catch (err) {
-      if (!(err instanceof DOMException)) throw err;
-      v = false;
-    }
+    const stored = collapsedColumns.read(storeId(tabId, paneId));
+    v = stored.kind === "value" && stored.value;
   }
   s.state.set(paneId, v);
   return v;
@@ -65,14 +74,8 @@ export function useColumnCollapse(paneId: string): [boolean, () => void] {
   const toggle = () => {
     const next = !s.state.get(paneId);
     s.state.set(paneId, next);
-    if (tabId !== undefined) {
-      try {
-        sessionStorage.setItem(KEY(tabId, paneId), String(next));
-        // eslint-disable-next-line promise-safety/no-bare-catch
-      } catch {
-        // ignore storage errors (private mode, quota)
-      }
-    }
+    if (tabId !== undefined)
+      collapsedColumns.write(storeId(tabId, paneId), next);
     for (const fn of s.subscribers) fn();
   };
 

@@ -39,6 +39,7 @@ import {
 } from "@testing-library/react";
 import { PendingTurnCard } from "../components/pending-turn-card";
 import type { PendingTurn, PendingTurnState } from "../internal/pending";
+import { conversationPromptDraft } from "../internal/prompt-draft";
 
 const CONV = "conv-card";
 
@@ -115,10 +116,8 @@ describe("PendingTurnCard", () => {
         "POST /api/conversations/:id/turns/:turnId/withdraw",
       ]),
     );
-    const stored = localStorage.getItem(
-      `singularity:draft:conversation:prompt:${CONV}`,
-    );
-    expect(JSON.parse(stored ?? "{}").v).toBe("fix the build");
+    const stored = conversationPromptDraft.read(CONV);
+    expect(stored.kind === "value" ? stored.value : null).toBe("fix the build");
   });
 
   it("an unsent request retries and withdraws in the tab: no ledger call", () => {

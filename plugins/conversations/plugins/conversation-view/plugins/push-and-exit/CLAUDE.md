@@ -10,14 +10,13 @@
     - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
     - `ConfigV2.WebRegister` "config"
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations/conversation-view/pending-turn` ×3
     - `conversations/conversation-view` ×3
     - `infra/endpoints` ×3
     - `config_v2` ×2
-    - `conversations/conversation-view/pending-turn` ×2
     - `conversations` ×2
     - `primitives/css/ui-kit` ×2
     - `conversations/conversation-view/code.useEditedFiles`
-    - `conversations/conversation-view/prompt-input.CONVERSATION_PROMPT_DRAFT_KEY`
     - `network/live.useLive`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.combineResources`

@@ -31,10 +31,12 @@ a hook conditionally inside one component.
     - `infra/attachments.holdAttachments`
     - `infra/attachments.uploadAttachment`
     - `primitives/css/link-chip.LinkChip`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/file-type.FileTypeIcon`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.openInBrowserTab`
     - `primitives/overlay/image-viewer.ViewerThumbnail`
+    - `primitives/persistent-draft.legacyDraftKeys`
     - `primitives/persistent-draft.onDraftWritten`
     - `primitives/persistent-draft.readDraft`
     - `primitives/persistent-draft.writeDraft`

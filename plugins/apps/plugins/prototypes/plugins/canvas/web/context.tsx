@@ -14,10 +14,11 @@ import {
 } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
+  legacyDraftKeys,
   readDraft,
   writeDraft,
-  type DraftOptions,
 } from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -53,7 +54,11 @@ import {
   type FrameId,
   type PrototypeFrame,
 } from "./internal/canvas-model";
-import { restoreCanvas, serializeCanvas } from "./internal/saved-canvas";
+import {
+  restoreCanvas,
+  SavedCanvasSchema,
+  serializeCanvas,
+} from "./internal/saved-canvas";
 import { FrameSource, PrototypeDetailWrap } from "./slots";
 
 /** A frame source as the header lists it. */
@@ -68,21 +73,23 @@ export interface CanvasSourceEntry {
  * throws it away — a comparison is a throwaway, never carried to a new session.
  * Held for as long as the tab lives, however long that is.
  */
-const SAVED_CANVAS: DraftOptions = {
-  storage: "session",
+const savedCanvasStore = defineStore({
+  owner: "prototypes.canvas",
+  label: "Prototype canvases",
+  area: "session",
+  cap: "1 MB",
   ttl: Number.POSITIVE_INFINITY,
-};
-const SAVED_CANVAS_KEY = "prototypes.canvas";
+  whenFull: "evict-oldest",
+  schema: SavedCanvasSchema,
+  legacy: legacyDraftKeys("prototypes.canvas"),
+});
 
 /**
  * The canvas saved under `slot` in this tab, or a fresh one at `size` — the
  * size the prototype declares.
  */
 function openCanvas(slot: string, size: PrototypeViewport): CanvasState {
-  const raw = readDraft<unknown>(SAVED_CANVAS_KEY, {
-    ...SAVED_CANVAS,
-    scope: slot,
-  });
+  const raw = readDraft(savedCanvasStore, { scope: slot });
   if (raw === null) return initialCanvasState({ size });
   const restored = restoreCanvas(raw);
   if (restored.kind === "restored") return restored.state;
@@ -352,10 +359,7 @@ function DetailProvider({
     setHeld({ name, slot, state });
     // A drag's preview changes every move and is never saved.
     if (slot !== null && !isTransientAction(action)) {
-      writeDraft(SAVED_CANVAS_KEY, serializeCanvas(state), {
-        ...SAVED_CANVAS,
-        scope: slot,
-      });
+      writeDraft(savedCanvasStore, serializeCanvas(state), { scope: slot });
     }
     for (const effect of effects) runEffect(effect);
   });

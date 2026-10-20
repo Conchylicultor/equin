@@ -49,7 +49,7 @@ await withBrowser(async (h) => {
     await page.evaluate(
       ({ id, text }) => {
         localStorage.setItem(
-          `singularity:draft:conversation:prompt:${id}`,
+          `s:conversations.prompt-draft:${id}`,
           JSON.stringify({ v: text, ts: Date.now() }),
         );
       },

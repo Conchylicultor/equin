@@ -13,6 +13,8 @@ import {
   type WsStatus,
   type NetDiagEvent,
 } from "@plugins/primitives/plugins/networking/web";
+import { z } from "zod";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import type { ResourceDescriptor, ResourceOrigin } from "../core";
@@ -164,16 +166,28 @@ function trace(line: string): void {
   );
 }
 
-// Dev-only verbose toggle for the high-volume per-apply trace. Read straight
-// from localStorage (no config_v2 server plumbing for a debug switch). Wrapped
-// for SSR / denied-storage safety.
+// Dev-only verbose toggle for the high-volume per-apply trace, set from the
+// console: set the key `s:live-state.verbose-trace:` to {"v":true,"ts":<now>}
+// (no config_v2 server plumbing for a debug switch).
+const verboseTraceFlag = defineStore({
+  owner: "live-state.verbose-trace",
+  label: "Debug flags",
+  area: "local",
+  cap: "1 KB",
+  ttl: Infinity,
+  whenFull: "refuse",
+  schema: z.boolean(),
+  // The flag used to be the raw key `liveState.verboseTrace` = "1".
+  legacy: {
+    match: (key) => key === "liveState.verboseTrace",
+    adopt: (_key, raw) =>
+      raw === "1" ? { id: "", value: true, ts: Date.now() } : null,
+  },
+});
+
 function verboseTraceOn(): boolean {
-  try {
-    return localStorage.getItem("liveState.verboseTrace") === "1";
-    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- SSR / denied-storage safety for a local debug flag; any access failure means "verbose trace off" (return false), the correct default, never a signal to surface
-  } catch {
-    return false;
-  }
+  const read = verboseTraceFlag.read();
+  return read.kind === "value" && read.value;
 }
 
 // Drives the TanStack Query cache off server resource notifications. Uses

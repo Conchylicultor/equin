@@ -5078,6 +5078,14 @@
       "name": "@singularity/plugin-primitives-dom-scroll-reveal",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/dom/plugins/web-storage": {
+      "name": "@singularity/plugin-primitives-dom-web-storage",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/dom/plugins/web-storage/plugins/health": {
+      "name": "@singularity/plugin-primitives-dom-web-storage-health",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/edit-mode-signal": {
       "name": "@singularity/plugin-primitives-edit-mode-signal",
       "version": "0.0.1",
@@ -5355,10 +5363,6 @@
     },
     "plugins/primitives/plugins/persistent-draft": {
       "name": "@singularity/plugin-primitives-persistent-draft",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/persistent-draft/plugins/unsaved-warning": {
-      "name": "@singularity/plugin-primitives-persistent-draft-unsaved-warning",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/prompt-editor": {
@@ -5740,6 +5744,10 @@
     },
     "plugins/reports/plugins/viewport-escape": {
       "name": "@singularity/plugin-reports-viewport-escape",
+      "version": "0.0.1",
+    },
+    "plugins/reports/plugins/web-storage": {
+      "name": "@singularity/plugin-reports-web-storage",
       "version": "0.0.1",
     },
     "plugins/review": {
@@ -9310,6 +9318,10 @@
 
     "@singularity/plugin-primitives-dom-scroll-reveal": ["@singularity/plugin-primitives-dom-scroll-reveal@workspace:plugins/primitives/plugins/dom/plugins/scroll-reveal"],
 
+    "@singularity/plugin-primitives-dom-web-storage": ["@singularity/plugin-primitives-dom-web-storage@workspace:plugins/primitives/plugins/dom/plugins/web-storage"],
+
+    "@singularity/plugin-primitives-dom-web-storage-health": ["@singularity/plugin-primitives-dom-web-storage-health@workspace:plugins/primitives/plugins/dom/plugins/web-storage/plugins/health"],
+
     "@singularity/plugin-primitives-edit-mode-signal": ["@singularity/plugin-primitives-edit-mode-signal@workspace:plugins/primitives/plugins/edit-mode-signal"],
 
     "@singularity/plugin-primitives-editable-field": ["@singularity/plugin-primitives-editable-field@workspace:plugins/primitives/plugins/editable-field"],
@@ -9445,8 +9457,6 @@
     "@singularity/plugin-primitives-perfs-scheduler": ["@singularity/plugin-primitives-perfs-scheduler@workspace:plugins/primitives/plugins/perfs/plugins/scheduler"],
 
     "@singularity/plugin-primitives-persistent-draft": ["@singularity/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
-
-    "@singularity/plugin-primitives-persistent-draft-unsaved-warning": ["@singularity/plugin-primitives-persistent-draft-unsaved-warning@workspace:plugins/primitives/plugins/persistent-draft/plugins/unsaved-warning"],
 
     "@singularity/plugin-primitives-prompt-editor": ["@singularity/plugin-primitives-prompt-editor@workspace:plugins/primitives/plugins/prompt-editor"],
 
@@ -9615,6 +9625,8 @@
     "@singularity/plugin-reports-turn-unconfirmed": ["@singularity/plugin-reports-turn-unconfirmed@workspace:plugins/reports/plugins/turn-unconfirmed"],
 
     "@singularity/plugin-reports-viewport-escape": ["@singularity/plugin-reports-viewport-escape@workspace:plugins/reports/plugins/viewport-escape"],
+
+    "@singularity/plugin-reports-web-storage": ["@singularity/plugin-reports-web-storage@workspace:plugins/reports/plugins/web-storage"],
 
     "@singularity/plugin-review": ["@singularity/plugin-review@workspace:plugins/review"],
 

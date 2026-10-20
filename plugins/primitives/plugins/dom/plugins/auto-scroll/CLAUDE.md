@@ -160,11 +160,9 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/in-view.useInView`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/persistent-draft.clearDraft`
-    - `primitives/persistent-draft.readDraft`
-    - `primitives/persistent-draft.writeDraft`
     - `ui/icons.Icon`
   - Exports (types):
     - `DocumentScroll`

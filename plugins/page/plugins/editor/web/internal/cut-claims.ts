@@ -1,7 +1,11 @@
 import {
+  DEFAULT_DRAFT_TTL,
+  legacyDraftKeys,
   readDraft,
   writeDraft,
 } from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import type { PageSource } from "../../core";
 
 /**
@@ -19,13 +23,22 @@ import type { PageSource } from "../../core";
  * is benign: a repeated claim of a page that already moved just moves it again.
  */
 
-const STORAGE_KEY = "page-editor:pasted-cut";
+const pastedCutStore = defineStore({
+  owner: "page-editor.pasted-cut",
+  label: "Cut-paste records",
+  area: "local",
+  cap: "256 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "evict-oldest",
+  schema: z.literal(true),
+  legacy: legacyDraftKeys("page-editor:pasted-cut"),
+});
 const pastedThisSession = new Set<string>();
 
 function wasPasted(cutId: string): boolean {
   return (
     pastedThisSession.has(cutId) ||
-    readDraft<true>(STORAGE_KEY, { scope: cutId }) !== null
+    readDraft(pastedCutStore, { scope: cutId }) !== null
   );
 }
 
@@ -48,6 +61,6 @@ export function markCutsPasted(sources: readonly PageSource[]): void {
   for (const { cutId } of sources) {
     if (cutId === undefined || pastedThisSession.has(cutId)) continue;
     pastedThisSession.add(cutId);
-    writeDraft(STORAGE_KEY, true, { scope: cutId });
+    writeDraft(pastedCutStore, true, { scope: cutId });
   }
 }

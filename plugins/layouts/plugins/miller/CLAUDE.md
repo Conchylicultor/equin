@@ -122,7 +122,7 @@ not yet supported — see the open question in
 
 - Description: Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
 - Web:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×12
     - `primitives/hover-reveal` ×2
     - `primitives/sortable-list` ×2
@@ -131,6 +131,7 @@ not yet supported — see the open question in
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/auto-scroll.scrollChildIntoView`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/scope/surface-id.useSurfaceTabId`

@@ -11,7 +11,13 @@ import {
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  DEFAULT_DRAFT_TTL,
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import {
   taskRows,
   type TaskListItem,
@@ -19,7 +25,11 @@ import {
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { TaskDraftForm, makeCard, type CardDraft } from "./task-draft-form";
 import { describeOutcome, submitChain } from "../internal/submit";
-import type { TaskChainRelateMode, TaskChainTarget } from "@plugins/tasks/core";
+import {
+  TaskChainRelateModeSchema,
+  type TaskChainRelateMode,
+  type TaskChainTarget,
+} from "@plugins/tasks/core";
 import { TaskLaunch } from "@plugins/tasks/plugins/launch-options/web";
 import { useActiveRelateContext } from "../active-relate-context";
 import { useCaptureUrlDefault } from "../use-capture-url-default";
@@ -42,9 +52,9 @@ import { appendSnippet, type TaskDraftInsert } from "../insert-request";
 interface TaskDraftState {
   cards: CardDraft[];
   /** The explicit `relate` prop's mode. */
-  relateMode: TaskChainRelateMode | undefined;
+  relateMode?: TaskChainRelateMode | undefined;
   /** The mode against the ambient related task (no explicit `relate`). */
-  ambientRelateMode: TaskChainRelateMode | undefined;
+  ambientRelateMode?: TaskChainRelateMode | undefined;
   /** A prerequisite that does not take over the related task's dependencies. */
   standalone: boolean;
   /**
@@ -52,8 +62,39 @@ interface TaskDraftState {
    * all of them. Keyed by the related task, so a choice made against one task
    * never applies to another (the ambient related task follows navigation).
    */
-  insertBefore: { taskId: string; ids: string[] } | undefined;
+  insertBefore?: { taskId: string; ids: string[] } | undefined;
 }
+
+// `:v3` — the popover's separate `cards:v2` / `relate-mode` /
+// `ambient-relate-mode` drafts became this one record, so the id was renamed
+// and the old entries expire on their TTL (the precedent for a draft shape
+// change).
+const taskDraftStore = defineStore<TaskDraftState>({
+  owner: "task-draft-form.draft",
+  label: "Task drafts",
+  area: "local",
+  cap: "256 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "refuse",
+  schema: z.object({
+    cards: z.array(
+      z.object({
+        localId: z.string(),
+        text: z.string(),
+        options: z.record(z.string(), z.unknown()),
+        includeUrl: z.boolean().optional(),
+        linkedToPrev: z.boolean(),
+      }),
+    ),
+    relateMode: TaskChainRelateModeSchema.optional(),
+    ambientRelateMode: TaskChainRelateModeSchema.optional(),
+    standalone: z.boolean(),
+    insertBefore: z
+      .object({ taskId: z.string(), ids: z.array(z.string()) })
+      .optional(),
+  }),
+  legacy: legacyDraftKeys("task-draft:v3"),
+});
 
 type PatchDraft = (patch: Partial<TaskDraftState>) => void;
 
@@ -308,12 +349,8 @@ export function TaskDraftPopover({
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : uncontrolledOpen;
 
-  // `:v3` — the popover's separate `cards:v2` / `relate-mode` /
-  // `ambient-relate-mode` drafts became this one record. `readDraft` blind-casts,
-  // so the key is renamed and the old keys expire on their 7-day TTL — the
-  // repo's precedent for a draft shape change (no migration exists).
-  const [draft, setDraft, clearDraft] = useDraft<TaskDraftState>(
-    "task-draft:v3",
+  const [draft, setDraft, clearDraft] = useDraft(
+    taskDraftStore,
     () => freshDraft(relate),
     { scope: draftScope(target) },
   );

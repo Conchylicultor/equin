@@ -9,7 +9,11 @@
   - Slots: `welcomePane.Actions`
   - Slot contributors: `welcomePane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "welcome"
-  - Uses:
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×3
+    - `primitives/persistent-draft` ×3
+    - `primitives/live-state` ×2
+    - `tasks/launch-options` ×2
     - `conversations.useConversations`
     - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
     - `primitives/css/fill.Fill`
@@ -19,17 +23,10 @@
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.useTaskLaunch`
-    - `primitives/live-state.matchResource`
-    - `primitives/live-state.ResourceErrorInline`
-    - `primitives/pane.defineRoute`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/persistent-draft.useDraft`
     - `primitives/text-editor/composer.ComposerField`
-    - `tasks/launch-options.LaunchOptionPills`
-    - `tasks/launch-options.LaunchOptionValues`
   - Exports (values): `welcomePane`
 - Cross-plugin:
   - Uses tokens:

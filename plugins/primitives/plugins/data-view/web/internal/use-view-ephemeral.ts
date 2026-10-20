@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
+import { z } from "zod";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 
 /**
@@ -53,66 +55,69 @@ const EMPTY_LOCAL: LocalViewState = {
 };
 
 // ---------------------------------------------------------------------------
-// Web Storage helpers (DOMException-guarded — private-mode / quota safe). The
-// store is a parameter so the durable (local) and per-tab (session) halves share
-// one guarded implementation and cannot drift in their failure handling.
+// Web Storage: the two halves are budgeted stores keyed by the surface's
+// `storageKey`. Pre-store keys (`${storageKey}:view-state` / `:view-query`, raw
+// JSON map, no envelope) are adopted on first use.
 // ---------------------------------------------------------------------------
 
-function readString(store: Storage, key: string): string | null {
-  try {
-    return store.getItem(key);
-  } catch (err) {
-    if (!(err instanceof DOMException)) throw err;
-    return null;
-  }
+const localViewStateSchema = z.object({
+  expanded: z.record(z.string(), z.boolean()).default({}),
+  collapsedSections: z.array(z.string()).default([]),
+  collapsed: z.boolean().default(false),
+});
+const localMapSchema = z.record(z.string(), localViewStateSchema);
+const queryMapSchema = z.record(z.string(), z.string());
+
+/** Adopt an old `${storageKey}${suffix}` key: its raw value was the JSON map. */
+function adoptSuffixed(suffix: string) {
+  return (key: string, raw: string) => {
+    let value: unknown;
+    try {
+      value = JSON.parse(raw);
+    } catch (err) {
+      if (err instanceof SyntaxError) return null;
+      throw err;
+    }
+    return { id: key.slice(0, -suffix.length), value, ts: Date.now() };
+  };
 }
 
-function writeString(store: Storage, key: string, value: string): void {
-  try {
-    store.setItem(key, value);
-  } catch (err) {
-    if (!(err instanceof DOMException)) throw err;
-  }
+const viewStates = defineStore({
+  owner: "data-view.view-state",
+  label: "List view states",
+  area: "local",
+  cap: "512 KB",
+  ttl: 90 * 24 * 60 * 60 * 1000,
+  whenFull: "evict-oldest",
+  schema: localMapSchema,
+  legacy: {
+    match: (key) => key.endsWith(STATE_SUFFIX),
+    adopt: adoptSuffixed(STATE_SUFFIX),
+  },
+});
+
+const viewQueries = defineStore({
+  owner: "data-view.view-queries",
+  label: "List view searches",
+  area: "session",
+  cap: "64 KB",
+  ttl: Infinity,
+  whenFull: "evict-oldest",
+  schema: queryMapSchema,
+  legacy: {
+    match: (key) => key.endsWith(QUERY_SUFFIX),
+    adopt: adoptSuffixed(QUERY_SUFFIX),
+  },
+});
+
+function readLocalMap(storageKey: string): LocalMap {
+  const read = viewStates.read(storageKey);
+  return read.kind === "value" ? read.value : {};
 }
 
-/** Parse the per-instance `{expanded, collapsedSections, collapsed}` map, tolerant of
- *  partial / legacy shapes. A legacy blob's `sort`/`filter`/`query` keys are
- *  ignored — so a query stranded in `localStorage` by the old device-local
- *  behavior is dropped on the next read rather than needing a migration. */
-function readLocalMap(key: string): LocalMap {
-  const raw = readString(localStorage, key);
-  if (!raw) return {};
-  const parsed: unknown = JSON.parse(raw);
-  if (typeof parsed !== "object" || parsed === null) return {};
-  const out: LocalMap = {};
-  for (const [viewId, v] of Object.entries(parsed as Record<string, unknown>)) {
-    if (typeof v !== "object" || v === null) continue;
-    const r = v as Record<string, unknown>;
-    out[viewId] = {
-      expanded:
-        typeof r.expanded === "object" && r.expanded !== null
-          ? (r.expanded as Record<string, boolean>)
-          : {},
-      collapsedSections: Array.isArray(r.collapsedSections)
-        ? (r.collapsedSections as string[]).filter((k) => typeof k === "string")
-        : [],
-      collapsed: r.collapsed === true,
-    };
-  }
-  return out;
-}
-
-/** Parse the per-tab `viewId → query` map. */
-function readQueryMap(key: string): QueryMap {
-  const raw = readString(sessionStorage, key);
-  if (!raw) return {};
-  const parsed: unknown = JSON.parse(raw);
-  if (typeof parsed !== "object" || parsed === null) return {};
-  const out: QueryMap = {};
-  for (const [viewId, v] of Object.entries(parsed as Record<string, unknown>)) {
-    if (typeof v === "string") out[viewId] = v;
-  }
-  return out;
+function readQueryMap(storageKey: string): QueryMap {
+  const read = viewQueries.read(storageKey);
+  return read.kind === "value" ? read.value : {};
 }
 
 export interface EphemeralViewState {
@@ -141,14 +146,11 @@ export interface EphemeralViewState {
  * sort/filter live on the config row.
  */
 export function useViewEphemeral(storageKey: string): EphemeralViewState {
-  const stateKey = `${storageKey}${STATE_SUFFIX}`;
-  const queryKey = `${storageKey}${QUERY_SUFFIX}`;
-
   const [localMap, setLocalMap] = useState<LocalMap>(() =>
-    readLocalMap(stateKey),
+    readLocalMap(storageKey),
   );
   const [queryMap, setQueryMap] = useState<QueryMap>(() =>
-    readQueryMap(queryKey),
+    readQueryMap(storageKey),
   );
 
   const writeLocal = useCallback(
@@ -156,11 +158,11 @@ export function useViewEphemeral(storageKey: string): EphemeralViewState {
       setLocalMap((prev) => {
         const current = prev[viewId] ?? EMPTY_LOCAL;
         const next = { ...prev, [viewId]: mutate(current) };
-        writeString(localStorage, stateKey, JSON.stringify(next));
+        viewStates.write(storageKey, next);
         return next;
       });
     },
-    [stateKey],
+    [storageKey],
   );
 
   const localFor = useCallback(
@@ -176,11 +178,11 @@ export function useViewEphemeral(storageKey: string): EphemeralViewState {
     (viewId: string, query: string) => {
       setQueryMap((prev) => {
         const next = { ...prev, [viewId]: query };
-        writeString(sessionStorage, queryKey, JSON.stringify(next));
+        viewQueries.write(storageKey, next);
         return next;
       });
     },
-    [queryKey],
+    [storageKey],
   );
 
   const setExpanded = useCallback(

@@ -1,9 +1,7 @@
 import { useCallback, useSyncExternalStore } from "react";
-import {
-  appInstanceKey,
-  legacyInstanceKey,
-  mayAdoptLegacyPayload,
-} from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
+import { z } from "zod";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { appInstanceId } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { nextSnapAction, type SnapDirection, type SnapZone } from "./use-snap";
 
 /** A window's free-floating box on the desktop, plus its chrome state. */
@@ -228,14 +226,6 @@ function reorder() {
   nextZ = ranked.length;
 }
 
-/**
- * sessionStorage key, namespaced per **app instance** (not per browser tab):
- * window geometry is instance state, so an external navigation starts with a
- * clean desktop while a reload / back-forward finds its windows where they
- * were. See `primitives/scope/app-instance`.
- */
-const LS_KEY = () => appInstanceKey("app-windows");
-
 /** The persisted shape of a window (members + active + desktop + geo). */
 interface PersistedWindow {
   members: string[];
@@ -251,47 +241,92 @@ interface PersistedStore {
   activeDesktopId: string;
 }
 
-/** Whole-store serialization to sessionStorage (per browser tab, like PersistedTabs). */
-function persist() {
-  if (typeof window === "undefined") return;
-  try {
-    const record: Record<WindowId, PersistedWindow> = {};
-    for (const [id, win] of windows)
-      record[id] = {
-        members: win.members,
-        activeTabId: win.activeTabId,
-        desktopId: win.desktopId,
-        geo: win.geo,
-      };
-    const store: PersistedStore = {
-      windows: record,
-      desktops,
-      activeDesktopId,
-    };
-    sessionStorage.setItem(LS_KEY(), JSON.stringify(store));
-  } catch (err) {
-    if (!(err instanceof DOMException)) throw err;
-  }
-}
+const geometrySchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  w: z.number(),
+  h: z.number(),
+  z: z.number(),
+  // Older sessions predate these two: `normalizeGeo` defaults them.
+  pinned: z.boolean().optional(),
+  minimized: z.boolean(),
+  snap: z
+    .custom<SnapZone>((v) => typeof v === "string")
+    .nullable()
+    .optional(),
+  maximized: z.boolean().optional(),
+  restore: z
+    .object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() })
+    .optional(),
+});
+
+const persistedStoreSchema = z.object({
+  windows: z.record(
+    z.object({
+      members: z.array(z.string()),
+      activeTabId: z.string().optional(),
+      desktopId: z.string().optional(),
+      geo: geometrySchema,
+    }),
+  ),
+  desktops: z.array(z.object({ id: z.string(), name: z.string().optional() })),
+  activeDesktopId: z.string(),
+});
 
 /**
- * MIGRATION (remove once no live session predates app instances): the
- * pre-generation `app-windows:<tabId>` store, read at most once ever.
- *
- * Entitlement is {@link mayAdoptLegacyPayload}'s call — instance lifecycle,
- * owned by `primitives/scope/app-instance`, which carries the full rationale;
- * consuming it (`removeItem`) is the consumer's half. What is specific here is
- * the stake: a desktop full of windows is the most visible instance state there
- * is, so a leak into a fresh instance doesn't merely restore stale data, it
- * reopens windows the user never opened in this instance and puts them over the
- * one tab they asked for.
+ * The window store, one entry per **app instance** (id = `appInstanceId()`):
+ * window geometry is instance state, so an external navigation starts with a
+ * clean desktop while a reload / back-forward finds its windows where they
+ * were. See `primitives/scope/app-instance`.
  */
-function adoptLegacyStore(): string | null {
-  if (!mayAdoptLegacyPayload()) return null;
-  const key = legacyInstanceKey("app-windows");
-  const raw = sessionStorage.getItem(key);
-  if (raw !== null) sessionStorage.removeItem(key);
-  return raw;
+const windowsStore = defineStore({
+  owner: "desktop.windows",
+  label: "Desktop windows",
+  area: "session",
+  cap: "512 KB",
+  ttl: Infinity,
+  whenFull: "refuse",
+  schema: persistedStoreSchema,
+  // MIGRATION (remove once no live session predates the web-storage envelope):
+  // `app-windows:<tabId>:<generation>` raw payloads become entries of this
+  // store. The older pre-generation `app-windows:<tabId>` has no instance to
+  // belong to and is dropped, as are pre-window-grouping shapes (they fail the
+  // schema).
+  legacy: {
+    match: (key) => key.startsWith("app-windows:"),
+    adopt: (key, raw) => {
+      const id = key.slice("app-windows:".length);
+      if (!id.includes(":")) return null;
+      let value: unknown;
+      try {
+        value = JSON.parse(raw);
+      } catch (err) {
+        if (err instanceof SyntaxError) return null;
+        throw err;
+      }
+      return { id, value, ts: Date.now() };
+    },
+  },
+});
+
+/** Whole-store serialization to session storage (per app instance, like PersistedTabs). */
+function persist() {
+  if (typeof window === "undefined") return;
+  const record: Record<WindowId, PersistedWindow> = {};
+  for (const [id, win] of windows)
+    record[id] = {
+      members: win.members,
+      activeTabId: win.activeTabId,
+      desktopId: win.desktopId,
+      geo: win.geo,
+    };
+  const store: PersistedStore = {
+    windows: record,
+    desktops,
+    activeDesktopId,
+  };
+  // A refused write (full, blocked) is reported by the store itself.
+  windowsStore.write(appInstanceId(), store);
 }
 
 /**
@@ -299,15 +334,13 @@ function adoptLegacyStore(): string | null {
  * unified `snap` field, and default the always-on-top flag, so a refresh never
  * crashes on a stale geometry shape.
  */
-function normalizeGeo(geo: Geometry): Geometry {
-  const legacy = geo as Geometry & { maximized?: boolean };
-  const normalized: Geometry = {
-    ...geo,
+function normalizeGeo(geo: z.infer<typeof geometrySchema>): Geometry {
+  const { maximized, ...rest } = geo;
+  return {
+    ...rest,
     pinned: geo.pinned ?? false,
-    snap: geo.snap ?? (legacy.maximized ? "maximize" : null),
+    snap: geo.snap ?? (maximized ? "maximize" : null),
   };
-  delete (normalized as { maximized?: boolean }).maximized;
-  return normalized;
 }
 
 /**
@@ -329,82 +362,50 @@ let hydrated = false;
 function hydrate() {
   if (hydrated || typeof window === "undefined") return;
   hydrated = true;
-  try {
-    // The gen-scoped store, falling back ONCE to the pre-instance key for a
-    // document entitled to it (see `adoptLegacyStore`). The next `persist()`
-    // writes the whole store back under the gen-scoped key.
-    const raw = sessionStorage.getItem(LS_KEY()) ?? adoptLegacyStore();
-    if (!raw) {
-      ensureDefaultDesktop();
-      reindex();
-      return;
-    }
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    // The current shape carries a `windows` key; its absence marks a legacy
-    // session — a bare `Record<WindowId, PersistedWindow>` (or the even older
-    // `Record<tabId, Geometry>`), where the parsed object IS the windows record.
-    const legacy = !("windows" in parsed);
-    const store = parsed as Partial<PersistedStore>;
-    const windowsRecord = (legacy ? parsed : (store.windows ?? {})) as Record<
-      string,
-      unknown
-    >;
-
-    // Restore (or mint a default) desktop layout BEFORE the windows, so legacy
-    // windows can land on the default desktop and `nextDesktopId` is kept ahead
-    // of any persisted `d<N>` id (mirroring how `nextWindowId` is kept ahead).
-    if (!legacy && store.desktops && store.desktops.length > 0) {
-      desktops = store.desktops;
-      for (const d of desktops) {
-        const m = /^d(\d+)$/.exec(d.id);
-        if (m && Number(m[1]) > nextDesktopId) nextDesktopId = Number(m[1]);
-      }
-    }
+  const read = windowsStore.read(appInstanceId());
+  if (read.kind !== "value") {
+    // Nothing stored for this instance (or an unreadable entry, reported by
+    // the store): start from a fresh default desktop.
     ensureDefaultDesktop();
-
-    for (const [key, value] of Object.entries(windowsRecord)) {
-      // Legacy shape: `Record<tabId, Geometry>` (no `members` field) — wrap each
-      // entry as a singleton window keyed by its own (legacy = tabId) key, so a
-      // session persisted before window-grouping migrates losslessly. A window
-      // missing `desktopId` (any legacy shape) lands on the default desktop.
-      const entry = value as Partial<PersistedWindow> & Geometry;
-      const win: FloatingWindow =
-        entry.members === undefined
-          ? {
-              id: key,
-              members: [key],
-              activeTabId: key,
-              desktopId: activeDesktopId,
-              geo: normalizeGeo(value as Geometry),
-            }
-          : {
-              id: key,
-              members: entry.members,
-              activeTabId: entry.activeTabId ?? entry.members[0]!,
-              desktopId: entry.desktopId ?? activeDesktopId,
-              geo: normalizeGeo(entry.geo as Geometry),
-            };
-      windows.set(win.id, win);
-      if (win.geo.z > nextZ) nextZ = win.geo.z;
-      // Keep the id counter ahead of any persisted `w<N>` id so fresh windows
-      // never collide with a hydrated one.
-      const m = /^w(\d+)$/.exec(win.id);
-      if (m && Number(m[1]) > nextWindowId) nextWindowId = Number(m[1]);
-    }
-
-    // Restore the active desktop only if it still names a real desktop; else fall
-    // back to the first, so `activeDesktopId` always points at an existing one.
-    if (
-      !legacy &&
-      store.activeDesktopId &&
-      desktops.some((d) => d.id === store.activeDesktopId)
-    )
-      activeDesktopId = store.activeDesktopId;
-
     reindex();
-  } catch (err) {
-    if (!(err instanceof DOMException)) throw err;
+    return;
   }
+  const store = read.value;
+
+  // Restore the desktop layout BEFORE the windows, so `nextDesktopId` is kept
+  // ahead of any persisted `d<N>` id (mirroring how `nextWindowId` is kept ahead).
+  if (store.desktops.length > 0) {
+    desktops = store.desktops;
+    for (const d of desktops) {
+      const m = /^d(\d+)$/.exec(d.id);
+      if (m && Number(m[1]) > nextDesktopId) nextDesktopId = Number(m[1]);
+    }
+  }
+  ensureDefaultDesktop();
+
+  for (const [id, entry] of Object.entries(store.windows)) {
+    const win: FloatingWindow = {
+      id,
+      members: entry.members,
+      activeTabId: entry.activeTabId ?? entry.members[0]!,
+      // A window missing `desktopId` lands on the default desktop.
+      desktopId: entry.desktopId ?? activeDesktopId,
+      geo: normalizeGeo(entry.geo),
+    };
+    windows.set(win.id, win);
+    if (win.geo.z > nextZ) nextZ = win.geo.z;
+    // Keep the id counter ahead of any persisted `w<N>` id so fresh windows
+    // never collide with a hydrated one.
+    const m = /^w(\d+)$/.exec(win.id);
+    if (m && Number(m[1]) > nextWindowId) nextWindowId = Number(m[1]);
+  }
+
+  // Restore the active desktop only if it still names a real desktop; else fall
+  // back to the first, so `activeDesktopId` always points at an existing one.
+  if (desktops.some((d) => d.id === store.activeDesktopId))
+    activeDesktopId = store.activeDesktopId;
+
+  reindex();
 }
 
 /**

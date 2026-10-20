@@ -9,15 +9,15 @@
   - Contributes:
     - `Shell.Sidebar` "New conversation" → `LaunchSidebarItem`
     - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
-    - `conversations/pane-restore` ×2
     - `primitives/css/fill` ×2
     - `primitives/launch` ×2
     - `primitives/pane` ×2
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversations-view/data-view.ConversationsSidebarDataView`
     - `conversations/model-provider.useDefaultModel`
+    - `conversations/pane-restore.loadRouteForConversation`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.insetClass`

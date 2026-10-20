@@ -18,8 +18,8 @@ import {
   type QuestionSelection,
 } from "./answer-model";
 import {
-  ANSWER_DRAFT_KEY,
-  RESPONSE_DRAFT_KEY,
+  answerDraftStore,
+  responseDraftStore,
   emptyAnswers,
   type QuestionAnswer,
 } from "./answer-draft";
@@ -120,12 +120,12 @@ export function AnswerForm({
   // for the scope). A rewind from the answered card writes this same draft, so
   // the reopened form starts from the previous answer.
   const [answers, setAnswers, clearDraft] = useDraft<QuestionAnswer[]>(
-    ANSWER_DRAFT_KEY,
+    answerDraftStore,
     () => emptyAnswers(questions),
     { scope: draftScope },
   );
   const [reply, setReply, clearReply] = useDraft<string>(
-    RESPONSE_DRAFT_KEY,
+    responseDraftStore,
     "",
     { scope: draftScope },
   );

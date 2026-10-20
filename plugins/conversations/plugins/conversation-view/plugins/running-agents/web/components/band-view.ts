@@ -1,5 +1,11 @@
 import { useCallback } from "react";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  DEFAULT_DRAFT_TTL,
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 
 /**
  * How one conversation's agents card is shown, shared by the card and the
@@ -22,17 +28,26 @@ export interface AgentsBandView {
 
 const DEFAULT_VIEW: AgentsBandView = { showAll: false, open: true };
 
+const bandViewStore = defineStore<AgentsBandView>({
+  owner: "running-agents.view",
+  label: "Agent card views",
+  area: "local",
+  cap: "64 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "evict-oldest",
+  schema: z.object({ showAll: z.boolean(), open: z.boolean() }),
+  legacy: legacyDraftKeys("running-agents:view"),
+});
+
 export function useAgentsBandView(conversationId: string): {
   view: AgentsBandView;
   setOpen: (open: boolean) => void;
   /** Show every agent, unfolded — or, when already shown, go back to the running ones. */
   toggleShowAll: () => void;
 } {
-  const [view, setView] = useDraft<AgentsBandView>(
-    "running-agents:view",
-    DEFAULT_VIEW,
-    { scope: conversationId },
-  );
+  const [view, setView] = useDraft(bandViewStore, DEFAULT_VIEW, {
+    scope: conversationId,
+  });
   const setOpen = useCallback(
     (open: boolean) => setView((prev) => ({ ...prev, open })),
     [setView],

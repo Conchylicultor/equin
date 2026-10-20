@@ -164,9 +164,10 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
-    - `primitives/persistent-draft.DraftOptions`
+    - `primitives/persistent-draft.legacyDraftKeys`
     - `primitives/persistent-draft.readDraft`
     - `primitives/persistent-draft.writeDraft`
     - `primitives/slot-render.defineDispatchSlot`

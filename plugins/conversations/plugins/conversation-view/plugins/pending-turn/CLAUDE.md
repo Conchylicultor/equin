@@ -100,10 +100,13 @@ render (`reports/turn-unconfirmed`).
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useCombinedResources`
+    - `primitives/persistent-draft.DEFAULT_DRAFT_TTL`
+    - `primitives/persistent-draft.legacyDraftKeys`
     - `primitives/persistent-draft.writeDraft`
     - `primitives/sync-status.useReportSync`
     - `shell/toast.showToast`
@@ -113,6 +116,7 @@ render (`reports/turn-unconfirmed`).
     - `TurnDelivery`
     - `TurnSend`
   - Exports (values):
+    - `conversationPromptDraft`
     - `PendingTurnCard`
     - `sendConversationTurn`
     - `useOptimisticConversationStatus`

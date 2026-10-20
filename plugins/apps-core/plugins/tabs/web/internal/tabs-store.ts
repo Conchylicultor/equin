@@ -1,8 +1,6 @@
-import {
-  appInstanceKey,
-  legacyInstanceKey,
-  mayAdoptLegacyPayload,
-} from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
+import { z } from "zod";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { appInstanceId } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 import {
   currentRoutePath,
@@ -83,37 +81,67 @@ export interface PersistedTabs {
   mode?: Placement;
 }
 
+const persistedSlotSchema = z.object({
+  paneId: z.string(),
+  params: z.record(z.string()),
+  options: z.custom<PaneOptions>((v) => typeof v === "object" && v !== null),
+  uuid: z.string(),
+});
+
+const persistedTabsSchema = z
+  .object({
+    tabs: z.array(
+      z.object({
+        tabId: z.string(),
+        appId: z.string(),
+        route: z.array(persistedSlotSchema),
+        rawPath: z.string().optional(),
+      }),
+    ),
+    focusedTabId: z.string().optional(),
+    mode: z.custom<Placement>((v) => typeof v === "string").optional(),
+  })
+  // Absent focusedTabId is only valid with no tabs (a mode that `allowsEmpty`).
+  .refine((p) => p.focusedTabId !== undefined || p.tabs.length === 0);
+
+const LEGACY_PREFIX = "app-tabs:";
+
 /**
- * sessionStorage key, namespaced per **app instance** — one running SPA
- * app-state, not one browser tab. An external navigation (bookmark, address
- * bar, link from another app) mints a fresh generation, so this key names an
- * empty slot and the tab set starts clean; a reload or a back/forward adopts
+ * The tab set, one entry per **app instance** (id = `appInstanceId()`) - one
+ * running SPA app-state, not one browser tab. An external navigation (bookmark,
+ * address bar, link from another app) mints a fresh generation, so its id names
+ * an empty slot and the tab set starts clean; a reload or a back/forward adopts
  * the generation the load belongs to and finds its tabs where it left them.
  * See `primitives/scope/app-instance`.
  */
-function storageKey(): string {
-  return appInstanceKey("app-tabs");
-}
-
-/**
- * MIGRATION (remove once no live session predates app instances): the
- * pre-generation `app-tabs:<tabId>` payload, read at most once ever.
- *
- * Whether this document is entitled to it at all is
- * {@link mayAdoptLegacyPayload}'s call — instance lifecycle, owned by
- * `primitives/scope/app-instance`, which carries the full rationale. Consuming it
- * (`removeItem`) is the consumer's half: it closes the same hole from the other
- * side, so the blob cannot outlive the migrating load and be picked up later.
- * The following `savePersistedTabs` re-homes the payload under the gen-scoped
- * key, so one preserving load carries the tab set across.
- */
-function adoptLegacyPayload(): string | null {
-  if (!mayAdoptLegacyPayload()) return null;
-  const key = legacyInstanceKey("app-tabs");
-  const raw = window.sessionStorage.getItem(key);
-  if (raw !== null) window.sessionStorage.removeItem(key);
-  return raw;
-}
+const tabsStore = defineStore({
+  owner: "apps-core.tabs",
+  label: "Open tabs",
+  area: "session",
+  cap: "512 KB",
+  ttl: Infinity,
+  whenFull: "refuse",
+  schema: persistedTabsSchema,
+  // MIGRATION (remove once no live session predates the web-storage envelope):
+  // `app-tabs:<tabId>:<generation>` raw payloads become entries of this store.
+  // The older pre-generation `app-tabs:<tabId>` has no instance to belong to
+  // and is dropped.
+  legacy: {
+    match: (key) => key.startsWith(LEGACY_PREFIX),
+    adopt: (key, raw) => {
+      const id = key.slice(LEGACY_PREFIX.length);
+      if (!id.includes(":")) return null;
+      let value: unknown;
+      try {
+        value = JSON.parse(raw);
+      } catch (err) {
+        if (err instanceof SyntaxError) return null;
+        throw err;
+      }
+      return { id, value, ts: Date.now() };
+    },
+  },
+});
 
 /** Serialize a store's current route to the persisted slot shape. */
 export function serializeRoute(store: PaneStore): PersistedSlot[] {
@@ -168,9 +196,9 @@ function rawPathForTab(
 }
 
 /**
- * Read the persisted tab set for this browser tab, or null if none. Throws on
- * a present-but-malformed key — we fail loud rather than silently resetting,
- * so a corruption bug surfaces instead of quietly losing the user's tabs.
+ * Read the persisted tab set for this app instance, or null if none. A
+ * present-but-malformed entry is dropped and reported by the store (never
+ * silently handed back), then reads as none.
  */
 export function loadPersistedTabs(): PersistedTabs | null {
   if (typeof window === "undefined") return null;
@@ -179,20 +207,8 @@ export function loadPersistedTabs(): PersistedTabs | null {
   // tab's sessionStorage with the host page, and its instance is never
   // registered.
   if (isEmbeddedDocument()) return null;
-  const raw =
-    window.sessionStorage.getItem(storageKey()) ?? adoptLegacyPayload();
-  if (raw === null) return null;
-  const parsed = JSON.parse(raw) as PersistedTabs;
-  if (
-    !Array.isArray(parsed.tabs) ||
-    (typeof parsed.focusedTabId !== "string" &&
-      !(parsed.focusedTabId === undefined && parsed.tabs.length === 0))
-  ) {
-    throw new Error(
-      `Malformed persisted app-tabs payload under "${storageKey()}".`,
-    );
-  }
-  return parsed;
+  const read = tabsStore.read(appInstanceId());
+  return read.kind === "value" ? read.value : null;
 }
 
 /** Persist the live tab set (route serialized per store) to sessionStorage. */
@@ -206,8 +222,7 @@ export function savePersistedTabs(
   // is not restorable, and a write would land in the host tab's storage.
   if (isEmbeddedDocument()) return;
   // Read the prior payload so a resolved BACKGROUND tab can carry forward its
-  // rawPath (see rawPathForTab). Safe: bootTabs already read this key once and
-  // fails loud on genuine corruption, so a present key is well-formed here.
+  // rawPath (see rawPathForTab).
   const prev = loadPersistedTabs();
   const prevRawByTab = new Map<string, string | undefined>(
     (prev?.tabs ?? []).map((t) => [t.tabId, t.rawPath] as const),
@@ -222,7 +237,8 @@ export function savePersistedTabs(
     focusedTabId,
     mode,
   };
-  window.sessionStorage.setItem(storageKey(), JSON.stringify(payload));
+  // A refused write (full, blocked) is reported by the store itself.
+  tabsStore.write(appInstanceId(), payload);
 }
 
 /**

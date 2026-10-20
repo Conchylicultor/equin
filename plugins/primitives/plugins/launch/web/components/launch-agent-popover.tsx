@@ -19,7 +19,13 @@ import type { LaunchOptionDef } from "@plugins/tasks/plugins/launch-options/core
 import { type LaunchTaskResponse } from "@plugins/tasks/core";
 import type { TaskSubject } from "@plugins/tasks/plugins/task-subject/core";
 import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  DEFAULT_DRAFT_TTL,
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import { useTaskLaunch } from "./use-task-launch";
 
 /**
@@ -62,6 +68,22 @@ type LaunchDraft = {
   picked: LaunchOptionValues;
   toggles: Record<string, boolean>;
 };
+
+/** Unsent launch drafts, one per `draftKey`. */
+const launchDraftStore = defineStore<LaunchDraft>({
+  owner: "launch.agent-draft",
+  label: "Launch drafts",
+  area: "local",
+  cap: "256 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "refuse",
+  schema: z.object({
+    text: z.string(),
+    picked: z.record(z.string(), z.unknown()),
+    toggles: z.record(z.string(), z.boolean()),
+  }),
+  legacy: legacyDraftKeys("launch-agent"),
+});
 
 export type LaunchAgentFormProps = {
   /**
@@ -140,9 +162,10 @@ export function LaunchAgentForm({
   ownedOptions,
   textRequired = false,
 }: LaunchAgentFormProps) {
-  const [draft, setDraft, clearDraft] = useDraft<LaunchDraft>(
-    `launch-agent:${draftKey}`,
+  const [draft, setDraft, clearDraft] = useDraft(
+    launchDraftStore,
     { text: "", picked: {}, toggles: {} },
+    { scope: draftKey },
   );
   const { text, picked } = draft;
   // Only what the user changed; the rest reads through to the registry's

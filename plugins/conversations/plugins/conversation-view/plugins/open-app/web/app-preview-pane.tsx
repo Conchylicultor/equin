@@ -10,7 +10,12 @@ import {
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
 import { withEmbedFlag } from "@plugins/primitives/plugins/embed/core";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
 import { createContext, useCallback, useContext, useState } from "react";
@@ -30,8 +35,19 @@ const ReloadFrameContext = createContext<(() => void) | null>(null);
  * browser-wide preference, shared by the header toggle and the frame through
  * the draft key, and kept until changed (no expiry).
  */
+const showChromeStore = defineStore({
+  owner: "open-app.show-chrome",
+  label: "App preview preferences",
+  area: "local",
+  cap: "1 KB",
+  ttl: Infinity,
+  whenFull: "refuse",
+  schema: z.boolean(),
+  legacy: legacyDraftKeys("open-app:show-chrome"),
+});
+
 function useShowChrome() {
-  return useDraft("open-app:show-chrome", false, { ttl: Infinity });
+  return useDraft(showChromeStore, false);
 }
 
 /**

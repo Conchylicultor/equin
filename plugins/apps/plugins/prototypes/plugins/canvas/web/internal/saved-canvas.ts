@@ -23,7 +23,7 @@ const PRESET_NAMES = SIZE_PRESETS.map((p) => p.name) as [
 
 const FrameIdSchema = z.number().int().positive();
 
-const SavedCanvasSchema = z.object({
+export const SavedCanvasSchema = z.object({
   frames: z
     .array(
       z.discriminatedUnion("kind", [

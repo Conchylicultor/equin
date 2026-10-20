@@ -359,7 +359,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 79 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `primitives/data-view` ×6
     - `primitives/collapsible` ×5
@@ -396,6 +396,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/slider.Slider`
     - `primitives/css/sticky.Sticky`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/embed.isEmbeddedDocument`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/icon-button.IconButton`

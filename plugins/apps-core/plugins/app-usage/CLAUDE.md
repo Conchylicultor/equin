@@ -47,6 +47,7 @@ every flush.
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
+    - `primitives/dom/web-storage.defineStore`
   - Exports (values): `useAppUsageSummary`
 - Server:
   - Contributes: `resource.declare` "app-usage.summary"

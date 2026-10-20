@@ -72,7 +72,7 @@ beforeAll(() => {
 
 function clearSavedRoutes(): void {
   for (const convId of ["X", "Y"])
-    localStorage.removeItem("route.restore." + convId);
+    localStorage.removeItem("s:conversations.pane-restore:" + convId);
 }
 
 beforeEach(() => {
@@ -125,35 +125,14 @@ describe("pane-restore save listener", () => {
   });
 });
 
-describe("pane-restore corruption handling", () => {
-  // A genuine storage-read failure must never collapse into the same "nothing
-  // to restore" signal as an absent/expired key — it is reported as `corrupt`
-  // and the poisoned key is self-healed so it can't recur on every navigation.
-  it("flags malformed JSON as corrupt and drops the poisoned key", () => {
-    localStorage.setItem("route.restore.X", "{not valid json");
-
-    expect(loadRouteForConversation("X")).toEqual({
-      kind: "corrupt",
-      reason: "malformed JSON",
-    });
-    // Self-healed: the unreadable entry is gone, so the next read is a clean
-    // "nothing to restore" rather than a repeat fault.
-    expect(localStorage.getItem("route.restore.X")).toBeNull();
-    expect(loadRouteForConversation("X")).toEqual({ kind: "none" });
-  });
-
-  it("flags a valid-JSON-but-wrong-shape entry as corrupt (schema drift)", () => {
-    // Parses fine, but not our Envelope shape — the realistic corruption after
-    // a future SavedSlot/Envelope refactor reads an old entry.
+describe("pane-restore storage", () => {
+  it("drops a corrupt entry (the store reports it) and reads as nothing to restore", () => {
     localStorage.setItem(
-      "route.restore.X",
+      "s:conversations.pane-restore:X",
       JSON.stringify({ ts: Date.now(), v: [{ nope: 1 }] }),
     );
 
-    expect(loadRouteForConversation("X")).toEqual({
-      kind: "corrupt",
-      reason: "unrecognized shape",
-    });
-    expect(localStorage.getItem("route.restore.X")).toBeNull();
+    expect(loadRouteForConversation("X")).toEqual({ kind: "none" });
+    expect(localStorage.getItem("s:conversations.pane-restore:X")).toBeNull();
   });
 });

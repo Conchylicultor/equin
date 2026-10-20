@@ -7,9 +7,10 @@
 - Description: Sonata Section: the current key — its name, relative key and source, the scale as dots on a two-octave readout keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords as the chord list's rows (chord box + lit keyboard + how often the song plays its root, click to play) — tracking the playback cursor. Reads the session's Score + cursor (useSession).
 - Web:
   - Contributes: `Sonata.Section` "Current key" → `KeyReadout`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/document` ×5
     - `apps/sonata/rich/readout-keyboard` ×4
+    - `primitives/persistent-draft` ×3
     - `apps/sonata/rich/chord-label` ×2
     - `apps/sonata/session` ×2
     - `apps/sonata/rich/key-mode.saveKeyAutoDetect`
@@ -19,9 +20,9 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `primitives/persistent-draft.useDraft`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --primary`
 

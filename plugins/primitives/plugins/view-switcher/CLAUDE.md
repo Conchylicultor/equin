@@ -22,6 +22,7 @@ The shared **view-switching primitive**. It offers two things:
 - Web:
   - Uses:
     - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/dom/web-storage.defineStore`
     - `ui/icons.Icon`
   - Exports (types):
     - `ActiveViewState`

@@ -1,4 +1,10 @@
-import { writeDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { z } from "zod";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import {
+  DEFAULT_DRAFT_TTL,
+  legacyDraftKeys,
+  writeDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
 import {
   parseMarkerAnswer,
   parseSelectedLabels,
@@ -18,9 +24,33 @@ export interface QuestionAnswer {
   otherActive: boolean;
 }
 
-export const ANSWER_DRAFT_KEY = "ask-user-question:answer";
+export const answerDraftStore = defineStore<QuestionAnswer[]>({
+  owner: "ask-user-question.answer",
+  label: "Question answer drafts",
+  area: "local",
+  cap: "128 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "refuse",
+  schema: z.array(
+    z.object({
+      selected: z.array(z.string()),
+      otherText: z.string(),
+      otherActive: z.boolean(),
+    }),
+  ),
+  legacy: legacyDraftKeys("ask-user-question:answer"),
+});
 /** The free-text reply's draft — same scope as the answer's. */
-export const RESPONSE_DRAFT_KEY = "ask-user-question:response";
+export const responseDraftStore = defineStore({
+  owner: "ask-user-question.response",
+  label: "Question reply drafts",
+  area: "local",
+  cap: "128 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "refuse",
+  schema: z.string(),
+  legacy: legacyDraftKeys("ask-user-question:response"),
+});
 
 // Scoping by the tool-use id (unique per question) means a restored draft
 // always belongs to the exact question still on screen, and never collides
@@ -68,7 +98,7 @@ export function restoreAnswerDraft(
   questions: Question[],
   answerText: string,
 ): void {
-  writeDraft(ANSWER_DRAFT_KEY, answersFromText(questions, answerText), {
+  writeDraft(answerDraftStore, answersFromText(questions, answerText), {
     scope: answerDraftScope(convId, toolUseId),
   });
 }

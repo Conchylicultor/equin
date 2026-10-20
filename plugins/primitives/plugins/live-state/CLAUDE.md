@@ -1071,7 +1071,7 @@ keeps every row's identity rather than re-minting each moved row.
 - Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
 - Load-bearing: yes
 - Web:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/networking` ×10
     - `infra/endpoints` ×4
     - `primitives/css/spacing` ×2
@@ -1079,6 +1079,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/loading.Loading`

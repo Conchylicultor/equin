@@ -91,7 +91,7 @@ await withBrowser(async (h) => {
   // with the code under test.
   const cleared = await page.evaluate(() => {
     const doomed = Object.keys(localStorage).filter((k) =>
-      k.startsWith("singularity:draft:conversation-scroll:"),
+      k.startsWith("s:auto-scroll.positions:conversation-scroll:"),
     );
     for (const k of doomed) localStorage.removeItem(k);
     return doomed.length;

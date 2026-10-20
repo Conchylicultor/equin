@@ -3,8 +3,8 @@
 An **instance** is one running SPA app-state: its tab set, each tab's route, the
 focused tab, the surface mode, floating-window geometry. This primitive answers
 one question — *which instance does this document belong to?* — and owns
-everything that follows from it: the navigation-type read, the storage-key
-grammar, the LRU registry and its eviction sweep.
+everything that follows from it: the navigation-type read, the instance-scoped
+id, the LRU registry and its eviction sweep.
 
 ## Three nested things, easy to confuse
 
@@ -61,70 +61,16 @@ primary, a missing generation degrades to the old behaviour instead. The `null`
 row is load-bearing for the same reason: jsdom returns `[]` from
 `getEntriesByType`, so unknown must never destroy.
 
-## Key grammar
+## Ids and storage
 
-```
-app-tabs:<tabId>:<generation>          appInstanceKey("app-tabs")
-app-tabs:<tabId>                       legacyInstanceKey("app-tabs")  — migration only
-singularity.appInstances:<tabId>       the LRU registry, JSON string[], active LAST
-```
-
-## Migrating off the legacy key
-
-The 2-segment key exists only so the first load after this deploy doesn't reset
-live sessions. Reading it is **gated and consuming**, never a bare `??`:
-
-```ts
-const key = appInstanceKey("app-tabs");
-let raw = sessionStorage.getItem(key);
-if (raw === null && mayAdoptLegacyPayload()) {
-  const legacy = legacyInstanceKey("app-tabs");
-  raw = sessionStorage.getItem(legacy);
-  sessionStorage.removeItem(legacy); // consume: read exactly once, ever
-}
-```
-
-**Do not hand-roll the gate.** `mayAdoptLegacyPayload()` is the one sanctioned
-home for the predicate precisely because it is easy to get wrong in either
-direction and *both* failures are silent — each looks exactly like the original
-two-tabs bug. Every consumer that persists instance state calls the same
-function; none re-derives it.
-
-### The three cases
-
-| This document | May inherit? | Why |
-|---|---|---|
-| **adopts** a generation | **yes** | a preserving load continuing an instance; a missing gen-scoped key means the session predates the deploy |
-| **mints** from a preserving load (`reload` / `back_forward` / `null`) | **yes — this IS the migration** | a pre-generations session has no `appInstance` on its entry *and* an empty registry, so it necessarily resolves to a mint |
-| **mints** from an external navigation (`navigate` / `prerender`) | **never** | a bookmark must restore nothing; inheriting here resurrects the pre-deploy tab set on exactly the load whose purpose is to start clean |
-
-Row 2 is the trap. `!isFreshAppInstance()` looks like the right gate and is
-not: the migration's *target* case always mints, so freshness alone makes the
-migration unreachable and resets every live session's tabs on its next Cmd-R.
-Freshness cannot decide this on its own — **for a mint, the deciding question
-is what kind of load minted it**, and `navigate` / `prerender` is that
-discriminator:
-
-```ts
-if (!isFreshAppInstance()) return true;
-const nav = getNavigationType();
-return nav !== "navigate" && nav !== "prerender";
-```
-
-A preserving mint for a *non*-migration reason (an evicted or corrupt registry)
-is harmless: post-deploy sessions write gen-scoped keys and consume the legacy
-one, so there is nothing left to inherit.
-
-### And consume it
-
-`removeItem` after the read closes the hole from the other side. Without it the
-blob outlives the migrating load, and a later external navigation in the same
-browser tab — which row 3 forbids from inheriting — would still find it if the
-gate ever regressed. Consuming makes row 3 unreachable by construction rather
-than only by policy.
-
-The next `persist()` writes the gen-scoped key, so one preserving load carries
-the state across. Mark both call sites for removal once deployed.
+app-instance hands out no storage keys. `appInstanceId()` returns
+`<tabId>:<generation>`; a plugin persisting instance state declares its own
+`primitives/dom/web-storage` session store (owner, cap, schema) and uses that
+id as the entry id (`tabs-store`, desktop `windows`). The LRU registry is itself
+a session store (owner `scope.app-instance`, id = the tab id, value `string[]`
+with the active generation LAST). Pre-primitive keys are adopted by each store's
+`legacy` hook on its first use (`app-tabs:<tabId>:<generation>` becomes an entry
+of `apps-core.tabs`; the pre-generation 2-segment keys are simply dropped).
 
 ## Registry, retention, sweep
 
@@ -133,18 +79,18 @@ not merely as hygiene, but because Back into an older instance is a
 *cross-document* load that re-boots from storage. `N` is therefore a real UX
 knob: how many bookmark hops back can be fully restored.
 
-On overflow the head is dropped and a sweep deletes every sessionStorage key
-matching `^[^:]+:<tabId>:(.+)$` whose captured generation is not retained.
-Pinning `<tabId>` to position 2 makes it *structurally impossible* to touch
-`singularity.tabId` (no colon at all), a 2-segment legacy key, or the registry's
-own key — a property the test suite asserts rather than a convention.
+On overflow the head is dropped and a sweep removes every session-store entry,
+of ANY owner (`removeEntriesWhere`), whose id is `<tabId>:<generation>` for a
+generation that is not retained. Pinning `<tabId>:` as the id prefix makes it
+impossible to touch the tab-id entry or the registry's own (their ids carry no
+`:<generation>` part) - a property the test suite asserts.
 
-## Two traps, both verified
+## Two traps
 
-- **Iterate with `storage.length` / `storage.key(i)`, never
-  `Object.keys(sessionStorage)`.** A `Storage`'s entries are not own enumerable
-  properties, and the vitest suites install a `MemoryStorage` *class instance*
-  whose only own enumerable property is its private `store` field.
+- **The sweep iterates `storage.length` / `storage.key(i)`** (inside
+  web-storage), never `Object.keys(sessionStorage)`: a `Storage`'s entries are not
+  own enumerable properties, and the vitest suites install a `MemoryStorage`
+  *class instance*.
 - **`main.tsx` renders under `<StrictMode>`**, so the first caller runs twice in
   dev. Minting *and* every side effect (registry write, eviction sweep) live
   inside the memoized resolver — never at a call site — so the double-invoke is
@@ -156,38 +102,39 @@ A bfcache Back re-shows a document with no boot at all, so nothing would
 re-point the registry at that (still alive) instance. A `pageshow` listener
 registered on first resolve re-promotes the generation to the tail when
 `event.persisted`, so the last-active pointer can't go stale behind a restored
-document. The per-generation keys also fix a latent bug: two documents in one
-browser tab used to share `app-tabs:<tabId>` and clobber each other.
+document. The per-generation ids also fix a latent bug: two documents in one
+browser tab used to share one entry and clobber each other.
 
 ## Failure policy
 
-Storage access degrades rather than throws, following `tab-id`'s precedent — a
-blocked or full `sessionStorage` must not brick boot. A corrupt registry
-degrades to `[]`, which is **not** an absorbed failure mistaken for success: it
-is indistinguishable in effect from "this browser tab has no instances yet", the
-exact value a first load produces, and throwing has no recovery path since the
-registry *is* the pointer to the payload keys.
+Storage access degrades rather than throws - a blocked or full `sessionStorage`
+must not brick boot - and the store reports every refused write and corrupt
+entry itself. A missing or corrupt registry reads as `[]`, which is **not** an
+absorbed failure mistaken for success: it is indistinguishable in effect from
+"this browser tab has no instances yet", the exact value a first load produces,
+and throwing has no recovery path since the registry *is* the pointer to the
+payload entries.
 
 `getNavigationType()` returning `null` and `readAppInstance()` returning
-`undefined` are honest absences, not swallowed errors — each is a named row of
+`undefined` are honest absences, not swallowed errors - each is a named row of
 the decision table.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.
+- Description: Per-app-instance generation id: which running SPA state a document belongs to, and the instance-scoped id that storage entries are keyed by.
 - Web:
   - Uses:
+    - `primitives/dom/web-storage.defineStore`
+    - `primitives/dom/web-storage.removeEntriesWhere`
     - `primitives/embed.isEmbeddedDocument`
     - `primitives/scope/tab-id.getTabId`
   - Exports (types): `NavigationType`
   - Exports (values):
-    - `appInstanceKey`
+    - `appInstanceId`
     - `getAppInstanceId`
     - `getNavigationType`
-    - `legacyInstanceKey`
-    - `mayAdoptLegacyPayload`
     - `readAppInstance`
     - `stampAppInstance`
 - Cross-plugin:

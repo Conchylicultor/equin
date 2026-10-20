@@ -6,11 +6,12 @@
 
 - Description: Composable color picker primitive: a fitted (always-in-gamut) OKLCH ColorArea, HueSlider, AlphaSlider, per-channel ColorValueFields (HEX / OKLCH / HSL), SwatchGrid with named suggestions, and ColorPicker / ColorPickerPopover with before/after, Reset, eyedropper and a shared Recent row. The Color math (parse, convert, gamut) is in core.
 - Web:
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
     - `primitives/css/coords` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/text` ×2
+    - `primitives/persistent-draft` ×2
     - `primitives/usage-rank` ×2
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/center.Center`
@@ -22,11 +23,11 @@
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
-    - `primitives/persistent-draft.useDraft`
   - Exports (types):
     - `AlphaSliderProps`
     - `ColorAreaProps`

@@ -152,5 +152,6 @@ export type ExemptableRuleId =
   | "watcher-safety/no-detached-watch-reaction"
   | "watcher-safety/no-direct-parcel-watcher"
   | "watcher-safety/no-raw-fs-watch"
+  | "web-storage/no-raw-web-storage"
   | "z-layers/no-adhoc-zindex"
   | "zod-parser/no-narrow-zodtype";

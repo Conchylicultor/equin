@@ -14,8 +14,10 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { canSendTurn, stopConversation } from "@plugins/conversations/core";
 import type { ConversationEntry } from "@plugins/conversations/core";
 import { isDraftEmpty } from "@plugins/conversations/plugins/conversation-view/web";
-import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
-import { CONVERSATION_PROMPT_DRAFT_KEY } from "@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web";
+import {
+  conversationPromptDraft,
+  sendConversationTurn,
+} from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { resumeConversationEndpoint } from "@plugins/conversations/plugins/conversation-view/plugins/resume/core";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
@@ -119,11 +121,9 @@ export function ThreadComposer({
   placeholder: string;
 }) {
   const id = conversation.id;
-  const [draft, setDraft, clearDraft] = useDraft(
-    CONVERSATION_PROMPT_DRAFT_KEY,
-    "",
-    { scope: id },
-  );
+  const [draft, setDraft, clearDraft] = useDraft(conversationPromptDraft, "", {
+    scope: id,
+  });
   const draftRef = useLatestRef(draft);
   const resume = useEndpointMutation(resumeConversationEndpoint, {
     onError: (err) => failed("Couldn't resume the conversation", err),

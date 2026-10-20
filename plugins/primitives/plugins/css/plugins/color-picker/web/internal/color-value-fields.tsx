@@ -7,15 +7,15 @@ import {
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import type { Color } from "../../core";
 import { ChannelField } from "./channel-field";
-import {
-  channelsFor,
-  formatColor,
-  isColorFormat,
-  type ColorFormat,
-} from "./channels";
+import { channelsFor, formatColor, type ColorFormat } from "./channels";
 
 const FORMAT_OPTIONS = [
   { id: "hex", label: "HEX" },
@@ -23,8 +23,17 @@ const FORMAT_OPTIONS = [
   { id: "hsl", label: "HSL" },
 ] as const satisfies readonly { id: ColorFormat; label: string }[];
 
-/** How long the chosen format is remembered on this device. */
-const FORMAT_TTL = 365 * 24 * 60 * 60 * 1000;
+/** The chosen format, remembered on this device for a year. */
+const formatStore = defineStore({
+  owner: "color-picker.format",
+  label: "Colour format choices",
+  area: "local",
+  cap: "1 KB",
+  ttl: 365 * 24 * 60 * 60 * 1000,
+  whenFull: "refuse",
+  schema: z.enum(["hex", "oklch", "hsl"]),
+  legacy: legacyDraftKeys("color-picker-format"),
+});
 
 export interface ColorValueFieldsProps {
   color: Color;
@@ -49,13 +58,8 @@ export function ColorValueFields({
   showAlpha = false,
   className,
 }: ColorValueFieldsProps) {
-  const [stored, setFormat] = useDraft<ColorFormat>(
-    "color-picker-format",
-    "oklch",
-    { ttl: FORMAT_TTL },
-  );
-  // A stored value from an older build (or a hand-edited one) is not trusted.
-  const format = isColorFormat(stored) ? stored : "oklch";
+  // The store's schema drops a value from an older build or a hand edit.
+  const [format, setFormat] = useDraft<ColorFormat>(formatStore, "oklch");
   const channels = channelsFor(format, showAlpha);
 
   return (

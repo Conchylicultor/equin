@@ -5,13 +5,32 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { type SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { railClass } from "@plugins/primitives/plugins/css/plugins/rail/core";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  DEFAULT_DRAFT_TTL,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import { SectionCard } from "@plugins/primitives/plugins/section-card/web";
 import {
   defineRenderSlot,
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+
+/** Every pane's section open/closed flags, one entry per `<slot id>.<section id>.open`. */
+const sectionOpenStore = defineStore({
+  owner: "detail-sections.open",
+  label: "Section open states",
+  area: "local",
+  cap: "32 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "evict-oldest",
+  schema: z.boolean(),
+  // No `legacy`: the old keys (`singularity:draft:<slot>.<section>.open`) are
+  // indistinguishable from other owners' `*.open` drafts, so they are left to
+  // show as unowned; a section's fold state resets once.
+});
 
 /**
  * Pane-level options, declared ONCE by the slot owner in
@@ -240,10 +259,9 @@ export function defineDetailSections<
     sectionId: string,
     defaultOpen: boolean,
   ): [boolean, (open: boolean) => void] {
-    const [open, setOpen] = useDraft(
-      `${Section.id}.${sectionId}.open`,
-      defaultOpen,
-    );
+    const [open, setOpen] = useDraft(sectionOpenStore, defaultOpen, {
+      scope: `${Section.id}.${sectionId}.open`,
+    });
     return [open, setOpen];
   }
 

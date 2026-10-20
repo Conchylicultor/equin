@@ -2,12 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import {
-  appInstanceKey,
+  appInstanceId,
   getAppInstanceId,
   getNavigationType,
   isFreshAppInstance,
-  legacyInstanceKey,
-  mayAdoptLegacyPayload,
   readAppInstance,
   RETAINED_INSTANCES,
   stampAppInstance,
@@ -45,17 +43,19 @@ function setNavigationType(type: NavigationType | null): void {
   );
 }
 
+const registryKey = () => `s:scope.app-instance:${getTabId()}`;
+
 /** Seed the LRU registry for this browser tab, most-recently-active last. */
 function seedRegistry(...generations: string[]): void {
   sessionStorage.setItem(
-    `singularity.appInstances:${getTabId()}`,
-    JSON.stringify(generations),
+    registryKey(),
+    JSON.stringify({ v: generations, ts: Date.now() }),
   );
 }
 
 function readRegistry(): string[] {
-  const raw = sessionStorage.getItem(`singularity.appInstances:${getTabId()}`);
-  return raw === null ? [] : (JSON.parse(raw) as string[]);
+  const raw = sessionStorage.getItem(registryKey());
+  return raw === null ? [] : (JSON.parse(raw) as { v: string[] }).v;
 }
 
 beforeEach(() => {
@@ -246,68 +246,9 @@ describe("isFreshAppInstance", () => {
   });
 });
 
-describe("mayAdoptLegacyPayload", () => {
-  it("an adopted generation may inherit — a preserving load continuing an instance", () => {
-    setNavigationType("reload");
-    window.history.replaceState({ appInstance: "gen-entry" }, "");
-
-    expect(mayAdoptLegacyPayload()).toBe(true);
-  });
-
-  // THE migration case, and the reason `!isFreshAppInstance()` is the wrong
-  // gate: a session that predates generations has no stamp on its entry AND an
-  // empty registry, so it necessarily MINTS. Gating on freshness alone would
-  // make the migration unreachable and reset every live session on its Cmd-R.
-  it("a mint from a preserving load may inherit — this IS the migration", () => {
-    setNavigationType("reload");
-    window.history.replaceState({}, "");
-
-    expect(isFreshAppInstance()).toBe(true);
-    expect(mayAdoptLegacyPayload()).toBe(true);
-  });
-
-  it("back_forward minting on an empty registry may inherit", () => {
-    setNavigationType("back_forward");
-    window.history.replaceState(null, "");
-
-    expect(mayAdoptLegacyPayload()).toBe(true);
-  });
-
-  it("an unavailable nav type on a mint may inherit — `null` counts as preserving", () => {
-    setNavigationType(null);
-    window.history.replaceState({}, "");
-
-    expect(isFreshAppInstance()).toBe(true);
-    expect(mayAdoptLegacyPayload()).toBe(true);
-  });
-
-  it("a mint from `navigate` may NOT inherit — a bookmark must restore nothing", () => {
-    setNavigationType("navigate");
-
-    expect(mayAdoptLegacyPayload()).toBe(false);
-  });
-
-  it("a mint from `prerender` may NOT inherit", () => {
-    setNavigationType("prerender");
-
-    expect(mayAdoptLegacyPayload()).toBe(false);
-  });
-
-  // A `navigate` never adopts, so this can't arise via the resolver — but the
-  // predicate must not become order-dependent if it ever did.
-  it("navigate with a stamped entry still may NOT inherit (it minted)", () => {
-    setNavigationType("navigate");
-    seedRegistry("gen-old");
-    window.history.replaceState({ appInstance: "gen-entry" }, "");
-
-    expect(mayAdoptLegacyPayload()).toBe(false);
-  });
-});
-
 describe("eviction", () => {
-  it(`retains ${RETAINED_INSTANCES} generations, sweeps evicted payload keys, and spares the tab id + legacy keys`, () => {
+  it(`retains ${RETAINED_INSTANCES} generations, sweeps evicted entries of any owner, and spares the tab id + registry`, () => {
     const tabId = getTabId();
-    sessionStorage.setItem(`app-tabs:${tabId}`, "legacy-payload");
     setNavigationType("navigate");
 
     const generations: string[] = [];
@@ -315,41 +256,38 @@ describe("eviction", () => {
       resetAppInstanceForTests();
       const id = getAppInstanceId();
       generations.push(id);
-      sessionStorage.setItem(`foo:${tabId}:${id}`, "payload");
+      sessionStorage.setItem(`s:foo.owner:${tabId}:${id}`, "payload");
     }
 
     const retained = generations.slice(-RETAINED_INSTANCES);
     expect(readRegistry()).toEqual(retained);
 
-    // The two head generations fell off — their payload keys are gone.
+    // The two head generations fell off - their entries are gone.
     expect(
-      sessionStorage.getItem(`foo:${tabId}:${generations[0]!}`),
+      sessionStorage.getItem(`s:foo.owner:${tabId}:${generations[0]!}`),
     ).toBeNull();
     expect(
-      sessionStorage.getItem(`foo:${tabId}:${generations[1]!}`),
+      sessionStorage.getItem(`s:foo.owner:${tabId}:${generations[1]!}`),
     ).toBeNull();
-    // Every retained generation's payload survives.
+    // Every retained generation's entry survives.
     for (const id of retained) {
-      expect(sessionStorage.getItem(`foo:${tabId}:${id}`)).toBe("payload");
+      expect(sessionStorage.getItem(`s:foo.owner:${tabId}:${id}`)).toBe(
+        "payload",
+      );
     }
 
-    // The sweep pattern pins `<tabId>` to position 2, so neither the colon-less
-    // tab id nor a 2-segment legacy key can ever match.
-    expect(sessionStorage.getItem("singularity.tabId")).toBe(tabId);
-    expect(sessionStorage.getItem(`app-tabs:${tabId}`)).toBe("legacy-payload");
+    // Ids that are not `<tabId>:<generation>` are never matched.
+    expect(sessionStorage.getItem(`s:scope.tab-id:`)).not.toBeNull();
+    expect(sessionStorage.getItem(registryKey())).not.toBeNull();
   });
 });
 
-describe("key grammar", () => {
-  it("appInstanceKey is prefix : tabId : generation", () => {
+describe("instance id", () => {
+  it("appInstanceId is tabId : generation", () => {
     setNavigationType("reload");
     seedRegistry("gen-1");
 
-    expect(appInstanceKey("app-tabs")).toBe(`app-tabs:${getTabId()}:gen-1`);
-  });
-
-  it("legacyInstanceKey is the 2-segment prefix : tabId", () => {
-    expect(legacyInstanceKey("app-windows")).toBe(`app-windows:${getTabId()}`);
+    expect(appInstanceId()).toBe(`${getTabId()}:gen-1`);
   });
 });
 

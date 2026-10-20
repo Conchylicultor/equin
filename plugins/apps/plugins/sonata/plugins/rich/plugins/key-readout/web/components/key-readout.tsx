@@ -11,7 +11,13 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  DEFAULT_DRAFT_TTL,
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import type {
   KeyRenderState,
   LabelTone,
@@ -39,6 +45,17 @@ import {
   diatonicChords,
   tonicPc,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
+
+const showChordsStore = defineStore({
+  owner: "sonata.key-readout-chords",
+  label: "Sonata layout preferences",
+  area: "local",
+  cap: "1 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "refuse",
+  schema: z.boolean(),
+  legacy: legacyDraftKeys("sonata:key-readout:chords"),
+});
 
 /** The active key plus where it came from, for the source badge. */
 type ActiveKey = { key: KeySignature; source: "authored" | "derived" };
@@ -118,10 +135,7 @@ export function KeyReadout() {
   const mode = useChordDisplayMode();
   const scorePending = content.kind === "pending";
   const scoreFailure = content.kind === "failed" ? content.failure : null;
-  const [showChords, setShowChords] = useDraft<boolean>(
-    "sonata:key-readout:chords",
-    true,
-  );
+  const [showChords, setShowChords] = useDraft(showChordsStore, true);
 
   // Beat-indexed key entries — recomputed only when the Score changes. Walking
   // the memoized list (rather than `effectiveKeyAt`, which rebuilds it each call)

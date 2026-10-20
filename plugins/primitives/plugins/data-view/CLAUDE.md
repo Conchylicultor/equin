@@ -2674,12 +2674,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 75 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×67
+  - Contributes: 76 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×68
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 107 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 108 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
     - `primitives/css/ui-kit` ×14
     - `primitives/data-view/view-core` ×8
@@ -2719,6 +2719,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/auto-scroll.KeepAnchorAcross`
     - `primitives/dom/in-view.createInViewWatcher`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/row-actions.RowActions`
@@ -2890,8 +2891,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 69 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×67
+  - Contributes: 70 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×68
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -3035,11 +3036,11 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ui/tokens/type-scale` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/shadow --shadow`
-  - Imported by: 96 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 97 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×30
     - `apps` ×22
     - `debug` ×13
-    - `primitives` ×8
+    - `primitives` ×9
     - `conversations` ×7
     - `tasks` ×4
     - `infra` ×3

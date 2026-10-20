@@ -1,9 +1,12 @@
 import { useEffect, useRef } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
+  legacyDraftKeys,
   readDraft,
   writeDraft,
 } from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import {
   sortByUsage,
   usageKey,
@@ -17,11 +20,20 @@ import {
 // server cannot know a client's id set at snapshot time), so the stats arrive
 // one round-trip after mount; without this seed the strip would visibly
 // re-sort on every single open.
-const ORDER_DRAFT_KEY = "usage-rank:order";
+//
 // Longer than the default 7-day draft TTL: this is a rendering cache for a
 // slow-moving order, not an in-flight edit. Expiring it only costs one
 // re-sort flash, so a long TTL is free.
-const ORDER_DRAFT_TTL = 90 * 24 * 60 * 60 * 1000;
+const orderStore = defineStore({
+  owner: "usage-rank.order",
+  label: "Usage orders",
+  area: "local",
+  cap: "128 KB",
+  ttl: 90 * 24 * 60 * 60 * 1000,
+  whenFull: "evict-oldest",
+  schema: z.array(z.string()),
+  legacy: legacyDraftKeys("usage-rank:order"),
+});
 
 interface OrderSnapshot {
   /** `(resnapshotKey, key-set)` — the identity of the frozen window. */
@@ -44,17 +56,13 @@ function seedOrder(
   namespace: string,
   keys: readonly string[],
 ): readonly string[] {
-  const cached = readDraft<unknown>(ORDER_DRAFT_KEY, {
-    scope: namespace,
-    ttl: ORDER_DRAFT_TTL,
-  });
-  if (!Array.isArray(cached)) return [...keys];
+  const cached = readDraft(orderStore, { scope: namespace });
+  if (cached === null) return [...keys];
 
   const present = new Set(keys);
   const taken = new Set<string>();
   const seeded: string[] = [];
   for (const entry of cached) {
-    if (typeof entry !== "string") continue;
     if (present.has(entry) && !taken.has(entry)) {
       taken.add(entry);
       seeded.push(entry);
@@ -145,10 +153,7 @@ export function useUsageOrder(
     // Cache only a SETTLED order: re-writing the seed would re-persist a
     // possibly-stale order and refresh its TTL on nothing but a mount.
     if (!snapshot.settled) return;
-    writeDraft(ORDER_DRAFT_KEY, [...snapshot.order], {
-      scope: namespace,
-      ttl: ORDER_DRAFT_TTL,
-    });
+    writeDraft(orderStore, [...snapshot.order], { scope: namespace });
   }, [snapshot, namespace]);
 
   return snapshot.order;

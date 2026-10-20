@@ -19,6 +19,9 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/dom/web-storage.defineStore`
+    - `primitives/persistent-draft.DEFAULT_DRAFT_TTL`
+    - `primitives/persistent-draft.legacyDraftKeys`
     - `primitives/persistent-draft.useDraft`
 - Cross-plugin:
   - Uses tokens:

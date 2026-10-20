@@ -113,6 +113,7 @@ detail is rendered through `renderIsolated`.
     - `HealthReport.Row` ← `infra.claude-cli.availability`
     - `HealthReport.Row` ← `infra.health`
     - `HealthReport.Row` ← `infra.mcp.browser`
+    - `HealthReport.Row` ← `primitives.dom.web-storage.health`
     - `HealthReport.Row` ← `reports.resource-errors`
     - `HealthReport.Row` ← `tasks.worktree-identity`
   - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
@@ -166,6 +167,7 @@ detail is rendered through `renderIsolated`.
     - `infra/claude-cli/availability`
     - `infra/health`
     - `infra/mcp/browser`
+    - `primitives/dom/web-storage/health`
     - `reports/resource-errors`
     - `shell/global-action-bar`
     - `tasks/worktree-identity`

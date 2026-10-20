@@ -1,120 +1,79 @@
+import { z } from "zod";
+
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import {
   peekRoute,
   type PaneOptions,
 } from "@plugins/primitives/plugins/pane/web";
-import { report } from "@plugins/reports/web";
 
-const LS_PREFIX = "route.restore.";
-const TTL = 30 * 24 * 60 * 60 * 1000;
+const DAY = 24 * 60 * 60 * 1000;
+const LEGACY_PREFIX = "route.restore.";
 
 // `options` mirrors PaneSlot.options (the opener-supplied partial). Persisted via
-// JSON (localStorage), which round-trips booleans/numbers/nested objects — so it
-// is the structured PaneOptions bag, not a string map. A pane's `hint` is
-// deliberately absent: an optimistic mirror of server-owned state must not
+// JSON, which round-trips booleans/numbers/nested objects — so it is the
+// structured PaneOptions bag (an open record), not a string map. A pane's `hint`
+// is deliberately absent: an optimistic mirror of server-owned state must not
 // outlive the navigation that created it (see `Hint`).
 type SavedSlot = {
   paneId: string;
   params: Record<string, string>;
   options?: PaneOptions;
 };
-type Envelope = { v: SavedSlot[]; ts: number };
 
-// Tri-state so a genuine storage-read failure can never be mistaken for a
-// legitimate "nothing to restore" (absorbable-failure guardrail, inventory #12).
-// `restored` carries the saved layout; `none` means there is genuinely nothing
-// to restore (absent key, expired TTL, or a storage backend that is simply
-// unavailable — an environment condition, not our bug); `corrupt` means the
-// bytes we wrote are now unreadable (parse failure, or an unrecognized shape —
-// e.g. after a future Envelope schema change reads an old entry) — a real fault
-// the caller must surface, never silently swallow into a fresh pane.
+const savedSlotsSchema = z.array(
+  z.object({
+    paneId: z.string(),
+    params: z.record(z.string(), z.string()),
+    options: z.record(z.string(), z.unknown()).optional(),
+  }),
+) satisfies ZodParser<SavedSlot[]>;
+
+const paneRoutes = defineStore({
+  owner: "conversations.pane-restore",
+  label: "Conversation layouts",
+  area: "local",
+  cap: "256 KB",
+  ttl: 30 * DAY,
+  whenFull: "evict-oldest",
+  schema: savedSlotsSchema,
+  legacy: {
+    match: (key) => key.startsWith(LEGACY_PREFIX),
+    adopt: (key, raw) => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (err) {
+        if (err instanceof SyntaxError) return null;
+        throw err;
+      }
+      if (typeof parsed !== "object" || parsed === null) return null;
+      const env = parsed as { v?: unknown; ts?: unknown };
+      if (typeof env.ts !== "number") return null;
+      return { id: key.slice(LEGACY_PREFIX.length), value: env.v, ts: env.ts };
+    },
+  },
+});
+
+// `restored` carries the saved layout; `none` means there is nothing to restore
+// (absent, expired, unreadable — the store drops and reports an unreadable
+// entry itself — or storage unavailable).
 export type RouteRestore =
-  | { kind: "restored"; slots: SavedSlot[] }
-  | { kind: "none" }
-  | { kind: "corrupt"; reason: string };
+  { kind: "restored"; slots: SavedSlot[] } | { kind: "none" };
 
 export function saveRouteForConversation(
   convId: string,
   slots: SavedSlot[],
 ): void {
-  try {
-    const envelope: Envelope = { v: slots, ts: Date.now() };
-    localStorage.setItem(LS_PREFIX + convId, JSON.stringify(envelope));
-  } catch (err) {
-    if (err instanceof DOMException && err.name === "QuotaExceededError")
-      return;
-    throw err;
-  }
-}
-
-function isSavedSlot(value: unknown): value is SavedSlot {
-  if (typeof value !== "object" || value === null) return false;
-  const slot = value as Record<string, unknown>;
-  return (
-    typeof slot.paneId === "string" &&
-    typeof slot.params === "object" &&
-    slot.params !== null
-  );
-}
-
-function isEnvelope(value: unknown): value is Envelope {
-  if (typeof value !== "object" || value === null) return false;
-  const env = value as Record<string, unknown>;
-  if (typeof env.ts !== "number" || !Number.isFinite(env.ts)) return false;
-  if (!Array.isArray(env.v)) return false;
-  return env.v.every(isSavedSlot);
+  // A refused write is reported by the store itself.
+  paneRoutes.write(convId, slots);
 }
 
 export function loadRouteForConversation(convId: string): RouteRestore {
-  let raw: string | null;
-  try {
-    raw = localStorage.getItem(LS_PREFIX + convId);
-  } catch (err) {
-    // Storage unavailable (private mode / blocked) is an environment condition,
-    // not corruption of our data — degrade to "nothing to restore" so the user
-    // is never locked out; a fault report here would be noise they can't act on.
-    if (err instanceof DOMException) return { kind: "none" };
-    throw err;
-  }
-  if (!raw) return { kind: "none" };
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (err) {
-    if (err instanceof SyntaxError) {
-      localStorage.removeItem(LS_PREFIX + convId); // self-heal: drop the poison
-      return { kind: "corrupt", reason: "malformed JSON" };
-    }
-    throw err;
-  }
-
-  if (!isEnvelope(parsed)) {
-    localStorage.removeItem(LS_PREFIX + convId); // self-heal: drop the poison
-    return { kind: "corrupt", reason: "unrecognized shape" };
-  }
-
-  if (Date.now() - parsed.ts > TTL) {
-    localStorage.removeItem(LS_PREFIX + convId);
-    return { kind: "none" };
-  }
-  return { kind: "restored", slots: parsed.v };
-}
-
-// Surface a corrupt saved-route entry as a deduped crash task (Reports pane +
-// notification bell) via the generic client report channel. A stable errorType
-// with no per-conversation detail means a schema-drift burst across many
-// conversations collapses to a single task (crashFingerprint keys on
-// errorType + stack). Fire-and-forget: report() never throws — it is the error
-// path — and navigation must not depend on it.
-export function reportCorruptSavedRoute(reason: string): void {
-  void report({
-    kind: "crash",
-    source: "client-storage",
-    message: `pane-restore: saved route unreadable (${reason})`,
-    url: window.location.href,
-    userAgent: navigator.userAgent,
-    data: { errorType: "PaneRestoreCorrupt", stack: null },
-  });
+  const read = paneRoutes.read(convId);
+  return read.kind === "value"
+    ? { kind: "restored", slots: read.value }
+    : { kind: "none" };
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;

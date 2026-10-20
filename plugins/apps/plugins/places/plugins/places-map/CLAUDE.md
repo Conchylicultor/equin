@@ -215,7 +215,7 @@ pick, or pick mode; closing keeps the query (the filter and the ghosts stay).
     - `FieldPresentation.Register` "entity:places"
     - `GeoMap.Pin` → `SavedPlacePin`
     - `GeoMap.Pin` → `GoogleResultPin`
-  - Uses: 89 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 92 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×9
     - `map` ×7
     - `primitives/data-view` ×7
@@ -223,6 +223,7 @@ pick, or pick mode; closing keeps the query (the filter and the ghosts stay).
     - `primitives/css/ui-kit` ×4
     - `primitives/live-state` ×4
     - `network/live` ×3
+    - `primitives/persistent-draft` ×3
     - `ui/icons` ×3
     - `apps/places/tag-manager` ×2
     - `integrations/google-maps` ×2
@@ -255,12 +256,12 @@ pick, or pick mode; closing keeps the query (the filter and the ghosts stay).
     - `primitives/data-view/floating-toolbar.floatingToolbar`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/scroll-reveal.revealElement`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
-    - `primitives/persistent-draft.useDraft`
     - `primitives/relative-time.useNow`
     - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`

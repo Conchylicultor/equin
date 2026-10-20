@@ -23,7 +23,13 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  DEFAULT_DRAFT_TTL,
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import {
   CollapsibleChevron,
   CollapsibleContent,
@@ -54,6 +60,17 @@ import {
 import { AppShellBrand } from "@plugins/primitives/plugins/app-shell/web";
 import { placeSearchText } from "../internal/fields";
 import { TagChip } from "./tag-chip";
+
+const tagSidebarOpenStore = defineStore({
+  owner: "places.tag-sidebar-open",
+  label: "Places sidebar folds",
+  area: "local",
+  cap: "1 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "refuse",
+  schema: z.boolean(),
+  legacy: legacyDraftKeys("places.tag-sidebar.open"),
+});
 
 const checkIcon = symbol("check");
 const removeIcon = symbol("remove");
@@ -142,7 +159,7 @@ export function TagSidebar({
   );
   const picked = (ids: readonly string[]) =>
     ids.map((id) => byId.get(id)).filter((t): t is PlaceTag => !!t);
-  const [open, setOpen] = useDraft("places.tag-sidebar.open", true);
+  const [open, setOpen] = useDraft(tagSidebarOpenStore, true);
 
   return (
     // One fold for the tree and the footer: both slide away together under the

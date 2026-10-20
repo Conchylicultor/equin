@@ -79,7 +79,7 @@ export const companionManifest: Readonly<
       "table": ["primitives.data-view.table"],
     },
   },
-  "primitives.persistent-draft.root": { always: ["primitives.persistent-draft.unsaved-warning"] },
+  "primitives.dom.web-storage.root": { always: ["primitives.dom.web-storage.health", "reports.web-storage"] },
   "primitives.slot-render.item-attrs": { always: [] },
   "primitives.slot-render.item-middleware": { always: ["primitives.error-boundary", "reorder.slot-middleware"] },
   "primitives.slot-render.list-middleware": { always: ["reorder.slot-middleware"] },

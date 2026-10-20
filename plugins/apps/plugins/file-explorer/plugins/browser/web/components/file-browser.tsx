@@ -41,7 +41,12 @@ import {
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   hasHostPaths,
@@ -86,11 +91,31 @@ const upIcon = symbol("arrow-upward");
 const hiddenOnIcon = symbol("visibility");
 const hiddenOffIcon = symbol("visibility-off");
 
-const SHOW_HIDDEN_TTL_MS = 365 * 24 * 60 * 60 * 1000;
-
 /** Which lens hide rules are switched to show, by rule id. Absent → hidden. */
 type LensShown = Readonly<Record<string, boolean>>;
 const NONE_SHOWN: LensShown = {};
+
+// Device preferences, kept like Finder keeps them — so a long TTL.
+const showHiddenStore = defineStore({
+  owner: "file-explorer.show-hidden",
+  label: "File browser preferences",
+  area: "local",
+  cap: "2 KB",
+  ttl: 365 * 24 * 60 * 60 * 1000,
+  whenFull: "refuse",
+  schema: z.boolean(),
+  legacy: legacyDraftKeys("file-explorer:show-hidden"),
+});
+const lensShownStore = defineStore<LensShown>({
+  owner: "file-explorer.lens-shown",
+  label: "File browser lens preferences",
+  area: "local",
+  cap: "2 KB",
+  ttl: 365 * 24 * 60 * 60 * 1000,
+  whenFull: "refuse",
+  schema: z.record(z.string(), z.boolean()),
+  legacy: legacyDraftKeys("file-explorer:lens-shown"),
+});
 
 export interface FileBrowserProps {
   /**
@@ -154,17 +179,8 @@ function FileBrowserReady({
   const phone = useViewportAtMost(640);
   const narrow = useViewportAtMost(900);
 
-  // A device preference, kept like Finder keeps it — so a long TTL.
-  const [showHidden, setShowHidden] = useDraft<boolean>(
-    "file-explorer:show-hidden",
-    false,
-    { ttl: SHOW_HIDDEN_TTL_MS },
-  );
-  const [lensShown, setLensShown] = useDraft<LensShown>(
-    "file-explorer:lens-shown",
-    NONE_SHOWN,
-    { ttl: SHOW_HIDDEN_TTL_MS },
-  );
+  const [showHidden, setShowHidden] = useDraft(showHiddenStore, false);
+  const [lensShown, setLensShown] = useDraft(lensShownStore, NONE_SHOWN);
 
   const listing = (
     <WithLenses dir={absolutePath(dir, home)}>

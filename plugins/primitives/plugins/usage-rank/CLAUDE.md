@@ -69,8 +69,10 @@ the ranked things are config entries with no parent row to cascade from.
     - `framework/browser-server/demo.demoResource`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
+    - `primitives/persistent-draft.legacyDraftKeys`
     - `primitives/persistent-draft.readDraft`
     - `primitives/persistent-draft.writeDraft`
   - Exports (values):

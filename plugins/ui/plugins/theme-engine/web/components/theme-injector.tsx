@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { useEffect, useInsertionEffect, useMemo } from "react";
 import { useScopeMembership } from "@plugins/config_v2/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
@@ -424,6 +426,18 @@ function FixedThemeScopeStyles({
   );
 }
 
+// A store whose only job is its `legacy` key: the first touch deletes it.
+const retiredThemeCache = defineStore({
+  owner: "theme-engine.retired",
+  label: "Retired theme cache",
+  area: "local",
+  cap: "1 KB",
+  ttl: Infinity,
+  whenFull: "refuse",
+  schema: z.never(),
+  legacy: { match: (key) => key === "theme-engine:critical-css" },
+});
+
 /**
  * The browser used to keep a copy of the painted theme CSS in localStorage, to
  * replay before the first frame; the server now paints that frame. Removes the
@@ -432,12 +446,7 @@ function FixedThemeScopeStyles({
  */
 function useDropRetiredThemeCache(): void {
   useEffect(() => {
-    try {
-      localStorage.removeItem("theme-engine:critical-css");
-    } catch (err) {
-      // Storage blocked (a sandboxed frame, disabled site data): nothing to drop.
-      if (err instanceof DOMException && err.name === "SecurityError") return;
-      throw err;
-    }
+    // First touch scans the area and deletes the legacy key; there is nothing to read.
+    retiredThemeCache.ids();
   }, []);
 }

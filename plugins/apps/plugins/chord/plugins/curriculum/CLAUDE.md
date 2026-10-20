@@ -231,13 +231,14 @@ A round nothing was typed into reads exactly like the next one, so after
     - `POST /api/chord/curriculum/blanks`
     - `POST /api/chord/curriculum/extras`
 - Web:
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
     - `primitives/css/coords` ×3
     - `apps/chord/vocabulary` ×2
     - `infra/endpoints` ×2
     - `music/chord-box` ×2
     - `primitives/hover-reveal` ×2
+    - `primitives/persistent-draft` ×2
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -251,7 +252,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/yield.yieldClass`
-    - `primitives/persistent-draft.useDraft`
+    - `primitives/dom/web-storage.defineStore`
     - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (types):

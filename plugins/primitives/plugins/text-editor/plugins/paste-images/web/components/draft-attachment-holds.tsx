@@ -1,10 +1,13 @@
 import { useEffect } from "react";
 import { holdAttachments } from "@plugins/infra/plugins/attachments/web";
 import {
+  legacyDraftKeys,
   onDraftWritten,
   readDraft,
   writeDraft,
 } from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import { extractAttachmentIds } from "../internal/markdown";
 
 // A hold already sent is re-sent at most this often while its set is unchanged,
@@ -12,14 +15,23 @@ import { extractAttachmentIds } from "../internal/markdown";
 // length, so the hold never lapses before the draft it mirrors.
 const REFRESH_MS = 60 * 60 * 1000;
 
-const CLIENT_ID_KEY = "paste-images:client-id";
+const clientIdStore = defineStore({
+  owner: "paste-images.client-id",
+  label: "Browser ids",
+  area: "local",
+  cap: "1 KB",
+  ttl: Infinity,
+  whenFull: "refuse",
+  schema: z.string(),
+  legacy: legacyDraftKeys("paste-images:client-id"),
+});
 
 /** This browser's id, so two browsers drafting under one key hold apart. */
 function clientId(): string {
-  const stored = readDraft<string>(CLIENT_ID_KEY, { ttl: Infinity });
+  const stored = readDraft(clientIdStore);
   if (stored) return stored;
   const id = crypto.randomUUID();
-  writeDraft(CLIENT_ID_KEY, id, { ttl: Infinity });
+  writeDraft(clientIdStore, id);
   return id;
 }
 

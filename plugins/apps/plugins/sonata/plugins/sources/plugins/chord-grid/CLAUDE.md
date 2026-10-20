@@ -127,24 +127,19 @@ directives establish); the selected voicing strategy from the shared
     - `Library.Source` "chord-grid"
     - `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`
     - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
-  - Uses:
-    - `apps/sonata/document.SonataDocument`
-    - `apps/sonata/document.useSongDocument`
-    - `apps/sonata/library.Library`
-    - `apps/sonata/library.openSongImperative`
-    - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useSonataApp`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.useEndpointMutation`
-    - `primitives/collapsible.FoldMotion`
-    - `primitives/collapsible.useCollapsible`
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/persistent-draft` ×3
+    - `apps/sonata/document` ×2
+    - `apps/sonata/library` ×2
+    - `apps/sonata/shell` ×2
+    - `infra/endpoints` ×2
+    - `primitives/collapsible` ×2
+    - `primitives/css/ui-kit` ×2
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/persistent-draft.useDraft`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/syntax-highlight/overlay-textarea.OverlayTextarea`
     - `ui/icons.Icon`
 - Server:

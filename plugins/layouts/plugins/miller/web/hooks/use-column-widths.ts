@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { z } from "zod";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import {
   type PaneStore,
   usePaneStore,
@@ -28,20 +30,26 @@ function stateFor(store: PaneStore): SurfaceWidths {
   return s;
 }
 
-const LS_KEY = (tabId: string, paneId: string) =>
-  `miller.width.${tabId}.${paneId}`;
+const widths = defineStore({
+  owner: "miller.column-widths",
+  label: "Column widths",
+  area: "local",
+  cap: "64 KB",
+  ttl: 30 * 24 * 60 * 60 * 1000,
+  whenFull: "evict-oldest",
+  schema: z.number(),
+  // Pre-store keys (`miller.width.<tabId>.<paneId>`): dropped, not adopted.
+  legacy: { match: (key) => key.startsWith("miller.width.") },
+});
+
+const storeId = (tabId: string, paneId: string) => `${tabId}.${paneId}`;
 
 export function hasStoredWidth(
   tabId: string | undefined,
   paneId: string,
 ): boolean {
   if (tabId === undefined) return false;
-  try {
-    return localStorage.getItem(LS_KEY(tabId, paneId)) !== null;
-  } catch (err) {
-    if (!(err instanceof DOMException)) throw err;
-    return false;
-  }
+  return widths.read(storeId(tabId, paneId)).kind === "value";
 }
 
 function readStored(
@@ -49,13 +57,8 @@ function readStored(
   paneId: string,
 ): number | undefined {
   if (tabId === undefined) return undefined;
-  try {
-    const v = localStorage.getItem(LS_KEY(tabId, paneId));
-    return v != null ? Number(v) : undefined;
-  } catch (err) {
-    if (!(err instanceof DOMException)) throw err;
-    return undefined;
-  }
+  const read = widths.read(storeId(tabId, paneId));
+  return read.kind === "value" ? read.value : undefined;
 }
 
 function persistWidth(
@@ -64,10 +67,8 @@ function persistWidth(
   width: number,
 ) {
   if (tabId === undefined) return;
-  try {
-    localStorage.setItem(LS_KEY(tabId, paneId), String(width));
-    // eslint-disable-next-line promise-safety/no-bare-catch
-  } catch {}
+  // A refused write is reported by the store.
+  widths.write(storeId(tabId, paneId), width);
 }
 
 type WidthUpdater = number | ((prev: number) => number);

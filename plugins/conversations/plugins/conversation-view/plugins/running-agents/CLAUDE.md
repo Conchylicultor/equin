@@ -165,11 +165,12 @@ value (`band-view.ts`: `showAll` + `open`).
   - Contributes:
     - `Conversation.AbovePromptInput` → `RunningAgentsBand`
     - `TranscriptStats.Item` "agents" → `AgentsStat`
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/jsonl-viewer/background-shells` ×4
     - `primitives/collapsible` ×4
     - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×3
     - `conversations/conversation-view/jsonl-viewer` ×3
+    - `primitives/persistent-draft` ×3
     - `conversations/conversation-view/jsonl-viewer/subagents` ×2
     - `primitives/css/fill` ×2
     - `primitives/data-view` ×2
@@ -182,9 +183,9 @@ value (`band-view.ts`: `showAll` + `open`).
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.useOpenPane`
-    - `primitives/persistent-draft.useDraft`
     - `primitives/relative-time.ElapsedTime`
     - `ui/icons.Icon`
 - Cross-plugin:

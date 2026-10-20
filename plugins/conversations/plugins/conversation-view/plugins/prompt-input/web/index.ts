@@ -2,10 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { PromptInput } from "./components/prompt-input";
 
-export {
-  CONVERSATION_PROMPT_DRAFT_KEY,
-  setConversationPromptDraft,
-} from "./internal/draft";
+export { setConversationPromptDraft } from "./internal/draft";
 
 export default {
   description:

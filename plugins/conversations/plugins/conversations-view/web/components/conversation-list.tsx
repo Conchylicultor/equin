@@ -1,9 +1,6 @@
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
-import {
-  loadRouteForConversation,
-  reportCorruptSavedRoute,
-} from "@plugins/conversations/plugins/pane-restore/web";
+import { loadRouteForConversation } from "@plugins/conversations/plugins/pane-restore/web";
 import {
   useOpenPane,
   usePaneStore,
@@ -40,11 +37,6 @@ export function ConversationList() {
     return {
       open: () => {
         const result = loadRouteForConversation(id);
-        // A corrupt saved route (parse failure or unrecognized shape) is a real
-        // fault — surface it as a deduped crash task rather than silently
-        // opening a fresh pane as if nothing had been saved. Navigation still
-        // proceeds below.
-        if (result.kind === "corrupt") reportCorruptSavedRoute(result.reason);
         if (result.kind === "restored" && result.slots.length > 1) {
           store.restoreRoute(result.slots);
         } else {

@@ -8,11 +8,8 @@ import {
   useState,
   type ReactElement,
 } from "react";
-import {
-  clearDraft,
-  readDraft,
-  writeDraft,
-} from "@plugins/primitives/plugins/persistent-draft/web";
+import { z } from "zod";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { BottomSentinel } from "./internal/bottom-sentinel";
@@ -43,8 +40,6 @@ export interface StickyScrollPersist {
    * prepends to or compacts the list.
    */
   anchorAttr: string;
-  /** Defaults to 30 days, matching `pane-restore`. */
-  ttl?: number;
 }
 
 export interface UseStickyScrollOptions {
@@ -75,7 +70,30 @@ export interface StickyScrollHandle {
 }
 
 const DEFAULT_THRESHOLD = 50;
-const DEFAULT_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days, per pane-restore
+
+/**
+ * Every surface's saved reading position, one entry per `persist.key`. 30 days,
+ * matching `pane-restore`. A cache: the oldest positions go first when full.
+ */
+const positionStore = defineStore<PersistedMode>({
+  owner: "auto-scroll.positions",
+  label: "Scroll positions",
+  area: "local",
+  cap: "256 KB",
+  ttl: 30 * 24 * 60 * 60 * 1000,
+  whenFull: "evict-oldest",
+  schema: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("following") }),
+    z.object({ kind: z.literal("anchored"), key: z.string() }),
+  ]),
+  // Written before the primitive as `singularity:draft:<persistKey>:<tab>`.
+  // Positions are not worth carrying over: the old entries are only deleted.
+  legacy: {
+    match: (k) =>
+      k.startsWith("singularity:draft:conversation-scroll:") ||
+      k.startsWith("singularity:draft:subagent-scroll:"),
+  },
+});
 const PERSIST_DEBOUNCE_MS = 150;
 
 /**
@@ -151,16 +169,15 @@ export function useStickyScroll(
   const persistNow = useCallback(() => {
     const cfg = persistRef.current;
     if (!cfg) return;
-    const ttl = cfg.ttl ?? DEFAULT_TTL;
     if (modeRef.current.kind === "following") {
-      writeDraft<PersistedMode>(cfg.key, { kind: "following" }, { ttl });
+      positionStore.write(cfg.key, { kind: "following" });
       return;
     }
     const key = currentAnchorKey();
     // Parked with nothing identifiable on screen (an empty or unanchored list):
     // leave whatever was stored alone rather than overwriting it with a guess.
     if (key === null) return;
-    writeDraft<PersistedMode>(cfg.key, { kind: "anchored", key }, { ttl });
+    positionStore.write(cfg.key, { kind: "anchored", key });
   }, [currentAnchorKey]);
 
   const schedulePersist = useCallback(() => {
@@ -232,9 +249,8 @@ export function useStickyScroll(
     }
 
     const cfg = persistRef.current;
-    const saved = cfg
-      ? readDraft<PersistedMode>(cfg.key, { ttl: cfg.ttl ?? DEFAULT_TTL })
-      : null;
+    const read = cfg ? positionStore.read(cfg.key) : null;
+    const saved = read?.kind === "value" ? read.value : null;
     const outcome = resolveRestore(saved, (key) =>
       cfg
         ? el.querySelector<HTMLElement>(
@@ -255,7 +271,7 @@ export function useStickyScroll(
       // The row this named is gone (filter set changed, transcript compacted, a
       // key-scheme change). Drop the stale record so it cannot keep failing, and
       // fall back to the bottom.
-      clearDraft(cfg.key);
+      positionStore.remove(cfg.key);
     }
     modeRef.current = { kind: "following" };
     setIsFollowing(true);

@@ -19,7 +19,13 @@ import {
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  DEFAULT_DRAFT_TTL,
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import { OverlayTextarea } from "@plugins/primitives/plugins/syntax-highlight/plugins/overlay-textarea/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -27,6 +33,17 @@ import { Fragment, useMemo, type ReactNode } from "react";
 import { asChordGridRaw, type ChordGridRaw } from "./compile";
 import { parseGrid, type GridToken } from "./parse-grid";
 import "./chord-grid.css";
+
+const legendOpenStore = defineStore({
+  owner: "sonata.chord-grid-legend",
+  label: "Sonata layout preferences",
+  area: "local",
+  cap: "1 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "refuse",
+  schema: z.boolean(),
+  legacy: legacyDraftKeys("sonata:chord-grid:legend"),
+});
 
 const arrowDownIcon = symbol("keyboard-arrow-down");
 
@@ -78,10 +95,7 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
     () => parseGrid(text),
     [text],
   );
-  const [legendOpen, setLegendOpen] = useDraft<boolean>(
-    "sonata:chord-grid:legend",
-    false,
-  );
+  const [legendOpen, setLegendOpen] = useDraft(legendOpenStore, false);
   const legend = useCollapsible({
     open: legendOpen,
     onOpenChange: setLegendOpen,

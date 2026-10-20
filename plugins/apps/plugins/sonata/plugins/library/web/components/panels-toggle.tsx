@@ -1,4 +1,21 @@
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  DEFAULT_DRAFT_TTL,
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
+
+const collapsedStore = defineStore({
+  owner: "sonata.section-pane-collapsed",
+  label: "Sonata layout preferences",
+  area: "local",
+  cap: "1 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "refuse",
+  schema: z.boolean(),
+  legacy: legacyDraftKeys("sonata.section-pane.collapsed"),
+});
 
 /**
  * Whether the player's section dock is folded to its rail — one device-local
@@ -9,5 +26,5 @@ import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
  * existing choice survives the move.
  */
 export function useSectionPaneCollapsed() {
-  return useDraft("sonata.section-pane.collapsed", false);
+  return useDraft(collapsedStore, false);
 }

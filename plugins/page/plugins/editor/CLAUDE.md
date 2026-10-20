@@ -4441,12 +4441,13 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor.TurnInto` ×2
     - `Editor.BlockMenuItem` ← `page.open-as-page`
   - Contributes: `IdKinds.Kind` "block"
-  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/text-editor/caret-trigger` ×5
     - `primitives/css/spacing` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/dom/dom-selection` ×4
     - `primitives/live-state` ×4
+    - `primitives/persistent-draft` ×4
     - `primitives/slot-render` ×4
     - `primitives/undo-redo` ×4
     - `network/live` ×3
@@ -4458,7 +4459,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `reorder` ×3
     - `infra/endpoints` ×2
     - `primitives/latest-ref` ×2
-    - `primitives/persistent-draft` ×2
     - `ids.IdKinds`
     - `primitives/announce.announce`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
@@ -4474,6 +4474,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/dom/auto-scroll.useEdgeAutoScroll`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/networking.subscribeWsStatus`

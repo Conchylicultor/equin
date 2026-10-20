@@ -527,7 +527,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots: `welcomePane.Actions`
             - Slot contributors: `welcomePane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "welcome"
-            - Uses:
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md)
+              - `primitives/pane` ×3
+              - `primitives/persistent-draft` ×3
+              - `primitives/live-state` ×2
+              - `tasks/launch-options` ×2
               - `conversations.useConversations`
               - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
               - `primitives/css/fill.Fill`
@@ -537,17 +541,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
               - `primitives/launch.useTaskLaunch`
-              - `primitives/live-state.matchResource`
-              - `primitives/live-state.ResourceErrorInline`
-              - `primitives/pane.defineRoute`
-              - `primitives/pane.Pane`
-              - `primitives/pane.PaneChrome`
-              - `primitives/persistent-draft.useDraft`
               - `primitives/text-editor/composer.ComposerField`
-              - `tasks/launch-options.LaunchOptionPills`
-              - `tasks/launch-options.LaunchOptionValues`
             - Exports (values): `welcomePane`
           - Cross-plugin:
             - Uses tokens:
@@ -891,13 +888,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/chord/curriculum/blanks`
               - `POST /api/chord/curriculum/extras`
           - Web:
-            - Uses: 31 symbols — full list in [`plugins/apps/plugins/chord/plugins/curriculum/REFERENCE.md`](../plugins/apps/plugins/chord/plugins/curriculum/REFERENCE.md)
+            - Uses: 33 symbols — full list in [`plugins/apps/plugins/chord/plugins/curriculum/REFERENCE.md`](../plugins/apps/plugins/chord/plugins/curriculum/REFERENCE.md)
               - `primitives/collapsible` ×4
               - `primitives/css/coords` ×3
               - `apps/chord/vocabulary` ×2
               - `infra/endpoints` ×2
               - `music/chord-box` ×2
               - `primitives/hover-reveal` ×2
+              - `primitives/persistent-draft` ×2
               - `network/live.useLive`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
@@ -911,7 +909,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/yield.yieldClass`
-              - `primitives/persistent-draft.useDraft`
+              - `primitives/dom/web-storage.defineStore`
               - `shell/toast.showToast`
               - `ui/icons.Icon`
             - Exports (types):
@@ -2876,12 +2874,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
               - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
               - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-            - Uses: 44 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
+            - Uses: 43 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `apps-core/surface` ×4
               - `apps/desktop/shell` ×3
               - `apps/desktop/wallpaper` ×3
-              - `primitives/scope/app-instance` ×3
               - `primitives/shortcuts` ×3
               - `primitives/css/layer` ×2
               - `primitives/css/theme-boundary` ×2
@@ -2897,6 +2894,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
+              - `primitives/dom/web-storage.defineStore`
+              - `primitives/scope/app-instance.appInstanceId`
               - `primitives/scope/install-sink.defineInstallSink`
               - `primitives/slot-render.renderIsolated`
               - `ui/icons.Icon`
@@ -3754,7 +3753,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "collection:file-explorer.entry"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 61 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 63 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×9
               - `primitives/css/ui-kit` ×8
               - `infra/endpoints` ×6
@@ -3762,6 +3761,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane` ×4
               - `network/live` ×2
               - `primitives/path-bar` ×2
+              - `primitives/persistent-draft` ×2
               - `primitives/bar.Bar`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
               - `primitives/css/center.Center`
@@ -3774,13 +3774,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/theme-boundary.Theme`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/file-type.FileTypeIcon`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.activationProps`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
-              - `primitives/persistent-draft.useDraft`
               - `primitives/scope/dom-scope.defineDomScope`
               - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/search.SearchInput`
@@ -5393,7 +5393,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "entity:places"
               - `GeoMap.Pin` → `SavedPlacePin`
               - `GeoMap.Pin` → `GoogleResultPin`
-            - Uses: 89 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 92 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×9
               - `map` ×7
               - `primitives/data-view` ×7
@@ -5401,6 +5401,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit` ×4
               - `primitives/live-state` ×4
               - `network/live` ×3
+              - `primitives/persistent-draft` ×3
               - `ui/icons` ×3
               - `apps/places/tag-manager` ×2
               - `integrations/google-maps` ×2
@@ -5433,12 +5434,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view/floating-toolbar.floatingToolbar`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/scroll-reveal.revealElement`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
-              - `primitives/persistent-draft.useDraft`
               - `primitives/relative-time.useNow`
               - `primitives/search.SearchInput`
               - `primitives/shortcuts.useSurfaceShortcuts`
@@ -5544,7 +5545,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 79 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 80 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
@@ -5581,6 +5582,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/scroll.Scroll`
               - `primitives/css/slider.Slider`
               - `primitives/css/sticky.Sticky`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/embed.isEmbeddedDocument`
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/icon-button.IconButton`
@@ -6385,7 +6387,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
-            - Uses: 78 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses: 81 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×13
               - `apps/sonata/shell` ×6
               - `network/live` ×6
@@ -6393,6 +6395,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view` ×6
               - `apps/sonata/player` ×5
               - `apps/sonata/document` ×4
+              - `primitives/persistent-draft` ×3
               - `apps/sonata/view-options` ×2
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
@@ -6414,11 +6417,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
               - `primitives/css/yield.yieldClass`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.linkProps`
               - `primitives/loading.Loading`
-              - `primitives/persistent-draft.useDraft`
               - `primitives/relative-time.formatRelativeTime`
               - `ui/icons.Icon`
             - Exports (types): `SourceHydration`
@@ -7527,6 +7530,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
+                  - `primitives/dom/web-storage.defineStore`
+                  - `primitives/persistent-draft.DEFAULT_DRAFT_TTL`
+                  - `primitives/persistent-draft.legacyDraftKeys`
                   - `primitives/persistent-draft.useDraft`
               - Cross-plugin:
                 - Uses tokens:
@@ -7604,9 +7610,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`key-readout`** — Sonata Section: the current key — its name, relative key and source, the scale as dots on a two-octave readout keyboard plus note-name chips, and (Chords toggle) its seven diatonic chords as the chord list's rows (chord box + lit keyboard + how often the song plays its root, click to play) — tracking the playback cursor. Reads the session's Score + cursor (useSession).
               - Web:
                 - Contributes: `Sonata.Section` "Current key" → `KeyReadout`
-                - Uses: 23 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/key-readout/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/key-readout/REFERENCE.md)
+                - Uses: 26 symbols — full list in [`plugins/apps/plugins/sonata/plugins/rich/plugins/key-readout/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/rich/plugins/key-readout/REFERENCE.md)
                   - `apps/sonata/document` ×5
                   - `apps/sonata/rich/readout-keyboard` ×4
+                  - `primitives/persistent-draft` ×3
                   - `apps/sonata/rich/chord-label` ×2
                   - `apps/sonata/session` ×2
                   - `apps/sonata/rich/key-mode.saveKeyAutoDetect`
@@ -7616,9 +7623,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
+                  - `primitives/dom/web-storage.defineStore`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
-                  - `primitives/persistent-draft.useDraft`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/color-palette --primary`
             - **`readout-keyboard`** — Sonata readout keyboard: useReadoutPlane (voicings octave-fitted into the two-octave readout window, laid in the active pitch layout), ReadoutKeyboard (proportional keys in Sonata's skin), KeyboardCaption (lead · trail caption row, trail accented when current) and ChordKeyboardRow (a chord's box, its keyboard lit in its colour and a trail — the whole row a button that sounds the chord — shared by the chord list and the current key's chords) with ChordRowFrame, its lead · keyboard · trail columns for a keyboard that must line up with the rows.
@@ -8045,24 +8052,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Library.Source` "chord-grid"
                   - `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`
                   - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
-                - Uses:
-                  - `apps/sonata/document.SonataDocument`
-                  - `apps/sonata/document.useSongDocument`
-                  - `apps/sonata/library.Library`
-                  - `apps/sonata/library.openSongImperative`
-                  - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useSonataApp`
-                  - `infra/endpoints.fetchEndpoint`
-                  - `infra/endpoints.useEndpointMutation`
-                  - `primitives/collapsible.FoldMotion`
-                  - `primitives/collapsible.useCollapsible`
+                - Uses: 22 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
+                  - `primitives/persistent-draft` ×3
+                  - `apps/sonata/document` ×2
+                  - `apps/sonata/library` ×2
+                  - `apps/sonata/shell` ×2
+                  - `infra/endpoints` ×2
+                  - `primitives/collapsible` ×2
+                  - `primitives/css/ui-kit` ×2
                   - `primitives/css/badge.Badge`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/spacing.Stack`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.cn`
-                  - `primitives/persistent-draft.useDraft`
+                  - `primitives/dom/web-storage.defineStore`
                   - `primitives/syntax-highlight/overlay-textarea.OverlayTextarea`
                   - `ui/icons.Icon`
               - Server:
@@ -10253,6 +10255,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
           - `network/live.useLive`
+          - `primitives/dom/web-storage.defineStore`
         - Exports (values): `useAppUsageSummary`
       - Server:
         - Contributes: `resource.declare` "app-usage.summary"
@@ -10439,12 +10442,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/surface`
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, and the surface-written placement-capabilities registry.
       - Web:
-        - Uses: 41 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Uses: 40 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `primitives/pane` ×18
           - `apps-core` ×7
-          - `primitives/scope/app-instance` ×7
+          - `primitives/scope/app-instance` ×5
           - `primitives/embed` ×3
           - `primitives/link-gesture` ×2
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/scope/install-sink.defineInstallSink`
           - `primitives/scope/surface-id.useSurfaceTabId`
@@ -12669,7 +12673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
           - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
         - Uses: 55 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
-          - `conversations/conversation-view/pending-turn` ×6
+          - `conversations/conversation-view/pending-turn` ×7
           - `primitives/live-state` ×6
           - `conversations/conversation-view/jsonl-viewer` ×2
           - `conversations/conversation-view/user-message` ×2
@@ -12680,7 +12684,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/dom/auto-scroll` ×2
           - `primitives/slot-render` ×2
           - `conversations/conversation-view/jsonl-viewer/tool-call.ToolNameLabel`
-          - `conversations/conversation-view/prompt-input.CONVERSATION_PROMPT_DRAFT_KEY`
           - `conversations/hibernation.useMarkConversationViewed`
           - `conversations.useConversation`
           - `network/live.useLive`
@@ -15450,12 +15453,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: 33 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
+                    - Uses: 36 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
                       - `primitives/css/ui-kit` ×9
+                      - `primitives/persistent-draft` ×4
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                       - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
                       - `primitives/css/selection-indicator` ×2
-                      - `primitives/persistent-draft` ×2
                       - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                       - `conversations/conversation-view/pending-turn.sendConversationTurn`
                       - `conversations/conversation-view/rewind.useGoBackToMessage`
@@ -15469,6 +15472,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/rigid.rigidClass`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                      - `primitives/dom/web-storage.defineStore`
                       - `primitives/live-state.ResourceErrorInline`
                       - `ui/icons.Icon`
                     - Exports (types):
@@ -16189,6 +16193,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view.conversationPane`
               - `conversations/conversation-view/action-bar.Conversation`
               - `network/live.useLive`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/link-gesture.linkGestureProps`
               - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/pane.defineRoute`
@@ -16196,6 +16201,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.PaneChrome`
               - `primitives/pane.PaneIconAction`
               - `primitives/pane.useOpenPane`
+              - `primitives/persistent-draft.legacyDraftKeys`
               - `primitives/persistent-draft.useDraft`
               - `tasks/task-source-url.useAttemptSourceUrl`
           - Server:
@@ -16214,10 +16220,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/live-state.foldResource`
               - `primitives/live-state.mapResource`
               - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useCombinedResources`
+              - `primitives/persistent-draft.DEFAULT_DRAFT_TTL`
+              - `primitives/persistent-draft.legacyDraftKeys`
               - `primitives/persistent-draft.writeDraft`
               - `primitives/sync-status.useReportSync`
               - `shell/toast.showToast`
@@ -16227,6 +16236,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TurnDelivery`
               - `TurnSend`
             - Exports (values):
+              - `conversationPromptDraft`
               - `PendingTurnCard`
               - `sendConversationTurn`
               - `useOptimisticConversationStatus`
@@ -16282,20 +16292,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view.isDraftEmpty`
               - `conversations/conversation-view.useAttemptWorkspaceKind`
               - `conversations/conversation-view.useRegisterPromptComposer`
+              - `conversations/conversation-view/pending-turn.conversationPromptDraft`
               - `conversations/conversation-view/pending-turn.sendConversationTurn`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/persistent-draft.useDraft`
               - `primitives/persistent-draft.writeDraft`
               - `primitives/prompt-editor.PromptEditor`
               - `shell/notifications.toast`
-            - Exports (values):
-              - `CONVERSATION_PROMPT_DRAFT_KEY`
-              - `setConversationPromptDraft`
+            - Exports (values): `setConversationPromptDraft`
           - Cross-plugin:
-            - Imported by:
-              - `conversations/agent-thread`
-              - `conversations/conversation-view/push-and-exit`
-              - `conversations/conversation-view/rewind`
+            - Imported by: `conversations/conversation-view/rewind`
         - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
           - Web:
             - Contributes:
@@ -16340,14 +16346,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
               - `ConfigV2.WebRegister` "config"
             - Uses: 23 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
+              - `conversations/conversation-view/pending-turn` ×3
               - `conversations/conversation-view` ×3
               - `infra/endpoints` ×3
               - `config_v2` ×2
-              - `conversations/conversation-view/pending-turn` ×2
               - `conversations` ×2
               - `primitives/css/ui-kit` ×2
               - `conversations/conversation-view/code.useEditedFiles`
-              - `conversations/conversation-view/prompt-input.CONVERSATION_PROMPT_DRAFT_KEY`
               - `network/live.useLive`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/live-state.combineResources`
@@ -16485,11 +16490,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Conversation.AbovePromptInput` → `RunningAgentsBand`
               - `TranscriptStats.Item` "agents" → `AgentsStat`
-            - Uses: 34 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/running-agents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/running-agents/REFERENCE.md)
+            - Uses: 37 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/running-agents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/running-agents/REFERENCE.md)
               - `conversations/conversation-view/jsonl-viewer/background-shells` ×4
               - `primitives/collapsible` ×4
               - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×3
               - `conversations/conversation-view/jsonl-viewer` ×3
+              - `primitives/persistent-draft` ×3
               - `conversations/conversation-view/jsonl-viewer/subagents` ×2
               - `primitives/css/fill` ×2
               - `primitives/data-view` ×2
@@ -16502,9 +16508,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/pane.useOpenPane`
-              - `primitives/persistent-draft.useDraft`
               - `primitives/relative-time.ElapsedTime`
               - `ui/icons.Icon`
           - Cross-plugin:
@@ -16723,15 +16729,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Shell.Sidebar` "New conversation" → `LaunchSidebarItem`
           - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
-        - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversations-view/REFERENCE.md`](../plugins/conversations/plugins/conversations-view/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/conversations/plugins/conversations-view/REFERENCE.md`](../plugins/conversations/plugins/conversations-view/REFERENCE.md)
           - `primitives/css/ui-kit` ×6
-          - `conversations/pane-restore` ×2
           - `primitives/css/fill` ×2
           - `primitives/launch` ×2
           - `primitives/pane` ×2
           - `conversations/conversation-view.conversationPane`
           - `conversations/conversations-view/data-view.ConversationsSidebarDataView`
           - `conversations/model-provider.useDefaultModel`
+          - `conversations/pane-restore.loadRouteForConversation`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/css/line.Line`
           - `primitives/css/spacing.insetClass`
@@ -17169,16 +17175,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/auto-start/launch-option`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/catalog-file.ts`, `server/internal/cli-models.ts` (debt)
-    - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
+    - **`pane-restore`** — Saves and restores the pane route per conversation in the budgeted web storage.
       - Web:
         - Uses:
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/pane.PaneOptions`
           - `primitives/pane.peekRoute`
-          - `reports.report`
         - Exports (types): `RouteRestore`
-        - Exports (values):
-          - `loadRouteForConversation`
-          - `reportCorruptSavedRoute`
+        - Exports (values): `loadRouteForConversation`
       - Cross-plugin:
         - Imported by: `conversations/conversations-view`
     - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.
@@ -29556,7 +29560,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `PaneLayoutHost`
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Web:
-        - Uses: 26 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
           - `primitives/pane` ×12
           - `primitives/hover-reveal` ×2
           - `primitives/sortable-list` ×2
@@ -29565,6 +29569,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
           - `primitives/dom/auto-scroll.scrollChildIntoView`
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/scope/surface-id.useSurfaceTabId`
@@ -29637,9 +29642,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/css/surface.Surface`
       - `primitives/css/text.Text`
       - `primitives/css/ui-kit.cn`
+      - `primitives/dom/web-storage.defineStore`
       - `primitives/latest-ref.useLatestRef`
       - `primitives/loading.Loading`
-      - `primitives/persistent-draft.DraftOptions`
+      - `primitives/persistent-draft.legacyDraftKeys`
       - `primitives/persistent-draft.readDraft`
       - `primitives/persistent-draft.writeDraft`
       - `primitives/slot-render.defineDispatchSlot`
@@ -31366,12 +31372,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
-        - Uses: 83 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Uses: 86 symbols — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `primitives/text-editor/caret-trigger` ×5
           - `primitives/css/spacing` ×4
           - `primitives/css/ui-kit` ×4
           - `primitives/dom/dom-selection` ×4
           - `primitives/live-state` ×4
+          - `primitives/persistent-draft` ×4
           - `primitives/slot-render` ×4
           - `primitives/undo-redo` ×4
           - `network/live` ×3
@@ -31383,7 +31390,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reorder` ×3
           - `infra/endpoints` ×2
           - `primitives/latest-ref` ×2
-          - `primitives/persistent-draft` ×2
           - `ids.IdKinds`
           - `primitives/announce.announce`
           - `primitives/copy-to-clipboard.useCopyToClipboard`
@@ -31399,6 +31405,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/dom/auto-scroll.useEdgeAutoScroll`
           - `primitives/dom/scroll-reveal.useRevealOnActive`
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/networking.subscribeWsStatus`
@@ -35476,11 +35483,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow`
         - **`color-picker`** — Composable color picker primitive: a fitted (always-in-gamut) OKLCH ColorArea, HueSlider, AlphaSlider, per-channel ColorValueFields (HEX / OKLCH / HSL), SwatchGrid with named suggestions, and ColorPicker / ColorPickerPopover with before/after, Reset, eyedropper and a shared Recent row. The Color math (parse, convert, gamut) is in core.
           - Web:
-            - Uses: 29 symbols — full list in [`plugins/primitives/plugins/css/plugins/color-picker/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/color-picker/REFERENCE.md)
+            - Uses: 31 symbols — full list in [`plugins/primitives/plugins/css/plugins/color-picker/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/color-picker/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
               - `primitives/css/coords` ×2
               - `primitives/css/fill` ×2
               - `primitives/css/text` ×2
+              - `primitives/persistent-draft` ×2
               - `primitives/usage-rank` ×2
               - `primitives/copy-to-clipboard.CopyButton`
               - `primitives/css/center.Center`
@@ -35492,11 +35500,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/live-state.ResourceView`
               - `primitives/loading.Loading`
-              - `primitives/persistent-draft.useDraft`
             - Exports (types):
               - `AlphaSliderProps`
               - `ColorAreaProps`
@@ -36921,12 +36929,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 75 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×67
+        - Contributes: 76 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×68
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 107 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 108 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×18
           - `primitives/css/ui-kit` ×14
           - `primitives/data-view/view-core` ×8
@@ -36966,6 +36974,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/auto-scroll.KeepAnchorAcross`
           - `primitives/dom/in-view.createInViewWatcher`
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/popover.InlinePopover`
           - `primitives/row-actions.RowActions`
@@ -37137,8 +37146,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 69 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×67
+        - Contributes: 70 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×68
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -37282,11 +37291,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×5
           - `ui/tokens/shape` ×2
           - `ui/tokens/shadow --shadow`
-        - Imported by: 96 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 97 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
           - `apps` ×22
           - `debug` ×13
-          - `primitives` ×8
+          - `primitives` ×9
           - `conversations` ×7
           - `tasks` ×4
           - `infra` ×3
@@ -37805,6 +37814,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/inline.Inline`
           - `primitives/css/spacing.Stack`
+          - `primitives/dom/web-storage.defineStore`
+          - `primitives/persistent-draft.DEFAULT_DRAFT_TTL`
           - `primitives/persistent-draft.useDraft`
           - `primitives/section-card.SectionCard`
           - `primitives/slot-render.defineRenderSlot`
@@ -37903,11 +37914,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/dom/in-view.useInView`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
-              - `primitives/persistent-draft.clearDraft`
-              - `primitives/persistent-draft.readDraft`
-              - `primitives/persistent-draft.writeDraft`
               - `ui/icons.Icon`
             - Exports (types):
               - `DocumentScroll`
@@ -38086,6 +38095,81 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `scroll-safety/no-adhoc-scroll-into-view` — `web/internal/use-reveal-on-active.ts` (sanctioned)
               - `scroll-safety/no-adhoc-scroll-write` — `web/internal/use-reveal-on-active.ts` (sanctioned)
+        - **`web-storage`** — The one door to browser storage (localStorage / sessionStorage): defineStore declares an owner — key prefix s:<owner>:, byte cap, TTL, what to do when full (evict-oldest for caches, refuse for what the user typed), a zod schema — and returns a typed read/write/remove/subscribe handle with one {v, ts} envelope. The caps of an area's owners sum under the browser's quota (asserted at declaration and statically by the budget-fits check), so no owner can fill storage for another. Every refused write and unreadable entry is announced (onStorageFailure); useStorageUsage and scanArea feed the health row; the no-raw-web-storage lint rule bans touching Web Storage anywhere else.
+          - Web:
+            - Slots: `WebStorageSlots.Root`
+            - Slot contributors:
+              - `WebStorageSlots.Root` ← `primitives.dom.web-storage.health`
+              - `WebStorageSlots.Root` ← `reports.web-storage`
+            - Contributes: `Core.Root`
+            - Exports (types):
+              - `AreaBucket`
+              - `AreaScan`
+              - `LegacyKeys`
+              - `StorageFailure`
+              - `Store`
+              - `StoreRead`
+              - `StoreSpec`
+              - `StoreUsage`
+              - `StoreWrite`
+              - `WhenFull`
+              - `WriteFailureReason`
+            - Exports (values):
+              - `defineStore`
+              - `onStorageFailure`
+              - `removeEntriesWhere`
+              - `scanArea`
+              - `storageFailureReportSink`
+              - `useStorageUsage`
+              - `WebStorageSlots`
+          - Cross-plugin:
+            - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+              - `primitives` ×14
+              - `apps` ×10
+              - `conversations` ×5
+              - `apps-core` ×2
+              - `layouts/miller`
+              - `map`
+              - `page/editor`
+              - `reports/web-storage`
+              - `tasks/task-draft-form`
+              - `ui/theme-engine`
+          - Exemptions:
+            - Exempts itself from: `web-storage/no-raw-web-storage` — `web/internal/store.ts` (sanctioned)
+            - Exempted by: `primitives/dom/web-storage` (0 debt)
+          - Core:
+            - Exports (types):
+              - `StorageArea`
+              - `StorageSize`
+            - Exports (values):
+              - `AREA_BUDGET`
+              - `AREA_QUOTA`
+              - `entryBytes`
+              - `KEY_ROOT`
+              - `OWNER_PATTERN`
+              - `ownerPrefix`
+              - `parseStorageSize`
+          - Test helpers:
+            - Web: `@plugins/primitives/plugins/dom/plugins/web-storage/web/testing`
+              - `installStorage` — Make `window.<area>Storage` this storage for the rest of the test file.
+              - `QuotaStorage` — An in-memory Storage with a byte quota, throwing the browser's `QuotaExceededError` past it — the condition the 2026-10-19 incident hit and jsdom never produces.
+          - Plugins:
+            - **`health`** — Makes browser storage visible: an error toast once per owner per page load when a write is refused (over the owner's cap, the area full, or storage blocked — the value then lives only in memory), and the health report's Browser storage row (critical when the browser refused a write, attention when an owner hit or nears its cap; its detail lists every owner's use against its cap plus the legacy and unowned keys).
+              - Web:
+                - Contributes:
+                  - `WebStorageSlots.Root` → `StorageFailureToast`
+                  - `HealthReport.Row` "Browser storage" → `StorageDetail`
+                - Uses:
+                  - `primitives/data-view.DataView`
+                  - `primitives/data-view.defineDataView`
+                  - `primitives/data-view.FieldDef`
+                  - `primitives/dom/web-storage.onStorageFailure`
+                  - `primitives/dom/web-storage.scanArea`
+                  - `primitives/dom/web-storage.StorageFailure`
+                  - `primitives/dom/web-storage.useStorageUsage`
+                  - `primitives/dom/web-storage.WebStorageSlots`
+                  - `shell/health-report.HealthReport`
+                  - `shell/toast.showToast`
     - **`edit-mode-signal`** — The page-global edit-mode signal — setEditMode / getEditMode / useEditMode — as a leaf primitive whose only import is react. Everything that reorder's edit mode restyles (a bar, a wrapping chip row) reads the signal without importing the reorder feature plugin.
       - Cross-plugin:
         - Imported by:
@@ -38728,11 +38812,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useLatestRef`
     - **`launch`** — The standard launch-an-agent popover, and the split [model | launch] control under it.
       - Web:
-        - Uses: 35 symbols — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
+        - Uses: 38 symbols — full list in [`plugins/primitives/plugins/launch/REFERENCE.md`](../plugins/primitives/plugins/launch/REFERENCE.md)
           - `primitives/css/ui-kit` ×9
           - `tasks/launch-options` ×5
           - `conversations/model-provider` ×4
           - `infra/endpoints` ×3
+          - `primitives/persistent-draft` ×3
           - `primitives/pane` ×2
           - `conversations/conversation-view.conversationPane`
           - `infra/claude-cli/availability.useClaudeCodeLaunchBlock`
@@ -38741,8 +38826,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/switch.Switch`
           - `primitives/css/text.Text`
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/overlay/popover.InlinePopover`
-          - `primitives/persistent-draft.useDraft`
           - `primitives/shortcuts.formatShortcutLabel`
           - `primitives/text-editor/composer.ComposerField`
           - `ui/icons.Icon`
@@ -38917,7 +39002,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-events`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
       - Web:
-        - Uses: 26 symbols — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `primitives/networking` ×10
           - `infra/endpoints` ×4
           - `primitives/css/spacing` ×2
@@ -38925,6 +39010,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/center.Center`
           - `primitives/css/inline.Inline`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useEventCallback`
           - `primitives/loading.Loading`
@@ -39354,7 +39440,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `metrics.details:meta` (push)
           - `metrics.query` (invalidate)
       - Web:
-        - Uses: 40 symbols — full list in [`plugins/primitives/plugins/metrics/REFERENCE.md`](../plugins/primitives/plugins/metrics/REFERENCE.md)
+        - Uses: 41 symbols — full list in [`plugins/primitives/plugins/metrics/REFERENCE.md`](../plugins/primitives/plugins/metrics/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `primitives/data-view/view-core` ×4
           - `primitives/live-state` ×4
@@ -39372,6 +39458,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/text.Text`
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/icon-button.IconButton`
           - `primitives/link-gesture.activationProps`
           - `primitives/loading.Loading`
@@ -39946,14 +40033,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `createHoverIntent`
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
-            - Uses: 44 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
+            - Uses: 46 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
+              - `primitives/persistent-draft` ×3
               - `primitives/css/clip` ×2
               - `primitives/css/coords` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/spacing` ×2
               - `primitives/hover-reveal` ×2
-              - `primitives/persistent-draft` ×2
               - `primitives/announce.announce`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
@@ -39971,6 +40058,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/auto-scroll.keepInPlace`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/scroll-reveal.useRevealOnActive`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/link-gesture/new-tab.NewTabButton`
@@ -40650,40 +40738,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `framework/web-core`
           - Web:
             - Exports (values): `yieldToMain`
-    - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten observes every write and clear in the tab; onDraftWriteFailed every write the browser refused.
+    - **`persistent-draft`** — Drafts over a web-storage store: useDraft is the reactive useState drop-in (all calls on one store and scope stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency; onDraftWritten observes every write and clear in the tab; legacyDraftKeys carries drafts written before web-storage into a store. The store (defineStore) owns the cap, TTL and loud refusal.
+      - Cross-plugin:
+        - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
+          - `apps` ×9
+          - `conversations` ×7
+          - `primitives` ×7
+          - `map`
+          - `page/editor`
+          - `tasks/task-draft-form`
       - Web:
-        - Slots: `DraftSlots.Root`
-        - Slot contributors: `DraftSlots.Root` ← `primitives.persistent-draft.unsaved-warning`
-        - Contributes: `Core.Root`
         - Exports (types):
           - `DraftOptions`
           - `DraftWrite`
         - Exports (values):
           - `clearDraft`
           - `DEFAULT_DRAFT_TTL`
-          - `draftKey`
-          - `DraftSlots`
-          - `onDraftWriteFailed`
+          - `legacyDraftKeys`
           - `onDraftWritten`
           - `readDraft`
           - `useDraft`
           - `writeDraft`
-      - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/persistent-draft/REFERENCE.md`](../plugins/primitives/plugins/persistent-draft/REFERENCE.md)
-          - `apps` ×9
-          - `primitives` ×9
-          - `conversations` ×7
-          - `map`
-          - `page/editor`
-          - `tasks/task-draft-form`
-      - Plugins:
-        - **`unsaved-warning`** — Warns once per page load, with an error toast, when the browser refuses to save a draft (storage full or blocked) — the text then lives only in memory and a reload loses it.
-          - Web:
-            - Contributes: `DraftSlots.Root` → `UnsavedDraftWarning`
-            - Uses:
-              - `primitives/persistent-draft.DraftSlots`
-              - `primitives/persistent-draft.onDraftWriteFailed`
-              - `shell/toast.showToast`
     - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
       - Web:
         - Slots: `PromptEditorSlots.FloatingAction`
@@ -40867,18 +40942,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/health-report`
     - **`scope`** — Which mounted instance does this belong to, and how do I reach mine? — my instance's state (scoped-store), my instance's DOM node (dom-scope), the ids that name an instance (surface-id / tab-id / app-instance), and the deliberate opposite: one implementation for the whole page (install-sink).
       - Plugins:
-        - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.
+        - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the instance-scoped id that storage entries are keyed by.
           - Web:
             - Uses:
+              - `primitives/dom/web-storage.defineStore`
+              - `primitives/dom/web-storage.removeEntriesWhere`
               - `primitives/embed.isEmbeddedDocument`
               - `primitives/scope/tab-id.getTabId`
             - Exports (types): `NavigationType`
             - Exports (values):
-              - `appInstanceKey`
+              - `appInstanceId`
               - `getAppInstanceId`
               - `getNavigationType`
-              - `legacyInstanceKey`
-              - `mayAdoptLegacyPayload`
               - `readAppInstance`
               - `stampAppInstance`
           - Cross-plugin:
@@ -40954,6 +41029,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SurfaceIdContext`
               - `useSurfaceTabId`
         - **`tab-id`** — Stable per-tab id (sessionStorage-backed) for crash/notification attribution.
+          - Web:
+            - Uses: `primitives/dom/web-storage.defineStore`
+            - Exports (values): `getTabId`
           - Cross-plugin:
             - Imported by:
               - `debug/reports`
@@ -40961,8 +41039,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/scope/app-instance`
               - `reports`
               - `shell/notifications`
-          - Web:
-            - Exports (values): `getTabId`
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
       - Web:
         - Uses:
@@ -41688,10 +41764,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/attachments.holdAttachments`
               - `infra/attachments.uploadAttachment`
               - `primitives/css/link-chip.LinkChip`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/file-type.FileTypeIcon`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.openInBrowserTab`
               - `primitives/overlay/image-viewer.ViewerThumbnail`
+              - `primitives/persistent-draft.legacyDraftKeys`
               - `primitives/persistent-draft.onDraftWritten`
               - `primitives/persistent-draft.readDraft`
               - `primitives/persistent-draft.writeDraft`
@@ -42105,8 +42183,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/browser-server/demo.demoResource`
           - `infra/endpoints.fetchEndpoint`
           - `network/live.useLive`
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/live-state.mapResource`
           - `primitives/live-state.ResourceResult`
+          - `primitives/persistent-draft.legacyDraftKeys`
           - `primitives/persistent-draft.readDraft`
           - `primitives/persistent-draft.writeDraft`
         - Exports (values):
@@ -42166,6 +42246,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Uses:
           - `primitives/css/toggle-chip.SegmentedControl`
+          - `primitives/dom/web-storage.defineStore`
           - `ui/icons.Icon`
         - Exports (types):
           - `ActiveViewState`
@@ -42861,9 +42942,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:
     - Imported by: 55 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×21
+      - `reports` ×22
       - `debug` ×15
-      - `conversations` ×6
+      - `conversations` ×5
       - `database` ×3
       - `framework` ×2
       - `infra` ×2
@@ -43290,6 +43371,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `viewportEscapeFingerprint`
           - `ViewportEscapePayloadSchema`
+    - **`web-storage`** — Web-storage failure collector: drains the web-storage primitive's storageFailureReportSink into a deduped crash report (source client-storage, one row per owner and reason) for every write refused by an owner's cap or by the browser, and every stored entry that failed its owner's schema.
+      - Web:
+        - Contributes: `WebStorageSlots.Root` → `StorageFailureCollector`
+        - Uses:
+          - `primitives/dom/web-storage.storageFailureReportSink`
+          - `primitives/dom/web-storage.WebStorageSlots`
+          - `reports.report`
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Web:
@@ -43972,6 +44060,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `infra.claude-cli.availability`
           - `HealthReport.Row` ← `infra.health`
           - `HealthReport.Row` ← `infra.mcp.browser`
+          - `HealthReport.Row` ← `primitives.dom.web-storage.health`
           - `HealthReport.Row` ← `reports.resource-errors`
           - `HealthReport.Row` ← `tasks.worktree-identity`
         - Uses: 25 symbols — full list in [`plugins/shell/plugins/health-report/REFERENCE.md`](../plugins/shell/plugins/health-report/REFERENCE.md)
@@ -44025,6 +44114,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli/availability`
           - `infra/health`
           - `infra/mcp/browser`
+          - `primitives/dom/web-storage/health`
           - `reports/resource-errors`
           - `shell/global-action-bar`
           - `tasks/worktree-identity`
@@ -45580,9 +45670,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `TaskDraftFormSlots.Action`
         - Slot contributors: `TaskDraftFormSlots.Action` ← `improve.element-picker`
         - Contributes: `ConfigV2.WebRegister` "config"
-        - Uses: 39 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
+        - Uses: 42 symbols — full list in [`plugins/tasks/plugins/task-draft-form/REFERENCE.md`](../plugins/tasks/plugins/task-draft-form/REFERENCE.md)
           - `tasks/launch-options` ×5
           - `primitives/css/ui-kit` ×3
+          - `primitives/persistent-draft` ×3
           - `primitives/sortable-list` ×3
           - `primitives/text-editor/composer` ×3
           - `config_v2` ×2
@@ -45596,11 +45687,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.ResourceView`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
-          - `primitives/persistent-draft.useDraft`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `primitives/text-editor/paste-images.extractAttachmentIds`
@@ -47201,6 +47292,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.useScopeMembership`
           - `config_v2.useSetConfig`
           - `fields/dynamic-enum/config.DynamicEnum`
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/live-state.foldResource`
           - `primitives/slot-render.defineRenderSlot`
         - Exports (types):

@@ -16,7 +16,13 @@ import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plug
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { ComposerField } from "@plugins/primitives/plugins/text-editor/plugins/composer/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  DEFAULT_DRAFT_TTL,
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -112,6 +118,20 @@ type HomeDraft = {
   picked: LaunchOptionValues;
 };
 
+const homeDraftStore = defineStore<HomeDraft>({
+  owner: "agent-manager.home-prompt",
+  label: "Home prompt drafts",
+  area: "local",
+  cap: "64 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "refuse",
+  schema: z.object({
+    text: z.string(),
+    picked: z.record(z.string(), z.unknown()),
+  }),
+  legacy: legacyDraftKeys("agent-manager-home:prompt"),
+});
+
 /** How long the fallback task title may be — the title model replaces it. */
 const TITLE_CHARS = 80;
 
@@ -122,10 +142,10 @@ const TITLE_CHARS = 80;
  * place of the home. The unsent draft survives a reload.
  */
 function HomePrompt() {
-  const [draft, setDraft, clearDraft] = useDraft<HomeDraft>(
-    "agent-manager-home:prompt",
-    { text: "", picked: {} },
-  );
+  const [draft, setDraft, clearDraft] = useDraft(homeDraftStore, {
+    text: "",
+    picked: {},
+  });
   const { resolveOptions, launch, availability } = useTaskLaunch({
     openAfterLaunch: true,
     openMode: "root",

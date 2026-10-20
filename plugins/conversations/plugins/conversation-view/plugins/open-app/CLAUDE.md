@@ -24,6 +24,7 @@
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/action-bar.Conversation`
     - `network/live.useLive`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/link-gesture.linkGestureProps`
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/pane.defineRoute`
@@ -31,6 +32,7 @@
     - `primitives/pane.PaneChrome`
     - `primitives/pane.PaneIconAction`
     - `primitives/pane.useOpenPane`
+    - `primitives/persistent-draft.legacyDraftKeys`
     - `primitives/persistent-draft.useDraft`
     - `tasks/task-source-url.useAttemptSourceUrl`
 - Server:

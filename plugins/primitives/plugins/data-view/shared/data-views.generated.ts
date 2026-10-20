@@ -82,4 +82,5 @@ export const dataViews: DataViewEntry[] = [
   { id: "tasks.sidequest-autopilot.launch-list", pluginId: "tasks.sidequest-autopilot" },
   { id: "theme-engine.themes", pluginId: "ui.theme-engine.theme-gallery" },
   { id: "theme-engine.themes.quick", pluginId: "ui.theme-engine.theme-gallery" },
+  { id: "web-storage.owners", pluginId: "primitives.dom.web-storage.health" },
 ];

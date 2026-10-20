@@ -1,0 +1,30 @@
+// @hash 6ec84829688d
+// The Browser storage detail answers "who fills it?": biggest first, by area.
+// The table shows the numbers side by side; the list is the compact form for
+// the narrow health-report popover.
+{
+  "views": [
+    {
+      "id": "by-size",
+      "name": "By size",
+      "icon": "storage",
+      "view": {
+        "type": "list",
+        "groupBy": { "fieldId": "area", "groupingId": "value" },
+        "sort": [{ "fieldId": "bytes", "direction": "desc" }]
+      }
+    },
+    {
+      "id": "table",
+      "name": "Table",
+      "icon": "table",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "bytes", "direction": "desc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

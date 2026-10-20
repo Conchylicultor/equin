@@ -19,6 +19,7 @@ import {
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
+  conversationPromptDraft,
   sendConversationTurn,
   useTurnSendInFlight,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
@@ -30,7 +31,6 @@ import { exitConversation } from "@plugins/conversations/plugins/conversation-vi
 import { dropAndExit } from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/core";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { CONVERSATION_PROMPT_DRAFT_KEY } from "@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web";
 import { combineResources } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
@@ -146,13 +146,9 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // `useConversationById` answers with the live row (its by-id read).
   const live = conversation;
 
-  const [draft, setDraft, clearDraft] = useDraft(
-    CONVERSATION_PROMPT_DRAFT_KEY,
-    "",
-    {
-      scope: convId,
-    },
-  );
+  const [draft, setDraft, clearDraft] = useDraft(conversationPromptDraft, "", {
+    scope: convId,
+  });
   const [busy, setBusy] = useState(false);
   const draftRef = useLatestRef(draft);
   // Client-side read of the very prompt the server injects for Push & Close —

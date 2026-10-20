@@ -6,10 +6,12 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
+  legacyDraftKeys,
   readDraft,
   writeDraft,
-  type DraftOptions,
 } from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
@@ -102,26 +104,24 @@ export interface MapViewProps {
 
 function ignoreActivate(): void {}
 
-/** A remembered camera outlives a draft's week: where the user left a map stays theirs. */
-const CAMERA_DRAFT: DraftOptions = { ttl: Number.POSITIVE_INFINITY };
-
-function cameraDraftKey(cameraKey: string): string {
-  return `map.camera:${cameraKey}`;
-}
-
-/** Stored bytes are untrusted (an older shape, a hand edit): only a real view restores. */
-function isCameraView(v: unknown): v is CameraView {
-  if (typeof v !== "object" || v === null) return false;
-  const { center, zoom } = v as Partial<CameraView>;
-  return (
-    typeof zoom === "number" &&
-    Number.isFinite(zoom) &&
-    typeof center === "object" &&
-    center !== null &&
-    Number.isFinite(center.lat) &&
-    Number.isFinite(center.lng)
-  );
-}
+/**
+ * A remembered camera outlives a draft's week: where the user left a map stays
+ * theirs. Stored bytes are untrusted (an older shape, a hand edit): the schema
+ * drops anything that is not a real view.
+ */
+const cameraStore = defineStore({
+  owner: "map.camera",
+  label: "Map positions",
+  area: "local",
+  cap: "64 KB",
+  ttl: Number.POSITIVE_INFINITY,
+  whenFull: "evict-oldest",
+  schema: z.object({
+    center: z.object({ lat: z.number().finite(), lng: z.number().finite() }),
+    zoom: z.number().finite(),
+  }),
+  legacy: legacyDraftKeys("map.camera"),
+});
 
 /**
  * The remembered camera for `cameraKey`: the view to open at (read once, at
@@ -139,8 +139,7 @@ function useRememberedCamera(
 } {
   const [initialCamera] = useState(() => {
     if (cameraKey === undefined) return null;
-    const stored = readDraft<unknown>(cameraDraftKey(cameraKey), CAMERA_DRAFT);
-    return isCameraView(stored) ? stored : null;
+    return readDraft(cameraStore, { scope: cameraKey });
   });
   const framing = useLatestRef(framesSomething);
   const remember = useMemo(
@@ -149,11 +148,7 @@ function useRememberedCamera(
         ? undefined
         : ({ center, zoom }: CameraView) => {
             if (!framing.current) return;
-            writeDraft(
-              cameraDraftKey(cameraKey),
-              { center, zoom },
-              CAMERA_DRAFT,
-            );
+            writeDraft(cameraStore, { center, zoom }, { scope: cameraKey });
           },
     [cameraKey, framing],
   );

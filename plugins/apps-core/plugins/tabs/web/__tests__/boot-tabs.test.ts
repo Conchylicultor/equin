@@ -6,15 +6,14 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
 import {
-  appInstanceKey,
+  appInstanceId,
   getAppInstanceId,
   getNavigationType,
-  legacyInstanceKey,
 } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { resetAppInstanceForTests } from "@plugins/primitives/plugins/scope/plugins/app-instance/web/testing";
 import { bootTabs } from "../internal/use-tabs";
 import { isDeadUnresolvedLink } from "../internal/load-scope";
-import { savePersistedTabs, type PersistedTabs } from "../internal/tabs-store";
+import type { PersistedTabs } from "../internal/tabs-store";
 
 // bootTabs is nearly pure store construction: it reads the address bar + the
 // persisted-tabs blob and returns the initial tab set, seeding the focused tab's
@@ -68,22 +67,11 @@ function setPath(pathname: string): void {
   });
 }
 
-/** Write the persisted-tabs blob under the CURRENT app instance's storage key. */
+/** Write the persisted-tabs entry under the CURRENT app instance's id. */
 function persist(payload: PersistedTabs): void {
   window.sessionStorage.setItem(
-    appInstanceKey("app-tabs"),
-    JSON.stringify(payload),
-  );
-}
-
-/**
- * Write the payload under the PRE-INSTANCE 2-segment key — the shape a session
- * opened before generations existed still holds.
- */
-function persistLegacy(payload: PersistedTabs): void {
-  window.sessionStorage.setItem(
-    legacyInstanceKey("app-tabs"),
-    JSON.stringify(payload),
+    `s:apps-core.tabs:${appInstanceId()}`,
+    JSON.stringify({ v: payload, ts: Date.now() }),
   );
 }
 
@@ -327,87 +315,6 @@ describe("bootTabs — app instances (fresh state vs. preserved state)", () => {
     // Reusing the entry's id keeps the surrounding entries recognisable to the
     // shell adapter's restore(), instead of minting a stranger.
     expect(boot.focusedTabId).toBe("t-gone");
-  });
-});
-
-describe("bootTabs — the pre-instance (legacy key) migration", () => {
-  const APPS2 = [
-    fakeApp("pages", "/pages"),
-    fakeApp("story", "/story"),
-  ] as unknown as AppList;
-
-  /** A populated pre-deploy session: two tabs, focused on story, non-default mode. */
-  const LEGACY: PersistedTabs = {
-    tabs: [
-      { tabId: "t-pages", appId: "pages", route: [], rawPath: "" },
-      { tabId: "t-story", appId: "story", route: [], rawPath: "" },
-    ],
-    focusedTabId: "t-story",
-    mode: "floating",
-  };
-
-  it("navigate with ONLY a legacy payload: still ONE tab from the URL, nothing resurrected", () => {
-    // The regression test for the gate. A fresh instance's gen-scoped key is
-    // legitimately absent, so without it the fallback would read the legacy
-    // blob on exactly the load that must restore nothing — the original bug,
-    // one last time, for every session open across the deploy.
-    persistLegacy(LEGACY);
-    navType("navigate");
-    resetAppInstanceForTests();
-    setPath("/pages");
-
-    const boot = bootTabs(APPS2, "pages");
-    expect(boot.tabs.length).toBe(1);
-    expect(boot.tabs.map((t) => t.tabId)).not.toContain("t-story");
-    expect(boot.tabs.map((t) => t.tabId)).not.toContain("t-pages");
-    // The unresolved seed (see above): nothing persisted was adopted.
-    expect(boot.mode).toBe("");
-    // Refused, not consumed: this load was never entitled to it.
-    expect(
-      window.sessionStorage.getItem(legacyInstanceKey("app-tabs")),
-    ).not.toBeNull();
-  });
-
-  it("preserving load with ONLY a legacy payload: adopts it, consumes it, re-homes it under the generation", () => {
-    // Nav type is unavailable in jsdom ⇒ treated as `reload`. With an empty
-    // registry that still MINTS a generation, so this is the load that proves
-    // the gate can't be the mint alone: it is the one moment the migration
-    // exists for, and it must restore.
-    persistLegacy(LEGACY);
-    setPath("/pages");
-
-    const boot = bootTabs(APPS2, "pages");
-    expect(boot.tabs.map((t) => t.tabId)).toEqual(["t-pages", "t-story"]);
-    expect(boot.mode).toBe("floating");
-    // Consumed, so no LATER fresh instance in this browser tab can find it.
-    expect(
-      window.sessionStorage.getItem(legacyInstanceKey("app-tabs")),
-    ).toBeNull();
-
-    // …and the next persist re-homes the payload under the gen-scoped key, so
-    // one preserving load carries the state across.
-    savePersistedTabs(boot.tabs, boot.focusedTabId, boot.mode);
-    const rehomed = window.sessionStorage.getItem(appInstanceKey("app-tabs"));
-    expect(rehomed).not.toBeNull();
-    expect(
-      (JSON.parse(rehomed!) as PersistedTabs).tabs.map((t) => t.tabId),
-    ).toEqual(["t-pages", "t-story"]);
-  });
-
-  it("a bookmark AFTER the migrating load finds nothing left to inherit", () => {
-    // The two halves composing: the preserving load consumes the legacy blob,
-    // so the next freshly-minted instance starts clean on the key alone.
-    persistLegacy(LEGACY);
-    setPath("/pages");
-    const migrated = bootTabs(APPS2, "pages");
-    savePersistedTabs(migrated.tabs, migrated.focusedTabId, migrated.mode);
-
-    navType("navigate");
-    resetAppInstanceForTests();
-
-    const boot = bootTabs(APPS2, "pages");
-    expect(boot.tabs.length).toBe(1);
-    expect(boot.tabs.map((t) => t.tabId)).not.toContain("t-story");
   });
 });
 

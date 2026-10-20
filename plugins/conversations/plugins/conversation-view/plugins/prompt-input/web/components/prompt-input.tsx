@@ -12,11 +12,13 @@ import {
   isTurnRunning,
   QUESTION_WAITING_FOR,
 } from "@plugins/conversations/core";
-import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
+import {
+  conversationPromptDraft,
+  sendConversationTurn,
+} from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { CONVERSATION_PROMPT_DRAFT_KEY } from "../internal/draft";
 
 export function PromptInput({
   conversation,
@@ -25,13 +27,9 @@ export function PromptInput({
 }) {
   const live = useLiveConversation(conversation);
   const workspace = useAttemptWorkspaceKind(conversation.attemptId);
-  const [draft, setDraft, clearDraft] = useDraft(
-    CONVERSATION_PROMPT_DRAFT_KEY,
-    "",
-    {
-      scope: conversation.id,
-    },
-  );
+  const [draft, setDraft, clearDraft] = useDraft(conversationPromptDraft, "", {
+    scope: conversation.id,
+  });
 
   // The gate every turn-sending surface shares (canSendTurn): `starting` and
   // `working` stay sendable (the server holds or queues the turn), and so does a

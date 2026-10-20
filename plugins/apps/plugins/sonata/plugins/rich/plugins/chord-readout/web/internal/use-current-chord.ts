@@ -3,7 +3,13 @@ import {
   useCursorSelector,
   useSession,
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  DEFAULT_DRAFT_TTL,
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import type {
   Annotation,
   ChordData,
@@ -38,7 +44,18 @@ export function useCurrentChord(): Annotation<"chord", ChordData> | undefined {
   );
 }
 
+const inversionsStore = defineStore({
+  owner: "sonata.chord-readout-inversions",
+  label: "Sonata layout preferences",
+  area: "local",
+  cap: "1 KB",
+  ttl: DEFAULT_DRAFT_TTL,
+  whenFull: "refuse",
+  schema: z.boolean(),
+  legacy: legacyDraftKeys("sonata:chord-readout:inversions"),
+});
+
 /** Whether the section stacks one keyboard per inversion (persisted per user). */
 export function useShowInversions() {
-  return useDraft<boolean>("sonata:chord-readout:inversions", false);
+  return useDraft(inversionsStore, false);
 }

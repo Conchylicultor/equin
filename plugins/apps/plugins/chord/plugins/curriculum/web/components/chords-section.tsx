@@ -41,7 +41,12 @@ import {
   hoverRevealClass,
   useHoverReveal,
 } from "@plugins/primitives/plugins/hover-reveal/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import {
+  legacyDraftKeys,
+  useDraft,
+} from "@plugins/primitives/plugins/persistent-draft/web";
+import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
+import { z } from "zod";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
@@ -73,6 +78,28 @@ const APPLIED_MS = 1600;
 const UNDO_MS = 6000;
 /** Remembered folds last a year: they are a viewer's habit, not a draft. */
 const FOLD_TTL = 365 * 24 * 60 * 60 * 1000;
+
+const sectionOpenStore = defineStore({
+  owner: "chord.chords-section-open",
+  label: "Chord section folds",
+  area: "local",
+  cap: "1 KB",
+  ttl: FOLD_TTL,
+  whenFull: "refuse",
+  schema: z.boolean(),
+  legacy: legacyDraftKeys("chord.chords-section.open"),
+});
+
+const openTracksStore = defineStore({
+  owner: "chord.chords-section-tracks",
+  label: "Chord track folds",
+  area: "local",
+  cap: "2 KB",
+  ttl: FOLD_TTL,
+  whenFull: "refuse",
+  schema: z.record(z.string(), z.boolean()),
+  legacy: legacyDraftKeys("chord.chords-section.tracks"),
+});
 
 /** The swatch chord of the legend: V, in its blue. */
 const LEGEND_TOKEN = chordTokenFromParts({
@@ -215,9 +242,7 @@ export function ChordsSection({
   standing: StandingLookup | null;
 }) {
   const writes = useCurriculumWrites();
-  const [open, setOpen] = useDraft("chord.chords-section.open", true, {
-    ttl: FOLD_TTL,
-  });
+  const [open, setOpen] = useDraft(sectionOpenStore, true);
   const [hover, setHover] = useState<Hover | null>(null);
   const applied = useFlash(APPLIED_MS);
   const [undo, setUndo] = useState<Selection["chords"] | null>(null);
@@ -461,11 +486,9 @@ function Track({
   index: number;
   ctx: Ctx;
 }) {
-  const [openTracks, setOpenTracks] = useDraft<Record<string, boolean>>(
-    "chord.chords-section.tracks",
-    { major: true },
-    { ttl: FOLD_TTL },
-  );
+  const [openTracks, setOpenTracks] = useDraft(openTracksStore, {
+    major: true,
+  });
   const open = openTracks[track.id] === true;
   const standing = trackStanding(track, ctx.selection);
   const next = suggestedNext(track, ctx.selection);

@@ -10,16 +10,16 @@ import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { writeDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { conversationPromptDraft } from "../internal/prompt-draft";
 import { CARD_OF, type PendingTurn } from "../internal/pending";
 import { dismissSentTurn, resendTurn } from "../internal/send";
 import { retryLedgerTurn, withdrawLedgerTurn } from "../internal/delivery";
 
 // Restore the turn's text into the conversation's shared prompt draft — the
-// key prompt-input's useDraft reads (`CONVERSATION_PROMPT_DRAFT_KEY`, not
-// importable here: prompt-input imports this plugin), which picks the write up
-// through persistent-draft's sync event.
+// store prompt-input's useDraft reads, which picks the write up through the
+// store's subscription.
 function copyToDraft(conversationId: string, text: string): void {
-  writeDraft("conversation:prompt", text, { scope: conversationId });
+  writeDraft(conversationPromptDraft, text, { scope: conversationId });
 }
 
 /** Run a card action against the server; a refusal is a toast, not a crash. */

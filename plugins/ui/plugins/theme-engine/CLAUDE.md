@@ -198,6 +198,7 @@ without its own theme document is the `""` entry exactly.
     - `config_v2.useScopeMembership`
     - `config_v2.useSetConfig`
     - `fields/dynamic-enum/config.DynamicEnum`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/live-state.foldResource`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types):

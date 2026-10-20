@@ -258,6 +258,7 @@ export const exemptEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/dom/plugins/element-size", id: "primitives.dom.element-size", loader: () => import("@plugins/primitives/plugins/dom/plugins/element-size/exempt"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/in-view", id: "primitives.dom.in-view", loader: () => import("@plugins/primitives/plugins/dom/plugins/in-view/exempt"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/scroll-reveal", id: "primitives.dom.scroll-reveal", loader: () => import("@plugins/primitives/plugins/dom/plugins/scroll-reveal/exempt"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/dom/plugins/web-storage", id: "primitives.dom.web-storage", loader: () => import("@plugins/primitives/plugins/dom/plugins/web-storage/exempt"), dependsOn: [] },
   { pluginPath: "primitives/plugins/file-viewer", id: "primitives.file-viewer", loader: () => import("@plugins/primitives/plugins/file-viewer/exempt"), dependsOn: [] },
   { pluginPath: "primitives/plugins/file-viewer/plugins/image", id: "primitives.file-viewer.image", loader: () => import("@plugins/primitives/plugins/file-viewer/plugins/image/exempt"), dependsOn: [] },
   { pluginPath: "primitives/plugins/folder-picker", id: "primitives.folder-picker", loader: () => import("@plugins/primitives/plugins/folder-picker/exempt"), dependsOn: [] },
