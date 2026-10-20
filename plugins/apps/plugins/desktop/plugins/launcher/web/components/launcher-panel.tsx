@@ -213,9 +213,6 @@ export function LauncherPanel({ onClose }: { onClose(): void }) {
                   <Text variant="caption" tone="muted">
                     <Kbd>⇧</Kbd> <Kbd>↵</Kbd> new window
                   </Text>
-                  <Text variant="caption" tone="muted">
-                    Right-click an app to keep it in the dock
-                  </Text>
                 </Cluster>
               </Stack>
             </Clip>
