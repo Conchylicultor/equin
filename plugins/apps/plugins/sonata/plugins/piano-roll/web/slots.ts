@@ -6,7 +6,7 @@
  *
  * An effect is a HEADLESS React component: it renders nothing and instead
  * wires imperative Pixi objects into the {@link FxContext} inside an effect
- * (subscribe onNoteOn/onReset, add a ticker callback, parent containers into
+ * (subscribe onNoteOn/onReset, register an onFrame updater, parent containers into
  * `layers`), with full teardown on unmount. Each contribution also carries its
  * own one-field `{ enabled }` config — the host gates mounting on it AND the
  * config auto-appears in the generic settings pane, so a new effect ships its
@@ -14,7 +14,7 @@
  */
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
-import type { Container, Renderer, Ticker } from "pixi.js";
+import type { Container, Renderer } from "pixi.js";
 import type { EmitterOptions, ParticleEmitter } from "./internal/fx/particles";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
@@ -56,7 +56,7 @@ export interface FxNoteEvent {
 
 /**
  * Everything an effect needs to paint: mount points, event streams, geometry
- * accessors, the shared ticker/renderer, and a quality budget.
+ * accessors, the per-frame updater hook/renderer, and a quality budget.
  *
  * `getProjection`/`getLaneSize` are ACCESSORS (not snapshots) on purpose: the
  * context object stays identity-stable across lane resizes, and effects read
@@ -81,7 +81,7 @@ export interface FxContext {
    * The live playback cursor in quarter-note beats (latest — re-read per tick).
    *
    * The clock a NOTE-ANCHORED effect must read instead of integrating
-   * `ticker.deltaMS`: a highlight glued to a moving note (e.g. fx-core's
+   * wall-clock deltas: a highlight glued to a moving note (e.g. fx-core's
    * active-note brighten) derives its geometry as a pure function of (this
    * cursor, the note), so it stays welded to the bar by construction — paused
    * cursor ⇒ frozen highlight on the frozen bar, scrub ⇒ it follows. Wall-clock
@@ -92,8 +92,24 @@ export interface FxContext {
    * no note to track; freezing those on pause would suspend particles mid-air.
    */
   getPlaybackBeats(): number;
-  /** The app ticker — add per-frame updates here; REMOVE them on unmount. */
-  ticker: Ticker;
+  /**
+   * Register a per-frame update; returns the unregister (call it on unmount).
+   *
+   * The roll renders ON DEMAND (no free-running ticker): frames run only while
+   * something changes. `update(dtSec)` runs once per rendered frame and MUST
+   * return whether the effect is still animating — true while particles are
+   * alive / a fade is running, false once it has settled. The loop stays alive
+   * exactly while any updater returns true, then stops; an effect never holds
+   * it open by merely being mounted. Return `liveCount() > 0`-style truth, not
+   * a constant `true`.
+   *
+   * Waking: the scene requests a frame on every note-on, reset, and cursor
+   * change, BEFORE the updater next runs — so an effect spawned from
+   * `onNoteOn` is always updated on that frame and keeps itself alive by
+   * returning true. Anything driven by the playback cursor (see
+   * `getPlaybackBeats`) is re-evaluated on every cursor change for free.
+   */
+  onFrame(update: (dtSec: number) => boolean): () => void;
   /** The live renderer (texture generation, DPR). */
   renderer: Renderer;
   /**

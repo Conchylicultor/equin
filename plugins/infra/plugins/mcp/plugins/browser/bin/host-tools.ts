@@ -13,6 +13,8 @@ import {
   DEFAULT_VIEWPORT,
   findTab,
   getSession,
+  holdForScript,
+  inCall,
   openTab,
   type Session,
   type Tab,
@@ -335,6 +337,7 @@ const impls: Impls = {
   async browser_attach(_args, ctx) {
     const s = await session(ctx);
     const { ticket, tab } = await issueAttachTicket(s);
+    holdForScript(s);
     return text({
       tab: tab.id,
       target: targetOrigin(s),
@@ -351,7 +354,8 @@ const impls: Impls = {
  * Run one tool call. The args are parsed here, against the same schema the
  * backend advertised: the socket is a process boundary, and a backend running
  * other code may send what this host does not accept. A `drive` call runs
- * under a host `e2e` slot (`host-drives.ts`).
+ * under a host `e2e` slot (`host-drives.ts`); every call thaws its session's
+ * tabs first and lets them freeze again once calls stop (`inCall`).
  */
 export function runTool<N extends BrowserToolName>(
   name: N,
@@ -361,7 +365,6 @@ export function runTool<N extends BrowserToolName>(
   const args = z
     .object(browserToolSpecs[name].inputSchema)
     .parse(rawArgs ?? {}) as BrowserToolArgs<N>;
-  return browserToolSpecs[name].cost === "drive"
-    ? withDriveSlot(() => impls[name](args, ctx))
-    : impls[name](args, ctx);
+  const run = () => inCall(ctx.conversationId, () => impls[name](args, ctx));
+  return browserToolSpecs[name].cost === "drive" ? withDriveSlot(run) : run();
 }

@@ -25,7 +25,6 @@ import {
   Sprite,
   type Renderer,
   type Texture,
-  type Ticker,
 } from "pixi.js";
 import type { FxContext } from "@plugins/apps/plugins/sonata/plugins/piano-roll/web";
 
@@ -91,7 +90,7 @@ export function PitchCometsFx({ fx }: { fx: FxContext }) {
     const comets: Comet[] = [];
     /** trackId → last onset (x center, local-clock stamp). */
     const memory = new Map<string, { x: number; at: number }>();
-    /** Local wall clock, accumulated from ticker deltas (no Date.now drift). */
+    /** Local wall clock, accumulated from frame deltas (advances only while frames run) (no Date.now drift). */
     let clock = 0;
 
     const acquireHead = (): Sprite => {
@@ -143,8 +142,7 @@ export function PitchCometsFx({ fx }: { fx: FxContext }) {
       trail.clear();
     });
 
-    const tick = (ticker: Ticker): void => {
-      const dt = ticker.deltaMS / 1000;
+    const tick = (dt: number): boolean => {
       clock += dt;
 
       if (comets.length > 0) {
@@ -177,13 +175,14 @@ export function PitchCometsFx({ fx }: { fx: FxContext }) {
         }
       }
       trail.update(dt);
+      return comets.length > 0 || trail.liveCount() > 0;
     };
-    fx.ticker.add(tick);
+    const offFrame = fx.onFrame(tick);
 
     return () => {
       offNoteOn();
       offReset();
-      fx.ticker.remove(tick);
+      offFrame();
       trail.destroy();
       // Destroys pooled head sprites; the textures are ours to free.
       heads.destroy({ children: true });

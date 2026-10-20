@@ -14,7 +14,7 @@
  * overflow spawns. Headless; full teardown in the effect cleanup.
  */
 import { useEffect } from "react";
-import { Graphics, type Renderer, type Texture, type Ticker } from "pixi.js";
+import { Graphics, type Renderer, type Texture } from "pixi.js";
 import type { FxContext } from "@plugins/apps/plugins/sonata/plugins/piano-roll/web";
 
 /** Tiny rounded shard — rounded so additive overlaps stay soft. */
@@ -73,15 +73,15 @@ export function NoteShatterFx({ fx }: { fx: FxContext }) {
 
     const offReset = fx.onReset(() => debris.clear());
 
-    const tick = (ticker: Ticker): void => {
-      debris.update(ticker.deltaMS / 1000);
-    };
-    fx.ticker.add(tick);
+    const offFrame = fx.onFrame((dt) => {
+      debris.update(dt);
+      return debris.liveCount() > 0;
+    });
 
     return () => {
       offNoteOn();
       offReset();
-      fx.ticker.remove(tick);
+      offFrame();
       debris.destroy();
       debrisTex.destroy(true);
     };

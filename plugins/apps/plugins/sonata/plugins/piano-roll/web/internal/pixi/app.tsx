@@ -98,15 +98,19 @@ export interface PianoRollCanvasProps {
  * Returns a detach function for the WebGL listener (the WebGPU promise can't be
  * un-awaited, so the guard below de-dupes and the disposed flag drops late ones).
  */
-function watchContextLoss(app: Application, onLost: () => void): () => void {
+function watchContextLoss(
+  app: Application,
+  scene: PianoRollScene,
+  onLost: () => void,
+): () => void {
   let fired = false;
   const fire = (): void => {
     if (fired) return;
     fired = true;
-    // Stop the ticker before anything else: rendering a frame against the dead
+    // Halt the scene's scheduler before anything else: rendering a frame against the dead
     // context throws inside Pixi's render loop (it would keep firing until React
     // unmounts us). Halting it makes the rebuild clean.
-    app.stop();
+    scene.halt();
     onLost();
   };
 
@@ -180,6 +184,9 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
         // GPU backends only — NOT Pixi's default trailing "canvas" fallback,
         // which silently draws labels without notes. Should the probe above
         // and init ever disagree, init throws "No available renderer" (loud).
+        // Render on demand: the ticker starts stopped; the scene's scheduler
+        // runs it only while something changes (render-scheduler.ts).
+        autoStart: false,
         preference: ["webgpu", "webgl"],
         backgroundAlpha: 0,
         antialias: true,
@@ -223,7 +230,7 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
       onSceneReadyRef.current({ scene: liveScene, app });
       // Self-heal a spontaneous GPU loss: Pixi won't, so we ask the parent to
       // remount us and rebuild the app from the current props.
-      detachLoss = watchContextLoss(app, () => {
+      detachLoss = watchContextLoss(app, liveScene, () => {
         clientLog("piano-roll", "gpu context lost — reinitializing canvas");
         onContextLostRef.current();
       });

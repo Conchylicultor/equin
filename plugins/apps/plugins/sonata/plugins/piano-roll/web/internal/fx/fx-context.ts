@@ -49,7 +49,7 @@ export function createFxContext(input: {
     getProjection,
     getLaneSize,
     getPlaybackBeats,
-    ticker: app.ticker,
+    onFrame: (update) => scene.onFrame(update),
     renderer: app.renderer,
     createEmitter,
     quality: {

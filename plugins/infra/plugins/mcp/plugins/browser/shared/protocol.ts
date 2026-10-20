@@ -4,7 +4,9 @@ import { z } from "zod";
  * The wire between a backend and the agent-browser host (`bin/host.ts`): one
  * HTTP server on a Unix socket in the host's data dir. Bump on any change to
  * the routes or bodies below — a backend never talks to a host speaking
- * another protocol.
+ * another protocol. The one exception is an ADDED read route whose absence the
+ * backend reads as an answer (`/usage`: a 404 is `unsupported`), so adding it
+ * does not lock every other checkout out of the running host.
  */
 export const HOST_PROTOCOL = 2;
 

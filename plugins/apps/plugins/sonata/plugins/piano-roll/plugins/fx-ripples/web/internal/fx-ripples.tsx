@@ -6,7 +6,7 @@
  * easing out while alpha decays over ~700 ms. The canvas clips at the lane
  * bottom, so the ring reads as a half-ripple radiating from the keyboard line.
  *
- * CHORD MERGE: onsets within one frame are buffered and flushed by the ticker
+ * CHORD MERGE: onsets within one frame are buffered and flushed by the frame updater
  * as a SINGLE ripple at the velocity-weighted center, with strength growing
  * ~√count — a chord reads as one stronger wave instead of N overlapping rings
  * (which would bloom into mud under additive blending). Costs at most one
@@ -15,7 +15,7 @@
  * Headless: imperative Pixi wired in one effect with full teardown.
  */
 import { useEffect } from "react";
-import { Graphics, type Renderer, type Texture, type Ticker } from "pixi.js";
+import { Graphics, type Renderer, type Texture } from "pixi.js";
 import {
   easeOutCubic,
   type FxContext,
@@ -44,7 +44,7 @@ export function SoundWaveRipplesFx({ fx }: { fx: FxContext }) {
       ease: easeOutCubic,
     });
 
-    // Current-frame onset accumulator (flushed by the ticker — chord merge).
+    // Current-frame onset accumulator (flushed by the frame updater — chord merge).
     let count = 0;
     let sumX = 0;
     let sumW = 0;
@@ -71,7 +71,7 @@ export function SoundWaveRipplesFx({ fx }: { fx: FxContext }) {
       rings.clear();
     });
 
-    const tick = (ticker: Ticker): void => {
+    const tick = (dt: number): boolean => {
       if (count > 0) {
         // Strength: √count caps chord stacking; velocity sets the base.
         const strength = Math.min(1.6, Math.sqrt(count)) * (0.5 + 0.5 * maxVel);
@@ -92,14 +92,15 @@ export function SoundWaveRipplesFx({ fx }: { fx: FxContext }) {
         sumW = 0;
         maxVel = 0;
       }
-      rings.update(ticker.deltaMS / 1000);
+      rings.update(dt);
+      return rings.liveCount() > 0;
     };
-    fx.ticker.add(tick);
+    const offFrame = fx.onFrame(tick);
 
     return () => {
       offNoteOn();
       offReset();
-      fx.ticker.remove(tick);
+      offFrame();
       rings.destroy();
       ringTex.destroy(true);
     };

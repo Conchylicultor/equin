@@ -93,6 +93,46 @@ describe("formatInScope", () => {
     ).toBe(once);
   });
 
+  test("a selection that would change the program settles on the whole file", async () => {
+    // The branch dropped one name from a multi-line import prettier would join.
+    // The line diff aligns the block's `import {` with the next import's, so
+    // prettier's one edit reads as two hunks; only the deletion touches a
+    // changed line, and applying it alone deleted the import (it still parses).
+    const base = [
+      'import { useEffect } from "react";',
+      "import {",
+      "  Container,",
+      "  Graphics,",
+      "  Sprite,",
+      "  Texture,",
+      "  type Renderer,",
+      "  type Ticker,",
+      '} from "pixi.js";',
+      "import {",
+      "  easeOutCubic,",
+      "  type FxContext,",
+      "  type FxNoteEvent,",
+      '} from "@plugins/apps/plugins/sonata/plugins/piano-roll/web";',
+      "",
+      "export const used = [useEffect, Container, Graphics, Sprite, Texture, easeOutCubic];",
+      "export type T = [Renderer, Ticker, FxContext, FxNoteEvent];",
+      "",
+    ].join("\n");
+    const content = base
+      .replace("  type Ticker,\n", "")
+      .replace("Renderer, Ticker,", "Renderer,");
+    const out = await formatInScope({
+      file: "a.ts",
+      content,
+      scope: { kind: "lines", base },
+      format: formatSource,
+    });
+    expect(out).toContain('from "pixi.js"');
+    expect(await formatSource({ file: "a.ts", content: out })).toBe(
+      await formatSource({ file: "a.ts", content }),
+    );
+  });
+
   test("a syntax error in the content itself still throws", async () => {
     let thrown: unknown = null;
     try {

@@ -128,9 +128,13 @@ The repo is therefore NOT fully prettier-formatted at any moment, by design.
 function of `(content, base)` and stops at its fixed point, so a file the build
 left as `X` is one where `format-clean`'s `formatInScope(X)` is `X`. Two
 endings settle on the whole-file answer instead, which is equally reproducible:
-a file that has not converged after 8 rounds, and a partial selection prettier
-cannot parse (`FormatSyntaxError` — a reflow split across hunks). A syntax
-error in the content itself still throws.
+a file that has not converged after 8 rounds, and a partial selection that is
+not a formatting: one prettier cannot parse (`FormatSyntaxError` — a reflow
+split across hunks), or one whose prettier output differs from the original's
+(`format(selection) !== format(content)` — the line diff split one edit into an
+insertion and a deletion and only the deletion was selected, which once deleted
+a used `import {…}` block outright). A syntax error in the content itself still
+throws.
 
 ## Coupled sets
 

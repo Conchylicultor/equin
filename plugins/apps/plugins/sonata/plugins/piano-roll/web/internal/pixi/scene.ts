@@ -52,6 +52,7 @@ import { resolveCssColor } from "./css-color";
 import { createGrid, type BarMarker } from "./grid";
 import { createLabelLayer } from "./labels";
 import { createNoteMesh } from "./note-mesh";
+import { createRenderScheduler } from "./render-scheduler";
 
 export interface PianoRollSceneInput {
   notes: NoteVisual[];
@@ -100,6 +101,14 @@ export interface PianoRollScene {
   fxLayers: { belowNotes: Container; aboveNotes: Container };
   onNoteOn(cb: (e: FxNoteEvent) => void): () => void;
   onReset(cb: () => void): () => void;
+  /**
+   * Render-on-demand (see render-scheduler.ts). Every mutator above already
+   * requests a frame; `onFrame` registers an FX per-frame updater that returns
+   * whether it is still animating, and `halt` permanently stops rendering
+   * (GPU context loss).
+   */
+  onFrame(update: (dtSec: number) => boolean): () => void;
+  halt(): void;
   destroy(): void;
 }
 
@@ -119,6 +128,10 @@ export function createPianoRollScene(app: Application): PianoRollScene {
   pixelScroll.addChild(labels.barNumbers, labels.noteLabels);
   scrollRoot.addChild(contentScaled, pixelScroll);
   app.stage.addChild(grid.pitchLines, fxBelow, scrollRoot, fxAbove);
+
+  // The app is created with `autoStart: false`: nothing renders until a
+  // mutator below requests a frame or an FX updater reports it is animating.
+  const scheduler = createRenderScheduler(app.ticker);
 
   // --- state ---------------------------------------------------------------
   let visuals: NoteVisual[] = [];
@@ -184,6 +197,7 @@ export function createPianoRollScene(app: Application): PianoRollScene {
       labels.setNotes(visuals);
       labels.setBars(input.bars);
       labels.refreshColors(resolveColor);
+      scheduler.request();
     },
 
     resize(width, keysWidth, height, dpr) {
@@ -199,6 +213,7 @@ export function createPianoRollScene(app: Application): PianoRollScene {
       grid.resize(width, keysWidth, height);
       labels.setLaneSize(keysWidth, height, dpr);
       applyScroll();
+      scheduler.request();
     },
 
     setSpread(nextSpread) {
@@ -213,12 +228,14 @@ export function createPianoRollScene(app: Application): PianoRollScene {
       grid.setSpread(spread);
       labels.setSpread(pxPerSec());
       applyScroll();
+      scheduler.request();
     },
 
     setScroll(authoredSec, cursorBeat) {
       scrollSec = authoredSec;
       applyScroll();
       labels.update(authoredSec);
+      scheduler.request();
 
       if (!tracker) return;
       if (pendingTrackerReset) {
@@ -244,16 +261,22 @@ export function createPianoRollScene(app: Application): PianoRollScene {
           durationSeconds: (v.y1Sec - v.y0Sec) / tempoScale,
         };
         for (const cb of noteOnSubs) cb(event);
+        // An onset gave FX something to animate (setScroll already requested
+        // this frame; the updaters then keep the loop alive until they settle).
+        scheduler.request();
       }
     },
 
     reset() {
       pendingTrackerReset = true;
       for (const cb of resetSubs) cb();
+      // FX just cleared their in-flight state — draw the emptied layers.
+      scheduler.request();
     },
 
     setShowLabels(on) {
       labels.setVisible(on);
+      scheduler.request();
     },
 
     setLook(look) {
@@ -261,6 +284,7 @@ export function createPianoRollScene(app: Application): PianoRollScene {
       mesh.setLook(style.pen, style.notes);
       grid.setLook(style.grid, resolveColor);
       labels.setLook(style.labels, resolveColor);
+      scheduler.request();
     },
 
     refreshColors() {
@@ -271,6 +295,7 @@ export function createPianoRollScene(app: Application): PianoRollScene {
       mesh.recolor(visuals, resolveColor);
       grid.refreshColors(resolveColor);
       labels.refreshColors(resolveColor);
+      scheduler.request();
     },
 
     onNoteOn(cb) {
@@ -283,7 +308,14 @@ export function createPianoRollScene(app: Application): PianoRollScene {
       return () => resetSubs.delete(cb);
     },
 
+    onFrame: (update) => scheduler.onFrame(update),
+
+    halt() {
+      scheduler.halt();
+    },
+
     destroy() {
+      scheduler.halt();
       noteOnSubs.clear();
       resetSubs.clear();
       mesh.destroy();

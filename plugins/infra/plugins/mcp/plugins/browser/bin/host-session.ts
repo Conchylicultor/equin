@@ -1,5 +1,6 @@
-import type { Browser, BrowserContext, Page } from "playwright";
+import type { Browser, BrowserContext, CDPSession, Page } from "playwright";
 import { readyNow } from "@plugins/infra/plugins/deps/deps";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { launchChromium } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import {
@@ -35,7 +36,13 @@ import { trackWrites, type WriteDrain } from "./write-drain";
  * Lifetimes are deadlines reset on use, not polling: a session closes after
  * {@link SESSION_IDLE_MS} untouched (and when its conversation ends — the
  * backend's trigger calls `/close`); the host exits {@link HOST_IDLE_MS} after
- * its last session, taking Chromium with it.
+ * its last session, taking Chromium with it. "Use" is a tool call (and, for a
+ * bounded time after `browser_attach`, the traffic of the script it hands a
+ * tab to) — never a page's own traffic: an app keeps fetching on its own (a
+ * live socket, telemetry posts), and counting that kept every session that had
+ * one of our apps open alive forever.
+ *
+ * Between calls a session's tabs are frozen (see {@link FREEZE_AFTER_MS}).
  */
 
 /**
@@ -45,6 +52,33 @@ import { trackWrites, type WriteDrain } from "./write-drain";
  */
 export const SESSION_IDLE_MS = 30 * 60_000;
 export const HOST_IDLE_MS = 5 * 60_000;
+/**
+ * A tab renders only while an agent uses it. Headless Chromium has no GPU, so
+ * every frame a page draws is rasterized on the CPU (SwiftShader) — and a page
+ * that redraws forever (a WebGL canvas on a ticker, a CSS spinner) costs whole
+ * cores with nobody looking: four idle Sonata tabs once held ~4.5 cores for
+ * hours. So once no call has touched a session for this long, its tabs are
+ * frozen, and the next call thaws them before it runs. Long enough that an
+ * agent reading a result and deciding its next step does not freeze and thaw
+ * between calls.
+ *
+ * Frozen = the page's JavaScript paused in the debugger (`Debugger.pause`; a
+ * thaw is `Debugger.disable`, which resumes it, or cancels a pause still
+ * pending on a page that ran no JS since). No script runs, so no rAF draws a
+ * frame: measured, an idle Sonata song's GPU process fell from ~60 % to 0.
+ * `Page.setWebLifecycleState: frozen` is NOT it — headless pages are always
+ * visible, and Chromium ignores a freeze of a visible page (scripts kept
+ * running, the GPU cost was unchanged); a minimized window is ignored too.
+ */
+export const FREEZE_AFTER_MS = 60_000;
+/**
+ * How long a `browser_attach` ticket keeps its session rendering and counts
+ * its pages' traffic as use: an e2e script drives the tab without one MCP
+ * call, and must be neither frozen nor idle-closed mid-run. Bounded, because
+ * the host cannot see the script end — a session holds it at most this long
+ * after its last attach.
+ */
+export const SCRIPT_HOLD_MS = 30 * 60_000;
 const LOG_CAP = 500;
 const BOUND_MS = 30_000;
 /**
@@ -84,6 +118,10 @@ export interface Tab {
   title: string;
   console: ConsoleEntry[];
   network: NetworkEntry[];
+  /** Paused between calls ({@link FREEZE_AFTER_MS}); resumed by the next. */
+  frozen: boolean;
+  /** The page's own CDP session, opened on its first freeze. */
+  cdp: Promise<CDPSession> | null;
 }
 
 export interface Session {
@@ -105,6 +143,10 @@ export interface Session {
   openedAt: Date;
   idleDeadline: Date;
   idle: ReturnType<typeof setTimeout> | null;
+  /** Freezes the tabs {@link FREEZE_AFTER_MS} after the last call ended. */
+  freeze: ReturnType<typeof setTimeout> | null;
+  /** Set while a script attached through `browser_attach` may be driving a tab. */
+  scriptHold: ReturnType<typeof setTimeout> | null;
 }
 
 let browser: Promise<Browser> | null = null;
@@ -116,6 +158,18 @@ let hostIdle: ReturnType<typeof setTimeout> | null = null;
 const bound = new WeakMap<Browser, Promise<string>>();
 /** The tab a page is, so the context's `page` event and `openTab` adopt it once. */
 const tabOfPage = new WeakMap<Page, Tab>();
+
+/**
+ * Tool calls running per conversation — keyed by id, not session, because a
+ * conversation's first call runs before its session exists.
+ */
+const callsInFlight = new Map<string, number>();
+/**
+ * One freeze or thaw at a time per conversation: a thaw racing a freeze still
+ * in progress would skip the tab the freeze then marks frozen, and the call
+ * would act on a page that runs nothing.
+ */
+const lifecycle = createKeyedMutex();
 
 /** Wired by the entry: publish the status file, exit when idle. */
 let onChange: () => void = () => {};
@@ -166,6 +220,7 @@ export function hostSnapshot(): {
         id: t.id,
         url: t.page.url(),
         title: t.title,
+        frozen: t.frozen,
       })),
     })),
     errors: [...errors],
@@ -204,7 +259,7 @@ async function launch(): Promise<Browser> {
     // Crashed or closed: every session went with it. The next call relaunches
     // and a call naming a lost tab fails loudly with "no tab".
     browser = null;
-    for (const s of sessions.values()) if (s.idle) clearTimeout(s.idle);
+    for (const s of sessions.values()) clearTimers(s);
     sessions.clear();
     armHostIdle();
     onChange();
@@ -248,6 +303,12 @@ function armHostIdle(): void {
     hostIdle = null;
     if (sessions.size === 0) onIdle();
   }, HOST_IDLE_MS);
+}
+
+function clearTimers(session: Session): void {
+  if (session.idle) clearTimeout(session.idle);
+  if (session.freeze) clearTimeout(session.freeze);
+  if (session.scriptHold) clearTimeout(session.scriptHold);
 }
 
 function touch(session: Session): void {
@@ -335,6 +396,8 @@ export async function getSession(
     openedAt: now,
     idleDeadline: now,
     idle: null,
+    freeze: null,
+    scriptHold: null,
   };
   sessions.set(conversationId, session);
   // Every page of the context is a tab — the ones a script attached through
@@ -363,8 +426,9 @@ export async function openTab(session: Session): Promise<Tab> {
 
 /**
  * Make a page of the session's context one of its tabs (once), recording its
- * console and network from then on. Its traffic keeps the session alive: a
- * script driving a tab makes no MCP call, and must not be idle-closed mid-run.
+ * console and network from then on. Its traffic keeps the session alive only
+ * under a script hold ({@link SCRIPT_HOLD_MS}): a script driving a tab makes no
+ * MCP call, and must not be idle-closed mid-run.
  */
 function adoptPage(session: Session, page: Page): Tab {
   const known = tabOfPage.get(page);
@@ -375,6 +439,8 @@ function adoptPage(session: Session, page: Page): Tab {
     title: "",
     console: [],
     network: [],
+    frozen: false,
+    cdp: null,
   };
   const push = <T>(log: T[], entry: T) => {
     log.push(entry);
@@ -399,7 +465,9 @@ function adoptPage(session: Session, page: Page): Tab {
     });
     background("dismiss-dialog", () => d.dismiss());
   });
-  page.on("request", () => touch(session));
+  page.on("request", () => {
+    if (session.scriptHold) touch(session);
+  });
   page.on("requestfinished", (req) => {
     background("record-request", async () => {
       const res = await req.response();
@@ -481,7 +549,7 @@ export async function closeSession(conversationId: string): Promise<boolean> {
   const session = sessions.get(conversationId);
   if (!session) return false;
   sessions.delete(conversationId);
-  if (session.idle) clearTimeout(session.idle);
+  clearTimers(session);
   try {
     const drained = await session.writes.drain(DRAIN_MS);
     if (drained.kind === "timeout") {
@@ -533,4 +601,96 @@ async function closeBounded(p: Promise<void>, what: string): Promise<void> {
   } finally {
     clearTimeout(timer);
   }
+}
+
+// ── Calls, freezing, script holds ─────────────────────────────────────────
+
+/**
+ * Run one tool call of a conversation: its session's tabs are thawed before
+ * the call and frozen {@link FREEZE_AFTER_MS} after the last running call ends
+ * (unless a script hold says a script may be driving them).
+ */
+export async function inCall<T>(
+  conversationId: string,
+  work: () => Promise<T>,
+): Promise<T> {
+  callsInFlight.set(
+    conversationId,
+    (callsInFlight.get(conversationId) ?? 0) + 1,
+  );
+  try {
+    const session = sessions.get(conversationId);
+    if (session) {
+      if (session.freeze) clearTimeout(session.freeze);
+      session.freeze = null;
+      await thaw(session);
+    }
+    return await work();
+  } finally {
+    const left = (callsInFlight.get(conversationId) ?? 1) - 1;
+    if (left === 0) callsInFlight.delete(conversationId);
+    else callsInFlight.set(conversationId, left);
+    const session = sessions.get(conversationId);
+    if (session && left === 0) armFreeze(session);
+  }
+}
+
+/**
+ * A script is about to drive one of this session's tabs (`browser_attach`):
+ * keep every tab rendering, and count the pages' traffic as use, for
+ * {@link SCRIPT_HOLD_MS} from now.
+ */
+export function holdForScript(session: Session): void {
+  if (session.scriptHold) clearTimeout(session.scriptHold);
+  session.scriptHold = setTimeout(() => {
+    session.scriptHold = null;
+    if (sessions.get(session.conversationId) === session) armFreeze(session);
+  }, SCRIPT_HOLD_MS);
+}
+
+function armFreeze(session: Session): void {
+  if (session.freeze) clearTimeout(session.freeze);
+  session.freeze = setTimeout(() => {
+    session.freeze = null;
+    if (sessions.get(session.conversationId) !== session) return;
+    if (session.scriptHold || callsInFlight.has(session.conversationId)) return;
+    background("freeze-tabs", () => setFrozen(session, true));
+  }, FREEZE_AFTER_MS);
+}
+
+function thaw(session: Session): Promise<void> {
+  return setFrozen(session, false);
+}
+
+function setFrozen(session: Session, frozen: boolean): Promise<void> {
+  return lifecycle.run(session.conversationId, () =>
+    applyFrozen(session, frozen),
+  );
+}
+
+async function applyFrozen(session: Session, frozen: boolean): Promise<void> {
+  // Re-checked under the lock: a call may have begun since the timer fired.
+  if (
+    frozen &&
+    (session.scriptHold !== null ||
+      callsInFlight.has(session.conversationId) ||
+      sessions.get(session.conversationId) !== session)
+  ) {
+    return;
+  }
+  let changed = false;
+  for (const tab of session.tabs.values()) {
+    if (tab.frozen === frozen || tab.page.isClosed()) continue;
+    tab.cdp ??= session.context.newCDPSession(tab.page);
+    const cdp = await tab.cdp;
+    if (frozen) {
+      await cdp.send("Debugger.enable");
+      await cdp.send("Debugger.pause");
+    } else {
+      await cdp.send("Debugger.disable");
+    }
+    tab.frozen = frozen;
+    changed = true;
+  }
+  if (changed) onChange();
 }

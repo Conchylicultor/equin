@@ -166,6 +166,14 @@ export async function selectChangedHunks(args: {
  * (the readers). A syntax error in `content` itself throws, as it always has;
  * one that only a partial selection produced (a reflow split across hunks)
  * settles on the whole-file answer instead, like a file that does not converge.
+ *
+ * So does a partial selection that still parses but CHANGED THE PROGRAM. The
+ * line diff may align one prettier edit as two hunks — joining a multi-line
+ * `import {…}` matched its `import {` to the next import's, giving "insert the
+ * joined line" + "delete the old block" — and selecting only the deletion drops
+ * the import, silently. Applying prettier's own hunks can never change what
+ * prettier makes of the file, so `format(selection) === whole` is the invariant
+ * every round checks; a selection that breaks it is not a formatting.
  */
 export async function formatInScope(args: {
   file: string;
@@ -188,6 +196,7 @@ export async function formatInScope(args: {
       if (err instanceof FormatSyntaxError) return whole;
       throw err;
     }
+    if (formatted !== whole) return whole;
   }
   return whole;
 }

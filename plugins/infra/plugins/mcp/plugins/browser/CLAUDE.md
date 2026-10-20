@@ -27,7 +27,9 @@ every agent's tabs. The host outlives any backend.
   main. So a push that does not touch this plugin keeps every session.
 - **Wire** (`shared/protocol.ts`): HTTP on `host.sock` — `POST /call`
   (`{conversationId, target, tool, args}` → the MCP result; 422 = the tool's
-  own failure), `/close`, `/shutdown`. Bump `HOST_PROTOCOL` on any change.
+  own failure), `/close`, `/shutdown`, `/usage`. Bump `HOST_PROTOCOL` on any
+  change — except an added read route whose 404 the backend reads as an answer
+  (`/usage` → `unsupported`), which must not lock other checkouts out.
 - **One tool table** (`shared/tools.ts`): the backend registers each spec as an
   `Mcp.tool` that resolves the target (a DB read — the host has no DB) and
   forwards; the host implements a record over the same keys
@@ -46,7 +48,10 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
   writes a final `exited` status.
 - **Session** — one `BrowserContext` per conversation. Closed after 30 idle
   minutes, on `browser_close`, and when the conversation goes `done` or `gone`
-  (`conversation-ended.ts`; `HAS_AGENT` names every status). Its requests carry
+  (`conversation-ended.ts`; `HAS_AGENT` names every status). Idle means no
+  tool call — a page's own traffic never counts (our apps fetch on their own
+  forever: a live socket, telemetry posts, which once kept sessions open for a
+  day), except under a script hold (below). Its requests carry
   the agent-origin headers with source `mcp-browser:<conversationId>` on every
   deploy behind the gateway (`http://<namespace>.localhost:9000` — its own
   build, main, another worktree) and on nothing else (a CDN, a public website).
@@ -73,6 +78,16 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
   network, attach, close) never queues. No op marker or op-log record per
   call; a call that waited ≥ 1 s says so in its result, and the status counts
   `drives` running and waiting.
+- **Freezing** (`inCall` / `FREEZE_AFTER_MS` in `bin/host-session.ts`). A
+  session's tabs freeze 60 s after its last call ends — their JavaScript
+  paused in the debugger (`Debugger.pause`), so no rAF draws a frame — and
+  thaw (`Debugger.disable`) before its next call runs. Not
+  `Page.setWebLifecycleState: frozen`: Chromium ignores it for a visible page,
+  and headless pages are always visible. Headless Chromium has no GPU: every frame is
+  rasterized on the CPU (SwiftShader) in the one GPU process, so a page that
+  redraws forever costs whole cores with nobody looking (four idle Sonata
+  piano rolls once held ~4.5 cores for a day). The status marks each tab
+  `frozen`.
 - **Tab** — `t1`, `t2`, …; a call naming none acts on the last one used. Each
   records its console (incl. page errors and auto-dismissed dialogs) and network
   from the moment it opens, capped at 500 entries. At most 5 per session, 32
@@ -84,9 +99,15 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
   (`absent` / `running` / `exited` / `died` / `unreadable`), pushed on every
   rewrite by a file watcher on every backend.
 - Health report → **Agent browser** row (`web/`): running or not, sessions,
-  tabs, idle deadlines, calls driving / waiting for a slot, recent host-side
-  failures (an idle close, a revert or a drain nobody was waiting on lands in
-  the status's `errors`).
+  tabs (frozen or not), idle deadlines, calls driving / waiting for a slot,
+  recent host-side failures (an idle close, a revert or a drain nobody was
+  waiting on lands in the status's `errors`), and the CPU / RAM line.
+- `agent-browser.usage` (core) — the host's and its Chromium's CPU (`ps`'s
+  decaying %cpu) and resident memory, grouped by process role (host, browser,
+  GPU, renderers, utility; `bin/host-usage.ts`, `POST /usage`). Sampled when
+  subscribed — the open health row — never on a timer. Not per tab: Chromium
+  shares renderers between same-site tabs and draws every tab in the one GPU
+  process, so no number belongs to one tab.
 - Debug → Background activity → `mcp-browser.host`.
 - **Recordings**: a page-changing call (`RECORDED_BROWSER_TOOLS`, owned by
   `debug/browser-recordings`) is recorded under the agent's tool call — the MCP
@@ -129,9 +150,11 @@ in Playwright's shared-browser mode — they see every context and leave them op
 on disconnect — so the tab is the session's own, before and after.
 
 Every page that appears in a session's context is adopted as a tab
-(`context.on("page")`), so pages a script opens are visible too, and a tab's
-requests reset the session's idle deadline, so a long script run is not closed
-under it.
+(`context.on("page")`), so pages a script opens are visible too. The script
+makes no MCP call, so issuing a ticket puts the session under a **script hold**
+(`SCRIPT_HOLD_MS`, 30 min from the last attach): its tabs are not frozen, and
+its pages' requests reset the idle deadline, so a script run is neither frozen
+nor closed under it. Bounded, because the host cannot see the script end.
 
 ## Not yet
 
@@ -141,7 +164,7 @@ under it.
 
 ## Plugin reference
 
-- Description: The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (conversation, target, tabs) and when each closes if left idle, and a host that died without closing them — read from the agent-browser.status push value. Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) forwarded to one detached host process per machine that owns the shared headless Chromium — an isolated session per conversation targeted at that conversation's own worktree build, tabs that stay open across calls and across backend restarts — plus the agent-browser.status value (host, sessions, tabs, deadlines) pushed from the host's status file.
+- Description: The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (conversation, target, tabs) and when each closes if left idle, and a host that died without closing them — read from the agent-browser.status push value. Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) forwarded to one detached host process per machine that owns the shared headless Chromium — an isolated session per conversation targeted at that conversation's own worktree build, tabs that stay open across calls and across backend restarts, frozen between calls — plus the agent-browser.status value (host, sessions, tabs, deadlines) pushed from the host's status file, and the agent-browser.usage value (the host's and Chromium's CPU and memory by process role) sampled on subscribe.
 - Web:
   - Contributes: `HealthReport.Row` "Agent browser" → `AgentBrowserDetail`
   - Uses:
@@ -152,12 +175,14 @@ under it.
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
     - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/relative-time.useNow`
     - `shell/health-report.HealthReport`
 - Server:
   - Contributes:
     - `trigger` "mcp-browser.conversation-ended"
     - `resource.declare` "agent-browser.status"
+    - `resource.declare` "agent-browser.usage"
   - Uses:
     - `infra/deps.requestDep`
     - `infra/events.Trigger`
@@ -189,20 +214,27 @@ under it.
     - `defineJob('mcp-browser.conversation-ended')`
     - `defineDaemon('mcp-browser.host')`
     - `defineFileWatcher('mcp-browser.host-status')`
-  - Resources: `agent-browser.status` (push, notified)
+  - Resources:
+    - `agent-browser.status` (push, notified)
+    - `agent-browser.usage` (push, notified)
 - Core:
   - Uses: `network/live.liveValue`
   - Exports (types):
     - `AgentBrowserHostError`
     - `AgentBrowserHostStatus`
+    - `AgentBrowserProcessRole`
     - `AgentBrowserSession`
     - `AgentBrowserStatus`
     - `AgentBrowserTab`
+    - `AgentBrowserUsage`
+    - `AgentBrowserUsageGroup`
     - `AttachTicket`
   - Exports (values):
     - `AgentBrowserHostStatusSchema`
     - `agentBrowserStatus`
     - `AgentBrowserStatusSchema`
+    - `agentBrowserUsage`
+    - `AgentBrowserUsageSchema`
     - `attachMarker`
     - `decodeAttachTicket`
     - `encodeAttachTicket`

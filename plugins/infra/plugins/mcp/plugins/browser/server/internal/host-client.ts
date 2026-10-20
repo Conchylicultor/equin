@@ -17,9 +17,12 @@ import { serveValue } from "@plugins/network/plugins/live/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   agentBrowserStatus,
+  agentBrowserUsage,
   AgentBrowserHostStatusSchema,
+  AgentBrowserUsageSchema,
   type AgentBrowserSession,
   type AgentBrowserStatus,
+  type AgentBrowserUsage,
 } from "../../core";
 import { agentBrowserDir } from "../../data-dirs";
 import { hostCodeId } from "../../shared/code-id";
@@ -51,6 +54,8 @@ const LAUNCH_MS = 30_000;
 const SHUTDOWN_MS = 60_000;
 /** One tool call: a 30 s navigation, a batch of several actions, a screenshot. */
 const CALL_MS = 5 * 60_000;
+/** One usage read: a single `ps` on the host. */
+const USAGE_MS = 10_000;
 
 /** Not installed yet is an answer, not a wait: ask for it and say so. */
 export class BrowserUnavailableError extends Error {}
@@ -406,3 +411,44 @@ export async function closeConversationSession(
   }
   return HostCloseResultSchema.parse(await res.json()).closed;
 }
+
+/**
+ * What the running host and its Chromium cost the machine — never launching a
+ * host to find out. A host from before `/usage` answers 404: `unsupported`.
+ */
+export async function readHostUsage(): Promise<AgentBrowserUsage> {
+  const status = readAgentBrowserStatus();
+  if (status.kind !== "running") return { kind: "not-running" };
+  let res: Response;
+  try {
+    res = await post("/usage", {}, USAGE_MS);
+  } catch (err) {
+    // It exited between the status read and the request.
+    if (isUnreachable(err)) return { kind: "not-running" };
+    throw err;
+  }
+  if (res.status === 404) {
+    return { kind: "unsupported", pid: status.host.pid };
+  }
+  if (!res.ok) {
+    throw new Error(
+      `[agent-browser] usage read failed: HTTP ${res.status} ${await res.text()}`,
+    );
+  }
+  return AgentBrowserUsageSchema.parse(await res.json());
+}
+
+/**
+ * Sampled when a tab subscribes (the health report's Agent browser row,
+ * open) and re-read once at subscribe, so a reopened row never shows the
+ * previous opening's numbers. No timer: an open row shows one reading.
+ */
+export const agentBrowserUsageServed = serveValue(agentBrowserUsage, {
+  source: "external",
+  changes: "notified",
+  loader: readHostUsage,
+  whileSubscribed: (_params, notify) => {
+    notify();
+    return () => {};
+  },
+});

@@ -12,6 +12,11 @@ export const AgentBrowserTabSchema = z.object({
   id: z.string(),
   url: z.string(),
   title: z.string(),
+  /**
+   * Frozen between calls (its JavaScript paused): no timers, no frames, no
+   * CPU. Defaulted: a host from before freezing wrote none.
+   */
+  frozen: z.boolean().default(false),
 });
 export type AgentBrowserTab = z.infer<typeof AgentBrowserTabSchema>;
 
@@ -116,4 +121,53 @@ export type AgentBrowserStatus = z.infer<typeof AgentBrowserStatusSchema>;
  */
 export const agentBrowserStatus = liveValue("agent-browser.status", {
   schema: AgentBrowserStatusSchema,
+});
+
+/** What a process of the host's tree is, read from Chromium's `--type=`. */
+export const AgentBrowserProcessRoleSchema = z.enum([
+  "host",
+  "browser",
+  "gpu",
+  "renderer",
+  "utility",
+  "other",
+]);
+export type AgentBrowserProcessRole = z.infer<
+  typeof AgentBrowserProcessRoleSchema
+>;
+
+export const AgentBrowserUsageGroupSchema = z.object({
+  role: AgentBrowserProcessRoleSchema,
+  processes: z.number().int().min(1),
+  /** Summed `ps` %cpu (100 = one core), the kernel's recent decaying average. */
+  cpuPercent: z.number().min(0),
+  /** Summed resident memory, bytes. */
+  rssBytes: z.number().int().min(0),
+});
+export type AgentBrowserUsageGroup = z.infer<
+  typeof AgentBrowserUsageGroupSchema
+>;
+
+/**
+ * What the agent browser costs the machine right now: its host process and
+ * every Chromium process under it, grouped by role. Sampled on subscribe —
+ * the health report reads it while its Agent browser row is open — never on
+ * a timer.
+ */
+export const AgentBrowserUsageSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("not-running") }),
+  /** A host from before `/usage` (it answers 404): replaced on main's next call. */
+  z.object({ kind: z.literal("unsupported"), pid: z.number().int() }),
+  z.object({
+    kind: z.literal("sampled"),
+    at: z.string(),
+    pid: z.number().int(),
+    groups: z.array(AgentBrowserUsageGroupSchema),
+  }),
+]);
+export type AgentBrowserUsage = z.infer<typeof AgentBrowserUsageSchema>;
+
+/** The agent browser's CPU and memory, read from the host when subscribed. */
+export const agentBrowserUsage = liveValue("agent-browser.usage", {
+  schema: AgentBrowserUsageSchema,
 });

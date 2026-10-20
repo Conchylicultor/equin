@@ -21,7 +21,7 @@
  * slower than the bar scrolls. Anchored bottom-at-laneY (`rect` and `beatToY`
  * come fresh from `getProjection()` each tick, so resizes and zoom stay
  * pixel-exact). Reading `fx.getPlaybackBeats()` rather than accumulating
- * `ticker.deltaMS` is what guarantees the highlight stays on the note when
+ * frame deltas is what guarantees the highlight stays on the note when
  * playback isn't advancing at real time: PAUSED ⇒ frozen cursor ⇒ frozen
  * highlight on the frozen bar; SCRUB ⇒ it tracks the bar both ways. It is also
  * tempo-exact by construction (beats, not seconds), so a tempo-map or live
@@ -29,18 +29,11 @@
  * in-flight bars via onReset (navigation must not leave a stale highlight).
  *
  * Headless: renders nothing; all painting is imperative Pixi wired in one
- * effect with full teardown (unsubscribe, ticker.remove, destroy containers
+ * effect with full teardown (unsubscribe, unregister the frame updater, destroy containers
  * and generated textures).
  */
 import { useEffect } from "react";
-import {
-  Container,
-  Graphics,
-  Sprite,
-  Texture,
-  type Renderer,
-  type Ticker,
-} from "pixi.js";
+import { Container, Graphics, Sprite, Texture, type Renderer } from "pixi.js";
 import {
   easeOutCubic,
   type FxContext,
@@ -179,12 +172,15 @@ export function NoteGlowSparksFx({ fx }: { fx: FxContext }) {
       sparks.clear();
     });
 
-    const tick = (ticker: Ticker): void => {
-      const dt = ticker.deltaMS / 1000;
+    const tick = (dt: number): boolean => {
       glow.update(dt);
       sparks.update(dt);
-
-      if (liveBars.length === 0) return;
+      // Only the emitters animate on their own. The brighten bars are a pure
+      // function of the cursor (re-evaluated on every cursor change, which
+      // wakes a frame), so a paused cursor with live bars must NOT hold the
+      // loop open.
+      const animating = glow.liveCount() > 0 || sparks.liveCount() > 0;
+      if (liveBars.length === 0) return animating;
       const proj = fx.getProjection();
       // `noteToRect` / `beatToY` are optional on Projection (capability-
       // dependent), but the piano roll always publishes a time-axis +
@@ -227,13 +223,14 @@ export function NoteGlowSparksFx({ fx }: { fx: FxContext }) {
         s.alpha =
           BRIGHTEN_ALPHA * Math.min(1, remainingSec / BRIGHTEN_RELEASE_SEC);
       }
+      return animating;
     };
-    fx.ticker.add(tick);
+    const offFrame = fx.onFrame(tick);
 
     return () => {
       offNoteOn();
       offReset();
-      fx.ticker.remove(tick);
+      offFrame();
       glow.destroy();
       sparks.destroy();
       // Destroys pooled sprites too; Texture.WHITE is shared and untouched

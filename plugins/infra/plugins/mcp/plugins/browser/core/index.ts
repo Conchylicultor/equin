@@ -8,7 +8,9 @@ export {
 export type { AttachTicket } from "./internal/attach-ticket";
 export {
   agentBrowserStatus,
+  agentBrowserUsage,
   AgentBrowserHostStatusSchema,
+  AgentBrowserUsageSchema,
   AgentBrowserStatusSchema,
   MAX_HOST_ERRORS,
   MAX_SESSIONS,
@@ -20,4 +22,7 @@ export type {
   AgentBrowserSession,
   AgentBrowserStatus,
   AgentBrowserTab,
+  AgentBrowserProcessRole,
+  AgentBrowserUsage,
+  AgentBrowserUsageGroup,
 } from "./internal/status";

@@ -28014,7 +28014,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Shared:
         - Exports (values): `mcpRequest`
       - Plugins:
-        - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (conversation, target, tabs) and when each closes if left idle, and a host that died without closing them — read from the agent-browser.status push value. Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) forwarded to one detached host process per machine that owns the shared headless Chromium — an isolated session per conversation targeted at that conversation's own worktree build, tabs that stay open across calls and across backend restarts — plus the agent-browser.status value (host, sessions, tabs, deadlines) pushed from the host's status file.
+        - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (conversation, target, tabs) and when each closes if left idle, and a host that died without closing them — read from the agent-browser.status push value. Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) forwarded to one detached host process per machine that owns the shared headless Chromium — an isolated session per conversation targeted at that conversation's own worktree build, tabs that stay open across calls and across backend restarts, frozen between calls — plus the agent-browser.status value (host, sessions, tabs, deadlines) pushed from the host's status file, and the agent-browser.usage value (the host's and Chromium's CPU and memory by process role) sampled on subscribe.
           - Web:
             - Contributes: `HealthReport.Row` "Agent browser" → `AgentBrowserDetail`
             - Uses:
@@ -28025,12 +28025,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
               - `primitives/live-state.foldResource`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/relative-time.useNow`
               - `shell/health-report.HealthReport`
           - Server:
             - Contributes:
               - `trigger` "mcp-browser.conversation-ended"
               - `resource.declare` "agent-browser.status"
+              - `resource.declare` "agent-browser.usage"
             - Uses:
               - `infra/deps.requestDep`
               - `infra/events.Trigger`
@@ -28062,20 +28064,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('mcp-browser.conversation-ended')`
               - `defineDaemon('mcp-browser.host')`
               - `defineFileWatcher('mcp-browser.host-status')`
-            - Resources: `agent-browser.status` (push, notified)
+            - Resources:
+              - `agent-browser.status` (push, notified)
+              - `agent-browser.usage` (push, notified)
           - Core:
             - Uses: `network/live.liveValue`
             - Exports (types):
               - `AgentBrowserHostError`
               - `AgentBrowserHostStatus`
+              - `AgentBrowserProcessRole`
               - `AgentBrowserSession`
               - `AgentBrowserStatus`
               - `AgentBrowserTab`
+              - `AgentBrowserUsage`
+              - `AgentBrowserUsageGroup`
               - `AttachTicket`
             - Exports (values):
               - `AgentBrowserHostStatusSchema`
               - `agentBrowserStatus`
               - `AgentBrowserStatusSchema`
+              - `agentBrowserUsage`
+              - `AgentBrowserUsageSchema`
               - `attachMarker`
               - `decodeAttachTicket`
               - `encodeAttachTicket`
