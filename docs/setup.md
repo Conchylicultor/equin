@@ -41,8 +41,7 @@ mise trust && mise install   # trust this checkout's mise.toml, then install
 
 # 5. The app.
 ./singularity start               # compiles and starts the gateway, and brings up Postgres
-#    (Linux: then Chromium's system libraries, see below)
-./singularity build --allow-main  # builds the app and deploys it
+./singularity build --allow-main --skip-checks  # builds the app and deploys it
 ```
 
 `mise install` also runs the repo's `setup` task (trusts every worktree's
@@ -76,11 +75,15 @@ which `install.sh` enables). On a server, `SINGULARITY_LISTEN=127.0.0.1:9000
 ./singularity start` keeps it on loopback. Elsewhere (no launchd, no systemd)
 the gateway does not survive a reboot: run `./singularity start` again after one.
 
-**Linux: headless Chromium's system libraries.** The build's layout checks
-launch Chromium, which links against libraries a desktop has but a server image
-does not (NSS, ATK, libgbm, ALSA, …). `install.sh` installs them after `start`
-with Playwright's own `install-deps chromium` (apt, one sudo); without them the
-Chromium install fails, naming the missing libraries and the exact command.
+**Chromium is not part of the install.** It is an on-demand dependency
+([`infra/deps`](../plugins/infra/plugins/deps/CLAUDE.md)), installed (~600 MB)
+the first time something needs it: the full check pass (its layout-geometry
+suite, so a build without `--skip-checks` or a `push`), an `e2e/` script, or an
+agent's `browser_*` tools. The install's build passes `--skip-checks` because
+main's tree already passed every check when it was pushed. On Linux, headless
+Chromium links against system libraries a server image lacks (NSS, ATK,
+libgbm, ALSA, …); its install then fails, naming the missing libraries and the
+one root command that installs them (Playwright's own `install-deps chromium`).
 
 ## Postgres
 

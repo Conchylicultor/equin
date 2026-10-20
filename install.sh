@@ -65,10 +65,9 @@ main() {
   cat <<EOF
 
   Singularity installer. This will:
-    1. install the Xcode command-line tools, if missing (macOS), or git, a C
-       compiler and the system libraries headless Chromium needs (Linux, apt)
-       — and enable lingering so the app runs with nobody logged in (Linux);
-       asks for your password once
+    1. install the Xcode command-line tools, if missing (macOS), or git and a
+       C compiler (Linux, apt) — and enable lingering so the app runs with
+       nobody logged in (Linux); asks for your password once
     2. install mise, and add one line to $RC so new terminals find its tools
     3. $( [ -n "$SELF_DIR" ] && echo "use the checkout at $INSTALL_DIR" || echo "clone $REPO_URL into $INSTALL_DIR" )
     4. install the exact Bun, Go, tmux and Rust releases mise.lock records
@@ -180,23 +179,16 @@ EOF
   say "Starting the gateway and its Postgres"
   ./singularity start
 
-  # Linux: the build's layout checks launch headless Chromium, which links
-  # against system libraries a server image lacks (NSS, ATK, libgbm, ALSA…).
-  # Playwright's own installer knows the list per distro; it runs from the
-  # workspace's pinned playwright, resolved the way the playwright-browser
-  # dependency resolves it (plugins/infra/plugins/deps/plugins/playwright-browser).
-  # Needs node_modules, which `start` just installed.
-  if [ "$OS" != "Darwin" ] && command -v apt-get >/dev/null 2>&1; then
-    BUN="$("$MISE" which bun)"
-    PW_CLI="$("$BUN" -e 'const p = Bun.resolveSync("playwright/package.json", process.argv[1]); const { join, dirname } = require("node:path"); console.log(join(dirname(p), require(p).bin.playwright));' "$INSTALL_DIR/plugins/infra/plugins/deps/plugins/playwright-browser")"
-    say "Installing the system libraries headless Chromium needs (apt; asks for your password)"
-    sudo DEBIAN_FRONTEND=noninteractive "$BUN" "$PW_CLI" install-deps chromium
-  fi
-
   STATUS="$HOME/.singularity/worktrees/singularity/build-status.json"
   before="$(grep -o '"buildId": *"[^"]*"' "$STATUS" 2>/dev/null || true)"
   say "Building the app (the long step)"
-  ./singularity build --allow-main
+  # --skip-checks: this deploys main, whose tree already passed the full check
+  # pass when it was pushed (the cheap alwaysRun subset still runs). The full
+  # pass is an authoring gate, and some of it needs headless Chromium (the
+  # layout-geometry suite) — an on-demand dependency (infra/deps) installed the
+  # first time a check, an e2e script or an agent's browser asks for it, never
+  # to launch the app.
+  ./singularity build --allow-main --skip-checks
   # The receipt is the authority on whether it deployed, not the exit code.
   after="$(grep -o '"buildId": *"[^"]*"' "$STATUS" 2>/dev/null || true)"
   if [ -z "$after" ] || [ "$after" = "$before" ] || ! grep -q '"status": *"ok"' "$STATUS"; then
