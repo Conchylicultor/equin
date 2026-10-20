@@ -76,7 +76,24 @@ export async function openCanvas(page: Page, name: string): Promise<void> {
   await boot(page, pathUrl(`/prototypes/proto/${name}`), {
     marker: canvasFrameSelector({ letter: "A", status: "found" }),
     settleMs: 500,
+    describe: describeCanvas,
   });
+}
+
+/**
+ * Where the canvas got to, for a timed-out open: a prototype frame is `found`
+ * from its first render, so "no frame A" means the canvas never drew it (no
+ * canvas root yet: the pane, the prototype list or the picks record was still
+ * pending), while a canvas whose frames exist names each one's status.
+ */
+async function describeCanvas(page: Page): Promise<string> {
+  if ((await page.locator(canvasLayoutSelector()).count()) === 0) {
+    return "canvas: not drawn (no canvas root)";
+  }
+  const frames = await listFrames(page);
+  return frames.length === 0
+    ? "canvas: drawn, no frame yet (its room not measured)"
+    : `canvas: ${frames.map((f) => `${f.letter} ${f.kind} ${f.status}`).join(", ")}`;
 }
 
 /**

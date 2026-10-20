@@ -210,6 +210,18 @@ For the same reason, `page.on("websocket")` and `routeWebSocket` see nothing of
 the live sockets: frame assertions and socket faults go through
 `tapSharedSocket` (`@plugins/primitives/plugins/networking/e2e`).
 
+## A timed-out `boot()` says what the page was showing
+
+`boot(page, url, { marker })` waits `ELEMENT_TIMEOUT_MS` for the marker — the
+first navigation after a deploy is the loaded case, so not a hand-picked 30 s.
+When it still times out it does not re-throw Playwright's bare "waitFor timed
+out": `describeBootStall` (`e2e/boot-diagnosis.ts`) reads the page at that
+moment — how many elements matched the marker and their box, the `aria-busy`
+loaders still up (every `Loading` is one), the requests in flight, the page's
+text — and a caller's `describe(page)` appends what only that app can read
+(the canvas driver lists its frames and their statuses). A one-off flake then
+leaves the reason in the transcript instead of "unknown".
+
 ## Chromium arrives on demand
 
 No browser is installed at `bun install`. Chromium is the `chromium`

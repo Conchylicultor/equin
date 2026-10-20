@@ -71,7 +71,6 @@ export function PrototypeCanvas(): ReactNode {
   const { name } = usePrototypeDetail();
   return matchResource(useLive(prototypesList), {
     loading: () => <Loading variant="block" />,
-    error: () => <Loading variant="block" />,
     ready: (rows) => {
       const meta = rows.find((p) => p.name === name) ?? null;
       if (!meta) {

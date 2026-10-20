@@ -51,6 +51,16 @@ export function trackContextNetwork(context: BrowserContext): void {
   for (const page of context.pages()) track(page);
 }
 
+/**
+ * The URLs `page` has in flight right now (worker loads aside) — what a timed-out
+ * wait prints, so "still loading" names what it was still loading. `null` for a
+ * page no harness session created (its requests were never tracked).
+ */
+export function inflightUrls(page: Page): string[] | null {
+  const tracker = trackers.get(page);
+  return tracker ? [...tracker.inflight].map((r) => r.url()) : null;
+}
+
 export interface NetworkIdleOptions {
   timeoutMs?: number;
   /** How long the page must stay without an in-flight request (Playwright's own rule: 500ms). */

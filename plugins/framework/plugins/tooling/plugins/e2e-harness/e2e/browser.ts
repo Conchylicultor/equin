@@ -36,6 +36,8 @@ import { repairAgentWrites, settleAgentWrites } from "./agent-writes";
 import { assertDeployIdentity } from "./deploy-identity";
 import { isTargetOrigin, targetNamespace, unconsumedPage } from "./target";
 import { trackContextNetwork, waitForNetworkIdle } from "./network-idle";
+import { describeBootStall } from "./boot-diagnosis";
+import { ELEMENT_TIMEOUT_MS } from "./wait";
 
 export const DEFAULT_VIEWPORT = { width: 1400, height: 900 } as const;
 
@@ -497,8 +499,17 @@ function assertSamePlaywright(ticket: AttachTicket): void {
 export interface BootOptions {
   /** A selector that proves the app actually rendered. */
   marker?: string;
-  /** How long to wait for `marker` (or for load, when no marker). */
+  /**
+   * How long to wait for `marker` (default `ELEMENT_TIMEOUT_MS`, the measured
+   * budget for an element the app has to render — the first navigation after
+   * a deploy is the loaded case), or for load when no marker (default 30 s).
+   */
   timeoutMs?: number;
+  /**
+   * What this app can say about its own state, appended to the diagnosis a
+   * marker timeout throws (e.g. which of its frames exist, in which status).
+   */
+  describe?: (page: Page) => Promise<string>;
   /** A final fixed pause after the marker appears, for post-paint hydration. */
   settleMs?: number;
 }
@@ -519,17 +530,49 @@ export async function boot(
   url: string,
   opts: BootOptions = {},
 ): Promise<void> {
-  const timeoutMs = opts.timeoutMs ?? 30_000;
-  await page.goto(url, { waitUntil: "domcontentloaded", timeout: timeoutMs });
+  const loadMs = opts.timeoutMs ?? 30_000;
+  await page.goto(url, { waitUntil: "domcontentloaded", timeout: loadMs });
   if (opts.marker) {
-    await page
-      .locator(opts.marker)
-      .first()
-      .waitFor({ state: "visible", timeout: timeoutMs });
+    await waitForMarker(
+      page,
+      opts.marker,
+      opts.timeoutMs ?? ELEMENT_TIMEOUT_MS,
+      opts.describe,
+    );
   } else {
     // Not Playwright's `networkidle`: it never fires on this app (a
     // SharedWorker's script load never finishes as far as the page can see).
-    await waitForNetworkIdle(page, { timeoutMs });
+    await waitForNetworkIdle(page, { timeoutMs: loadMs });
   }
   if (opts.settleMs) await page.waitForTimeout(opts.settleMs);
+}
+
+/**
+ * Wait for `marker` to be visible; on a timeout, throw what the page was
+ * showing instead (`describeBootStall`) — a bare "waitFor timed out" cannot
+ * tell a slow cold boot from a page stuck on something else.
+ */
+async function waitForMarker(
+  page: Page,
+  marker: string,
+  timeoutMs: number,
+  describe: BootOptions["describe"],
+): Promise<void> {
+  try {
+    await page
+      .locator(marker)
+      .first()
+      .waitFor({ state: "visible", timeout: timeoutMs });
+  } catch (err) {
+    if (!(err instanceof Error) || err.name !== "TimeoutError") throw err;
+    const seen = await describeBootStall(page, marker, describe).catch(
+      (diagErr: unknown) => [
+        `(could not read the page: ${diagErr instanceof Error ? diagErr.message : String(diagErr)})`,
+      ],
+    );
+    throw new Error(
+      `boot: ${marker} not visible after ${String(timeoutMs)}ms\n  ${seen.join("\n  ")}`,
+      { cause: err },
+    );
+  }
 }
