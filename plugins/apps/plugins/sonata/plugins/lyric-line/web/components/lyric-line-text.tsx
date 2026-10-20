@@ -246,7 +246,10 @@ function LyricWords({
                     ? chordLabel(chords[w.chord]!)
                     : null}
                 </span>
-                <span>{w.text.replace(/ /g, "\u00a0")}</span>
+                {/* A chord past the words has no text: a non-breaking
+                    space keeps the text row's height, so the chord still
+                    sits above the line rather than on it. */}
+                <span>{w.text.replace(/ /g, "\u00a0") || "\u00a0"}</span>
               </span>
             );
           })}

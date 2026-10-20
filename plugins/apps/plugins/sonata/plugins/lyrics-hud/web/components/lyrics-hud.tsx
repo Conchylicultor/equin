@@ -133,13 +133,22 @@ function LyricsCorner({ lines }: { lines: LyricAnnotation[] }) {
       rowRefs.current[Math.min(first + VISIBLE_LINES - 1, rows.length - 1)];
     if (!top || !bottom) return;
     setHeight(bottom.offsetTop + bottom.offsetHeight - top.offsetTop);
+  }, [current, rows]);
+  // Reveal once the viewport has its height: before that the list does not
+  // overflow, so there is nothing to scroll — a corner mounted mid-song (the
+  // lens switched back to the roll) would otherwise stay on the first line.
+  // The first reveal jumps; later ones glide as the song moves on.
+  const revealed = useRef(false);
+  useLayoutEffect(() => {
+    if (height === undefined) return;
     // Only the corner's own list scrolls: the roll around it stays put.
-    revealElement(top, {
-      behavior: "smooth",
+    revealElement(rowRefs.current[Math.max(current, 0)], {
+      behavior: revealed.current ? "smooth" : "instant",
       block: "start",
       scope: "nearest",
     });
-  }, [current, rows]);
+    revealed.current = true;
+  }, [current, rows, height]);
 
   return (
     // The HUD sits inside the roll's drag-to-scrub surface, whose pointerdown
