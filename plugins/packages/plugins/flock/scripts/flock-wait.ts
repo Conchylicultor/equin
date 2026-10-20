@@ -37,13 +37,21 @@ if (!file) {
   );
 }
 
+// `exclusive` (the default) or `shared` — which flock the worker blocks on.
+const mode = process.env.FLOCK_WAIT_MODE ?? "exclusive";
+if (mode !== "exclusive" && mode !== "shared") {
+  throw new Error(
+    `flock-wait: FLOCK_WAIT_MODE must be "exclusive" or "shared", got ${JSON.stringify(mode)}`,
+  );
+}
+
 mkdirSync(dirname(file), { recursive: true });
 
 // The worker does the blocking flock off this main thread. `unref()` so a still-
 // blocked worker never keeps our loop alive on its own — the stdin drain below is
 // the sole thing keeping us alive, so EOF always wins.
 const worker = new Worker(join(import.meta.dir, "flock-block.ts"), {
-  workerData: { file },
+  workerData: { file, shared: mode === "shared" },
 });
 worker.unref();
 

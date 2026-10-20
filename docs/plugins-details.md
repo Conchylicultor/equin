@@ -23850,8 +23850,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./singularity build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 44 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
-              - `framework/cli/op-runtime` ×33
+            - Uses: 45 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+              - `framework/cli/op-runtime` ×34
               - `framework/cli/bootstrap` ×4
               - `framework/cli/migrations` ×3
               - `build/run-ledger.createBuildRunRecorder`
@@ -23936,7 +23936,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resolveBuildReceipt`
               - `writeBuildReceipt`
           - Cli:
-            - Uses: `infra/jobs/supervised-job.cliExecContext`
+            - Uses:
+              - `infra/jobs/supervised-job.cliExecContext`
+              - `tasks/task-track.checkoutTrack`
             - Exports (types):
               - `BuildLogs`
               - `BuildProfile`
@@ -23976,6 +23978,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `laneFor`
               - `MAX_VALVE_HOLD_MS`
               - `openBuildProgress`
+              - `opPriority`
               - `printStepBlocks`
               - `PROGRESS_FILE`
               - `publishLane`
@@ -24016,6 +24019,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/git-artifacts.SKIP_POST_REWRITE_ENV`
               - `framework/cli/op-runtime.checkBroadcasts`
               - `framework/cli/op-runtime.installFatalSignalExit`
+              - `framework/cli/op-runtime.opPriority`
               - `framework/cli/op-runtime.reportInterruptedPredecessor`
               - `framework/cli/op-runtime.runCheckSubprocess`
               - `framework/cli/op-runtime.signalOriginTap`
@@ -27538,6 +27542,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HostFacts`
               - `HostPoolEntry`
               - `Lane`
+              - `Priority`
             - Exports (values):
               - `cpuBudget`
               - `HOST_GRANT_ENV`
@@ -30638,6 +30643,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `flockRelease`
           - `flockTry`
+          - `flockTryShared`
           - `waitForFlock`
       - Core:
         - Exports (types):
@@ -30648,6 +30654,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `exitWithParent`
           - `flockRelease`
           - `flockTry`
+          - `flockTryShared`
           - `holdParentLifeline`
           - `PARENT_LIFELINE_ENV`
           - `waitForFlock`
@@ -30655,12 +30662,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Uses:
           - `packages/flock.flockTry`
+          - `packages/flock.flockTryShared`
           - `packages/flock.HeldFlock`
           - `packages/flock.waitForFlock`
         - Exports (types):
           - `AcquireHooks`
           - `HostSemaphore`
           - `HostShare`
+          - `Priority`
           - `RepoLockDir`
         - Exports (values): `createHostSemaphore`
       - Cross-plugin:
@@ -46592,11 +46601,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/agent-manager/demo`
           - `conversations/conversation-view/track`
+          - `framework/cli/op-runtime`
           - `tasks`
           - `tasks/sidequest-autopilot`
           - `tasks/task-header`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
+      - Cli:
+        - Exports (types): `CheckoutTrack`
+        - Exports (values): `checkoutTrack`
     - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Web:
         - Contributes:

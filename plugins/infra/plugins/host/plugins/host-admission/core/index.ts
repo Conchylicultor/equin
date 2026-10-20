@@ -1,5 +1,6 @@
 export type {
   Lane,
+  Priority,
   HostPoolEntry,
   CpuBudget,
   HostFacts,

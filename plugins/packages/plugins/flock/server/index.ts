@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { flockTry, flockRelease } from "../core/internal/flock";
+export { flockTry, flockTryShared, flockRelease } from "../core/internal/flock";
 export { waitForFlock } from "../core/internal/wait";
 export type { HeldFlock, WaitForFlockOptions } from "../core/internal/wait";
 

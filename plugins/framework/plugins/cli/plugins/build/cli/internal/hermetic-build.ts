@@ -339,6 +339,7 @@ export async function runHermeticBuild(opts: {
       // A release artifact is never experimental — it is the shipped app.
       experimental: false,
       lane: "interactive",
+      priority: "normal",
       background: false,
       // Validation belongs to the SOURCE TREE, so it runs with the first
       // composition only — early enough that a broken tree fails before

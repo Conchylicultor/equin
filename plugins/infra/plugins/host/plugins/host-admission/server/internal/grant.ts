@@ -7,6 +7,7 @@ import {
   type Grant,
   type GrantHooks,
   type Lane,
+  type Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/server";
 import { defineHostPool } from "./pool";
@@ -80,6 +81,11 @@ function spendOf(want: number | undefined, held: number): number {
  * mid-`fn` the way `pool.run` does — see `GrantHooks.signal` for why a grant's
  * inheritable tokens make that unsafe.
  *
+ * `opts.priority` is required, so every acquirer decides: `low` (the sidequest
+ * track) takes a share only while no `normal` acquire of the pool is waiting,
+ * and yields one it won to a `normal` waiter that appeared meanwhile — see
+ * `Priority`. It is applied after the spread for the same reason as `lane`.
+ *
  * **An interactive grant runs its holder in the foreground.** The lane says a
  * human is blocked on this work, so while `fn` runs the process leaves macOS's
  * darwinbg tier (`withForegroundPriority`), and every child it spawns meanwhile
@@ -93,12 +99,13 @@ function spendOf(want: number | undefined, held: number): number {
  * floor), so this cannot lift the agent fleet.
  */
 export async function withHostGrant<T>(
-  opts: { lane: Lane; max: number; hooks?: GrantHooks },
+  opts: { lane: Lane; priority: Priority; max: number; hooks?: GrantHooks },
   fn: (grant: Grant) => Promise<T>,
 ): Promise<T> {
   const share = await cpuPool.acquireShare(opts.max, {
     ...opts.hooks,
     lane: opts.lane,
+    priority: opts.priority,
   });
   const grant = grantOfUnits(share.slots, opts.lane);
   try {
@@ -133,10 +140,13 @@ export const e2ePool = defineHostPool({
  * script spawns acquires its own `cpu` grant like any top-level op.
  */
 export async function withE2eGrant<T>(
-  opts: { lane: Lane; max: number; hooks?: GrantHooks },
+  opts: { lane: Lane; priority: Priority; max: number; hooks?: GrantHooks },
   fn: (grant: Grant) => Promise<T>,
 ): Promise<T> {
-  const share = await e2ePool.acquireShare(1, opts.hooks);
+  const share = await e2ePool.acquireShare(1, {
+    ...opts.hooks,
+    priority: opts.priority,
+  });
   const sem = createSemaphore(1);
   const grant: Grant = {
     units: 1,

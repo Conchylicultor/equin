@@ -37,6 +37,8 @@ export async function withDriveSlot(
   const result = await withE2eGrant(
     {
       lane: "background",
+      // The host drives tabs for every agent session at once — no one track.
+      priority: "normal",
       max: 1,
       hooks: {
         onWaitStart() {

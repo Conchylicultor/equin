@@ -1,6 +1,7 @@
 import { dlopen } from "bun:ffi";
 
 // `flock(2)` operations, from <sys/file.h>. Identical on darwin and linux.
+const LOCK_SH = 1;
 const LOCK_EX = 2;
 const LOCK_NB = 4;
 const LOCK_UN = 8;
@@ -50,6 +51,18 @@ function flock(fd: number, op: number): number {
  */
 export function flockTry(fd: number): boolean {
   return flock(fd, LOCK_EX | LOCK_NB) === 0;
+}
+
+/**
+ * Try to take a SHARED lock on `fd` without blocking — `flockTry`'s twin for
+ * a lock many holders may share at once. `true` iff this process now holds it;
+ * `false` means an exclusive holder has it. Any number of shared holders
+ * coexist, and an exclusive acquire is granted only once none is left — which
+ * is how a set of holders can announce "some of us are here" to a waiter that
+ * takes the exclusive lock to learn "nobody is" (host-semaphore's demand gate).
+ */
+export function flockTryShared(fd: number): boolean {
+  return flock(fd, LOCK_SH | LOCK_NB) === 0;
 }
 
 /**

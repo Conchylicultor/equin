@@ -5,6 +5,7 @@ export type {
   AcquireHooks,
   HostSemaphore,
   HostShare,
+  Priority,
   RepoLockDir,
 } from "./internal/host-semaphore";
 

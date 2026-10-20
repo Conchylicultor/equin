@@ -10,6 +10,7 @@ import {
 import { join } from "node:path";
 import {
   flockTry,
+  flockTryShared,
   waitForFlock,
   type HeldFlock,
 } from "@plugins/packages/plugins/flock/server";
@@ -108,6 +109,33 @@ export interface HostShare {
 export type Lane = "interactive" | "background";
 
 /**
+ * Admission priority, orthogonal to the lane. A lane decides WHICH slots an
+ * acquire may take; a priority decides WHO GOES FIRST when several want one.
+ *
+ *  - `normal` (default) — today's behaviour. While a `normal` acquire is WAITING
+ *    (slow path: every slot in its window busy), it announces demand by holding a
+ *    SHARED flock on the pool's `demand.lock`.
+ *  - `low` — yields to that demand. Before taking a slot it checks the demand
+ *    lock (a non-blocking EXCLUSIVE try); while any `normal` waiter holds it
+ *    shared, it waits (one `flock-wait` child on the exclusive lock — granted by
+ *    the kernel the instant the last `normal` waiter stops waiting, no polling).
+ *    And when it WINS a slot while a `normal` waiter has appeared meanwhile, it
+ *    hands the slot straight back and waits again, so the `normal` waiter gets it.
+ *
+ * So a `low` acquire runs only when no `normal` acquire of the same pool is
+ * waiting: it fills idle capacity and never takes a slot a `normal` caller is
+ * queued for. It does NOT pre-empt — a `low` holder keeps its slot until it
+ * releases. And it may starve while `normal` demand never lets up, which is the
+ * point: the sidequest track runs after the main track.
+ *
+ * Crash-safe like every lock here: a `normal` waiter that dies drops its shared
+ * lock with the process. The demand lock is per POOL (every lane), because a
+ * `normal` interactive waiter wants the very slot a `low` background acquire
+ * would take.
+ */
+export type Priority = "normal" | "low";
+
+/**
  * Per-acquire options: the reserved-floor `lane`, an optional `signal`, plus two
  * observability hooks. The hooks are optional and neither gates behavior; they let
  * callers make the gate visible (profiler spans, log lines) without coupling this
@@ -121,6 +149,11 @@ export interface AcquireHooks {
    * not which slots are reachable.
    */
   lane?: Lane;
+  /**
+   * Admission priority (default `normal`) — whether this acquire yields to
+   * waiting `normal` acquires of the same pool. See `Priority`.
+   */
+  priority?: Priority;
   /**
    * Ambient cancellation for this acquire. Optional everywhere: omitting it is
    * exactly today's behavior, so nothing that does not pass one changes.
@@ -372,6 +405,7 @@ export function createHostSemaphore(opts: {
   // Resolved per call, never captured — see the docblock on `slots`.
   const slotFile = (i: number) => slots.file(`slot-${i}.lock`);
   const turnstileFile = () => slots.file("turnstile.lock");
+  const demandFile = () => slots.file("demand.lock");
   const sizeFile = () => slots.file("size");
   const guardFile = () => slots.file(".size.lock");
 
@@ -675,6 +709,151 @@ export function createHostSemaphore(opts: {
     return winner;
   }
 
+  // ── The demand gate (`Priority`) ────────────────────────────────────────────
+  //
+  // A `normal` waiter holds `demand.lock` SHARED for as long as it waits; a `low`
+  // acquire takes it EXCLUSIVE to learn "nobody is waiting". flock grants a
+  // shared request whenever no exclusive holder exists, so a pending exclusive
+  // wait never delays a `normal` waiter's announcement.
+
+  // Announce demand for the duration of a `normal` wait. Non-blocking in-process
+  // first; it can only fail while a `low` acquire momentarily holds the lock
+  // exclusive (its probe, or its gate's grant before the release), so the
+  // fallback child is granted within milliseconds.
+  async function holdDemand(
+    signal: AbortSignal | undefined,
+  ): Promise<() => Promise<void>> {
+    slots.ensure();
+    const fd = openSync(demandFile(), "w");
+    if (flockTryShared(fd)) {
+      return () => {
+        closeSync(fd);
+        return Promise.resolve();
+      };
+    }
+    closeSync(fd);
+    const held = await waitForFlock(demandFile(), { shared: true, signal });
+    return () => held.release();
+  }
+
+  // Is any `normal` acquire of this pool waiting right now? A non-blocking
+  // exclusive try that releases immediately.
+  function demandPresent(): boolean {
+    slots.ensure();
+    const fd = openSync(demandFile(), "w");
+    try {
+      return !flockTry(fd);
+    } finally {
+      closeSync(fd);
+    }
+  }
+
+  // Block (push-based, off the loop) until no `normal` acquire is waiting.
+  async function awaitNoDemand(signal: AbortSignal | undefined): Promise<void> {
+    const held = await waitForFlock(demandFile(), { signal });
+    await held.release();
+  }
+
+  /** What one acquisition holds: fds swept in-process, plus a fan-out winner. */
+  interface Taken {
+    fds: number[];
+    winner: HeldFlock | undefined;
+  }
+
+  // Hand back everything `taken` holds, synchronously (see `HostShare.releaseSlots`).
+  function releaseTakenSync(taken: Taken): void {
+    for (const fd of taken.fds) closeSync(fd);
+    // Signals the child holding the winner's slot; it exits, its fd closes and
+    // the flock releases. The async release below reaps it.
+    taken.winner?.releaseSync();
+  }
+
+  async function releaseTaken(taken: Taken): Promise<void> {
+    releaseTakenSync(taken);
+    if (taken.winner) await taken.winner.release();
+  }
+
+  // One acquisition of `1 … effectiveMax` slots over the lane's `order` window:
+  // the fast-path sweep, else the turnstile + fan-out. A `normal` caller holds
+  // the demand lock shared across its slow path, so a `low` caller yields to it.
+  async function takeSlots(
+    effectiveMax: number,
+    order: number[],
+    priority: Priority,
+    signal: AbortSignal | undefined,
+    onWaitStart: () => void,
+  ): Promise<Taken> {
+    // Fast path: non-blocking sweep over the lane window for up to `effectiveMax`
+    // slots. On a window with any free slot this is the whole story — no turnstile,
+    // no subprocess.
+    let fds = sweepKeep(effectiveMax, order);
+    let winner: HeldFlock | undefined;
+    if (fds.length > 0) return { fds, winner };
+
+    // Slow path: every slot is busy (sweepKeep closed all fds it opened).
+    onWaitStart();
+    waiting++;
+    // (a) Turnstile — only the head waiter fans out host-wide. Declared BEFORE
+    // it is taken, with its release closure alongside, so that a cancellation
+    // landing anywhere from the `openSync` onward unwinds through one `finally`
+    // that closes the fd and reaps the child. (It used to be declared between
+    // the acquire and the use, which left the child unreachable from a `finally`
+    // for exactly the window an abort could land in.)
+    const turnstile = turnstileFile();
+    let turnstileFd: number | undefined;
+    let turnstileHeld: HeldFlock | undefined;
+    let turnstileReleased = false;
+    const releaseTurnstile = async (): Promise<void> => {
+      if (turnstileReleased) return;
+      turnstileReleased = true;
+      if (turnstileFd !== undefined) closeSync(turnstileFd);
+      // Idempotent and reaps the holding child; a cancelled wait never
+      // produced one (`waitForFlock` reaped it before throwing).
+      if (turnstileHeld) await turnstileHeld.release();
+    };
+    let releaseDemand: (() => Promise<void>) | undefined;
+
+    try {
+      // A `normal` waiter announces itself before queueing, so every `low`
+      // acquire from here on yields to it.
+      if (priority === "normal") releaseDemand = await holdDemand(signal);
+      // Take it non-blocking in-process; if contended, wait for it via a single
+      // child (a turnstile is one file, so an ordinary flock queue on it can't
+      // strand).
+      turnstileFd = openSync(turnstile, "w");
+      if (!flockTry(turnstileFd)) {
+        closeSync(turnstileFd);
+        turnstileFd = undefined;
+        turnstileHeld = await waitForFlock(turnstile, { signal });
+      }
+
+      // (b) Re-sweep the lane window: a slot may have freed while we queued for
+      // the turnstile.
+      fds = sweepKeep(effectiveMax, order);
+      if (fds.length === 0) {
+        // (c) Fan out over the lane's window and take the first grant; (d) reap
+        // the losers so their slots are back.
+        winner = await fanOut(order, signal);
+        // (d') Release the turnstile so the next waiter can fan out, BEFORE we
+        // (e) re-sweep for up to `effectiveMax - 1` EXTRA slots. The winner's own
+        // slot is held by the winner child, so it fails to lock here and is never
+        // double-counted.
+        await releaseTurnstile();
+        fds = sweepKeep(effectiveMax - 1, order);
+      }
+    } finally {
+      // Decremented FIRST, synchronously: a throwing `releaseTurnstile` must
+      // never leave the queue-depth gauge permanently inflated.
+      waiting--;
+      // Covers the (b)-success path, any throw from fanOut, and a cancellation
+      // anywhere in between — never strand the turnstile.
+      await releaseTurnstile();
+      // No longer waiting: stop holding `low` acquires back.
+      if (releaseDemand) await releaseDemand();
+    }
+    return { fds, winner };
+  }
+
   async function acquireShare(
     max: number,
     hooks?: AcquireHooks,
@@ -690,6 +869,7 @@ export function createHostSemaphore(opts: {
     // to hand straight back.
     signal?.throwIfAborted();
     const lane: Lane = hooks?.lane ?? "background";
+    const priority: Priority = hooks?.priority ?? "normal";
     const t0 = performance.now();
     await ensureSizeIdentity();
     // The reconcile itself is deliberately not cancellable (see its docblock) —
@@ -705,67 +885,51 @@ export function createHostSemaphore(opts: {
     // interactive) so the fast-path sweep and the extras re-sweep agree on the bound.
     const effectiveMax = Math.min(max, order.length);
 
-    // Fast path: non-blocking sweep over the lane window for up to `effectiveMax`
-    // slots. On a window with any free slot this is the whole story — no turnstile,
-    // no subprocess.
-    let fds = sweepKeep(effectiveMax, order);
-    let winner: HeldFlock | undefined;
-
-    if (fds.length === 0) {
-      // Slow path: every slot is busy (sweepKeep closed all fds it opened).
+    // `onWaitStart` fires once per acquire, however many times a `low` acquire
+    // goes back to waiting.
+    let waitStarted = false;
+    const onWaitStart = (): void => {
+      if (waitStarted) return;
+      waitStarted = true;
       hooks?.onWaitStart?.();
-      waiting++;
-      // (a) Turnstile — only the head waiter fans out host-wide. Declared BEFORE
-      // it is taken, with its release closure alongside, so that a cancellation
-      // landing anywhere from the `openSync` onward unwinds through one `finally`
-      // that closes the fd and reaps the child. (It used to be declared between
-      // the acquire and the use, which left the child unreachable from a `finally`
-      // for exactly the window an abort could land in.)
-      const turnstile = turnstileFile();
-      let turnstileFd: number | undefined;
-      let turnstileHeld: HeldFlock | undefined;
-      let turnstileReleased = false;
-      const releaseTurnstile = async (): Promise<void> => {
-        if (turnstileReleased) return;
-        turnstileReleased = true;
-        if (turnstileFd !== undefined) closeSync(turnstileFd);
-        // Idempotent and reaps the holding child; a cancelled wait never
-        // produced one (`waitForFlock` reaped it before throwing).
-        if (turnstileHeld) await turnstileHeld.release();
-      };
+    };
 
-      try {
-        // Take it non-blocking in-process; if contended, wait for it via a single
-        // child (a turnstile is one file, so an ordinary flock queue on it can't
-        // strand).
-        turnstileFd = openSync(turnstile, "w");
-        if (!flockTry(turnstileFd)) {
-          closeSync(turnstileFd);
-          turnstileFd = undefined;
-          turnstileHeld = await waitForFlock(turnstile, { signal });
+    let taken: Taken;
+    if (priority === "normal") {
+      taken = await takeSlots(
+        effectiveMax,
+        order,
+        priority,
+        signal,
+        onWaitStart,
+      );
+    } else {
+      for (;;) {
+        // (1) Never start while a `normal` acquire is waiting.
+        if (demandPresent()) {
+          onWaitStart();
+          waiting++;
+          try {
+            await awaitNoDemand(signal);
+          } finally {
+            waiting--;
+          }
         }
-
-        // (b) Re-sweep the lane window: a slot may have freed while we queued for
-        // the turnstile.
-        fds = sweepKeep(effectiveMax, order);
-        if (fds.length === 0) {
-          // (c) Fan out over the lane's window and take the first grant; (d) reap
-          // the losers so their slots are back.
-          winner = await fanOut(order, signal);
-          // (d') Release the turnstile so the next waiter can fan out, BEFORE we
-          // (e) re-sweep for up to `effectiveMax - 1` EXTRA slots. The winner's own
-          // slot is held by the winner child, so it fails to lock here and is never
-          // double-counted.
-          await releaseTurnstile();
-          fds = sweepKeep(effectiveMax - 1, order);
-        }
-      } finally {
-        // Decremented FIRST, synchronously: a throwing `releaseTurnstile` must
-        // never leave the queue-depth gauge permanently inflated.
-        waiting--;
-        // Covers the (b)-success path, any throw from fanOut, and a cancellation
-        // anywhere in between — never strand the turnstile.
-        await releaseTurnstile();
+        // (2) Take slots like anyone else (barging and all) …
+        taken = await takeSlots(
+          effectiveMax,
+          order,
+          priority,
+          signal,
+          onWaitStart,
+        );
+        // (3) … unless a `normal` acquire started waiting meanwhile — most often
+        // while we were fanned out for this very slot. Hand it straight back and
+        // go back to (1): the `normal` waiter's fan-out takes it.
+        if (!demandPresent()) break;
+        onWaitStart();
+        await releaseTaken(taken);
+        signal?.throwIfAborted();
       }
     }
 
@@ -781,17 +945,14 @@ export function createHostSemaphore(opts: {
       // where it already released. Guard so the second call is a no-op.
       if (released) return;
       released = true;
-      for (const fd of fds) closeSync(fd);
-      // Signals the child holding the winner's slot; it exits, its fd closes and
-      // the flock releases. `release()` below reaps it.
-      winner?.releaseSync();
+      releaseTakenSync(taken);
     };
     const release = async (): Promise<void> => {
       releaseSlots();
       // Reap the killed child. Awaiting a settled `exited` is a no-op, so calling
       // `release()` again — or calling it after an abort listener already ran
       // `releaseSlots()` — stays idempotent.
-      if (winner) await winner.release();
+      if (taken.winner) await taken.winner.release();
     };
 
     if (signal?.aborted) {
@@ -813,7 +974,11 @@ export function createHostSemaphore(opts: {
     // slots = (the winner child's one slot, if we took the slow path) + the fds we
     // hold directly. Always >= 1: on the fast path fds.length >= 1 (we only fall to
     // the slow path when it's 0); on the slow path the winner contributes the 1.
-    return { slots: (winner ? 1 : 0) + fds.length, release, releaseSlots };
+    return {
+      slots: (taken.winner ? 1 : 0) + taken.fds.length,
+      release,
+      releaseSlots,
+    };
   }
 
   return {

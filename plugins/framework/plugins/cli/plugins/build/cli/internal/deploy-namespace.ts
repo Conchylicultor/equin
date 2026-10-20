@@ -15,7 +15,10 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import { applyPluginMoves } from "@plugins/plugin-meta/plugins/relocate/core";
-import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import type {
+  Lane,
+  Priority,
+} from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { adaptiveTimeoutMs } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 import {
   SERVER_CORE_RELATIVE,
@@ -88,6 +91,7 @@ export interface DeployNamespaceOptions {
   /** The red agent-worktree frame — true for every target of a worktree build. */
   experimental: boolean;
   lane: Lane;
+  priority: Priority;
   background: boolean;
   /** Validation, shared with the frontend job's ONE host grant. First target only. */
   companions: HeavyJob[];
@@ -447,6 +451,7 @@ export async function deployNamespace(
     materialize: false,
     experimental: opts.experimental,
     lane: opts.lane,
+    priority: opts.priority,
     background: opts.background,
     companions: opts.companions,
     admission: opts.admission,

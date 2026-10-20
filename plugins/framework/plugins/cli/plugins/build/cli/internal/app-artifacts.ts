@@ -45,6 +45,7 @@ import {
   type Grant,
   type GrantHooks,
   type Lane,
+  type Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { isUnderDuress } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import {
@@ -875,6 +876,12 @@ export interface BuildWebDistOptions {
    */
   experimental: boolean;
   lane: Lane;
+  /**
+   * The host grant's admission priority — `low` for a sidequest checkout, so the
+   * build takes a slot only while no main-track op is waiting (op-runtime's
+   * `opPriority`).
+   */
+  priority: Priority;
   /** Demote heavy children (tsc, vite) to the background scheduling class. */
   background: boolean;
   /**
@@ -1063,6 +1070,7 @@ export async function buildAndPublishWebDist(
       const result = await withHostGrant<StepResult[] | typeof REQUEUE>(
         {
           lane: opts.lane,
+          priority: opts.priority,
           max: cpuBudget().B,
           hooks: opts.admission.grantHooks,
         },

@@ -32,6 +32,11 @@ export interface WaitForFlockOptions {
    * nothing to it.
    */
   signal?: AbortSignal;
+  /**
+   * Wait for a SHARED lock instead of the exclusive one: granted as soon as no
+   * process holds the file exclusively, alongside any other shared holders.
+   */
+  shared?: boolean;
 }
 
 const FLOCK_WAIT_PATH = join(
@@ -57,12 +62,16 @@ const GRANTED = "granted\n";
 // release channel. The child holds the lock until its stdin hits EOF — which
 // happens when WE die, by any means, SIGKILL included — so a lock held through
 // a child can never outlive the process it was taken for.
-function spawnWait(file: string) {
+function spawnWait(file: string, shared: boolean) {
   return Bun.spawn([process.execPath, "--smol", FLOCK_WAIT_PATH], {
     stdin: "pipe",
     stdout: "pipe",
     stderr: "inherit",
-    env: { ...process.env, FLOCK_WAIT_FILE: file },
+    env: {
+      ...process.env,
+      FLOCK_WAIT_FILE: file,
+      FLOCK_WAIT_MODE: shared ? "shared" : "exclusive",
+    },
   });
 }
 
@@ -70,7 +79,8 @@ type WaitChild = ReturnType<typeof spawnWait>;
 
 /**
  * Wait — push-based, without blocking the event loop — until the exclusive
- * `flock` on `path` can be taken, and return it held.
+ * `flock` on `path` can be taken (or the shared one, with `opts.shared`), and
+ * return it held.
  *
  * `flockTry` is the only acquire that may run on an event loop (a synchronous
  * FFI `flock(LOCK_EX)` freezes the thread it runs on), so the blocking call runs
@@ -94,7 +104,7 @@ export async function waitForFlock(
   const { signal } = opts;
   // First line: a caller that has already been told to stop never spawns.
   signal?.throwIfAborted();
-  const child = spawnWait(path);
+  const child = spawnWait(path, opts.shared === true);
 
   // Cancellation is expressed as KILLING OUR OWN CHILD, never as a
   // `Promise.race` against the signal. Racing would abandon a pending

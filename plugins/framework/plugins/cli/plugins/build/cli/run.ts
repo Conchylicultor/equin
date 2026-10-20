@@ -51,6 +51,7 @@ import {
   installVerdictGuard,
   laneFor,
   openBuildProgress,
+  opPriority,
   printStepBlocks,
   publishLane,
   pushBuildSpan,
@@ -88,7 +89,10 @@ import {
 } from "@plugins/database/plugins/admin/server";
 import { libpqEnv, readDatabaseConfig } from "@plugins/database/core";
 import { PG_LOG_FILE } from "@plugins/database/plugins/embedded/server";
-import { type Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import {
+  type Lane,
+  type Priority,
+} from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {
   formatSignalOrigin,
   type SignalOrigin,
@@ -1258,6 +1262,11 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // cannot disagree.
   const backgroundBuild = lane === "background";
 
+  // The heavy section's admission priority: a sidequest checkout's build
+  // queues behind every waiting main-track op (see op-runtime's priority.ts).
+  // Asked once, here, where the build is about to queue for its grant.
+  const priority: Priority = await opPriority(root, "build", branch === "main");
+
   // The FULL checks pass stays HERE rather than moving into the shared
   // pipeline: it is build-specific observability — the untruncated
   // check transcript plus a per-check `pushBuildSpan` that draws the build
@@ -1536,6 +1545,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       // a worktree publishes carries it, and main's publishes none.
       experimental: checkout.kind === "worktree",
       lane,
+      priority,
       background: backgroundBuild,
       // Validation belongs to the SOURCE TREE, which every target shares,
       // so it runs with the first target only — early enough that a broken

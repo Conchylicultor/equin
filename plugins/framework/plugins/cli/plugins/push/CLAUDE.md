@@ -116,6 +116,7 @@ queues behind the mutex it was holding.
     - `framework/cli/git-artifacts.SKIP_POST_REWRITE_ENV`
     - `framework/cli/op-runtime.checkBroadcasts`
     - `framework/cli/op-runtime.installFatalSignalExit`
+    - `framework/cli/op-runtime.opPriority`
     - `framework/cli/op-runtime.reportInterruptedPredecessor`
     - `framework/cli/op-runtime.runCheckSubprocess`
     - `framework/cli/op-runtime.signalOriginTap`

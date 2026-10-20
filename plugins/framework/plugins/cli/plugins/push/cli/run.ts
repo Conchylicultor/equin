@@ -3,6 +3,7 @@ import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
   checkBroadcasts,
   installFatalSignalExit,
+  opPriority,
   reportInterruptedPredecessor,
   runCheckSubprocess,
   signalOriginTap,
@@ -24,6 +25,7 @@ import {
 import {
   cpuBudget,
   type Grant,
+  type Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { markWorktreeOpStart } from "@plugins/infra/plugins/worktree/server";
 import {
@@ -442,8 +444,16 @@ async function pushLockFor(
 // Mutex then grant is acyclic: a grant holder never waits for the push mutex.
 // `grantHooks()` lands the grant queue as its own `host-grant` wait, right after
 // `granted`, rather than inside any step.
+//
+// **`priority` orders the MUTEX queue, never the grant.** A sidequest push
+// (`low`) takes the mutex only while no main-track push is waiting for it, so a
+// main push never queues behind a sidequest one that arrived first. Once a push
+// HOLDS the mutex, every queued push waits on it — so its grant is `normal`
+// whatever its track: a holder yielding CPU to others would only stretch the
+// hold the main-track pushes behind it are waiting out.
 async function withPushLock<T>(
   lock: PushLock,
+  priority: Priority,
   profiler: OpProfiler<"push">,
   fn: (grant: Grant) => Promise<T>,
   onLockRequested: () => void,
@@ -456,6 +466,7 @@ async function withPushLock<T>(
       return await withHostGrant(
         {
           lane: "interactive",
+          priority: "normal",
           max: cpuBudget().B,
           hooks: profiler.grantHooks(),
         },
@@ -463,6 +474,7 @@ async function withPushLock<T>(
       );
     },
     {
+      priority,
       onWaitStart: () =>
         console.log("Another push is in progress — waiting for lock..."),
     },
@@ -558,6 +570,9 @@ const pushAction: CliAction<
   // exit handler, AFTER the terminal is appended. A SIGKILLed push drops the
   // lock with the process, and the op-store reconciler closes it.
   const marker = markWorktreeOpStart(opSlug, "push", pushId);
+  // A sidequest checkout's push yields the push mutex to waiting main-track
+  // pushes (see withPushLock). Asked before the mutex, never while holding it.
+  const priority = await opPriority(root0, "push", onMain);
   // Set once the push contends for the mutex: a push that fails before that
   // point writes no op record at all — it never contended for anything.
   let requested = false;
@@ -656,6 +671,7 @@ const pushAction: CliAction<
     try {
       await withPushLock(
         pushLock,
+        priority,
         profiler,
         async (grant) => {
           // Both steps are about the REMOTE's main. In local mode there is no
@@ -757,6 +773,7 @@ const pushAction: CliAction<
   try {
     await withPushLock(
       pushLock,
+      priority,
       profiler,
       async (grant) => {
         // 2. Pull main to ensure it's up to date before merging.

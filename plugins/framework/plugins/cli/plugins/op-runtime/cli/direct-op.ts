@@ -7,6 +7,7 @@ import type {
   Grant,
   GrantHooks,
   Lane,
+  Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { z } from "zod";
 import {
@@ -39,6 +40,7 @@ import { reportInterruptedPredecessor } from "./build-receipt";
 import { installFatalSignalExit } from "./fatal-signals";
 import { signalOriginTap } from "./signal-origin-tap";
 import { publishLane } from "./lane";
+import { opPriority } from "./priority";
 
 // The lifecycle of a DIRECT op — one whose only entry ticket is the host CPU
 // grant: `check`, `test`, and an `e2e` script run. Before this file the whole
@@ -160,7 +162,7 @@ export interface DirectOpOptions<K extends OpKind = OpKind> {
 }
 
 type GrantAcquire = <T>(
-  opts: { lane: Lane; max: number; hooks?: GrantHooks },
+  opts: { lane: Lane; priority: Priority; max: number; hooks?: GrantHooks },
   fn: (grant: Grant) => Promise<T>,
 ) => Promise<T>;
 
@@ -221,6 +223,12 @@ export interface DirectOpDeps {
    */
   describeQueue: (pool: GrantPool, selfOpId: string) => string;
   identity: () => Promise<{ slug: Namespace; branch: string }>;
+  /**
+   * The admission priority a top-level op acquires at — `low` for a checkout
+   * whose task is on the sidequest track (see ./priority.ts). Asked only when
+   * the op actually acquires: a nested op or a single-flight joiner never does.
+   */
+  priority: (kind: OpKind, isMainCheckout: boolean) => Promise<Priority>;
   checkBroadcasts: (kind: OpKind) => Promise<void>;
   reportInterruptedPredecessor: (slug: Namespace) => void;
   publishLane: (isInteractiveOrigin: boolean) => void;
@@ -271,6 +279,8 @@ const realDeps: DirectOpDeps = {
   withE2eGrant,
   describeQueue: describeQueueFromOpLog,
   identity: getWorktreeIdentity,
+  priority: async (kind, isMainCheckout) =>
+    opPriority(await getWorktreeRoot(), kind, isMainCheckout),
   checkBroadcasts,
   reportInterruptedPredecessor,
   publishLane,
@@ -431,7 +441,15 @@ export async function withDirectOp<K extends OpKind>(
     const run = async (): Promise<OutcomeByKind[K]> =>
       inherited
         ? await runUnder(inherited)
-        : await acquire({ lane, max: opts.max, hooks: grantHooks() }, runUnder);
+        : await acquire(
+            {
+              lane,
+              priority: await deps.priority(kind, isInteractiveOrigin),
+              max: opts.max,
+              hooks: grantHooks(),
+            },
+            runUnder,
+          );
     const { flight } = opts;
     if (!flight) return await run();
 

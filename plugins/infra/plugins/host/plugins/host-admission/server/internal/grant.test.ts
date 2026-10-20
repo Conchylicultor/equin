@@ -16,7 +16,7 @@ import {
 
 test("withHostGrant grants at least one unit and runs fn", async () => {
   const result = await withHostGrant(
-    { lane: "background", max: 1 },
+    { lane: "background", priority: "normal", max: 1 },
     async (g) => {
       expect(g.units).toBeGreaterThanOrEqual(1);
       return g.run(async () => 42);

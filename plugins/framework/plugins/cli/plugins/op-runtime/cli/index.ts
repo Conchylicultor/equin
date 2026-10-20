@@ -60,6 +60,7 @@ export { signalOriginTap } from "./signal-origin-tap";
 export type { SignalOriginTapOptions } from "./signal-origin-tap";
 
 export { LANE_ENV, laneFor, publishLane } from "./lane";
+export { opPriority } from "./priority";
 
 export { withDirectOp } from "./direct-op";
 export type {

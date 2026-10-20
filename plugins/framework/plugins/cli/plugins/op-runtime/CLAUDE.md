@@ -63,6 +63,20 @@ the push mutex) and keep their own lifecycles. Every seam is injectable
 (`DirectOpDeps`), which is how `direct-op.test.ts` asserts the order and the
 nested gating without a flock or a marker file.
 
+## Admission priority (`priority.ts`)
+
+`opPriority(root, kind, isMainCheckout)` decides the host-admission `Priority`
+an op acquires at: `low` when the checkout is the worktree of a task on the
+**sidequest** track (`tasks/task-track`'s `checkoutTrack`, read from the main
+database at acquire time), `normal` otherwise. A `low` op takes a host slot only
+while no `normal` op of the same pool is waiting (`packages/host-semaphore`), so
+the sidequest track never delays the main track. Applied where an op acquires:
+`withDirectOp` (check / test / e2e — asked only when it really acquires, never
+when nested or joining a flight), `build`'s heavy-section grant, and `push`'s
+mutex. Push's grant inside the mutex stays `normal`: every queued push waits out
+the holder. A main database that cannot answer is printed and admits at
+`normal` — priority orders a queue, it bounds nothing.
+
 ## Direction of the dependency
 
 Commands import this; **nothing here may import a command.** The `cli` runtime's
@@ -136,7 +150,9 @@ the shared Playwright harness.
     - `resolveBuildReceipt`
     - `writeBuildReceipt`
 - Cli:
-  - Uses: `infra/jobs/supervised-job.cliExecContext`
+  - Uses:
+    - `infra/jobs/supervised-job.cliExecContext`
+    - `tasks/task-track.checkoutTrack`
   - Exports (types):
     - `BuildLogs`
     - `BuildProfile`
@@ -176,6 +192,7 @@ the shared Playwright harness.
     - `laneFor`
     - `MAX_VALVE_HOLD_MS`
     - `openBuildProgress`
+    - `opPriority`
     - `printStepBlocks`
     - `PROGRESS_FILE`
     - `publishLane`

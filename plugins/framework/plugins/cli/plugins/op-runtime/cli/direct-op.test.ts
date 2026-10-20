@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type {
   Grant,
   Lane,
+  Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import type {
@@ -66,7 +67,12 @@ type FlightScript =
 const LEADER: FlightLeader = { id: "leader-op", pid: 4242, startedAt: 0 };
 
 function makeHarness(
-  opts: { inherited?: Grant; slug?: string; flight?: FlightScript } = {},
+  opts: {
+    inherited?: Grant;
+    slug?: string;
+    flight?: FlightScript;
+    priority?: Priority;
+  } = {},
 ) {
   const events: string[] = [];
   const records: OpEvent[] = [];
@@ -78,7 +84,7 @@ function makeHarness(
   const deps: DirectOpDeps = {
     inheritedGrant: () => opts.inherited,
     withHostGrant: async (o, fn) => {
-      events.push(`acquire:${o.lane}:${o.max}`);
+      events.push(`acquire:${o.lane}:${o.priority}:${o.max}`);
       o.hooks?.onWaitStart?.();
       o.hooks?.onAcquired?.(0);
       try {
@@ -88,7 +94,7 @@ function makeHarness(
       }
     },
     withE2eGrant: async (o, fn) => {
-      events.push(`acquire-e2e:${o.lane}:${o.max}`);
+      events.push(`acquire-e2e:${o.lane}:${o.priority}:${o.max}`);
       try {
         return await fn(fakeGrant(1, o.lane));
       } finally {
@@ -97,6 +103,7 @@ function makeHarness(
     },
     describeQueue: (pool) => `queue:${pool}`,
     identity: async () => ({ slug, branch: "feature" }),
+    priority: async () => opts.priority ?? "normal",
     checkBroadcasts: async (kind) => {
       events.push(`broadcasts:${kind}`);
     },
@@ -190,7 +197,7 @@ describe("withDirectOp — top-level path", () => {
       "marker:test:publish",
       "log:requested",
       "signals:armed",
-      "acquire:background:4",
+      "acquire:background:normal:4",
       // The wait is announced on both ends, so a queued run never reads as hung.
       "log-line:Waiting for a host c",
       "log-line:Got a host cpu slot ",
@@ -224,15 +231,21 @@ describe("withDirectOp — top-level path", () => {
       h.deps,
     );
     expect(outcome).toBe("success");
-    expect(h.events).toContain("acquire-e2e:background:1");
+    expect(h.events).toContain("acquire-e2e:background:normal:1");
     expect(h.events.some((e) => e.startsWith("acquire:"))).toBe(false);
+  });
+
+  test("a sidequest checkout acquires at its priority", async () => {
+    const h = makeHarness({ priority: "low" });
+    await withDirectOp("check", { max: 2 }, async () => "success", h.deps);
+    expect(h.events).toContain("acquire:background:low:2");
   });
 
   test("the main worktree is the interactive origin", async () => {
     const h = makeHarness({ slug: "singularity" });
     await withDirectOp("e2e", { max: 1 }, async () => "success", h.deps);
     expect(h.events).toContain("lane:interactive");
-    expect(h.events).toContain("acquire-e2e:interactive:1");
+    expect(h.events).toContain("acquire-e2e:interactive:normal:1");
   });
 
   test("a failed body is stamped failed; a throwing body still writes its terminal, then releases", async () => {
@@ -381,7 +394,7 @@ describe("withDirectOp — run-level single-flight (opts.flight)", () => {
     expect(h.published).toEqual([{ outcome: "success" }]);
     // The flight is entered BEFORE the grant is asked for.
     expect(h.events.indexOf("flight")).toBeLessThan(
-      h.events.indexOf("acquire:background:2"),
+      h.events.indexOf("acquire:background:normal:2"),
     );
   });
 
@@ -405,7 +418,7 @@ describe("withDirectOp — run-level single-flight (opts.flight)", () => {
       h.deps,
     );
     expect(outcome).toBe("success");
-    expect(h.events).toContain("acquire:background:1");
+    expect(h.events).toContain("acquire:background:normal:1");
     const waits = terminalOf(h.records)?.waits ?? [];
     expect(waits.map((w) => [w.kind, w.result])).toEqual([
       ["in-flight", "aborted"],

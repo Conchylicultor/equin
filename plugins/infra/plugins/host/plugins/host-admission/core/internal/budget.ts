@@ -13,6 +13,16 @@ import { cpus, totalmem } from "node:os";
 export type Lane = "interactive" | "background";
 
 /**
+ * Who goes first when several holders want the same pool's slot — orthogonal
+ * to the lane (which decides WHICH slots). A `low` acquire takes a slot only
+ * while no `normal` acquire of that pool is waiting, and hands back one it won
+ * the moment a `normal` waiter appears; it never pre-empts a running holder.
+ * The sidequest track's ops are `low`, so they run after the main track's and
+ * never take the slot a main-track op is queued for. See `packages/host-semaphore`.
+ */
+export type Priority = "normal" | "low";
+
+/**
  * One type-check-class worker's resident set — the RAM quantum, and since
  * 2026-09-09 the ONLY term that sizes the elastic fleet.
  *

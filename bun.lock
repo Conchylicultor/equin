@@ -5994,6 +5994,9 @@
     "plugins/tasks/plugins/task-track": {
       "name": "@singularity/plugin-tasks-task-track",
       "version": "0.0.1",
+      "dependencies": {
+        "pg": "^8.23.1",
+      },
     },
     "plugins/tasks/plugins/tasks-core": {
       "name": "@singularity/plugin-tasks-tasks-core",

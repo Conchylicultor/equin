@@ -23,7 +23,7 @@ import { openSync } from "node:fs";
 import { parentPort, workerData } from "node:worker_threads";
 import { dlopen } from "bun:ffi";
 
-const { file } = workerData as { file: string };
+const { file, shared } = workerData as { file: string; shared?: boolean };
 if (typeof file !== "string" || file.length === 0) {
   throw new Error("flock-block: workerData.file must be a non-empty string");
 }
@@ -35,14 +35,18 @@ const { symbols: ffi } = dlopen(
   process.platform === "darwin" ? "libc.dylib" : "libc.so.6",
   { flock: { args: ["i32", "i32"], returns: "i32" } },
 );
+const LOCK_SH = 1;
 const LOCK_EX = 2;
+const op = shared === true ? LOCK_SH : LOCK_EX;
 
 // Open (never close) the lock fd, then block THIS thread only until we hold it.
 const fd = openSync(file, "w");
-const rc = ffi.flock(fd, LOCK_EX);
+const rc = ffi.flock(fd, op);
 if (rc !== 0) {
-  // Fail loudly — a non-zero flock is unexpected for a plain blocking LOCK_EX.
-  throw new Error(`flock-block: flock(LOCK_EX) on ${file} returned ${rc}`);
+  // Fail loudly — a non-zero flock is unexpected for a plain blocking flock.
+  throw new Error(
+    `flock-block: flock(${shared === true ? "LOCK_SH" : "LOCK_EX"}) on ${file} returned ${rc}`,
+  );
 }
 
 // We hold the lock. Tell the main thread; it relays "granted\n" to the parent.

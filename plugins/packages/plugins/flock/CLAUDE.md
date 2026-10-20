@@ -85,6 +85,7 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
   - Exports (values):
     - `flockRelease`
     - `flockTry`
+    - `flockTryShared`
     - `waitForFlock`
 - Core:
   - Exports (types):
@@ -95,6 +96,7 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
     - `exitWithParent`
     - `flockRelease`
     - `flockTry`
+    - `flockTryShared`
     - `holdParentLifeline`
     - `PARENT_LIFELINE_ENV`
     - `waitForFlock`

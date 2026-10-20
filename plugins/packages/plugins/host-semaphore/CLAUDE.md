@@ -155,6 +155,39 @@ so the historical non-laned pools migrate silently; a number missing/invalid,
 **only** throw on this path. The reconcile is memoized as an in-flight promise
 (concurrent in-process callers share one run) and cleared on settle.
 
+### Priority — `low` yields to waiting `normal` acquires
+
+`hooks.priority` (default `normal`) is orthogonal to the lane: the lane decides
+WHICH slots an acquire may take, the priority WHO GOES FIRST. The sidequest
+track's ops (`./singularity` build / check / test / e2e / push from a checkout
+whose task is a sidequest) acquire at `low`, so they never take a slot a
+main-track op is queued for.
+
+The mechanism is one more flock file, `demand.lock`, per pool:
+
+- A `normal` acquire on the **slow path** holds it **shared** for as long as it
+  waits (`flockTryShared`, else a shared `waitForFlock`), released in the same
+  `finally` as the turnstile. Fast-path acquires never touch it.
+- A `low` acquire (1) takes it **exclusive** non-blocking to ask "is anyone
+  waiting?" — if not, releases it at once; if so, waits for the exclusive lock in
+  one `flock-wait` child, granted by the kernel the instant the last `normal`
+  waiter stops waiting (push-based, no polling); (2) takes slots like anyone
+  else; (3) re-asks, and if a `normal` waiter appeared meanwhile — typically
+  while it was fanned out for the very slot it won — hands everything back and
+  returns to (1), so the `normal` waiter's fan-out takes the slot.
+
+flock grants a shared request whenever no exclusive HOLDER exists (a pending
+exclusive request does not block it), so a `low` waiter never delays a `normal`
+one's announcement; the only contention is the instant a `low` acquire holds the
+lock exclusive, which the `normal` side covers with its shared wait child.
+
+What it is not: pre-emption (a `low` holder keeps its slot until it releases),
+and starvation-free (`low` waits as long as `normal` demand persists — the
+point). Crash-safe like every lock here: a dead `normal` waiter's shared lock
+goes with its process. `onWaitStart` fires once per acquire however often a
+`low` acquire goes back to waiting, and `depth()` counts a `low` acquire parked
+on the demand gate.
+
 ## `acquireShare(max)` — a whole share up front
 
 `run` holds exactly one slot. A caller that fans out N units of heavy work would
@@ -281,12 +314,14 @@ export.
 - Server:
   - Uses:
     - `packages/flock.flockTry`
+    - `packages/flock.flockTryShared`
     - `packages/flock.HeldFlock`
     - `packages/flock.waitForFlock`
   - Exports (types):
     - `AcquireHooks`
     - `HostSemaphore`
     - `HostShare`
+    - `Priority`
     - `RepoLockDir`
   - Exports (values): `createHostSemaphore`
 - Cross-plugin:

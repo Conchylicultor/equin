@@ -1040,3 +1040,97 @@ describe("cancellation (AcquireHooks.signal)", () => {
     await again.release();
   });
 });
+
+describe("priority (AcquireHooks.priority)", () => {
+  test("a waiting normal acquire is served before a low one queued earlier", async () => {
+    const slots = uniqueSlots("prio-order");
+    const sem = createHostSemaphore({ slots, size: 1 });
+    const holder = await sem.acquireShare(1);
+
+    const order: string[] = [];
+    // The low acquire queues FIRST — it would win the freed slot on arrival order.
+    const low = sem.acquireShare(1, { priority: "low" }).then((s) => {
+      order.push("low");
+      return s;
+    });
+    await sleep(150);
+    const normal = sem.acquireShare(1).then((s) => {
+      order.push("normal");
+      return s;
+    });
+    await sleep(300);
+    expect(order).toEqual([]);
+
+    await holder.release();
+    const n = await normal;
+    expect(order).toEqual(["normal"]);
+    // The low acquire still waits: the slot is held by the normal one.
+    await sleep(150);
+    expect(order).toEqual(["normal"]);
+
+    await n.release();
+    const l = await low;
+    expect(order).toEqual(["normal", "low"]);
+    await l.release();
+  });
+
+  test("a low acquire on an idle pool takes the fast path", async () => {
+    const slots = uniqueSlots("prio-idle");
+    const sem = createHostSemaphore({ slots, size: 2 });
+    let waited = false;
+    const share = await sem.acquireShare(2, {
+      priority: "low",
+      onWaitStart: () => {
+        waited = true;
+      },
+    });
+    expect(share.slots).toBe(2);
+    expect(waited).toBe(false);
+    await share.release();
+  });
+
+  test("a low acquire does not take a freed slot while a normal acquire is waiting", async () => {
+    const slots = uniqueSlots("prio-gate");
+    const sem = createHostSemaphore({ slots, size: 2 });
+    const a = await sem.acquireShare(1);
+    const b = await sem.acquireShare(1);
+
+    const normal = sem.acquireShare(1);
+    await sleep(300); // the normal acquire is now on the slow path, holding demand
+
+    let lowGot = false;
+    const low = sem.acquireShare(1, { priority: "low" }).then((s) => {
+      lowGot = true;
+      return s;
+    });
+    await sleep(150);
+
+    await a.release();
+    const n = await normal;
+    await sleep(150);
+    expect(lowGot).toBe(false); // every slot is held again (b + normal)
+
+    await b.release();
+    const l = await low;
+    expect(lowGot).toBe(true);
+    await l.release();
+    await n.release();
+  });
+
+  test("a cancelled low acquire waiting on demand throws the reason", async () => {
+    const slots = uniqueSlots("prio-abort");
+    const sem = createHostSemaphore({ slots, size: 1 });
+    const holder = await sem.acquireShare(1);
+    const normal = sem.acquireShare(1);
+    await sleep(300);
+
+    const ac = new AbortController();
+    const low = sem.acquireShare(1, { priority: "low", signal: ac.signal });
+    await sleep(150);
+    ac.abort(new Error("gave up"));
+    expect((await rejection(low)).message).toBe("gave up");
+
+    await holder.release();
+    await (await normal).release();
+  });
+});

@@ -91,7 +91,11 @@ export const typeCheckBackstopJob = defineSupervisedJob({
     const result = inherited
       ? await spawn(inherited)
       : await withHostGrant(
-          { lane: "background", max: TYPE_CHECK_WORKER_UNITS },
+          {
+            lane: "background",
+            priority: "normal",
+            max: TYPE_CHECK_WORKER_UNITS,
+          },
           spawn,
         );
     for (const line of result.tscLines) log(line);
