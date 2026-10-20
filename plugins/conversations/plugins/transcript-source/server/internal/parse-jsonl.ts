@@ -567,6 +567,22 @@ export async function buildJsonlEvents(
 
     if (type === "assistant" && msg?.role === "assistant") {
       if (!Array.isArray(msg.content)) continue;
+      if (obj.isApiErrorMessage === true) {
+        events.push({
+          kind: "api-error",
+          at: ts,
+          error: typeof obj.error === "string" ? obj.error : undefined,
+          text: (msg.content as RawBlock[])
+            .flatMap((block) =>
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
+              block?.type === "text" && typeof block.text === "string"
+                ? [block.text]
+                : [],
+            )
+            .join("\n"),
+        });
+        continue;
+      }
       const msgId = msg.id;
       const lineUsage = tokenUsageOf((msg as { usage?: unknown }).usage);
       const shouldAttributeUsage =

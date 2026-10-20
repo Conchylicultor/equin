@@ -13,9 +13,8 @@ export const COMPACTION_HOOK_MATCHER = "compact";
  */
 export const COMPACTION_HOOK_TIMEOUT_S = 60;
 
-// The command crosses two shells (the pane's single-quoted `--settings`, then
-// the CLI's own hook shell), so the path is held to a plain-path alphabet
-// rather than escaped for both.
+// The command is run by the CLI's own hook shell, so the path is held to a
+// plain-path alphabet rather than escaped for it.
 const SAFE_PATH_RE = /^\/[A-Za-z0-9_./ +-]+$/;
 
 export interface CompactionHookEntry {

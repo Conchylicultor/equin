@@ -16,7 +16,7 @@ gate, believing them received, never re-sent them.
   (agent-launch's `agentLaunchHooks()`; entry built by `compactionHookEntry()`,
   `core/hook.ts`). It runs `bin/compaction-context.ts`.
 - The script POSTs `/api/conversations/:id/compaction-context` on the backend the
-  pane dials (`SINGULARITY_PARENT_HOST`), retrying a backend mid-restart for
+  agent dials (`SINGULARITY_PARENT_HOST`), retrying a backend mid-restart for
   40 s, and prints the answer as SessionStart's `additionalContext` — nothing
   when it is empty. A refusal or a backend gone for good is a non-blocking hook
   error (exit 1, stderr): the session goes on without it.

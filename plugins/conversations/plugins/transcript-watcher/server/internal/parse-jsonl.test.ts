@@ -902,3 +902,29 @@ describe("queue operations", () => {
     ]);
   });
 });
+
+describe("readJsonlEvents — API errors", () => {
+  test("the CLI's synthetic error line is an api-error, not assistant text", async () => {
+    const path = await writeFixture([
+      userLine("root", null, "go on"),
+      {
+        ...assistantLine(
+          "e1",
+          "root",
+          "You've hit your session limit · resets 6:20pm (Europe/Paris)",
+        ),
+        isApiErrorMessage: true,
+        error: "rate_limit",
+      },
+    ]);
+    const events = await readJsonlEvents(path);
+    expect(events.filter((e) => e.kind !== "user-text")).toEqual([
+      {
+        kind: "api-error",
+        at: TS,
+        error: "rate_limit",
+        text: "You've hit your session limit · resets 6:20pm (Europe/Paris)",
+      },
+    ]);
+  });
+});

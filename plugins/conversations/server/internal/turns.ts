@@ -8,7 +8,6 @@ import {
   acceptTurn,
   applyTurnEvent,
   getTurn,
-  hasPromptHook,
   holdIfStarting,
   listHeldTurns,
   returnTurnByText,
@@ -214,10 +213,7 @@ export async function launchWithHeldTurn(
       });
       throw err;
     }
-    await applyTurnEvent(first.id, {
-      kind: "typed",
-      hookless: !(await hasPromptHook(conversationId)),
-    });
+    await applyTurnEvent(first.id, { kind: "typed" });
   });
 }
 
@@ -267,12 +263,11 @@ async function deliverLocked(turn: TurnRow): Promise<TurnRow> {
     await applyTurnEvent(turn.id, { kind: "failed", error: messageOf(err) });
     throw err;
   }
-  const hookless = !(await hasPromptHook(conversationId));
   return applyTurnEvent(
     turn.id,
     typed.verdict.kind === "submitted"
-      ? { kind: "typed", hookless }
-      : { kind: "unverified", hookless, reason: typed.verdict.reason },
+      ? { kind: "typed" }
+      : { kind: "unverified", reason: typed.verdict.reason },
   );
 }
 

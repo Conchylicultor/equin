@@ -1,16 +1,16 @@
 import type { TurnState } from "../../core/schemas";
 
 // The ledger's whole state machine, as one pure function: what an event does
-// to a row. Every writer (the send path, the hook mailbox, Stop, Retry) goes
+// to a row. Every writer (the send path, the agent's confirmation, Stop, Retry) goes
 // through `applyTurnEvent` (store.ts), which locks the row, asks this, and
 // writes the answer — so the rules below are the only place a state changes.
 //
 // The rules that make it safe to apply events in whatever order they arrive:
 //
-//   - A hook match always wins. The CLI saying "I submitted this" is the one
-//     ground truth, so it resolves `typing`, `typed`, `unverified` and `failed`
-//     alike — it can land before the send path has even recorded `typed` (the
-//     hook fires at Enter, inside typeTurn's own wait).
+//   - A confirmation always wins. The agent saying "I submitted this" (its
+//     `turn_started` event) is the one ground truth, so it resolves `typing`,
+//     `typed`, `unverified` and `failed` alike — it can land before the send
+//     path has even recorded `typed`.
 //   - Never revert. Once accepted or merged, the send path's own verdicts
 //     (`typed`, `unverified`, `failed`) change nothing; only Stop's `returned`
 //     moves a settled row, because the CLI really did hand the text back.
@@ -25,12 +25,10 @@ import type { TurnState } from "../../core/schemas";
  * - `deliver` — a held or retried row starts being typed, as `typedText`.
  * - `release` — the launch that was to carry a held row threw before the
  *   agent existed: it is held again, as `typedText`.
- * - `typed` / `unverified` — the runtime's submit check, with whether the
- *   session reports its prompts at all (`hookless`: launched without the
- *   ledger's hook). A row already hookless by its text stays so.
+ * - `typed` / `unverified` — the runtime's submit check.
  * - `failed` — the text never reached the box.
- * - `hook` — the CLI's `UserPromptSubmit` reported `prompt`, `at` the moment
- *   it fired (the mailbox file's mtime — not when the drain got to it).
+ * - `confirmed` — the agent reported taking `prompt` (its `turn_started` event),
+ *   `at` the moment it did.
  * - `returned` — the CLI gave the text back (Stop, or found in the box).
  * - `withdraw` — the user took a `failed` / `unverified` turn back into the
  *   draft instead of retrying it: the draft is now its only copy.
@@ -39,10 +37,10 @@ export type TurnEvent =
   | { kind: "hold" }
   | { kind: "deliver"; typedText: string }
   | { kind: "release"; typedText: string }
-  | { kind: "typed"; hookless: boolean }
-  | { kind: "unverified"; hookless: boolean; reason: string }
+  | { kind: "typed" }
+  | { kind: "unverified"; reason: string }
   | { kind: "failed"; error: string }
-  | { kind: "hook"; prompt: string; at: Date }
+  | { kind: "confirmed"; prompt: string; at: Date }
   | { kind: "returned" }
   | { kind: "withdraw" };
 
@@ -50,13 +48,11 @@ export type TurnEvent =
 export interface TurnFacts {
   state: TurnState;
   typedText: string;
-  hookless: boolean;
 }
 
 /** The row fields a transition may write, beside `state`. */
 export interface TurnPatch {
   typedText?: string;
-  hookless?: boolean;
   submittedText?: string;
   submittedAt?: Date;
   extraText?: string | null;
@@ -75,8 +71,8 @@ export type PromptMatch =
   | { kind: "none" };
 
 /**
- * Compare the hook's `prompt` with what was typed. Byte-exact (Step 1, E1: the
- * hook's prompt is the box's text verbatim — multi-line, a leading `>`, `@`
+ * Compare the confirmed `prompt` with what was typed. Byte-exact (Step 1, E1:
+ * the confirmed prompt is the sent text verbatim — multi-line, a leading `>`, `@`
  * tokens), save for whitespace at the two ends: the launch message reaches the
  * CLI with a leading space before a `/` (the retired tmux runtime's
  * launch-message.ts did that), and nothing else about a turn depends on edge whitespace.
@@ -111,17 +107,15 @@ export function matchPrompt(prompt: string, typedText: string): PromptMatch {
  *      somebody else's prompt.
  *
  * `prompt_id` is no turn id (a busy agent's queued turn carries the running
- * turn's), so text is the key. Hookless rows are never candidates.
+ * turn's), so text is the key.
  */
 export function promptCandidates<T extends TurnFacts>(
   prompt: string,
   oldestFirst: readonly T[],
 ): T[] {
-  const open = oldestFirst.filter(
-    (row) => !row.hookless && HOOK_ROLE[row.state] === "open",
-  );
+  const open = oldestFirst.filter((row) => CONFIRM_ROLE[row.state] === "open");
   const withdrawn = oldestFirst.filter(
-    (row) => !row.hookless && HOOK_ROLE[row.state] === "exact",
+    (row) => CONFIRM_ROLE[row.state] === "exact",
   );
   return [
     ...open.filter(
@@ -141,19 +135,19 @@ export function promptCandidates<T extends TurnFacts>(
 }
 
 /**
- * What a hook may still do to a row in each state (see "a hook match always
+ * What a confirmation may still do to a row in each state (see "a confirmation always
  * wins"): `open` — resolve it, equal or merged; `exact` — resolve it only on an
  * exact match, after every open row (`withdrawn`: the user took it back, but
  * it may have landed after all — the truth wins); `null` — nothing (settled,
  * or not typed yet). A Record, so a new state cannot be left out.
  */
-const HOOK_ROLE: Record<TurnState, "open" | "exact" | null> = {
+const CONFIRM_ROLE: Record<TurnState, "open" | "exact" | null> = {
   held: null,
   typing: "open",
   typed: "open",
   accepted: null,
   merged: null,
-  // Stop's / the box's: the CLI handed the text back; a hook for that text
+  // Stop's / the box's: the CLI handed the text back; a confirmation of that text
   // belongs to whatever turn carries it next.
   returned: null,
   failed: "open",
@@ -161,10 +155,10 @@ const HOOK_ROLE: Record<TurnState, "open" | "exact" | null> = {
   withdrawn: "exact",
 };
 
-/** The states a hook may still resolve — the mailbox's candidate query. */
-export const HOOK_RESOLVABLE_STATES = (
-  Object.keys(HOOK_ROLE) as TurnState[]
-).filter((state) => HOOK_ROLE[state] !== null);
+/** The states a confirmation may still resolve — `resolvePromptSubmit`'s candidate query. */
+export const CONFIRMABLE_STATES = (
+  Object.keys(CONFIRM_ROLE) as TurnState[]
+).filter((state) => CONFIRM_ROLE[state] !== null);
 
 /** The next state for `event`, or null when the event changes nothing. */
 export function transitionTurn(
@@ -187,28 +181,20 @@ export function transitionTurn(
         ? { state: "held", patch: { typedText: event.typedText } }
         : null;
     case "typed":
-      return state === "typing"
-        ? {
-            state: "typed",
-            patch: { hookless: row.hookless || event.hookless },
-          }
-        : null;
+      return state === "typing" ? { state: "typed", patch: {} } : null;
     case "unverified":
       return state === "typing"
         ? {
             state: "unverified",
-            patch: {
-              hookless: row.hookless || event.hookless,
-              error: event.reason,
-            },
+            patch: { error: event.reason },
           }
         : null;
     case "failed":
       return state === "typing" || state === "held"
         ? { state: "failed", patch: { error: event.error } }
         : null;
-    case "hook": {
-      const role = HOOK_ROLE[state];
+    case "confirmed": {
+      const role = CONFIRM_ROLE[state];
       if (role === null) return null;
       const match = matchPrompt(event.prompt, row.typedText);
       if (match.kind === "none") return null;

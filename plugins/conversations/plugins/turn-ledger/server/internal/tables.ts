@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index } from "drizzle-orm/pg-core";
 import { nullable } from "@plugins/fields/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
@@ -19,7 +19,7 @@ import { ledgerTurnsEntityRef } from "../../core/entity";
 // a returned turn goes back to, and what `conversation.userTurnSent` carries.
 // `typed_text` is exactly what reached the CLI: attachment refs resolved to
 // `@<disk-path>`, or the whole launch prompt for a held turn that rode the
-// launch. The hook's prompt is compared with it.
+// launch. The confirmed prompt is compared with it.
 //
 // `created_at` is `clock_timestamp()`, not `now()`: a held turn is inserted
 // after the conversation row lock, so the wall clock at insert follows the lock
@@ -29,12 +29,12 @@ export const conversationTurnsEntity = defineEntity(
   ledgerTurnsEntityRef,
   {
     typedText: textField(),
-    // `merged` only: the hook's whole prompt, and the part of it that was
+    // `merged` only: the confirmed whole prompt, and the part of it that was
     // not this turn (`extraText`).
     submittedText: nullable(textField()),
-    // `accepted` / `merged`: when the CLI submitted it — the hook's mailbox
-    // file mtime, so a late drain still records the CLI's moment. The status
-    // reconciler weighs it against the CLI's own idle/busy write.
+    // `accepted` / `merged`: when the agent took it — its `turn_started`
+    // event's own time, so a late replay still records the agent's moment. The
+    // status reconciler weighs it against the agent's own idle/busy write.
     submittedAt: nullable(dateField()),
   },
   {
@@ -43,13 +43,12 @@ export const conversationTurnsEntity = defineEntity(
       conversationId: {
         references: { column: () => _conversations.id, onDelete: "cascade" },
       },
-      hookless: { default: false },
       createdAt: { default: sqlDefault(sql`clock_timestamp()`) },
       updatedAt: { default: sqlDefault(sql`clock_timestamp()`) },
     },
     indexes: (t) => [
       // Every read is "this conversation's turns, by age": the web's window,
-      // the held flush, the hook's candidates.
+      // the held flush, the confirmation's candidates.
       index("conversation_turns_conversation_idx").on(
         t.conversationId,
         t.createdAt,
@@ -61,7 +60,6 @@ export const conversationTurnsEntity = defineEntity(
       touchedBy: {
         typedText: true,
         state: true,
-        hookless: true,
         submittedText: true,
         submittedAt: true,
         extraText: true,
@@ -77,17 +75,3 @@ export const conversationTurnsEntity = defineEntity(
 );
 
 export const _conversationTurns = conversationTurnsEntity.table;
-
-// The conversations whose CURRENT session was launched with the ledger's
-// UserPromptSubmit hook — written by the runtime on every launch (a resume
-// included, which is how a session from before the hook existed picks it up).
-// A conversation without a row is `hookless`: nothing will ever confirm its
-// turns, so `typed` is final for them.
-export const _conversationPromptHooks = pgTable("conversation_prompt_hooks", {
-  conversationId: text("conversation_id")
-    .primaryKey()
-    .references(() => _conversations.id, { onDelete: "cascade" }),
-  launchedAt: timestamp("launched_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});

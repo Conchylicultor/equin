@@ -1,7 +1,7 @@
 /**
  * Real-DB suite for the ledger's writes (store.ts): the accept's row lock
  * against the status flip, idempotent ids, the one-claimant `deliver`, and the
- * hook / Stop resolutions. Every guarantee here lives in Postgres locks and
+ * confirmation / Stop resolutions. Every guarantee here lives in Postgres locks and
  * conditional writes, so a fake `db` would prove nothing. Drives the
  * db-parametrized functions against a throwaway database (db-test-fixture)
  * seeded with the REAL migration chain.
@@ -160,15 +160,18 @@ describe("acceptTurn", () => {
     expect(String(caught)).toContain("already belongs to conversation");
   });
 
-  test("a hookless text is marked at the accept", async () => {
+  test("a slash command is confirmed like any turn", async () => {
     const id = await seedConversation("waiting");
-    const accepted = await acceptTurn(
+    const accepted = await acceptTurn(id, turn("/compact"), conn);
+    if (accepted.kind !== "send") throw new Error(accepted.kind);
+    await applyTurnEvent(accepted.turn.id, { kind: "typed" }, conn);
+    const resolved = await resolvePromptSubmit(
       id,
-      { ...turn("/compact"), kind: "turn" },
+      "/compact",
+      new Date(),
       conn,
     );
-    if (accepted.kind !== "send") throw new Error(accepted.kind);
-    expect(accepted.turn.hookless).toBe(true);
+    expect(resolved?.state).toBe("accepted");
   });
 
   test("a flip in progress makes the accept wait, then record it for sending", async () => {
@@ -284,7 +287,7 @@ describe("delivery claims", () => {
 });
 
 describe("resolvePromptSubmit", () => {
-  test("the hook accepts the oldest row with exactly its text, even before `typed`", async () => {
+  test("the confirmation accepts the oldest row with exactly its text, even before `typed`", async () => {
     const id = await seedConversation("waiting");
     const first = await acceptTurn(id, turn("same"), conn);
     const second = await acceptTurn(id, turn("same"), conn);
@@ -306,16 +309,12 @@ describe("resolvePromptSubmit", () => {
     expect(null);
   });
 
-  test("the submit check landing after the hook changes nothing", async () => {
+  test("the submit check landing after the confirmation changes nothing", async () => {
     const id = await seedConversation("waiting");
     const accepted = await acceptTurn(id, turn("hi"), conn);
     const turnId = accepted.kind === "send" ? accepted.turn.id : "";
     await resolvePromptSubmit(id, "hi", AT, conn);
-    const after = await applyTurnEvent(
-      turnId,
-      { kind: "typed", hookless: false },
-      conn,
-    );
+    const after = await applyTurnEvent(turnId, { kind: "typed" }, conn);
     expect(after.state).toBe("accepted");
   });
 });

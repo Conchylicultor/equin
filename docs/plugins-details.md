@@ -12464,9 +12464,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "claude-code-unavailable-at-spawn"
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "held-turn-undelivered"
-    - Uses: 75 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 74 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×25
-      - `conversations/turn-ledger` ×12
+      - `conversations/turn-ledger` ×11
       - `conversations/transcript-watcher` ×7
       - `conversations/workspace` ×3
       - `infra/claude-cli/availability` ×3
@@ -14075,9 +14075,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.Overlay`
               - `JsonlViewer.PendingPromptAction`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 57 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 58 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.ContextRole` ×31
-              - `JsonlViewer.EventRenderer` ×17
+              - `JsonlViewer.EventRenderer` ×18
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
               - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
@@ -14164,12 +14164,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 42 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×41
+            - Imported by: 43 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×42
               - `tasks/outcome-report`
           - Exemptions:
             - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
           - Plugins:
+            - **`api-error`** — Renders the CLI's own notice of a failed model request in the JSONL viewer — a usage limit with its reset time, a server error, an expired login — as a warning line, not as the agent's words.
+              - Web:
+                - Contributes: `JsonlViewer.EventRenderer` "api-error" → `ApiErrorRow`
+                - Uses:
+                  - `conversations/conversation-view/jsonl-viewer.EventLine`
+                  - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `ui/icons.Icon`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --foreground`
+                  - `ui/tokens/color-palette --warning`
+                  - `ui/tokens/shape --spacing`
             - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that changed them. Folds with the harness context around it.
               - Web:
                 - Contributes:
@@ -17750,12 +17762,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `applyTurnEvent`
           - `getTurn`
           - `hasHeldTurns`
-          - `hasPromptHook`
           - `holdIfStarting`
           - `latestSubmitAt`
           - `listHeldTurns`
           - `onTurnSubmitted`
-          - `recordPromptHookLaunch`
           - `resolvePromptSubmit`
           - `returnTurnByText`
           - `returnTurnsSince`
@@ -17772,7 +17782,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields.FieldsRecord`
           - `fields.fieldsToZodObject`
           - `fields.nullable`
-          - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
           - `fields/text/config.parsedTextField`
           - `fields/text/config.textField`
@@ -21793,10 +21802,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 29 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 28 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `debug` ×11
               - `apps` ×6
-              - `conversations` ×4
+              - `conversations` ×3
               - `tasks` ×2
               - `history/engine`
               - `infra/host/duress`
@@ -46576,9 +46585,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 307 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 308 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×71
-          - `conversations` ×56
+          - `conversations` ×57
           - `primitives` ×41
           - `page` ×40
           - `fields` ×34
@@ -47662,9 +47671,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 489 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 490 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×109
-              - `conversations` ×85
+              - `conversations` ×86
               - `primitives` ×75
               - `debug` ×34
               - `page` ×32
@@ -48040,8 +48049,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 414 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×90
+            - Tokens used by: 415 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×91
               - `apps` ×82
               - `primitives` ×69
               - `page` ×35

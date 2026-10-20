@@ -17,6 +17,7 @@ export const exhibitsEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/agent-manager/plugins/demo", id: "apps.agent-manager.demo", loader: () => import("@plugins/apps/plugins/agent-manager/plugins/demo/exhibits"), dependsOn: [] },
   { pluginPath: "config_v2/plugins/settings", id: "config_v2.settings", loader: () => import("@plugins/config_v2/plugins/settings/exhibits"), dependsOn: ["primitives/plugins/css/plugins/control-panel"] },
   { pluginPath: "conversations/plugins/agent-thread", id: "conversations.agent-thread", loader: () => import("@plugins/conversations/plugins/agent-thread/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text", "primitives/plugins/css/plugins/ui-kit"] },
+  { pluginPath: "conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/api-error", id: "conversations.conversation-view.jsonl-viewer.api-error", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/api-error/exhibits"), dependsOn: [] },
   { pluginPath: "infra/plugins/claude-cli", id: "infra.claude-cli", loader: () => import("@plugins/infra/plugins/claude-cli/exhibits"), dependsOn: [] },
   { pluginPath: "primitives/plugins/adaptive-bar", id: "primitives.adaptive-bar", loader: () => import("@plugins/primitives/plugins/adaptive-bar/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text"] },
   { pluginPath: "primitives/plugins/css/plugins/color-picker", id: "primitives.css.color-picker", loader: () => import("@plugins/primitives/plugins/css/plugins/color-picker/exhibits"), dependsOn: [] },

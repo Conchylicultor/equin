@@ -137,6 +137,17 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     text: z.string(),
   }),
   z.object({
+    // The CLI's own notice that a model request failed, written as a synthetic
+    // assistant line (`isApiErrorMessage`): a usage limit ("You've hit your
+    // session limit · resets 6:20pm"), a server error, an expired login.
+    // `error` is the CLI's kind of failure (`rate_limit`, `server_error`,
+    // `authentication_failed`, …) when the line names one.
+    kind: z.literal("api-error"),
+    at: z.string(),
+    error: z.string().optional(),
+    text: z.string(),
+  }),
+  z.object({
     // Harness-injected prompt turns (loop/queue wakeups, "Continue from where
     // you left off.", local-command caveats). These are `type:"user"` lines
     // with `isMeta:true` — never authored by the human — so they must not

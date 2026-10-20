@@ -144,9 +144,9 @@ back.
     - `JsonlViewer.Overlay`
     - `JsonlViewer.PendingPromptAction`
     - `JsonlViewer.TranscriptEnd`
-  - Slot contributors: 57 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 58 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `JsonlViewer.ContextRole` ×31
-    - `JsonlViewer.EventRenderer` ×17
+    - `JsonlViewer.EventRenderer` ×18
     - `JsonlViewer.Overlay` ×4
     - `JsonlViewer.EventFilter` ×2
     - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
@@ -233,12 +233,13 @@ back.
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×41
+  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×42
     - `tasks/outcome-report`
 - Exemptions:
   - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
 - Sub-plugins:
+  - **`api-error`** — Renders the CLI's own notice of a failed model request in the JSONL viewer — a usage limit with its reset time, a server error, an expired login — as a warning line, not as the agent's words.
   - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that…
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.

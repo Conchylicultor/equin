@@ -6,11 +6,11 @@ import {
   getConversation,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { turnIdKind, type TurnId } from "../../core/id-kind";
-import type { TurnKind, TurnState } from "../../core/schemas";
-import { _conversationPromptHooks, _conversationTurns } from "./tables";
+import type { TurnKind } from "../../core/schemas";
+import { _conversationTurns } from "./tables";
 import { userTurnSent } from "./tables-user-turn-sent-event";
 import {
-  HOOK_RESOLVABLE_STATES,
+  CONFIRMABLE_STATES,
   promptCandidates,
   transitionTurn,
   type TurnEvent,
@@ -30,15 +30,6 @@ export interface NewTurn {
 }
 
 type Tx = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
-
-/**
- * The CLI reports neither a slash command nor a `!` shell line to
- * `UserPromptSubmit` (Step 1, E8), so a turn typed as one can never be
- * confirmed: it is hookless by construction.
- */
-export function isHooklessText(typedText: string): boolean {
-  return typedText.startsWith("/") || typedText.startsWith("!");
-}
 
 /** What the accept decided for one turn. */
 export type AcceptOutcome =
@@ -88,7 +79,6 @@ export async function acceptTurn(
         text: turn.text,
         typedText: turn.typedText,
         state: held ? "held" : "typing",
-        hookless: isHooklessText(turn.typedText),
       })
       .onConflictDoNothing({ target: _conversationTurns.id })
       .returning();
@@ -146,7 +136,6 @@ export async function getTurn(
 
 interface Applied {
   row: TurnRow;
-  before: TurnState;
   changed: boolean;
 }
 
@@ -162,26 +151,24 @@ async function applyInTx(
     .for("update");
   if (!row) throw new Error(`turn ${turnId} not found`);
   const next = transitionTurn(row, event);
-  if (!next) return { row, before: row.state, changed: false };
+  if (!next) return { row, changed: false };
   const [updated] = await tx
     .update(_conversationTurns)
     .set({ state: next.state, ...next.patch })
     .where(eq(_conversationTurns.id, turnIdKind.key(turnId)))
     .returning();
-  return { row: updated!, before: row.state, changed: true };
+  return { row: updated!, changed: true };
 }
 
 /**
  * Whether this change is the moment the agent got a user's message, the fact
- * `conversation.userTurnSent` announces: the hook confirmed it (accepted or
- * merged), or — for a row nothing can confirm — the box took it (typed).
+ * `conversation.userTurnSent` announces: the agent confirmed it (accepted or
+ * merged).
  */
-function deliveredNow({ row, before }: Applied): boolean {
-  if (row.kind !== "turn") return false;
-  if (row.state === "typed") return row.hookless;
-  if (row.state !== "accepted" && row.state !== "merged") return false;
-  // A hookless row already announced itself at `typed`.
-  return !(before === "typed" && row.hookless);
+function deliveredNow({ row }: Applied): boolean {
+  return (
+    row.kind === "turn" && (row.state === "accepted" || row.state === "merged")
+  );
 }
 
 /** What a change means beyond the row: the event, and its report. */
@@ -254,7 +241,7 @@ export async function hasHeldTurns(
 
 /**
  * Resolve the turn the CLI just reported submitting at `at`: the first of
- * {@link promptCandidates} the hook event still applies to. A prompt matching
+ * {@link promptCandidates} the confirmation still applies to. A prompt matching
  * nothing — typed in the terminal, the launch's own task prompt — is not ours.
  * Returns the resolved row, or null. A resolved row signals
  * `onTurnSubmitted`.
@@ -271,13 +258,13 @@ export async function resolvePromptSubmit(
     .where(
       and(
         eq(_conversationTurns.conversationId, conversationId),
-        inArray(_conversationTurns.state, HOOK_RESOLVABLE_STATES),
+        inArray(_conversationTurns.state, CONFIRMABLE_STATES),
       ),
     )
     .orderBy(asc(_conversationTurns.createdAt), asc(_conversationTurns.id));
   for (const candidate of promptCandidates(prompt, oldestFirst)) {
     const applied = await conn.transaction((tx) =>
-      applyInTx(tx, candidate.id, { kind: "hook", prompt, at }),
+      applyInTx(tx, candidate.id, { kind: "confirmed", prompt, at }),
     );
     await afterChange(applied);
     if (applied.changed) {
@@ -367,31 +354,4 @@ export async function returnTurnByText(
   );
   if (!match) return null;
   return applyTurnEvent(match.id, { kind: "returned" }, conn);
-}
-
-/**
- * Record that the conversation's session was just launched reporting every
- * turn it takes (the sdk runtime's `create`, a resume included: its agent's
- * `turn_started` event).
- */
-export async function recordPromptHookLaunch(
-  conversationId: string,
-  conn: NodePgDatabase = db,
-): Promise<void> {
-  await conn
-    .insert(_conversationPromptHooks)
-    .values({ conversationId })
-    .onConflictDoNothing({ target: _conversationPromptHooks.conversationId });
-}
-
-/** Whether the conversation's session reports its prompts to the ledger. */
-export async function hasPromptHook(
-  conversationId: string,
-  conn: Pick<NodePgDatabase, "select"> = db,
-): Promise<boolean> {
-  const [row] = await conn
-    .select({ id: _conversationPromptHooks.conversationId })
-    .from(_conversationPromptHooks)
-    .where(eq(_conversationPromptHooks.conversationId, conversationId));
-  return row !== undefined;
 }

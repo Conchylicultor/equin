@@ -8,14 +8,16 @@ the default flip and the tmux runtime's removal:
 [`research/2026-10-20-conversations-sdk-default-and-tmux-removal.md`](../../../../research/2026-10-20-conversations-sdk-default-and-tmux-removal.md).
 
 - `machine/` — the runtime (`sdkRuntime`): launch in tmux (marked
-  `@singularity-host sdk`), liveness = the socket answers `hello`, the
+  `@singularity-host sdk`, so a backend still on Phase-1 code — whose tmux
+  poller skips marked sessions — leaves it alone; drop the mark once no
+  checkout is on Phase-1 code), liveness = the socket answers `hello`, the
   `events.jsonl` consumer (one file watcher, DB cursor, reads rotated
-  generations, reports a seq gap), questions into question-relay; and the boot
-  step that moves conversations left on the retired tmux runtime onto sdk
-  (`adopt-tmux-rows.ts` — kills only the sessions this backend launched;
-  delete it once no database holds a `tmux` row).
+  generations, reports a seq gap), questions into question-relay.
 - `server/` — the `conversations_ext_sdk_agent` side table, the pure event
-  reducer, the launch → options-file mapping, the tmux-row move's pure plan.
+  reducer, the launch → options-file mapping.
+- Conversations left on the retired tmux runtime were moved by the data
+  migration `retire_tmux_rows` (`runtime='sdk'`; a live row hibernated, so its
+  next Send resumes it from its transcript).
 
 - `bin/agent.ts` — one detached agent process per conversation: the Agent SDK's
   `query()` in streaming-input mode, commands over

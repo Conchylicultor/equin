@@ -18,9 +18,9 @@
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "held-turn-undelivered"
-  - Uses: 75 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 74 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×25
-    - `conversations/turn-ledger` ×12
+    - `conversations/turn-ledger` ×11
     - `conversations/transcript-watcher` ×7
     - `conversations/workspace` ×3
     - `infra/claude-cli/availability` ×3
@@ -230,6 +230,7 @@
       - **`hold-and-exit`** — Exit-menu entry that marks the task as held and closes the conversation.
       - **`jsonl-viewer`** [exempt] — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Streams a conversation's…
         - Plugins:
+          - **`api-error`** — Renders the CLI's own notice of a failed model request in the JSONL viewer — a usage limit with its reset time, a server error, an expired login — as a warning line, not as the agent's words.
           - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that…
           - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
           - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.

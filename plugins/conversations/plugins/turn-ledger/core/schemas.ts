@@ -13,30 +13,30 @@ export type TurnKind = z.infer<typeof TurnKindSchema>;
 
 /**
  * Where one turn stands. Every verdict comes from an event — the runtime's
- * submit check, the CLI's `UserPromptSubmit` hook, or Stop — never a timer.
+ * send, the agent's confirmation (`turn_started`: it took the turn off its
+ * input queue), or Stop — never a timer.
  *
- * - `held` — the conversation was still `starting`; delivered once it can take
- *   input (as the launch message, or typed when its input box appears).
- * - `typing` — being typed into the agent's input box.
- * - `typed` — typed, and the box emptied after Enter: the CLI took the
- *   keystrokes. Waiting on the hook to say what it submitted — unless the row
- *   is `hookless`, where `typed` is final.
- * - `accepted` — the hook reported exactly this text (also for a busy agent:
- *   the hook fires at Enter, before the turn is dequeued).
- * - `merged` — the hook reported this text PLUS other text (a leftover draft
- *   the box still held); `extraText` is the rest.
- * - `returned` — Stop rewound it, or its text was found back in the input box:
- *   the CLI gave it back and the web draft is now its only copy.
- * - `failed` — it never reached the box (a tmux error, an input box that would
- *   not empty, a resume that was refused). Retry.
- * - `unverified` — typed, but the box never emptied after Enter. Retry; a late
- *   hook still resolves it.
+ * - `held` — the conversation was still `starting`; delivered once the agent
+ *   can take it (as the launch prompt, or sent once it is up).
+ * - `typing` — being sent to the agent.
+ * - `typed` — the agent's socket took it; waiting on the agent to confirm it
+ *   took it off its queue.
+ * - `accepted` — the agent confirmed exactly this text (also for a busy agent:
+ *   it confirms when the turn is dequeued).
+ * - `merged` — the agent confirmed this text PLUS other text; `extraText` is
+ *   the rest.
+ * - `returned` — Stop rewound it: the agent gave it back and the web draft is
+ *   now its only copy.
+ * - `failed` — it never reached the agent (a resume that was refused, a socket
+ *   error). Retry.
+ * - `unverified` — sent, but the runtime cannot tell whether it went in.
+ *   Retry; a late confirmation still resolves it.
  * - `withdrawn` — a `failed` / `unverified` turn the user took back into the
  *   draft instead of retrying (the card's Copy to draft); its error stays for
- *   history. A late hook matching it EXACTLY still makes it `accepted` (an
- *   unverified turn may have landed after all), unlike Stop's `returned`.
+ *   history. A late confirmation matching it EXACTLY still makes it `accepted`
+ *   (an unverified turn may have landed after all), unlike Stop's `returned`.
  *
- * A hook match always wins, over `failed` and `unverified` too.
+ * A confirmation always wins, over `failed` and `unverified` too.
  */
 export const TurnStateSchema = z.enum([
   "held",
@@ -60,7 +60,7 @@ export const RETRYABLE_TURN_STATES = [
 /**
  * The states whose outcome is decided — swept by retention a week later. Only
  * two late facts still move one: Stop's `returned` (out of accepted / merged)
- * and an exact hook (out of `withdrawn`), neither of which reopens it.
+ * and an exact confirmation (out of `withdrawn`), neither of which reopens it.
  */
 export const SETTLED_TURN_STATES = [
   "accepted",

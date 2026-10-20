@@ -22,7 +22,6 @@ function row(
     kind: "turn",
     text: id,
     state,
-    hookless: false,
     extraText: null,
     error: null,
     createdAt: new Date(T0 + sentMs),
@@ -91,7 +90,7 @@ describe("landedTurnIds", () => {
   test("turns that do not land as a prompt are never matched nor counted", () => {
     const rows = [
       row("answer", 0, "accepted", { kind: "answer" }),
-      row("slash", 100, "typed", { hookless: true }),
+      row("slash", 100, "typed", { text: "/compact" }),
       row("cut", 200, "returned"),
       row("t1", 300),
     ];

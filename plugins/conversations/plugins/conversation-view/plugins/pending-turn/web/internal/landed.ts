@@ -43,12 +43,19 @@ const ON_ITS_WAY: Record<TurnState, boolean> = {
   withdrawn: false,
 };
 
+/**
+ * Whether a turn is a slash command: the CLI runs it rather than writing it as
+ * a prompt, so the transcript holds no prompt row for it to land as — the
+ * agent's confirmation (`accepted`) is the last word on it.
+ */
+export function isSlashCommand(row: Pick<LedgerTurn, "text">): boolean {
+  return row.text.trimStart().startsWith("/");
+}
+
 /** Whether a ledger turn's text should land as a prompt in the transcript. */
 function landsAsPrompt(row: LedgerTurn): boolean {
-  // An answer is typed into a question menu: it lands as the tool's result. A
-  // hookless turn is a slash command or `!` line, or a session that reports
-  // nothing — neither is a prompt row to wait for.
-  return row.kind !== "answer" && !row.hookless && ON_ITS_WAY[row.state];
+  // An answer resolves a question: it lands as the tool's result.
+  return row.kind !== "answer" && !isSlashCommand(row) && ON_ITS_WAY[row.state];
 }
 
 /**

@@ -16,7 +16,6 @@ import {
   agentSessionEnv,
 } from "@plugins/conversations/plugins/agent-launch/server";
 import { TMUX_HOSTED_BY_OPTION } from "@plugins/conversations/plugins/agent-launch/core";
-import { recordPromptHookLaunch } from "@plugins/conversations/plugins/turn-ledger/server";
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import {
@@ -275,9 +274,6 @@ export const sdkRuntime: ConversationRuntime = {
     if (await hasTmuxSession(id)) await tmux(["kill-session", "-t", id]);
     writeOptions(id, options);
     await startAgentSession(id, options);
-    // The agent's `turn_started` event confirms every turn it takes, so the
-    // ledger must not treat this conversation as hookless.
-    await recordPromptHookLaunch(id);
   },
 
   async delete(id: string) {

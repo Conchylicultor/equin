@@ -77,7 +77,6 @@ function row(
     kind: "turn" as TurnKind,
     text: `text of ${id}`,
     state,
-    hookless: false,
     extraText: null,
     error: null,
     createdAt: new Date(Date.now() - 60_000),
@@ -193,9 +192,13 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
     expect(pendingTurnsOf([accepted], [], landed)).toEqual([]);
   });
 
-  it("a hookless turn the box took draws nothing: nothing will say more", () => {
-    const slash = row("c", "t1", "typed", { hookless: true });
-    expect(pendingTurnsOf([slash], [], NO_EVENTS)).toEqual([]);
+  it("a slash command echoes until the agent takes it, then draws nothing", () => {
+    const sent = row("c", "t1", "typed", { text: "/compact" });
+    expect(pendingTurnsOf([sent], [], NO_EVENTS)).toEqual([
+      expect.objectContaining({ id: "t1", state: "typed" }),
+    ]);
+    const taken = row("c", "t1", "accepted", { text: "/compact" });
+    expect(pendingTurnsOf([taken], [], NO_EVENTS)).toEqual([]);
   });
 });
 

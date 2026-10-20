@@ -16,13 +16,17 @@ const EVENTS = {
   hold: { kind: "hold" },
   deliver: { kind: "deliver", typedText: TYPED },
   release: { kind: "release", typedText: TYPED },
-  typed: { kind: "typed", hookless: false },
-  unverified: { kind: "unverified", hookless: false, reason: "box kept text" },
+  typed: { kind: "typed" },
+  unverified: { kind: "unverified", reason: "box kept text" },
   failed: { kind: "failed", error: "tmux exploded" },
-  "hook-equal": { kind: "hook", prompt: TYPED, at: AT },
-  "hook-merged": { kind: "hook", prompt: `stale draft\n${TYPED}`, at: AT },
-  "hook-other": {
-    kind: "hook",
+  "confirmed-equal": { kind: "confirmed", prompt: TYPED, at: AT },
+  "confirmed-merged": {
+    kind: "confirmed",
+    prompt: `stale draft\n${TYPED}`,
+    at: AT,
+  },
+  "confirmed-other": {
+    kind: "confirmed",
     prompt: "something the user typed",
     at: AT,
   },
@@ -43,9 +47,9 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     typed: null,
     unverified: null,
     failed: "failed",
-    "hook-equal": null,
-    "hook-merged": null,
-    "hook-other": null,
+    "confirmed-equal": null,
+    "confirmed-merged": null,
+    "confirmed-other": null,
     returned: null,
     withdraw: null,
   },
@@ -56,9 +60,9 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     typed: "typed",
     unverified: "unverified",
     failed: "failed",
-    "hook-equal": "accepted",
-    "hook-merged": "merged",
-    "hook-other": null,
+    "confirmed-equal": "accepted",
+    "confirmed-merged": "merged",
+    "confirmed-other": null,
     returned: null,
     withdraw: null,
   },
@@ -69,9 +73,9 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     typed: null,
     unverified: null,
     failed: null,
-    "hook-equal": "accepted",
-    "hook-merged": "merged",
-    "hook-other": null,
+    "confirmed-equal": "accepted",
+    "confirmed-merged": "merged",
+    "confirmed-other": null,
     returned: "returned",
     withdraw: null,
   },
@@ -82,9 +86,9 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     typed: null,
     unverified: null,
     failed: null,
-    "hook-equal": null,
-    "hook-merged": null,
-    "hook-other": null,
+    "confirmed-equal": null,
+    "confirmed-merged": null,
+    "confirmed-other": null,
     returned: "returned",
     withdraw: null,
   },
@@ -95,9 +99,9 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     typed: null,
     unverified: null,
     failed: null,
-    "hook-equal": null,
-    "hook-merged": null,
-    "hook-other": null,
+    "confirmed-equal": null,
+    "confirmed-merged": null,
+    "confirmed-other": null,
     returned: "returned",
     withdraw: null,
   },
@@ -108,9 +112,9 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     typed: null,
     unverified: null,
     failed: null,
-    "hook-equal": null,
-    "hook-merged": null,
-    "hook-other": null,
+    "confirmed-equal": null,
+    "confirmed-merged": null,
+    "confirmed-other": null,
     returned: null,
     withdraw: null,
   },
@@ -121,9 +125,9 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     typed: null,
     unverified: null,
     failed: null,
-    "hook-equal": "accepted",
-    "hook-merged": "merged",
-    "hook-other": null,
+    "confirmed-equal": "accepted",
+    "confirmed-merged": "merged",
+    "confirmed-other": null,
     returned: null,
     withdraw: "withdrawn",
   },
@@ -134,9 +138,9 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     typed: null,
     unverified: null,
     failed: null,
-    "hook-equal": "accepted",
-    "hook-merged": "merged",
-    "hook-other": null,
+    "confirmed-equal": "accepted",
+    "confirmed-merged": "merged",
+    "confirmed-other": null,
     returned: null,
     withdraw: "withdrawn",
   },
@@ -148,9 +152,9 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     unverified: null,
     failed: null,
     // The truth wins, but only exactly.
-    "hook-equal": "accepted",
-    "hook-merged": null,
-    "hook-other": null,
+    "confirmed-equal": "accepted",
+    "confirmed-merged": null,
+    "confirmed-other": null,
     returned: null,
     withdraw: null,
   },
@@ -159,7 +163,6 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
 const row = (state: TurnState): TurnFacts => ({
   state,
   typedText: TYPED,
-  hookless: false,
 });
 
 describe("transitionTurn", () => {
@@ -187,7 +190,6 @@ describe("transitionTurn", () => {
           {
             state: first.state,
             typedText: first.patch.typedText ?? TYPED,
-            hookless: false,
           },
           event,
         );
@@ -197,14 +199,19 @@ describe("transitionTurn", () => {
     }
   });
 
-  test("the hook and the submit check converge in either order", () => {
-    const hookFirst = transitionTurn(row("typing"), EVENTS["hook-equal"])!;
-    expect(transitionTurn(row(hookFirst.state), EVENTS.typed)).toBeNull();
-    expect(transitionTurn(row(hookFirst.state), EVENTS.unverified)).toBeNull();
+  test("the confirmation and the submit check converge in either order", () => {
+    const confirmedFirst = transitionTurn(
+      row("typing"),
+      EVENTS["confirmed-equal"],
+    )!;
+    expect(transitionTurn(row(confirmedFirst.state), EVENTS.typed)).toBeNull();
+    expect(
+      transitionTurn(row(confirmedFirst.state), EVENTS.unverified),
+    ).toBeNull();
     const typedFirst = transitionTurn(row("typing"), EVENTS.typed)!;
     expect(
-      transitionTurn(row(typedFirst.state), EVENTS["hook-equal"])?.state,
-    ).toBe(hookFirst.state);
+      transitionTurn(row(typedFirst.state), EVENTS["confirmed-equal"])?.state,
+    ).toBe(confirmedFirst.state);
   });
 
   test("withdrawing keeps the error, for history", () => {
@@ -215,7 +222,9 @@ describe("transitionTurn", () => {
   });
 
   test("a merge records the other text the CLI submitted", () => {
-    expect(transitionTurn(row("typed"), EVENTS["hook-merged"])?.patch).toEqual({
+    expect(
+      transitionTurn(row("typed"), EVENTS["confirmed-merged"])?.patch,
+    ).toEqual({
       submittedText: `stale draft\n${TYPED}`,
       submittedAt: AT,
       extraText: "stale draft",
@@ -224,7 +233,9 @@ describe("transitionTurn", () => {
   });
 
   test("an accept records when the CLI submitted it", () => {
-    expect(transitionTurn(row("typed"), EVENTS["hook-equal"])?.patch).toEqual({
+    expect(
+      transitionTurn(row("typed"), EVENTS["confirmed-equal"])?.patch,
+    ).toEqual({
       submittedAt: AT,
       error: null,
     });
@@ -233,20 +244,11 @@ describe("transitionTurn", () => {
   test("a retry clears the old error and types the given text", () => {
     expect(
       transitionTurn(
-        { state: "failed", typedText: "old", hookless: false },
+        { state: "failed", typedText: "old" },
         { kind: "deliver", typedText: "new" },
       ),
     ).toEqual({ state: "typing", patch: { typedText: "new", error: null } });
   });
-});
-
-test("a row hookless by its text stays hookless whatever the session says", () => {
-  expect(
-    transitionTurn(
-      { state: "typing", typedText: "/compact", hookless: true },
-      { kind: "typed", hookless: false },
-    )?.patch.hookless,
-  ).toBe(true);
 });
 
 describe("matchPrompt", () => {
@@ -285,16 +287,10 @@ describe("matchPrompt", () => {
 });
 
 describe("promptCandidates", () => {
-  const at = (
-    id: string,
-    state: TurnState,
-    typedText: string,
-    hookless = false,
-  ) => ({
+  const at = (id: string, state: TurnState, typedText: string) => ({
     id,
     state,
     typedText,
-    hookless,
   });
 
   test("a withdrawn turn is tried last, and only for an exact match", () => {
@@ -331,12 +327,11 @@ describe("promptCandidates", () => {
     expect(promptCandidates("fix", rows).map((r) => r.id)).toEqual(["failed"]);
   });
 
-  test("settled, held and hookless rows are never candidates", () => {
+  test("settled and held rows are never candidates", () => {
     const rows = [
       at("accepted", "accepted", "fix"),
       at("returned", "returned", "fix"),
       at("held", "held", "fix"),
-      at("hookless", "typed", "fix", true),
     ];
     expect(promptCandidates("fix", rows)).toEqual([]);
   });

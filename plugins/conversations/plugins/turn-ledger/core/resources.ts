@@ -14,7 +14,6 @@ export const conversationTurns = liveCollection("turn-ledger.turns", {
       "kind",
       "text",
       "state",
-      "hookless",
       "extraText",
       "error",
       "createdAt",

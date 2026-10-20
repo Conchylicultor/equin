@@ -25,7 +25,7 @@ const conversationId = process.env.SINGULARITY_CONVERSATION_ID;
 const parentHost = process.env.SINGULARITY_PARENT_HOST;
 if (!conversationId || !parentHost) {
   fail(
-    "SINGULARITY_CONVERSATION_ID / SINGULARITY_PARENT_HOST are not set — not an app-launched agent pane",
+    "SINGULARITY_CONVERSATION_ID / SINGULARITY_PARENT_HOST are not set — not an app-launched agent",
   );
 }
 

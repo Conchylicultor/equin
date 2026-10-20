@@ -4,7 +4,6 @@ import {
   nullable,
   type FieldsRecord,
 } from "@plugins/fields/core";
-import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import {
   parsedTextField,
@@ -28,12 +27,6 @@ export const ledgerTurnFields = {
   /** What the user wrote, raw — for the draft and the echo. */
   text: textField(),
   state: parsedTextField(TurnStateSchema, { default: "held" }),
-  /**
-   * No hook will ever confirm this row — its session was launched without the
-   * ledger's hook, or the text is a `/` command or `!` shell line, which the CLI
-   * does not report. Its `typed` is final and means delivered.
-   */
-  hookless: boolField(),
   /** `merged` only: the text the CLI submitted around this turn's. */
   extraText: nullable(textField()),
   /** `failed` / `unverified` (and kept by `withdrawn`): why. */

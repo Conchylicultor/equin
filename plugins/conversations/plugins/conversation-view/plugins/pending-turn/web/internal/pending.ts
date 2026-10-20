@@ -18,7 +18,7 @@ import type {
   ConversationWorkingOn,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { isTurnRunning } from "@plugins/conversations/core";
-import { landedTurnIds } from "./landed";
+import { isSlashCommand, landedTurnIds } from "./landed";
 import { settleSentTurns, useSentTurns, type SentTurn } from "./send";
 
 /**
@@ -76,12 +76,14 @@ function draws(turn: { kind: TurnKind; state: PendingTurnState }): boolean {
 
 /**
  * Whether a ledger row's echo has nothing left to stand in for: the transcript
- * shows it, or — a hookless turn (a slash command, a `!` line) — the box took
- * it, which is all anything will ever say about it.
+ * shows it, or — a slash command, which lands as no prompt row — the agent
+ * confirmed taking it, which is all anything will ever say about it.
  */
 function echoRetired(row: LedgerTurn, landed: ReadonlySet<string>): boolean {
   if (CARD_OF[row.state] !== "echo") return false;
-  return landed.has(row.id) || (row.hookless && row.state === "typed");
+  return (
+    landed.has(row.id) || (isSlashCommand(row) && row.state === "accepted")
+  );
 }
 
 /**
@@ -185,9 +187,9 @@ const BEFORE_THE_SERVER_KNOWS: Record<TurnState, boolean> = {
 /**
  * Whether a turn sent to the conversation is running ahead of the server's
  * status: this tab's request is open (or done, its row not here yet), or a
- * hooked row is being typed or awaits its hook — sent since the server's
- * status last moved (`updatedAt`), so a row whose hook never comes cannot hold
- * it once the server has spoken.
+ * row is being sent or awaits the agent's confirmation — sent since the
+ * server's status last moved (`updatedAt`), so a row whose confirmation never
+ * comes cannot hold it once the server has spoken.
  */
 export function runsAheadOfServer(
   conversation: { id: string; updatedAt: Date },
@@ -207,7 +209,6 @@ export function runsAheadOfServer(
     newestFirst.some(
       (row) =>
         row.conversationId === conversation.id &&
-        !row.hookless &&
         BEFORE_THE_SERVER_KNOWS[row.state] &&
         row.createdAt.getTime() > since,
     )

@@ -8,9 +8,9 @@ It replaces a browser-side guess — "did the CLI accept these exact bytes?",
 answered by matching transcript text, only while one view was mounted, against
 a 90 s deadline — with facts: the runtime's verdict on the send, the agent's
 own confirmation (the sdk runtime's `turn_started` event, which carries the
-exact prompt it took), and Stop. The code still calls that confirmation "the
-hook" — it was the CLI's `UserPromptSubmit` hook under the retired tmux
-runtime.
+exact prompt it took), and Stop. Under the retired tmux runtime that
+confirmation was the CLI's `UserPromptSubmit` hook; the ledger's `confirmed`
+event is its successor.
 
 ## The row — `conversation_turns`
 
@@ -19,10 +19,9 @@ runtime.
 | `id` | `turn-<uuid>` (`turnIdKind`), minted by the client so a repeated POST finds the row the first one wrote; the server mints one when a sender has none |
 | `kind` | `turn` (a user message), `answer` (an AskUserQuestion answer), `push-and-exit` |
 | `text` | what the user wrote, raw — the draft a returned turn goes back to; what `userTurnSent` carries |
-| `typed_text` | exactly what reached the CLI: attachment refs resolved, or the whole launch prompt for a held turn that rode the launch. The hook's prompt is compared with this |
+| `typed_text` | exactly what reached the CLI: attachment refs resolved, or the whole launch prompt for a held turn that rode the launch. The confirmed prompt is compared with this |
 | `state` | below |
-| `hookless` | no hook will ever confirm it (see below) |
-| `submitted_text`, `extra_text` | `merged` only: the hook's whole prompt, and the part that was not this turn |
+| `submitted_text`, `extra_text` | `merged` only: the confirmed whole prompt, and the part that was not this turn |
 | `submitted_at` | `accepted` / `merged`: when the agent took it — the event's own time, so a late replay still records the agent's moment |
 | `error` | `failed` / `unverified`: why |
 
@@ -32,50 +31,40 @@ runtime.
 machine, and `applyTurnEvent` (`store.ts`) the only writer: lock the row, ask
 the function, write its answer, announce it. `transition.test.ts` writes the
 full state × event matrix out, plus the fixed point (an event applied twice
-changes nothing) and order independence (hook before or after `typed`).
+changes nothing) and order independence (the confirmation before or after `typed`).
 
 ```
-held ─▶ typing ─▶ typed ─▶ accepted     hook prompt == typed text
-  ▲       │         ├────▶ merged       hook prompt contains it plus other text
-  └─hold──┤         └────▶ returned     Stop rewound it / found back in the box
-          ├─▶ failed       never reached the box — Retry
-          └─▶ unverified   typed, box never emptied after Enter — Retry
-failed / unverified ─withdraw─▶ withdrawn ─exact hook─▶ accepted
+held ─▶ typing ─▶ typed ─▶ accepted     confirmed prompt == typed text
+  ▲       │         ├────▶ merged       confirmed prompt contains it plus other text
+  └─hold──┤         └────▶ returned     Stop rewound it
+          ├─▶ failed       never reached the agent — Retry
+          └─▶ unverified   the runtime cannot tell whether it went in — Retry
+failed / unverified ─withdraw─▶ withdrawn ─exact confirmation─▶ accepted
 ```
 
-- **A hook match always wins** — over `typing` (the hook fires inside the
-  runtime's own submit wait), `typed`, `unverified`, `failed` and (exactly) a
+- **A confirmation always wins** — over `typing` (it can land inside the
+  runtime's own send), `typed`, `unverified`, `failed` and (exactly) a
   `withdrawn` turn.
 - **Never revert.** Once accepted or merged, the send path's own verdicts change
   nothing; only `returned` moves a settled row (the CLI really gave it back).
-- **No timer anywhere.** A `typed` row of a hooked session waits for its hook.
+- **No timer anywhere.** A `typed` row waits for its confirmation. Every turn
+  gets one — a slash command or a `!` line included: the agent confirms
+  whatever it takes off its input queue.
 - `withdraw` (failed / unverified → `withdrawn`): the card's Copy to draft —
   the user takes the text back instead of retrying; the error stays, for
   history. Without it a failed row would hold its card until it left the
-  window. A late hook matching it EXACTLY still makes it `accepted` (an
-  unverified turn may have landed after all — the truth wins), tried after
-  every turn still on its way. Stop's `returned` ignores hooks: a hook for
-  that text belongs to whatever turn carries it next. `HOOK_ROLE` (a Record
-  over every state) says what a hook may do in each.
+  window. A late confirmation matching it EXACTLY still makes it `accepted`
+  (an unverified turn may have landed after all — the truth wins), tried after
+  every turn still on its way. Stop's `returned` ignores confirmations: one of
+  that text belongs to whatever turn carries it next. `CONFIRM_ROLE` (a Record
+  over every state) says what a confirmation may do in each.
 - `hold` (typing → held): a hibernated conversation the send resumed is
   `starting` again; the turn waits for its input box like any held turn.
   `release` (typing → held): the launch that was to carry it threw.
 
-### Hookless
+## Matching the confirmation
 
-A row is `hookless` when nothing will ever confirm it, and its `typed` is then
-final and means delivered:
-
-- the text starts with `/` or `!` — the CLI reports neither a slash command nor
-  a shell line to `UserPromptSubmit` (finding E8);
-- the session was launched without a confirmation. Every launch through the
-  sdk runtime's `create()` (a resume included) records the conversation in
-  `conversation_prompt_hooks`; a session from before that has no row until it is
-  resumed.
-
-## Matching the hook
-
-`resolvePromptSubmit(conversationId, prompt)` takes the rows a hook may still
+`resolvePromptSubmit(conversationId, prompt)` takes the rows a confirmation may still
 resolve, oldest first, and tries `promptCandidates`: every **equal** match
 first, then every row the prompt **contains** — never a `failed` one, which
 never reached the box to be merged. Equality is byte-exact save for edge
@@ -110,8 +99,8 @@ The status reconciler (conversations server) reads `latestSubmitAt` per
 conversation and counts the agent `working` when it confirmed a turn after the
 runtime's last status write (`liveStatusFor`): an idle written before the submit
 is stale, one written after it (the turn ended, or was interrupted) stands. A
-resolved hook signals `onTurnSubmitted`, which the reconciler subscribes to, so
-the status follows the hook's arrival. The browser's optimistic status stops at
+resolved confirmation signals `onTurnSubmitted`, which the reconciler subscribes
+to, so the status follows the confirmation's arrival. The browser's optimistic status stops at
 `accepted` — the server is the one writer of `working` from there.
 
 ## Rewind
@@ -124,8 +113,7 @@ cutMessageAt)` plus `returnTurnByText` for the cut message itself make them
 ## Events and reports
 
 - `conversation.userTurnSent` (owned here, read by task-title) is emitted when a
-  `turn` row is accepted or merged, or reaches `typed` while hookless — the
-  moment the agent got it.
+  `turn` row is accepted or merged — the moment the agent got it.
 - `turn-merged` (with the extra text) and `turn-unverified` are filed where the
   fact is learned: the merge by the confirmation, the unverified verdict by the
   transition write. They replace the browser's `turn-unconfirmed`.
@@ -183,12 +171,10 @@ removes settled rows (accepted, merged, returned, withdrawn).
     - `applyTurnEvent`
     - `getTurn`
     - `hasHeldTurns`
-    - `hasPromptHook`
     - `holdIfStarting`
     - `latestSubmitAt`
     - `listHeldTurns`
     - `onTurnSubmitted`
-    - `recordPromptHookLaunch`
     - `resolvePromptSubmit`
     - `returnTurnByText`
     - `returnTurnsSince`
@@ -205,7 +191,6 @@ removes settled rows (accepted, merged, returned, withdrawn).
     - `fields.FieldsRecord`
     - `fields.fieldsToZodObject`
     - `fields.nullable`
-    - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
