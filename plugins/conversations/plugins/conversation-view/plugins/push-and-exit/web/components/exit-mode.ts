@@ -2,7 +2,11 @@ import {
   standingOf,
   type AttemptWork,
 } from "@plugins/tasks/plugins/attempt-work/core";
-import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import type {
+  ConversationStatus,
+  ConversationWorkingOn,
+} from "@plugins/tasks/plugins/tasks-core/core";
+import { isTurnRunning } from "@plugins/conversations/core";
 import {
   satisfiesCapabilities,
   type WorkspaceKindState,
@@ -82,7 +86,10 @@ export type ExitReads =
 
 export type ExitModeInput = {
   conversation: { attemptId: string } | null;
-  live: { status: ConversationStatus } | null;
+  live: {
+    status: ConversationStatus;
+    workingOn: ConversationWorkingOn | null;
+  } | null;
   draftEmpty: boolean;
   exit: ExitReads;
 };
@@ -114,14 +121,13 @@ export function deriveExitMode({
   if (!conversation || !live) return { mode: "exit", provisional: false };
   if (live.status === "gone" || live.status === "done")
     return { mode: "restore", provisional: false };
-  // A draft while the agent is working is queued (pasted without a C-c
-  // interrupt) rather than sent immediately — surface that as "Queue".
+  // A draft while a turn runs is queued behind it rather than sent
+  // immediately — surface that as "Queue". Between turns (even with background
+  // work pending) it is sent, and there is no turn for Stop to interrupt.
+  const turnRunning = isTurnRunning(live);
   if (!draftEmpty)
-    return {
-      mode: live.status === "working" ? "queue" : "send",
-      provisional: false,
-    };
-  if (live.status === "working") return { mode: "stop", provisional: false };
+    return { mode: turnRunning ? "queue" : "send", provisional: false };
+  if (turnRunning) return { mode: "stop", provisional: false };
   switch (exit.workspace) {
     case "unknown":
       return { mode: "exit", provisional: true };

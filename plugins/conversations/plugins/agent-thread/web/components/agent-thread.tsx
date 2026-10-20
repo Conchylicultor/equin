@@ -19,6 +19,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import {
   PendingTurnCard,
   useOptimisticConversationStatus,
+  useTurnRunning,
   usePendingTurns,
   type PendingTurn,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
@@ -112,6 +113,7 @@ function LiveThread<D extends ThreadResultDef>({
   placeholder: string;
 }) {
   const status = useOptimisticConversationStatus(conversation);
+  const turnRunning = useTurnRunning(conversation);
   const waitingFor = conversation.waitingFor;
   const key = results.map((d) => d.tool).join("\n");
   const turns = useMemo(
@@ -162,6 +164,7 @@ function LiveThread<D extends ThreadResultDef>({
         <ThreadComposer
           conversation={conversation}
           status={status}
+          turnRunning={turnRunning}
           placeholder={placeholder}
         />
       }

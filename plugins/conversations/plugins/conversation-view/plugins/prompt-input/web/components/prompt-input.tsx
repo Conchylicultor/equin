@@ -7,7 +7,11 @@ import {
   useAttemptWorkspaceKind,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useLiveConversation } from "@plugins/conversations/web";
-import { canSendTurn, QUESTION_WAITING_FOR } from "@plugins/conversations/core";
+import {
+  canSendTurn,
+  isTurnRunning,
+  QUESTION_WAITING_FOR,
+} from "@plugins/conversations/core";
 import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
@@ -77,7 +81,7 @@ export function PromptInput({
       ? "Answer above, or send a message to skip the question"
       : live.status === "starting"
         ? "Agent starting — send now, it gets your message when ready"
-        : live.status === "working"
+        : isTurnRunning(live)
           ? "Queue a message — Enter to queue, Shift+Enter for newline"
           : "Send a message — Enter to send, Shift+Enter for newline";
 

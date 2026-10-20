@@ -18,7 +18,10 @@ import {
   WorkspaceSpecSchema,
   type WorkspaceSpec,
 } from "@plugins/conversations/plugins/workspace/core";
-import { ConversationStatusSchema } from "../conversation-status";
+import {
+  ConversationStatusSchema,
+  ConversationWorkingOnSchema,
+} from "../conversation-status";
 
 // Web-safe field records for the tasks / attempts / task_dependencies / pushes /
 // conversations FK cluster. One `FieldsRecord` per table, keyed by JS prop name
@@ -156,6 +159,7 @@ export const conversationFields = {
   }),
   claudeSessionId: nullable(textField()),
   waitingFor: nullable(textField()),
+  workingOn: nullable(enumTextField(ConversationWorkingOnSchema.options)),
   spawnedBy: nullable(textField()),
   createdAt: dateField({ label: "Created" }),
   // Last activity. Sortable in the lists: it is DERIVED (a DB trigger) and

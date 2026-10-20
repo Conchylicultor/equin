@@ -201,7 +201,11 @@ async function inspectAgents(
     const row = rows.get(id);
     if (!alive[i] || !row) return;
     out.set(id, {
-      working: row.working,
+      workingOn: row.working
+        ? "turn"
+        : row.backgroundTasks > 0
+          ? "background"
+          : null,
       dead: false,
       claudeSessionId: row.sessionId,
       statusWrittenAt: row.statusAt,

@@ -6,6 +6,7 @@ export type { TurnSend } from "./internal/send";
 export {
   usePendingTurns,
   useOptimisticConversationStatus,
+  useTurnRunning,
 } from "./internal/pending";
 export type { PendingTurn, PendingTurnState } from "./internal/pending";
 export type { TurnDelivery } from "./internal/delivery";

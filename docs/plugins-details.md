@@ -12602,6 +12602,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `hasLiveProcess`
       - `hibernationConfig`
       - `isActiveStatus`
+      - `isTurnRunning`
       - `listConversations`
       - `listConversationTurns`
       - `ListTurnsQuerySchema`
@@ -12667,9 +12668,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
           - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
           - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-        - Uses: 54 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
+        - Uses: 55 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
+          - `conversations/conversation-view/pending-turn` ×6
           - `primitives/live-state` ×6
-          - `conversations/conversation-view/pending-turn` ×5
           - `conversations/conversation-view/jsonl-viewer` ×2
           - `conversations/conversation-view/user-message` ×2
           - `conversations/conversation-view` ×2
@@ -16221,6 +16222,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sendConversationTurn`
               - `useOptimisticConversationStatus`
               - `usePendingTurns`
+              - `useTurnRunning`
               - `useTurnSendInFlight`
           - Cross-plugin:
             - Uses tokens:
@@ -46260,6 +46262,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConversationKind`
           - `ConversationStatus`
           - `ConversationSummary`
+          - `ConversationWorkingOn`
           - `Push`
           - `Task`
           - `TaskListItem`
@@ -46286,6 +46289,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationsSystem`
           - `ConversationStatusSchema`
           - `ConversationSummarySchema`
+          - `ConversationWorkingOnSchema`
           - `isAdoptedConversation`
           - `isBlockedStatus`
           - `isSettled`

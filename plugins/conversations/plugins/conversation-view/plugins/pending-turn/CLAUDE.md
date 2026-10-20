@@ -117,6 +117,7 @@ render (`reports/turn-unconfirmed`).
     - `sendConversationTurn`
     - `useOptimisticConversationStatus`
     - `usePendingTurns`
+    - `useTurnRunning`
     - `useTurnSendInFlight`
 - Cross-plugin:
   - Uses tokens:

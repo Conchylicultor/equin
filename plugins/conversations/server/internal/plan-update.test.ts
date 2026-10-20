@@ -20,6 +20,7 @@ function row(overrides: Partial<PlanRow> = {}): PlanRow {
     closeRequested: false,
     claudeSessionId: SESSION,
     waitingFor: null,
+    workingOn: null,
     createdAt: new Date(NOW - 60 * 60_000),
     hibernatedAt: null,
     ...overrides,
@@ -30,7 +31,7 @@ function live(overrides: Partial<RuntimeInfo> = {}): Liveness {
   return {
     kind: "live",
     info: {
-      working: false,
+      workingOn: null,
       dead: false,
       claudeSessionId: SESSION,
       statusWrittenAt: null,
@@ -55,7 +56,7 @@ function ctx(overrides: Partial<PlanContext> = {}): PlanContext {
 
 describe("planConversationUpdate — done is never overwritten", () => {
   test.each([
-    ["live", live({ working: true })],
+    ["live", live({ workingOn: "turn" })],
     ["dead", live({ dead: true })],
     ["absent", ABSENT],
     ["unknown", UNKNOWN],
@@ -75,8 +76,52 @@ describe("planConversationUpdate — live session", () => {
 
   test("waiting → working", () => {
     expect(
-      planConversationUpdate(row(), live({ working: true }), ctx()),
+      planConversationUpdate(row(), live({ workingOn: "turn" }), ctx()),
     ).toMatchObject({ kind: "patch", patch: { status: "working" } });
+  });
+
+  test("a turn ending with background tasks pending stays working, on background", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "working", workingOn: "turn" }),
+        live({ workingOn: "background" }),
+        ctx(),
+      ),
+    ).toEqual({
+      kind: "patch",
+      patch: { status: "working", workingOn: "background" },
+      adoptedSessionId: null,
+    });
+  });
+
+  test("background work finishing (nothing else to do) waits on the user", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "working", workingOn: "background" }),
+        live(),
+        ctx(),
+      ),
+    ).toEqual({
+      kind: "patch",
+      patch: { status: "waiting" },
+      adoptedSessionId: null,
+    });
+  });
+
+  test("a turn submitted while background work runs is a running turn", () => {
+    expect(
+      planConversationUpdate(
+        row({ status: "working", workingOn: "background" }),
+        live({
+          workingOn: "background",
+          statusWrittenAt: new Date(NOW - 50),
+        }),
+        ctx({ lastSubmitAt: new Date(NOW) }),
+      ),
+    ).toMatchObject({
+      kind: "patch",
+      patch: { status: "working", workingOn: "turn" },
+    });
   });
 
   test("working → waiting", () => {
@@ -90,7 +135,7 @@ describe("planConversationUpdate — live session", () => {
   });
 
   test("a held question waits on a question", () => {
-    for (const agent of [live(), live({ working: true })]) {
+    for (const agent of [live(), live({ workingOn: "turn" })]) {
       expect(
         planConversationUpdate(
           row({ status: "working" }),
@@ -117,7 +162,7 @@ describe("planConversationUpdate — live session", () => {
     expect(
       planConversationUpdate(
         row({ waitingFor: "question" }),
-        live({ working: true }),
+        live({ workingOn: "turn" }),
         ctx(),
       ),
     ).toMatchObject({
@@ -356,7 +401,7 @@ describe("liveStatusFor — a confirmed submit is evidence of work", () => {
   test("an idle written before the submit is stale: working", () => {
     expect(
       liveStatusFor(info({ statusWrittenAt: new Date(NOW - 50) }), SUBMIT),
-    ).toBe("working");
+    ).toEqual({ status: "working", workingOn: "turn" });
   });
 
   test("an idle written after the submit (turn ended, interrupted) stands", () => {
@@ -364,13 +409,13 @@ describe("liveStatusFor — a confirmed submit is evidence of work", () => {
     // 15:54:48 — still waiting.
     expect(
       liveStatusFor(info({ statusWrittenAt: new Date(NOW + 12_000) }), SUBMIT),
-    ).toBe("waiting");
+    ).toEqual({ status: "waiting" });
   });
 
   test("no status write to weigh (a dead agent, no event yet) — the submit overrides nothing", () => {
-    expect(liveStatusFor(info({ statusWrittenAt: null }), SUBMIT)).toBe(
-      "waiting",
-    );
+    expect(liveStatusFor(info({ statusWrittenAt: null }), SUBMIT)).toEqual({
+      status: "waiting",
+    });
   });
 
   test("the planner writes it on a waiting row", () => {

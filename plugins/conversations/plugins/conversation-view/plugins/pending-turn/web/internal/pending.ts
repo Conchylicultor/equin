@@ -13,7 +13,11 @@ import {
   type TurnState,
 } from "@plugins/conversations/plugins/turn-ledger/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import type {
+  ConversationStatus,
+  ConversationWorkingOn,
+} from "@plugins/tasks/plugins/tasks-core/core";
+import { isTurnRunning } from "@plugins/conversations/core";
 import { landedTurnIds } from "./landed";
 import { settleSentTurns, useSentTurns, type SentTurn } from "./send";
 
@@ -227,15 +231,41 @@ export function useOptimisticConversationStatus(conversation: {
   status: ConversationStatus;
   updatedAt: Date;
 }): ConversationStatus {
+  const ahead = useRunsAhead(conversation);
+  if (conversation.status !== "waiting") return conversation.status;
+  return ahead ? "working" : conversation.status;
+}
+
+/**
+ * Whether a turn is running as the user should see it (`isTurnRunning`), from
+ * the instant one is sent — the turn-level twin of
+ * {@link useOptimisticConversationStatus}: a turn sent while the agent sits
+ * idle between turns (waiting, or working only on background tasks) is
+ * running before the server can know it.
+ */
+export function useTurnRunning(conversation: {
+  id: string;
+  status: ConversationStatus;
+  workingOn: ConversationWorkingOn | null;
+  updatedAt: Date;
+}): boolean {
+  const ahead = useRunsAhead(conversation);
+  if (isTurnRunning(conversation)) return true;
+  const idleBetweenTurns =
+    conversation.status === "waiting" ||
+    (conversation.status === "working" &&
+      conversation.workingOn === "background");
+  return idleBetweenTurns && ahead;
+}
+
+/** {@link runsAheadOfServer} over the ledger's newest turns and this tab's sends. */
+function useRunsAhead(conversation: { id: string; updatedAt: Date }): boolean {
   const recent = useLive(conversationTurns);
   const sent = useSentTurns(conversation.id);
-  if (conversation.status !== "waiting") return conversation.status;
   const rows = foldResource(recent, {
     loading: () => [],
     error: (_error, stale) => stale ?? [],
     ready: (data) => data,
   });
-  return runsAheadOfServer(conversation, rows, sent)
-    ? "working"
-    : conversation.status;
+  return runsAheadOfServer(conversation, rows, sent);
 }

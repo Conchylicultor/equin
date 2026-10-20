@@ -1,7 +1,10 @@
 import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
-import type { ConversationStatus } from "../../../core/conversation-status";
+import type {
+  ConversationStatus,
+  ConversationWorkingOn,
+} from "../../../core/conversation-status";
 import { _attempts, _conversations } from "../tables";
 import { conversations } from "../views";
 import { emitConversationStatusChange } from "../status-emit";
@@ -16,18 +19,27 @@ export interface InsertConversationInput {
   model: ConversationModel;
   spawnedBy: string;
   kind?: "user" | "agent" | "system";
-  status?: "starting" | "working" | "waiting" | "gone" | "done";
+  /** Never `working`: only the status reconciler knows what a turn is busy on. */
+  status?: Exclude<ConversationStatus, "working">;
   title?: string | null;
 }
 
-export interface UpdateConversationPatch {
-  status?: "starting" | "working" | "waiting" | "gone" | "done";
+/**
+ * A status write, with `workingOn` kept in step by construction: `working`
+ * names what the agent is busy with, every other status clears it.
+ */
+type ConversationStatusPatch =
+  | { status?: undefined; workingOn?: never }
+  | { status: "working"; workingOn: ConversationWorkingOn }
+  | { status: Exclude<ConversationStatus, "working">; workingOn?: never };
+
+export type UpdateConversationPatch = ConversationStatusPatch & {
   title?: string | null;
   claudeSessionId?: string | null;
   waitingFor?: string | null;
   endedAt?: Date | null;
   closeRequested?: boolean;
-}
+};
 
 // Resolve the owning task id AND the current status of a conversation in one
 // read. `taskId` is null when the conversation/attempt was already deleted (the
@@ -122,7 +134,7 @@ export async function insertConversation(
 
 export async function insertConversationOnConflictDoNothing(
   input: InsertConversationInput & {
-    status: "starting" | "working" | "waiting" | "gone" | "done";
+    status: Exclude<ConversationStatus, "working">;
   },
 ) {
   const taskId = await taskIdForAttempt(input.attemptId);
@@ -160,7 +172,10 @@ export async function updateConversation(
   // entity declares as counting (`touchedBy` in `tables.ts`), and a write to
   // it raises.
   const dbPatch: Partial<(typeof _conversations)["$inferInsert"]> = {};
-  if (patch.status !== undefined) dbPatch.status = patch.status;
+  if (patch.status !== undefined) {
+    dbPatch.status = patch.status;
+    dbPatch.workingOn = patch.status === "working" ? patch.workingOn : null;
+  }
   if (patch.title !== undefined) dbPatch.title = patch.title;
   if (patch.claudeSessionId !== undefined)
     dbPatch.claudeSessionId = patch.claudeSessionId;
@@ -229,6 +244,7 @@ export async function markConversationGone(id: string): Promise<boolean> {
         status: "gone",
         endedAt: now,
         waitingFor: null,
+        workingOn: null,
       })
       .where(
         and(
@@ -278,7 +294,7 @@ export async function markConversationClosed(
   await withTaskStatusChange(taskId ?? [], db, async () => {
     await db
       .update(_conversations)
-      .set({ status: "done", endedAt })
+      .set({ status: "done", endedAt, workingOn: null })
       .where(eq(_conversations.id, id));
   });
   await emitConversationStatusChange(id, taskId, prevStatus, "done");

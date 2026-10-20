@@ -8,7 +8,7 @@ import {
 } from "./exit-mode";
 
 const conversation = { attemptId: "att-1" };
-const live = { status: "waiting" } as const;
+const live = { status: "waiting", workingOn: null } as const;
 
 type SettledData = Extract<ExitDecision, { status: "ready" }>["data"];
 
@@ -239,16 +239,34 @@ describe("deriveExitMode", () => {
     expect(
       deriveExitMode({
         ...input(pendingErr),
-        live: { status: "working" },
+        live: { status: "working", workingOn: "turn" },
         draftEmpty: false,
       }).mode,
     ).toBe("queue");
     expect(
-      deriveExitMode({ ...input(pendingErr), live: { status: "working" } })
-        .mode,
+      deriveExitMode({
+        ...input(pendingErr),
+        live: { status: "working", workingOn: "turn" },
+      }).mode,
     ).toBe("stop");
+    // Background work between turns: a draft is sent, and there is no turn to
+    // stop — the exit decision applies.
+    const background = { status: "working", workingOn: "background" } as const;
     expect(
-      deriveExitMode({ ...input(pendingErr), live: { status: "gone" } }).mode,
+      deriveExitMode({
+        ...input(pendingErr),
+        live: background,
+        draftEmpty: false,
+      }).mode,
+    ).toBe("send");
+    expect(
+      deriveExitMode({ ...input(pendingErr), live: background }).mode,
+    ).not.toBe("stop");
+    expect(
+      deriveExitMode({
+        ...input(pendingErr),
+        live: { status: "gone", workingOn: null },
+      }).mode,
     ).toBe("restore");
     expect(
       deriveExitMode({ ...input(pendingErr), conversation: null }).mode,
@@ -285,7 +303,7 @@ describe("deriveExitMode", () => {
       deriveExitMode({
         ...input(loading),
         exit: noGit(undelivered),
-        live: { status: "done" },
+        live: { status: "done", workingOn: null },
       }).mode,
     ).toBe("restore");
   });

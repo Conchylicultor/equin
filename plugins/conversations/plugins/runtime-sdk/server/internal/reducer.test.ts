@@ -182,4 +182,41 @@ describe("reduceEvents", () => {
       outcome: "aborted",
     });
   });
+
+  test("background tasks keep the count the CLI last reported; an exit clears it", () => {
+    const bg = (seq: number, n: number) =>
+      sdk(seq, {
+        type: "system",
+        subtype: "background_tasks_changed",
+        tasks: Array.from({ length: n }, (_, i) => ({ task_id: `t-${i}` })),
+      });
+    const { state } = reduceEvents(EMPTY_PROJECTION, [
+      ...stream.slice(0, 3),
+      bg(4, 1),
+      bg(5, 2),
+      result(6),
+    ]);
+    expect(state).toMatchObject({ working: false, backgroundTasks: 2 });
+    const exited = reduceEvents(state, [
+      {
+        seq: 7,
+        t: at(),
+        kind: "agent",
+        payload: { event: "exited", reason: "x" },
+      },
+    ]);
+    expect(exited.state.backgroundTasks).toBe(0);
+  });
+
+  test("a turn the CLI starts by itself (no turn_started) opens on its init", () => {
+    const { state } = reduceEvents(EMPTY_PROJECTION, [
+      ...stream.slice(0, 5),
+      sdk(6, { type: "system", subtype: "task_notification", task_id: "t-0" }),
+      init(7, "sid-1"),
+      assistant(8, "a-2"),
+    ]);
+    expect(state.working).toBe(true);
+    const ended = reduceEvents(state, [result(9)]);
+    expect(ended.state.working).toBe(false);
+  });
 });

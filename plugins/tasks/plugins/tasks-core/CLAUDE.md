@@ -470,6 +470,7 @@ serves them.
     - `ConversationKind`
     - `ConversationStatus`
     - `ConversationSummary`
+    - `ConversationWorkingOn`
     - `Push`
     - `Task`
     - `TaskListItem`
@@ -496,6 +497,7 @@ serves them.
     - `conversationsSystem`
     - `ConversationStatusSchema`
     - `ConversationSummarySchema`
+    - `ConversationWorkingOnSchema`
     - `isAdoptedConversation`
     - `isBlockedStatus`
     - `isSettled`

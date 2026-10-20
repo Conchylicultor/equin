@@ -162,6 +162,7 @@
     - `hasLiveProcess`
     - `hibernationConfig`
     - `isActiveStatus`
+    - `isTurnRunning`
     - `listConversations`
     - `listConversationTurns`
     - `ListTurnsQuerySchema`

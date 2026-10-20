@@ -108,11 +108,14 @@ function failed(title: string, err: unknown): void {
 export function ThreadComposer({
   conversation,
   status,
+  turnRunning,
   placeholder,
 }: {
   conversation: ConversationEntry;
   /** The status as the user sees it (`useOptimisticConversationStatus`). */
   status: ConversationStatus;
+  /** Whether a turn runs, as the user sees it (`useTurnRunning`). */
+  turnRunning: boolean;
   placeholder: string;
 }) {
   const id = conversation.id;
@@ -158,7 +161,7 @@ export function ThreadComposer({
     );
   }, [draftRef, disabled, clearDraft, ended, id, resume, setDraft]);
 
-  const working = status === "working" || status === "starting";
+  const working = turnRunning || status === "starting";
   return (
     <ThreadComposerView
       value={draft}

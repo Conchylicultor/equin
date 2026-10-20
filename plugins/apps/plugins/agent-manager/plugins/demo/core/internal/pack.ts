@@ -54,6 +54,7 @@ export default definePack(({ ago }) => {
     taskTitle: s.task,
     claudeSessionId: null,
     waitingFor: null,
+    workingOn: s.status === "working" ? ("turn" as const) : null,
     spawnedBy: null,
     closeRequested: false,
     hibernatedAt: null,

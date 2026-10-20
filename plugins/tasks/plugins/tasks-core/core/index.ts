@@ -28,9 +28,15 @@ export {
 } from "./internal/trailers";
 export type { TrailerCommit } from "./internal/trailers";
 
-export { ConversationStatusSchema } from "./conversation-status";
+export {
+  ConversationStatusSchema,
+  ConversationWorkingOnSchema,
+} from "./conversation-status";
 export { isAdoptedConversation } from "./adopted";
-export type { ConversationStatus } from "./conversation-status";
+export type {
+  ConversationStatus,
+  ConversationWorkingOn,
+} from "./conversation-status";
 export { ConversationSummarySchema } from "./schemas";
 export type { ConversationSummary, AttemptWithConversations } from "./schemas";
 

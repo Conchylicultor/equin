@@ -284,6 +284,7 @@ const CONVERSATION_QUEUE_CARRY = {
     "attemptId",
     "claudeSessionId",
     "waitingFor",
+    "workingOn",
     "spawnedBy",
     "closeRequested",
     "hibernatedAt",

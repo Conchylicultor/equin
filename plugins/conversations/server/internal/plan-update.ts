@@ -1,6 +1,6 @@
 import type {
   Conversation,
-  ConversationStatus,
+  ConversationWorkingOn,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import type { UpdateConversationPatch } from "@plugins/tasks/plugins/tasks-core/server";
 import { decideMissingProcessAction } from "./hibernation-decision";
@@ -28,6 +28,7 @@ export type PlanRow = Pick<
   | "closeRequested"
   | "claudeSessionId"
   | "waitingFor"
+  | "workingOn"
   | "createdAt"
   | "hibernatedAt"
 >;
@@ -82,22 +83,30 @@ export type UpdatePlan =
       adoptedSessionId: string | null;
     };
 
+/** A live session's status, `workingOn` riding with `working`. */
+export type LiveStatus =
+  | { status: "working"; workingOn: ConversationWorkingOn }
+  | { status: "waiting" };
+
 /**
- * Working when the runtime says so — or when the turn ledger confirmed a turn
- * submitted after the runtime's last status write: an idle written BEFORE the
- * submit is stale evidence; one written after it (the turn ended, or was
- * interrupted) is current. Causal order, not a grace timer.
+ * Working on what the runtime says the agent is busy with — or on a turn when
+ * the turn ledger confirmed one submitted after the runtime's last status
+ * write: an idle written BEFORE the submit is stale evidence; one written after
+ * it (the turn ended, or was interrupted) is current. Causal order, not a
+ * grace timer.
  */
 export function liveStatusFor(
   info: RuntimeInfo,
   lastSubmitAt: Date | null,
-): ConversationStatus {
-  if (info.working) return "working";
+): LiveStatus {
   const submittedSince =
     lastSubmitAt !== null &&
     info.statusWrittenAt !== null &&
     lastSubmitAt > info.statusWrittenAt;
-  return submittedSince ? "working" : "waiting";
+  if (submittedSince) return { status: "working", workingOn: "turn" };
+  if (info.workingOn !== null)
+    return { status: "working", workingOn: info.workingOn };
+  return { status: "waiting" };
 }
 
 /**
@@ -151,28 +160,33 @@ function planLive(
 
   // A held question: the agent is blocked on it, whatever its turn state says.
   const heldOpen = ctx.questionHold === "open";
-  const desiredStatus = heldOpen
-    ? "waiting"
+  const desired: LiveStatus = heldOpen
+    ? { status: "waiting" }
     : liveStatusFor(info, ctx.lastSubmitAt);
+  const desiredWorkingOn =
+    desired.status === "working" ? desired.workingOn : null;
   // Only adopt a new claudeSessionId once the shell's gate accepted it (a
   // transcript exists, in THIS conversation's own projects directory).
   const candidate = sessionCandidate(row, { kind: "live", info });
   const desiredSessionId =
     candidate && ctx.sessionAccepted ? candidate : row.claudeSessionId;
   const sessionChanged = desiredSessionId !== row.claudeSessionId;
-  const statusChanged = desiredStatus !== row.status;
+  const statusChanged =
+    desired.status !== row.status ||
+    desiredWorkingOn !== (row.workingOn ?? null);
   const desiredWaitingFor = heldOpen ? "question" : null;
   const waitingForChanged =
     (desiredWaitingFor ?? null) !== (row.waitingFor ?? null);
   if (!sessionChanged && !statusChanged && !waitingForChanged)
     return { kind: "noop" };
 
-  const patch: UpdateConversationPatch = {};
-  if (sessionChanged) patch.claudeSessionId = desiredSessionId;
-  if (statusChanged) patch.status = desiredStatus;
-  if (waitingForChanged) patch.waitingFor = desiredWaitingFor;
-  // A live session on a `gone` row resurrects it.
-  if (row.status === "gone") patch.endedAt = null;
+  const patch: UpdateConversationPatch = {
+    ...(statusChanged ? desired : {}),
+    ...(sessionChanged ? { claudeSessionId: desiredSessionId } : {}),
+    ...(waitingForChanged ? { waitingFor: desiredWaitingFor } : {}),
+    // A live session on a `gone` row resurrects it.
+    ...(row.status === "gone" ? { endedAt: null } : {}),
+  };
   return {
     kind: "patch",
     patch,

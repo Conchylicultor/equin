@@ -2,6 +2,7 @@ import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { getConversationRuntime } from "@plugins/tasks/plugins/tasks-core/server";
+import type { ConversationWorkingOn } from "@plugins/tasks/plugins/tasks-core/core";
 import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
 import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugins/transcript-watcher/server";
 import { readTurnsFromChain, type Turn } from "./claude-transcript";
@@ -11,7 +12,13 @@ import type { ConversationRuntimeId } from "@plugins/conversations/plugins/runti
 export type { Turn };
 
 export interface RuntimeInfo {
-  working: boolean;
+  /**
+   * What the agent is busy with, without the user: a running turn, or — between
+   * turns — background work (a backgrounded build, a background subagent) that
+   * re-invokes it when it finishes. Null only when it has nothing left to do on
+   * its own: the conversation waits on the user.
+   */
+  workingOn: ConversationWorkingOn | null;
   dead: boolean;
   claudeSessionId: string | null;
   /**

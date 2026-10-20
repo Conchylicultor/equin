@@ -74,6 +74,7 @@ import type {
 import { serializeTranscript } from "./claude-transcript";
 import { locateTranscriptCut, type LocateCutRefusal } from "./locate-cut";
 import type { RewindOutcome, RewindPreview } from "../../core/rewind";
+import { isTurnRunning } from "../../core/status";
 
 // The runtime a launch starts on: the caller's, else the source's for a fork
 // (its transcript and session are that runtime's), else the default.
@@ -731,7 +732,7 @@ export async function previewRewind(
     messageText: located.cut.messageText,
     losses: located.cut.losses,
     inPlace: located.isTail,
-    turnRunning: row.status === "working",
+    turnRunning: isTurnRunning(row),
   };
 }
 

@@ -166,7 +166,8 @@ const conversationsEntity = defineEntity(conversationsEntityRef, {
   // raises). New messages are tracked by the status proxy: a turn enters
   // `working` and the reply leaves it; closing (`done`) counts. Resume
   // (waiting <-> starting), a pane dying (-> gone), viewing and hibernation
-  // do not.
+  // do not. A turn starting or ending while background work keeps the status
+  // `working` moves it through `workingOn` instead (into / out of `turn`).
   updatedAt: {
     touchedBy: {
       id: false,
@@ -178,6 +179,7 @@ const conversationsEntity = defineEntity(conversationsEntityRef, {
       kind: false,
       claudeSessionId: false,
       waitingFor: false,
+      workingOn: { into: ["turn"], outOf: ["turn"] },
       spawnedBy: false,
       createdAt: false,
       endedAt: false,

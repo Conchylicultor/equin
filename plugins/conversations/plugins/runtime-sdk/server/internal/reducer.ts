@@ -10,9 +10,21 @@ export interface AgentProjection {
   cursorSeq: number;
   /** The Claude session id (`system/init`), the conversation's live tail. */
   sessionId: string | null;
-  /** Between a turn's start and its `result` (or the process's exit). */
+  /**
+   * Between a turn's start and its `result` (or the process's exit). A turn
+   * starts on the prompt the agent fed (`turn_started`) or on the CLI's own
+   * `system/init`, which also opens the turns the CLI starts by itself (a
+   * background task's completion notification) — no `turn_started` marks those.
+   */
   working: boolean;
-  /** When the agent wrote the event `working` rests on. */
+  /**
+   * How many background tasks (backgrounded commands, background subagents)
+   * the agent has in flight — the last `system/background_tasks_changed`. Each
+   * one re-invokes the agent when it finishes, so the agent is busy while any
+   * is pending even between turns.
+   */
+  backgroundTasks: number;
+  /** When the agent wrote the event `working` / `backgroundTasks` rests on. */
   statusAt: Date | null;
   cliVersion: string | null;
   /** The live agent process (a held question's holder). */
@@ -37,6 +49,7 @@ export const EMPTY_PROJECTION: AgentProjection = {
   cursorSeq: 0,
   sessionId: null,
   working: false,
+  backgroundTasks: 0,
   statusAt: null,
   cliVersion: null,
   agentPid: null,
@@ -80,6 +93,7 @@ interface SdkLike {
   session_id?: unknown;
   uuid?: unknown;
   parent_tool_use_id?: unknown;
+  tasks?: unknown;
   message?: { content?: unknown };
 }
 
@@ -121,8 +135,10 @@ export function reduceEvents(
         switch (p.event) {
           case "started":
             s.agentPid = p.pid;
-            // A new process holds no question and runs no turn yet.
+            // A new process holds no question, runs no turn and has no
+            // background task yet.
             s.working = false;
+            s.backgroundTasks = 0;
             s.statusAt = at;
             s.openRequestId = null;
             s.openToolUseId = null;
@@ -140,7 +156,9 @@ export function reduceEvents(
             effects.push({ kind: "prompt-submitted", text: p.text, at });
             break;
           case "exited":
+            // Its background tasks die with it.
             s.working = false;
+            s.backgroundTasks = 0;
             s.statusAt = at;
             s.agentPid = null;
             if (s.openToolUseId) {
@@ -182,6 +200,17 @@ export function reduceEvents(
           typeof msg.session_id === "string"
         ) {
           s.sessionId = msg.session_id;
+          if (!s.working) {
+            s.working = true;
+            s.statusAt = at;
+          }
+        } else if (
+          msg.type === "system" &&
+          msg.subtype === "background_tasks_changed" &&
+          Array.isArray(msg.tasks)
+        ) {
+          s.backgroundTasks = msg.tasks.length;
+          s.statusAt = at;
         } else if (
           msg.type === "assistant" &&
           msg.parent_tool_use_id == null &&
