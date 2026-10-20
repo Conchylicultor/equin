@@ -10,9 +10,9 @@ import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle
 import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
 import { metronomeConfig } from "../../shared/config";
 import { TempoBand } from "./tempo-band";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { sonataIcons } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/icons/core";
 
-const metronomeIcon = symbol("av-timer");
+const metronomeIcon = sonataIcons.icon("metronome");
 
 // Count-in lengths as a single-select segmented control. The ids are strings
 // (SegmentedControl is keyed by string); they map 1:1 to the `countInBars` int.

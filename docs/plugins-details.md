@@ -6984,6 +6984,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --border`
                   - `ui/tokens/shadow --shadow`
                 - Imported by: `apps/sonata/library`
+            - **`icons`** — Contributes the sonata icon family (sonataIcons) to Icons.Family, so a scope whose iconFamily is sonata — the Sonata theme's — draws its glyphs.
+              - Web:
+                - Contributes: `Icons.Family` "Sonata"
+                - Uses: `ui/icons.Icons`
+              - Core:
+                - Uses: `ui/icons.defineIconFamily`
+                - Exports (types): `SonataGlyph`
+                - Exports (values): `sonataIcons`
             - **`inertial-drag`** — 1-D pointer drag-to-scrub hook with exponential-friction release momentum (flick → coast → settle).
               - Web:
                 - Uses: `primitives/latest-ref.useLatestRef`
@@ -46524,14 +46532,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
+    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Web:
-        - Slots: `Icons.Root`
+        - Slots:
+          - `Icons.Root`
+          - `Icons.Family`
         - Slot contributors:
+          - `Icons.Root` ← `ui.icons`
           - `Icons.Root` ← `ui.icons.sprites`
           - `Icons.Root` ← `ui.tokens.icons`
-        - Contributes: `Core.Root`
+          - `Icons.Family` ← `apps.sonata.primitives.icons`
+          - `Icons.Family` ← `ui.icons`
+        - Contributes:
+          - `Core.Root`
+          - `Icons.Root` → `IconFamilyHost`
+          - `Icons.Family` "Lucide"
         - Exports (types):
+          - `IconFamilyContribution`
           - `IconMarkup`
           - `IconMarkupReader`
           - `IconProps`
@@ -46546,6 +46563,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installRuntimeSymbolLoader`
           - `provideRuntimeSymbols`
           - `provideSprite`
+          - `useIconFamilies`
           - `useIconMarkup`
           - `useIconStyle`
           - `usePublishIconStyle`
@@ -46555,8 +46573,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 306 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×70
+        - Imported by: 307 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×71
           - `conversations` ×56
           - `primitives` ×41
           - `page` ×40
@@ -46601,17 +46619,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `BrandName`
           - `BrandRef`
+          - `CustomRef`
           - `IconFamily`
+          - `IconFamilyId`
           - `IconFill`
+          - `IconGlyph`
           - `IconRef`
           - `IconShape`
           - `IconStyle`
           - `IconWeight`
+          - `InlineIconFamily`
           - `LucideName`
           - `RuntimeSymbolRef`
           - `SavedSymbolName`
           - `SetiName`
           - `SetiRef`
+          - `SpriteIconFamily`
           - `SpriteKey`
           - `StyleKey`
           - `SymbolName`
@@ -46624,18 +46647,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `coveredStyles`
           - `DEFAULT_ICON_STYLE`
           - `DEFAULT_STYLE_KEYS`
-          - `ICON_FAMILIES`
+          - `defineIconFamily`
+          - `familyGlyphId`
+          - `familyGlyphMarkup`
           - `ICON_FILLS`
           - `ICON_SHAPES`
           - `ICON_WEIGHTS`
           - `iconifyName`
+          - `isIconFamilyId`
           - `isIconRefModule`
           - `isSpriteKey`
           - `isStyleKey`
+          - `LUCIDE_FAMILY`
           - `LUCIDE_MAP`
           - `LUCIDE_SPRITE`
           - `lucideId`
           - `lucideNameOf`
+          - `MATERIAL_FAMILY`
           - `navIcons`
           - `parseStyleKey`
           - `resolveSymbolStyle`
@@ -47816,6 +47844,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
               - `ui/icons.Icons`
+              - `ui/icons.useIconFamilies`
               - `ui/icons.usePublishIconStyle`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.useResolvedColorMode`
@@ -47825,11 +47854,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `ui/icons.DEFAULT_ICON_STYLE`
-              - `ui/icons.ICON_FAMILIES`
               - `ui/icons.ICON_FILLS`
               - `ui/icons.ICON_SHAPES`
               - `ui/icons.ICON_WEIGHTS`
               - `ui/icons.IconStyle`
+              - `ui/icons.isIconFamilyId`
               - `ui/theme-engine.defineTokenGroup`
             - Exports (types): `IconsTokenValues`
             - Exports (values):

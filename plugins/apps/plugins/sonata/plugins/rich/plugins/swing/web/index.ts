@@ -5,7 +5,6 @@ import {
   swingSetting,
 } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   FeelSection,
   FeelSummary,
@@ -15,6 +14,7 @@ import {
 import { SwingChip } from "./components/swing-chip";
 import { SwingObserver } from "./components/swing-observer";
 import { swingDisplayConfig } from "../shared/config";
+import { sonataIcons } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/icons/core";
 
 export { usePerformedScore } from "./use-performed-score";
 
@@ -31,7 +31,7 @@ export default {
     Sonata.Section({
       id: "feel",
       label: "Feel",
-      icon: symbol("music-note"),
+      icon: sonataIcons.icon("swing"),
       area: "player",
       component: FeelSection,
       actions: FeelSwitch,

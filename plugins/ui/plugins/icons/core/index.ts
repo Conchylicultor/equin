@@ -3,6 +3,7 @@ export { navIcons } from "./nav-icons";
 export { isIconRefModule } from "./icon-module";
 export type {
   BrandRef,
+  CustomRef,
   IconRef,
   RuntimeSymbolRef,
   SavedSymbolName,
@@ -16,7 +17,7 @@ export type {
 } from "./symbol-names.generated";
 export type { SetiName } from "./seti-names.generated";
 export { coveredStyles, resolveSymbolStyle } from "./fallback";
-export { LUCIDE_MAP, lucideNameOf } from "./lucide-map";
+export { LUCIDE_FAMILY, LUCIDE_MAP, lucideNameOf } from "./lucide-map";
 export {
   ALL_STYLE_KEYS,
   BRANDS_SPRITE,
@@ -24,7 +25,6 @@ export {
   SETI_SPRITE,
   DEFAULT_ICON_STYLE,
   DEFAULT_STYLE_KEYS,
-  ICON_FAMILIES,
   ICON_FILLS,
   ICON_SHAPES,
   ICON_WEIGHTS,
@@ -40,7 +40,6 @@ export {
   symbolId,
 } from "./style";
 export type {
-  IconFamily,
   IconFill,
   IconShape,
   IconStyle,
@@ -48,3 +47,17 @@ export type {
   SpriteKey,
   StyleKey,
 } from "./style";
+export {
+  MATERIAL_FAMILY,
+  defineIconFamily,
+  familyGlyphId,
+  familyGlyphMarkup,
+  isIconFamilyId,
+} from "./icon-family";
+export type {
+  IconFamily,
+  IconFamilyId,
+  SpriteIconFamily,
+  IconGlyph,
+  InlineIconFamily,
+} from "./icon-family";

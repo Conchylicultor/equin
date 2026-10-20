@@ -1,3 +1,5 @@
+import type { SpriteIconFamily } from "./icon-family";
+import { LUCIDE_SPRITE, lucideId } from "./style";
 import type { LucideName, SymbolName } from "./symbol-names.generated";
 
 /**
@@ -372,3 +374,18 @@ export function lucideNameOf(name: string): LucideName | undefined {
   const entry = (LUCIDE_MAP as Readonly<Record<string, LucideEntry>>)[name];
   return entry === undefined || entry === MATERIAL_ONLY ? undefined : entry;
 }
+
+/**
+ * The Lucide family: each mapped symbol's Lucide drawing, from the server-built
+ * `lucide` sprite (`sprites/server/internal/lucide.ts`). Contributed to
+ * `Icons.Family` by icons web like any other family; a symbol with no
+ * counterpart keeps its Material drawing.
+ */
+export const LUCIDE_FAMILY: SpriteIconFamily = {
+  kind: "sprite",
+  id: "lucide",
+  label: "Lucide",
+  sprite: LUCIDE_SPRITE,
+  idOf: (name) =>
+    lucideNameOf(name) === undefined ? undefined : lucideId(name),
+};

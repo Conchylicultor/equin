@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { KeyReadout } from "./components/key-readout";
 import { KeyReadoutActions } from "./components/key-readout-actions";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { sonataIcons } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/icons/core";
 
 export default {
   description:
@@ -11,7 +11,7 @@ export default {
     Sonata.Section({
       id: "key-readout",
       label: "Current key",
-      icon: symbol("vpn-key"),
+      icon: sonataIcons.icon("key"),
       component: KeyReadout,
       area: "player",
       actions: KeyReadoutActions,

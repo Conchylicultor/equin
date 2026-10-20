@@ -5,29 +5,45 @@ import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useTokenGroupEditor } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import {
-  ICON_FAMILIES,
   ICON_FILLS,
   ICON_SHAPES,
   ICON_WEIGHTS,
+  MATERIAL_FAMILY,
   symbol,
 } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import { Icon, useIconFamilies } from "@plugins/ui/plugins/icons/web";
 import { iconsGroup } from "../../core";
 
 type IconToken = keyof typeof iconsGroup.schema;
 
-// Every icon token is a closed choice, so each is a segmented control rather
-// than the free-text row other groups use.
+interface Option {
+  id: string;
+  label: string;
+}
+
+const optionLabel = (value: string) =>
+  value.charAt(0).toUpperCase() + value.slice(1);
+
+const closed = (values: readonly string[]): readonly Option[] =>
+  values.map((id) => ({ id, label: optionLabel(id) }));
+
+// Every icon token is a choice, so each is a segmented control rather than the
+// free-text row other groups use. The family's options are the contributed
+// families (an open set), so they are read at render.
 const TOKENS: readonly {
   token: IconToken;
   label: string;
-  options: readonly string[];
+  options: readonly Option[] | "families";
 }[] = [
-  { token: "iconFamily", label: "Family", options: ICON_FAMILIES },
-  { token: "iconShape", label: "Shape", options: ICON_SHAPES },
-  { token: "iconFill", label: "Fill", options: ICON_FILLS },
-  { token: "iconActiveFill", label: "Fill when active", options: ICON_FILLS },
-  { token: "iconStroke", label: "Stroke", options: ICON_WEIGHTS },
+  { token: "iconFamily", label: "Family", options: "families" },
+  { token: "iconShape", label: "Shape", options: closed(ICON_SHAPES) },
+  { token: "iconFill", label: "Fill", options: closed(ICON_FILLS) },
+  {
+    token: "iconActiveFill",
+    label: "Fill when active",
+    options: closed(ICON_FILLS),
+  },
+  { token: "iconStroke", label: "Stroke", options: closed(ICON_WEIGHTS) },
 ];
 
 // A few glyphs drawn in the scope's current style, at rest and active.
@@ -37,9 +53,6 @@ const PREVIEW = [
   symbol("settings"),
   symbol("keep"),
 ];
-
-const optionLabel = (value: string) =>
-  value.charAt(0).toUpperCase() + value.slice(1);
 
 function matches(search: string, token: IconToken, label: string): boolean {
   const q = search.trim().toLowerCase();
@@ -55,7 +68,7 @@ function TokenChoice({
   onChange,
 }: {
   label: string;
-  options: readonly string[];
+  options: readonly Option[];
   value: string;
   onChange: (value: string) => void;
 }) {
@@ -63,11 +76,7 @@ function TokenChoice({
     <Row
       actionsAlwaysVisible
       actions={
-        <SegmentedControl
-          options={options.map((id) => ({ id, label: optionLabel(id) }))}
-          value={value}
-          onChange={onChange}
-        />
+        <SegmentedControl options={options} value={value} onChange={onChange} />
       }
     >
       <Text as="span" variant="label">
@@ -79,6 +88,10 @@ function TokenChoice({
 
 export function IconsSection({ search }: { search: string }) {
   const editor = useTokenGroupEditor(iconsGroup);
+  const families: readonly Option[] = [
+    { id: MATERIAL_FAMILY, label: "Material" },
+    ...useIconFamilies().map((f) => ({ id: f.id, label: f.label })),
+  ];
   if (editor.pending) return <Loading variant="rows" count={TOKENS.length} />;
 
   // "both" edits light and dark together; the light value is what it shows.
@@ -112,7 +125,7 @@ export function IconsSection({ search }: { search: string }) {
           <TokenChoice
             key={token}
             label={label}
-            options={options}
+            options={options === "families" ? families : options}
             value={shown[token]!}
             onChange={(value) => editor.setToken(token, value)}
           />

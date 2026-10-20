@@ -12,7 +12,7 @@ import { hydrate } from "./hydrate";
 import { ultimateGuitarCreateOption } from "./components/ug-create-option";
 import { UltimateGuitarEditorSection } from "./components/ug-editor-section";
 import { UltimateGuitarPersistObserver } from "./components/ug-persist-observer";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { sonataIcons } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/icons/core";
 
 export default {
   description:
@@ -21,7 +21,7 @@ export default {
     SonataDocument.Source({
       id: UG_SOURCE_ID,
       label: "Ultimate Guitar",
-      icon: symbol("music-note"),
+      icon: sonataIcons.icon("pick"),
       LoaderComponent: UltimateGuitarLoader,
       compile,
     }),
@@ -33,7 +33,7 @@ export default {
     Sonata.Section({
       id: "ultimate-guitar-editor",
       label: "Ultimate Guitar",
-      icon: symbol("music-note"),
+      icon: sonataIcons.icon("pick"),
       component: UltimateGuitarEditorSection,
       area: "editor",
       useAvailable: () =>

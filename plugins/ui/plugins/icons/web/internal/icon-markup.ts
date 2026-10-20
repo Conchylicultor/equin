@@ -1,10 +1,15 @@
-import type { IconRef, SpriteKey } from "../../core";
+import {
+  familyGlyphMarkup,
+  type IconRef,
+  type InlineIconFamily,
+} from "../../core";
 import { spriteMarkup, useSprites } from "./sprite-store";
 import {
   runtimeSymbolChunks,
   useRuntimeSymbolChunks,
 } from "./runtime-symbol-store";
-import { resolveIconDrawing } from "./icon-drawing";
+import { resolveIconDrawing, type DrawingSource } from "./icon-drawing";
+import { iconFamily, useIconFamilies } from "./family-store";
 import { askFor, useIconStyle } from "./icon";
 
 /**
@@ -48,10 +53,28 @@ function indexSymbols(
   return index;
 }
 
+/** Each app-drawn family's sheet markup, built once per family object. */
+const familyMarkup = new WeakMap<InlineIconFamily, string>();
+
+function markupOfFamily(family: InlineIconFamily): string {
+  let markup = familyMarkup.get(family);
+  if (markup === undefined) {
+    markup = familyGlyphMarkup(family);
+    familyMarkup.set(family, markup);
+  }
+  return markup;
+}
+
 function symbolMarkup(
   id: string,
-  source: { kind: "sprite"; key: SpriteKey } | { kind: "runtime" },
+  source: DrawingSource,
 ): IconMarkup | undefined {
+  if (source.kind === "family") {
+    const family = iconFamily(source.family);
+    return family?.kind === "inline"
+      ? indexSymbols(markupOfFamily(family)).get(id)
+      : undefined;
+  }
   if (source.kind === "sprite") {
     const markup = spriteMarkup(source.key);
     return markup === undefined ? undefined : indexSymbols(markup).get(id);
@@ -76,6 +99,7 @@ export function useIconMarkup(): IconMarkupReader {
   // Subscriptions only: the reader reads the stores themselves.
   useSprites();
   useRuntimeSymbolChunks();
+  useIconFamilies();
   return (icon, { active }) => {
     const { drawing, wants } = resolveIconDrawing(icon, style, active);
     for (const w of wants) queueMicrotask(() => askFor(w));

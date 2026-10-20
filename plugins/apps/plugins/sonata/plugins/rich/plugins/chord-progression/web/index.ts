@@ -3,7 +3,7 @@ import { useHasChords } from "@plugins/apps/plugins/sonata/plugins/document/web"
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { ChordLabelModeAction } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
 import { ChordProgression } from "./components/chord-progression";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { sonataIcons } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/icons/core";
 
 export default {
   description:
@@ -12,7 +12,7 @@ export default {
     Sonata.Section({
       id: "chord-progression",
       label: "Progression",
-      icon: symbol("queue-music"),
+      icon: sonataIcons.icon("progression"),
       component: ChordProgression,
       actions: ChordLabelModeAction,
       area: "player",

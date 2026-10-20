@@ -4,6 +4,8 @@
  * the sprite server and `<Icon>` agree on one spelling.
  */
 
+import { MATERIAL_FAMILY, type IconFamilyId } from "./icon-family";
+
 export const ICON_SHAPES = ["default", "rounded", "sharp"] as const;
 export type IconShape = (typeof ICON_SHAPES)[number];
 
@@ -17,18 +19,16 @@ export type IconWeight = (typeof ICON_WEIGHTS)[number];
 const WEIGHT_NUMBER = { regular: 400, light: 300 } as const;
 type WeightNumber = (typeof WEIGHT_NUMBER)[IconWeight];
 
-/**
- * Which drawing a `symbol("…")` gets. `material` draws the Material Symbols
- * glyph in the style the other axes pick; `lucide` draws the symbol's Lucide
- * counterpart (`LUCIDE_MAP`) from the one `lucide` sprite, and keeps the
- * Material drawing — in the other axes' style — for a symbol with none.
- */
-export const ICON_FAMILIES = ["material", "lucide"] as const;
-export type IconFamily = (typeof ICON_FAMILIES)[number];
-
 /** What one theme scope says about its icons. */
 export interface IconStyle {
-  family: IconFamily;
+  /**
+   * Which drawing a `symbol("…")` gets: `material` draws the Material Symbols
+   * glyph in the style the other axes pick; any other id names a contributed
+   * family (`Icons.Family`, icons web — Lucide, an app's own), which draws the
+   * symbols it maps and leaves the rest to its fallback chain, ending at
+   * Material in the other axes' style.
+   */
+  family: IconFamilyId;
   shape: IconShape;
   /** The fill of an icon at rest. */
   fill: IconFill;
@@ -39,7 +39,7 @@ export interface IconStyle {
 
 /** The global default: Material, outline, filled when active, regular weight, default shape. */
 export const DEFAULT_ICON_STYLE: IconStyle = {
-  family: "material",
+  family: MATERIAL_FAMILY,
   shape: "default",
   fill: "outline",
   activeFill: "filled",

@@ -940,6 +940,10 @@
       "name": "@singularity/plugin-apps-sonata-primitives-glass",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/primitives/plugins/icons": {
+      "name": "@singularity/plugin-apps-sonata-primitives-icons",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag": {
       "name": "@singularity/plugin-apps-sonata-primitives-inertial-drag",
       "version": "0.0.1",
@@ -7321,6 +7325,8 @@
     "@singularity/plugin-apps-sonata-primitives": ["@singularity/plugin-apps-sonata-primitives@workspace:plugins/apps/plugins/sonata/plugins/primitives"],
 
     "@singularity/plugin-apps-sonata-primitives-glass": ["@singularity/plugin-apps-sonata-primitives-glass@workspace:plugins/apps/plugins/sonata/plugins/primitives/plugins/glass"],
+
+    "@singularity/plugin-apps-sonata-primitives-icons": ["@singularity/plugin-apps-sonata-primitives-icons@workspace:plugins/apps/plugins/sonata/plugins/primitives/plugins/icons"],
 
     "@singularity/plugin-apps-sonata-primitives-inertial-drag": ["@singularity/plugin-apps-sonata-primitives-inertial-drag@workspace:plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag"],
 

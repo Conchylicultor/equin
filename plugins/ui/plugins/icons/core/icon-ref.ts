@@ -47,11 +47,24 @@ export interface RuntimeSymbolRef {
 }
 
 /**
+ * A glyph an app draws itself, from its icon family (`defineIconFamily`):
+ * minted by the family's `icon("…")`, which tsc checks against the family's
+ * glyph names. Drawn from that family in every scope (one style, like a
+ * brand); an empty box at its final size until the family is contributed.
+ */
+export interface CustomRef {
+  readonly kind: "custom";
+  readonly family: string;
+  readonly name: string;
+}
+
+/**
  * An icon as DATA: which glyph, never how it looks. `<Icon icon={…}/>` draws it
  * in the style the surrounding theme scope picks, so a slot takes an `IconRef`
  * rather than a component.
  */
-export type IconRef = SymbolRef | BrandRef | SetiRef | RuntimeSymbolRef;
+export type IconRef =
+  SymbolRef | BrandRef | SetiRef | RuntimeSymbolRef | CustomRef;
 
 /**
  * A Material Symbols icon by its base name (`"forum"`, `"open-in-new"`). The

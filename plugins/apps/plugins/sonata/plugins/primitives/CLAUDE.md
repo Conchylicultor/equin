@@ -15,6 +15,7 @@ interaction primitives belong here too.
 - Description: Umbrella for Sonata-local client primitives.
 - Sub-plugins:
   - **`glass`** — The player's one floating surface: <Glass> — a barely translucent, blurred panel with a top sheen and a hairline edge that the toolbar pill, the progression capsule and the section rail all float on…
+  - **`icons`** — Contributes the sonata icon family (sonataIcons) to Icons.Family, so a scope whose iconFamily is sonata — the Sonata theme's — draws its glyphs.
   - **`inertial-drag`** — 1-D pointer drag-to-scrub hook with exponential-friction release momentum (flick → coast → settle).
   - **`jog-wheel`** — Horizontal jog-wheel chrome: a bordered pill with a leading icon, a draggable ribbed 'physical wheel' face, and a right-hand readout. Consumers supply the value model + the inertial-drag handle.
   - **`keyboard`** — Stateless keyboard renderer: draws any PitchPlane's pads, lights given pitches (accent or per-key color) with optional per-key content, and picks its chrome from the plane's own layout. Composed by…

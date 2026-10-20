@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-primitives-icons",
+  "description": "Sonata's own icon family: the mockup's hand-drawn 24-unit line glyphs, drawn for the Material names Sonata's chrome uses in a Sonata-themed scope (falling back to Lucide), plus music glyphs Material has no name for (sonataIcons.icon(\"piano-roll\")).",
+  "private": true,
+  "version": "0.0.1"
+}

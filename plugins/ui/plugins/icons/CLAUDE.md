@@ -1,9 +1,11 @@
 # icons
 
 Every icon in code is a **Material Symbols** glyph, named as data and drawn in
-the style its theme scope picks — or, in a scope whose icon family is Lucide,
-as that symbol's Lucide counterpart (see "Lucide family"). Plan and rationale:
-[`research/2026-09-27-global-material-symbols-icons.md`](../../../../research/2026-09-27-global-material-symbols-icons.md).
+the style its theme scope picks — or, in a scope whose icon family is another
+one (Lucide, an app's own), as that family's drawing of it (see "Icon
+families"). Plan and rationale:
+[`research/2026-09-27-global-material-symbols-icons.md`](../../../../research/2026-09-27-global-material-symbols-icons.md),
+families: [`research/2026-10-20-ui-app-icon-families.md`](../../../../research/2026-10-20-ui-app-icon-families.md).
 
 ```ts
 import { symbol, brand, type IconRef } from "@plugins/ui/plugins/icons/core"; // any runtime
@@ -55,8 +57,8 @@ const tsIcon = seti("typescript");         // { kind: "seti",   name: "typescrip
 ## How a style is chosen
 
 The style axes are the `icons` token group
-(`plugins/ui/plugins/tokens/plugins/icons`): `iconFamily` (material | lucide —
-see "Lucide family"), `iconShape` (default | rounded |
+(`plugins/ui/plugins/tokens/plugins/icons`): `iconFamily` (`material` or a
+contributed family's id — see "Icon families"), `iconShape` (default | rounded |
 sharp), `iconFill` (outline | filled), `iconActiveFill` (filled | outline),
 `iconStroke` (regular = Material Symbols 400 | light = Material Symbols Light
 300; not `iconWeight`, which `type-scale:closed-role-ladder` reads as a type
@@ -121,6 +123,38 @@ destination.
   never answered with bytes the URL does not name. A failed fetch is
   thrown into the host's error boundary.
 
+## Icon families
+
+A family is a drawing a scope's `iconFamily` can pick, contributed to
+`Icons.Family` (web, `{ family: IconFamily }`) — an open set; `material` is the
+built-in base and no contribution. `IconFamilyHost` (an `Icons.Root`
+companion) publishes the contributions to the page-global family store in a
+layout effect (no fallback flash) and renders app-drawn families' glyphs
+hidden in the page as `<symbol id="fam-<family>-<glyph>">`.
+
+- **Two kinds** (`core/icon-family.ts`): a `SpriteIconFamily` draws from a
+  server-built sprite fetched on first use (`idOf(name)` → its sprite id —
+  Lucide, `LUCIDE_FAMILY`, contributed by this plugin); an `InlineIconFamily`
+  (`defineIconFamily`, from an app's `core/`) ships its glyph bodies as data
+  in the app's bundle. A body holds shape elements only (checked at define
+  time); its paint (`stroke` at the family's `stroke` width, round caps and
+  joins, or `fill`) is the sheet's one `<g>` around it, so callers need no CSS.
+- **A symbol in family F** draws from the first family of the chain F →
+  `F.fallback` → … that maps it (an inline family's `symbols`, a sprite
+  family's `idOf`); a sprite family whose sprite has not loaded is wanted and
+  the walk goes on. Material ends every chain, in the scope's Material style. A
+  family not (yet) contributed ends the chain early — its plugin may load in a
+  later tier, so its scopes draw Material meanwhile. A fallback loop throws.
+- **App-only glyphs**: `family.icon("piano-roll")` mints a `CustomRef`
+  (`{ kind: "custom", family, name }`, the name checked by tsc against the
+  family's glyphs). It draws from its family in every scope — one style, like a
+  brand — and is an empty box at its final size until the family is
+  contributed. Not manifest-scanned: the whole family ships with its plugin.
+- `readIconTokens` checks a family id's spelling only; the customizer's Family
+  picker lists Material plus every contributed family.
+
+Example: `apps/sonata/primitives/icons` (`sonataIcons`, fallback `lucide`).
+
 ## Lucide family
 
 A theme scope whose `iconFamily` is `lucide` (`IconStyle.family`) draws every
@@ -128,6 +162,8 @@ A theme scope whose `iconFamily` is `lucide` (`IconStyle.family`) draws every
 a Lucide name, so the shared chrome (ui-kit close buttons, the sidebar toggle,
 the path bar, a search field) follows the scope it is drawn in.
 
+- **The family** — `LUCIDE_FAMILY` (`core/lucide-map.ts`), a sprite family
+  this plugin contributes to `Icons.Family` like any other.
 - **The map** — `core/lucide-map.ts`, `LUCIDE_MAP`: every manifest symbol →
   its Lucide name (a `LucideName`, so a typo is a tsc error) or
   `MATERIAL_ONLY`. `icons:lucide-coverage` FAILS while any `symbol("…")` in the
@@ -251,14 +287,23 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
 
 ## Plugin reference
 
-- Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
+- Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
 - Web:
-  - Slots: `Icons.Root`
+  - Slots:
+    - `Icons.Root`
+    - `Icons.Family`
   - Slot contributors:
+    - `Icons.Root` ← `ui.icons`
     - `Icons.Root` ← `ui.icons.sprites`
     - `Icons.Root` ← `ui.tokens.icons`
-  - Contributes: `Core.Root`
+    - `Icons.Family` ← `apps.sonata.primitives.icons`
+    - `Icons.Family` ← `ui.icons`
+  - Contributes:
+    - `Core.Root`
+    - `Icons.Root` → `IconFamilyHost`
+    - `Icons.Family` "Lucide"
   - Exports (types):
+    - `IconFamilyContribution`
     - `IconMarkup`
     - `IconMarkupReader`
     - `IconProps`
@@ -273,6 +318,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `installRuntimeSymbolLoader`
     - `provideRuntimeSymbols`
     - `provideSprite`
+    - `useIconFamilies`
     - `useIconMarkup`
     - `useIconStyle`
     - `usePublishIconStyle`
@@ -282,8 +328,8 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - Uses tokens:
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
-  - Imported by: 306 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×70
+  - Imported by: 307 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×71
     - `conversations` ×56
     - `primitives` ×41
     - `page` ×40
@@ -328,17 +374,22 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - Exports (types):
     - `BrandName`
     - `BrandRef`
+    - `CustomRef`
     - `IconFamily`
+    - `IconFamilyId`
     - `IconFill`
+    - `IconGlyph`
     - `IconRef`
     - `IconShape`
     - `IconStyle`
     - `IconWeight`
+    - `InlineIconFamily`
     - `LucideName`
     - `RuntimeSymbolRef`
     - `SavedSymbolName`
     - `SetiName`
     - `SetiRef`
+    - `SpriteIconFamily`
     - `SpriteKey`
     - `StyleKey`
     - `SymbolName`
@@ -351,18 +402,23 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `coveredStyles`
     - `DEFAULT_ICON_STYLE`
     - `DEFAULT_STYLE_KEYS`
-    - `ICON_FAMILIES`
+    - `defineIconFamily`
+    - `familyGlyphId`
+    - `familyGlyphMarkup`
     - `ICON_FILLS`
     - `ICON_SHAPES`
     - `ICON_WEIGHTS`
     - `iconifyName`
+    - `isIconFamilyId`
     - `isIconRefModule`
     - `isSpriteKey`
     - `isStyleKey`
+    - `LUCIDE_FAMILY`
     - `LUCIDE_MAP`
     - `LUCIDE_SPRITE`
     - `lucideId`
     - `lucideNameOf`
+    - `MATERIAL_FAMILY`
     - `navIcons`
     - `parseStyleKey`
     - `resolveSymbolStyle`

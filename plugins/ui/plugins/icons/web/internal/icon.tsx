@@ -12,6 +12,7 @@ import {
   wantRuntimeSymbol,
 } from "./runtime-symbol-store";
 import { resolveIconDrawing, type DrawingWant } from "./icon-drawing";
+import { subscribeFamilies } from "./family-store";
 
 export interface IconProps extends Omit<
   ComponentPropsWithRef<"svg">,
@@ -32,13 +33,15 @@ export function useIconStyle(): IconStyle {
   return useScopeIconStyle(useIconScope());
 }
 
-/** Subscribe to both icon stores: a sprite or a runtime-symbol chunk landing. */
+/** Subscribe to every icon store: a sprite, a runtime-symbol chunk or the families landing. */
 export function subscribeIconStores(listener: () => void): () => void {
   const offSprites = subscribeSprites(listener);
   const offRuntime = subscribeRuntimeSymbols(listener);
+  const offFamilies = subscribeFamilies(listener);
   return () => {
     offSprites();
     offRuntime();
+    offFamilies();
   };
 }
 
@@ -67,10 +70,14 @@ function wantsKey(wants: readonly DrawingWant[]): string {
  * the first Seti icon to mount asks the sprite host for it, and until it lands
  * the icon is an empty box at its final size (a loading state).
  *
- * In a scope whose icon family is Lucide, a symbol with a Lucide counterpart
- * draws it from the `lucide` sprite — never resident: the first such icon to
- * mount asks for it, and until it lands the icon draws its Material symbol as
- * above. A symbol with no counterpart keeps its Material drawing.
+ * In a scope whose icon family is a contributed one (`Icons.Family`), a symbol
+ * draws from the first family of its fallback chain that maps it: an app-drawn
+ * family's glyph at once; a sprite family's (Lucide) once its sprite — never
+ * resident — has loaded, the next family's drawing until then. A symbol no
+ * family maps keeps its Material drawing.
+ *
+ * A custom glyph (`family.icon("…")`) draws from its family in every scope,
+ * and is an empty box at its final size until the family is contributed.
  *
  * A runtime (saved) symbol draws from the runtime symbol store the same way:
  * its style's symbol once held, the default style's while that one loads, and

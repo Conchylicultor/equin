@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { useHasChords } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { CircleOfFifths } from "./components/circle-of-fifths";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { sonataIcons } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/icons/core";
 
 export default {
   description:
@@ -11,7 +11,7 @@ export default {
     Sonata.Section({
       id: "circle-of-fifths",
       label: "Circle of fifths",
-      icon: symbol("donut-large"),
+      icon: sonataIcons.icon("harmony"),
       component: CircleOfFifths,
       area: "player",
       useAvailable: useHasChords,

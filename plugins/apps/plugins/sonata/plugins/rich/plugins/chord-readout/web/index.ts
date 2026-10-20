@@ -3,7 +3,7 @@ import { useHasChords } from "@plugins/apps/plugins/sonata/plugins/document/web"
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { ChordReadout } from "./components/chord-readout";
 import { ChordReadoutActions } from "./components/chord-readout-actions";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { sonataIcons } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/icons/core";
 
 export default {
   description:
@@ -12,7 +12,7 @@ export default {
     Sonata.Section({
       id: "chord-readout",
       label: "Current chord",
-      icon: symbol("music-note"),
+      icon: sonataIcons.icon("chord"),
       component: ChordReadout,
       actions: ChordReadoutActions,
       area: "player",

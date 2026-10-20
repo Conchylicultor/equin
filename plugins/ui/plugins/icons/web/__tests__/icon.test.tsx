@@ -7,7 +7,11 @@ import {
   symbol,
   type SavedSymbolName,
 } from "../../core/icon-ref";
+import type { IconRef } from "../../core/icon-ref";
 import type { IconStyle } from "../../core/style";
+import { defineIconFamily } from "../../core/icon-family";
+import { LUCIDE_FAMILY } from "../../core/lucide-map";
+import { provideIconFamilies } from "../internal/family-store";
 import { Icon } from "../internal/icon";
 import { IconScopeProvider } from "../internal/icon-scope";
 import { usePublishIconStyle } from "../internal/style-store";
@@ -178,12 +182,26 @@ describe("<Icon> on a runtime (saved) symbol", () => {
 
 describe("<Icon> in a Lucide scope", () => {
   const lucide: IconStyle = { ...rounded, family: "lucide" };
+  afterEach(() => provideIconFamilies([]));
 
   function Wanted() {
     return <span data-testid="wanted">{useWantedSprites().join(",")}</span>;
   }
 
+  it("draws Material while the Lucide family is not contributed", () => {
+    const { container } = render(
+      <>
+        <Publish scope="app:lucide-unregistered" style={lucide} />
+        <IconScopeProvider scope="app:lucide-unregistered">
+          <Icon icon={symbol("folder")} />
+        </IconScopeProvider>
+      </>,
+    );
+    expect(hrefOf(container)).toBe("#ms-rounded-filled-300-folder");
+  });
+
   it("draws a mapped symbol's Lucide drawing once the lucide sprite lands, its Material drawing until then", () => {
+    act(() => provideIconFamilies([LUCIDE_FAMILY]));
     act(() => provideSprite("rounded-filled-300", "<svg></svg>"));
     const { container, getByTestId } = render(
       <>
@@ -201,6 +219,7 @@ describe("<Icon> in a Lucide scope", () => {
   });
 
   it("keeps the Material drawing, in the scope's style, for a material-only symbol", () => {
+    act(() => provideIconFamilies([LUCIDE_FAMILY]));
     act(() => provideSprite("lucide", "<svg></svg>"));
     const { container } = render(
       <>
@@ -211,5 +230,65 @@ describe("<Icon> in a Lucide scope", () => {
       </>,
     );
     expect(hrefOf(container)).toBe("#ms-rounded-filled-300-grain");
+  });
+});
+
+describe("<Icon> with an app-drawn family", () => {
+  const app = defineIconFamily({
+    id: "test-app",
+    label: "Test app",
+    fallback: "lucide",
+    stroke: 1.7,
+    glyphs: {
+      x: { body: '<path d="M6 6l12 12"/>' },
+      roll: { body: '<path d="M6 4v7"/>' },
+    },
+    symbols: { close: "x" },
+  });
+  const appStyle: IconStyle = { ...rounded, family: "test-app" };
+  afterEach(() => provideIconFamilies([]));
+
+  function inApp(scope: string, icon: IconRef) {
+    return render(
+      <>
+        <Publish scope={scope} style={appStyle} />
+        <IconScopeProvider scope={scope}>
+          <Icon icon={icon} />
+        </IconScopeProvider>
+      </>,
+    ).container;
+  }
+
+  it("draws a mapped symbol from the family's own glyph", () => {
+    act(() => provideIconFamilies([app, LUCIDE_FAMILY]));
+    expect(hrefOf(inApp("app:fam-1", symbol("close")))).toBe("#fam-test-app-x");
+  });
+
+  it("falls down the chain for a name it does not map: Lucide, then Material", () => {
+    act(() => provideIconFamilies([app, LUCIDE_FAMILY]));
+    act(() => provideSprite("lucide", "<svg></svg>"));
+    expect(hrefOf(inApp("app:fam-2", symbol("folder")))).toBe("#lucide-folder");
+    expect(hrefOf(inApp("app:fam-3", symbol("grain")))).toBe(
+      "#ms-rounded-filled-300-grain",
+    );
+  });
+
+  it("draws a custom glyph from its family in any scope, an empty box until it is contributed", () => {
+    const { container } = render(<Icon icon={app.icon("roll")} />);
+    expect(hrefOf(container)).toBeNull();
+    act(() => provideIconFamilies([app]));
+    expect(hrefOf(container)).toBe("#fam-test-app-roll");
+  });
+
+  it("rejects a glyph body holding a non-shape element", () => {
+    expect(() =>
+      defineIconFamily({
+        id: "bad",
+        label: "Bad",
+        stroke: 1,
+        glyphs: { x: { body: "<script>alert(1)</script>" } },
+        symbols: {},
+      }),
+    ).toThrow(/not a shape element/);
   });
 });

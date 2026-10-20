@@ -52,6 +52,7 @@ primitive.
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
     - `ui/icons.Icons`
+    - `ui/icons.useIconFamilies`
     - `ui/icons.usePublishIconStyle`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.useResolvedColorMode`
@@ -61,11 +62,11 @@ primitive.
 - Core:
   - Uses:
     - `ui/icons.DEFAULT_ICON_STYLE`
-    - `ui/icons.ICON_FAMILIES`
     - `ui/icons.ICON_FILLS`
     - `ui/icons.ICON_SHAPES`
     - `ui/icons.ICON_WEIGHTS`
     - `ui/icons.IconStyle`
+    - `ui/icons.isIconFamilyId`
     - `ui/theme-engine.defineTokenGroup`
   - Exports (types): `IconsTokenValues`
   - Exports (values):

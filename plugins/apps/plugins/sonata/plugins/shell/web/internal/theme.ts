@@ -153,10 +153,11 @@ const density = densityGroup.fragment(
 );
 
 /**
- * Thin-stroked line icons, as the mockup draws them: each symbol's Lucide
- * counterpart.
+ * Thin-stroked line icons, as the mockup draws them: Sonata's own family
+ * (`sonataIcons`, sonata/primitives/icons), which falls back to each symbol's
+ * Lucide counterpart for the names it does not draw.
  */
-const icons = iconsGroup.fragment(both({ iconFamily: "lucide" }));
+const icons = iconsGroup.fragment(both({ iconFamily: "sonata" }));
 
 /**
  * Sonata's own theme — the immersive player's night, dark only. Selected for

@@ -8,7 +8,6 @@ import { SpreadWheel } from "./components/spread-wheel";
 import { pianoRollConfig } from "../shared/config";
 import { PianoRollFx } from "./slots";
 import { FxViewSection } from "./components/fx-view-section";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // The FX extension point: effect sub-plugins import these from this barrel
 // (the only legal cross-plugin path) and contribute headless effects.
@@ -24,6 +23,7 @@ export type {
   EmitterOptions,
   SpawnSpec,
 } from "./internal/fx/particles";
+import { sonataIcons } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/icons/core";
 export { easeOutCubic } from "./internal/fx/particle-step";
 
 export default {
@@ -36,7 +36,7 @@ export default {
       match: "piano-roll",
       id: "piano-roll",
       label: "Piano roll",
-      icon: symbol("graphic-eq"),
+      icon: sonataIcons.icon("piano-roll"),
       capabilities: ["time-axis", "pitch-plane"],
       // The default lens when the user hasn't picked one.
       default: true,

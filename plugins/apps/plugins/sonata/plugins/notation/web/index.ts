@@ -4,7 +4,7 @@ import { SonataPlayer } from "@plugins/apps/plugins/sonata/plugins/player/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { lazyComponent } from "@plugins/primitives/plugins/lazy-component/web";
 import { notationConfig } from "../shared/config";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { sonataIcons } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/icons/core";
 
 export default {
   description:
@@ -18,7 +18,7 @@ export default {
       match: "notation",
       id: "notation",
       label: "Notation",
-      icon: symbol("music-note"),
+      icon: sonataIcons.icon("notation"),
       capabilities: [],
       // Lazy-loaded so VexFlow (the heavy engraving library reached through
       // `./components/notation` → `./components/engrave`) is code-split off the
