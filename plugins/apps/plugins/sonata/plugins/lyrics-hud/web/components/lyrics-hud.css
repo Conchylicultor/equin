@@ -18,7 +18,11 @@
   pointer-events: auto;
   /* Wide enough that a songsheet line (and its chords) keeps to one row; a
    * longer one wraps. */
-  max-width: 460px;
+  --lyrics-max-width: 460px;
+  /* How much bigger the line being sung is drawn (see `.lyrics-hud-row[data-now]
+   * .sonata-lyric-words`). */
+  --lyrics-now-scale: 1.08;
+  max-width: var(--lyrics-max-width);
   margin-top: max(9rem, 30vh);
   margin-right: 14px;
 }
@@ -31,15 +35,19 @@
   mask-image: radial-gradient(closest-side, #000 62%, transparent);
 }
 
-/* Sized by the component to the current line + the next two. */
+/* Sized by the component to the current line + the next two. Its right
+ * padding is the room the current line grows into when scaled up: lines wrap
+ * inside it, and a transform overflowing into a scroller's padding is not
+ * clipped. */
 .lyrics-hud-scroll {
   position: relative;
   transition: height 0.2s;
+  padding-right: calc(var(--lyrics-max-width) * (var(--lyrics-now-scale) - 1));
 }
 
 /* A line; click to seek. The coming lines are quieter than the one being sung
- * but the same size and weight, so every line breaks where it will when it
- * becomes the current one. */
+ * and laid out at the same size and weight, so every line breaks where it will
+ * when it becomes the current one (which is only drawn bigger). */
 .lyrics-hud-row {
   display: block;
   width: 100%;
@@ -64,10 +72,17 @@
     0 0 8px var(--lyrics-halo, transparent),
     0 0 3px var(--lyrics-halo, transparent),
     0 1px 2px rgb(0 0 0 / 0.8);
+  transform-origin: left top;
+  transition: transform 0.15s;
 }
-/* The line in progress: full strength, with the accent bar beside it; only
- * the words under the sounding chord stay lit — those already sung and those
- * still to come recede, chords with them. */
+/* The line being sung reads bigger — scaled, not resized: a transform takes
+ * no layout, so it breaks exactly where it did as a coming line. */
+.lyrics-hud-row[data-now] .sonata-lyric-words {
+  transform: scale(var(--lyrics-now-scale));
+}
+/* The line in progress: full strength, scaled up, with the accent bar beside
+ * it; only the words under the sounding chord stay lit — those already sung and
+ * those still to come recede, chords with them. */
 .lyrics-hud-line {
   padding-left: 10px;
   margin-left: -10px;
