@@ -10,7 +10,7 @@
 //   ./singularity run plugins/apps/plugins/prototypes/plugins/present/e2e/present-verify.ts \
 //     [--name <prototype>] [--out <prefix>] [--headed]
 
-import type { Page } from "playwright";
+import type { Locator } from "playwright";
 import {
   agentFetch,
   arg,
@@ -61,12 +61,14 @@ const option = meta.options.find(
 );
 const otherValue = option?.values.find((v) => v !== option.default);
 
-/** The live prototype document's frame URL, wherever it is mounted. */
-function frameUrl(page: Page): string | undefined {
-  return page
-    .frames()
-    .find((f) => f.url().includes(`/api/prototypes/${name}/index.html`))
-    ?.url();
+/**
+ * The URL the document in `scope`'s frame has loaded. Scoped, not the page's
+ * first prototype frame: the canvas stays mounted under a presentation, and
+ * its other frames keep picks of their own.
+ */
+async function frameUrl(scope: Locator): Promise<string | undefined> {
+  const iframe = await scope.locator("iframe").first().elementHandle();
+  return (await iframe?.contentFrame())?.url();
 }
 
 await withBrowser(async (h) => {
@@ -158,6 +160,10 @@ await withBrowser(async (h) => {
   );
   await chromeIsThere("full-screen");
   await snap(page, out, "full-screen");
+  // The chrome hides after 0.8 s at rest, which the snap can outlast: a
+  // pointer move brings it back before the click.
+  await page.mouse.move(10, 10);
+  await page.mouse.move(20, 20);
   // Keys go to the app document, not the prototype's iframe.
   await dialog.getByText("1 of 2 · ← →").click();
   await page.keyboard.press("ArrowRight");
@@ -228,7 +234,7 @@ await withBrowser(async (h) => {
       .getByRole("radio", { name: new RegExp(`^${humanizeToken(otherValue)}`) })
       .click();
     const switched = await waitFor(
-      () => Promise.resolve(frameUrl(page)),
+      () => frameUrl(dialog),
       (url) =>
         url !== undefined && url.includes(`${option.name}=${otherValue}`),
       { timeoutMs: 15_000 },
@@ -313,13 +319,7 @@ await withBrowser(async (h) => {
       })
       .click();
     const switched = await waitFor(
-      () =>
-        Promise.resolve(
-          tab
-            .frames()
-            .find((f) => f.url().includes(`/api/prototypes/${name}/`))
-            ?.url(),
-        ),
+      () => frameUrl(tab.locator(canvasFrameSelector({ letter: "A" }))),
       (url) =>
         url !== undefined && !url.includes(`${option.name}=${otherValue}`),
       { timeoutMs: 15_000 },
