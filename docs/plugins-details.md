@@ -12871,9 +12871,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `derived-view` "agents_v"
           - `derived-table` "task_latest_conversation"
           - `taskCategory` "agents"
-        - Uses: 26 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
-          - `tasks/tasks-core` ×4
+        - Uses: 25 symbols — full list in [`plugins/conversations/plugins/agents/REFERENCE.md`](../plugins/conversations/plugins/agents/REFERENCE.md)
           - `primitives/rank` ×3
+          - `tasks/tasks-core` ×3
           - `database/sql-projection` ×2
           - `infra/endpoints` ×2
           - `infra/entities` ×2
