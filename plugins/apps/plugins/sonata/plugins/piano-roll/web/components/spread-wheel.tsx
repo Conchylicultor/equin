@@ -29,6 +29,10 @@ const asZoom = (spread: number) =>
     ? `${Math.round(spread * 10) / 10}×`
     : `${Math.round(spread * 100) / 100}×`;
 
+/** Quick-set zooms offered by clicking the readout (each clamped by the live
+ *  range, so none is offered that the roll cannot show). */
+const SPREAD_PRESETS = [0.5, 0.75, 1, 1.5, 2, 3];
+
 /**
  * A horizontal jog wheel for the piano-roll vertical zoom ("spread"). Drag it
  * left/right (with release momentum, via the shared inertial-drag primitive) to
@@ -76,16 +80,35 @@ function PianoRollSpreadWheel() {
     },
   });
 
+  // Commit a value the way a settled drag does: live now, and saved globally
+  // unless it is a sub-default fit-zoom.
+  const commit = (v: number) => {
+    lastValue.current = v;
+    setSpread(v);
+    if (v >= SPREAD_MIN) setConfig("spread", v);
+  };
+  const presets = [
+    // A long song's zoom-out floor sits below the default band: offer it as
+    // "fit the whole song".
+    ...(spreadMin < SPREAD_MIN
+      ? [{ label: "Fit song", value: spreadMin }]
+      : []),
+    ...SPREAD_PRESETS.filter((v) => v >= spreadMin && v <= spreadMax).map(
+      (value) => ({ label: asZoom(value), value }),
+    ),
+  ];
+
   return (
     <JogWheel
       icon={<Icon icon={spreadIcon} className="size-3.5" />}
-      tooltip="Note spread — drag to zoom; pull left to fit the whole song"
+      tooltip="Note spread — drag to zoom, click the value for presets; pull left to fit the whole song"
       drag={drag}
       // Position tracks log(spread) so the ribs travel uniformly per zoom ratio
       // (matching the log-space drag), not faster at high zoom.
       ribOffsetPx={Math.log(spread) * RIB_SCALE}
       readout={asZoom(spread)}
       collapsible
+      presets={{ options: presets, onPick: commit }}
       aria={{
         label: "Note spread",
         valueMin: Math.round(spreadMin * 100),

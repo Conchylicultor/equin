@@ -7007,6 +7007,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/clip.Clip`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/css/ui-kit.DropdownMenu`
+                  - `primitives/css/ui-kit.DropdownMenuContent`
+                  - `primitives/css/ui-kit.DropdownMenuRadioGroup`
+                  - `primitives/css/ui-kit.DropdownMenuRadioItem`
+                  - `primitives/css/ui-kit.DropdownMenuTrigger`
                 - Exports (types):
                   - `JogWheelAria`
                   - `JogWheelProps`
@@ -7016,6 +7021,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --border`
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --primary`
+                  - `ui/tokens/color-palette --ring`
+                  - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-bold`
                 - Imported by:

@@ -23,6 +23,12 @@ const RIB_SCALE = 50;
 
 const asPercent = (scale: number) => `${Math.round(scale * 100)}%`;
 
+/** Quick-set speeds offered by clicking the readout — the usual practice steps. */
+const SPEED_PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2].map((value) => ({
+  label: asPercent(value),
+  value,
+}));
+
 /**
  * A horizontal jog wheel for the playback speed, mirroring the piano-roll's zoom
  * `SpreadWheel`: drag it left/right (with release momentum, via the shared
@@ -46,13 +52,14 @@ export function TempoWheel() {
   return (
     <JogWheel
       icon={<Icon icon={speedIcon} className="size-3.5" />}
-      tooltip="Playback speed — drag to scrub (↑/↓ to nudge)"
+      tooltip="Playback speed — drag to scrub, click the value for presets (↑/↓ to nudge)"
       drag={drag}
       // Position tracks the linear tempo so the ribs travel at a constant rate
       // across the whole range (matching the linear-space drag).
       ribOffsetPx={tempoScale * RIB_SCALE}
       readout={asPercent(tempoScale)}
       collapsible
+      presets={{ options: SPEED_PRESETS, onPick: setTempoScale }}
       aria={{
         label: "Playback speed",
         valueMin: Math.round(MIN_SCALE * 100),

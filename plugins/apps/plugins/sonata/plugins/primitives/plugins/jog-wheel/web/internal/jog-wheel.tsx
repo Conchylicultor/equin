@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { InertialDragHandle } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
@@ -16,6 +23,21 @@ export interface JogWheelAria {
   valueMax: number;
   valueNow: number;
   valueText: string;
+}
+
+/** One quick-set value offered by the readout's menu. */
+export interface JogWheelPreset {
+  /** Menu label (e.g. `"75%"`, `"Fit song"`). */
+  label: string;
+  /** The value set when picked, in the consumer's own domain. */
+  value: number;
+}
+
+/** Quick-set values for the readout: clicking it opens a menu of them. */
+export interface JogWheelPresets {
+  options: readonly JogWheelPreset[];
+  /** Apply a picked preset's `value`. */
+  onPick: (value: number) => void;
 }
 
 export interface JogWheelProps {
@@ -38,6 +60,11 @@ export interface JogWheelProps {
    * not idle — so it never snaps shut mid-flick or mid-coast.
    */
   collapsible?: boolean;
+  /**
+   * Turn the readout into a menu button listing quick-set values; the one whose
+   * label matches the readout shows checked.
+   */
+  presets?: JogWheelPresets;
 }
 
 /**
@@ -65,6 +92,7 @@ export function JogWheel({
   readout,
   aria,
   collapsible = false,
+  presets,
 }: JogWheelProps) {
   // The ribbed wheel face. The tick pattern + its sliding position are inline
   // styles (no Tailwind spacing/radius to lint); the value-bound
@@ -105,13 +133,62 @@ export function JogWheel({
       hoverExpand={collapsible ? { held: drag.phase !== "idle" } : undefined}
     >
       {collapsible ? <HoverExpandPanel>{face}</HoverExpandPanel> : face}
-      <Text
-        as="span"
-        variant="caption"
-        className="min-w-9 font-bold text-foreground tabular-nums"
-      >
-        {readout}
-      </Text>
+      {presets ? (
+        <PresetReadout readout={readout} label={aria.label} presets={presets} />
+      ) : (
+        <Readout readout={readout} />
+      )}
     </ToolbarControl>
+  );
+}
+
+function Readout({ readout }: { readout: string }) {
+  return (
+    <Text
+      as="span"
+      variant="caption"
+      className="min-w-9 font-bold text-foreground tabular-nums"
+    >
+      {readout}
+    </Text>
+  );
+}
+
+/** The readout as a menu button: click for the quick-set values. */
+function PresetReadout({
+  readout,
+  label,
+  presets,
+}: {
+  readout: string;
+  label: string;
+  presets: JogWheelPresets;
+}) {
+  const picked = presets.options.find((p) => p.label === readout);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={`${label} presets`}
+        className="cursor-pointer rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      >
+        <Readout readout={readout} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuRadioGroup
+          value={picked?.label ?? null}
+          onValueChange={(value: string) => {
+            const preset = presets.options.find((p) => p.label === value);
+            if (!preset) throw new Error(`Unknown ${label} preset: ${value}`);
+            presets.onPick(preset.value);
+          }}
+        >
+          {presets.options.map((p) => (
+            <DropdownMenuRadioItem key={p.label} value={p.label} closeOnClick>
+              {p.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
