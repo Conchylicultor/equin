@@ -12,14 +12,24 @@
 // Node forms:
 // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 // Hide: { "item": "<key>", "hidden": true }
+// Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
+// Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items either side of it, turned to the slot's flow (flat in a column such as a sidebar's footer rows, upright in a row such as a toolbar).
+// Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+// Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+// Arrange "items" for how this slot ACTUALLY renders — a sidebar is a
+// vertical list, a toolbar a horizontal bar, a pane a stack of blocks.
+// Look at the surface, then order for that reading direction.
+// Node forms:
+// Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+// Hide: { "item": "<key>", "hidden": true }
 // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
 // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // At most one spacer per slot.
 //
 // A frame's hover actions, at the right end of its header, read left to
-// right: the two that reshape the canvas around THIS frame (keep only it,
-// duplicate it), then the two that show it alone (Open in a new tab, and Full
+// right: the one that reshapes the canvas around THIS frame (keep only
+// it), then the two that show it alone (Open in a new tab, and Full
 // screen), and Close on the outer edge —
 // the one that removes something, where a stray click is least likely.
 {
@@ -30,7 +40,6 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.prototypes.canvas:keep-only",
-    "apps.prototypes.canvas:duplicate",
     "apps.prototypes.present:open-new-tab",
     "apps.prototypes.present:full-screen",
     "apps.prototypes.canvas:close"

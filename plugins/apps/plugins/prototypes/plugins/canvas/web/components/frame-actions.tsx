@@ -6,7 +6,6 @@ import type { FrameActionRow } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const closeIcon = symbol("close");
-const contentCopyIcon = symbol("content-copy");
 const cropSquareIcon = symbol("crop-square");
 
 // The canvas's own frame actions, contributed to `PrototypeFrameActions` like
@@ -24,21 +23,6 @@ export function KeepOnlyFrameAction({
       icon={cropSquareIcon}
       label="Keep only this frame — close the others"
       onClick={() => keepOnly(row.frame.id)}
-    />
-  );
-}
-
-/** Add a copy of this prototype frame, to change its variant or version. */
-export function DuplicateFrameAction({
-  row,
-}: ItemActionProps<FrameActionRow>): ReactElement | null {
-  const { dispatch } = usePrototypeDetail();
-  if (row.frame.kind !== "prototype") return null;
-  return (
-    <IconButton
-      icon={contentCopyIcon}
-      label="Duplicate — then change its variant or version"
-      onClick={() => dispatch({ type: "addPrototype", from: row.frame.id })}
     />
   );
 }

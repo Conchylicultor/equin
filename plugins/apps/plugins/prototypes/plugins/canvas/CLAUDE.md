@@ -98,8 +98,9 @@ not declare is dropped from its URL.
 ## Frames: add, copy, link, spread, keep only, close
 
 - **`+ Frame`** (header) adds a copy of the LAST prototype frame — same version,
-  same picks — ready to change its variant or version. A frame's own
-  **Duplicate** action copies that frame instead.
+  same picks — ready to change its variant or version. (There is no per-frame
+  Duplicate: `+ Frame` already is one, and Compare in a new frame copies a
+  frame at another version.)
 - **`+ <addLabel>`** — one button per frame source ("+ Real app"), disabled
   while that source is already on the canvas. The canvas names no source.
   Adding one switches the canvas to Swipe (when that makes two frames) at
@@ -275,7 +276,7 @@ other.
   canvas contributes the layout switch and the add buttons; `copy-id` the copy
   button; `gallery` the Done toggle. Order: `config/apps/prototypes/canvas/`.
 - **`PrototypeFrameActions`** — a frame's header actions, handed
-  `{ frame, meta }`. The canvas ships Keep only, Duplicate and Close; `present`
+  `{ frame, meta }`. The canvas ships Keep only and Close; `present`
   adds Open in a new tab and Full screen.
 - **`FrameSource`** — a dispatch slot keyed on the source id: `{ match: "<id>",
   addLabel, component }`. The component is handed `{ source, meta, children }`
@@ -359,7 +360,6 @@ navigation, so it starts from nothing remembered.
     - `prototypeDetailPane.Actions` "layout" → `LayoutAction`
     - `prototypeDetailPane.Actions` "add" → `AddFrameActions`
     - `PrototypeFrameActions` "keep-only" → `KeepOnlyFrameAction`
-    - `PrototypeFrameActions` "duplicate" → `DuplicateFrameAction`
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`

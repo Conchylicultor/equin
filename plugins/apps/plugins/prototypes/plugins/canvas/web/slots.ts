@@ -76,8 +76,8 @@ export interface FrameActionRow {
 }
 
 /**
- * The hover actions in a frame's header (keep only, duplicate, close…). The
- * canvas ships those three; the `present` plugin adds Present.
+ * The hover actions in a frame's header (keep only, close…). The
+ * canvas ships those two; the `present` plugin adds Present.
  */
 export const PrototypeFrameActions = defineItemActions<FrameActionRow>();
 

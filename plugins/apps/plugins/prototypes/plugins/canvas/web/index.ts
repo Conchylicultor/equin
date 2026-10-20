@@ -10,7 +10,6 @@ import {
 import { AddFrameActions, LayoutAction } from "./components/header-actions";
 import {
   CloseFrameAction,
-  DuplicateFrameAction,
   KeepOnlyFrameAction,
 } from "./components/frame-actions";
 import {
@@ -80,7 +79,6 @@ export default {
     prototypeDetailPane.Actions({ id: "layout", component: LayoutAction }),
     prototypeDetailPane.Actions({ id: "add", component: AddFrameActions }),
     PrototypeFrameActions({ id: "keep-only", component: KeepOnlyFrameAction }),
-    PrototypeFrameActions({ id: "duplicate", component: DuplicateFrameAction }),
     PrototypeFrameActions({ id: "close", component: CloseFrameAction }),
     PrototypeVersionActions({
       id: "compare",
