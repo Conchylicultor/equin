@@ -37,9 +37,11 @@ export interface LyricLineTextProps {
    * - `columns` (default) — the songbook: a monospace chord row over a
    *   monospace lyric row, each chord pinned to its character column.
    * - `words` — in the surface's own font: the line flows as words that wrap,
-   *   and each word a chord starts on carries that chord just above it. The
-   *   words before the sounding chord read as sung (`data-sung`), the word it
-   *   starts on as now (`data-now`), for the caller's CSS.
+   *   and each word a chord starts on carries that chord just above it. While one
+   *   of the line's chords sounds, every word says where it stands against
+   *   it (`data-phase`, for the caller's CSS): `sung` before it (the words
+   *   ahead of the line's first chord included), `now` under it, `coming`
+   *   after it.
    */
   layout?: "columns" | "words";
 }
@@ -207,6 +209,21 @@ function lyricWords(
   return words;
 }
 
+/**
+ * Where a word stands against the sounding chord: before it (words ahead of
+ * the line's first chord sit under no chord, so before every one), under it,
+ * or after it. None while no chord of the line sounds.
+ */
+function wordPhase(
+  under: number | null,
+  activeChord: number | null,
+): "sung" | "now" | "coming" | undefined {
+  if (activeChord === null) return undefined;
+  const at = under ?? -1;
+  if (at < activeChord) return "sung";
+  return at === activeChord ? "now" : "coming";
+}
+
 /** The `words` layout — see {@link LyricLineTextProps.layout}. */
 function LyricWords({
   lyric,
@@ -230,18 +247,7 @@ function LyricWords({
               <span
                 key={i}
                 className="sonata-lyric-word"
-                data-sung={
-                  activeChord !== null &&
-                  w.under !== null &&
-                  w.under < activeChord
-                    ? true
-                    : undefined
-                }
-                data-now={
-                  activeChord !== null && w.under === activeChord
-                    ? true
-                    : undefined
-                }
+                data-phase={wordPhase(w.under, activeChord)}
               >
                 {/* The chord row, empty over a word no chord starts on — it
                     still holds the row's height. */}

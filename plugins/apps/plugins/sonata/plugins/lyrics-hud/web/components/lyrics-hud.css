@@ -65,8 +65,9 @@
     0 0 3px var(--lyrics-halo, transparent),
     0 1px 2px rgb(0 0 0 / 0.8);
 }
-/* The line in progress: full strength, with the accent bar beside it;
- * the words already sung recede, the word under the sounding chord stays. */
+/* The line in progress: full strength, with the accent bar beside it; only
+ * the words under the sounding chord stay lit — those already sung and those
+ * still to come recede, chords with them. */
 .lyrics-hud-line {
   padding-left: 10px;
   margin-left: -10px;
@@ -74,7 +75,7 @@
 .lyrics-hud-row[data-now] .lyrics-hud-line {
   box-shadow: inset 2px 0 0 var(--primary);
 }
-.lyrics-hud-row[data-now] .sonata-lyric-word[data-sung] {
+.lyrics-hud-row[data-now] .sonata-lyric-word:is([data-phase="sung"], [data-phase="coming"]) {
   opacity: 0.6;
 }
 /* A chord over the words, in its tile's colour (`--fn`, from
