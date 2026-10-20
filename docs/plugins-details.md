@@ -6619,7 +6619,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/lyric-line.LyricChordStyle`
               - `apps/sonata/lyric-line.LyricLineText`
               - `apps/sonata/player.usePlayerView`
-              - `apps/sonata/rich/chord-label.useChordDisplayMode`
               - `apps/sonata/session.useCursorSelector`
               - `apps/sonata/session.useSession`
               - `apps/sonata/shell.Sonata`
@@ -7411,7 +7410,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses tokens: `ui/tokens/type-scale --font-weight-semibold`
                 - Imported by:
                   - `apps/sonata/chord-chart`
-                  - `apps/sonata/lyrics-hud`
                   - `apps/sonata/rich/chord-list`
                   - `apps/sonata/rich/chord-overlay`
                   - `apps/sonata/rich/chord-progression`

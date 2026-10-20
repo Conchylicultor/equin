@@ -34,7 +34,6 @@ chord overlay and the progression strip so they label chords identically.
   - Uses tokens: `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `apps/sonata/chord-chart`
-    - `apps/sonata/lyrics-hud`
     - `apps/sonata/rich/chord-list`
     - `apps/sonata/rich/chord-overlay`
     - `apps/sonata/rich/chord-progression`

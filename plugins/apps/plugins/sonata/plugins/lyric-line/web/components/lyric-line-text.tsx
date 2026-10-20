@@ -172,12 +172,19 @@ interface LyricWord {
 
 /**
  * A line's words, each carrying the chord that starts on it. The text is cut
- * at every chord's column first (a chord can start mid-word), then each piece
- * into words; the first word of a piece takes the piece's chord.
+ * at every chord's printed column first (a chord can start mid-word), then
+ * each piece into words; the first word of a piece takes the piece's chord.
+ * The columns are the `columns` layout's ({@link chordColumns}), so a chord the
+ * one before it pushed right lands where the songbook prints it — past the
+ * words, over nothing — rather than splitting the last word.
  */
-function lyricWords(text: string, chords: readonly LyricChord[]): LyricWord[] {
-  const cuts = chords.map((c) =>
-    Math.min(Math.max(c.charOffset, 0), text.length),
+function lyricWords(
+  text: string,
+  chords: readonly LyricChord[],
+  labels: readonly string[],
+): LyricWord[] {
+  const cuts = chordColumns(labels, chords).map((col) =>
+    Math.min(Math.max(col, 0), text.length),
   );
   const words: LyricWord[] = [];
   let under: number | null = null;
@@ -209,7 +216,7 @@ function LyricWords({
   variant,
 }: Required<Omit<LyricLineTextProps, "layout">>) {
   const { text, chords } = lyric.data;
-  const words = lyricWords(text, chords);
+  const words = lyricWords(text, chords, chords.map(chordLabel));
   return (
     <Text variant={variant} as="div" className="sonata-lyric-words">
       {words.length === 0

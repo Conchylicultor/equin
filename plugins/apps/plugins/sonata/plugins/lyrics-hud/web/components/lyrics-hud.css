@@ -16,7 +16,9 @@
   position: relative;
   isolation: isolate;
   pointer-events: auto;
-  max-width: 360px;
+  /* Wide enough that a songsheet line (and its chords) keeps to one row; a
+   * longer one wraps. */
+  max-width: 460px;
   margin-top: max(9rem, 30vh);
   margin-right: 14px;
 }
@@ -35,8 +37,9 @@
   transition: height 0.2s;
 }
 
-/* A line; click to seek. The coming lines are smaller and quieter than the one
- * being sung. */
+/* A line; click to seek. The coming lines are quieter than the one being sung
+ * but the same size and weight, so every line breaks where it will when it
+ * becomes the current one. */
 .lyrics-hud-row {
   display: block;
   width: 100%;
@@ -54,15 +57,15 @@
   outline-offset: -2px;
 }
 .lyrics-hud-row .sonata-lyric-words {
-  font-size: 13.5px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   line-height: 1.25;
   text-shadow:
     0 0 8px var(--lyrics-halo, transparent),
     0 0 3px var(--lyrics-halo, transparent),
     0 1px 2px rgb(0 0 0 / 0.8);
 }
-/* The line in progress: bigger, full strength, with the accent bar beside it;
+/* The line in progress: full strength, with the accent bar beside it;
  * the words already sung recede, the word under the sounding chord stays. */
 .lyrics-hud-line {
   padding-left: 10px;
@@ -70,10 +73,6 @@
 }
 .lyrics-hud-row[data-now] .lyrics-hud-line {
   box-shadow: inset 2px 0 0 var(--primary);
-}
-.lyrics-hud-row[data-now] .sonata-lyric-words {
-  font-size: 16px;
-  font-weight: 600;
 }
 .lyrics-hud-row[data-now] .sonata-lyric-word[data-sung] {
   opacity: 0.6;

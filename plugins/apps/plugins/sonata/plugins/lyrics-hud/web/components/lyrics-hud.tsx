@@ -21,8 +21,6 @@ import {
   type LyricChordStyle,
 } from "@plugins/apps/plugins/sonata/plugins/lyric-line/web";
 import { chordToneStyle } from "@plugins/music/plugins/chord-box/web";
-import { useChordDisplayMode } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
-import { formatChordLabel } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import {
   asSonataLook,
   SONATA_LOOK_STYLES,
@@ -47,7 +45,8 @@ interface Row {
 /**
  * The lyrics corner — a Sonata HUD, a third of the way down the roll's right
  * side. Shows the line in progress and the next two, each chord over the word
- * it starts on (in the colour of the chord sounding at its beat); the rest stay
+ * it starts on — its symbol as the tab writes it, so the corner reads like the
+ * songsheet, painted in the colour of the chord sounding at its beat; the rest stay
  * a scroll away, and a click on a line seeks there. No card: a soft backing
  * (`lyrics-hud.css`) blurs and dims the notes behind the text, its edges
  * feathered into the roll.
@@ -84,15 +83,6 @@ function LyricsCorner({ lines }: { lines: LyricAnnotation[] }) {
     () => lyricChordReadings(score, lines),
     [score, lines],
   );
-  // Chords are labelled the way every other chord surface is (the shared
-  // Chord labels mode): the score's chord at that beat, as a name, a numeral
-  // or both; the tab's own symbol where the score has no chord there.
-  const mode = useChordDisplayMode();
-  const chordLabel = (c: LyricChord): string => {
-    const r = readings.get(c);
-    return r?.chord ? formatChordLabel(r.chord, r.key, mode) : c.symbol;
-  };
-
   // The corner sits on the bare lane, which wears the look's palette, not the
   // theme's: its backing is the lane's own ground and its words the lane's ink,
   // so it melts into the roll in every theme and look.
@@ -209,7 +199,6 @@ function LyricsCorner({ lines }: { lines: LyricAnnotation[] }) {
                     activeChord?.line === index ? activeChord.chord : null
                   }
                   chordStyle={chordStyle}
-                  chordLabel={chordLabel}
                   variant="caption"
                   layout="words"
                 />

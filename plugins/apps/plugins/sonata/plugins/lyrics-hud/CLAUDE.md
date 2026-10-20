@@ -14,7 +14,6 @@
     - `apps/sonata/lyric-line.LyricChordStyle`
     - `apps/sonata/lyric-line.LyricLineText`
     - `apps/sonata/player.usePlayerView`
-    - `apps/sonata/rich/chord-label.useChordDisplayMode`
     - `apps/sonata/session.useCursorSelector`
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
