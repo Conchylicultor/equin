@@ -123,6 +123,7 @@ function prepared(taskId: string): PreparedConversation {
     spawnedBy: "test",
     kind: "user",
     rawPrompt: "do the thing",
+    launchTurn: { text: "do the thing", typedText: "do the thing" },
     prepromptId: undefined,
     workspace: {
       attemptId,
@@ -131,7 +132,6 @@ function prepared(taskId: string): PreparedConversation {
     },
     target: { kind: "new", attemptId, taskId },
     create: {
-      prompt: "do the thing",
       model: MODEL,
       forkSession: false,
     },

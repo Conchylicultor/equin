@@ -17,7 +17,7 @@ event is its successor.
 | column | meaning |
 |---|---|
 | `id` | `turn-<uuid>` (`turnIdKind`), minted by the client so a repeated POST finds the row the first one wrote; the server mints one when a sender has none |
-| `kind` | `turn` (a user message), `answer` (an AskUserQuestion answer), `push-and-exit` |
+| `kind` | `turn` (a user message), `answer` (an AskUserQuestion answer), `push-and-exit`, `launch` (the prompt the conversation was launched with) |
 | `text` | what the user wrote, raw — the draft a returned turn goes back to; what `userTurnSent` carries |
 | `typed_text` | exactly what reached the CLI: attachment refs resolved, or the whole launch prompt for a held turn that rode the launch. The confirmed prompt is compared with this |
 | `state` | below |
@@ -71,8 +71,8 @@ never reached the box to be merged. Equality is byte-exact save for edge
 whitespace (the launch message reaches the CLI with a space before a leading
 `/`). `prompt_id` is no turn id: a busy agent's queued turn carries the running
 turn's. Sends are serialized per conversation, so the candidates are few and in
-order. A prompt matching nothing — a launch's own task prompt — is not ours and
-is dropped.
+order. A prompt matching nothing — typed in the terminal — is not ours and is
+dropped.
 
 ## Where the confirmation comes from
 
@@ -86,7 +86,10 @@ backend is down.
 Every sender goes through `submitTurn` (conversations server, `turns.ts`), so
 there is no typed turn without a row: the prompt input (`POST …/turn`), Push &
 Exit, AskUserQuestion answers, the held-turn flush and the spawn's launch
-message. `acceptTurn` holds a turn while its conversation is `starting` under
+message. The launch's own prompt is a `launch` row, accepted on the
+transaction that commits the conversation (conversations `commitConversation`),
+so it is `held` — and echoed — from the moment the conversation exists, and
+rides the launch message as the oldest held turn. `acceptTurn` holds a turn while its conversation is `starting` under
 the conversation ROW lock — every flip out of `starting` is an UPDATE of that
 row, so a turn is held before the flip (and the flush the reconciler enqueues
 after its write sees it) or the accept sees the new status. Delivery claims a

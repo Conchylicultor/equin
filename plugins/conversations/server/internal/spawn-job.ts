@@ -87,10 +87,11 @@ export const spawnConversationJob = defineJob({
       // would no-op, so a held turn claimed here would never reach the agent.
       // Leave every held turn to the flush the status flip triggers.
       if (!(await runtime.isRunning(conversationId))) {
-        // Path A of held-turn delivery (turns.ts): a turn the user sent
-        // while this was starting becomes the launch message, behind the baked
-        // preprompt block `create.prompt` already carries, so Claude starts on
-        // it directly instead of idling at an empty prompt.
+        // Path A of held-turn delivery (turns.ts): the oldest held turn — the
+        // launch's own prompt (kind `launch`), else one the user sent while
+        // this was starting — becomes the launch message, behind the baked
+        // preprompt block `create.prompt` carries, so Claude starts on it
+        // directly instead of idling at an empty prompt.
         await launchWithHeldTurn(conversationId, create.prompt, (prompt) =>
           runtime.create(
             conversationId,

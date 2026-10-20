@@ -4,11 +4,20 @@ import { z } from "zod";
  * What a ledger row carries to the agent:
  * - `turn` — a message the user wrote (the prompt input, a template, Send);
  * - `answer` — an AskUserQuestion answer, typed once its menu is dismissed;
- * - `push-and-exit` — the configured wrap-up prompt.
+ * - `push-and-exit` — the configured wrap-up prompt;
+ * - `launch` — the prompt a conversation was launched with, recorded with the
+ *   conversation itself and delivered as its launch message — so it echoes
+ *   from the moment the conversation exists, like any held turn.
  *
- * Only `turn` rows emit `conversation.userTurnSent`.
+ * Only `turn` rows emit `conversation.userTurnSent` (a launch's prompt is
+ * already announced by `conversationCreated`).
  */
-export const TurnKindSchema = z.enum(["turn", "answer", "push-and-exit"]);
+export const TurnKindSchema = z.enum([
+  "turn",
+  "answer",
+  "push-and-exit",
+  "launch",
+]);
 export type TurnKind = z.infer<typeof TurnKindSchema>;
 
 /**

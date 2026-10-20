@@ -250,7 +250,7 @@ export async function hasHeldTurns(
 /**
  * Resolve the turn the CLI just reported submitting at `at`: the first of
  * {@link promptCandidates} the confirmation still applies to. A prompt matching
- * nothing — typed in the terminal, the launch's own task prompt — is not ours.
+ * nothing — typed in the terminal — is not ours.
  * Returns the resolved row, or null. A resolved row signals
  * `onTurnSubmitted`.
  */

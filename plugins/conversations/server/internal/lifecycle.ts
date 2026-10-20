@@ -53,9 +53,12 @@ import {
   type WorkspaceAt,
 } from "@plugins/conversations/plugins/workspace/server";
 import {
+  acceptTurn,
   returnTurnByText,
   returnTurnsSince,
 } from "@plugins/conversations/plugins/turn-ledger/server";
+import { turnIdKind } from "@plugins/conversations/plugins/turn-ledger/core";
+import { launchWithHeldTurn } from "./turns";
 import { spawnConversationJob } from "./spawn-job";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
@@ -167,6 +170,11 @@ export interface PreparedConversation {
   kind: ConversationKind;
   // The caller's raw prompt, for the `conversationCreated` payload.
   rawPrompt: string | undefined;
+  // The launch's prompt as the conversation's first ledger turn (kind
+  // `launch`), held from the commit on: the pane echoes it at once, and the
+  // launch delivers it as its message (`launchWithHeldTurn`), behind
+  // `create.prompt` — which is then only the baked preprompt block.
+  launchTurn: { text: string; typedText: string } | undefined;
   prepromptId: string | undefined;
   // The attempt's workspace: its path and the spec it was launched with.
   workspace: WorkspaceAt;
@@ -321,8 +329,11 @@ export async function prepareConversation(
 
   // Single chokepoint for `![](/api/attachments/<id>)` → `@<disk-path>` rewriting
   // so every entry point (HTTP create, agent launch, auto-start) gets it.
-  let resolvedPrompt = opts.prompt
-    ? (await resolveAttachmentRefs(opts.prompt)).text
+  const launchTurn = opts.prompt?.trim()
+    ? {
+        text: opts.prompt,
+        typedText: (await resolveAttachmentRefs(opts.prompt)).text,
+      }
     : undefined;
 
   // Resolve the preprompt (config list-item id → text). It comes only from the
@@ -339,13 +350,10 @@ export async function prepareConversation(
   // replayed verbatim on resume/fork. Only on a fresh launch: a
   // forked/resumed transcript already contains the baked first turn, so
   // re-injecting (`claude --resume --fork-session` copies the original) would
-  // duplicate it. The no-initial-prompt edge yields a first turn that is the
-  // preprompt block alone.
-  if (preprompt && !resumeSessionId) {
-    resolvedPrompt = resolvedPrompt
-      ? `${wrapPreprompt(preprompt)}\n\n${resolvedPrompt}`
-      : wrapPreprompt(preprompt);
-  }
+  // duplicate it. The launch turn rides behind it (`mergeLaunchPrompt`); with
+  // none, the first turn is the preprompt block alone.
+  const basePrompt =
+    preprompt && !resumeSessionId ? wrapPreprompt(preprompt) : undefined;
 
   // Thinking mode: the launching task's, for the same reason as the preprompt.
   // Threaded to the runtime as CLI args; no prompt mutation (unlike preprompt,
@@ -360,11 +368,12 @@ export async function prepareConversation(
     spawnedBy,
     kind: opts.kind ?? "user",
     rawPrompt: opts.prompt,
+    launchTurn,
     prepromptId,
     workspace,
     target,
     create: {
-      prompt: resolvedPrompt,
+      prompt: basePrompt,
       model,
       effort,
       resumeSessionId,
@@ -432,6 +441,22 @@ export async function commitConversation(
     tx,
   );
 
+  // The launch's prompt is a turn from the start: held (the row above is
+  // `starting`), on this transaction, so the conversation never exists
+  // without the message it was launched with.
+  if (p.launchTurn) {
+    const accepted = await acceptTurn(
+      conv.id,
+      { id: turnIdKind.mint(), kind: "launch", ...p.launchTurn },
+      queueTx,
+    );
+    if (accepted.kind !== "held") {
+      throw new Error(
+        `launch turn of ${conv.id} was not held (${accepted.kind}): a new conversation must be starting`,
+      );
+    }
+  }
+
   // Emit right after insert — the subscribers (title-gen, queue-rank, preprompt
   // snapshot) need only the row, never the live session — so it fires whether the
   // spawn happens inline (reuse branch) or in the background job (new branch).
@@ -498,11 +523,14 @@ export async function finishConversation(
         p.target.transcriptCopy.content,
       );
     }
-    await Runtime.get(p.runtimeId).create(
-      p.conversationId,
-      p.workspace.path,
-      workspace.launch(p.workspace, { conversationId: p.conversationId }),
-      p.create,
+    // The launch turn rides the launch message, as in the spawn job.
+    await launchWithHeldTurn(p.conversationId, p.create.prompt, (prompt) =>
+      Runtime.get(p.runtimeId).create(
+        p.conversationId,
+        p.workspace.path,
+        workspace.launch(p.workspace, { conversationId: p.conversationId }),
+        { ...p.create, prompt },
+      ),
     );
   } catch (err) {
     // Without this, the row stays at "starting" forever — the status reconciler
