@@ -3,6 +3,7 @@ import {
   MAX_TOTALS_FILTERS,
   RAW_RETENTION_DAYS,
   REPORT_ROWS_PER_DIMENSION,
+  reportRowGroup,
   TOTAL_DIMENSION,
   ZERO_ADDITIVE_METRICS,
   addMetrics,
@@ -207,7 +208,8 @@ const rowKey = (dimension: string, value: string) => `${dimension}\t${value}`;
 
 /**
  * Sum the per-day rows by (dimension, value), attach each one's distinct
- * visitors over the period, and keep each dimension's top rows.
+ * visitors over the period, and keep each dimension's (or `event_prop`
+ * group's) top rows.
  */
 function topRows(
   daily: readonly KeyedRow[],
@@ -248,7 +250,18 @@ function topRows(
         return { value, visitors: rowVisitors, ...metrics };
       })
       .sort(rankRows)
-      .slice(0, REPORT_ROWS_PER_DIMENSION);
+      .filter(keepTop(dimension));
   }
   return rows;
+}
+
+/** Keeps the first {@link REPORT_ROWS_PER_DIMENSION} ranked rows of each `reportRowGroup`. */
+function keepTop(dimension: Dimension): (row: ReportRow) => boolean {
+  const kept = new Map<string, number>();
+  return (row) => {
+    const group = reportRowGroup(dimension, row.value);
+    const n = kept.get(group) ?? 0;
+    kept.set(group, n + 1);
+    return n < REPORT_ROWS_PER_DIMENSION;
+  };
 }

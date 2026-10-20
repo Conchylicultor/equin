@@ -37,6 +37,16 @@ the hourly chart are all built on it. That is why a report read from the daily
 totals equals the same report from raw rows — pinned by the parity test in
 `analytics.db.test.ts`.
 
+## Event props
+
+An event's props are the `event_prop` hit dimension, valued
+`<event>.<key>=<value>` (`core/internal/event-prop.ts`; keys share the event-name
+alphabet so the value splits back). So one event with a prop — which card a
+visitor opened — is ONE row under `event`, broken down under `event_prop`,
+instead of one event name per card. Its report rows are capped per
+(event, key) (`reportRowGroup`), so one busy event never crowds out another's.
+The dashboard's Events panel expands an event into these rows.
+
 ## Report sources
 
 `reportSourceFor(query, now)` (core) decides, and both sides call it:
@@ -127,6 +137,7 @@ totals equals the same report from raw rows — pinned by the parity test in
     - `Dimension`
     - `EngagementBody`
     - `EventBody`
+    - `EventProp`
     - `FilterLevel`
     - `Granularity`
     - `HitDimension`
@@ -177,6 +188,7 @@ totals equals the same report from raw rows — pinned by the parity test in
     - `encodeAnalyticsQuery`
     - `EngagementBodySchema`
     - `EVENT_NAME_PATTERN`
+    - `EVENT_PROP_KEY_PATTERN`
     - `EventBodySchema`
     - `EventPropsSchema`
     - `FilterLevelSchema`
@@ -187,7 +199,6 @@ totals equals the same report from raw rows — pinned by the parity test in
     - `IDENTITY_WINDOW_DAYS`
     - `MAX_COLLECT_BODY_BYTES`
     - `MAX_ENGAGED_MS`
-    - `MAX_EVENT_PROP_KEY_LENGTH`
     - `MAX_EVENT_PROP_VALUE_LENGTH`
     - `MAX_EVENT_PROPS`
     - `MAX_FILTERS`
@@ -204,6 +215,7 @@ totals equals the same report from raw rows — pinned by the parity test in
     - `OsFamilySchema`
     - `PagePathSchema`
     - `PageviewBodySchema`
+    - `parseEventPropValue`
     - `PeriodReportSchema`
     - `planPeriods`
     - `RAW_RETENTION_DAYS`
@@ -211,6 +223,7 @@ totals equals the same report from raw rows — pinned by the parity test in
     - `RECORDED_FIELDS`
     - `REPORT_ROWS_PER_DIMENSION`
     - `REPORT_SOURCES`
+    - `reportRowGroup`
     - `ReportRowSchema`
     - `reportSourceFor`
     - `SeriesPointSchema`
@@ -229,6 +242,7 @@ totals equals the same report from raw rows — pinned by the parity test in
     - `apps/deploy/analytics/dashboard`
     - `apps/website/improve`
     - `apps/website/pages/download`
+    - `apps/website/pages/foundations`
     - `apps/website/shell`
   - Endpoint callers: `host-only`
 - Exemptions:

@@ -1703,6 +1703,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Dimension`
                   - `EngagementBody`
                   - `EventBody`
+                  - `EventProp`
                   - `FilterLevel`
                   - `Granularity`
                   - `HitDimension`
@@ -1753,6 +1754,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `encodeAnalyticsQuery`
                   - `EngagementBodySchema`
                   - `EVENT_NAME_PATTERN`
+                  - `EVENT_PROP_KEY_PATTERN`
                   - `EventBodySchema`
                   - `EventPropsSchema`
                   - `FilterLevelSchema`
@@ -1763,7 +1765,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `IDENTITY_WINDOW_DAYS`
                   - `MAX_COLLECT_BODY_BYTES`
                   - `MAX_ENGAGED_MS`
-                  - `MAX_EVENT_PROP_KEY_LENGTH`
                   - `MAX_EVENT_PROP_VALUE_LENGTH`
                   - `MAX_EVENT_PROPS`
                   - `MAX_FILTERS`
@@ -1780,6 +1781,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `OsFamilySchema`
                   - `PagePathSchema`
                   - `PageviewBodySchema`
+                  - `parseEventPropValue`
                   - `PeriodReportSchema`
                   - `planPeriods`
                   - `RAW_RETENTION_DAYS`
@@ -1787,6 +1789,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `RECORDED_FIELDS`
                   - `REPORT_ROWS_PER_DIMENSION`
                   - `REPORT_SOURCES`
+                  - `reportRowGroup`
                   - `ReportRowSchema`
                   - `reportSourceFor`
                   - `SeriesPointSchema`
@@ -1805,6 +1808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/analytics/dashboard`
                   - `apps/website/improve`
                   - `apps/website/pages/download`
+                  - `apps/website/pages/foundations`
                   - `apps/website/shell`
                 - Endpoint callers: `host-only`
               - Exemptions:
@@ -1817,13 +1821,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`dashboard`** — Analytics section of a deployment's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH: resolves the deployment's server and pinned SSH target, curls the install's host-only report through its own gateway on the loopback port, and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
               - Web:
                 - Contributes: `DeploymentDetail.Section` "Analytics" → `AnalyticsSection`
-                - Uses: 27 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                - Uses: 30 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
                   - `infra/endpoints` ×2
                   - `network/live` ×2
                   - `primitives/css/coords` ×2
                   - `primitives/css/text` ×2
+                  - `primitives/css/ui-kit` ×2
                   - `apps/deploy/deployments.DeploymentDetail`
                   - `plugin-meta/composition.useCompositionIncludes`
+                  - `primitives/collapsible.FoldMotion`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/card.Card`
                   - `primitives/css/cluster.Cluster`
@@ -1832,11 +1838,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/inline.Inline`
                   - `primitives/css/line.Line`
                   - `primitives/css/placeholder.Placeholder`
+                  - `primitives/css/rigid.Rigid`
                   - `primitives/css/row.Row`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/switch.Switch`
                   - `primitives/css/toggle-chip.SegmentedControl`
-                  - `primitives/css/ui-kit.Button`
                   - `primitives/icon-button.IconButton`
                   - `primitives/live-state.ResourceErrorInline`
                   - `primitives/loading.Loading`
@@ -1876,6 +1882,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --popover-foreground`
                   - `ui/tokens/color-palette --primary`
                   - `ui/tokens/color-palette --success`
+                  - `ui/tokens/density --control-height-xs`
                   - `ui/tokens/density --space-sm`
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
@@ -9863,6 +9870,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ThemeEngine.SubTheme` "iceberg sea header"
                   - `ThemeEngine.SubTheme` "iceberg sky header"
                 - Uses:
+                  - `apps/deploy/analytics/collect.track`
                   - `apps/website/shell.WebsiteChrome`
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteNavLink`
@@ -35405,10 +35413,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `conversations` ×12
+          - `apps` ×10
           - `ui` ×10
-          - `apps` ×9
           - `primitives` ×8
           - `plugin-meta` ×4
           - `review` ×3
@@ -36309,8 +36317,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 122 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
-              - `apps` ×28
+            - Imported by: 123 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+              - `apps` ×29
               - `conversations` ×22
               - `primitives` ×17
               - `debug` ×12

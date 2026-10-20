@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DIMENSIONS, DimensionSchema, type Dimension } from "./dimensions";
+import { parseEventPropValue } from "./event-prop";
 import {
   AnalyticsRangeSchema,
   DaySchema,
@@ -89,8 +90,9 @@ export function reportSourceFor(
  * On a report row, counts are restricted to the row's value: for `page`,
  * `pageviews` counts views of that page, `durationMs` sums the time that page
  * was visible (time on page) and `events` counts events fired on it; for
- * `event`, `events` counts that event. `visitors` / `visits` / `bounces` /
- * `returningVisits` always count the visits that have the value.
+ * `event`, `events` counts that event; for `event_prop`, the events that
+ * carried that prop. `visitors` / `visits` / `bounces` / `returningVisits`
+ * always count the visits that have the value.
  */
 export const MetricsSchema = z
   .object({
@@ -127,8 +129,19 @@ export const ReportRowSchema = MetricsSchema.extend({
 }).strict();
 export type ReportRow = z.infer<typeof ReportRowSchema>;
 
-/** Rows kept per dimension, ranked by visitors, then pageviews, then value. */
+/**
+ * Rows kept per dimension, ranked by visitors, then pageviews, then value —
+ * per {@link reportRowGroup}: an `event_prop` keeps this many per (event, key),
+ * so one busy event's props never crowd out another's.
+ */
 export const REPORT_ROWS_PER_DIMENSION = 50;
+
+/** The group a row is ranked and capped within: its event and key for `event_prop`, else the whole dimension. */
+export function reportRowGroup(dimension: Dimension, value: string): string {
+  if (dimension !== "event_prop") return "";
+  const { event, key } = parseEventPropValue(value);
+  return `${event}.${key}`;
+}
 
 const ReportRowsSchema = z.array(ReportRowSchema);
 const rowsShape = Object.fromEntries(

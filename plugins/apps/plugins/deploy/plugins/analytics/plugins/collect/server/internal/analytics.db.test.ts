@@ -36,6 +36,7 @@ import {
 } from "../../core";
 import { CollectBodySchema } from "../../core/internal/collect-body";
 import { DimensionSchema } from "../../core/internal/dimensions";
+import { eventPropValue } from "../../core/internal/event-prop";
 import {
   rawDailyRows,
   dailyTotalsRows,
@@ -428,8 +429,36 @@ describe("report", () => {
       ["improve_open", 1],
       ["improve_show_me", 1],
     ]);
+    expect(report.rows.event_prop).toEqual([]);
     expect(report.current.series).toHaveLength(7);
     expect(report.previous?.series).toHaveLength(7);
+  });
+
+  test("raw: an event's props break down under event_prop, and filter", async () => {
+    const value = eventPropValue("improve_open", "from", "nav");
+    const all = await runAnalyticsQuery(
+      t.db,
+      { range: "30d", compare: false, filters: [] },
+      now,
+    );
+    if (all.kind !== "report") throw new Error("expected a report");
+    expect(all.report.rows.event_prop).toEqual([
+      expect.objectContaining({ value, visitors: 1, visits: 1, events: 1 }),
+    ]);
+    const filtered = await runAnalyticsQuery(
+      t.db,
+      {
+        range: "30d",
+        compare: false,
+        filters: [{ dimension: "event_prop", value }],
+      },
+      now,
+    );
+    if (filtered.kind !== "report") throw new Error("expected a report");
+    expect(filtered.report.current.summary).toMatchObject({
+      visitors: 1,
+      visits: 1,
+    });
   });
 
   test("raw: stacked filters intersect", async () => {

@@ -88,6 +88,7 @@ variables.
     - `ThemeEngine.SubTheme` "iceberg sea header"
     - `ThemeEngine.SubTheme` "iceberg sky header"
   - Uses:
+    - `apps/deploy/analytics/collect.track`
     - `apps/website/shell.WebsiteChrome`
     - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteNavLink`

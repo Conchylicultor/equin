@@ -77,13 +77,15 @@ Run with `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugi
 - Description: Analytics section of a deployment's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH: resolves the deployment's server and pinned SSH target, curls the install's host-only report through its own gateway on the loopback port, and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
 - Web:
   - Contributes: `DeploymentDetail.Section` "Analytics" → `AnalyticsSection`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/endpoints` ×2
     - `network/live` ×2
     - `primitives/css/coords` ×2
     - `primitives/css/text` ×2
+    - `primitives/css/ui-kit` ×2
     - `apps/deploy/deployments.DeploymentDetail`
     - `plugin-meta/composition.useCompositionIncludes`
+    - `primitives/collapsible.FoldMotion`
     - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
     - `primitives/css/cluster.Cluster`
@@ -92,11 +94,11 @@ Run with `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugi
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.Rigid`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/switch.Switch`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/css/ui-kit.Button`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
@@ -136,6 +138,7 @@ Run with `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugi
     - `ui/tokens/color-palette --popover-foreground`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --success`
+    - `ui/tokens/density --control-height-xs`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`

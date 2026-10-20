@@ -41,10 +41,10 @@ export {
   EventBodySchema,
   EventPropsSchema,
   EVENT_NAME_PATTERN,
+  EVENT_PROP_KEY_PATTERN,
   MAX_COLLECT_BODY_BYTES,
   MAX_ENGAGED_MS,
   MAX_EVENT_PROPS,
-  MAX_EVENT_PROP_KEY_LENGTH,
   MAX_EVENT_PROP_VALUE_LENGTH,
   MAX_HOST_LENGTH,
   MAX_PATH_LENGTH,
@@ -56,6 +56,8 @@ export {
   UtmTagsSchema,
   stripQuery,
 } from "./internal/collect-body";
+export { parseEventPropValue } from "./internal/event-prop";
+export type { EventProp } from "./internal/event-prop";
 export type {
   CollectBody,
   CollectResponse,
@@ -100,6 +102,7 @@ export {
   ReportRowSchema,
   SeriesPointSchema,
   encodeAnalyticsQuery,
+  reportRowGroup,
   reportSourceFor,
 } from "./internal/query";
 export type {

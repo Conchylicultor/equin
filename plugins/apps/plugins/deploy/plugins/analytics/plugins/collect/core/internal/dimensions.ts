@@ -7,7 +7,10 @@ import { z } from "zod";
  * - a **visit dimension** has exactly one value per visit (its entry page, its
  *   channel, its browser…), read from one column of `analytics_visits`;
  * - a **hit dimension** can have several values per visit (every page it
- *   viewed, every event it fired), read from `analytics_hits`.
+ *   viewed, every event it fired, every prop those events carried), read from
+ *   `analytics_hits`. `event_prop` values are `<event>.<key>=<value>`
+ *   (`event-prop.ts`): one event name with a prop (which card was opened)
+ *   counts once in `event`, and breaks down here.
  *
  * Every dimension is also a filter: a filter `(dimension, value)` keeps the
  * visits that HAVE that value — for a hit dimension, visits with at least one
@@ -28,7 +31,7 @@ export const VISIT_DIMENSIONS = [
 ] as const;
 export type VisitDimension = (typeof VISIT_DIMENSIONS)[number];
 
-export const HIT_DIMENSIONS = ["page", "event"] as const;
+export const HIT_DIMENSIONS = ["page", "event", "event_prop"] as const;
 export type HitDimension = (typeof HIT_DIMENSIONS)[number];
 
 export const DIMENSIONS = [...HIT_DIMENSIONS, ...VISIT_DIMENSIONS] as const;

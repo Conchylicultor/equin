@@ -1,5 +1,6 @@
 import {
   NONE_VALUE,
+  parseEventPropValue,
   type AnalyticsRange,
   type Dimension,
   type Granularity,
@@ -26,6 +27,11 @@ export function formatDurationMs(ms: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+}
+
+/** An average count: one decimal ("4.2"). */
+export function formatAverage(n: number): string {
+  return n.toFixed(1);
 }
 
 /** An optional rate: a missing denominator reads as a dash, never as zero. */
@@ -82,6 +88,7 @@ export const DIMENSION_LABEL: Record<Dimension, string> = {
   browser: "Browser",
   os: "OS",
   event: "Event",
+  event_prop: "Event",
 };
 
 /*
@@ -121,7 +128,14 @@ function countryLabel(code: string): string {
  */
 const VALUE_LABEL: Partial<Record<Dimension, (value: string) => string>> = {
   country: countryLabel,
+  event_prop: eventPropLabel,
 };
+
+/** "foundations_card_open · card: Agent manager". */
+function eventPropLabel(stored: string): string {
+  const { event, key, value } = parseEventPropValue(stored);
+  return `${event} · ${key}: ${value}`;
+}
 
 export function dimensionValueLabel(
   dimension: Dimension,

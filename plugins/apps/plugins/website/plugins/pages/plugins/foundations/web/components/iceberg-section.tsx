@@ -10,13 +10,16 @@ import {
 import { findScrollParent } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
+import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { CARDS } from "../internal/cards";
 import { LAYERS, type IcebergPiece } from "../internal/iceberg/data";
 import { openWidth, PIECE_FONT } from "../internal/iceberg/geometry";
 import {
   mountIcebergScene,
+  type ExpandAllVia,
   type HeaderOver,
   type IcebergScene,
+  type OpenedPiece,
 } from "../internal/iceberg/scene";
 import { createCardRuntime } from "../internal/kit/runtime";
 import "../internal/kit/kit.css";
@@ -34,6 +37,12 @@ import "./iceberg.css";
  * mounted into open pieces — exactly as the prototype's script owned its page.
  * That is what lets a piece glide from a pill into a card without React ever
  * reconciling a half-animated node.
+ *
+ * Analytics: a piece the visitor opens is ONE event, `foundations_card_open`,
+ * whose `card` / `layer` props say which — the dashboard counts it once and
+ * breaks it down on demand, instead of listing one event per card. Expand all
+ * is `foundations_expand_all` (`via`: button | shortcut), and the pieces it
+ * opens are not counted as card opens.
  */
 export function IcebergSection({
   onHeaderOver,
@@ -56,6 +65,8 @@ export function IcebergSection({
       locs: LAYERS.map((L) => L.loc),
       idPrefix,
       onHeaderOver,
+      onPieceOpen,
+      onExpandAll,
     });
     sceneRef.current = scene;
     return () => {
@@ -78,7 +89,7 @@ export function IcebergSection({
         keys: "e",
         label: "Expand or collapse every piece",
         group: "Foundations",
-        handler: () => sceneRef.current?.toggleAll(),
+        handler: () => sceneRef.current?.toggleAll("shortcut"),
       },
     ],
     [],
@@ -86,6 +97,14 @@ export function IcebergSection({
   useSurfaceShortcuts(shortcuts);
 
   return <IcebergMarkup ref={rootRef} />;
+}
+
+function onPieceOpen({ name, layer }: OpenedPiece) {
+  track("foundations_card_open", { card: name, layer });
+}
+
+function onExpandAll(via: ExpandAllVia) {
+  track("foundations_expand_all", { via });
 }
 
 /** The scene's static markup. Memoised with no props, so React never touches it after mount. */
@@ -135,7 +154,7 @@ const IcebergMarkup = memo(function IcebergMarkup({
             </div>
             <div className="iceberg-pieces">
               {L.pieces.map((p) => (
-                <Piece key={p.name} piece={p} layer={i} />
+                <Piece key={p.name} piece={p} layer={i} layerName={L.name} />
               ))}
             </div>
           </section>
@@ -171,7 +190,15 @@ const IcebergMarkup = memo(function IcebergMarkup({
   );
 });
 
-function Piece({ piece, layer }: { piece: IcebergPiece; layer: number }) {
+function Piece({
+  piece,
+  layer,
+  layerName,
+}: {
+  piece: IcebergPiece;
+  layer: number;
+  layerName: string;
+}) {
   const style = {
     "--i": layer,
     "--fs": `${PIECE_FONT[piece.weight]}px`,
@@ -183,6 +210,8 @@ function Piece({ piece, layer }: { piece: IcebergPiece; layer: number }) {
       className={`iceberg-item${piece.card ? " has-viz" : ""}`}
       data-w={piece.weight}
       data-kind={piece.kind}
+      data-name={piece.name}
+      data-layer={layerName}
       aria-expanded="false"
       style={style}
     >

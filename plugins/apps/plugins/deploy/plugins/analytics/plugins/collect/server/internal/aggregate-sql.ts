@@ -29,7 +29,9 @@ import { analyticsVisits } from "./tables";
  * - one row per visit dimension, `NULL` spelled {@link NONE_VALUE};
  * - `('page', path)` per distinct path the visit hit, contributing that page's
  *   views, visible time and events;
- * - `('event', name)` per distinct event, contributing that event's count.
+ * - `('event', name)` per distinct event, contributing that event's count;
+ * - `('event_prop', '<event>.<key>=<value>')` per distinct prop of its events
+ *   (the spelling of `eventPropValue`), contributing how many events carried it.
  */
 
 // Closed constants, validated, so they can be inlined as literals: a bound
@@ -96,6 +98,14 @@ function visitsAndMemberships(where: SQL): SQL {
       FROM analytics_hits h JOIN base b ON b.id = h.visit_id
       WHERE h.kind = 'event'
       GROUP BY h.visit_id, h.event_name, b.pageviews, b.duration_ms
+      UNION ALL
+      SELECT h.visit_id, ${literal("event_prop")},
+        h.event_name || '.' || p.key || '=' || p.value,
+        b.pageviews::bigint, b.duration_ms, count(*)
+      FROM analytics_hits h JOIN base b ON b.id = h.visit_id
+        CROSS JOIN LATERAL jsonb_each_text(h.event_props) AS p(key, value)
+      WHERE h.kind = 'event'
+      GROUP BY h.visit_id, 3, b.pageviews, b.duration_ms
     )`;
 }
 

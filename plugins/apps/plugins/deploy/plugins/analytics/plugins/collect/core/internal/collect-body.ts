@@ -14,8 +14,12 @@ export const MAX_HOST_LENGTH = 253;
 export const MAX_REFERRER_LENGTH = 2048;
 export const MAX_UTM_LENGTH = 128;
 export const EVENT_NAME_PATTERN = /^[a-z0-9_]{1,64}$/;
+/**
+ * A prop key: the same alphabet as an event name, so an `event_prop` value
+ * (`<event>.<key>=<value>`, see `event-prop.ts`) splits back unambiguously.
+ */
+export const EVENT_PROP_KEY_PATTERN = /^[a-z0-9_]{1,64}$/;
 export const MAX_EVENT_PROPS = 10;
-export const MAX_EVENT_PROP_KEY_LENGTH = 64;
 export const MAX_EVENT_PROP_VALUE_LENGTH = 128;
 /** One pageview's visible time is capped at a day; anything above is a stuck tab. */
 export const MAX_ENGAGED_MS = 24 * 60 * 60 * 1000;
@@ -56,7 +60,7 @@ export const UtmTagsSchema = z
 
 export const EventPropsSchema = z
   .record(
-    z.string().min(1).max(MAX_EVENT_PROP_KEY_LENGTH),
+    z.string().regex(EVENT_PROP_KEY_PATTERN),
     z.string().max(MAX_EVENT_PROP_VALUE_LENGTH),
   )
   .refine((props) => Object.keys(props).length <= MAX_EVENT_PROPS, {

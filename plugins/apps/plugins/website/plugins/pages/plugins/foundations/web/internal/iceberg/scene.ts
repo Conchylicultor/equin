@@ -24,7 +24,7 @@ export interface IcebergScene {
   /** The pane's viewport changed size: refit when the screen changed, else redraw the berg. */
   onResize(): void;
   /** Open every piece, or close every one if all are open. */
-  toggleAll(): void;
+  toggleAll(via: ExpandAllVia): void;
   dispose(): void;
 }
 
@@ -39,6 +39,15 @@ const q = <T extends Element>(root: ParentNode, sel: string): T => {
   return el;
 };
 
+/** What a visitor used to Expand all: the pill, or its `E` shortcut. */
+export type ExpandAllVia = "button" | "shortcut";
+
+/** A piece, as its markup names it (`data-name`, `data-layer`). */
+export interface OpenedPiece {
+  name: string;
+  layer: string;
+}
+
 /** What lies under the pane's pinned header. */
 export type HeaderOver = "sky" | "sea";
 
@@ -48,6 +57,8 @@ export function mountIcebergScene({
   locs,
   idPrefix,
   onHeaderOver,
+  onPieceOpen,
+  onExpandAll,
 }: {
   /** The section's root: the scene, the gauge and the Expand all pill. */
   root: HTMLElement;
@@ -60,6 +71,10 @@ export function mountIcebergScene({
    * waterline passes it, then the sea. Told on mount and whenever it changes.
    */
   onHeaderOver: (over: HeaderOver) => void;
+  /** The visitor opened one piece by clicking it (never told for Expand all). */
+  onPieceOpen: (piece: OpenedPiece) => void;
+  /** The visitor expanded every piece (never told for collapsing them). */
+  onExpandAll: (via: ExpandAllVia) => void;
 }): IcebergScene {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const scene = q<HTMLElement>(root, ".iceberg-scene");
@@ -405,9 +420,16 @@ export function mountIcebergScene({
       opening ? [] : [el],
     );
     syncExpander();
+    if (opening) onPieceOpen(openedPiece(el));
   }
 
   // Expand all unfolds every piece, turning the iceberg into the full reference without leaving it.
+  function toggleAll(via: ExpandAllVia) {
+    const on = !allOpen();
+    expandAll(on);
+    if (on) onExpandAll(via);
+  }
+
   function expandAll(on: boolean) {
     // anchor on the first piece at or below 40% of the screen
     const mid =
@@ -442,7 +464,7 @@ export function mountIcebergScene({
     const target = e.target;
     if (!(target instanceof Element)) return;
     if (target.closest(".iceberg-expander")) {
-      expandAll(!allOpen());
+      toggleAll("button");
       return;
     }
     const f = target.closest<HTMLElement>(".iceberg-split-key button");
@@ -495,7 +517,7 @@ export function mountIcebergScene({
 
   return {
     onResize,
-    toggleAll: () => expandAll(!allOpen()),
+    toggleAll,
     dispose() {
       disposed = true;
       root.removeEventListener("click", onClick);
@@ -503,6 +525,13 @@ export function mountIcebergScene({
       scroller.removeEventListener("scroll", onScroll);
     },
   };
+}
+
+function openedPiece(el: HTMLElement): OpenedPiece {
+  const { name, layer } = el.dataset;
+  if (name === undefined || layer === undefined)
+    throw new Error("iceberg: a piece without data-name / data-layer");
+  return { name, layer };
 }
 
 /** The apps, the first water layer and the one under it — the scene needs all three. */

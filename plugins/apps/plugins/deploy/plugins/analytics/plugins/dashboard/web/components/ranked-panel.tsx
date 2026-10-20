@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import type {
   AnalyticsFilter,
   AnalyticsReport,
   Dimension,
+  ReportRow,
   ReportSource,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
@@ -12,6 +13,11 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
+import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -22,6 +28,10 @@ import { dimensionValueLabel, formatCount } from "../internal/format";
 import type { DataCredit, PanelDef, PanelTab } from "../internal/panels";
 
 const NUMBER_CELL = "w-24 text-right tabular-nums";
+/** How far a breakdown row's label sits in from its parent's. */
+const NESTED_INDENT_PX = 24;
+const chevronRightIcon = symbol("chevron-right");
+const expandMoreIcon = symbol("expand-more");
 
 /**
  * One panel of the dashboard: a titled card whose tabs each rank one
@@ -113,14 +123,23 @@ function RankedList({
   filters: readonly AnalyticsFilter[];
   onFilterRow: (dimension: Dimension, value: string) => void;
 }): ReactNode {
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const rows = report.rows[tab.dimension];
   if (rows.length === 0) {
     return <Placeholder>Nothing recorded in this period.</Placeholder>;
   }
   const max = Math.max(1, ...rows.map((r) => tab.primary.value(r)));
-  return (
+  const toggle = (value: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(value)) next.add(value);
+      return next;
+    });
+  const rowProps = { tab, report, source, filters, onFilterRow };
+  const list = (
     <Stack gap="none">
       <Line className="px-sm">
+        {tab.breakdown && <ExpanderCell />}
         <Fill>
           <Text variant="eyebrow" tone="muted">
             {tab.label}
@@ -129,50 +148,161 @@ function RankedList({
         <Text variant="eyebrow" tone="muted" className={NUMBER_CELL}>
           {tab.primary.label}
         </Text>
-        <Text variant="eyebrow" tone="muted" className={NUMBER_CELL}>
-          {tab.secondary.label}
-        </Text>
+        {tab.columns.map((c) => (
+          <Text
+            key={c.label}
+            variant="eyebrow"
+            tone="muted"
+            className={NUMBER_CELL}
+          >
+            {c.label}
+          </Text>
+        ))}
       </Line>
-      {/* eslint-disable-next-line data-view/no-adhoc-row-list -- a ranked top-N readout of one fetched report (not live records): each row is a filter toggle, the order is the server's ranking, and search/sort/group would contradict it */}
       {rows.map((row) => {
-        const selected = isFilterOn(filters, tab.dimension, row.value);
-        const click = clickRow(filters, source, tab.dimension, row.value);
+        const groups = tab.breakdown?.(row, report) ?? [];
+        const open = expanded.has(row.value);
         const label = dimensionValueLabel(tab.dimension, row.value);
         return (
-          <Row
-            key={row.value}
-            selected={selected}
-            disabled={click.kind === "blocked"}
-            title={
-              click.kind === "blocked"
-                ? click.reason
-                : selected
-                  ? "Remove this filter"
-                  : `Filter by ${label}`
-            }
-            onClick={() => onFilterRow(tab.dimension, row.value)}
-            className="relative"
-          >
-            <Placed
-              as="span"
-              decorative
-              x={{ start: 0, size: pct(tab.primary.value(row) / max) }}
-              y="fill"
-              className="rounded-md bg-primary/10"
-            />
-            {/* `relative`: positioned after the bar, so the text paints over it. */}
-            <Fill className="relative">
-              <Text>{label}</Text>
-            </Fill>
-            <Text className={`relative ${NUMBER_CELL}`}>
-              {formatCount(tab.primary.value(row))}
-            </Text>
-            <Text tone="muted" className={`relative ${NUMBER_CELL}`}>
-              {tab.secondary.cell(row, report)}
-            </Text>
-          </Row>
+          <Fragment key={row.value}>
+            <Line>
+              {tab.breakdown && (
+                <ExpanderCell>
+                  {groups.length > 0 && (
+                    <IconButton
+                      icon={open ? expandMoreIcon : chevronRightIcon}
+                      label={`${open ? "Collapse" : "Expand"} ${label}`}
+                      aria-expanded={open}
+                      onClick={() => toggle(row.value)}
+                    />
+                  )}
+                </ExpanderCell>
+              )}
+              <Fill>
+                <RankedRow
+                  {...rowProps}
+                  dimension={tab.dimension}
+                  row={row}
+                  label={label}
+                  share={tab.primary.value(row) / max}
+                />
+              </Fill>
+            </Line>
+            <FoldMotion open={open}>
+              {groups.map((group) => (
+                <Fragment key={group.label}>
+                  <Line className="px-sm">
+                    <ExpanderCell />
+                    <Text
+                      variant="eyebrow"
+                      tone="muted"
+                      style={{ paddingLeft: NESTED_INDENT_PX }}
+                    >
+                      {group.label}
+                    </Text>
+                  </Line>
+                  {group.rows.map((sub) => (
+                    <Line key={sub.value}>
+                      <ExpanderCell />
+                      <Fill>
+                        <RankedRow
+                          {...rowProps}
+                          dimension={group.dimension}
+                          row={sub}
+                          label={group.rowLabel(sub.value)}
+                          // relative to the parent: the share of its count this value holds
+                          share={
+                            tab.primary.value(sub) /
+                            Math.max(1, tab.primary.value(row))
+                          }
+                          nested
+                        />
+                      </Fill>
+                    </Line>
+                  ))}
+                </Fragment>
+              ))}
+            </FoldMotion>
+          </Fragment>
         );
       })}
     </Stack>
+  );
+  // An expander is an xs icon button; its column is that box wide on every line.
+  return tab.breakdown ? (
+    <ControlSizeProvider size="xs">{list}</ControlSizeProvider>
+  ) : (
+    list
+  );
+}
+
+/** The leading column of a list whose rows expand: the expander, or the empty box that keeps the rows aligned. */
+function ExpanderCell({ children }: { children?: ReactNode }): ReactNode {
+  return <Rigid className="control-icon-xs">{children}</Rigid>;
+}
+
+/** One ranked row: a filter toggle for its (dimension, value), its bar, and its numbers. */
+function RankedRow({
+  tab,
+  report,
+  source,
+  filters,
+  onFilterRow,
+  dimension,
+  row,
+  label,
+  share,
+  nested,
+}: {
+  tab: PanelTab;
+  report: AnalyticsReport;
+  source: ReportSource;
+  filters: readonly AnalyticsFilter[];
+  onFilterRow: (dimension: Dimension, value: string) => void;
+  dimension: Dimension;
+  row: ReportRow;
+  label: string;
+  /** The bar's length, 0–1. */
+  share: number;
+  /** A breakdown row, indented under its parent. */
+  nested?: true;
+}): ReactNode {
+  const selected = isFilterOn(filters, dimension, row.value);
+  const click = clickRow(filters, source, dimension, row.value);
+  return (
+    <Row
+      selected={selected}
+      disabled={click.kind === "blocked"}
+      title={
+        click.kind === "blocked"
+          ? click.reason
+          : selected
+            ? "Remove this filter"
+            : `Filter by ${label}`
+      }
+      onClick={() => onFilterRow(dimension, row.value)}
+      indent={nested ? NESTED_INDENT_PX : undefined}
+      className="relative"
+    >
+      <Placed
+        as="span"
+        decorative
+        x={{ start: 0, size: pct(share) }}
+        y="fill"
+        className="rounded-md bg-primary/10"
+      />
+      {/* `relative`: positioned after the bar, so the text paints over it. */}
+      <Fill className="relative">
+        <Text>{label}</Text>
+      </Fill>
+      <Text className={`relative ${NUMBER_CELL}`}>
+        {formatCount(tab.primary.value(row))}
+      </Text>
+      {tab.columns.map((c) => (
+        <Text key={c.label} tone="muted" className={`relative ${NUMBER_CELL}`}>
+          {c.cell(row, report)}
+        </Text>
+      ))}
+    </Row>
   );
 }
