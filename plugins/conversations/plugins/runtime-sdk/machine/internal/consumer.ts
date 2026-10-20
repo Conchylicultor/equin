@@ -146,13 +146,24 @@ async function catchUp(id: string): Promise<void> {
   const path = agentEventsPath(id);
   const read = readAgentEvents(path, positions.get(id) ?? null);
   const { worktreePath: _path, ...projection } = row;
-  const { state, effects, gaps } = reduceEvents(projection, read.events);
+  const { state, effects, gaps, malformed } = reduceEvents(
+    projection,
+    read.events,
+  );
   for (const gap of gaps) {
     await recordReport({
       kind: "crash",
       source: "server-caught",
       message: `SDK agent ${id}: events ${gap.from}–${gap.to} were rotated out of ${path} before this backend read them; the conversation's status may have missed them`,
       data: { errorType: "SdkEventGap", label: "runtime-sdk.events" },
+    });
+  }
+  for (const bad of malformed) {
+    await recordReport({
+      kind: "crash",
+      source: "server-caught",
+      message: `SDK agent ${id}: event ${bad.seq} (system/${bad.subtype}) in ${path} did not parse, so it was skipped; the conversation's status may be wrong until a later event corrects it — ${bad.issue}`,
+      data: { errorType: "SdkMalformedEvent", label: "runtime-sdk.events" },
     });
   }
   // Side effects first, then the cursor: a crash in between replays the lines,

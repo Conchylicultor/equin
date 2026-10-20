@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { AgentEvent, OpenRequest } from "../../core";
 
 // Event lines → the conversation's projection, plus the side effects the
@@ -81,19 +82,45 @@ export interface SeqGap {
   to: number;
 }
 
+/**
+ * A line of a kind the projection reads (a `system` subtype below) whose shape
+ * did not parse: applied as nothing — the cursor still moves past it, so one
+ * bad line never stalls the stream — and reported by the consumer.
+ */
+export interface MalformedEvent {
+  seq: number;
+  subtype: string;
+  issue: string;
+}
+
 export interface ReduceResult {
   state: AgentProjection;
   effects: AgentEffect[];
   gaps: SeqGap[];
+  malformed: MalformedEvent[];
+}
+
+/**
+ * The `system` subtypes the projection reads, each with the shape it reads.
+ * A subtype not listed here is not the projection's business; a listed one
+ * that fails its schema is a {@link MalformedEvent}, never silently skipped.
+ */
+const SYSTEM_SCHEMAS = {
+  init: z.object({ session_id: z.string() }),
+  background_tasks_changed: z.object({ tasks: z.array(z.unknown()) }),
+};
+
+function isReadSubtype(
+  subtype: unknown,
+): subtype is keyof typeof SYSTEM_SCHEMAS {
+  return typeof subtype === "string" && Object.hasOwn(SYSTEM_SCHEMAS, subtype);
 }
 
 interface SdkLike {
   type?: unknown;
   subtype?: unknown;
-  session_id?: unknown;
   uuid?: unknown;
   parent_tool_use_id?: unknown;
-  tasks?: unknown;
   message?: { content?: unknown };
 }
 
@@ -122,6 +149,7 @@ export function reduceEvents(
   const s = { ...state };
   const effects: AgentEffect[] = [];
   const gaps: SeqGap[] = [];
+  const malformed: MalformedEvent[] = [];
   for (const e of events) {
     if (e.seq <= s.cursorSeq) continue;
     if (e.seq > s.cursorSeq + 1) {
@@ -194,23 +222,42 @@ export function reduceEvents(
         break;
       case "sdk": {
         const msg = (e.payload ?? {}) as SdkLike;
-        if (
-          msg.type === "system" &&
-          msg.subtype === "init" &&
-          typeof msg.session_id === "string"
-        ) {
-          s.sessionId = msg.session_id;
-          if (!s.working) {
-            s.working = true;
-            s.statusAt = at;
+        if (msg.type === "system" && isReadSubtype(msg.subtype)) {
+          const subtype = msg.subtype;
+          switch (subtype) {
+            case "init": {
+              const parsed = SYSTEM_SCHEMAS.init.safeParse(msg);
+              if (!parsed.success) {
+                malformed.push({
+                  seq: e.seq,
+                  subtype,
+                  issue: parsed.error.message,
+                });
+                break;
+              }
+              s.sessionId = parsed.data.session_id;
+              if (!s.working) {
+                s.working = true;
+                s.statusAt = at;
+              }
+              break;
+            }
+            case "background_tasks_changed": {
+              const parsed =
+                SYSTEM_SCHEMAS.background_tasks_changed.safeParse(msg);
+              if (!parsed.success) {
+                malformed.push({
+                  seq: e.seq,
+                  subtype,
+                  issue: parsed.error.message,
+                });
+                break;
+              }
+              s.backgroundTasks = parsed.data.tasks.length;
+              s.statusAt = at;
+              break;
+            }
           }
-        } else if (
-          msg.type === "system" &&
-          msg.subtype === "background_tasks_changed" &&
-          Array.isArray(msg.tasks)
-        ) {
-          s.backgroundTasks = msg.tasks.length;
-          s.statusAt = at;
         } else if (
           msg.type === "assistant" &&
           msg.parent_tool_use_id == null &&
@@ -234,5 +281,5 @@ export function reduceEvents(
       }
     }
   }
-  return { state: s, effects, gaps };
+  return { state: s, effects, gaps, malformed };
 }

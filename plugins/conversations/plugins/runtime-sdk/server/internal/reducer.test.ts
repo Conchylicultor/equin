@@ -219,4 +219,27 @@ describe("reduceEvents", () => {
     const ended = reduceEvents(state, [result(9)]);
     expect(ended.state.working).toBe(false);
   });
+
+  test("a read system event that does not parse is reported, skipped, and does not stall the stream", () => {
+    const { state, malformed } = reduceEvents(EMPTY_PROJECTION, [
+      ...stream.slice(0, 3),
+      sdk(4, {
+        type: "system",
+        subtype: "background_tasks_changed",
+        tasks: "oops",
+      }),
+      sdk(5, { type: "system", subtype: "init", session_id: 7 }),
+      result(6),
+    ]);
+    expect(malformed.map((m) => [m.seq, m.subtype])).toEqual([
+      [4, "background_tasks_changed"],
+      [5, "init"],
+    ]);
+    expect(state).toMatchObject({
+      cursorSeq: 6,
+      sessionId: "sid-1",
+      backgroundTasks: 0,
+      working: false,
+    });
+  });
 });
