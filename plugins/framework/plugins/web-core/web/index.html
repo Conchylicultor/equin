@@ -8,19 +8,11 @@
          configured `.dark` class) in at the end of the head — see
          shell/document-head and theme-engine/server — so nothing here reads
          browser storage. This only covers a shell served without that
-         fragment (a backend that has never booted): it picks the scheme from
-         the OS so the neutral loading floor (app.css: html { background:
-         Canvas }) paints in the right shade until ThemeInjector mounts. -->
+         fragment (a backend that has never booted): it paints the neutral
+         loading floor (app.css: html { background: Canvas }) dark — the
+         configured color mode's default — until ThemeInjector mounts. -->
     <script>
-      (function () {
-        try {
-          if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-            document.documentElement.classList.add("dark");
-          }
-        } catch (e) {
-          /* matchMedia unavailable → default light floor */
-        }
-      })();
+      document.documentElement.classList.add("dark");
     </script>
     <!-- React commit bridge. Generic, passive — NO profiler logic here.
          React's renderer reads `window.__REACT_DEVTOOLS_GLOBAL_HOOK__` exactly

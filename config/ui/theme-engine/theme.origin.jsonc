@@ -1,6 +1,6 @@
-// @hash 229102bb7c88
+// @hash 81ba03048557
 {
   "theme": "default",
   // Allowed values: "light", "dark", "system"
-  "colorMode": "system"
+  "colorMode": "dark"
 }

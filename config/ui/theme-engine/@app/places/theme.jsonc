@@ -1,4 +1,4 @@
-// @hash 229102bb7c88
+// @hash 81ba03048557
 {
   // Places paints its own theme, `places`, contributed by the Places shell
   // (`plugins/apps/plugins/places/plugins/shell/web/internal/theme.ts`) — never

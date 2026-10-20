@@ -1,4 +1,4 @@
-// @hash 229102bb7c88
+// @hash 81ba03048557
 {
   // The agent manager paints its own designed theme, `mist`, contributed by the
   // agent-manager shell (`plugins/apps/plugins/agent-manager/plugins/shell/web/internal/theme.ts`)

@@ -18,8 +18,10 @@ export const themeSelectionConfig = defineConfig({
   scope: "app",
   fields: {
     theme: dynamicEnumField({ default: DEFAULT_THEME_ID, label: "Theme" }),
+    // Dark by default, whatever the OS prefers: every app is designed dark
+    // first. Light (or following the OS) stays an explicit choice.
     colorMode: enumField({
-      default: "system",
+      default: "dark",
       options: ["light", "dark", "system"],
       label: "Color mode",
     }),
