@@ -15,7 +15,7 @@
  */
 
 import { test, expect } from "bun:test";
-import { isCandidatePath, isImperativeReadHandle } from "./index";
+import { isCandidatePath, strayPgTableCalls } from "./index";
 
 // Sample paths use the real `improve` plugin so the `plugin-refs-resolve` check
 // (which validates every `plugins/...` string literal repo-wide) stays happy —
@@ -60,18 +60,68 @@ const names = new Set([
 ]);
 
 test("a pgTable read handle on an imperative name constant is exempt", () => {
-  expect(
-    isImperativeReadHandle(
-      "export const _task_latest_conversation = pgTable(TASK_LATEST_CONVERSATION_TABLE, {",
-      names,
-    ),
-  ).toBe(true);
+  const src = [
+    "export const _t = pgTable(TASK_LATEST_CONVERSATION_TABLE, {",
+    '  id: text("id"),',
+    "});",
+  ].join("\n");
+  expect(strayPgTableCalls(src, names)).toEqual([]);
+});
+
+test("a read handle the formatter wrapped (name on its own line) is exempt", () => {
+  const src = [
+    "export const _task_latest_conversation = pgTable(",
+    "  TASK_LATEST_CONVERSATION_TABLE,",
+    "  {",
+    '    taskId: text("task_id").primaryKey(),',
+    "  },",
+    ");",
+  ].join("\n");
+  expect(strayPgTableCalls(src, names)).toEqual([]);
+});
+
+test("a comment before the name, or a generic call, does not defeat the exemption", () => {
+  const src = [
+    "const a = pgTable(/* rollup */ TASK_LATEST_CONVERSATION_TABLE, {});",
+    "const b = pgTable<Cols>(",
+    "  // the ledger",
+    "  MIGRATIONS_TABLE_NAME,",
+    "  {},",
+    ");",
+  ].join("\n");
+  expect(strayPgTableCalls(src, names)).toEqual([]);
 });
 
 test("a pgTable on a non-imperative identifier is NOT exempt", () => {
-  expect(isImperativeReadHandle("export const x = pgTable(SOME_OTHER_TABLE, {", names)).toBe(false);
+  const src = [
+    'import { pgTable } from "drizzle-orm/pg-core";',
+    "export const x = pgTable(SOME_OTHER_TABLE, {});",
+  ].join("\n");
+  expect(strayPgTableCalls(src, names)).toEqual([
+    { line: 2, text: "export const x = pgTable(SOME_OTHER_TABLE, {});" },
+  ]);
 });
 
-test("a pgTable with a string-literal name is NOT exempt", () => {
-  expect(isImperativeReadHandle('export const x = pgTable("agents", {', names)).toBe(false);
+test("a pgTable with a string-literal name is NOT exempt, wrapped or not", () => {
+  const src = [
+    'export const x = pgTable("agents", {});',
+    "export const y = pgTable(",
+    '  "tasks",',
+    "  {},",
+    ");",
+  ].join("\n");
+  expect(strayPgTableCalls(src, names).map((c) => c.line)).toEqual([1, 2]);
+});
+
+test("an imperative constant that is not the whole first argument is NOT exempt", () => {
+  const src =
+    "export const x = pgTable(prefix + TASK_LATEST_CONVERSATION_TABLE, {});";
+  expect(strayPgTableCalls(src, names)).toHaveLength(1);
+});
+
+test("pgTable inside a comment or a string is not a call", () => {
+  const src = ['// pgTable("x", {})', "const s = 'pgTable(\"y\", {})';"].join(
+    "\n",
+  );
+  expect(strayPgTableCalls(src, names)).toEqual([]);
 });

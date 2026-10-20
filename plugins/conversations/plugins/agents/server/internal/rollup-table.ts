@@ -17,13 +17,13 @@ import { ConversationStatusSchema } from "@plugins/tasks/plugins/tasks-core/core
 // `status` is decoded by `ConversationStatusSchema` (C27): the DDL stays plain
 // `text` (the rollup copies `conversations.status`, itself a decoded text
 // column), and a reader gets the union, never a string to cast.
-//
-// The call stays on one line with its name constant: the
-// `table-defs-in-schema-glob` check reads that line to exempt the handle.
-export const _latest_conversation = pgTable(TASK_LATEST_CONVERSATION_TABLE, {
-  taskId: text("task_id").primaryKey(),
-  conversationId: text("conversation_id").notNull(),
-  title: text("title"),
-  status: parsedText("status", ConversationStatusSchema).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-});
+export const _task_latest_conversation = pgTable(
+  TASK_LATEST_CONVERSATION_TABLE,
+  {
+    taskId: text("task_id").primaryKey(),
+    conversationId: text("conversation_id").notNull(),
+    title: text("title"),
+    status: parsedText("status", ConversationStatusSchema).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+);

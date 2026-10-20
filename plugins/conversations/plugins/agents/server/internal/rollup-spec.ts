@@ -3,7 +3,7 @@ import {
   _attempts,
   _conversations,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { _latest_conversation } from "./rollup-table";
+import { _task_latest_conversation } from "./rollup-table";
 
 // Trigger-maintained materialized rollup: the latest NON-system conversation per
 // task. Source of truth = `listConversationsForDisplay` (kind <> 'system',
@@ -31,8 +31,8 @@ import { _latest_conversation } from "./rollup-table";
 //
 // The `c.id DESC` tie-break makes equal-`created_at` ties deterministic.
 export const taskLatestConversation = defineRollup({
-  table: _latest_conversation,
-  key: _latest_conversation.taskId,
+  table: _task_latest_conversation,
+  key: _task_latest_conversation.taskId,
   select: (scope) => `
     SELECT DISTINCT ON (a.task_id)
            a.task_id, c.id AS conversation_id, c.title, c.status, c.created_at

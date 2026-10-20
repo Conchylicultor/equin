@@ -33,6 +33,12 @@ through the schema glob. To add an imperative-table read handle: add its name
 constant to the `IMPERATIVE_PUBLIC_TABLES` record, create the table imperatively,
 and pass that constant to `pgTable(...)` in a non-glob file.
 
+The name argument is read from the call's own argument span
+(`strayPgTableCalls`: `markerCallSpans` over the fully masked file), never from
+the line the call starts on — so the formatter wrapping
+`pgTable(\n  MY_TABLE,\n  {…})`, a comment before the name, or the generic
+`pgTable<…>(` form all exempt the handle like the one-line spelling.
+
 The identifiers come from **`IMPERATIVE_PUBLIC_TABLE_CONSTS`**
 (`@plugins/database/plugins/derived-views/core`) — the keys of the same
 single-source allowlist record the `orphaned-db-tables` check reads the values of.

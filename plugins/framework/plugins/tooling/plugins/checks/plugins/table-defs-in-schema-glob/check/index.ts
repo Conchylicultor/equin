@@ -1,5 +1,13 @@
 import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
-import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import {
+  grepCode,
+  listCandidateSources,
+} from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import {
+  lineAt,
+  markerCallSpans,
+  maskSource,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
 import { IMPERATIVE_PUBLIC_TABLE_CONSTS } from "@plugins/database/plugins/derived-views/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
@@ -58,18 +66,41 @@ const FACTORY_DEFINITION_FILES = new Set(
 // no parse any more.
 const IMPERATIVE_NAME_CONSTS = new Set(IMPERATIVE_PUBLIC_TABLE_CONSTS);
 
+/** One `pgTable(...)` call that is not a sanctioned imperative-table read handle. */
+export interface StrayPgTableCall {
+  /** 1-based line of the `pgTable` identifier. */
+  line: number;
+  /** The ORIGINAL (unmasked) text of that line, trailing-trimmed. */
+  text: string;
+}
+
 /**
- * True when a `pgTable(...)` match line is a sanctioned imperative-table read
- * handle: its first argument is one of the allowlist's name constants. Matches
- * `pgTable(<IDENT>` (a bare identifier — string-literal names are never
- * imperative-table handles, those go through the schema glob).
+ * Every real `pgTable(...)` call in `src` (comments, strings and regex literals
+ * masked; the generic `pgTable<…>(` form included) that is NOT a sanctioned
+ * imperative-table read handle — one whose first argument is a bare identifier
+ * naming one of the allowlist's name constants. String-literal names are never
+ * exempt: those go through the schema glob.
+ *
+ * The first argument is read from the call's own argument span, not from the
+ * line the call starts on, so formatting is irrelevant: prettier wrapping
+ * `pgTable(\n  MY_TABLE,\n  {…})` (or a comment before the name) exempts the
+ * handle exactly like the one-line form.
  */
-export function isImperativeReadHandle(
-  lineText: string,
+export function strayPgTableCalls(
+  src: string,
   imperativeNameConsts: Set<string>,
-): boolean {
-  const m = lineText.match(/pgTable\(\s*([A-Za-z_$][A-Za-z0-9_$]*)/);
-  return m !== null && imperativeNameConsts.has(m[1]!);
+): StrayPgTableCall[] {
+  const masked = maskSource(src);
+  const lines = src.split("\n");
+  const out: StrayPgTableCall[] = [];
+  for (const span of markerCallSpans(masked, "pgTable")) {
+    const args = masked.slice(span.open + 1, span.close);
+    const name = args.match(/^\s*([A-Za-z_$][A-Za-z0-9_$]*)\s*(?:,|$)/);
+    if (name && imperativeNameConsts.has(name[1]!)) continue;
+    const line = lineAt(src, span.identifier);
+    out.push({ line, text: (lines[line - 1] ?? "").replace(/\s+$/, "") });
+  }
+  return out;
 }
 
 /**
@@ -97,19 +128,23 @@ const check: Check = {
     const offenders = new Map<string, string>(); // key `path:line` → formatted line
 
     // 2. Rule 1 — a stray `pgTable(` in a candidate file that isn't a factory
-    // body and isn't a sanctioned imperative-table read handle.
-    const pgTableMatches = await grepCode({
+    // body and isn't a sanctioned imperative-table read handle. Scanned per
+    // file, not per line: the exemption reads the call's first argument, which
+    // the formatter may wrap onto a later line.
+    const pgTableSources = await listCandidateSources({
       root,
-      pattern: /pgTable\(/,
-      grepArg: "pgTable(",
+      grepArg: "pgTable",
       fixed: true,
-      maskStrings: true,
     });
-    for (const m of pgTableMatches) {
-      if (!isCandidatePath(m.path, globFiles)) continue;
-      if (FACTORY_DEFINITION_FILES.has(m.path)) continue;
-      if (isImperativeReadHandle(m.text, IMPERATIVE_NAME_CONSTS)) continue;
-      offenders.set(`${m.path}:${m.line}`, `${m.path}:${m.line}:${m.text}`);
+    for (const { rel, src } of pgTableSources) {
+      if (!isCandidatePath(rel, globFiles)) continue;
+      if (FACTORY_DEFINITION_FILES.has(rel)) continue;
+      for (const call of strayPgTableCalls(src, IMPERATIVE_NAME_CONSTS)) {
+        offenders.set(
+          `${rel}:${call.line}`,
+          `${rel}:${call.line}:${call.text}`,
+        );
+      }
     }
 
     // 3. Rule 2 — a stray factory call in a candidate file. Factory body files
