@@ -49,6 +49,7 @@ export async function seed(): Promise<void> {
       attemptId,
       title: story.title,
       status: story.status,
+      workingOn: story.status === "working" ? "turn" : null,
       model: story.model,
       createdAt: ago(story.startedAgo),
       updatedAt: ago(story.updatedAgo),
