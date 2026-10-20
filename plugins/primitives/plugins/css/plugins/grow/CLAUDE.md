@@ -65,6 +65,7 @@ needs an axis, because `min-width: 0` and `min-height: 0` are two properties.
     - `debug/timeline`
     - `primitives/css/fill`
     - `primitives/data-view/view-core`
+    - `primitives/markdown`
 - Web:
   - Exports (values): `growClass`
 

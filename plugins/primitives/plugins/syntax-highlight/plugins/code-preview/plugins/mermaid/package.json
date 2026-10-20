@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-primitives-syntax-highlight-code-preview-mermaid",
+  "description": "Mermaid as a code preview: a mermaid fence drawn as its diagram, themed from the surrounding theme tokens.",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "mermaid": "^12.2.0"
+  }
+}

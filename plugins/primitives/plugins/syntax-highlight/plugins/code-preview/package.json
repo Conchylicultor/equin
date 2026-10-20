@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-syntax-highlight-code-preview",
+  "description": "Registry of code previews keyed by fence language: a CodePreview.Renderer contribution draws a language's source as what it describes (a mermaid fence as its diagram). Markdown fences and the page code block read it through useCodePreviewRenderer.",
+  "private": true,
+  "version": "0.0.1"
+}

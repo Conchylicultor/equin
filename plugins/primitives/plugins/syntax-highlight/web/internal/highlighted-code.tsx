@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { themeForMode } from "./highlighter";
@@ -8,10 +9,16 @@ import { useHighlightedHtml } from "./use-highlighted-html";
 export function HighlightedCode({
   code,
   lang,
+  flush,
   className,
 }: {
   code: string;
   lang?: string | null;
+  /**
+   * Sits flush inside a frame of its own (a fence's header above it) rather than
+   * as a free block in prose: no vertical rhythm margin around it.
+   */
+  flush?: boolean;
   className?: string;
 }) {
   const dark = useDarkMode();
@@ -39,7 +46,11 @@ export function HighlightedCode({
           as="pre"
           axis="both"
           // eslint-disable-next-line spacing/no-adhoc-spacing -- my-2 sets code-block vertical rhythm against surrounding content; one-off, no parent flex to own it
-          className={`my-2 rounded-md bg-muted p-md font-mono text-caption ${className ?? ""}`}
+          className={cn(
+            !flush && "my-2",
+            "rounded-md bg-muted p-md font-mono text-caption",
+            className,
+          )}
         >
           <code>{code}</code>
         </Scroll>
@@ -51,7 +62,7 @@ export function HighlightedCode({
     <ContentScope>
       <div
         // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout, radius/no-adhoc-radius -- my-2 sets code-block vertical rhythm (one-off, no parent flex to own it); every `[&>pre]:` class in `wrapper` styles shiki's injected <pre>, which this component never holds, so no primitive can wrap it
-        className={`my-2 ${wrapper} ${className ?? ""}`}
+        className={cn(!flush && "my-2", wrapper, className)}
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </ContentScope>

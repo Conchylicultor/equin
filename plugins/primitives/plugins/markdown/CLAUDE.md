@@ -35,10 +35,17 @@ Design rationale lives in:
     - `MarkdownEnhancerSlot` ← `active-data`
     - `MarkdownEnhancerSlot` ← `conversations.conversation-view.markdown-extensions`
   - Uses:
+    - `primitives/copy-to-clipboard.CopyButton`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/grow.growClass`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/syntax-highlight.HighlightedCode`
+    - `primitives/syntax-highlight/code-preview.useCodePreviewRenderer`
+    - `primitives/view-switcher.ViewSwitcher`
   - Exports (types):
     - `MarkdownEnhancement`
     - `RemarkPlugins`

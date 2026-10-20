@@ -4,12 +4,19 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const codeIcon = symbol("code");
 
+export const CODE_BLOCK_VIEWS = ["code", "preview", "split"] as const;
+export type CodeBlockView = (typeof CODE_BLOCK_VIEWS)[number];
+
 export const codeBlock = defineBlock({
   type: "code-block",
   schema: z.object({
     code: z.string().default(""),
     // A shiki language id (see SHIKI_LANGS); undefined renders as plain text.
     language: z.string().optional(),
+    // How a language with a code preview (a mermaid diagram) shows: its source,
+    // its preview, or both. Display state only — not part of the markdown fence.
+    // undefined ⇒ split. Ignored for a language with no preview.
+    view: z.enum(CODE_BLOCK_VIEWS).optional(),
   }),
   label: "Code",
   icon: codeIcon,

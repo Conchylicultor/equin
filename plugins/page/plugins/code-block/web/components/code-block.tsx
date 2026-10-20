@@ -38,13 +38,34 @@ import {
   useBlockPlainText,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
-import { codeBlock } from "../../core";
+import { codeBlock, type CodeBlockView } from "../../core";
 import { detectLanguage } from "../detect-language";
 import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import {
+  useCodePreviewLangs,
+  useCodePreviewRenderer,
+} from "@plugins/primitives/plugins/syntax-highlight/plugins/code-preview/web";
+import { ViewSwitcher } from "@plugins/primitives/plugins/view-switcher/web";
 
 const autoAwesomeIcon = symbol("auto-awesome");
+
+const VIEW_OPTIONS: ReadonlyArray<{
+  id: CodeBlockView;
+  title: string;
+  icon: IconRef;
+}> = [
+  { id: "code", title: "Code", icon: symbol("code") },
+  { id: "preview", title: "Preview", icon: symbol("visibility") },
+  { id: "split", title: "Split", icon: symbol("splitscreen") },
+];
+
+function viewOf(id: string): CodeBlockView {
+  const option = VIEW_OPTIONS.find((o) => o.id === id);
+  if (!option) throw new Error(`code-block: unknown view "${id}"`);
+  return option.id;
+}
 
 // Tri-state language model, all stored in the single optional `language` field:
 //   undefined  → AUTO: detect the language from the content and highlight it
@@ -96,6 +117,10 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   // debounced) code save closure pointed at the latest value.
   const [language, setLanguage] = useState<string | undefined>(parsed.language);
   const languageRef = useLatestRef(language);
+  // Code / Preview / Split, for a language with a code preview (a mermaid
+  // diagram). Persisted alongside the language, the same way.
+  const [view, setView] = useState<CodeBlockView | undefined>(parsed.view);
+  const viewRef = useLatestRef(view);
 
   // The block's own plain-text surface. `useBlockPlainText` owns the draft, the
   // SYNCHRONOUS undo entry per keystroke, the debounced row write, the void-caret
@@ -106,7 +131,11 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
     isFocused,
     editor,
     value: parsed.code,
-    rowData: (code) => ({ code, language: languageRef.current }),
+    rowData: (code) => ({
+      code,
+      language: languageRef.current,
+      view: viewRef.current,
+    }),
     label: "code",
     onKeyDown: (e, ctl) => {
       if (e.key !== "Tab") return;
@@ -139,16 +168,35 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
     // AUTO maps back to undefined; "text" (PLAIN) and concrete langs persist as-is.
     const lang = !value || value === AUTO ? undefined : value;
     setLanguage(lang);
-    editor.update({ code, language: lang });
+    editor.update({ code, language: lang, view });
   }
+
+  function onViewChange(next: CodeBlockView) {
+    setView(next);
+    editor.update({ code, language, view: next });
+  }
+
+  // Only an explicitly chosen language previews — never an auto-detected guess.
+  const preview = useCodePreviewRenderer(language);
+  const shown: CodeBlockView = preview ? (view ?? "split") : "code";
+  const previewLangs = useCodePreviewLangs();
+  const pickerLangs = useMemo(
+    () => [
+      ...SHIKI_LANGS,
+      ...previewLangs
+        .map((p) => p.lang)
+        .filter((l) => !SHIKI_LANGS.includes(l)),
+    ],
+    [previewLangs],
+  );
 
   const langItems = useMemo<Record<string, string>>(
     () => ({
       [AUTO]: "Auto",
       [PLAIN]: "Plain text",
-      ...Object.fromEntries(SHIKI_LANGS.map((l) => [l, l])),
+      ...Object.fromEntries(pickerLangs.map((l) => [l, l])),
     }),
-    [],
+    [pickerLangs],
   );
 
   return (
@@ -165,6 +213,14 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
             className={hoverRevealTarget}
           >
             <ControlSizeProvider size="xs">
+              {preview ? (
+                <ViewSwitcher
+                  options={VIEW_OPTIONS}
+                  activeId={shown}
+                  onSelect={(id) => onViewChange(viewOf(id))}
+                  className="bg-background/80 backdrop-blur"
+                />
+              ) : null}
               <Select
                 items={langItems}
                 value={language ?? AUTO}
@@ -209,7 +265,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
                   </SelectItem>
                   <SelectItem value={PLAIN}>Plain text</SelectItem>
                   <SelectSeparator />
-                  {SHIKI_LANGS.map((lang) => (
+                  {pickerLangs.map((lang) => (
                     <SelectItem key={lang} value={lang}>
                       {lang}
                     </SelectItem>
@@ -225,40 +281,67 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
           </Stack>
         </Pin>
 
-        {/* Underlay: highlighted (or plain) text, decorative — sizes the box. */}
-        {html ? (
-          <div
-            aria-hidden
-            className={SHIKI_PRE}
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        ) : (
-          <pre
-            aria-hidden
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- m-0 resets the UA <pre> default margin to zero; there is no margin ramp and "none" is a layout reset, not rhythm
-            className={cn("m-0", METRICS)}
-          >
-            {underlay}
-          </pre>
-        )}
+        {shown !== "preview" ? (
+          // The editor's own box: the textarea layer is laid over the underlay
+          // only, never over the preview below it.
+          <Clip>
+            {/* Underlay: highlighted (or plain) text, decorative — sizes the box. */}
+            {html ? (
+              <div
+                aria-hidden
+                className={SHIKI_PRE}
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
+            ) : (
+              <pre
+                aria-hidden
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- m-0 resets the UA <pre> default margin to zero; there is no margin ramp and "none" is a layout reset, not rhythm
+                className={cn("m-0", METRICS)}
+              >
+                {underlay}
+              </pre>
+            )}
 
-        {/* Editor: transparent text + visible caret, laid exactly over the underlay. */}
-        <BlockTextArea
-          text={text}
-          placeholder="Code…"
-          // The interactive full-bleed editor layer laid exactly over the sizing
-          // underlay. `layerClasses()` (not `<Overlay above>`, which is
-          // pointer-events-none) because the layer IS this element. METRICS is
-          // the caret-alignment contract: drop a token and the invisible caret
-          // drifts off the coloured glyphs underneath.
-          className={cn(
-            layerClasses(),
-            clipClasses({ axis: "both", fill: false }),
-            "h-full w-full resize-none border-0 bg-transparent",
-            "text-transparent",
-            METRICS,
-          )}
-        />
+            {/* Editor: transparent text + visible caret, laid exactly over the underlay. */}
+            <BlockTextArea
+              text={text}
+              placeholder="Code…"
+              // The interactive full-bleed editor layer laid exactly over the sizing
+              // underlay. `layerClasses()` (not `<Overlay above>`, which is
+              // pointer-events-none) because the layer IS this element. METRICS is
+              // the caret-alignment contract: drop a token and the invisible caret
+              // drifts off the coloured glyphs underneath.
+              className={cn(
+                layerClasses(),
+                clipClasses({ axis: "both", fill: false }),
+                "h-full w-full resize-none border-0 bg-transparent",
+                "text-transparent",
+                METRICS,
+              )}
+            />
+          </Clip>
+        ) : null}
+
+        {preview && shown !== "code" ? (
+          shown === "preview" ? (
+            // Preview only: click the diagram to edit its source beside it.
+            <button
+              type="button"
+              onClick={() => {
+                onViewChange("split");
+                editor.onFocus();
+              }}
+              aria-label={`Edit ${preview.label} source`}
+              className="block w-full cursor-text text-left outline-none"
+            >
+              <preview.Component source={code} />
+            </button>
+          ) : (
+            <div className="border-t border-border">
+              <preview.Component source={code} />
+            </div>
+          )
+        ) : null}
       </Clip>
     </Inset>
   );

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-page-code-block-mermaid-insert",
+  "description": "`/mermaid` in the page editor: turns the caret's line into a code block set to mermaid, shown as its source beside the drawn diagram.",
+  "private": true,
+  "version": "0.0.1"
+}

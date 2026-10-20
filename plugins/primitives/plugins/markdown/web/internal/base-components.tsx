@@ -1,9 +1,9 @@
 import type { ComponentType, ReactNode } from "react";
 import type { Components } from "react-markdown";
-import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { langFromClassName, nodeToText } from "./helpers";
 import { InlineCode } from "./inline-code";
+import { FencedCode } from "./fenced-code";
 
 // react-markdown hands every component override a fresh `node` (the hast AST
 // node) on every render. Any override that spreads its props onto an intrinsic
@@ -102,7 +102,7 @@ export function buildBaseComponents(
       const text = nodeToText(children).replace(/\n$/, "");
       const isBlock = lang !== null || text.includes("\n");
       if (isBlock) {
-        return <HighlightedCode code={text} lang={lang} />;
+        return <FencedCode code={text} lang={lang} />;
       }
       for (const handler of getInlineCodeHandlers()) {
         const result = handler(text);

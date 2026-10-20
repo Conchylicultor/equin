@@ -31190,13 +31190,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button. Code block type: registers its `data` schema (code + language) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "code-block" → `CodeBlock`
-        - Uses: 30 symbols — full list in [`plugins/page/plugins/code-block/REFERENCE.md`](../plugins/page/plugins/code-block/REFERENCE.md)
+        - Uses: 33 symbols — full list in [`plugins/page/plugins/code-block/REFERENCE.md`](../plugins/page/plugins/code-block/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `page/editor` ×5
           - `primitives/syntax-highlight` ×4
           - `primitives/css/clip` ×2
           - `primitives/css/spacing` ×2
           - `primitives/hover-reveal` ×2
+          - `primitives/syntax-highlight/code-preview` ×2
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/layer.layerClasses`
@@ -31204,6 +31205,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/text.textVariantClass`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/view-switcher.ViewSwitcher`
           - `ui/icons.Icon`
         - Exports (values): `codeBlock`
       - Server:
@@ -31213,10 +31215,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `page/editor.defineBlock`
           - `ui/icons.symbol`
-        - Exports (values): `codeBlock`
+        - Exports (types): `CodeBlockView`
+        - Exports (values):
+          - `CODE_BLOCK_VIEWS`
+          - `codeBlock`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --background`
+          - `ui/tokens/color-palette --border`
           - `ui/tokens/color-palette --muted`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/density --space-md`
@@ -31231,6 +31237,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
           - `ui/tokens/type-scale --line-height-code`
+      - Plugins:
+        - **`mermaid-insert`** — `/mermaid` in the page editor: turns the caret's line into a code block set to mermaid, shown split — its source above the drawn diagram (the code-preview registry draws it).
+          - Web:
+            - Contributes: `Editor.InsertAction` "Mermaid diagram"
+            - Uses: `page/editor.Editor`
     - **`container`** — Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the two decoration seats a container may ask for — a gutter glyph that leads its first line, or the card's own name in the box's top-right corner, revealed only while the pointer is inside it (both share the static/interactive branch and the appearance popover; the structural actions live on the rail of the line the container borrows). Contributes nothing itself — each container plugin registers its own block type through it.
       - Web:
         - Uses:
@@ -31324,11 +31335,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Editor.BlockMenuItem`
           - `Editor.FormatAction`
           - `Editor.InsertAction`
-        - Slot contributors: 51 contributors — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Slot contributors: 52 contributors — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `Editor.Block` ×30
           - `Editor.BlockFrame` ×8
           - `Editor.FormatAction` ×7
-          - `Editor.InsertAction` ×3
+          - `Editor.InsertAction` ×4
           - `Editor.TurnInto` ×2
           - `Editor.BlockMenuItem` ← `page.open-as-page`
         - Contributes: `IdKinds.Kind` "block"
@@ -31786,8 +31797,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×2
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 76 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
-          - `page` ×57
+        - Imported by: 77 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+          - `page` ×58
           - `apps` ×8
           - `reports` ×4
           - `active-data` ×3
@@ -35224,10 +35235,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
           - `apps` ×8
+          - `primitives` ×5
           - `page` ×4
-          - `primitives` ×4
           - `conversations` ×3
           - `debug` ×3
           - `review` ×2
@@ -35371,9 +35382,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 115 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 116 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×33
-              - `primitives` ×24
+              - `primitives` ×25
               - `page` ×17
               - `conversations` ×7
               - `debug` ×6
@@ -35402,9 +35413,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `clipClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×21
-              - `primitives` ×10
+              - `primitives` ×11
               - `conversations` ×7
               - `debug` ×7
               - `page` ×5
@@ -35678,6 +35689,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/timeline`
               - `primitives/css/fill`
               - `primitives/data-view/view-core`
+              - `primitives/markdown`
           - Web:
             - Exports (values): `growClass`
         - **`grow-relay`** — The grow request: a widget that sizes itself from the room it is given asks for that room (useRequestGrow), every box in between relays the ask upward (<GrowRelay>, render-prop), and the row stops it (<GrowRelay.Stop>). Replaces the fill flag a contribution had to declare three files away from the <AdaptiveBar> it was about — the ask travels with the widget, so there is nothing left to forget.
@@ -36062,10 +36074,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 95 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 96 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×26
               - `apps` ×21
-              - `primitives` ×14
+              - `primitives` ×15
               - `debug` ×13
               - `page` ×4
               - `build` ×3
@@ -36162,10 +36174,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 396 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 398 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×61
-              - `primitives` ×51
+              - `primitives` ×53
               - `debug` ×36
               - `ui` ×29
               - `page` ×24
@@ -36382,10 +36394,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 370 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 371 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×104
               - `conversations` ×70
-              - `primitives` ×42
+              - `primitives` ×43
               - `debug` ×35
               - `page` ×21
               - `plugin-meta` ×14
@@ -36667,8 +36679,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 414 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×106
+            - Imported by: 416 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×108
               - `apps` ×93
               - `conversations` ×53
               - `page` ×25
@@ -38806,6 +38818,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/math/render`
           - `primitives/graph-canvas`
           - `primitives/markdown`
+          - `primitives/syntax-highlight/code-preview/mermaid`
           - `primitives/text-editor`
     - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
       - Cross-plugin:
@@ -39066,12 +39079,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 191 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 192 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×63
           - `ui` ×20
           - `conversations` ×18
           - `debug` ×18
-          - `primitives` ×17
+          - `primitives` ×18
           - `tasks` ×13
           - `page` ×8
           - `build` ×4
@@ -39222,10 +39235,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MarkdownEnhancerSlot` ← `active-data`
           - `MarkdownEnhancerSlot` ← `conversations.conversation-view.markdown-extensions`
         - Uses:
+          - `primitives/copy-to-clipboard.CopyButton`
+          - `primitives/css/clip.Clip`
+          - `primitives/css/grow.growClass`
+          - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/lazy-component.lazyComponent`
           - `primitives/syntax-highlight.HighlightedCode`
+          - `primitives/syntax-highlight/code-preview.useCodePreviewRenderer`
+          - `primitives/view-switcher.ViewSwitcher`
         - Exports (types):
           - `MarkdownEnhancement`
           - `RemarkPlugins`
@@ -41268,6 +41288,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/scroll.Scroll`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/dom/scroll-reveal.revealElement`
           - `primitives/select-scope.ContentScope`
         - Exports (types):
@@ -41315,8 +41336,46 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/diff-view`
           - `primitives/file-viewer/code`
           - `primitives/markdown`
+          - `primitives/syntax-highlight/code-preview/mermaid`
           - `ui/theme-engine/theme-gallery`
       - Plugins:
+        - **`code-preview`** — Registry of code previews keyed by fence language: a CodePreview.Renderer contribution ({ lang, aliases, label, Component }) draws a language's source as what it describes — a mermaid fence as its diagram. Consumers (markdown fences, the page code block) read it only through useCodePreviewRenderer / useCodePreviewLangs, so a new language needs no consumer change; CodePreviewError is the shared failure chrome.
+          - Web:
+            - Slots: `CodePreview.Renderer`
+            - Slot contributors: `CodePreview.Renderer` ← `primitives.syntax-highlight.code-preview.mermaid`
+            - Uses:
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+            - Exports (types): `CodePreviewRendererContribution`
+            - Exports (values):
+              - `CodePreview`
+              - `CodePreviewError`
+              - `useCodePreviewLangs`
+              - `useCodePreviewRenderer`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/density --space-md`
+              - `ui/tokens/density --space-sm`
+            - Imported by:
+              - `page/code-block`
+              - `primitives/markdown`
+              - `primitives/syntax-highlight/code-preview/mermaid`
+          - Plugins:
+            - **`mermaid`** — Mermaid as a code preview: a mermaid fence (in markdown, or a page code block set to mermaid) drawn as its diagram — lazy-loaded, themed from the surrounding theme tokens, with the parse error shown in place of (or under the last good) diagram.
+              - Web:
+                - Contributes: `CodePreview.Renderer` "mermaid"
+                - Uses:
+                  - `primitives/css/center.Center`
+                  - `primitives/css/scroll.Scroll`
+                  - `primitives/lazy-component.lazyComponent`
+                  - `primitives/loading.Loading`
+                  - `primitives/syntax-highlight.useDarkMode`
+                  - `primitives/syntax-highlight/code-preview.CodePreview`
+                  - `primitives/syntax-highlight/code-preview.CodePreviewError`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/density --space-md`
+                  - `ui/tokens/density --space-sm`
         - **`overlay-textarea`** — Editable highlighted text: <OverlayTextarea> lays a transparent textarea (visible caret) exactly over an underlay <pre> rendering decorate(value), which sizes the box so the field grows as you type. Both layers share one metrics class, so glyphs, wrapping and the caret stay aligned.
           - Web:
             - Uses:
@@ -42097,7 +42156,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/deploy/remote-deploy`
+          - `page/code-block`
           - `primitives/data-view/view-core`
+          - `primitives/markdown`
           - `primitives/tabbed-view`
     - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's list / gallery / icons views and data-table.
       - Web:
@@ -47629,9 +47690,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 313 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 315 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `primitives` ×67
               - `apps` ×65
-              - `primitives` ×65
               - `conversations` ×47
               - `debug` ×27
               - `page` ×20
