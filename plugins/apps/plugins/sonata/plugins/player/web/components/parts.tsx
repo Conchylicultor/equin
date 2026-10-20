@@ -9,12 +9,14 @@ import {
   scoreEndBeat,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { formatElapsed } from "@plugins/primitives/plugins/relative-time/web";
 import { SonataPlayer } from "../slots";
 import { useMarkPlayerShown, usePlayerView } from "../view";
 import { NoDisplay } from "./no-display";
+import { DisplayCoverContext, NO_COVER, type DisplayCover } from "../cover";
 
 /**
  * The display lens over the session's score — `displayId`, else the player
@@ -22,26 +24,43 @@ import { NoDisplay } from "./no-display";
  * fills its parent. Renders the no-display fallback when no lens is
  * contributed. While mounted it marks the player shown, which mounts the
  * player's `SonataPlayer.Effect`s (the keyboard transport).
+ *
+ * `cover` is what the host's floating chrome covers. A `bleed` display fills
+ * the whole box and reads the cover (`useDisplayCover`) to keep its content
+ * out of it while its ground runs under the chrome; any other display is laid
+ * out beside the cover.
  */
-export function PlayerDisplay({ displayId }: { displayId?: string }) {
+export function PlayerDisplay({
+  displayId,
+  cover = NO_COVER,
+}: {
+  displayId?: string;
+  cover?: DisplayCover;
+}) {
   useMarkPlayerShown();
   const { score, tempoScale } = useSession();
   const view = usePlayerView();
+  const displays = SonataPlayer.Display.useContributions();
   const active = displayId ?? view.displayId;
+  const bleed = displays.find((d) => d.id === active)?.bleed === true;
   return (
-    <Clip fill>
-      {active === null ? (
-        <NoDisplay />
-      ) : (
-        <SonataPlayer.Display.Dispatch
-          score={score}
-          // Displays scale geometry by this to cancel the scale folded into
-          // `score`; floor it so a frozen 0% (which scales `score` by the
-          // same floor) cancels to a finite layout instead of NaN.
-          tempoScale={Math.max(tempoScale, TEMPO_MATH_FLOOR)}
-          activeDisplayId={active}
-        />
-      )}
+    <Clip fill className="relative">
+      <Placed x={{ start: 0, end: bleed ? 0 : cover.right }} y="fill">
+        {active === null ? (
+          <NoDisplay />
+        ) : (
+          <DisplayCoverContext.Provider value={bleed ? cover : NO_COVER}>
+            <SonataPlayer.Display.Dispatch
+              score={score}
+              // Displays scale geometry by this to cancel the scale folded into
+              // `score`; floor it so a frozen 0% (which scales `score` by the
+              // same floor) cancels to a finite layout instead of NaN.
+              tempoScale={Math.max(tempoScale, TEMPO_MATH_FLOOR)}
+              activeDisplayId={active}
+            />
+          </DisplayCoverContext.Provider>
+        )}
+      </Placed>
     </Clip>
   );
 }

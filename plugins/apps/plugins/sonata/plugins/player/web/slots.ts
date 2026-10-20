@@ -43,6 +43,10 @@ export const SonataPlayer = {
        *  first contribution). Collection-consumer clean — consumers pick the
        *  default-flagged display, never naming a contributor. */
       default?: boolean;
+      /** Paints its ground under a host's floating chrome (`PlayerDisplay`'s
+       *  `cover`), reading `useDisplayCover` to keep its content beside it.
+       *  Without it the display is laid out beside the cover. */
+      bleed?: boolean;
     }
   >({
     key: (props) => props.activeDisplayId,

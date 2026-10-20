@@ -37,7 +37,10 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { usePerformedScore } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/swing/web";
 import { useSongDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
-import { usePlayerView } from "@plugins/apps/plugins/sonata/plugins/player/web";
+import {
+  useDisplayCover,
+  usePlayerView,
+} from "@plugins/apps/plugins/sonata/plugins/player/web";
 import {
   LaneInsetsProvider,
   Sonata,
@@ -168,6 +171,13 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // reserve its vertical zone — a boundary that sits under the HUD is bucketed
   // "top" and its chip tucks just below the cluster (`topInset`) instead of
   // colliding with it. `0` until the HUD has measured (no reservation yet).
+  // The host's floating chrome over the lane's right edge (the player's
+  // section dock). The roll bleeds: its ground and bar / beat rules run the
+  // lane's full width, under the chrome, while the keys — and with them the
+  // notes, the pitch rules, the overlays and the HUD — keep to `notesWidth`.
+  const cover = useDisplayCover();
+  const notesWidth = Math.max(0, lane.width - cover.right);
+
   const [hudSizeRef, hudSize] = useElementSize();
   const topInset = hudSize.height > 0 ? hudSize.height + HUD_EDGE_CLEARANCE : 0;
 
@@ -255,7 +265,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   const projection = useMemo(
     () =>
       buildProjection({
-        width: lane.width,
+        width: notesWidth,
         height: lane.height,
         plane,
         score: axisScore,
@@ -263,7 +273,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
         tempoScale,
         spread,
       }),
-    [lane.width, lane.height, plane, axisScore, timeline, tempoScale, spread],
+    [notesWidth, lane.height, plane, axisScore, timeline, tempoScale, spread],
   );
 
   // Tempo indices, built once per score and reused by the ScrollLayer so they
@@ -436,7 +446,8 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // projection/lane values every render. Closing over `projection` directly
   // would hand effects a stale snapshot after the first resize.
   const projectionRef = useLatestRef(projection);
-  const laneSizeRef = useLatestRef(lane);
+  // The notes' part of the lane — what FX geometry lives in.
+  const laneSizeRef = useLatestRef({ width: notesWidth, height: lane.height });
   const timelineRef = useLatestRef(timeline);
 
   // FX bridge — one per scene. See fx-context.ts for the accessor/budget design.
@@ -658,6 +669,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
           <PianoRollCanvas
             key={canvasNonce}
             width={lane.width}
+            notesWidth={notesWidth}
             height={lane.height}
             visuals={visuals}
             bars={barMarkers}
@@ -677,103 +689,112 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
               fx layers via the context. */}
           {fx ? <FxHost fx={fx} /> : null}
 
-          <ScrollLayer ref={scrollLayerRef}>{content}</ScrollLayer>
+          {/* Every DOM layer keeps to the notes' part of the lane: the
+              overlays, the landing line, the edge chips, the HUD and the
+              lane's messages stay clear of the host's chrome. */}
+          <Placed x={{ start: 0, end: cover.right }} y="fill">
+            <ScrollLayer ref={scrollLayerRef}>{content}</ScrollLayer>
 
-          {/* Playback now-line: where falling notes land on the keyboard. Screen-
-              anchored, so it sits OUTSIDE the scroll layer (and above it). */}
-          <Placed
-            decorative
-            layer="raised"
-            x={{ start: 0, size: lane.width }}
-            y={{ start: lane.height, size: 2 }}
-            // The look's landing line: its colour, at its strength.
-            style={{
-              backgroundColor: lookStyle.nowLine.colorExpr,
-              opacity: lookStyle.nowLine.alpha,
-            }}
-          />
+            {/* Playback now-line: where falling notes land on the keyboard. Screen-
+                anchored, so it sits OUTSIDE the scroll layer (and above it). */}
+            <Placed
+              decorative
+              layer="raised"
+              x={{ start: 0, size: notesWidth }}
+              y={{ start: lane.height, size: 2 }}
+              // The look's landing line: its colour, at its strength.
+              style={{
+                backgroundColor: lookStyle.nowLine.colorExpr,
+                opacity: lookStyle.nowLine.alpha,
+              }}
+            />
 
-          {/* Screen-anchored transport-edge indicators (the off-screen A–B loop
-              boundary arrow chips). Sits OUTSIDE the scroll layer so it stays
-              pinned to the lane edges; takes the projection as a prop. */}
-          <TransportEdgeHost projection={projection} />
+            {/* Screen-anchored transport-edge indicators (the off-screen A–B loop
+                boundary arrow chips). Sits OUTSIDE the scroll layer so it stays
+                pinned to the lane edges; takes the projection as a prop. */}
+            <TransportEdgeHost projection={projection} />
 
-          {/* HUD: screen-anchored heads-up chips (current key, …) pinned to the
-              lane's top-right corner — above the scroll layer and now-line, clear
-              of the chord overlay that hugs the left edge. Contributors read the
-              session cursor via useSession(); collection-consumer clean (renders the
-              generic Sonata.Hud slot, never naming a contributor). The ref feeds
-              `topInset` so an edge chip tucks just below this cluster. */}
-          <Pin
-            to="top-right"
-            offset="sm"
-            layer="float"
-            decorative
-            ref={hudSizeRef}
-          >
-            <Stack gap="xs" align="end">
-              <Sonata.Hud.Render>
-                {(h) => <h.component key={h.id} />}
-              </Sonata.Hud.Render>
-            </Stack>
-          </Pin>
+            {/* HUD: screen-anchored heads-up chips (current key, …) pinned to the
+                lane's top-right corner — above the scroll layer and now-line, clear
+                of the chord overlay that hugs the left edge. Contributors read the
+                session cursor via useSession(); collection-consumer clean (renders the
+                generic Sonata.Hud slot, never naming a contributor). The ref feeds
+                `topInset` so an edge chip tucks just below this cluster. */}
+            <Pin
+              to="top-right"
+              offset="sm"
+              layer="float"
+              decorative
+              ref={hudSizeRef}
+            >
+              <Stack gap="xs" align="end">
+                <Sonata.Hud.Render>
+                  {(h) => <h.component key={h.id} />}
+                </Sonata.Hud.Render>
+              </Stack>
+            </Pin>
 
-          {/* No GPU: nothing can draw the notes, so say so plainly (it takes
-              the empty-score slot — one centred message at most). */}
-          {gpuUnavailable ? (
-            <Layer decorative>
-              <Center className="h-full w-full">
-                <Stack gap="xs" align="center" className="max-w-md text-center">
-                  <Text as="span" variant="body">
-                    Can't draw notes: the browser has no GPU available.
-                  </Text>
+            {/* No GPU: nothing can draw the notes, so say so plainly (it takes
+                the empty-score slot — one centred message at most). */}
+            {gpuUnavailable ? (
+              <Layer decorative>
+                <Center className="h-full w-full">
+                  <Stack
+                    gap="xs"
+                    align="center"
+                    className="max-w-md text-center"
+                  >
+                    <Text as="span" variant="body">
+                      Can't draw notes: the browser has no GPU available.
+                    </Text>
+                    <Text
+                      as="span"
+                      variant="body"
+                      className="text-muted-foreground"
+                    >
+                      Graphics acceleration is off in this browser, often after
+                      a GPU crash. Restart the browser; chrome://gpu shows the
+                      details.
+                    </Text>
+                  </Stack>
+                </Center>
+              </Layer>
+            ) : scoreFailure !== null ? (
+              /* A setting could not be read: not "no notes", not a spinner. */
+              <Layer>
+                <Center className="h-full w-full">
+                  <ResourceErrorInline
+                    variant="block"
+                    subject="the song's settings"
+                    error={scoreFailure.error}
+                    refetch={scoreFailure.refetch}
+                  />
+                </Center>
+              </Layer>
+            ) : viewPending ? (
+              /* The song's settings are still loading: not "no notes". */
+              <Layer decorative>
+                <Center className="h-full w-full">
+                  <Loading />
+                </Center>
+              </Layer>
+            ) : score.notes.length === 0 ? (
+              /* Empty-score affordance. */
+              // Full-bleed layer over the lane (sibling of the canvas/scroll
+              // layers), centering the empty-state message.
+              <Layer decorative>
+                <Center className="h-full w-full">
                   <Text
                     as="span"
                     variant="body"
                     className="text-muted-foreground"
                   >
-                    Graphics acceleration is off in this browser, often after a
-                    GPU crash. Restart the browser; chrome://gpu shows the
-                    details.
+                    No notes to display. Load a source to see the piano roll.
                   </Text>
-                </Stack>
-              </Center>
-            </Layer>
-          ) : scoreFailure !== null ? (
-            /* A setting could not be read: not "no notes", not a spinner. */
-            <Layer>
-              <Center className="h-full w-full">
-                <ResourceErrorInline
-                  variant="block"
-                  subject="the song's settings"
-                  error={scoreFailure.error}
-                  refetch={scoreFailure.refetch}
-                />
-              </Center>
-            </Layer>
-          ) : viewPending ? (
-            /* The song's settings are still loading: not "no notes". */
-            <Layer decorative>
-              <Center className="h-full w-full">
-                <Loading />
-              </Center>
-            </Layer>
-          ) : score.notes.length === 0 ? (
-            /* Empty-score affordance. */
-            // Full-bleed layer over the lane (sibling of the canvas/scroll
-            // layers), centering the empty-state message.
-            <Layer decorative>
-              <Center className="h-full w-full">
-                <Text
-                  as="span"
-                  variant="body"
-                  className="text-muted-foreground"
-                >
-                  No notes to display. Load a source to see the piano roll.
-                </Text>
-              </Center>
-            </Layer>
-          ) : null}
+                </Center>
+              </Layer>
+            ) : null}
+          </Placed>
         </LaneInsetsProvider>
       </Clip>
 
@@ -784,7 +805,10 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
         className="relative shrink-0 border-t border-border"
         style={{ height: pitchKeyboardHeight(plane.layout, "keybed") }}
       >
-        <PitchAxisHost projection={projection} />
+        {/* The keys lay out across their own box: the notes' width. */}
+        <Placed x={{ start: 0, end: cover.right }} y="fill">
+          <PitchAxisHost projection={projection} />
+        </Placed>
       </div>
     </Stack>
   );

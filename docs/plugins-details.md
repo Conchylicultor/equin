@@ -6726,10 +6726,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "config"
               - `Sonata.ViewOption` "piano-roll"
               - `Sonata.ViewSection` "piano-roll-fx" → `FxViewSection`
-            - Uses: 34 symbols — full list in [`plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md)
+            - Uses: 35 symbols — full list in [`plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/piano-roll/REFERENCE.md)
+              - `apps/sonata/player` ×3
               - `apps/sonata/track-mixer` ×3
               - `config_v2` ×3
-              - `apps/sonata/player` ×2
               - `apps/sonata/session` ×2
               - `apps/sonata/shell` ×2
               - `apps/sonata/document.useSongDocument`
@@ -6927,6 +6927,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/session.useSession`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
+              - `primitives/css/coords.Placed`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/latest-ref.useLatestRef`
@@ -6934,7 +6935,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/slot-render.defineDispatchSlot`
               - `primitives/slot-render.defineMountSlot`
               - `primitives/slot-render.defineRenderSlot`
-            - Exports (types): `PlayerView`
+            - Exports (types):
+              - `DisplayCover`
+              - `PlayerView`
             - Exports (values):
               - `PlayerDisplay`
               - `PlayerDisplayBinding`
@@ -6942,6 +6945,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlayerTransport`
               - `SonataPlayer`
               - `SonataPlayerScope`
+              - `useDisplayCover`
               - `usePlayerView`
           - Cross-plugin:
             - Uses tokens:
@@ -35603,8 +35607,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
-              - `apps` ×17
+            - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+              - `apps` ×18
               - `primitives` ×7
               - `debug` ×3
               - `page` ×2

@@ -6,7 +6,7 @@
  *   ├─ pitchLines       screen space — fixed pitch grid, redrawn on resize only
  *   ├─ fxBelow          FX layer (Phase 3) painting UNDER the notes
  *   ├─ scrollRoot       y = laneHeight + scrollSec × PX_PER_SECOND (per frame)
- *   │   ├─ contentScaled  scale = (laneWidth, PX_PER_SECOND) — authored space
+ *   │   ├─ contentScaled  scale = (notesWidth, PX_PER_SECOND) — authored space
  *   │   │   ├─ barLines     content space, built once per score
  *   │   │   └─ noteMesh     content space, built once per score
  *   │   └─ pixelScroll     no scale — text stays undistorted
@@ -66,7 +66,10 @@ export interface PianoRollSceneInput {
 
 export interface PianoRollScene {
   setScore(input: PianoRollSceneInput): void;
-  resize(width: number, height: number, dpr: number): void;
+  /** `width` is the canvas; `notesWidth` the keys' part of it from the left
+   *  edge — narrower when the roll bleeds under a host's chrome. Notes, pitch
+   *  rules and labels lay out across `notesWidth`; the bar rules span `width`. */
+  resize(width: number, notesWidth: number, height: number, dpr: number): void;
   /** Per frame: scroll offset (authored sec) + cursor (beats) for onsets. */
   setScroll(authoredSec: number, cursorBeat: number): void;
   /** Set the vertical zoom (1 = base). Rescales the content layer, note SDF
@@ -125,7 +128,7 @@ export function createPianoRollScene(app: Application): PianoRollScene {
    *  post-seek cursor — `reset()` itself has no beat to anchor at. */
   let pendingTrackerReset = true;
   let tempoScale = 1;
-  let laneWidth = 0;
+  let notesWidth = 0;
   let laneHeight = 0;
   let scrollSec = 0;
   // Vertical zoom. The effective px/authored-second is PX_PER_SECOND * spread,
@@ -183,18 +186,18 @@ export function createPianoRollScene(app: Application): PianoRollScene {
       labels.refreshColors(resolveColor);
     },
 
-    resize(width, height, dpr) {
-      laneWidth = width;
+    resize(width, keysWidth, height, dpr) {
+      notesWidth = keysWidth;
       laneHeight = height;
       lastDpr = dpr;
       app.renderer.resize(width, height, dpr);
       // THE payoff of authored-space geometry: a resize is one container
       // scale + two uniforms + a couple of redrawn octave lines — O(1) in
       // note count, vs. the DOM version's per-note style writes.
-      contentScaled.scale.set(width, pxPerSec());
-      mesh.setUniforms(width, dpr, pxPerSec());
-      grid.resize(width, height);
-      labels.setLaneSize(width, height);
+      contentScaled.scale.set(keysWidth, pxPerSec());
+      mesh.setUniforms(keysWidth, dpr, pxPerSec());
+      grid.resize(width, keysWidth, height);
+      labels.setLaneSize(keysWidth, height);
       applyScroll();
     },
 
@@ -205,8 +208,8 @@ export function createPianoRollScene(app: Application): PianoRollScene {
       // the content layer + the SDF pixel-budget uniform — no buffer rebuild.
       // The grid (bar-line height) and labels (pixel-space positions/fonts)
       // each re-derive from the new effective px/sec; then re-glue the scroll.
-      contentScaled.scale.set(laneWidth, pxPerSec());
-      mesh.setUniforms(laneWidth, lastDpr, pxPerSec());
+      contentScaled.scale.set(notesWidth, pxPerSec());
+      mesh.setUniforms(notesWidth, lastDpr, pxPerSec());
       grid.setSpread(spread);
       labels.setSpread(pxPerSec());
       applyScroll();
@@ -232,8 +235,8 @@ export function createPianoRollScene(app: Application): PianoRollScene {
         if (!v) continue; // hidden track — no visual, no FX
         const event: FxNoteEvent = {
           note,
-          x: v.xFrac * laneWidth,
-          width: v.wFrac * laneWidth,
+          x: v.xFrac * notesWidth,
+          width: v.wFrac * notesWidth,
           laneY: laneHeight,
           color: resolveColor(v.colorExpr),
           velocity: note.velocity / 127,

@@ -39,6 +39,9 @@ export interface PianoRollCanvasProps {
   /** Lane size in CSS px (from the lane's ResizeObserver). */
   width: number;
   height: number;
+  /** The keys' part of the lane, from its left edge (≤ `width`): where notes,
+   *  pitch rules and labels lay out. The bar rules run the whole `width`. */
+  notesWidth: number;
   /** Cursor-invariant note geometry (authored space; see geometry.ts). */
   visuals: NoteVisual[];
   bars: BarMarker[];
@@ -133,6 +136,7 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
   const {
     width,
     height,
+    notesWidth,
     visuals,
     bars,
     pitchLines,
@@ -248,11 +252,11 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
   // Declaration order matters on the first scene-ready pass: size before score
   // (label layout needs the lane size) before the parent's scroll re-sync.
   useLayoutEffect(() => {
-    if (!scene || width <= 0 || height <= 0) return;
+    if (!scene || width <= 0 || notesWidth <= 0 || height <= 0) return;
     // Re-read DPR every resize: a window move across monitors changes it
     // without any React prop changing size.
-    scene.resize(width, height, window.devicePixelRatio);
-  }, [scene, width, height]);
+    scene.resize(width, notesWidth, height, window.devicePixelRatio);
+  }, [scene, width, notesWidth, height]);
 
   // The look. After resize so the grid's screen-space rules redraw at the real
   // lane size; before the score, whose layers then paint with the stored ink.

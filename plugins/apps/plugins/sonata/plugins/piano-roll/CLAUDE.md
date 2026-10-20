@@ -34,10 +34,10 @@ bar).
     - `ConfigV2.WebRegister` "config"
     - `Sonata.ViewOption` "piano-roll"
     - `Sonata.ViewSection` "piano-roll-fx" → `FxViewSection`
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/player` ×3
     - `apps/sonata/track-mixer` ×3
     - `config_v2` ×3
-    - `apps/sonata/player` ×2
     - `apps/sonata/session` ×2
     - `apps/sonata/shell` ×2
     - `apps/sonata/document.useSongDocument`

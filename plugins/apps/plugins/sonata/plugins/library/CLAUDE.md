@@ -52,8 +52,10 @@ mockup's px, spelled once in `web/internal/player-geometry.ts`.
   the scrubber, loop — the `SonataPlayer.Transport` slot) in a deep glass pill
   centred over the notes, at most 980px wide.
 - **Section dock** (`SectionDock`): see below. Only the dock takes room — the
-  display and the capsule keep to the part of the window it leaves (the rail's
-  strip, or the open panel's width), so the panel sits BESIDE the notes.
+  display's content and the capsule keep to the part of the window it leaves
+  (the rail's strip, or the open panel's width), so the panel sits BESIDE the
+  notes. The display is handed that strip as its `cover` (`PlayerDisplay`), so
+  a bleeding display (the piano roll) still runs its ground and grid under it.
 
 `useSongLink` opens the player with `openPane(sonataPlayerPane, { songId },
 { mode: "root", hint: { title } })`. The ← Library button calls `clearRoute()`

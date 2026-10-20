@@ -368,9 +368,11 @@ function SonataPlayerSurface(): ReactElement {
  * The immersive player: the active display fills the window and everything
  * else floats over it — the header band (back, the title, the toolbar pill),
  * the progression capsule centred over the notes, and the section dock at the
- * right edge. Only the dock takes room: the display (and the capsule) keep to
- * the part of the window the dock leaves — the rail's narrow strip, or the
- * open panel's width — so the panel sits beside the notes, never over them.
+ * right edge. Only the dock takes room: the display's content (and the
+ * capsule) keep to the part of the window the dock leaves — the rail's narrow
+ * strip, or the open panel's width — so the panel sits beside the notes, never
+ * over them. The display itself gets the whole window as its `cover`d box, so
+ * a bleeding display's ground (the roll's grid) runs under the dock.
  *
  * The pane draws its own header (`PlayerHeader`) in place of `PaneChrome`'s
  * bar, because its top chrome is not a row above the body but a band floating
@@ -381,10 +383,12 @@ function ImmersivePlayer() {
   const right = collapsed ? RAIL_RESERVE : PANEL_RESERVE;
   return (
     <Clip className="relative isolate h-full bg-background text-foreground">
-      <Placed x={{ start: 0, end: right }} y="fill">
+      {/* The whole window: a display that bleeds (the piano roll) runs its
+          ground and grid under the dock, keeping its notes beside it. */}
+      <Placed x="fill" y="fill">
         {/* A column, so the display's filling clip takes the whole height. */}
         <Stack gap="none" className="h-full">
-          <PlayerDisplay />
+          <PlayerDisplay cover={{ right }} />
         </Stack>
       </Placed>
 

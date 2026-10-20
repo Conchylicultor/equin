@@ -40,6 +40,9 @@ export default {
       capabilities: ["time-axis", "pitch-plane"],
       // The default lens when the user hasn't picked one.
       default: true,
+      // Its ground and bar rules run under the player's dock; the keys keep
+      // beside it (`useDisplayCover`).
+      bleed: true,
       // Lazy: the piano-roll draws via pixi.js, a heavy dep. Code-splitting it
       // here keeps pixi off the eager plugin-boot wave — it loads only when a
       // user actually opens the (non-default) Sonata piano-roll display.

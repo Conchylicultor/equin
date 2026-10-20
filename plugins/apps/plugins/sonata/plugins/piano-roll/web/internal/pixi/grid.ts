@@ -9,12 +9,15 @@
  *    units: x in 0..1 key-fractions, y = -seconds) under the content-scaled
  *    container. A line is a filled rect of height 1/PX_PER_SECOND seconds —
  *    scale.y is the constant PX_PER_SECOND, so it renders exactly 1px at any
- *    lane size. Built ONCE per score; resize never redraws it.
+ *    lane size. A rule runs the LANE's width, which may exceed the keys' (the
+ *    roll bleeds under a host's chrome — see `resize`), so it is
+ *    `laneWidth / notesWidth` key-fractions wide. Built once per score, and
+ *    again only when a resize changes that ratio.
  *
  *  - Pitch lines mark a fixed pitch axis, so they are SCREEN-space (a direct
  *    stage child): vertical 1px lines at the natural white-key boundaries
  *    (B–C octave splits, plus the E–F mid-octave split), at each boundary key's
- *    left-edge fraction × laneWidth, full lane height. Octave (B–C) lines render
+ *    left-edge fraction × the keys' width, full lane height. Octave (B–C) lines render
  *    stronger than the mid-octave (E–F) lines. Redrawn on resize only.
  *
  * Color: both layers draw WHITE geometry and carry a tint + per-layer alpha
@@ -61,8 +64,10 @@ export interface GridHandle {
   /** New vertical zoom: redraw the bar lines so each stays 1px tall under the
    *  content scale.y = PX_PER_SECOND * spread. O(bars). */
   setSpread(spread: number): void;
-  /** Redraw the screen-space pitch lines for a new lane size. */
-  resize(laneWidth: number, laneHeight: number): void;
+  /** Redraw for a new lane size: `laneWidth` is the whole canvas (the bar
+   *  rules' span), `notesWidth` the keys' part of it from the left edge (the
+   *  pitch rules' axis). */
+  resize(laneWidth: number, notesWidth: number, laneHeight: number): void;
   /** New look: store its grid ink and repaint. Never rebuilds the handle — the
    *  scene (and the FX plugins holding its layers) outlives every look change. */
   setLook(
@@ -89,8 +94,10 @@ export function createGrid(): GridHandle {
   barLines.alpha = ink.barLineAlpha;
 
   let lines: readonly PitchGuide[] = [];
-  let laneWidth = 0;
+  let notesWidth = 0;
   let laneHeight = 0;
+  // How many key-fractions a bar rule spans: the lane over the keys' width.
+  let ruleSpan = 1;
   // Bars + zoom retained so a spread change can redraw bar lines at the right
   // (zoom-compensated) authored-seconds height without a fresh score.
   let lastBars: readonly BarMarker[] = [];
@@ -111,11 +118,11 @@ export function createGrid(): GridHandle {
       // (toward earlier time). y = -startSec; height = 1px after the content
       // scale.y = PX_PER_SECOND * spread, so the authored-seconds height is
       // 1 / (PX_PER_SECOND * spread) to stay exactly 1px at any zoom.
-      barLines.rect(0, -b.startSec, 1, h).fill(0xffffff);
+      barLines.rect(0, -b.startSec, ruleSpan, h).fill(0xffffff);
       if (beatAlpha <= 0) continue;
       for (const sec of b.beatSecs) {
         barLines
-          .rect(0, -sec, 1, h)
+          .rect(0, -sec, ruleSpan, h)
           .fill({ color: 0xffffff, alpha: beatAlpha });
       }
     }
@@ -123,11 +130,11 @@ export function createGrid(): GridHandle {
 
   const redrawPitchLines = (): void => {
     pitchLines.clear();
-    if (laneWidth <= 0 || laneHeight <= 0) return;
+    if (notesWidth <= 0 || laneHeight <= 0) return;
     for (const { frac, strong } of lines) {
       // 1px vertical line whose LEFT edge sits on the boundary key's left edge —
       // matching the DOM's `border-l` at `left: center - width/2`.
-      const x = frac * laneWidth;
+      const x = frac * notesWidth;
       const alpha = strong ? ink.octaveLineAlpha : ink.pitchLineAlpha;
       const dash = strong ? ink.octaveDash : null;
       // A zero-length period would never advance `y` — treat it as solid.
@@ -177,10 +184,15 @@ export function createGrid(): GridHandle {
       redrawBars();
     },
 
-    resize(width, height) {
-      laneWidth = width;
+    resize(width, keysWidth, height) {
+      notesWidth = keysWidth;
       laneHeight = height;
       redrawPitchLines();
+      const span = keysWidth > 0 ? width / keysWidth : 1;
+      if (span !== ruleSpan) {
+        ruleSpan = span;
+        redrawBars();
+      }
     },
 
     setLook(nextInk, resolveColor) {
