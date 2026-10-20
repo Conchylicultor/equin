@@ -54,10 +54,7 @@ export function ShelfEntryButton({
         "hover:-translate-y-1 active:-translate-y-0.5 active:scale-[0.97]",
       )}
     >
-      <DesktopAppTile
-        icon={app.icon}
-        className="size-11.5 rounded-xl max-[760px]:size-9.5"
-      />
+      <DesktopAppTile app={app} className="size-11.5 max-[760px]:size-9.5" />
       {Badge && (
         // eslint-disable-next-line layout/no-adhoc-layout -- the app's badge overhangs the tile's top-right corner by the mockup's 4px
         <span className="pointer-events-none absolute -top-1 -right-1">

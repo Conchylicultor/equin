@@ -201,7 +201,6 @@ the code:
     - `apps-core/tab-bar`
     - `apps-core/tab-surface`
     - `apps-core/theme-scope`
-    - `apps/desktop/shell`
     - `apps/desktop/windows`
     - `apps/file-explorer/browser`
     - `apps/prototypes/compare/exhibit`

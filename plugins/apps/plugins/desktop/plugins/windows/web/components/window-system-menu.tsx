@@ -13,8 +13,10 @@ import {
 } from "@plugins/primitives/plugins/overlay/plugins/cursor-menu/web";
 import { PopupTheme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
-import { desktopThemeScope } from "@plugins/apps/plugins/desktop/plugins/shell/web";
-import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
+import {
+  desktopThemeScope,
+  type DesktopTileApp,
+} from "@plugins/apps/plugins/desktop/plugins/shell/web";
 import type {
   Desktop,
   Geometry,
@@ -43,7 +45,7 @@ export interface MergeTarget {
   id: WindowId;
   /** Its shown tab's app, the item's "App — title" and tile. */
   appName: string;
-  appIcon: AppIcon | undefined;
+  app: DesktopTileApp | undefined;
   /** Its shown tab's title. */
   title: string;
 }
@@ -236,7 +238,7 @@ export function WindowSystemMenu({
                   key={target.id}
                   onClick={() => onMergeInto(target.id)}
                 >
-                  <WindowAppTile icon={target.appIcon} size={16} radius={4} />
+                  <WindowAppTile app={target.app} size={16} radius={4} />
                   {`${target.appName} — ${target.title}`}
                 </DropdownMenuItem>
               ))

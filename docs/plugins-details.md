@@ -2659,15 +2659,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConfigV2.WebRegister` "shelf"
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/app-icon.AppIconView`
+              - `apps-core/app-icon.AppIconTile`
+              - `apps-core/app-icon.DEFAULT_APP_ICON`
               - `apps-core/tabs.getSurfaceMode`
               - `apps-core/tabs.useSurfaceMode`
               - `config_v2.ConfigV2`
-              - `primitives/css/center.Center`
               - `primitives/css/rigid.rigidClass`
-              - `primitives/css/theme-boundary.Theme`
               - `primitives/css/ui-kit.cn`
               - `ui/theme-engine.ThemeEngine`
+            - Exports (types): `DesktopTileApp`
             - Exports (values):
               - `DesktopAppTile`
               - `desktopThemeScope`
@@ -2689,7 +2689,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --background`
               - `ui/tokens/color-palette --popover`
-              - `ui/tokens/color-palette --primary`
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shadow --shadow-popover`
               - `ui/tokens/shadow --shadow-xl`
@@ -2911,13 +2910,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: 43 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `apps-core/surface` ×4
-              - `apps/desktop/shell` ×3
+              - `apps/desktop/shell` ×4
               - `apps/desktop/wallpaper` ×3
               - `primitives/shortcuts` ×3
               - `primitives/css/layer` ×2
               - `primitives/css/theme-boundary` ×2
               - `primitives/overlay/cursor-menu` ×2
-              - `apps-core/app-icon.DEFAULT_APP_ICON`
               - `apps-core/tabs.useTabs`
               - `apps-core.Apps`
               - `config_v2.useConfig`
@@ -10154,7 +10152,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-launcher`
           - `apps-core/app-rail`
           - `apps/desktop/shell`
-          - `apps/desktop/windows`
           - `config_v2/settings`
       - Core:
         - Exports (types):
@@ -35647,8 +35644,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 116 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×33
+            - Imported by: 115 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×32
               - `primitives` ×25
               - `page` ×17
               - `conversations` ×7
@@ -36731,7 +36728,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/tab-bar`
               - `apps-core/tab-surface`
               - `apps-core/theme-scope`
-              - `apps/desktop/shell`
               - `apps/desktop/windows`
               - `apps/file-explorer/browser`
               - `apps/prototypes/compare/exhibit`

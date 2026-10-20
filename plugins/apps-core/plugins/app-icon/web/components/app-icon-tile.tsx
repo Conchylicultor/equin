@@ -17,7 +17,8 @@ const TILE_PALETTE_VARS = Object.fromEntries(
  * declared colour (`icon.color`), or one derived from `appId` when it declares
  * none — the same tile the Home gallery draws, so an app looks the same in
  * every launcher. `className` sizes the tile (e.g. `size-9`); the glyph is a
- * fixed share of it. It paints in `APP_TILE_PALETTE`, not the enclosing
+ * fixed share of it. `appId` undefined (an app that cannot be resolved) and no
+ * declared colour draws the neutral box. It paints in `APP_TILE_PALETTE`, not the enclosing
  * theme's categorical slots.
  */
 export function AppIconTile({
@@ -27,7 +28,7 @@ export function AppIconTile({
 }: {
   icon: AppIcon;
   /** Seeds the derived colour when the icon declares none. */
-  appId: string;
+  appId: string | undefined;
   className?: string;
 }) {
   switch (icon.kind) {

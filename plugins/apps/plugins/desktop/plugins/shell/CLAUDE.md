@@ -12,15 +12,15 @@
     - `ConfigV2.WebRegister` "shelf"
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/app-icon.AppIconView`
+    - `apps-core/app-icon.AppIconTile`
+    - `apps-core/app-icon.DEFAULT_APP_ICON`
     - `apps-core/tabs.getSurfaceMode`
     - `apps-core/tabs.useSurfaceMode`
     - `config_v2.ConfigV2`
-    - `primitives/css/center.Center`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
     - `ui/theme-engine.ThemeEngine`
+  - Exports (types): `DesktopTileApp`
   - Exports (values):
     - `DesktopAppTile`
     - `desktopThemeScope`
@@ -42,7 +42,6 @@
   - Uses tokens:
     - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --popover`
-    - `ui/tokens/color-palette --primary`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shadow --shadow-popover`
     - `ui/tokens/shadow --shadow-xl`

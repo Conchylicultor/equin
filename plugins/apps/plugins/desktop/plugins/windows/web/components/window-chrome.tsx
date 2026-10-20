@@ -9,7 +9,7 @@ import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
+import type { DesktopTileApp } from "@plugins/apps/plugins/desktop/plugins/shell/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
@@ -80,7 +80,7 @@ interface WindowChromeProps {
   window: FloatingWindow;
   /** The shown tab's app — the titlebar's app button. */
   appName: string;
-  appIcon: AppIcon | undefined;
+  app: DesktopTileApp | undefined;
   focused: boolean;
   /**
    * The shown tab's app draws a sidebar: the classic titlebar (tinted, with a
@@ -185,7 +185,7 @@ function TitlebarControl({
 export function WindowChrome({
   window: win,
   appName,
-  appIcon,
+  app,
   focused,
   classic,
   setGeo,
@@ -426,7 +426,7 @@ export function WindowChrome({
           className={cn(rigidClass(), "hover:bg-hover-fill")}
           style={APP_BUTTON_STYLE}
         >
-          <WindowAppTile icon={appIcon} size={18} radius={5} muted={!focused} />
+          <WindowAppTile app={app} size={18} radius={5} muted={!focused} />
         </Center>
         {/* In-window tab strip — one chip per member. `data-floating-window-id`
             marks the drop-zone the tab-chip drag hit-tests against. The

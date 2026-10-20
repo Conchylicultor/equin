@@ -44,7 +44,7 @@ export function SwitcherThumb({
       {/* The header is as wide as the snapshot, never wider: w-0 + min-w-full
           takes the column's width from the snapshot below it. */}
       <Line className="h-6.5 w-0 min-w-full gap-sm pb-xs">
-        <DesktopAppTile icon={app.icon} className="size-4 rounded-sm" />
+        <DesktopAppTile app={app} className="size-4" />
         <Fill>
           <Text variant="caption" className="font-semibold">
             {title ?? app.app.name}

@@ -10,7 +10,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
+import type { DesktopTileApp } from "@plugins/apps/plugins/desktop/plugins/shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
@@ -28,8 +28,8 @@ const closeIcon = symbol("close");
 export interface WindowMember {
   tabId: string;
   title: string;
-  /** The member's app icon — the drag ghost's tile. */
-  icon: AppIcon | undefined;
+  /** The member's app — the drag ghost's tile. */
+  app: DesktopTileApp | undefined;
 }
 
 /** The commit operations a finished chip drag invokes (resolved by the host). */
@@ -174,7 +174,7 @@ export function WindowTabStrip({
             sourceWindowId: windowId,
             pointer: { x: ev.clientX, y: ev.clientY },
             label: member.title,
-            icon: member.icon,
+            app: member.app,
             tearSize,
             drop: resolveDrop(ev.clientX, ev.clientY),
           });

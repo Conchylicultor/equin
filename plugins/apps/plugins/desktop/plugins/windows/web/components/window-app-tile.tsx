@@ -1,8 +1,9 @@
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { DesktopAppTile } from "@plugins/apps/plugins/desktop/plugins/shell/web";
-import { DEFAULT_APP_ICON } from "@plugins/apps-core/plugins/app-icon/web";
-import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
+import {
+  DesktopAppTile,
+  type DesktopTileApp,
+} from "@plugins/apps/plugins/desktop/plugins/shell/web";
 
 /**
  * The desktop's app tile at one of the window chrome's small sizes — the
@@ -11,12 +12,12 @@ import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
  * the app's density, so the box is sized here and the tile fills it.
  */
 export function WindowAppTile({
-  icon,
+  app,
   size,
   radius,
   muted,
 }: {
-  icon: AppIcon | undefined;
+  app: DesktopTileApp | undefined;
   size: number;
   radius: number;
   muted?: boolean;
@@ -26,11 +27,7 @@ export function WindowAppTile({
       className={rigidClass()}
       style={{ width: size, height: size, borderRadius: radius }}
     >
-      <DesktopAppTile
-        icon={icon ?? DEFAULT_APP_ICON}
-        muted={muted}
-        className="size-full"
-      />
+      <DesktopAppTile app={app} muted={muted} className="size-full" />
     </Clip>
   );
 }

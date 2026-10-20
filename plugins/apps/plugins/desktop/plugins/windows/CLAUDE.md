@@ -140,13 +140,12 @@ new window of the focused window's app; F3 toggles the overview.
   - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `apps-core/surface` ×4
-    - `apps/desktop/shell` ×3
+    - `apps/desktop/shell` ×4
     - `apps/desktop/wallpaper` ×3
     - `primitives/shortcuts` ×3
     - `primitives/css/layer` ×2
     - `primitives/css/theme-boundary` ×2
     - `primitives/overlay/cursor-menu` ×2
-    - `apps-core/app-icon.DEFAULT_APP_ICON`
     - `apps-core/tabs.useTabs`
     - `apps-core.Apps`
     - `config_v2.useConfig`

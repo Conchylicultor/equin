@@ -64,7 +64,6 @@ changes to existing `kind: "symbol"` authors.
     - `apps-core/app-launcher`
     - `apps-core/app-rail`
     - `apps/desktop/shell`
-    - `apps/desktop/windows`
     - `config_v2/settings`
 - Core:
   - Exports (types):

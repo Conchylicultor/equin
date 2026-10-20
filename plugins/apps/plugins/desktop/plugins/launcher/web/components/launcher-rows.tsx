@@ -81,7 +81,7 @@ export function AppGridCell({
         selected && SELECTED,
       )}
     >
-      <DesktopAppTile icon={app.icon} className="size-12 rounded-xl" />
+      <DesktopAppTile app={app} className="size-12" />
       <Stack
         direction="row"
         gap="xs"
@@ -123,7 +123,7 @@ export function AppRow({
         selected && SELECTED,
       )}
     >
-      <DesktopAppTile icon={app.icon} className="size-6.5 rounded-md" />
+      <DesktopAppTile app={app} className="size-6.5" />
       <Text variant="label" className={cn(rigidClass(), "font-semibold")}>
         {app.name}
       </Text>

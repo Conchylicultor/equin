@@ -9,7 +9,10 @@ import { desktopApp, DESKTOP_PLACEMENT_ID, shelfConfig } from "../core";
 
 export { isDesktopActive, useDesktopActive } from "./internal/desktop-mode";
 export { desktopThemeScope } from "./internal/theme-scope";
-export { DesktopAppTile } from "./components/desktop-app-tile";
+export {
+  DesktopAppTile,
+  type DesktopTileApp,
+} from "./components/desktop-app-tile";
 
 export default {
   description:

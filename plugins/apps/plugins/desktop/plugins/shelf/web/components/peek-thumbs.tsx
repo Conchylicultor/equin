@@ -127,7 +127,7 @@ function Thumb({
           width by hand). */}
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- the mockup's `.thumb-h` (gap 7px, padding 0 2px 7px), off the ramp */}
       <Line className="h-[26px] w-0 min-w-full gap-[7px] px-[2px] pb-[7px]">
-        <DesktopAppTile icon={app.icon} className="size-4 rounded-sm" />
+        <DesktopAppTile app={app} className="size-4" />
         <Fill>
           <Text variant="caption" className="font-[550]">
             {title}

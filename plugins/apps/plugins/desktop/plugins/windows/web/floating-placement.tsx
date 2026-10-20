@@ -205,7 +205,7 @@ function FloatingChrome({
         return {
           tabId: memberId,
           title: titles[memberId] ?? entry?.app.name ?? "Window",
-          icon: entry?.icon,
+          app: entry,
         };
       }),
     [win.members, tabAppId, apps, titles],
@@ -226,7 +226,7 @@ function FloatingChrome({
       out.push({
         id: other.id,
         appName: otherApp?.app.name ?? "Window",
-        appIcon: otherApp?.icon,
+        app: otherApp,
         title: titles[other.activeTabId] ?? otherApp?.app.name ?? "Window",
       });
     }
@@ -315,7 +315,7 @@ function FloatingChrome({
     <WindowChrome
       window={win}
       appName={shownApp?.app.name ?? "Window"}
-      appIcon={shownApp?.icon}
+      app={shownApp}
       focused={focused}
       classic={classic}
       setGeo={setGeo}

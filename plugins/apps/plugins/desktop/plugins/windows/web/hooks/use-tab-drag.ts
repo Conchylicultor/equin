@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
+import type { DesktopTileApp } from "@plugins/apps/plugins/desktop/plugins/shell/web";
 
 /** Live pointer position, in viewport coordinates. */
 export interface DragPointer {
@@ -36,8 +36,8 @@ export interface TabDragSession {
   pointer: DragPointer;
   /** The drag ghost's label (the member's title). */
   label: string;
-  /** The drag ghost's app tile (the member's app icon), if any. */
-  icon?: AppIcon;
+  /** The drag ghost's app tile (the member's app), if any. */
+  app?: DesktopTileApp;
   /** The box a tear-off would open at (the source window's size, capped — mockup 640 × 460). */
   tearSize: { w: number; h: number };
   /** Resolved drop target, or null before the first move resolves one. */

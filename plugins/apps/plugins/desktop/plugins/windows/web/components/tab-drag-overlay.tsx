@@ -202,7 +202,7 @@ export function TabDragOverlay() {
           top: session.pointer.y - oy,
         }}
       >
-        <WindowAppTile icon={session.icon} size={16} radius={4} />
+        <WindowAppTile app={session.app} size={16} radius={4} />
         <Text>{session.label}</Text>
       </Line>
     </div>
