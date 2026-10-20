@@ -25,7 +25,11 @@ import {
   CANVAS_FRAME_ATTR,
   CANVAS_FRAME_KIND_ATTR,
   CANVAS_FRAME_STATUS_ATTR,
+  CANVAS_LAYOUT_ATTR,
+  canvasCardSelector,
   canvasFrameSelector,
+  canvasLayoutSelector,
+  type CanvasLayout,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 
 /**
@@ -121,12 +125,51 @@ export function screen(page: Page, letter: string): Locator {
 }
 
 /**
- * A frame's whole card: header, screen and options pill. The
- * screen sits in the selectable wrapper, inside the header/screen stack,
- * inside the card.
+ * A frame's whole card: header, screen and options pill. Side by side only —
+ * a Swipe canvas draws no cards ({@link requireCards}).
  */
 export function card(page: Page, letter: string): Locator {
-  return screen(page, letter).locator("xpath=../../..");
+  return page.locator(canvasCardSelector(letter));
+}
+
+/** The layout the canvas is drawing (Swipe only ever with two frames). */
+export async function canvasLayout(page: Page): Promise<CanvasLayout> {
+  const drawn = await page
+    .locator(canvasLayoutSelector())
+    .getAttribute(CANVAS_LAYOUT_ATTR);
+  if (drawn !== "side" && drawn !== "swipe") {
+    throw new Error(`canvas publishes ${CANVAS_LAYOUT_ATTR}="${drawn ?? ""}"`);
+  }
+  return drawn;
+}
+
+/**
+ * Draw the canvas `side` by side or as a `swipe`, through the header's layout
+ * control (shown only with exactly two frames). Adding a source frame swipes
+ * it over frame A, so a flow that needs each frame on its own — its card, its
+ * options pill, a screenshot of one screen — goes side by side first.
+ */
+export async function setLayout(
+  page: Page,
+  layout: CanvasLayout,
+): Promise<void> {
+  if ((await canvasLayout(page)) === layout) return;
+  const label = layout === "side" ? "Side by side" : "Swipe";
+  await page.getByRole("radio", { name: label, exact: true }).click();
+  await page
+    .locator(canvasLayoutSelector(layout))
+    .waitFor({ state: "attached", timeout: 5000 });
+}
+
+/**
+ * Fail at once, naming the cause, when the canvas is swiped: a swiped frame
+ * has no card, so a card's control would otherwise just time out.
+ */
+async function requireCards(page: Page, letter: string): Promise<void> {
+  if ((await canvasLayout(page)) === "side") return;
+  throw new Error(
+    `frame ${letter} has no card (header actions, options pill): the canvas is swiped — call setLayout(page, "side") first`,
+  );
 }
 
 /** What a prototype frame's document was opened with. */
@@ -215,14 +258,34 @@ export async function hoverCard(page: Page, letter: string): Promise<void> {
   await page.mouse.move(box.x + box.width / 2, box.y - 20);
 }
 
-/** Click one of a frame's header actions, by its label. */
+/** The `⋯` a header narrower than its actions folds the overflow into. */
+const FRAME_ACTIONS_MORE = "Frame actions";
+
+/**
+ * Click one of a frame's header actions, by its label — in the header, or in
+ * its `⋯` panel when the header is too narrow to show it.
+ */
 export async function frameAction(
   page: Page,
   letter: string,
   label: string | RegExp,
 ): Promise<void> {
+  await requireCards(page, letter);
   await hoverCard(page, letter);
-  await card(page, letter).getByRole("button", { name: label }).click();
+  const header = card(page, letter);
+  const direct = header.getByRole("button", { name: label });
+  if ((await direct.count()) > 0) return direct.click();
+  const more = header.getByRole("button", { name: FRAME_ACTIONS_MORE });
+  if ((await more.count()) === 0) {
+    throw new Error(
+      `frame ${letter} has no header action ${String(label)}, and no ${FRAME_ACTIONS_MORE} overflow`,
+    );
+  }
+  await more.click();
+  await page
+    .getByRole("dialog", { name: FRAME_ACTIONS_MORE })
+    .getByRole("button", { name: label })
+    .click();
 }
 
 /** Open a frame's options popover and return it. */
@@ -230,6 +293,7 @@ export async function openOptions(
   page: Page,
   letter: string,
 ): Promise<Locator> {
+  await requireCards(page, letter);
   await hoverCard(page, letter);
   await card(page, letter).getByLabel("Prototype options").click();
   const popover = page.getByRole("group", { name: "Options", exact: true });

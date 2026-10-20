@@ -5703,12 +5703,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/present`
               - `conversations/conversation-view/artifacts/prototype`
           - Core:
-            - Exports (types): `CanvasFrameStatus`
+            - Exports (types):
+              - `CanvasFrameStatus`
+              - `CanvasLayout`
             - Exports (values):
+              - `CANVAS_CARD_ATTR`
               - `CANVAS_FRAME_ATTR`
               - `CANVAS_FRAME_KIND_ATTR`
               - `CANVAS_FRAME_STATUS_ATTR`
+              - `CANVAS_LAYOUT_ATTR`
+              - `canvasCardSelector`
               - `canvasFrameSelector`
+              - `canvasLayoutSelector`
               - `PROTOTYPE_FRAME_KIND`
         - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt), and checkpoints each through the files plugin's version store with the turn's request and summary.
           - Server:

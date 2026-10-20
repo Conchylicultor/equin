@@ -105,6 +105,7 @@ import {
   openSizeMenu,
   pickValue,
   screen,
+  setLayout,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/e2e";
 import {
   REAL_APP_LABEL,
@@ -364,6 +365,9 @@ await withBrowser(async (h) => {
   // A fresh session: the canvas opens as frame A alone, then gets the Real app.
   await openCanvas(page, name);
   await addSource(page, REAL_APP_LABEL);
+  // Adding a source swipes it over frame A — one box, A clipped over B, and
+  // no options pill. Each screen is photographed on its own, side by side.
+  await setLayout(page, "side");
   const mock = page.locator(mockSelector());
   const counterpart = page.locator(appSelector());
 

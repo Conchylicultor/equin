@@ -13,6 +13,8 @@ export {
   letters,
   screen,
   card,
+  canvasLayout,
+  setLayout,
   frameDoc,
   frameValue,
   frameColor,

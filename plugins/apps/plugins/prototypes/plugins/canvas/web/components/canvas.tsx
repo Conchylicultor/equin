@@ -14,6 +14,11 @@ import {
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
+  CANVAS_CARD_ATTR,
+  CANVAS_LAYOUT_ATTR,
+  type CanvasLayout,
+} from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
+import {
   documentOptions,
   usePrototypeDetail,
   useStoredPicksOf,
@@ -91,9 +96,14 @@ export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
   });
   const names = useFrameNames(meta);
   const measured = room.width > 0 && room.height > 0;
+  // The layout drawn, not the one asked for: Swipe needs exactly two frames.
+  const drawn: CanvasLayout = swipe ? "swipe" : "side";
 
   return (
-    <div className="relative h-full bg-muted/40">
+    <div
+      className="relative h-full bg-muted/40"
+      {...{ [CANVAS_LAYOUT_ATTR]: drawn }}
+    >
       <CanvasShortcuts />
       <Scroll ref={roomRef} axis="both" className="h-full">
         {measured ? (
@@ -196,6 +206,7 @@ function FrameCard({
   return (
     <div
       className={cn("relative", hoverRevealGroup)}
+      {...{ [CANVAS_CARD_ATTR]: letterOf(index) }}
       style={{
         width: screenWidth,
         marginBlock: "auto",

@@ -5,6 +5,7 @@ import {
   type PrototypeViewport,
   type StoredPicks,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import type { CanvasLayout } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 
 /**
  * The canvas of one prototype's detail pane, as data: which frames sit on it,
@@ -58,8 +59,8 @@ export type CanvasSize =
 /** Fit (the whole frame visible at once) or a fixed scale, 0.1–2. */
 export type CanvasZoom = "fit" | number;
 
-/** Frames side by side, or — with exactly two — one swiped over the other. */
-export type CanvasLayout = "side" | "swipe";
+/** Published to drivers as `data-canvas-layout`, so the type lives in core. */
+export type { CanvasLayout };
 
 export interface CanvasState {
   frames: readonly CanvasFrame[];
