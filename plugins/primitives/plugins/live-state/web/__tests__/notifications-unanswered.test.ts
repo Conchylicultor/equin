@@ -7,10 +7,18 @@
  * that had dropped the tab's port). The client reports it on
  * `unansweredSubReportSink` — never retries on its own.
  *
+ * An answer is a frame echoing the request's `(tabId, id)` — not any frame for
+ * the same tuple: the shared socket fans every frame out to every tab, and a
+ * tab's version guard may drop its own answer (an `update` or HTTP read landed
+ * first) without that answer having been lost (2026-10-19: ~97% of reports
+ * were such dropped answers).
+ *
  * Pins:
  *   - an unanswered sub is reported once, at the deadline, with its key;
  *   - an answered sub is never reported;
  *   - a sub-error counts as an answer;
+ *   - an answer the version guard drops still counts as an answer;
+ *   - another tab's answer for the same tuple does not answer this tab's sub;
  *   - a sub sent before the socket opens waits for the open's replay, which
  *     starts its clock — a socket that never opens is not this deadline's.
  *
@@ -45,6 +53,20 @@ const flush = async (): Promise<void> => {
   await vi.advanceTimersByTimeAsync(0);
 };
 
+/** The request identity of the last `sub` `tabId` sent for `key` — what an answer echoes. */
+function requestOf(
+  socket: FakeWebSocket,
+  key: string,
+  tabId: string,
+): { id: number; tabId: string } {
+  const sub = socket
+    .sentJson()
+    .filter((f) => f.op === "sub" && f.key === key && f.tabId === tabId)
+    .at(-1);
+  if (sub === undefined) throw new Error(`no sub for ${key} from ${tabId}`);
+  return { id: sub.id as number, tabId };
+}
+
 describe("NotificationsClient — unanswered subs", () => {
   const clients: NotificationsClient[] = [];
   let reports: UnansweredSubReport[] = [];
@@ -57,6 +79,7 @@ describe("NotificationsClient — unanswered subs", () => {
     const hub = createTransportHub();
     const client = new NotificationsClient(new QueryClient(), {
       makeSocket: hub.makeSocket(hub.tab()),
+      tabId: "tab-a",
     });
     clients.push(client);
     await flush();
@@ -109,6 +132,7 @@ describe("NotificationsClient — unanswered subs", () => {
     await flush();
     socket.serverSend({
       kind: "sub-ack",
+      ...requestOf(socket, "k", "tab-a"),
       key: "k",
       params: {},
       value: { status: "ok" },
@@ -124,12 +148,68 @@ describe("NotificationsClient — unanswered subs", () => {
     await flush();
     socket.serverSend({
       kind: "sub-error",
+      ...requestOf(socket, "k", "tab-a"),
       key: "k",
       params: {},
       reason: "loader-failed",
     });
     await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS * 2);
     expect(reports).toHaveLength(0);
+  });
+
+  test("an answer the version guard drops is still an answer", async () => {
+    const { client, socket } = await setup({ open: true });
+    client.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+    // A change lands while the sub's load runs: the push reaches the tab
+    // first, and the sub-ack — at the version it read before loading — is
+    // dropped as stale.
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: {},
+      value: { status: "newer" },
+      version: 2,
+    });
+    socket.serverSend({
+      kind: "sub-ack",
+      ...requestOf(socket, "k", "tab-a"),
+      key: "k",
+      params: {},
+      value: { status: "older" },
+      version: 2,
+    });
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS * 2);
+    expect(reports).toHaveLength(0);
+  });
+
+  test("another tab's answer for the same tuple does not answer this tab's sub", async () => {
+    const { hub, client: tabA, socket } = await setup({ open: true });
+    const tabB = new NotificationsClient(new QueryClient(), {
+      makeSocket: hub.makeSocket(hub.tab()),
+      tabId: "tab-b",
+    });
+    clients.push(tabB);
+    await flush();
+    expect(hub.server.all()).toHaveLength(1); // one shared socket
+
+    tabA.observe("k", {}, undefined, { schema: pushSchema });
+    tabB.observe("k", {}, undefined, { schema: pushSchema });
+    await flush();
+    // Only tab B's request is answered (tab A's was lost); the shared socket
+    // fans the answer out to tab A too.
+    socket.serverSend({
+      kind: "sub-ack",
+      ...requestOf(socket, "k", "tab-b"),
+      key: "k",
+      params: {},
+      value: { status: "ok" },
+      version: 1,
+    });
+    await vi.advanceTimersByTimeAsync(UNANSWERED_SUB_MS);
+    expect(reports).toEqual([
+      expect.objectContaining({ count: 1, oldestKey: "k" }),
+    ]);
   });
 
   test("a sub sent before the socket opens is timed from the open's replay", async () => {

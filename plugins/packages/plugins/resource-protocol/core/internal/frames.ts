@@ -184,6 +184,12 @@ const c = <const K extends string, const F extends WireFields>(
  * - `etag` (conditional revalidation): the fresh content signature beside a
  *   full value, for a resource that declares `revalidate`; echoed on the next
  *   (re)subscribe / conditional GET.
+ * - `id` + `tabId` (an answer frame — sub-ack, up-to-date, sub-error): the
+ *   request it answers, as the asking tab's own `id` and the `tabId` it sent.
+ *   Ids are per tab, so only the pair names one request on a shared socket —
+ *   a tab reads a frame as ITS answer only when both match (the unanswered-sub
+ *   deadline). Absent on an unsolicited frame (a refusal or eviction broadcast
+ *   to every holder).
  * - `epoch`: the server's boot identity, on every ack frame — echoed with the
  *   sub's version on a replay so a same-boot server can answer `up-to-date`.
  * - `watermark` (Rule B′): the xid8 snapshot floor a FULLY reconciling value
@@ -202,6 +208,7 @@ const SERVER_FRAMES = {
   ping: s("ping", { flushOpenMs: w.number }),
   "sub-error": s("sub-error", {
     id: w.optional(w.number),
+    tabId: w.optional(w.string),
     key: w.string,
     params: w.params,
     reason: w.oneOf(SUB_ERROR_REASONS),
@@ -214,6 +221,7 @@ const SERVER_FRAMES = {
   }),
   "sub-ack": s("sub-ack", {
     id: w.optional(w.number),
+    tabId: w.optional(w.string),
     key: w.string,
     params: w.params,
     value: w.unknown,
@@ -231,6 +239,7 @@ const SERVER_FRAMES = {
    */
   "sub-ack-derived": s("sub-ack", {
     id: w.optional(w.number),
+    tabId: w.optional(w.string),
     key: w.string,
     params: w.params,
     version: w.number,
@@ -244,6 +253,7 @@ const SERVER_FRAMES = {
    */
   "sub-ack-bytes": s("sub-ack", {
     id: w.optional(w.number),
+    tabId: w.optional(w.string),
     key: w.string,
     params: w.params,
     version: w.number,
@@ -252,6 +262,7 @@ const SERVER_FRAMES = {
   /** "Your cached value is still current" — the WS twin of HTTP 304. */
   "up-to-date": s("up-to-date", {
     id: w.optional(w.number),
+    tabId: w.optional(w.string),
     key: w.string,
     params: w.params,
     version: w.number,
@@ -260,6 +271,8 @@ const SERVER_FRAMES = {
   /** One frame answering every already-current entry of a `sub-batch`. */
   "up-to-date-batch": s("up-to-date-batch", {
     epoch: w.string,
+    /** The tab whose `sub-batch` this answers; each entry echoes its `id`. */
+    tabId: w.optional(w.string),
     entries: w.array(
       w.object({
         id: w.optional(w.number),

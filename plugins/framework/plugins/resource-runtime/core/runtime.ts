@@ -2188,6 +2188,24 @@ const REVERSE_RESOLVE_CAP = 500;
 // `paramsKey({})` — the one tuple of a param-less resource.
 const EMPTY_PK = "{}";
 
+/**
+ * The request a frame answers: the asking tab's own frame `id` and its
+ * `tabId`. Ids are minted per tab, so only the pair names one request on a
+ * shared socket — every answer (`sub-ack`, `up-to-date`, `sub-error`) echoes
+ * both, and a tab counts a frame as the answer to its sub only when both match.
+ */
+interface SubRequest {
+  id: number | undefined;
+  tabId: string | undefined;
+}
+
+function subRequestOf(m: { id?: number; tabId?: string }): SubRequest {
+  return {
+    id: typeof m.id === "number" ? m.id : undefined,
+    tabId: typeof m.tabId === "string" ? m.tabId : undefined,
+  };
+}
+
 export function createResourceRuntime(
   opts: ResourceRuntimeOptions = {},
 ): ResourceRuntime {
@@ -2458,7 +2476,7 @@ export function createResourceRuntime(
   function refuseSubParams(
     ws: RuntimeSocket,
     entry: RegistryEntry,
-    id: number | undefined,
+    req: SubRequest,
     params: ResourceParams,
     clientBuild: string | undefined,
   ): boolean {
@@ -2470,7 +2488,7 @@ export function createResourceRuntime(
         const verdict = rejectContract(entry.key, params, err, clientBuild);
         sendJson(ws, {
           kind: "sub-error",
-          id,
+          ...req,
           key: entry.key,
           params,
           reason: "contract-mismatch",
@@ -2480,7 +2498,7 @@ export function createResourceRuntime(
         reportLoaderError(`validateParams failed for ${entry.key}`, err);
         sendJson(ws, {
           kind: "sub-error",
-          id,
+          ...req,
           key: entry.key,
           params,
           reason: "loader-failed",
@@ -2497,12 +2515,15 @@ export function createResourceRuntime(
    * again, so the tuple is dropped from every socket holding it, each holder
    * is told `contract-mismatch`, and it is ALWAYS reported (it is a bug in the
    * gate, whatever the client's build). Returns false for any other error, so
-   * the caller's own failure handling runs.
+   * the caller's own failure handling runs. `asker`: the sub whose read hit
+   * it — its socket's copy names that request, since this broadcast is also
+   * its answer.
    */
   function evictOnContractError(
     entry: RegistryEntry,
     params: ResourceParams,
     err: unknown,
+    asker?: { state: SocketState; req: SubRequest },
   ): boolean {
     if (!(err instanceof ResourceContractError)) return false;
     reportLoaderError(
@@ -2512,6 +2533,7 @@ export function createResourceRuntime(
     unregisterTupleEverywhere(entry.key, params, (state) =>
       sendJson(state.ws, {
         kind: "sub-error",
+        ...(asker?.state === state ? asker.req : {}),
         key: entry.key,
         params,
         reason: "contract-mismatch",
@@ -6384,14 +6406,15 @@ export function createResourceRuntime(
     state: SocketState,
     m: ReceivedFrame<"sub">,
   ): Promise<void> {
-    const { id, key, params = {}, etag: clientEtag } = m;
+    const { key, params = {}, etag: clientEtag } = m;
     if (!key) return;
+    const req = subRequestOf(m);
     const build = typeof m.build === "string" ? m.build : undefined;
     const entry = registry.get(key);
     if (!entry) {
       sendJson(state.ws, {
         kind: "sub-error",
-        id,
+        ...req,
         key,
         params,
         reason: "unknown-key",
@@ -6401,7 +6424,7 @@ export function createResourceRuntime(
     }
     // The params gate — before authorize and before the sub registers, so a
     // refused sub leaves no trace a push could rerun.
-    if (refuseSubParams(state.ws, entry, id, params, build)) return;
+    if (refuseSubParams(state.ws, entry, req, params, build)) return;
     // Subscription-authorization seam (deferred; single-instance-per-user — see
     // research/2026-07-02-global-adr-single-instance-per-user.md). Runs before
     // any side effect (refcount bump, onFirstSubscribe, loader read) so a refused
@@ -6420,7 +6443,7 @@ export function createResourceRuntime(
       if (!allowed) {
         sendJson(state.ws, {
           kind: "sub-error",
-          id,
+          ...req,
           key,
           params,
           reason: "unauthorized",
@@ -6434,7 +6457,7 @@ export function createResourceRuntime(
       entry,
       pk,
       params,
-      typeof m.tabId === "string" ? m.tabId : "",
+      req.tabId ?? "",
       m.acks === true,
     );
     // Seeded derivation: answered (or refused) right here, synchronously after
@@ -6455,7 +6478,7 @@ export function createResourceRuntime(
         derivedSubs.set(key, (derivedSubs.get(key) ?? 0) + 1);
         sendJson(state.ws, {
           kind: "sub-ack",
-          id,
+          ...req,
           key,
           params,
           version: entry.versions.get(pk) ?? 0,
@@ -6513,7 +6536,7 @@ export function createResourceRuntime(
     ) {
       sendJson(state.ws, {
         kind: "up-to-date",
-        id,
+        ...req,
         key,
         params,
         version: currentVersion,
@@ -6523,7 +6546,7 @@ export function createResourceRuntime(
       return;
     }
 
-    await serveSub(state, entry, id, key, params, pk, clientEtag, firstGlobal);
+    await serveSub(state, entry, req, key, params, pk, clientEtag, firstGlobal);
   }
 
   // The read/serve tail of a subscription: probe the conditional-revalidation
@@ -6533,7 +6556,7 @@ export function createResourceRuntime(
   async function serveSub(
     state: SocketState,
     entry: RegistryEntry,
-    id: number | undefined,
+    req: SubRequest,
     key: string,
     params: ResourceParams,
     pk: string,
@@ -6602,7 +6625,7 @@ export function createResourceRuntime(
       noteRead(entry, pk, undefined);
       sendJson(state.ws, {
         kind: "up-to-date",
-        id,
+        ...req,
         key,
         params,
         version,
@@ -6619,7 +6642,7 @@ export function createResourceRuntime(
     if (entry.bytes === true) {
       sendJson(state.ws, {
         kind: "sub-ack",
-        id,
+        ...req,
         key,
         params,
         version,
@@ -6645,7 +6668,7 @@ export function createResourceRuntime(
     } catch (err) {
       // A gate gap: the tuple is registered, so evict it everywhere (which
       // tells this socket too) rather than leave every push re-failing.
-      if (evictOnContractError(entry, params, err)) return;
+      if (evictOnContractError(entry, params, err, { state, req })) return;
       reportLoaderError(`loader failed for ${key}`, err);
       noteRead(entry, pk, undefined); // D8: this holder now sits on an error
       sendJson(
@@ -6653,14 +6676,14 @@ export function createResourceRuntime(
         err instanceof ResourceRefusal
           ? {
               kind: "sub-error",
-              id,
+              ...req,
               key,
               params,
               reason: "refused",
               code: err.code,
               message: err.message,
             }
-          : { kind: "sub-error", id, key, params, reason: "loader-failed" },
+          : { kind: "sub-error", ...req, key, params, reason: "loader-failed" },
       );
       return;
     }
@@ -6712,7 +6735,7 @@ export function createResourceRuntime(
     noteRead(entry, pk, { raw }, opensSpan ? { state, version } : undefined);
     sendJson(state.ws, {
       kind: "sub-ack",
-      id,
+      ...req,
       key,
       params,
       value,
@@ -6766,6 +6789,7 @@ export function createResourceRuntime(
         sendJson(state.ws, {
           kind: "sub-error",
           id: e.id,
+          tabId,
           key: e.key,
           params,
           reason: "unknown-key",
@@ -6773,7 +6797,8 @@ export function createResourceRuntime(
         });
         continue;
       }
-      if (refuseSubParams(state.ws, entry, e.id, params, build)) continue;
+      if (refuseSubParams(state.ws, entry, { id: e.id, tabId }, params, build))
+        continue;
       retained.add(`${e.key}\0${pk}`);
       if (entry.authorize) {
         // The authorization seam must run BEFORE any side effect (see
@@ -6856,7 +6881,7 @@ export function createResourceRuntime(
         await serveSub(
           state,
           p.entry,
-          p.id,
+          { id: p.id, tabId },
           p.key,
           p.params,
           p.pk,
@@ -6869,6 +6894,7 @@ export function createResourceRuntime(
       sendJson(state.ws, {
         kind: "up-to-date-batch",
         epoch: bootEpoch,
+        tabId,
         entries: upToDate,
       });
     }
