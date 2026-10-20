@@ -28,6 +28,7 @@ export const exhibitsEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/css/plugins/yield", id: "primitives.css.yield", loader: () => import("@plugins/primitives/plugins/css/plugins/yield/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text"] },
   { pluginPath: "primitives/plugins/metrics/plugins/chart-kit", id: "primitives.metrics.chart-kit", loader: () => import("@plugins/primitives/plugins/metrics/plugins/chart-kit/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text", "primitives/plugins/css/plugins/ui-kit"] },
   { pluginPath: "primitives/plugins/section-card", id: "primitives.section-card", loader: () => import("@plugins/primitives/plugins/section-card/exhibits"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/syntax-highlight/plugins/code-preview/plugins/mermaid", id: "primitives.syntax-highlight.code-preview.mermaid", loader: () => import("@plugins/primitives/plugins/syntax-highlight/plugins/code-preview/plugins/mermaid/exhibits"), dependsOn: [] },
   { pluginPath: "tasks/plugins/task-draft-form", id: "tasks.task-draft-form", loader: () => import("@plugins/tasks/plugins/task-draft-form/exhibits"), dependsOn: [] },
 ];
 

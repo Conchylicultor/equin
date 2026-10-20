@@ -12,13 +12,16 @@ import type {
 } from "../../../core";
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 import { participantHue } from "../hues";
+import { iconFor, nodeIcon } from "../icons";
 import {
   arrivalAngle,
   edgeKeys,
   edgePath,
   layoutFlowchart,
   shapeSize,
+  type Cubic,
   type FlowLayout,
   type Size,
 } from "./layout";
@@ -29,9 +32,11 @@ const HEAD = 9;
 type Box = { x: number; y: number; width: number; height: number };
 
 /**
- * A flowchart drawn natively: nodes are HTML cards measured where they render,
- * laid out by dagre at their real size, joined by smooth SVG edges with label
- * pills; subgraphs are tinted frames. Drawn at natural size — the caller's
+ * A flowchart drawn natively: nodes are HTML cards (an icon its label reads
+ * as, a title, a mono subtitle from the label's further lines; a node the
+ * source gives a class drawn as the key node) measured where they render, laid
+ * out by dagre at their real size, joined by smooth SVG curves with label
+ * pills sitting on them; subgraphs are tinted frames. Drawn at natural size — the caller's
  * scroller handles a wide one. Hovering a node traces its edges.
  *
  * Every label stays the same DOM element from first render on, so the size
@@ -65,8 +70,8 @@ export function Flowchart({ diagram }: { diagram: FlowchartModel }) {
       const labelSizes = new Map<string, Size>();
       for (const [key, el] of edgeLabelRefs.current) {
         labelSizes.set(key, {
-          width: el.offsetWidth + 8,
-          height: el.offsetHeight + 4,
+          width: el.offsetWidth,
+          height: el.offsetHeight,
         });
       }
       setLayout(layoutFlowchart(diagram, nodeSizes, labelSizes));
@@ -119,7 +124,7 @@ export function Flowchart({ diagram }: { diagram: FlowchartModel }) {
               <Wire
                 key={keys[i]}
                 edge={edge}
-                points={at.points}
+                segments={at.segments}
                 hot={touches(edge)}
               />
             ) : null;
@@ -170,6 +175,14 @@ export function Flowchart({ diagram }: { diagram: FlowchartModel }) {
   );
 }
 
+// Shapes drawn as a card (icon, title, subtitle); the others keep their outline.
+const CARD_SHAPES: ReadonlySet<FlowNode["shape"]> = new Set([
+  "rect",
+  "round",
+  "stadium",
+  "subroutine",
+]);
+
 function NodeBox({
   node,
   box,
@@ -183,12 +196,17 @@ function NodeBox({
   labelRef: (el: HTMLElement | null) => void;
   onHover: (on: boolean) => void;
 }) {
+  const [title = "", ...rest] = node.label.split("\n");
+  const sub = rest.length ? rest.join("\n") : null;
+  const card = CARD_SHAPES.has(node.shape);
   // One element whether laid out or not, so its label is never remounted (the
   // observer keeps watching it): unplaced, it waits invisibly at the origin.
   return (
     <Placed
       className="mmd-flow-node"
       data-shape={node.shape}
+      data-card={card ? "" : undefined}
+      data-key={node.classes.length ? "" : undefined}
       data-hot={hot ? "" : undefined}
       data-pending={box ? undefined : ""}
       x={box ? { center: box.x, size: box.width } : { start: 0 }}
@@ -203,8 +221,18 @@ function NodeBox({
           height={box.height}
         />
       ) : null}
-      <span ref={labelRef} className="mmd-flow-node-label">
-        {node.label}
+      <span ref={labelRef} className="mmd-flow-node-body">
+        {card ? (
+          <span className="mmd-badge mmd-flow-node-badge" aria-hidden>
+            <Icon icon={iconFor([title, sub], nodeIcon)} />
+          </span>
+        ) : null}
+        <span className="mmd-flow-node-text">
+          <span className="mmd-flow-node-title">{title}</span>
+          {sub !== null ? (
+            <span className="mmd-flow-node-sub">{sub}</span>
+          ) : null}
+        </span>
       </span>
     </Placed>
   );
@@ -243,14 +271,14 @@ function ShapeOutline({
 
 function Wire({
   edge,
-  points,
+  segments,
   hot,
 }: {
   edge: FlowEdge;
-  points: ReadonlyArray<{ x: number; y: number }>;
+  segments: readonly Cubic[];
   hot: boolean;
 }) {
-  if (points.length < 2) return null;
+  if (segments.length === 0) return null;
   const headLen = edge.head === "arrow" ? HEAD : edge.head === "none" ? 0 : 4;
   return (
     <g
@@ -260,18 +288,18 @@ function Wire({
     >
       <path
         className="mmd-flow-wire-line"
-        d={edgePath(points, headLen, edge.bidirectional ? headLen : 0)}
+        d={edgePath(segments, headLen, edge.bidirectional ? headLen : 0)}
       />
       <Head
         kind={edge.head}
-        at={points.at(-1)!}
-        angle={arrivalAngle(points, false)}
+        at={segments.at(-1)!.p1}
+        angle={arrivalAngle(segments, false)}
       />
       {edge.bidirectional ? (
         <Head
           kind={edge.head}
-          at={points[0]!}
-          angle={arrivalAngle(points, true)}
+          at={segments[0]!.p0}
+          angle={arrivalAngle(segments, true)}
         />
       ) : null}
     </g>

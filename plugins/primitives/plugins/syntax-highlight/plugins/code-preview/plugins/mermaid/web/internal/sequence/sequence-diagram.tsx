@@ -8,18 +8,17 @@ import type {
   SequenceParticipant,
 } from "../../../core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 import { participantHue } from "../hues";
+import { actorIcon, iconFor, participantIcon } from "../icons";
 import "./sequence.css";
-
-const personIcon = symbol("person");
 
 /**
  * A sequence diagram drawn natively: one grid column per participant (its card
  * on top, its lifeline running behind), each message a coloured, numbered arrow
  * between two columns, notes as callouts, and loop / alt / … blocks as framed
  * sub-grids that keep the columns aligned through any nesting. Text is the
- * conversation's own size; a wide diagram scrolls rather than shrinks.
+ * conversation's own size; a wide diagram scrolls rather than shrinks. Each
+ * participant's badge is the icon its name reads as (icons.ts).
  */
 export function SequenceDiagram({ diagram }: { diagram: SequenceModel }) {
   const index = useMemo(
@@ -103,12 +102,14 @@ function ParticipantCard({
       onMouseEnter={() => ctx.setHot({ participant: participant.id })}
       onMouseLeave={() => ctx.setHot(null)}
     >
-      <span className="mmd-seq-actor-badge" aria-hidden>
-        {participant.kind === "actor" ? (
-          <Icon icon={personIcon} />
-        ) : (
-          initial(participant.label)
-        )}
+      <span className="mmd-badge mmd-seq-actor-badge" aria-hidden>
+        <Icon
+          icon={
+            participant.kind === "actor"
+              ? actorIcon
+              : iconFor([name, sub], participantIcon)
+          }
+        />
       </span>
       <span className="mmd-seq-actor-text">
         <span className="mmd-seq-actor-name">{name}</span>
@@ -122,10 +123,6 @@ function ParticipantCard({
 function splitLabel(label: string): { name: string; sub: string | null } {
   const m = /^(.+?)\s*\((.+)\)$/.exec(label);
   return m ? { name: m[1]!, sub: m[2]! } : { name: label, sub: null };
-}
-
-function initial(label: string): string {
-  return (/[\p{L}\p{N}]/u.exec(label)?.[0] ?? "•").toUpperCase();
 }
 
 /**
@@ -358,6 +355,7 @@ function numberMessages(
 // size columns so a label rarely outgrows the hop it names.
 const MONO_CHAR = 7.6;
 const SANS_CHAR = 7.4;
+const CAPTION_CHAR = 6.4;
 
 /**
  * The narrowest a column may be: wide enough for every participant card, and
@@ -367,7 +365,13 @@ const SANS_CHAR = 7.4;
 function columnMinWidth(diagram: SequenceModel): number {
   let min = 140;
   for (const p of diagram.participants) {
-    min = Math.max(min, p.label.length * SANS_CHAR + 72);
+    // The card stacks the name over its subtitle: the wider of the two.
+    const { name, sub } = splitLabel(p.label);
+    const text = Math.max(
+      name.length * SANS_CHAR,
+      (sub?.length ?? 0) * CAPTION_CHAR,
+    );
+    min = Math.max(min, text + 80);
   }
   const index = new Map(diagram.participants.map((p, i) => [p.id, i]));
   const visit = (items: readonly SequenceItem[]) => {

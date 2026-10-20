@@ -84,6 +84,12 @@ export interface FlowNode {
   shape: FlowNodeShape;
   /** The subgraph that holds it, or null at the top level. */
   group: string | null;
+  /**
+   * The Mermaid classes the source gives it (`A:::key`, `class A,B key`), in
+   * first-given order. The native renderer draws its own look, so a class only
+   * says the author singled the node out — it is drawn as a key node.
+   */
+  classes: readonly string[];
 }
 
 export interface FlowEdge {

@@ -1,0 +1,40 @@
+/* The stage a native diagram is drawn on: ONE surface, owned by the diagram.
+ * A host frames a preview however it likes (the markdown fence and the page
+ * code block paint --muted); the stage sits inset in that frame and paints
+ * --mmd-surface, and every pill, note and frame inside reads that same
+ * variable — never a palette token of its own — so nothing can come out a
+ * different shade from what it sits on. Cards sit lifted on it (--mmd-card-lift), which
+ * is what gives the diagram its depth. */
+
+.mmd-stage {
+  --mmd-surface: var(--background);
+  /* Outlines and rules on the stage. */
+  --mmd-line: var(--border);
+  --mmd-line-strong: color-mix(in oklch, var(--muted-foreground) 30%, var(--border));
+  /* Categorical hues (hues.ts) are oklch(--mmd-l --mmd-c <hue>), tuned per
+   * colour scheme: deeper and more saturated on light, lighter on dark. */
+  --mmd-l: 0.58;
+  --mmd-c: 0.16;
+  --mmd-card-lift: 0 1px 2px rgb(16 24 40 / 0.05), 0 8px 24px -16px rgb(16 24 40 / 0.18);
+  margin: var(--space-sm);
+  border: 1px solid var(--mmd-line);
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--mmd-surface);
+  color: var(--foreground);
+}
+:root.dark .mmd-stage {
+  --mmd-l: 0.74;
+  --mmd-c: 0.13;
+  --mmd-card-lift: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 8px 24px -12px rgb(0 0 0 / 0.6);
+}
+
+/* An icon badge: a card's leading square, tinted by --mmd-hue. */
+.mmd-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  font-size: 18px;
+  color: var(--mmd-hue);
+  background: color-mix(in oklch, var(--mmd-hue) 14%, transparent);
+}

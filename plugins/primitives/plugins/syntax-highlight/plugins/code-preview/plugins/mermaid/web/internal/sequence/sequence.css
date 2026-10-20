@@ -2,8 +2,8 @@
  * column per participant, shared by the header, the lifelines and every
  * (sub)grid of the body, so a message drawn from column centre to column
  * centre lands on the lifelines however deeply its block nests. Every colour
- * reads the theme; a participant's hue (`--mmd-hue`) is mixed toward the
- * foreground by `participantHue`. */
+ * reads the stage (stage.css): its surface, its lines, and a participant's
+ * hue (`--mmd-hue`, from `participantHue`). */
 
 .mmd-seq {
   /* Set inline from the diagram (participant count, the narrowest a column may
@@ -11,13 +11,10 @@
   --mmd-n: 1;
   --mmd-col-min: 140px;
   --mmd-hue: var(--muted-foreground);
-  /* Outlines and rules: --border alone vanishes on a muted surface. */
-  --mmd-line: color-mix(in oklch, var(--muted-foreground) 32%, var(--border));
   --mmd-cols: repeat(var(--mmd-n), minmax(var(--mmd-col-min), 1fr));
   position: relative;
   min-width: calc(var(--mmd-n) * var(--mmd-col-min));
-  padding-block: 4px 12px;
-  color: var(--foreground);
+  padding-block: 0 4px;
 }
 .mmd-seq-grid {
   display: grid;
@@ -27,7 +24,7 @@
 /* ── Lifelines: a dashed rule down every column's centre ─────────────────── */
 .mmd-seq-lifelines {
   position: absolute;
-  inset: 28px 0 12px;
+  inset: 24px 0 4px;
 }
 .mmd-seq-lifelines > div {
   position: relative;
@@ -49,29 +46,21 @@
   align-items: center;
   gap: 10px;
   max-width: calc(100% - 12px);
-  padding: 7px 14px 7px 7px;
+  padding: 8px 14px 8px 8px;
   background: var(--card);
   border: 1px solid var(--mmd-line);
-  border-radius: calc(var(--radius) + 2px);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--mmd-card-lift);
 }
 .mmd-seq-actor-badge {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: calc(var(--font-size-caption) * var(--font-scale));
-  color: var(--mmd-hue);
-  background: color-mix(in oklch, var(--mmd-hue) 15%, transparent);
+  width: 30px;
+  height: 30px;
 }
 .mmd-seq-actor-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 .mmd-seq-actor-name {
   font-weight: 500;
@@ -116,7 +105,7 @@
   margin-bottom: 6px;
   padding: 2px 10px 2px 3px;
   border-radius: 999px;
-  background: var(--background);
+  background: var(--mmd-surface);
 }
 .mmd-seq-msg[data-self] .mmd-seq-msg-label {
   align-self: flex-start;
@@ -133,7 +122,7 @@
   font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--background);
+  color: var(--mmd-surface);
   background: var(--mmd-hue);
 }
 .mmd-seq-msg-text {
@@ -239,8 +228,8 @@
   white-space: pre;
   text-align: center;
   color: var(--foreground);
-  background: color-mix(in oklch, var(--mmd-hue) 10%, var(--background));
-  border: 1px solid color-mix(in oklch, var(--mmd-hue) 32%, transparent);
+  background: color-mix(in oklch, var(--mmd-hue) 10%, var(--mmd-surface));
+  border: 1px solid color-mix(in oklch, var(--mmd-hue) 30%, transparent);
   transition: opacity 0.15s;
 }
 .mmd-seq-note-cell[data-wide] .mmd-seq-note {
@@ -267,9 +256,10 @@
   position: absolute;
   inset-block: 0;
   inset-inline: calc(6px + var(--mmd-depth) * 8px);
-  border: 1px solid var(--mmd-line);
+  border: 1px solid var(--mmd-line-strong);
   border-radius: calc(var(--radius) + 2px);
-  background: color-mix(in oklch, var(--background) 45%, transparent);
+  /* A faint shade of whatever the stage is, never a second surface colour. */
+  background: color-mix(in oklch, var(--foreground) 2.5%, transparent);
   pointer-events: none;
 }
 .mmd-seq-section {
@@ -281,7 +271,7 @@
   position: absolute;
   top: 0;
   inset-inline: calc(6px + var(--mmd-depth) * 8px);
-  border-top: 1px dashed var(--mmd-line);
+  border-top: 1px dashed var(--mmd-line-strong);
 }
 .mmd-seq-section-head {
   grid-column: 1 / -1;
@@ -306,7 +296,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted-foreground);
-  background: var(--muted);
+  background: color-mix(in oklch, var(--foreground) 7%, transparent);
 }
 .mmd-seq-section-label {
   font-size: calc(var(--font-size-caption) * var(--font-scale));
@@ -316,5 +306,5 @@
 
 /* ── Hover: trace one participant's messages, or one step ───────────────── */
 .mmd-seq[data-hovering] :is(.mmd-seq-msg, .mmd-seq-note):not([data-hot]) {
-  opacity: 0.3;
+  opacity: 0.28;
 }

@@ -1,12 +1,13 @@
 // Distinct hues around the wheel, in the order participants / groups take them.
-const HUES = [250, 300, 160, 65, 20, 200, 335, 110];
+const HUES = [250, 295, 165, 70, 15, 200, 335, 110];
 
 /**
- * The colour of the i-th participant: a categorical hue pulled toward the
- * theme's foreground, so it reads on the surface in either scheme — lighter on
- * a dark theme, deeper on a light one — without knowing which is in force.
+ * The colour of the i-th participant: a categorical hue at the lightness and
+ * chroma the stage sets for the colour scheme in force (`--mmd-l` / `--mmd-c`,
+ * stage.css) — deeper and more saturated on a light surface, lighter on a dark
+ * one — so it stays clean in both rather than drifting toward the foreground.
  */
 export function participantHue(i: number): string {
   const hue = HUES[i % HUES.length]!;
-  return `color-mix(in oklch, oklch(0.66 0.16 ${hue}) 72%, var(--foreground))`;
+  return `oklch(var(--mmd-l) var(--mmd-c) ${hue})`;
 }

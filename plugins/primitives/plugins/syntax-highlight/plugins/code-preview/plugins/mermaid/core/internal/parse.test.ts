@@ -147,6 +147,18 @@ describe("parseMermaid — flowchart", () => {
     ]);
   });
 
+  test("a node's classes are kept, from `:::` and `class` statements", () => {
+    const d = flowchart(`flowchart TB
+      class a,b key
+      a --> b:::hot --> c
+      class b key`);
+    expect(Object.fromEntries(d.nodes.map((n) => [n.id, n.classes]))).toEqual({
+      a: ["key"],
+      b: ["hot", "key"],
+      c: [],
+    });
+  });
+
   // As in Mermaid: a top-level node a subgraph mentions moves into it; one
   // already in a subgraph stays in that one.
   test("subgraphs own the nodes they mention", () => {

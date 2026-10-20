@@ -1,15 +1,16 @@
 /* The native flowchart's paint. Geometry comes from dagre (runtime numbers,
  * placed through <Placed>); this file draws the cards, the wires and the
- * frames, every colour read from the theme. */
+ * frames, every colour read from the stage (stage.css). */
 
 .mmd-flow {
   /* A group's hue, set per group inline; this is the fallback. */
   --mmd-hue: var(--muted-foreground);
-  /* Outlines: --border alone vanishes on a muted surface. */
-  --mmd-line: color-mix(in oklch, var(--muted-foreground) 32%, var(--border));
+  /* The emphasis a key node (one the source gives a class) and a traced edge
+   * wear: a hue of the diagram's own palette, at the stage's per-scheme
+   * lightness — a theme's --primary may be a neutral that would not read. */
+  --mmd-accent: oklch(var(--mmd-l) calc(var(--mmd-c) + 0.04) 285);
   position: relative;
   margin-inline: auto;
-  color: var(--foreground);
 }
 /* Before the first layout — and for a node or label the current layout does not
  * know yet — labels render at their natural size only to be measured. */
@@ -25,17 +26,22 @@
   place-items: center;
   background: var(--card);
   border: 1px solid var(--mmd-line);
-  border-radius: calc(var(--radius) + 2px);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--mmd-card-lift);
   transition: border-color 0.15s, background 0.15s;
 }
+.mmd-flow-node:hover,
 .mmd-flow-node[data-hot] {
-  border-color: color-mix(in oklch, var(--primary) 55%, var(--border));
+  border-color: var(--mmd-line-strong);
 }
-.mmd-flow-node[data-shape="round"] { border-radius: 16px; }
+.mmd-flow-node[data-key] {
+  border-color: color-mix(in oklch, var(--mmd-accent) 55%, var(--mmd-line));
+  background: color-mix(in oklch, var(--mmd-accent) 8%, var(--card));
+}
+.mmd-flow-node[data-shape="round"] { border-radius: 18px; }
 .mmd-flow-node:is([data-shape="stadium"], [data-shape="circle"]) { border-radius: 999px; }
 .mmd-flow-node[data-shape="subroutine"] {
-  box-shadow: inset 6px 0 0 -5px var(--border), inset -6px 0 0 -5px var(--border);
+  box-shadow: inset 6px 0 0 -5px var(--mmd-line-strong), inset -6px 0 0 -5px var(--mmd-line-strong), var(--mmd-card-lift);
 }
 /* Outlines a border cannot draw: the SVG is the shape, the box is invisible. */
 .mmd-flow-node:is([data-shape="decision"], [data-shape="hexagon"], [data-shape="database"]) {
@@ -50,25 +56,63 @@
 }
 .mmd-flow-shape path {
   fill: var(--card);
-  stroke: var(--mmd-line);
+  stroke: var(--mmd-line-strong);
   stroke-width: 1.25;
   transition: stroke 0.15s;
 }
-.mmd-flow-node[data-hot] .mmd-flow-shape path {
-  stroke: color-mix(in oklch, var(--primary) 55%, var(--border));
+.mmd-flow-node[data-key] .mmd-flow-shape path {
+  fill: color-mix(in oklch, var(--mmd-accent) 8%, var(--card));
+  stroke: color-mix(in oklch, var(--mmd-accent) 55%, var(--mmd-line));
 }
 
-.mmd-flow-node-label {
+/* What is measured: the node's content box, padding included. */
+.mmd-flow-node-body {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: max-content;
-  max-width: 15rem;
-  padding: 10px 16px;
+  padding: 10px 18px;
+  line-height: 1.35;
+}
+.mmd-flow-node[data-card] .mmd-flow-node-body {
+  min-width: 200px;
+  padding: 12px 16px 12px 12px;
+}
+.mmd-flow-node-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  background: var(--mmd-surface);
+  border: 1px solid var(--mmd-line);
+}
+.mmd-flow-node[data-key] .mmd-flow-node-badge {
+  color: var(--mmd-accent);
+  background: color-mix(in oklch, var(--mmd-accent) 14%, transparent);
+  border-color: transparent;
+}
+.mmd-flow-node-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 16rem;
+}
+.mmd-flow-node:not([data-card]) .mmd-flow-node-text {
+  align-items: center;
   text-align: center;
+}
+.mmd-flow-node-title {
+  font-weight: 500;
   white-space: pre-line;
   overflow-wrap: anywhere;
-  line-height: 1.35;
-  font-weight: 500;
+}
+.mmd-flow-node-sub {
+  font-family: var(--font-mono);
+  font-size: calc(var(--font-size-caption) * var(--font-scale));
+  color: var(--muted-foreground);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 /* ── Wires ───────────────────────────────────────────────────────────────── */
@@ -78,7 +122,7 @@
   z-index: 1;
   overflow: visible;
   pointer-events: none;
-  --mmd-wire: color-mix(in oklch, var(--muted-foreground) 70%, var(--border));
+  --mmd-wire: color-mix(in oklch, var(--muted-foreground) 45%, var(--border));
 }
 .mmd-flow-wire-line {
   fill: none;
@@ -90,10 +134,10 @@
 .mmd-flow-wire[data-line="dotted"] .mmd-flow-wire-line { stroke-dasharray: 2 5; }
 .mmd-flow-wire[data-line="thick"] .mmd-flow-wire-line { stroke-width: 2.75; }
 .mmd-flow-head { fill: var(--mmd-wire); transition: fill 0.15s; }
-.mmd-flow-head-ring { fill: var(--background); stroke: var(--mmd-wire); stroke-width: 1.5; }
+.mmd-flow-head-ring { fill: var(--mmd-surface); stroke: var(--mmd-wire); stroke-width: 1.5; }
 .mmd-flow-head-cross { stroke: var(--mmd-wire); stroke-width: 1.75; stroke-linecap: round; }
 
-.mmd-flow-wire[data-hot] { --mmd-wire: var(--primary); }
+.mmd-flow-wire[data-hot] { --mmd-wire: var(--mmd-accent); }
 .mmd-flow-wire[data-hot] .mmd-flow-wire-line {
   stroke-dasharray: 6 6;
   animation: mmd-flow-run 0.8s linear infinite;
@@ -115,7 +159,7 @@
   padding: 2px 9px;
   border-radius: 999px;
   border: 1px solid var(--mmd-line);
-  background: var(--background);
+  background: var(--mmd-surface);
   color: var(--muted-foreground);
   font-family: var(--font-mono);
   font-size: calc(var(--font-size-caption) * var(--font-scale));
@@ -126,14 +170,14 @@
 }
 .mmd-flow-edge-label[data-hot] {
   color: var(--foreground);
-  border-color: color-mix(in oklch, var(--primary) 50%, var(--border));
+  border-color: color-mix(in oklch, var(--mmd-accent) 50%, var(--mmd-line));
 }
 
 /* ── Subgraphs ───────────────────────────────────────────────────────────── */
 .mmd-flow-group {
   z-index: 0;
   border-radius: calc(var(--radius) + 6px);
-  border: 1px solid color-mix(in oklch, var(--mmd-hue) 28%, var(--border));
+  border: 1px solid color-mix(in oklch, var(--mmd-hue) 28%, var(--mmd-line));
   background: color-mix(in oklch, var(--mmd-hue) 6%, transparent);
 }
 .mmd-flow-group-label {

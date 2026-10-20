@@ -60,8 +60,16 @@ export function parseFlowchart(
   const groups: FlowGroup[] = [];
   const stack: string[] = [];
 
-  const reference = (id: string, label?: string, shape?: FlowNodeShape) => {
+  // `class A,B name` may come before or after the nodes it names.
+  const assigned: Array<{ ids: string[]; cls: string }> = [];
+  const reference = (
+    id: string,
+    label?: string,
+    shape?: FlowNodeShape,
+    cls?: string,
+  ) => {
     const existing = nodes.get(id);
+    const classes = existing?.classes ?? [];
     // A top-level node a subgraph mentions moves into it; a node already in a
     // subgraph stays where it was first placed.
     const group = existing?.group ?? stack.at(-1) ?? null;
@@ -71,11 +79,17 @@ export function parseFlowchart(
       label: label ?? existing?.label ?? id,
       shape: shape ?? existing?.shape ?? "rect",
       group,
+      classes: cls && !classes.includes(cls) ? [...classes, cls] : classes,
     });
   };
 
   for (const { line, text: raw } of lines) {
     for (const text of splitStatements(raw)) {
+      const cls = /^class\s+([^\s]+)\s+([\w-]+)$/.exec(text);
+      if (cls) {
+        assigned.push({ ids: cls[1]!.split(","), cls: cls[2]! });
+        continue;
+      }
       if (IGNORED.test(text)) continue;
       const sub = /^subgraph\s+(.+)$/.exec(text);
       if (sub) {
@@ -110,6 +124,14 @@ export function parseFlowchart(
     return { kind: "unsupported", reason: "edge to a subgraph" };
   }
   for (const id of groupIds) nodes.delete(id);
+  for (const { ids, cls } of assigned) {
+    for (const id of ids) {
+      const node = nodes.get(id);
+      if (node && !node.classes.includes(cls)) {
+        nodes.set(id, { ...node, classes: [...node.classes, cls] });
+      }
+    }
+  }
   if (nodes.size === 0) return { kind: "unsupported", reason: "no nodes" };
   return {
     kind: "flowchart",
@@ -144,7 +166,12 @@ function splitStatements(text: string): string[] {
  */
 function parseChain(
   text: string,
-  reference: (id: string, label?: string, shape?: FlowNodeShape) => void,
+  reference: (
+    id: string,
+    label?: string,
+    shape?: FlowNodeShape,
+    cls?: string,
+  ) => void,
   edges: FlowEdge[],
 ): boolean {
   let rest = text;
@@ -153,7 +180,7 @@ function parseChain(
     for (;;) {
       const node = readNode(rest);
       if (!node) return null;
-      reference(node.id, node.label, node.shape);
+      reference(node.id, node.label, node.shape, node.cls);
       ids.push(node.id);
       rest = node.rest.trimStart();
       if (!rest.startsWith("&")) return ids;
@@ -179,9 +206,13 @@ function parseChain(
   return true;
 }
 
-function readNode(
-  text: string,
-): { id: string; label?: string; shape?: FlowNodeShape; rest: string } | null {
+function readNode(text: string): {
+  id: string;
+  label?: string;
+  shape?: FlowNodeShape;
+  cls?: string;
+  rest: string;
+} | null {
   const idMatch = NODE_ID.exec(text);
   if (!idMatch) return null;
   const id = idMatch[0];
@@ -206,10 +237,10 @@ function readNode(
     rest = body.slice(end + s.close.length);
     break;
   }
-  // `:::className` styles the node — the native renderer draws its own look.
-  const cls = /^:::[\w-]+/.exec(rest);
+  // `:::className` singles the node out (see FlowNode.classes).
+  const cls = /^:::([\w-]+)/.exec(rest);
   if (cls) rest = rest.slice(cls[0].length);
-  return { id, label, shape, rest };
+  return { id, label, shape, cls: cls?.[1], rest };
 }
 
 function readLink(
