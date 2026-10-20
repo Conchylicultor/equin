@@ -1,4 +1,4 @@
-import { automationsCatalogServed } from "./live";
+import { catalogChanged } from "./catalog-changed";
 import { markLaunchReleased } from "./origin";
 import { registeredAutomation } from "./registry";
 
@@ -13,7 +13,7 @@ import { registeredAutomation } from "./registry";
 export async function releaseLaunchedTask(taskId: string): Promise<boolean> {
   const automationId = await markLaunchReleased(taskId);
   if (automationId === null) return false;
-  automationsCatalogServed.notify();
+  catalogChanged();
   // Absent from this composition ⇒ nothing here to start the next task.
   registeredAutomation(automationId)?.wake();
   return true;

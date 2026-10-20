@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  fetchEndpoint,
+  useMachineAvailability,
+} from "@plugins/infra/plugins/endpoints/web";
 import {
   foldResource,
   ResourceErrorInline,
@@ -25,10 +28,21 @@ function recheck(): Promise<unknown> {
   return fetchEndpoint(recheckClaudeCode, {});
 }
 
-/** The row's trailing control: ask the machine again now. */
+/**
+ * The row's trailing control: ask the machine again now — disabled, with why as
+ * its tooltip, under a host without the computer.
+ */
 export function ClaudeCodeActions() {
-  return (
+  const availability = useMachineAvailability(recheckClaudeCode);
+  return availability.available ? (
     <IconButton icon={refreshIcon} label="Check again" onClick={recheck} />
+  ) : (
+    <IconButton
+      icon={refreshIcon}
+      label="Check again"
+      tooltip={availability.message}
+      disabled
+    />
   );
 }
 
@@ -36,6 +50,9 @@ export function ClaudeCodeActions() {
 export function ClaudeCodeDetail() {
   const result = useClaudeCodeStatus();
   if (result.status === "loading") return null;
+  if (result.status === "unavailable") {
+    return <StepNote>{result.message}</StepNote>;
+  }
   if (result.status === "error") {
     return (
       <ResourceErrorInline
@@ -100,11 +117,13 @@ export function ClaudeCodeDetail() {
  */
 export function RecheckOnReturn() {
   const result = useClaudeCodeStatus();
-  // Only a KNOWN block re-checks on return; a status still loading or that
-  // failed to load has nothing to re-check against.
+  // Only a KNOWN block re-checks on return; a status still loading, that
+  // failed to load, or that no computer here can answer has nothing to
+  // re-check against.
   const blocked = foldResource(result, {
     loading: () => false,
     error: () => false,
+    unavailable: () => false,
     ready: (s) =>
       s.kind === "missing" ||
       s.kind === "signed-out" ||

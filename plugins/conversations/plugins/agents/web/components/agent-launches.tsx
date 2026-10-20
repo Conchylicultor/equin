@@ -15,10 +15,7 @@ import {
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import {
-  agentLaunchRows,
-  type AgentLaunchWithStatus,
-} from "../../shared/resources";
+import { agentLaunchRows, type AgentLaunchWithStatus } from "../../core";
 
 const AGENT_LAUNCHES_VIEW = defineDataView("agent-launches");
 

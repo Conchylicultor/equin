@@ -1,8 +1,8 @@
 import { asc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { listAgents } from "../../core/endpoints";
-import { AgentSchema } from "../../core/schemas";
+import { listAgents } from "../../core";
+import { AgentSchema } from "../../core";
 import { agents } from "./views";
 
 export const handleList = implement(listAgents, async () => {

@@ -12,6 +12,7 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { AutomationEntry } from "../../core";
 import { useAutomations } from "../internal/use-automations";
@@ -57,6 +58,8 @@ export function AutomationsView({
   const rows = foldResource(result, {
     loading: () => NO_ROWS,
     error: () => NO_ROWS,
+    // Never reaches the view: the message renders instead (below).
+    unavailable: () => NO_ROWS,
     ready: (d) => d,
   });
 
@@ -105,6 +108,12 @@ export function AutomationsView({
     ],
     [],
   );
+
+  // The catalog is the machine half's: an in-browser server has none. Said
+  // as what it is — never "No automation is installed".
+  if (result.status === "unavailable") {
+    return <Placeholder>{result.message}</Placeholder>;
+  }
 
   return (
     <DataView<AutomationEntry>

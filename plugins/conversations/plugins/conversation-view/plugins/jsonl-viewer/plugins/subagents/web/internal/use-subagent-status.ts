@@ -30,6 +30,7 @@ export function useSubagentStatus({
   switch (subagents.kind) {
     case "pending":
     case "failed":
+    case "unavailable":
       return subagents;
     case "known":
       return subagents.statusOf({ toolUseId, agentToolEvent });

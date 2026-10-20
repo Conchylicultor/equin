@@ -31,6 +31,20 @@ export function unsupportedEndpointResponse(
 }
 
 /**
+ * What a host that is not the desktop server (a browser server, the browser
+ * host's plugin graph) answers a request no route matches: an `/api/…` path is
+ * the unsupported refusal (`unsupportedEndpointResponse` — the server is real,
+ * that endpoint is simply not part of it), any other path a 404 naming it.
+ * Shaped as `http-router`'s `onUnmatched`.
+ */
+export function unmatchedApiResponse(req: Request, pathname: string): Response {
+  if (pathname === "/api" || pathname.startsWith("/api/")) {
+    return unsupportedEndpointResponse(req.method, pathname);
+  }
+  return new Response(`Not found: ${pathname}`, { status: 404 });
+}
+
+/**
  * Whether a parsed error body is `unsupportedEndpointResponse`'s — a host's
  * refusal of an endpoint it does not serve, not a failure of the endpoint.
  */

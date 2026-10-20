@@ -31,6 +31,9 @@ function storePathFor(
 
 const WEB_REGISTER_SLOT_ID = "config_v2.web-register";
 
+/** The barrels whose `ConfigV2.Register` contributions make the server half. */
+const SERVER_HALF_RUNTIMES = ["server", "machine"] as const;
+
 type BarrelContribution = Record<string, unknown> & {
   _slot?: SlotHandle;
   _kind?: symbol;
@@ -41,7 +44,7 @@ type BarrelContribution = Record<string, unknown> & {
 const check: Check = {
   id: "config-v2:registrations-paired",
   description:
-    "Every ConfigV2.Register (server) must have a matching ConfigV2.WebRegister (web) at the same storePath, and vice versa",
+    "Every ConfigV2.Register (server/ or machine/) must have a matching ConfigV2.WebRegister (web) at the same storePath, and vice versa",
   async run() {
     const root = await getWorktreeRoot();
     const pluginsRoot = join(root, "plugins");
@@ -127,15 +130,20 @@ const check: Check = {
         }
       }
 
-      const serverIndex = join(node.dir, "server", "index.ts");
-      if (existsSync(serverIndex)) {
+      // The server half is the server/ barrel OR the machine/ one: a plugin
+      // made portable keeps its config registration on the computer
+      // (`machine/`), whose contributions boot are collected exactly like
+      // server/'s.
+      for (const runtime of SERVER_HALF_RUNTIMES) {
+        const serverIndex = join(node.dir, runtime, "index.ts");
+        if (!existsSync(serverIndex)) continue;
         let mod: Record<string, unknown>;
         try {
           mod = await importBarrel(serverIndex);
         } catch (err) {
           return {
             ok: false,
-            message: `Failed to import server barrel ${relative(root, serverIndex)}: ${String(err)}`,
+            message: `Failed to import ${runtime} barrel ${relative(root, serverIndex)}: ${String(err)}`,
           };
         }
         const def = mod.default as
@@ -162,7 +170,7 @@ const check: Check = {
     const parts: string[] = [];
     if (webOnly.length > 0) {
       parts.push(
-        `${webOnly.length} config descriptor(s) registered on web (ConfigV2.WebRegister) but NOT on the server (no matching ConfigV2.Register) — these silently read back defaults at runtime:\n` +
+        `${webOnly.length} config descriptor(s) registered on web (ConfigV2.WebRegister) but NOT on the server (no matching ConfigV2.Register in server/ or machine/) — these silently read back defaults at runtime:\n` +
           webOnly.map((p) => `    ${p}`).join("\n"),
       );
     }
@@ -178,7 +186,7 @@ const check: Check = {
       message: parts.join("\n\n"),
       hint: [
         webOnly.length > 0 &&
-          "For each web-only storePath, add ConfigV2.Register({ descriptor }) (with the same pluginId override if used) to the defining plugin's server/index.ts contributions[].",
+          "For each web-only storePath, add ConfigV2.Register({ descriptor }) (with the same pluginId override if used) to the defining plugin's server/index.ts or machine/index.ts contributions[].",
         serverOnly.length > 0 &&
           "For each server-only storePath, add ConfigV2.WebRegister({ descriptor }) (with the same pluginId override if used) to the defining plugin's web/index.ts contributions[].",
       ]

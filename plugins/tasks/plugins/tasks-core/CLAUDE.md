@@ -524,15 +524,15 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 72 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×32
+  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×30
     - `tasks` ×17
     - `active-data` ×5
     - `debug` ×4
     - `page` ×3
+    - `apps` ×2
     - `infra` ×2
     - `stats` ×2
-    - `apps/sonata/transcription`
     - `backup/sources/transcripts`
     - `code-explorer`
     - `database/query`

@@ -3,7 +3,7 @@ import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { deleteAgent } from "@plugins/conversations/plugins/agents/core";
-import type { Agent } from "../../shared/resources";
+import type { Agent } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const deleteIcon = symbol("delete");

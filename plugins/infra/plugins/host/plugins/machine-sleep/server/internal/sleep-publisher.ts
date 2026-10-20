@@ -26,16 +26,18 @@ export function sleepNowChanged(prev: SleepNow, next: SleepNow): boolean {
 export interface SleepPublisher {
   /** The last published reading, reading the clock first if nothing was yet. */
   current(): SleepNow;
-  /** Read the clock; publish (call `notify`) only when it changed. */
+  /** Read the clock; tell every listener only when it changed. */
   publish(): void;
+  /** Run `fn` on every changed reading `publish` finds. Returns the unsubscribe. */
+  subscribe(fn: () => void): () => void;
 }
 
-/** The set-if-changed core of the publisher, with the clock and the push injected. */
+/** The set-if-changed core of the publisher, with the clock injected. */
 export function createSleepPublisher(
   read: () => SleepClockReading,
-  notify: () => void,
 ): SleepPublisher {
   let last: { value: SleepNow } | null = null;
+  const listeners = new Set<() => void>();
   return {
     current() {
       last ??= { value: toSleepNow(read()) };
@@ -45,7 +47,13 @@ export function createSleepPublisher(
       const next = toSleepNow(read());
       if (last !== null && !sleepNowChanged(last.value, next)) return;
       last = { value: next };
-      notify();
+      for (const fn of listeners) fn();
+    },
+    subscribe(fn) {
+      listeners.add(fn);
+      return () => {
+        listeners.delete(fn);
+      };
     },
   };
 }

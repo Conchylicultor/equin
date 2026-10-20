@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-data-view-custom-columns-values",
+  "description": "Per-row custom-column values for any DataView: the generic data_view_custom_values table keyed by (dataViewId, rowKey, columnId), its live value and the upsert / delete-column endpoints. Portable.",
+  "private": true,
+  "version": "0.0.1"
+}

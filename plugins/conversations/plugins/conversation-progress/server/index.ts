@@ -1,26 +1,18 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
-import { conversationTurnCompleted } from "@plugins/conversations/server";
 import { pushLanded } from "@plugins/tasks/plugins/tasks-core/server";
-import { classifyProgressJob } from "./internal/heuristic-job";
 import { markProgressPushedJob } from "./internal/push-job";
 import { conversationProgressRowsServed } from "./internal/resource";
 
 export { conversationProgress } from "./internal/tables";
-export { classifyProgressJob } from "./internal/heuristic-job";
 export { markProgressPushedJob } from "./internal/push-job";
 
 export default {
+  portable: true,
   description:
-    "Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.",
+    "Tracks each conversation through four phases (research → design → implementation → pushed): serves the per-conversation progress row and marks every conversation of an attempt pushed when its work lands. The git heuristic that classifies the first three phases runs in the machine half.",
   contributions: [
     ...conversationProgressRowsServed.declare,
-    Trigger({
-      on: conversationTurnCompleted,
-      do: classifyProgressJob,
-      with: {},
-      oneShot: false,
-    }),
     Trigger({
       on: pushLanded,
       do: markProgressPushedJob,
@@ -28,5 +20,5 @@ export default {
       oneShot: false,
     }),
   ],
-  register: [classifyProgressJob, markProgressPushedJob],
+  register: [markProgressPushedJob],
 } satisfies ServerPluginDefinition;

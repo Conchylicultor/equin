@@ -9,8 +9,20 @@ import {
 import { upsertRank } from "@plugins/conversations/plugins/conversations-view/plugins/queue/server";
 import { writeTranscript } from "@plugins/conversations/plugins/transcript-source/plugins/memory/server";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
+import { setTaskTrack } from "@plugins/tasks/plugins/task-track/server";
+import { tasksShortTitle } from "@plugins/tasks/plugins/task-title/server";
+import { conversationNotes } from "@plugins/conversations/plugins/conversation-view/plugins/notes/server";
+import { conversationProgress } from "@plugins/conversations/plugins/conversation-progress/server";
 import {
+  _agent_launches,
+  _agents,
+  nextAgentRankUnder,
+} from "@plugins/conversations/plugins/agents/server";
+import {
+  DEMO_AGENTS,
   DEMO_STORIES,
+  demoAgentId,
+  demoAgentLaunchId,
   demoAttemptId,
   demoConversationId,
   demoTaskId,
@@ -23,13 +35,27 @@ import {
  * story (`../core`): its task and category, the attempt and conversation it
  * runs in — backdated to the story's clock, which no mutation can do, so those
  * two are inserted as rows — its place in the queue, its transcript as Claude
- * Code JSONL, and, for a finished story, the push that landed it.
+ * Code JSONL, and, for a finished story, the push that landed it; its short
+ * title, track, progress and note; and the roster of agents with the launch of
+ * each story an agent filed.
  */
 export async function seed(): Promise<void> {
   const now = Date.now();
   const ago = (ms: number) => new Date(now - ms);
   const live = DEMO_STORIES.filter((s) => s.status !== "done");
   const ranks = Rank.nBetween(null, null, live.length);
+  for (const agent of DEMO_AGENTS) {
+    await db.insert(_agents).values({
+      id: demoAgentId(agent),
+      parentId: null,
+      name: agent.name,
+      prompt: agent.prompt,
+      model: null,
+      icon: null,
+      iconColor: null,
+      rank: (await nextAgentRankUnder(null)).toJSON(),
+    });
+  }
   for (const story of DEMO_STORIES) {
     const taskId = demoTaskId(story);
     const attemptId = demoAttemptId(story);
@@ -37,6 +63,11 @@ export async function seed(): Promise<void> {
     await createTask({ id: taskId, title: story.task, titleAuto: false });
     if (story.category !== undefined)
       await setTaskCategory(taskId, story.category);
+    await tasksShortTitle.upsert(taskId, {
+      shortTitle: story.shortTitle,
+      sourceTitle: story.task,
+    });
+    if (story.track !== undefined) await setTaskTrack(taskId, story.track);
     await db.insert(_attempts).values({
       id: attemptId,
       taskId,
@@ -57,6 +88,25 @@ export async function seed(): Promise<void> {
       lastViewedAt: ago(story.updatedAgo),
     });
     await writeTranscript(conversationId, demoTranscriptJsonl(story, now));
+    await conversationProgress.upsert(conversationId, {
+      phase: story.phase,
+      source: story.phase === "pushed" ? "push" : "heuristic",
+    });
+    if (story.note !== undefined)
+      await conversationNotes.upsert(conversationId, { notes: story.note });
+    if (story.agent !== undefined) {
+      const agent = DEMO_AGENTS.find((a) => a.key === story.agent);
+      if (agent === undefined)
+        throw new Error(
+          `demo story "${story.key}" names agent "${story.agent}", which DEMO_AGENTS does not list`,
+        );
+      await db.insert(_agent_launches).values({
+        id: demoAgentLaunchId(story),
+        agentId: demoAgentId(agent),
+        taskId,
+        createdAt: ago(story.startedAgo),
+      });
+    }
     if (story.endedAgo !== undefined)
       await insertPush({
         id: `push-demo-${story.key}`,

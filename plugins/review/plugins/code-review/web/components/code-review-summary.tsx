@@ -59,11 +59,14 @@ function AttemptCodeReviewSummary({
   // list would show a confidently-wrong "0 +0 −0" (and hide warnings) until the
   // resource settles. A failed read renders nothing here too, deliberately:
   // this is a header summary chip, and the section body (edited files) and the
-  // review pane's source tabs (pushes) each render their own failure.
+  // review pane's source tabs (pushes) each render their own failure. An
+  // unavailable read (edited files need the computer, which an in-browser host
+  // lacks) renders nothing as well: the section body says why.
   const reads = combineResources({ pushes: pushesQ, files: filesResult });
   switch (reads.status) {
     case "loading":
     case "error":
+    case "unavailable":
       return null;
     case "ready":
       break;

@@ -10,7 +10,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -66,8 +65,8 @@ function OpenConversation({ conversationId }: { conversationId: string }) {
 /**
  * The user has seen what the thread said: stamp the conversation viewed while
  * this thread is on screen and has something newer than the last view. Only
- * then, because the stamp also resumes a hibernated conversation — a thread
- * restored with nothing new to show must not wake its agent.
+ * then, because marking viewed also resumes a hibernated conversation — a
+ * thread restored with nothing new to show must not wake its agent.
  */
 function useMarkViewedWhileVisible(
   conversation: ConversationEntry,
@@ -78,23 +77,17 @@ function useMarkViewedWhileVisible(
   const unseen =
     outputAt !== null && (viewedAt === null || outputAt > viewedAt);
   const id = conversation.id;
+  const hibernatedAt = conversation.hibernatedAt;
   useEffect(() => {
     if (!unseen) return;
     const mark = () => {
       if (document.visibilityState !== "visible") return;
-      void markViewed(id).then((outcome) => {
-        if (outcome.kind !== "blocked") return;
-        showToast({
-          title: "Can't resume conversation",
-          description: outcome.message,
-          variant: "error",
-        });
-      });
+      void markViewed({ id, hibernatedAt });
     };
     mark();
     document.addEventListener("visibilitychange", mark);
     return () => document.removeEventListener("visibilitychange", mark);
-  }, [unseen, id, markViewed]);
+  }, [unseen, id, hibernatedAt, markViewed]);
 }
 
 function LiveThread<D extends ThreadResultDef>({

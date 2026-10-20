@@ -35,7 +35,7 @@ One `liveCollection` (`task-tracks.all`), read two ways:
 - `useStoredTracks()` — every stored row as a taskId → track map: the
   collection is declared `all` (at most one row per task), preloaded
   (`boot-and-keep`), read with `useLive(taskTracks, { select })` — the
-  sidequest autopilot's launch list reads it; see `shared/resources.ts`.
+  sidequest autopilot's launch list reads it; see `core/internal/resources.ts`.
 
 No list reads either: the shape EXPOSES the track (`exposes`, served by
 `LiveColumns.Expose(tasksTrack)`), so every list whose rows reach a task — the
@@ -54,11 +54,8 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
 
 - Description: Per-task track (main | sidequest): the track badge, the clickable Track control the task detail header renders to switch it, and the exposed `track` field of every list whose rows reach a task (the task list, the conversation lists). Owns the tasks_ext_track side-table: the per-task track (absence = main, a row = sidequest), its live collection (the whole set for the task list, point reads for one task), the endpoint that switches a task's track, the tasks.trackChanged trigger event every track write emits, and the track exposed to every list whose rows reach a task (LiveColumns.Expose).
 - Web:
-  - Contributes:
-    - `Demo.Resource` "task-tracks"
-    - `FieldPresentation.Register` "exposure:tasks_ext_track"
+  - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_track"
   - Uses:
-    - `framework/browser-server/demo.demoResource`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.FieldPresentation`
     - `network/live.mapRow`
@@ -108,17 +105,27 @@ The track is decided per filing and is NOT inherited by subtasks (it is not a
     - `task-tracks.all:rows` (keyed, point)
   - Routes: `PUT /api/tasks/:taskId/track`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`
-  - Exports (types): `TaskTrack`
+  - Uses:
+    - `fields/text/config.enumTextField`
+    - `infra/endpoints.defineEndpoint`
+    - `infra/entity-extensions.defineExtensionShape`
+    - `network/live.liveCollection`
+    - `tasks/tasks-core.tasksEntityRef`
+  - Exports (types):
+    - `TaskTrack`
+    - `TaskTrackRow`
   - Exports (values):
     - `DEFAULT_TASK_TRACK`
     - `putTaskTrack`
     - `TASK_TRACKS`
+    - `taskTracks`
     - `TaskTrackSchema`
+    - `taskTrackShape`
     - `TRACK_META`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/agent-manager/demo`
     - `conversations/conversation-view/track`
     - `tasks`
     - `tasks/sidequest-autopilot`

@@ -14,7 +14,10 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  SectionLabel,
+  Text,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import {
@@ -23,15 +26,19 @@ import {
   DEFAULT_AGENT_AVATAR,
 } from "@plugins/primitives/plugins/avatar/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  fetchEndpoint,
+  useFetchEndpoint,
+  useMachineAvailability,
+} from "@plugins/infra/plugins/endpoints/web";
 import {
   launchAgent,
   updateAgent,
 } from "@plugins/conversations/plugins/agents/core";
 import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
-import { agentLaunchRows, agentRows } from "../../shared/resources";
-import type { Agent } from "../../shared/resources";
+import { agentLaunchRows, agentRows } from "../../core";
+import type { Agent } from "../../core";
 import { AgentLaunches } from "./agent-launches";
 import { symbol, type SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -76,6 +83,13 @@ function AgentDetailInner({
   const launchesQ = useLive(agentLaunchRows);
   const [model, setModel] = useState<ModelChoice | null>(agent.model);
   const [launching, setLaunching] = useState(false);
+  // No computer behind this subtree (an in-browser server): launching cannot
+  // be asked at all, so the pane says why instead of offering it.
+  const launchAvailability = useMachineAvailability(launchAgent);
+  const unavailable = launchAvailability.available
+    ? null
+    : launchAvailability.message;
+  const fetchMachineEndpoint = useFetchEndpoint();
 
   const save = useCallback(
     async (patch: Patch) => {
@@ -118,11 +132,18 @@ function AgentDetailInner({
 
   const launch = async () => {
     if (!agent.prompt) return;
-    if (launching) return;
+    if (launching || unavailable !== null) return;
     setLaunching(true);
     try {
       await promptField.flush();
-      await fetchEndpoint(launchAgent, { id: agentId }, { body: {} });
+      const result = await fetchMachineEndpoint(
+        launchAgent,
+        { id: agentId },
+        { body: {} },
+      );
+      // Unreachable: Launch is disabled while launching is unavailable, and a
+      // subtree's transport is fixed.
+      if (result.kind === "unavailable") throw new Error(result.message);
     } finally {
       setLaunching(false);
     }
@@ -194,11 +215,16 @@ function AgentDetailInner({
             />
           </div>
         </Stack>
+        {unavailable !== null && (
+          <Text as="div" variant="caption" tone="muted">
+            {unavailable}
+          </Text>
+        )}
         <Stack gap="none" direction="row" justify="end">
           <Button
             onClick={launch}
             loading={launching}
-            disabled={!promptField.value.trim()}
+            disabled={unavailable !== null || !promptField.value.trim()}
             className="gap-xs"
           >
             <Icon icon={playArrowIcon} className="size-4" />

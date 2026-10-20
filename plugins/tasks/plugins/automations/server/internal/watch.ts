@@ -1,7 +1,7 @@
 import { watchConfig } from "@plugins/config_v2/server";
 import { refreshJobSchedules } from "@plugins/infra/plugins/jobs/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { automationsCatalogServed } from "./live";
+import { catalogChanged } from "./catalog-changed";
 import { syncLaunchBatch } from "./launch-batch";
 import { registeredAutomations, type RegisteredAutomation } from "./registry";
 import { automationSettings } from "./settings";
@@ -24,7 +24,7 @@ export function watchAutomationConfigs(): void {
     const { spec } = registered;
     watchConfig(spec.config, () => {
       refreshJobSchedules();
-      automationsCatalogServed.notify();
+      catalogChanged();
       if (spec.kind === "launch") {
         void runTracked(`automation:${spec.id}:batch-sync`, () =>
           syncThenWake(registered),
@@ -44,6 +44,6 @@ async function syncThenWake({
   wake,
 }: RegisteredAutomation): Promise<void> {
   await syncLaunchBatch(spec.id, automationSettings(spec).enabled);
-  automationsCatalogServed.notify();
+  catalogChanged();
   wake();
 }

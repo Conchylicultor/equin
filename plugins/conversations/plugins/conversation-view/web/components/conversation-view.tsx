@@ -1,8 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { useMarkConversationViewed } from "@plugins/conversations/plugins/hibernation/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
-import type { ResumeOutcome } from "@plugins/conversations/core";
 import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { workspaceAllows } from "@plugins/conversations/plugins/workspace/core";
@@ -20,35 +18,24 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
-// Surface a refused transparent resume. Every other arm ("resumed", "nothing to
-// resume") is the silent success this is supposed to be.
-function reportBlockedResume(outcome: ResumeOutcome): void {
-  if (outcome.kind !== "blocked") return;
-  showToast({
-    title: "Can't resume conversation",
-    description: outcome.message,
-    variant: "error",
-  });
-}
-
 export function ConversationView() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
   const markConversationViewed = useMarkConversationViewed();
 
   // Selection signal for idle hibernation: opening (or switching to) a
-  // conversation resets its idle timer and transparently resumes it if it was
-  // hibernated. Fire-and-forget — failure here must not block rendering the
+  // conversation resets its idle timer and transparently resumes it if its row
+  // says it is hibernated (a refused resume is the hook's toast). Once per
+  // opened conversation, as soon as its row is in — not on every row update, so
+  // a view left open over a hibernation does not wake the agent it just put to
+  // sleep. Fire-and-forget — failure here must not block rendering the
   // transcript (which renders from disk, independent of the live process).
-  //
-  // But it must not be SILENT either: when the resume is refused (its worktree
-  // checkout was reclaimed while it slept) the transcript still renders
-  // perfectly, so without this toast the only clue would be an agent that never
-  // answers. The conversation's status is deliberately left alone by the server,
-  // so it stays in the list and can be recovered.
+  const markedId = useRef<string | null>(null);
   useEffect(() => {
-    void markConversationViewed(convId).then(reportBlockedResume);
-  }, [convId, markConversationViewed]);
+    if (conversation === null || markedId.current === conversation.id) return;
+    markedId.current = conversation.id;
+    void markConversationViewed(conversation);
+  }, [conversation, markConversationViewed]);
 
   const promptBarItems = Conversation.PromptBar.useContributions();
   const promptInputItems = Conversation.PromptInput.useContributions();

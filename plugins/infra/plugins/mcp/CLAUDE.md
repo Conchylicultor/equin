@@ -106,7 +106,6 @@ client sees them at connect (Claude Code connects once per conversation).
     - `page/annotations/agent-access`
     - `plugin-meta/plugin-health`
     - `tasks`
-    - `tasks/outcome-report`
   - Endpoint callers: `scratch`
 - Shared:
   - Exports (values): `mcpRequest`

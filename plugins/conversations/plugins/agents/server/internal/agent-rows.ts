@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { expr } from "@plugins/infra/plugins/query-resource/core";
 import type { ServeAllCollectionOptions } from "@plugins/network/plugins/live/server";
-import type { Agent } from "../../core/schemas";
+import type { Agent } from "../../core";
 import { _agents } from "./tables";
 
 // How `agentRows` (shared: the whole ordered roster, key `agents.roster`)

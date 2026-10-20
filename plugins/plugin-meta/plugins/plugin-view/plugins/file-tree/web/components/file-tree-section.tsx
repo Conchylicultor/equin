@@ -6,6 +6,7 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 
 // Sentinel resolving to the current running server's own worktree root.
@@ -28,6 +29,9 @@ export function FileTreeSection({ node }: { node: PluginNode }) {
         refetch={tree.refetch}
       />
     );
+  }
+  if (tree.status === "unavailable") {
+    return <Placeholder>{tree.message}</Placeholder>;
   }
   const { pluginsRoot } = tree.data;
   const pluginDir = `${pluginsRoot}/${node.path}`;

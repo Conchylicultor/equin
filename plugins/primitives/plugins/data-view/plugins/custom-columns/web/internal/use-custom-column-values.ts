@@ -11,7 +11,7 @@ import {
   deleteCustomColumnValues,
   type SetCustomColumnValueBody,
   type DeleteCustomColumnValuesBody,
-} from "../../core";
+} from "@plugins/primitives/plugins/data-view/plugins/custom-columns/plugins/values/core";
 
 /** `Map<rowKey, Map<columnId, value>>` for O(1) per-cell reads. */
 export type CustomColumnValueIndex = Map<string, Map<string, string>>;

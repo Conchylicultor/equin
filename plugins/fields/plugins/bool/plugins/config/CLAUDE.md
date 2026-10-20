@@ -36,10 +36,10 @@ a config_v2 `FieldDef<boolean>` carrying the canonical `fields/` bool token
     - `boolField`
     - `boolSample`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×11
     - `apps` ×6
-    - `conversations` ×3
+    - `conversations` ×4
     - `tasks` ×2
     - `history/engine`
     - `infra/host/duress`

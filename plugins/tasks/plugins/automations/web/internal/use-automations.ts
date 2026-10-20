@@ -3,6 +3,7 @@ import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
+  type GateUnavailable,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -12,15 +13,20 @@ import {
 } from "../../core";
 import { Automations } from "./slots";
 
-/** Every registered automation, as the server resolves it now. */
-export function useAutomations(): ResourceResult<AutomationEntry[]> {
+/**
+ * Every registered automation, as the server resolves it now — or
+ * `unavailable` under an in-browser server (the catalog is the machine
+ * half's), which every reader renders as the message it carries.
+ */
+export function useAutomations():
+  ResourceResult<AutomationEntry[]> | GateUnavailable {
   return useLive(automationsCatalog);
 }
 
 /** One automation by id — `null` once the catalog is known and lacks it. */
 export function useAutomation(
   automationId: string,
-): ResourceResult<AutomationEntry | null> {
+): ResourceResult<AutomationEntry | null> | GateUnavailable {
   const all = useAutomations();
   return useMemo(
     () =>

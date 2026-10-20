@@ -1,20 +1,12 @@
 import { readSleepClock } from "@plugins/packages/plugins/sleep-clock/core";
-import { serveValue } from "@plugins/network/plugins/live/server";
-import { machineSleep } from "../../core";
+import type { SleepNow } from "../../core";
 import { createSleepPublisher } from "./sleep-publisher";
 
-const publisher = createSleepPublisher(readSleepClock, () =>
-  machineSleepServed.notify(),
-);
-
-// External, not DB-backed: the truth is the OS clock, which no change feed
-// observes, so publishSleepReading() calls notify() when it moved. Pushed (the
-// liveValue default): one small value, the same for every tab.
-export const machineSleepServed = serveValue(machineSleep, {
-  source: "external",
-  changes: "notified",
-  loader: () => publisher.current(),
-});
+// The one publisher of this process: the server half owns the reading (other
+// plugins' server code drives it through publishSleepReading), and the machine
+// half serves it as the machine.sleep live value, subscribed for as long as a
+// tab reads it.
+const publisher = createSleepPublisher(readSleepClock);
 
 /**
  * Read the machine's sleep clock and push it if it changed — in practice only
@@ -23,4 +15,14 @@ export const machineSleepServed = serveValue(machineSleep, {
  */
 export function publishSleepReading(): void {
   publisher.publish();
+}
+
+/** The last published reading, reading the clock first if nothing was yet. */
+export function currentSleepReading(): SleepNow {
+  return publisher.current();
+}
+
+/** Run `fn` whenever {@link publishSleepReading} finds a changed reading. Returns the unsubscribe. */
+export function onSleepReadingChanged(fn: () => void): () => void {
+  return publisher.subscribe(fn);
 }

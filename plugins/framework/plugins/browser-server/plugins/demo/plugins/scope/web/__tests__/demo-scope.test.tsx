@@ -2,7 +2,8 @@
  * `<DemoScope>` against the real live-state client (`NotificationsClient`
  * under its own `<TransportProvider>`): a contributed value and collection
  * render through `useLive`, beside another `Demo.Resource` contribution's value
- * and its later `notify()`; a `Demo.Route` answers through `useFetchEndpoint()`;
+ * and its later `notify()`; a backend's own route answers through
+ * `useFetchEndpoint()`;
  * a known key nothing serves fails `loader-failed` and never reaches the
  * contract-mismatch store; unsupported POSTs throw `EndpointUnsupportedError`
  * with ONE toast and nothing on the error sink; a key served twice reaches the
@@ -59,7 +60,6 @@ import {
 } from "@plugins/primitives/plugins/networking/web";
 import {
   Demo,
-  demoResource,
   type DemoBackend,
 } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
 import { DemoScope } from "../components/demo-scope";
@@ -97,6 +97,13 @@ const TRACKS = [
   { id: "t2", title: "Two", rank: 2 },
 ];
 const FIXED = { fixed: { reason: "test fixture" } } as const;
+
+/** A `Demo.Resource` whose answers depend on nothing in the scope's tree (a module-level, stable backend). */
+function demoResource(id: string, serve: DemoBackend["serve"]) {
+  const backend: DemoBackend = { serve };
+  const useBackend = (): DemoBackend => backend;
+  return Demo.Resource({ id, useBackend });
+}
 
 /** The story's own backend: a greeting per person and the tracks. */
 const story = demoResource("story", (s) => [
@@ -209,22 +216,9 @@ describe("<DemoScope>", () => {
   it("serves the contributions through the real client; a contribution notifies", async () => {
     const contributed = noteResource();
     const seen: Record<string, unknown> = {};
-    let fetchIn: ReturnType<typeof useFetchEndpoint> | null = null;
     await renderAsync(
       <PluginProvider
-        plugins={plugins([
-          story,
-          demoResource("note", contributed.serve),
-          Demo.Route({
-            route: [
-              echo.route,
-              implement(echo, ({ params, body }) => ({
-                id: params.id,
-                doubled: body.n * 2,
-              })),
-            ],
-          }),
-        ])}
+        plugins={plugins([story, demoResource("note", contributed.serve)])}
       >
         <DemoScope scenario={scenarioOf()}>
           <Probe
@@ -242,10 +236,6 @@ describe("<DemoScope>", () => {
             read={() => useLive(note)}
             onRead={(r) => (seen.note = textOf(r))}
           />
-          <Probe
-            read={() => useFetchEndpoint()}
-            onRead={(f) => (fetchIn = f)}
-          />
         </DemoScope>
       </PluginProvider>,
     );
@@ -256,10 +246,6 @@ describe("<DemoScope>", () => {
     });
     act(() => contributed.set("second note"));
     await waitFor(() => expect(seen.note).toBe("second note"));
-    expect(await fetchIn!(echo, { id: "x" }, { body: { n: 21 } })).toEqual({
-      id: "x",
-      doubled: 42,
-    });
   });
 
   it(
@@ -383,7 +369,7 @@ describe("<DemoScope>", () => {
     });
   });
 
-  it("a route answered by both a Demo.Route and a backend throws, naming both", async () => {
+  it("a route answered by two backends throws, naming both", async () => {
     console.error = () => {};
     const handler = implement(echo, ({ params }) => ({
       id: params.id,
@@ -396,7 +382,7 @@ describe("<DemoScope>", () => {
     const view = await renderAsync(
       <PluginProvider
         plugins={plugins([
-          Demo.Route({ route: [echo.route, handler] }),
+          Demo.Resource({ id: "first", useBackend: () => backend }),
           Demo.Resource({ id: "echoer", useBackend: () => backend }),
         ])}
       >
@@ -409,7 +395,7 @@ describe("<DemoScope>", () => {
     );
     await waitFor(() =>
       expect(view.getByTestId("boundary").textContent).toBe(
-        `demo scope "route-twice": route "${echo.route}" is answered by both a Demo.Route and Demo.Resource "echoer".`,
+        `demo scope "route-twice": route "${echo.route}" is answered by both Demo.Resource "first" and Demo.Resource "echoer".`,
       ),
     );
   });

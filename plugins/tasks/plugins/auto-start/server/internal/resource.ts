@@ -1,5 +1,5 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
-import { taskAutoStart } from "../../shared/resources";
+import { taskAutoStart } from "../../core";
 import { tasksAutoStart } from "./tables";
 
 // Server half of the per-task marker read: the lookup-only collection served

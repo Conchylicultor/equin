@@ -5,7 +5,7 @@ import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   combineResources,
-  type GateInput,
+  type PortableGateInput,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { ResourceReadiness } from "@plugins/primitives/plugins/live-state/core";
 import {
@@ -115,7 +115,7 @@ function previewOf(
  * A theme-engine state that cannot fail as a whole (a failing source rides in
  * its value as a `failures` entry), as a gate input: loading until it settles.
  */
-function settledGate(state: { pending: boolean }): GateInput {
+function settledGate(state: { pending: boolean }): PortableGateInput {
   return { status: state.pending ? "loading" : "ready" };
 }
 

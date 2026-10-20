@@ -45,9 +45,7 @@
   - Exports (values): `prepromptLaunchOption`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-  - Imported by:
-    - `conversations`
-    - `conversations/conversation-preprompt`
+  - Imported by: `conversations`
 - Shared:
   - Exports (types): `TaskPreprompt`
   - Exports (values):

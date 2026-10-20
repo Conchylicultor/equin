@@ -164,7 +164,7 @@ keeps the origin's id and caret; the wrap is ONE undo entry).
     - `page/editor._blocks`
     - `page/editor.Editor`
     - `page/editor.liveBlocks`
-    - `ui/icons/sprites.defineSavedIconSource`
+    - `ui/icons/saved-sources.defineSavedIconSource`
 - Core:
   - Uses:
     - `page/container.defineContainerBlock`

@@ -62,6 +62,10 @@ export function usePluginClaim(text: string): CodeClaim<PluginNode> {
 
   if (tree.status === "loading") return claimPending();
   if (tree.status === "error") return declined("plugin tree unavailable");
+  // No plugin tree on this host (an in-browser server): it will never arrive,
+  // so this is a settled decline — the span stays a plain code span, and the
+  // rest of the chain gets its turn. Pending here would hold it forever.
+  if (tree.status === "unavailable") return declined(tree.message);
 
   const index = indexFor(tree.data);
   const exact = index.byId.get(id);

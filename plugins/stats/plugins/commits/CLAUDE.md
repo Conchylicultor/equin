@@ -47,8 +47,9 @@
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
+    - `conversations/conversation-category.conversationCategoryConfig`
     - `conversations/conversation-category.getItemMap`
-    - `conversations/conversation-category.getItemOrder`
+    - `conversations/conversation-category.itemOrder`
     - `infra/endpoints.implement`
     - `infra/paths.GIT`
     - `infra/worktree.ensureMainWorktreeRoot`

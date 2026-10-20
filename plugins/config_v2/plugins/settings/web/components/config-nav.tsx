@@ -3,6 +3,7 @@ import {
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useCallback, useMemo } from "react";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
@@ -50,6 +51,9 @@ export function ConfigNav() {
   const payload = foldResource(treeRes, {
     loading: () => undefined,
     error: () => undefined,
+    // No plugin tree on this host: `readiness` carries the arm, and the nav
+    // shows its message instead of the view (below).
+    unavailable: () => undefined,
     ready: (tree) => tree,
   });
 
@@ -64,7 +68,7 @@ export function ConfigNav() {
   const modifiedRes = useLive(configModifiedCounts);
   const conflictRes = useConflictMap();
   // The nav is ready only when all three are: the plugin tree and both maps.
-  // Precedence error > loading.
+  // Precedence error > unavailable > loading.
   const readiness = useCombinedResources({
     tree: treeRes,
     modified: modifiedRes,
@@ -242,6 +246,13 @@ export function ConfigNav() {
     }),
     [modifiedCountOf, conflictOf],
   );
+
+  // The plugin tree is read from this checkout's `plugins/`, which an
+  // in-browser server does not have — and the nav is that tree. Say so, never
+  // an empty nav ("nothing configured").
+  if (readiness.status === "unavailable") {
+    return <Placeholder>{readiness.message}</Placeholder>;
+  }
 
   return (
     <DataView<ConfigNavRow>

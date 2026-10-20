@@ -1,7 +1,7 @@
 export { conversationCategoryConfig } from "./config";
 export { categoryRowId } from "./row-id";
-export { ConversationCategorySchema, conversationCategories } from "./schemas";
-export type { ConversationCategory } from "./schemas";
+export { ConversationCategorySchema, conversationCategories } from "../core";
+export type { ConversationCategory } from "../core";
 export {
   classifyConversation,
   setConversationCategory,

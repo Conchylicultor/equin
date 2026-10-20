@@ -35,3 +35,5 @@ export {
   agentLaunchFields,
   agentLaunchesEntityRef,
 } from "./entity";
+export { agentRows, agentLaunchRows } from "./resources";
+export type { AgentLaunchConversationRef } from "./schemas";

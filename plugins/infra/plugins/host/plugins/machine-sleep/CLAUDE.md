@@ -6,13 +6,19 @@ The machine's sleep clock as a live value, so a browser can tell a nap from work
   `{ boot, asleepMs, wakeAtMs } | null`, where `null` means the platform cannot
   tell (never "did not sleep"). `SleepNow` is the one definition every consumer
   shares (op-log's fold takes it as its `sleepNow` parameter).
-- `server` — serves the value (`source: "external"`) and exports
-  `publishSleepReading()`: re-read `packages/sleep-clock`'s `readSleepClock()` and
-  `notify()` only when the reading changed (a new boot, a new `wakeAtMs`, or ≥1 ms
-  more sleep — read jitter never pushes). In practice it pushes once per wake.
+- `server` — owns the reading: `publishSleepReading()` re-reads
+  `packages/sleep-clock`'s `readSleepClock()` and tells its listeners only when the
+  reading changed (a new boot, a new `wakeAtMs`, or ≥1 ms more sleep — read jitter
+  never pushes). In practice it pushes once per wake. `currentSleepReading()` /
+  `onSleepReadingChanged()` are what the machine half serves from. It stays in
+  `server/` because health-monitor's server calls `publishSleepReading()`.
+- `machine` — serves the value (`source: "external"`, `live/machine`): the
+  declaration is `needsMachine` (the clock is the computer's), so a host without
+  one (the demo's browser worker) answers it `unavailable` without a request.
 - `web` — `useSleepNow()`: the `useLive` result, loading until the first reading.
   `useSleepNowForFold()`: the same reading as op-log's `sleepNow` fold parameter —
-  `null` (the fold's "unknown": no live tail sleep) while loading or failed, so
+  `null` (the fold's "unknown": no live tail sleep) while loading, failed or
+  unavailable, so
   a live op surface never blocks on it. Used by the op detail, the op Gantt and
   the op-status banner/chip.
 
@@ -28,21 +34,23 @@ reaches the browser within one tick.
 
 ## Plugin reference
 
-- Description: useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. Serves the machine.sleep live value (this box's sleep clock: boot, cumulative asleepMs, last wake) and publishSleepReading(), which re-reads the clock and pushes only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own.
+- Description: useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value.
+- Server:
+  - Contributes: `resource.declare` "machine.sleep"
+  - Exports (values):
+    - `currentSleepReading`
+    - `onSleepReadingChanged`
+    - `publishSleepReading`
+  - Resources: `machine.sleep` (push, notified)
 - Web:
-  - Contributes: `Demo.Resource` "machine-sleep"
   - Uses:
-    - `framework/browser-server/demo.demoResource`
     - `network/live.useLive`
     - `primitives/live-state.foldResource`
   - Exports (values):
     - `useSleepNow`
     - `useSleepNowForFold`
-- Server:
-  - Contributes: `resource.declare` "machine.sleep"
+- Machine:
   - Uses: `network/live.serveValue`
-  - Exports (values): `publishSleepReading`
-  - Resources: `machine.sleep` (push, notified)
 - Core:
   - Uses: `network/live.liveValue`
   - Exports (types): `SleepNow`
@@ -51,6 +59,7 @@ reaches the browser within one tick.
     - `SleepNowSchema`
 - Cross-plugin:
   - Imported by:
+    - `apps/agent-manager/demo`
     - `conversations/conversation-view/op-status`
     - `debug/health-monitor`
     - `debug/profiling/ops`

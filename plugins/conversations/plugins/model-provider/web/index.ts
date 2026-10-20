@@ -3,8 +3,6 @@ import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
 import { DynamicFlags } from "@plugins/fields/plugins/dynamic-flags/plugins/config/web";
-import { demoResource } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
-import { serveDemoCatalog } from "./internal/demo-resource";
 import { modelProviderConfig } from "../shared/config";
 import { ModelCorruptionReporter } from "./components/corruption-reporter";
 import {
@@ -31,8 +29,6 @@ export default {
     "Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's version as a hint, pinned versions the user turned on), and the corruption reporter for malformed stored models.",
   contributions: [
     ConfigV2.WebRegister({ descriptor: modelProviderConfig }),
-    // Inside a demo scope, the catalog is the code baseline, never this machine's.
-    demoResource("model-provider", serveDemoCatalog),
     // Both settings offer the live catalog, so neither config lists a model.
     DynamicEnum.Options({
       field: modelProviderConfig.fields.defaultModel,

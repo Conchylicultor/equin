@@ -15,7 +15,7 @@ import {
   transitionTurn,
   type TurnEvent,
 } from "./transition";
-import { reportTurnMerged, reportTurnUnverified } from "./report-kinds";
+import { turnVerdictSink } from "./verdict-sink";
 import { notifyTurnSubmitted } from "./submit-signal";
 
 /** One ledger row, as the server holds it. */
@@ -185,8 +185,16 @@ async function afterChange(applied: Applied): Promise<void> {
       });
     }
   }
-  if (row.state === "merged") await reportTurnMerged(row);
-  if (row.state === "unverified") await reportTurnUnverified(row);
+  if (row.state === "merged" || row.state === "unverified") {
+    turnVerdictSink.emit({
+      verdict: row.state,
+      id: row.id,
+      conversationId: row.conversationId,
+      typedText: row.typedText,
+      extraText: row.extraText,
+      error: row.error,
+    });
+  }
 }
 
 /**

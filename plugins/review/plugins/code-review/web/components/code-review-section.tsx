@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Collapsible,
@@ -61,37 +61,40 @@ function WorkingTreeBody({
   worktree: string;
 }) {
   const filesResult = useEditedFiles(conversationId);
-  return (
-    <ResourceView
-      resource={filesResult}
-      fallback={
+  return matchResource(filesResult, {
+    loading: () => (
+      <FileList
+        files={null}
+        worktree={worktree}
+        base="main"
+        emptyLabel="No edited files."
+      />
+    ),
+    // The files are measured from git on disk: a host without the computer
+    // (the in-browser demo) says so, rather than a "No edited files." that
+    // would read as a clean worktree.
+    unavailable: (message) => (
+      <Body>
+        <Placeholder>{message}</Placeholder>
+      </Body>
+    ),
+    ready: (payload) =>
+      // The payload is a `Resolvable`: an unresolved worktree is a determinate
+      // "unknown", NOT an empty diff, so it renders its `reason` rather than the
+      // "No edited files." empty copy that would read as a genuinely clean tree.
+      payload.resolved ? (
         <FileList
-          files={null}
+          files={payload.value}
           worktree={worktree}
           base="main"
           emptyLabel="No edited files."
         />
-      }
-    >
-      {(payload) =>
-        // The payload is a `Resolvable`: an unresolved worktree is a determinate
-        // "unknown", NOT an empty diff, so it renders its `reason` rather than the
-        // "No edited files." empty copy that would read as a genuinely clean tree.
-        payload.resolved ? (
-          <FileList
-            files={payload.value}
-            worktree={worktree}
-            base="main"
-            emptyLabel="No edited files."
-          />
-        ) : (
-          <Body>
-            <Placeholder tone="error">{payload.reason}</Placeholder>
-          </Body>
-        )
-      }
-    </ResourceView>
-  );
+      ) : (
+        <Body>
+          <Placeholder tone="error">{payload.reason}</Placeholder>
+        </Body>
+      ),
+  });
 }
 
 function PushBody({ pushId }: { pushId: string }) {

@@ -32,6 +32,14 @@ detail (`opsHistory`), and — server-side, as SQL over the exported `_opLogOps`
 table — the stats/pushes charts. Nothing but the ingester and the worktree
 reconciler writes the table.
 
+Both collections are `needsMachine` ("Builds, tests and pushes on this
+machine"): the rows are this machine's op log, so `machine/` serves them and a
+host without the computer (the in-browser demo) reads `unavailable`. The banner
+and chip render nothing then, the open-app button is disabled with the message
+as its tooltip, and the Ops panes show the message. On the desktop nothing
+changes, the in-flight boot preload included. `_opLogOps` stays exported from
+`server/` for stats/pushes.
+
 ## Ingester (`server/internal/ingest.ts`, `segments.ts`, `store.ts`)
 
 Runs on **every serving backend**, into its own DB: a worktree DB is a fork of
@@ -86,10 +94,7 @@ filesystem event; the 30 s tick is what notices it.
 
 ## Plugin reference
 
-- Description: Op-store web presence: eagerly registers the boot-critical op-store.in-flight.all live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), and serves the rows as the opsInFlight and opsHistory live collections, with a 30-day retention sweep.
-- Web:
-  - Contributes: `Demo.Resource` "op-store"
-  - Uses: `framework/browser-server/demo.demoResource`
+- Description: Op-store web presence: eagerly registers the boot-critical op-store.in-flight.all live collection so boot-snapshot can hydrate it before first paint. Op-log read model: every serving backend ingests the host-global op-log.jsonl (and its rotations) into its own op_log_ops table behind a durable (inode, offset) cursor committed with the rows, reconciles in-flight ops whose process is gone (main appends a reconciler terminal to the log; a worktree closes locally only after an ingest gap), with a 30-day retention sweep. The machine half serves the rows as the opsInFlight and opsHistory live collections.
 - Server:
   - Contributes:
     - `resource.declare` "op-store.history"
@@ -110,7 +115,6 @@ filesystem event; the 30 s tick is what notices it.
     - `infra/retention.defineRetention`
     - `infra/worktree.listWorktreeOps`
     - `infra/worktree.probeWorktreeOp`
-    - `network/live.serveCollection`
   - DB schema: `plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/server/internal/tables.ts`
   - Exports (values): `_opLogOps`
   - Register:
@@ -122,6 +126,8 @@ filesystem event; the 30 s tick is what notices it.
     - `op-store.history:rows` (keyed, point)
     - `op-store.in-flight.all` (keyed)
     - `op-store.in-flight.all:rows` (keyed, point)
+- Machine:
+  - Uses: `network/live.serveCollection`
 - Core:
   - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug/profiling/op-log` ×10
@@ -150,7 +156,9 @@ filesystem event; the 30 s tick is what notices it.
     - `WAIT_KIND_IDS`
     - `WAIT_RESULTS`
 - Cross-plugin:
-  - Imported by: `stats/pushes`
+  - Imported by:
+    - `apps/agent-manager/demo`
+    - `stats/pushes`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ingest.ts`, `server/internal/service.ts` (debt)
 

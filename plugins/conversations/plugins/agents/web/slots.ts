@@ -1,7 +1,7 @@
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type { ComponentType } from "react";
-import type { Agent } from "../shared/resources";
+import type { Agent } from "../core";
 import type { SystemAgentDescriptor } from "./system-agents";
 
 export const Agents = {

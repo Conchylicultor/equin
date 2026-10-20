@@ -4,7 +4,7 @@ import {
   combineResources,
   mapResource,
   useEndpointResource,
-  type GateInput,
+  type PortableGateInput,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { ThemeId } from "@plugins/ui/plugins/theme-engine/core";
@@ -62,7 +62,7 @@ export function useCatalogEntries(): ResourceResult<ThemeSourceEntry[]> {
  * The theme list as a gate input: it cannot fail as a whole (a failing source
  * rides in its value as a `failures` entry), so it is loading until it settles.
  */
-function themesGate(pending: boolean): GateInput {
+function themesGate(pending: boolean): PortableGateInput {
   return { status: pending ? "loading" : "ready" };
 }
 

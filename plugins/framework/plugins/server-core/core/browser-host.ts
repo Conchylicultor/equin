@@ -27,6 +27,15 @@ export interface BrowserHostOptions {
    * anything is served: a demo's seed rows. Absent: the database starts empty.
    */
   seed?: () => Promise<void>;
+  /**
+   * The answer to a request no route of the graph matches — pass
+   * `infra/endpoints/core`'s `unmatchedApiResponse`, so an endpoint the graph
+   * does not serve is the 409 unsupported refusal (the client recognises it
+   * and says "not available here"), never a plain 404 it would report as a
+   * missing route. An option rather than an import: `infra/endpoints` imports
+   * server-core, so server-core cannot import it back (a plugin cycle).
+   */
+  onUnmatched: (req: Request, pathname: string) => Response;
 }
 
 export interface BrowserHost {
@@ -71,6 +80,7 @@ export async function bootBrowserHost(
         err.stack ?? "",
       );
     },
+    onUnmatched: opts.onUnmatched,
   });
   return {
     request,

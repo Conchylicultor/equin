@@ -1,6 +1,8 @@
+import { getConfig } from "@plugins/config_v2/server";
 import {
+  conversationCategoryConfig,
   getItemMap,
-  getItemOrder,
+  itemOrder,
 } from "@plugins/conversations/plugins/conversation-category/server";
 
 const UNKNOWN = "Unknown";
@@ -28,5 +30,5 @@ export function itemFor(
 
 /** The category's configured item names, in config order — the series order. */
 export function getConfigItemOrder(categoryId: string): string[] {
-  return getItemOrder(categoryId);
+  return itemOrder(getConfig(conversationCategoryConfig), categoryId);
 }

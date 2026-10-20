@@ -57,8 +57,8 @@ import {
   type TreeOracle,
   type TreeStep,
 } from "@plugins/tasks/plugins/tasks-core/server/testing";
-import { AgentSchema } from "../../core/schemas";
-import { agentRows } from "../../shared/resources";
+import { AgentSchema } from "../../core";
+import { agentRows } from "../../core";
 import { agentRowsServeOptions } from "./agent-rows";
 import { agents } from "./views";
 

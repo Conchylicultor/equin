@@ -1,6 +1,4 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { subagentActivityServed } from "./internal/activity-resource";
-import { subagentTranscriptServed } from "./internal/transcript-resource";
 import { parentFactsServed } from "./internal/served";
 
 // Discovery, for a consumer that accounts over a conversation's whole tree (its
@@ -11,10 +9,6 @@ export { subagentDirOf, listSubagentEntries } from "./internal/discovery";
 
 export default {
   description:
-    "Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts, and serves two live resources: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation; plus the parent-transcript facts sub-agent state joins on (Agent / Workflow calls, task notifications, idle and resume times), folded over the whole parent transcript.",
-  contributions: [
-    ...subagentActivityServed.declare,
-    ...subagentTranscriptServed.declare,
-    ...parentFactsServed.declare,
-  ],
+    "Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts (the discovery conversations/usage accounts over), plus the reads behind the two live values the machine half serves: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation; it serves the parent-transcript facts sub-agent state joins on (Agent / Workflow calls, task notifications, idle and resume times), folded over the whole parent transcript.",
+  contributions: [...parentFactsServed.declare],
 } satisfies ServerPluginDefinition;

@@ -8,6 +8,7 @@ import {
   type PortEnd,
 } from "@plugins/framework/plugins/browser-server/core";
 import { bootBrowserHost } from "@plugins/framework/plugins/server-core/core";
+import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
 import { hostEntries } from "./browser-host.generated";
 import { seed } from "./seed";
 
@@ -16,6 +17,10 @@ import { seed } from "./seed";
 const port = self as unknown as PortEnd;
 
 void serveOverPort(port, async () => {
-  const host = await bootBrowserHost({ entries: hostEntries, seed });
+  const host = await bootBrowserHost({
+    entries: hostEntries,
+    seed,
+    onUnmatched: unmatchedApiResponse,
+  });
   return { server: runtimeBrowserServer(host), keys: new Set(host.keys) };
 });

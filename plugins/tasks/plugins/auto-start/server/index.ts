@@ -2,10 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { taskStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { taskAutoStartServed } from "./internal/resource";
-import {
-  autoStartDroppedSweepWarmup,
-  cancelAutoStartOnDropJob,
-} from "./internal/cancel-on-drop";
+import { cancelAutoStartOnDropJob } from "./internal/cancel-on-drop";
 
 export {
   setTaskAutoStart,
@@ -15,6 +12,7 @@ export {
 } from "./internal/mutations";
 
 export default {
+  portable: true,
   description:
     "Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.",
   contributions: [
@@ -26,5 +24,5 @@ export default {
       oneShot: false,
     }),
   ],
-  register: [cancelAutoStartOnDropJob, autoStartDroppedSweepWarmup],
+  register: [cancelAutoStartOnDropJob],
 } satisfies ServerPluginDefinition;

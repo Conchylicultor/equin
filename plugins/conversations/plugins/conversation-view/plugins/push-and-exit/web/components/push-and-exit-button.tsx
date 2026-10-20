@@ -198,7 +198,11 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const exit = useMemo((): ExitReads => {
     if (workResult.status === "unavailable")
       return { workspace: "unavailable", message: workResult.message };
-    if (workspace === "git")
+    if (workspace === "git") {
+      // The edited files are measured from git too: unmeasurable here, the
+      // decision is not made either way — only the safe Close is offered.
+      if (filesResult.status === "unavailable")
+        return { workspace: "unavailable", message: filesResult.message };
       return {
         workspace,
         decision: combineResources({
@@ -207,6 +211,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
           files: filesResult,
         }),
       };
+    }
     if (workspace === "no-git")
       return {
         workspace,

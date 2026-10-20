@@ -13,6 +13,7 @@
     - `network/live.useLive`
     - `plugin-meta/plugin-view.PluginViewSlots`
     - `primitives/css/clip.Clip`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/pane.useOpenPane`

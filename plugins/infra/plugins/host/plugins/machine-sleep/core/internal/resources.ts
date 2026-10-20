@@ -23,8 +23,11 @@ export type SleepNow = z.infer<typeof SleepNowSchema>;
  * and it changes only when the machine wakes, so it is pushed only then.
  *
  * A schema-bounded scalar. No placeholder: until the first reading lands
- * `useLive` reports it pending.
+ * `useLive` reports it pending. The clock is the computer's, so only the
+ * desktop app answers it (`needsMachine`): a reader under an in-browser server
+ * gets `unavailable`.
  */
 export const machineSleep = liveValue("machine.sleep", {
   schema: SleepNowSchema,
+  needsMachine: { feature: "Reading the machine's sleep clock" },
 });

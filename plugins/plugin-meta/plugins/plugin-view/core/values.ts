@@ -11,6 +11,9 @@ import { pluginTreePayloadSchema } from "./schema";
 export const pluginTree = liveValue("plugin-view.tree", {
   schema: pluginTreePayloadSchema,
   load: "on-demand",
+  // Read from this checkout's `plugins/` on disk: only the desktop app answers
+  // it, and a reader under an in-browser server gets `unavailable`.
+  needsMachine: { feature: "Reading the plugin tree" },
 });
 
 /**
@@ -21,4 +24,5 @@ export const pluginTree = liveValue("plugin-view.tree", {
 export const pluginFacetsTree = liveValue("plugin-view.facets-tree", {
   schema: pluginTreePayloadSchema,
   load: "on-demand",
+  needsMachine: { feature: "Reading the plugin tree" },
 });

@@ -2,10 +2,10 @@ import { eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { rankAdjacentTo } from "@plugins/primitives/plugins/rank/server";
-import { moveAgent } from "../../core/endpoints";
+import { moveAgent } from "../../core";
 import { _agents } from "./tables";
 import { isAgentDescendant } from "./hierarchy";
-import { agentIdKind } from "../../core/id-kinds";
+import { agentIdKind } from "../../core";
 
 export const handleMove = implement(moveAgent, async ({ params, body }) => {
   if (body.parentId === params.id) {

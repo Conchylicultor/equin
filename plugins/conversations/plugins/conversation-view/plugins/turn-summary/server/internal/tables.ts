@@ -1,7 +1,7 @@
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { defaultNow } from "@plugins/infra/plugins/entities/server";
-import { turnSummaryShape } from "../../shared/schemas";
+import { turnSummaryShape } from "../../core";
 
 export const turnSummaries = defineExtension(
   _conversations,

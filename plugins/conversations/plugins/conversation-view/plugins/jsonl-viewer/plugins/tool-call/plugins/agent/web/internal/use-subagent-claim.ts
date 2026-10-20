@@ -31,6 +31,9 @@ export function useSubagentNotificationClaim(
   // The set could not be read, so whether this is a sub-agent's is unknown —
   // decline rather than guess; the sub-agent card says the read failed.
   if (subagents.kind === "failed") return { kind: "declined" };
+  // No sub-agent reads on this host (an in-browser server): nothing can join
+  // the notification to a sub-agent, and never will — decline, never pend.
+  if (subagents.kind === "unavailable") return { kind: "declined" };
   const entry = subagents.entries.find(
     ({ row, agentToolEvent }) =>
       row.agentId === event.taskId ||

@@ -25,7 +25,6 @@ export {
   systemAgentDetailPane,
   agentSidePane,
 } from "./panes";
-import { agentsDemo } from "./internal/demo-resource";
 export { Agents } from "./slots";
 export { defineSystemAgent } from "./system-agents";
 export type { SystemAgentDescriptor } from "./system-agents";
@@ -34,7 +33,6 @@ export { patchAgent } from "./components/agents-list";
 export default {
   description: "Named agent definitions that launch conversations.",
   contributions: [
-    agentsDemo,
     IdKinds.Kind({ kind: agentIdKind }),
     IdKinds.Kind({ kind: agentLaunchIdKind }),
     Pane.Register({ pane: agentsRootPane }),

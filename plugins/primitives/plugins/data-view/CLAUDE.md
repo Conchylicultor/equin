@@ -2900,7 +2900,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ids.IdKinds`
     - `primitives/data-view/view-core.buildViewConfigRegistrations`
     - `primitives/data-view/view-core.viewsDescriptor`
-    - `ui/icons/sprites.defineSavedIconSource`
+    - `ui/icons/saved-sources.defineSavedIconSource`
   - Exports (values):
     - `readDataViewConfigDoc`
     - `watchDataViewConfigDoc`
@@ -3076,7 +3076,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - Types: `PagedDataView`, `PagedLayout`, `PagedViewUnderTest`
 - Sub-plugins:
   - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in…
-  - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row…
+  - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Custom-column…
   - **`floating-toolbar`** — Floating toolbar arrangement for the data-view primitive: the band floats over the view (a full-bleed map under it) — the view tabs as a floating card top-left, past the surface's aside, and search…
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
   - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.

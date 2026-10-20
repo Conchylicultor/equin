@@ -9,7 +9,6 @@ export {
   PluginDetailForId,
   usePluginDisplayName,
 } from "./components/plugin-detail-for-id";
-import { pluginTreeDemo } from "./internal/demo-resource";
 export { SectionCount } from "./components/section-count";
 export { PluginLink } from "./components/plugin-link";
 export { ConsumerList } from "./components/consumer-list";
@@ -23,6 +22,6 @@ export default {
   collapsed: true,
   description:
     "Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.",
-  contributions: [pluginTreeDemo, Pane.Register({ pane: pluginViewPane })],
+  contributions: [Pane.Register({ pane: pluginViewPane })],
   slots: { ...PluginView, "plugin-view": pluginViewPane },
 } satisfies PluginDefinition;

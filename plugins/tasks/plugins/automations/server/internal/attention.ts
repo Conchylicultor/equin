@@ -9,7 +9,7 @@ import {
   SLOT_SETTLED_STATUSES,
   type OriginRole,
 } from "../../core";
-import { automationsCatalogServed } from "./live";
+import { catalogChanged } from "./catalog-changed";
 import { originOfTask } from "./origin";
 import { registeredAutomation } from "./registry";
 
@@ -69,7 +69,7 @@ export const automationTaskStatusJob = defineJob({
     const origin = await originOfTask(event.taskId);
     if (origin === null) return;
     const { automationId } = origin;
-    automationsCatalogServed.notify();
+    catalogChanged();
     const automation = registeredAutomation(automationId);
     if (origin.role === "launched" && SETTLES_SLOT.has(event.status)) {
       automation?.wake();

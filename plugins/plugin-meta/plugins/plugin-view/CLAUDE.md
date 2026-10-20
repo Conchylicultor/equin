@@ -15,6 +15,14 @@ throttled 2 s (a build or a burst of saves re-reads at most once per window),
 and ETagged by `pluginTreeGeneration()`, so an unchanged generation answers 304. There
 is no request/response endpoint for either tree.
 
+Both are declared `needsMachine` ("Reading the plugin tree") and served by the
+machine half (`machine/`; there is no `server/`): the tree is this checkout's
+`plugins/` on disk. Under an in-browser server they read `unavailable`:
+plugin-link DECLINES (a plain code span, never pending — pending would stop the
+code-claim chain), and the plugin pane, the file-tree section, Settings'
+config nav and the Studio panes (explorer, contributions, closure tree) show
+the message.
+
 ## Contributing a section
 
 `PluginViewSlots.Section` is a
@@ -27,7 +35,7 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
 
 ## Plugin reference
 
-- Description: Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
+- Description: Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.
 - Web:
   - Slots:
     - `PluginViewSlots.Section`
@@ -51,18 +59,16 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.source-path`
     - `PluginViewSlots.Section` ← `plugin-meta.plugin-view.sub-plugins`
     - `pluginViewPane.Actions` ← `primitives.pane`
-  - Contributes:
-    - `Demo.Resource` "plugin-view"
-    - `Pane.Register` "plugin-view"
+  - Contributes: `Pane.Register` "plugin-view"
   - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
     - `primitives/pane` ×4
-    - `framework/browser-server/demo.demoResource`
     - `network/live.useLive`
     - `primitives/breadcrumb.Breadcrumb`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -90,15 +96,11 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
   - Contributes:
     - `resource.declare` "plugin-view.facets-tree"
     - `resource.declare` "plugin-view.tree"
-  - Uses:
-    - `network/live.serveValue`
-    - `plugin-meta/plugin-tree.getFacetsTreeCached`
-    - `plugin-meta/plugin-tree.getStructureTreeCached`
-    - `plugin-meta/plugin-tree.onPluginTreeChanged`
-    - `plugin-meta/plugin-tree.pluginTreeGeneration`
   - Resources:
     - `plugin-view.facets-tree` (invalidate, notified)
     - `plugin-view.tree` (invalidate, notified)
+- Machine:
+  - Uses: `network/live.serveValue`
 - Core:
   - Uses: `network/live.liveValue`
   - Exports (types):
@@ -114,9 +116,9 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `ui/tokens/density` ×5
     - `ui/tokens/color-palette` ×3
     - `ui/tokens/shape --spacing`
-  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta` ×19
-    - `apps` ×2
+    - `apps` ×3
     - `active-data/plugin-link`
     - `debug/mcp-tools`
 - Sub-plugins:

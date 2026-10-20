@@ -87,6 +87,8 @@ function AgentsStatFor({ conversationId }: { conversationId: string }) {
       </StatBadge>
     );
   }
+  // Pending, unavailable (no sub-agent reads on this host) or no agents
+  // launched: the strip carries nothing it cannot say.
   if (reading === null || reading.agents === 0) return null;
 
   const { agents, running, ownOutput, agentsOutput } = reading;

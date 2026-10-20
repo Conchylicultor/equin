@@ -499,6 +499,9 @@ export function OpStatusBanner({
         refetch={result.refetch}
       />
     );
+  // No computer behind this app (the in-browser demo): there are no ops on it
+  // to show, and the banner is optional chrome — it renders nothing.
+  if (result.status === "unavailable") return null;
   if (!op || !chrome) return null;
 
   return (

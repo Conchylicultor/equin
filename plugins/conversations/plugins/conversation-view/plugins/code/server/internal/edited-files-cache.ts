@@ -3,7 +3,7 @@ import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-ca
 import { computeEditedFiles } from "./compute-edited-files";
 import { editedFilesSignature } from "./edited-files-signature";
 
-// ONE module-level memo, shared between the resource (edited-files-resource.ts —
+// ONE module-level memo, shared between the resource (machine/internal/edited-files-resource.ts —
 // BOTH its `revalidate` and its `loader`) and the @parcel watcher
 // (watch-edited-files.ts, the authoritative WRITER).
 //

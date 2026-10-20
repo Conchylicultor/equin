@@ -3,7 +3,7 @@ import { SegmentedProgressBar } from "@plugins/ui/plugins/segmented-progress-bar
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { PHASE_STEPS, PROGRESS_SUMMARY } from "../../shared/schemas";
+import { PHASE_STEPS, PROGRESS_SUMMARY } from "../../core";
 import { useProgressFor } from "../internal/use-progress";
 
 export function ProgressBarToolbar() {

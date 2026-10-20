@@ -4,13 +4,13 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
 import { assertChoiceLaunchable } from "@plugins/conversations/plugins/model-provider/core";
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
-import { updateAgent } from "../../core/endpoints";
-import { AgentSchema } from "../../core/schemas";
+import { updateAgent } from "../../core";
+import { AgentSchema } from "../../core";
 import { _agents } from "./tables";
 import { agentAttachments } from "./tables-attachments";
 import { agents } from "./views";
 import { isAgentDescendant } from "./hierarchy";
-import { agentIdKind } from "../../core/id-kinds";
+import { agentIdKind } from "../../core";
 
 export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
   const id = params.id;

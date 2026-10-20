@@ -1,3 +1,12 @@
+// <DemoScope>: a demo's own browser server. The story and every key a demo
+// reads come from the scenario's host (a worker running real portable server
+// code on PGlite; a `needsMachine` read answers unavailable without reaching
+// it). The page-side server below remains for ONE contributor, config_v2's
+// `Demo.Resource` (its in-memory user layer and `set-field` write), until the
+// config_v2 split moves config into the host — then this page server, the
+// `Demo.Resource` slot and the composition with the host go
+// (research/2026-10-20-global-demo-stubs-to-worker.md).
+
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   composeBrowserServers,
@@ -147,12 +156,11 @@ function claiming(
 }
 
 /**
- * Every route the scope answers: the stateless `Demo.Route` handlers plus each
- * backend's own. A route key claimed twice throws naming both sources.
+ * Every route the scope answers: each backend's own. A route key claimed twice
+ * throws naming both sources.
  */
 function scopeRoutes(
   scenarioId: string,
-  routeContributions: readonly DemoRoute[],
   backends: readonly ContributedBackend[],
 ): [string, RouteHandler][] {
   const owners = new Map<string, string>();
@@ -167,7 +175,6 @@ function scopeRoutes(
     owners.set(key, source);
     out.push([key, handler]);
   };
-  for (const r of routeContributions) add("a Demo.Route", r);
   for (const { source, backend } of backends) {
     for (const r of backend.routes ?? []) add(source, r);
   }
@@ -183,7 +190,6 @@ interface PageServer {
 function buildServer(
   scenario: DemoScenario,
   backends: readonly ContributedBackend[],
-  routes: readonly DemoRoute[],
   lastToastAt: { current: number | null },
 ): PageServer {
   const owners = new Map<string, string>();
@@ -198,7 +204,7 @@ function buildServer(
       for (const served of all) for (const key of served.keys) keys.add(key);
       return all;
     },
-    routes: scopeRoutes(scenario.id, routes, backends),
+    routes: scopeRoutes(scenario.id, backends),
     unserved: (key) =>
       new DemoMissingError(
         key,
@@ -269,12 +275,10 @@ function startScopeServer(
 function ScopeServer({
   scenario,
   backends,
-  routes,
   children,
 }: {
   scenario: DemoScenario;
   backends: readonly ContributedBackend[];
-  routes: readonly DemoRoute[];
   children: ReactNode;
 }): ReactNode {
   const lastToastAt = useRef<number | null>(null);
@@ -287,7 +291,7 @@ function ScopeServer({
     // resource owned by this mount, so StrictMode's mount → unmount → mount
     // disposes the first and keeps the second (an initialiser would build one
     // a discarded render never disposes).
-    const page = buildServer(scenario, backends, routes, lastToastAt);
+    const page = buildServer(scenario, backends, lastToastAt);
     const stop = startScopeServer(scenario, page, setServer, (error) =>
       setFailure({ error }),
     );
@@ -296,7 +300,7 @@ function ScopeServer({
       // The next server (a host still booting) is not this one.
       setServer(null);
     };
-  }, [scenario, backends, routes]);
+  }, [scenario, backends]);
   // A host that could not boot reaches the error boundary, never an empty app.
   if (failure !== null) throw failure.error;
   const transport = useMemo(
@@ -313,9 +317,9 @@ function ScopeServer({
 
 /**
  * Renders `children` against a browser server of its own: the scenario's host
- * (real server code in a worker, on the scenario's seed), every
- * `Demo.Resource` contribution's backend (its serves and its routes) and every
- * `Demo.Route` handler. Any other known live key fails `loader-failed`
+ * (real server code in a worker, on the scenario's seed), and every
+ * `Demo.Resource` contribution's backend (its serves and its routes — today
+ * config_v2's alone). Any other known live key fails `loader-failed`
  * (`DemoMissingError`); any other `/api` request is refused
  * (`unsupportedEndpointResponse`) with one "Not available in the demo" toast at
  * a time. The host booting renders `<Loading/>`; a host that fails to boot, or
@@ -329,15 +333,10 @@ export function DemoScope({
   children: ReactNode;
 }): ReactNode {
   const resources = Demo.Resource.useContributions();
-  const routeContributions = Demo.Route.useContributions();
-  const routes = useMemo(
-    () => routeContributions.map((c) => c.route),
-    [routeContributions],
-  );
   return (
     <CollectBackends resources={resources} index={0} acc={NO_BACKENDS}>
       {(backends) => (
-        <ScopeServer scenario={scenario} backends={backends} routes={routes}>
+        <ScopeServer scenario={scenario} backends={backends}>
           {children}
         </ScopeServer>
       )}

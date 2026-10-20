@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { getAgent } from "../../core/endpoints";
-import { AgentSchema } from "../../core/schemas";
+import { getAgent } from "../../core";
+import { AgentSchema } from "../../core";
 import { agents } from "./views";
-import { agentIdKind } from "../../core/id-kinds";
+import { agentIdKind } from "../../core";
 
 export const handleGet = implement(getAgent, async ({ params }) => {
   const [row] = await db

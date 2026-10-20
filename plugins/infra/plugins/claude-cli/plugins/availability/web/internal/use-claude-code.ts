@@ -8,7 +8,10 @@ import {
 } from "../../core";
 import { claudeCodeVerdict } from "./claude-code-health";
 
-/** Claude Code's live status on this backend — loading until the first check lands. */
+/**
+ * Claude Code's live status on this backend — loading until the first check
+ * lands; `unavailable` under a host without the computer.
+ */
 export function useClaudeCodeStatus() {
   return useLive(claudeCodeStatus);
 }
@@ -24,12 +27,16 @@ export function useClaudeCodeHealth(): HealthStatus {
  * Only a KNOWN block disables: while the status is loading, or the check
  * itself could not answer, the control stays enabled and the server — which
  * asks again before starting anything — is the authority. So a launch is never
- * refused on a guess, and never lets a known-dead agent start either.
+ * refused on a guess, and never lets a known-dead agent start either. Under a
+ * host without the computer the status is `unavailable`, which is no block of
+ * Claude Code's: there is no agent to start there, and the launch controls are
+ * already gated on the launch endpoint's own availability.
  */
 export function useClaudeCodeLaunchBlock(): string | null {
   return foldResource(useClaudeCodeStatus(), {
     loading: () => null,
     error: () => null,
+    unavailable: () => null,
     ready: launchBlock,
   });
 }

@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { deleteAgent } from "../../core/endpoints";
+import { deleteAgent } from "../../core";
 import { _agents } from "./tables";
-import { agentIdKind } from "../../core/id-kinds";
+import { agentIdKind } from "../../core";
 
 export const handleDelete = implement(deleteAgent, async ({ params }) => {
   const children = await db

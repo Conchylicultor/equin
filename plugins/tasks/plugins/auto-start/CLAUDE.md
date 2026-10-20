@@ -27,7 +27,6 @@
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
-    - `infra/warmup.defineWarmup`
     - `network/live.serveCollection`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.taskStatusChanged`
@@ -38,19 +37,34 @@
     - `getTaskAutoStart`
     - `listArmedTaskIds`
     - `setTaskAutoStart`
-  - Register:
-    - `defineJob('tasks.auto-start-cancel-on-drop')`
-    - `defineWarmup('tasks.auto-start-dropped-sweep')`
+  - Register: `defineJob('tasks.auto-start-cancel-on-drop')`
   - Resources: `tasks-auto-start:rows` (keyed, point)
+- Core:
+  - Uses:
+    - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
+    - `conversations/model-provider.StoredModelChoiceSchema`
+    - `fields.nullable`
+    - `fields/date/config.dateField`
+    - `fields/text/config.parsedTextField`
+    - `fields/text/config.textField`
+    - `infra/entity-extensions.defineExtensionShape`
+    - `network/live.liveCollection`
+  - Exports (types): `TaskAutoStartRow`
+  - Exports (values):
+    - `taskAutoStart`
+    - `taskAutoStartShape`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/agent-manager/demo`
     - `conversations`
     - `tasks`
     - `tasks/auto-start/launch-option`
     - `tasks/automations`
+- Machine:
+  - Register: `defineWarmup('tasks.auto-start-dropped-sweep')`
 - Sub-plugins:
   - **`launch-option`** — Auto-start model picker as a launch option: the same controlled select on the task detail's Prompt card (bound to the task's row) and on the task-draft popover (bound to the draft card). Applies a…
 

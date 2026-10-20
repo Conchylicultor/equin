@@ -1,4 +1,7 @@
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type {
+  GateUnavailable,
+  ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import { claudeCodeProblem, type ClaudeCodeStatus } from "../../core";
 
@@ -9,11 +12,16 @@ import { claudeCodeProblem, type ClaudeCodeStatus } from "../../core";
  * - `ready` → `ok`, naming the account and version;
  * - `missing` / `signed-out` → `critical`: the app exists to run agents, and it
  *   cannot start one;
- * - `unreadable` → `unknown` with why (the check failed; Claude Code may be fine).
+ * - `unreadable` → `unknown` with why (the check failed; Claude Code may be fine);
+ * - `unavailable` (a host without the computer) → `unknown` with the sentence
+ *   saying so: there is no CLI here to vouch for, and none is claimed.
  */
 export function claudeCodeVerdict(
-  result: ResourceResult<ClaudeCodeStatus>,
+  result: ResourceResult<ClaudeCodeStatus> | GateUnavailable,
 ): HealthStatus {
+  if (result.status === "unavailable") {
+    return { state: "unknown", summary: result.message };
+  }
   if (result.status === "loading") return { state: "unknown" };
   if (result.status === "error") {
     return { state: "unknown", summary: "Couldn't load Claude Code's status" };

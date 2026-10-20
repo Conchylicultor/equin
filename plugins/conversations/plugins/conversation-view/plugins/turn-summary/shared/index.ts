@@ -1,3 +1,3 @@
-export { TurnSummarySchema, turnSummaryRows } from "./schemas";
-export type { TurnSummary } from "./schemas";
+export { TurnSummarySchema, turnSummaryRows } from "../core";
+export type { TurnSummary } from "../core";
 export { turnSummaryConfig } from "./config";

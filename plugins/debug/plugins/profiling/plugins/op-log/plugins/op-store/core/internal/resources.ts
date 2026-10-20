@@ -6,6 +6,14 @@ import { opLogOpsEntityRef } from "./schemas";
 // other key rides the row (`OP_ROW_CARRIED`), in no list and never filterable.
 // No base exposures: the rows are the op-log reducer's state (`OpRow`), and
 // nothing extends the entity.
+//
+// Both are ingested from the host's op log on disk (the builds, tests and
+// pushes this machine runs), so only the desktop app answers them
+// (`needsMachine`, served by `machine/`): a reader under an in-browser server
+// gets `unavailable`. The boot preload is unchanged on the desktop.
+const OPS_ON_THIS_MACHINE = {
+  feature: "Builds, tests and pushes on this machine",
+} as const;
 const OP_ROW_LISTED_PICK = [
   "kind",
   "opSlug",
@@ -64,6 +72,7 @@ export const opsInFlight = liveCollection("op-store.in-flight.all", {
     unbounded: { reason: "every op in flight on the host" },
   },
   preload: "boot",
+  needsMachine: OPS_ON_THIS_MACHINE,
 });
 
 /**
@@ -81,4 +90,5 @@ export const opsHistory = liveCollection("op-store.history", {
   sortable: ["requestedAt", "completedAt"],
   default: { orderBy: [["requestedAt", "desc"]], limit: 500 },
   maxLimit: 2000,
+  needsMachine: OPS_ON_THIS_MACHINE,
 });

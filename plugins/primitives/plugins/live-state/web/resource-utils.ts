@@ -12,6 +12,12 @@
  *   - several resources:        combineResources({ a, b, c }) — all-or-nothing,
  *     so a view can never render from a half-loaded snapshot
  *
+ * A read of a declaration that needs the computer (`needsMachine`, network/live)
+ * carries a fourth arm, `unavailable`, under a host without one. Every
+ * combinator here accepts it: `combineResources` and `mapResource` pass it
+ * through, and `foldResource` requires an `unavailable` handler exactly when
+ * the input's type carries the arm — a portable read's call sites are unchanged.
+ *
  * GATE RESTRICTION: feed only whole-resource results (no `select`) into these.
  * A select-scoped subscription can settle without a re-render when the
  * selected slice is identical across the no-value→first-value boundary (a
@@ -20,19 +26,48 @@
  * For a select-based readiness read, pass `gate: true` to useResource instead.
  */
 
-import { ResourceError, type ResourceStatus } from "../core";
+import { ResourceError } from "../core";
 import type { ResourceResult } from "./use-resource";
+
+/**
+ * The arm of a read that will not arrive here: its declaration needs the
+ * computer and the host has none behind it (network/live's `LiveUnavailable`,
+ * structurally). Not `loading` (it never lands) and not `error` (nothing
+ * failed): `message` is the sentence to show in its place.
+ */
+export interface GateUnavailable {
+  status: "unavailable";
+  message: string;
+}
 
 /**
  * Anything gateable on readiness: a `useResource` / `useLive` / `useLiveRow`
  * result, a `combineResources` result, a `useOptimisticResource` result — any
  * value naming its state by `status`, whose `error` arm carries the failure
- * (and, for a gate that reads values, whose `ready` arm carries `data`).
+ * (and, for a gate that reads values, whose `ready` arm carries `data`). A
+ * needsMachine read adds the {@link GateUnavailable} arm.
  */
 export type GateInput =
   | { status: "loading" }
   | { status: "error"; error: Error }
-  | { status: "ready" };
+  | { status: "ready" }
+  | GateUnavailable;
+
+/**
+ * A gate that is never `unavailable`: a portable read's, or one a caller builds
+ * by hand from its own state (a setting's pending/failed/settled). Type a
+ * hand-built gate with this, not {@link GateInput}, or every combine and fold
+ * it feeds gains the `unavailable` arm it can never be in.
+ */
+export type PortableGateInput = Exclude<GateInput, GateUnavailable>;
+
+/** The state a gateable result names: the three of a read, plus `unavailable`. */
+export type GateStatus = GateInput["status"];
+
+/** True when the gateable type `R` carries the `unavailable` arm. */
+type HasUnavailable<R> = [Extract<R, GateUnavailable>] extends [never]
+  ? false
+  : true;
 
 /** The settled data type carried by a gateable result. */
 export type GateDataOf<R> = R extends { status: "ready"; data: infer D }
@@ -46,11 +81,20 @@ type GateStaleOf<R> = R extends { status: "error"; stale?: infer D }
 
 /**
  * `combineResources`' result: the same three states as a `ResourceResult`,
- * precedence error > loading > ready — one failed input fails the whole combine
- * (a surface never renders from a half-loaded snapshot, and never spins on a
- * read that will not load). No `stale`: a partial snapshot is not a value.
+ * precedence error > unavailable > loading > ready — one failed input fails the
+ * whole combine (a surface never renders from a half-loaded snapshot, and never
+ * spins on a read that will not load). No `stale`: a partial snapshot is not a
+ * value. The `unavailable` arm is there exactly when some input carries it: one
+ * input that will never arrive makes the whole snapshot unavailable.
  */
 export type CombinedResources<T extends Record<string, GateInput>> =
+  | (HasUnavailable<T[keyof T]> extends true
+      ? {
+          status: "unavailable";
+          message: string;
+          refetch: () => Promise<void>;
+        }
+      : never)
   | {
       status: "loading";
       refetch: () => Promise<void>;
@@ -67,7 +111,7 @@ export type CombinedResources<T extends Record<string, GateInput>> =
     };
 
 /** The status of any gateable result. */
-export function statusOf(r: GateInput): ResourceStatus {
+export function statusOf(r: GateInput): GateStatus {
   return r.status;
 }
 
@@ -93,9 +137,11 @@ function refetchOf(r: GateInput): (() => Promise<void>) | undefined {
 /**
  * Promise.all for resource results: `loading` until EVERY input is ready, then
  * `data` carries each input's value under its key. Precedence
- * **error > loading > ready**: one failed input makes the combine `error` (with
- * the first failed input's error), even while others still load. The combine's
- * `refetch` refetches every input that can.
+ * **error > unavailable > loading > ready**: one failed input makes the combine
+ * `error` (with the first failed input's error), even while others still load;
+ * otherwise one unavailable input makes it `unavailable` (with the first such
+ * input's message) — it will never be ready, so it is not loading either. The
+ * combine's `refetch` refetches every input that can.
  *
  * Pure function — for a render-stable identity inside a component, use
  * `useCombinedResources`.
@@ -104,17 +150,30 @@ export function combineResources<T extends Record<string, GateInput>>(
   inputs: T,
 ): CombinedResources<T> {
   let error: ResourceError | null = null;
+  let unavailable: string | null = null;
   let loading = false;
   const refetches: (() => Promise<void>)[] = [];
   for (const r of Object.values(inputs)) {
     const status = statusOf(r);
     if (status === "error" && error === null) error = errorOf(r);
+    if (status === "unavailable" && unavailable === null) {
+      unavailable = (r as GateUnavailable).message;
+    }
     if (status === "loading") loading = true;
     const refetch = refetchOf(r);
     if (refetch !== undefined) refetches.push(refetch);
   }
   const refetch = () => Promise.all(refetches.map((f) => f())).then(() => {});
   if (error !== null) return { status: "error", error, refetch };
+  if (unavailable !== null) {
+    // The arm is in the result type exactly when an input can carry it, and
+    // only such an input reaches here.
+    return {
+      status: "unavailable",
+      message: unavailable,
+      refetch,
+    } as unknown as CombinedResources<T>;
+  }
   if (loading) return { status: "loading", refetch };
   const data = Object.fromEntries(
     Object.entries(inputs).map(([k, r]) => [
@@ -144,7 +203,8 @@ export function useCombinedResources<T extends Record<string, GateInput>>(
  * arm's `stale` value, if any, derived the same way). This is how a domain hook
  * narrows a read — e.g. a point set to its one row, `rows[0] ?? null` — while
  * still handing its caller "not known yet" and "failed" as states rather than
- * as a value that means "absent".
+ * as a value that means "absent". A needsMachine read's `unavailable` arm
+ * passes through as is (the result keeps the arm in its type).
  *
  * Pure; `fn` runs on every call, so memoize its output at the call site when a
  * stable identity matters.
@@ -152,8 +212,18 @@ export function useCombinedResources<T extends Record<string, GateInput>>(
 export function mapResource<T, U>(
   result: ResourceResult<T>,
   fn: (data: T) => U,
-): ResourceResult<U> {
+): ResourceResult<U>;
+export function mapResource<T, U>(
+  result: ResourceResult<T> | GateUnavailable,
+  fn: (data: T) => U,
+): ResourceResult<U> | GateUnavailable;
+export function mapResource<T, U>(
+  result: ResourceResult<T> | GateUnavailable,
+  fn: (data: T) => U,
+): ResourceResult<U> | GateUnavailable {
   switch (result.status) {
+    case "unavailable":
+      return result;
     case "ready":
       return {
         status: "ready",
@@ -198,13 +268,22 @@ export function readyResource<T>(data: T): ResourceResult<T> {
  * with something I can show" renders as the failure it is, never as the value.
  * The loading and error arms pass through. (A grouping read full at its limit
  * may be missing values: a filter offering it as the complete option set
- * refuses it.)
+ * refuses it.) A needsMachine read's `unavailable` arm passes through too.
  */
 export function refuseResource<T>(
   result: ResourceResult<T>,
   refuse: (data: T) => ResourceError | null,
-): ResourceResult<T> {
+): ResourceResult<T>;
+export function refuseResource<T>(
+  result: ResourceResult<T> | GateUnavailable,
+  refuse: (data: T) => ResourceError | null,
+): ResourceResult<T> | GateUnavailable;
+export function refuseResource<T>(
+  result: ResourceResult<T> | GateUnavailable,
+  refuse: (data: T) => ResourceError | null,
+): ResourceResult<T> | GateUnavailable {
   switch (result.status) {
+    case "unavailable":
     case "loading":
     case "error":
       return result;
@@ -221,13 +300,22 @@ export function refuseResource<T>(
   }
 }
 
-/** The handlers of {@link foldResource} — all three required, by design. */
-export interface FoldResourceHandlers<R extends GateInput, U> {
+/**
+ * The handlers of {@link foldResource} — every state the result can be in
+ * required, by design: the three of a read, plus `unavailable` exactly when
+ * `R` carries that arm (a needsMachine read) — and refused when it does not.
+ */
+export type FoldResourceHandlers<R extends GateInput, U> = {
   loading: () => U;
   /** `stale` is the last-known-good value, when the result carries one. */
   error: (error: ResourceError, stale: GateStaleOf<R> | undefined) => U;
   ready: (data: GateDataOf<R>) => U;
-}
+} & (HasUnavailable<R> extends true
+  ? {
+      /** `message` is the sentence the read carries to show in its place. */
+      unavailable: (message: string) => U;
+    }
+  : { unavailable?: never });
 
 /**
  * Reduce a resource result to a plain value, naming what every state yields.
@@ -252,5 +340,17 @@ export function foldResource<R extends GateInput, U>(
         errorOf(result),
         (result as { stale?: GateStaleOf<R> }).stale,
       );
+    case "unavailable": {
+      // Typed required whenever `R` carries the arm; a hand-cast input
+      // reaching here without one is a broken assumption, said out loud.
+      const unavailable = (handlers as { unavailable?: (message: string) => U })
+        .unavailable;
+      if (unavailable === undefined) {
+        throw new Error(
+          "foldResource: the result is unavailable but no `unavailable` handler was given",
+        );
+      }
+      return unavailable((result as GateUnavailable).message);
+    }
   }
 }

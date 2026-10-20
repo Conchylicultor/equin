@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-ui-icons-saved-sources",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The saved-icon source registry (defineSavedIconSource / savedIconSources): where user-picked icons are stored, read by the sprites plugin's resident saved-icon sprites. Portable."
+}

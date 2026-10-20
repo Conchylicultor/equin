@@ -7,10 +7,8 @@ const BOOT = "B25F1FC6-798F-412D-B0DA-B41350248582";
 function harness(first: SleepClockReading) {
   let reading = first;
   let notified = 0;
-  const p = createSleepPublisher(
-    () => reading,
-    () => notified++,
-  );
+  const p = createSleepPublisher(() => reading);
+  p.subscribe(() => notified++);
   return {
     p,
     set: (r: SleepClockReading) => (reading = r),
@@ -55,6 +53,24 @@ describe("createSleepPublisher", () => {
     // The loader's read counts as the baseline: an unchanged publish is silent.
     h.p.publish();
     expect(h.notified()).toBe(0);
+  });
+
+  test("an unsubscribed listener hears nothing more", () => {
+    const h = harness({
+      supported: true,
+      boot: BOOT,
+      asleepMs: 0,
+      wakeAtMs: 1,
+    });
+    let other = 0;
+    const stop = h.p.subscribe(() => other++);
+    h.p.publish();
+    expect(other).toBe(1);
+    stop();
+    h.set({ supported: true, boot: BOOT, asleepMs: 5_000, wakeAtMs: 2 });
+    h.p.publish();
+    expect(other).toBe(1);
+    expect(h.notified()).toBe(2);
   });
 });
 

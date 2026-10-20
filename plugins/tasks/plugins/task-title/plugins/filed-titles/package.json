@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-tasks-task-title-filed-titles",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The task titles of a host without a model: the TaskTitleGenerator host service as nothing to do, so every task keeps the title it was filed with (the browser composition, the portable boot test). Never booted by the desktop."
+}

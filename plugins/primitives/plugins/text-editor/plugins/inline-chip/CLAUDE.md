@@ -197,7 +197,6 @@ rendered chip out of a read surface puts the token back on the clipboard.
     - `page/inline-page-link`
     - `page/links`
     - `primitives/ui-context/element-picker`
-    - `tasks/task-title`
 - Server:
   - Exports (types): `InlineTokenReferent`
   - Exports (values):

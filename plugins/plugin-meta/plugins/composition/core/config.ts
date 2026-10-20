@@ -165,11 +165,12 @@ export const compositionsConfig = defineConfig({
         // exactly as the disabled closure did. One mechanism decides membership now,
         // and it is this one.
         //
-        // The other seven are the HOST-SERVICE PROVIDERS of a host without the
+        // The others are the HOST-SERVICE PROVIDERS of a host without the
         // computer — the PGlite database driver, the in-process job queue, the
         // memory stores for attachment bytes, logs, the push ledger and
-        // transcripts, and the migration history bundled as text. A desktop
-        // backend provides each of those services from a machine half
+        // transcripts, the migration history bundled as text, the baseline
+        // model catalog and the task titles kept as filed. A desktop backend
+        // provides each of those services from a machine half
         // (`database#machine`, `jobs#machine`, …), and a host booting two
         // providers of one service fails boot (`assertHostServices`), so no app
         // that runs on the desktop may ship them. A composition that runs without
@@ -187,6 +188,8 @@ export const compositionsConfig = defineConfig({
             "!tasks.tasks-core.seeded-push-ledger.**",
             "!database.migrations.bundled-source.**",
             "!conversations.transcript-source.memory.**",
+            "!conversations.model-provider.catalog.baseline.**",
+            "!tasks.task-title.filed-titles.**",
           ],
           selectedContributors: [] as string[],
           extends: [] as string[],

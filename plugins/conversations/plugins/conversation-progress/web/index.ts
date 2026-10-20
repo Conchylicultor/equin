@@ -3,13 +3,11 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { ProgressBarToolbar } from "./components/progress-bar-toolbar";
 import { ProgressBarRow } from "./components/progress-bar-row";
-import { conversationProgressDemo } from "./internal/demo-resource";
 
 export default {
   description:
     "4-step progress bar (started → designed → implemented → pushed) in the conversation toolbar and sidebar chip.",
   contributions: [
-    conversationProgressDemo,
     conversationPane.Actions({ id: "progress", component: ProgressBarToolbar }),
     Item.Chips({ id: "progress", component: ProgressBarRow }),
   ],

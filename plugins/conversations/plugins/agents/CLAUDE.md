@@ -1,5 +1,15 @@
 # agents
 
+## Portable, but for the launch
+
+`server/` is portable (`portable: true`): the roster, the launches and every
+CRUD / move route run on any host, the in-browser server included, reading the
+model catalog through `ModelCatalogSource` (`getModelCatalog()`). The launch —
+`launchAgent`, which files the launch's task and starts a conversation, so
+spawns Claude Code — is declared `needsMachine` and served by `machine/`
+(`implementMachine`). The detail pane reads `useMachineAvailability(launchAgent)`:
+without the computer, Launch is disabled and the message says why.
+
 ## Tree collapse is not an agent field
 
 There is deliberately no `expanded` column. Expand/collapse of the agents tree is
@@ -14,7 +24,7 @@ drag-reparent behavior. Do not reintroduce it; see
 
 ## The roster is an `all` collection over the `agents` table
 
-`agentRows` (`shared/resources.ts`, key `"agents.roster"`, `preload: "boot"`)
+`agentRows` (`core/resources.ts`, key `"agents.roster"`, `preload: "boot"`)
 is the whole ordered roster (`rank`, then `createdAt`), served by
 `serveCollection(agentRows, agentRowsServeOptions)`
 (`server/internal/agent-rows.ts`, the one spelling the server and the tests
@@ -38,7 +48,7 @@ read it whole with `useLive(agentRows)`; a pane that names one agent reads
 
 ## Launches are an `all` collection over a rollup
 
-`agentLaunchRows` (`shared/resources.ts`, key `"agent-launches"`,
+`agentLaunchRows` (`core/resources.ts`, key `"agent-launches"`,
 `preload: "boot"`) is the whole ordered set of launches, each carrying the
 latest non-system conversation of its task (`latestConversation`, and its
 status flat as `latestConversationStatus`). Served by
@@ -72,7 +82,7 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
 
 ## Plugin reference
 
-- Description: Named agent definitions that launch conversations.
+- Description: Named agent definitions that launch conversations. Named agent definitions that launch conversations: the agents roster and launches (tables, live collections, CRUD and move routes), portable; the launch route itself is the desktop-only machine half.
 - Web:
   - Slots:
     - `Agents.List`
@@ -92,7 +102,6 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `agentSidePane.Actions` ← `conversations.agents`
     - `agentSidePane.Actions` ← `primitives.pane`
   - Contributes:
-    - `Demo.Resource` "agents"
     - `IdKinds.Kind` "agent"
     - `IdKinds.Kind` "launch"
     - `Pane.Register` "agent-detail"
@@ -104,13 +113,14 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `Item.Avatar` → `AgentAvatarRow`
     - `conversationPane.Actions` "agent-avatar" → `AgentAvatarTitlePrefix`
     - `Agents.AgentActions` "delete" → `DeleteAgentAction`
-  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×8
     - `primitives/data-view` ×5
     - `primitives/avatar` ×4
     - `primitives/collapsible` ×4
     - `primitives/live-state` ×4
     - `conversations/conversation-ui/item` ×3
+    - `infra/endpoints` ×3
     - `network/live` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/css/spacing` ×2
@@ -120,9 +130,7 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `conversations/model-provider.ModelSelect`
     - `conversations.useConversationById`
     - `fields/avatar/table.avatarFieldDef`
-    - `framework/browser-server/demo.demoResource`
     - `ids.IdKinds`
-    - `infra/endpoints.fetchEndpoint`
     - `primitives/app-shell.opensPane`
     - `primitives/css/center.Center`
     - `primitives/css/placeholder.Placeholder`
@@ -156,24 +164,22 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `derived-view` "agents_v"
     - `derived-table` "task_latest_conversation"
     - `taskCategory` "agents"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/rank` ×3
-    - `tasks/tasks-core` ×3
     - `database/sql-projection` ×2
     - `infra/endpoints` ×2
     - `infra/entities` ×2
-    - `tasks/task-category` ×2
+    - `tasks/tasks-core` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
-    - `conversations.createConversation`
     - `database/derived-tables.DerivedTable`
     - `database/derived-views.View`
     - `database/sql-column.parsedText`
     - `database.db`
     - `ids.IdKinds`
     - `infra/attachments.Attachments`
-    - `infra/claude-cli/availability.assertClaudeCodeReady`
     - `network/live.serveCollection`
-    - `ui/icons/sprites.defineSavedIconSource`
+    - `tasks/task-category.TaskCategory`
+    - `ui/icons/saved-sources.defineSavedIconSource`
   - DB schema:
     - `plugins/conversations/plugins/agents/server/internal/rollup-table.ts`
     - `plugins/conversations/plugins/agents/server/internal/schema.ts`
@@ -204,32 +210,31 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `PATCH /api/agents/:id`
     - `POST /api/agents/:id/move`
     - `DELETE /api/agents/:id`
-    - `POST /api/agents/:id/launch`
     - `GET /api/agents/:id/launches`
+- Machine:
+  - Uses: `infra/endpoints.implementMachine`
+  - Routes: `POST /api/agents/:id/launch`
 - Core:
-  - Uses:
-    - `conversations/model-provider.DEFAULT_MODEL_CHOICE`
-    - `conversations/model-provider.ModelChoiceSchema`
-    - `conversations/model-provider.StoredModelChoiceSchema`
-    - `fields.FieldsRecord`
-    - `fields.nullable`
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations/model-provider` ×3
+    - `ids` ×3
+    - `fields/rank/config` ×2
+    - `fields/text/config` ×2
+    - `fields` ×2
+    - `ui/icons/saved-names` ×2
+    - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
-    - `fields/rank/config.rankField`
-    - `fields/text/config.parsedTextField`
-    - `fields/text/config.textField`
-    - `ids.defineIdKind`
-    - `ids.idKindField`
-    - `ids.IdOf`
+    - `fields/json/config.jsonField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
+    - `network/live.liveCollection`
     - `primitives/rank.RankSchema`
     - `tasks/tasks-core.ConversationStatusSchema`
-    - `ui/icons/saved-names.parseSavedSymbolName`
-    - `ui/icons/saved-names.SavedSymbolNameSchema`
   - Exports (types):
     - `Agent`
     - `AgentId`
     - `AgentLaunch`
+    - `AgentLaunchConversationRef`
     - `AgentLaunchId`
     - `AgentLaunchWithStatus`
     - `CreateAgentBody`
@@ -244,8 +249,10 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `agentLaunchesEntityRef`
     - `agentLaunchFields`
     - `agentLaunchIdKind`
+    - `agentLaunchRows`
     - `AgentLaunchSchema`
     - `AgentLaunchWithStatusSchema`
+    - `agentRows`
     - `AgentSchema`
     - `agentsEntityRef`
     - `createAgent`
@@ -280,5 +287,6 @@ rollup (`server/internal/rollup-spec.ts`) on the launch's `task_id`. Read with
     - `ui/tokens/type-scale --font-weight-semibold`
     - `ui/tokens/type-scale --line-height-body`
     - `ui/tokens/type-scale --line-height-title`
+  - Imported by: `apps/agent-manager/demo`
 
 <!-- AUTOGENERATED:END -->

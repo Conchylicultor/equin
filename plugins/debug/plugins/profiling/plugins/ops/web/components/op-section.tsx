@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { opsHistory } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
 import { FIVE_MINUTES, OPS_READ_LIMIT, floorTo } from "../internal/op-groups";
@@ -34,6 +35,9 @@ export function OpSection(): ReactElement | null {
         refetch={result.refetch}
       />
     );
+  // The ops are this machine's: a host without the computer says so.
+  if (result.status === "unavailable")
+    return <Placeholder tone="muted">{result.message}</Placeholder>;
   return (
     <LiveOpGantt
       rows={result.data}

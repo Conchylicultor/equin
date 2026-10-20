@@ -4,7 +4,7 @@ import {
   combineResources,
   foldResource,
   mapResource,
-  type GateInput,
+  type PortableGateInput,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -68,8 +68,8 @@ const NO_PLATFORM: ReleaseSnapshot = { kind: "no-platform" };
  * reads, a held gate makes the whole info `loading` — the candidate it is
  * waiting for is a push away.
  */
-const HELD: GateInput = { status: "loading" };
-const SETTLED: GateInput = { status: "ready" };
+const HELD: PortableGateInput = { status: "loading" };
+const SETTLED: PortableGateInput = { status: "ready" };
 
 /**
  * The two questions behind every release affordance in this app, asked

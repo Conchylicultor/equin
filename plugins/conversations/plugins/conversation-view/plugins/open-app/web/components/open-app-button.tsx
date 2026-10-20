@@ -36,13 +36,17 @@ function OpenAppAction({ attemptId }: { attemptId: string }) {
   });
   if (builds.status === "error") throw builds.error;
   const built = builds.status === "ready" && builds.data.length > 0;
+  // No computer behind this app (the in-browser demo): nothing is built or
+  // served, and the build history is not readable — disabled, saying why.
+  const label =
+    builds.status === "unavailable"
+      ? builds.message
+      : builds.status === "ready" && !built
+        ? "Open app — not built yet"
+        : "Open app";
   return (
     <PaneIconAction
-      label={
-        builds.status === "ready" && !built
-          ? "Open app — not built yet"
-          : "Open app"
-      }
+      label={label}
       icon={rocketLaunchIcon}
       // Pending until we know whether the task was filed from a page: opening
       // `/` meanwhile would be a guess the click cannot take back.

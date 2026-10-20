@@ -18,7 +18,7 @@ import {
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
 import { compileCollection } from "@plugins/network/plugins/live/server/testing";
-import { taskTracks } from "../../shared/resources";
+import { taskTracks } from "../../core";
 import { tasksTrack } from "./tables";
 
 setDefaultTimeout(120_000);

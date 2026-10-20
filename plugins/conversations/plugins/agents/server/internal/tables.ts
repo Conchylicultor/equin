@@ -3,7 +3,7 @@ import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
-import { agentLaunchesEntityRef, agentsEntityRef } from "../../core/entity";
+import { agentLaunchesEntityRef, agentsEntityRef } from "../../core";
 
 // Physical tables only, built from the field records in `core/entity.ts`.
 // Views, Zod schemas, and types live in `./schema.ts`.

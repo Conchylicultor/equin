@@ -5,7 +5,7 @@ import {
   defineEntity,
 } from "@plugins/infra/plugins/entities/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
-import { conversationCategoriesEntityRef } from "../../shared/schemas";
+import { conversationCategoriesEntityRef } from "../../core";
 
 // One row per (conversation, category) assignment. NOT a 1:1 entity extension:
 // a conversation carries one row per configured category, and `defineExtension`
@@ -14,7 +14,7 @@ import { conversationCategoriesEntityRef } from "../../shared/schemas";
 // The primary key is the derived `categoryRowId(conversationId, categoryId)`
 // rather than a composite, because the `conversationCategories` lookup
 // collection's row id must be a SINGLE-column primary key — see
-// shared/row-id.ts and shared/schemas.ts. The unique index on the pair is the
+// shared/row-id.ts and core/internal/schemas.ts. The unique index on the pair is the
 // writer's guard that the derived id and the logical key can never disagree.
 export const conversationCategoriesEntity = defineEntity(
   conversationCategoriesEntityRef,

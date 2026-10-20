@@ -1,5 +1,5 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { listAgentLaunches } from "../../core/endpoints";
+import { listAgentLaunches } from "../../core";
 import { agentLaunchRowsServed } from "./resources";
 
 // One agent's launches, read THROUGH the served `agent-launches` set

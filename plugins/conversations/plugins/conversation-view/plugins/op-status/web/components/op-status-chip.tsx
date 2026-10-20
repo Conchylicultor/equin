@@ -58,6 +58,9 @@ export function OpStatusChip({ conv }: { conv: ConversationItemConv }) {
         refetch={reading.refetch}
       />
     );
+  // No computer behind this app: no ops to flag — an optional adornment, so
+  // nothing (the unavailability is not this chip's to explain).
+  if (reading.status === "unavailable") return null;
   const op = reading.data;
   if (!op) return null;
   return (

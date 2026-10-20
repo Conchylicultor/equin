@@ -20,8 +20,8 @@
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/live-state.combineResources`
-    - `primitives/live-state.GateInput`
     - `primitives/live-state.mapResource`
+    - `primitives/live-state.PortableGateInput`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useEndpointResource`
     - `ui/theme-engine.ThemeEngine`

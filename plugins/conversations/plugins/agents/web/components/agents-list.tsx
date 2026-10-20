@@ -25,8 +25,8 @@ import {
   createAgent,
   deleteAgent,
 } from "@plugins/conversations/plugins/agents/core";
-import { agentRows } from "../../shared/resources";
-import type { Agent } from "../../shared/resources";
+import { agentRows } from "../../core";
+import type { Agent } from "../../core";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
 import { AgentStatus } from "./agent-status";

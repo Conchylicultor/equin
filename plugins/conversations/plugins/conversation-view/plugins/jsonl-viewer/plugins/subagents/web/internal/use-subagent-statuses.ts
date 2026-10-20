@@ -52,6 +52,13 @@ export interface SubagentEntry {
   agentToolEvent: ToolCallEvent | undefined;
 }
 
+/** The sub-agent reads need the computer, and this host has none behind it. */
+export interface SubagentsUnavailable {
+  kind: "unavailable";
+  /** The sentence to show in place of the sub-agent surface. */
+  message: string;
+}
+
 /**
  * Everything a surface needs to say about one sub-agent, in one read.
  *
@@ -64,6 +71,12 @@ export type SubagentStatus =
   | { kind: "pending" }
   /** A read behind the answer FAILED — render it with Retry, never as a spinner. */
   | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
+  /**
+   * Nothing here can watch sub-agents: their files are on a computer this host
+   * does not have (an in-browser server). Settled, never arriving — a card
+   * renders from its transcript alone, with no run state, never "running".
+   */
+  | SubagentsUnavailable
   | {
       kind: "known";
       state: SubagentRunState;
@@ -101,6 +114,13 @@ export type ConversationSubagents =
    * renders it as an error with Retry, never as a spinner or an empty set.
    */
   | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
+  /**
+   * The set cannot be read on this host at all (`subagentActivity` needs the
+   * computer). Never an empty set: "no sub-agents" is a claim about the
+   * conversation, this is a fact about the host. A list hides itself; a pane
+   * shows `message`.
+   */
+  | SubagentsUnavailable
   | {
       kind: "known";
       /** Every sub-agent of the conversation, in start order. */
@@ -159,6 +179,9 @@ export function useConversationSubagents(
   const reads = combineResources({ activity, facts });
   if (reads.status === "error") {
     return { kind: "failed", error: reads.error, refetch: reads.refetch };
+  }
+  if (reads.status === "unavailable") {
+    return { kind: "unavailable", message: reads.message };
   }
   if (reads.status === "loading" || conversation === null) {
     return { kind: "pending" };

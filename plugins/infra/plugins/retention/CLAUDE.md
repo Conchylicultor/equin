@@ -155,7 +155,6 @@ check would have been a patch on a footgun.
     - `apps/events/refresh`
     - `apps/pages/agent-origin`
     - `conversations/question-relay`
-    - `conversations/turn-ledger`
     - `debug/boot-profile`
     - `debug/latency-ledger`
     - `debug/profiling/op-log/op-store`
@@ -167,7 +166,6 @@ check would have been a patch on a footgun.
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/instructions`
     - `page/annotations/todo/task-link`
-    - `primitives/usage-rank`
     - `reports`
 - Test helpers:
   - Server: `@plugins/infra/plugins/retention/server/testing`

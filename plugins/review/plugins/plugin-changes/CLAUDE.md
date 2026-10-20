@@ -67,25 +67,20 @@ A push's review is not live: it reads `GET /api/review/plugin-changes` once.
   - Uses:
     - `code-explorer.getRangeFiles`
     - `code-explorer.resolveParentSha`
-    - `conversations/conversation-view/code.editedFilesServed`
     - `conversations/conversation-view/code.editedFilesSignature`
-    - `conversations/conversation-view/code.getEditedFiles`
-    - `conversations/workspace.findWorkspaceOfConversation`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/git/git-read-cache.createGitStateMemo`
     - `infra/git/git-watcher.lastKnownMainSha`
-    - `infra/git/git-watcher.refHeadServed`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.GIT`
     - `infra/paths.REPO_ROOT`
-    - `network/live.serveValue`
     - `primitives/commit-list.runGit`
-    - `tasks/tasks-core._attempts`
-    - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.listPushesByPushId`
   - Resources: `review.plugin-changes` (push, notified)
   - Routes: `GET /api/review/plugin-changes`
+- Machine:
+  - Uses: `conversations/conversation-view/code.editedFilesServed`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (types):
@@ -128,7 +123,7 @@ A push's review is not live: it reads `GET /api/review/plugin-changes` once.
 - Exemptions:
   - Exempts itself from:
     - `live/no-endpoint-read` — `web/use-plugin-changes.ts` (debt)
-    - `boundaries/no-platform-api` — `server/internal/handle-plugin-changes.ts`, `server/internal/main-plugins-dir.ts`, `server/internal/plugin-changes-resource.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/handle-plugin-changes.ts`, `server/internal/main-plugins-dir.ts` (debt)
 - Sub-plugins:
   - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
   - **`file-changes`** (excluded) — File-level diff section for per-plugin review cards.

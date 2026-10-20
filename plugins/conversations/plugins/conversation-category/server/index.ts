@@ -1,52 +1,23 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-// Registers the configured icons' saved-icon source (module eval).
-import "./internal/saved-icons";
-import { ConfigV2 } from "@plugins/config_v2/server";
-import { Trigger } from "@plugins/infra/plugins/events/server";
-import { conversationTurnCompleted } from "@plugins/conversations/server";
-import { conversationCategoryConfig } from "../shared/config";
-import { classifyConversationJob } from "./internal/classify-job";
 import { conversationCategoriesServed } from "./internal/resource";
-import {
-  handleClassify,
-  handleClearCategory,
-  handleSetCategory,
-} from "./internal/routes";
-import {
-  classifyConversation,
-  setConversationCategory,
-  clearConversationCategory,
-} from "../shared/endpoints";
+import { handleClearCategory } from "./internal/routes";
+import { clearConversationCategory } from "../shared/endpoints";
 
 export { conversationCategoryConfig } from "../shared/config";
-export { classifyConversationJob } from "./internal/classify-job";
-// The generic category API. Consumers (stats) enumerate categories through it
-// and never name one, so adding or removing a category needs no edit there.
-export {
-  getCategories,
-  getItemOrder,
-  getAvatarCategoryId,
-} from "./internal/categories";
-export type { CategoryDescriptor } from "./internal/categories";
+// The generic category API. Consumers (stats) enumerate a category's items
+// through it and never name one, so adding or removing a category needs no edit
+// there. `itemOrder` is pure over the config value — the config read is the
+// caller's (desktop) business, so this half stays portable.
+export { itemOrder } from "./internal/item-order";
+export type { CategoriesConfigValue } from "./internal/item-order";
 export { getItemMap } from "./internal/store";
 
 export default {
   description:
-    "Classifies each conversation along a user-defined set of categories using Haiku, one item per category. Paints the sidebar avatar from the category chosen for it.",
-  contributions: [
-    ConfigV2.Register({ descriptor: conversationCategoryConfig }),
-    ...conversationCategoriesServed.declare,
-    Trigger({
-      on: conversationTurnCompleted,
-      do: classifyConversationJob,
-      with: {},
-      oneShot: false,
-    }),
-  ],
+    "The conversation-category assignments, portable half: the table, the lookup-only conversation-categories collection over it, the cross-plugin per-category item read, and clearing one assignment. The config, the Haiku classifier and setting an item are the machine/ half's.",
+  contributions: [...conversationCategoriesServed.declare],
   httpRoutes: {
-    [classifyConversation.route]: handleClassify,
-    [setConversationCategory.route]: handleSetCategory,
     [clearConversationCategory.route]: handleClearCategory,
   },
-  register: [classifyConversationJob],
+  portable: true,
 } satisfies ServerPluginDefinition;

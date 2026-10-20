@@ -286,8 +286,9 @@ back.
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 46 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×44
+    - `apps/agent-manager/demo`
     - `tasks/outcome-report`
 - Exemptions:
   - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)

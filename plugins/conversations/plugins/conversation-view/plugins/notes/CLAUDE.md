@@ -7,12 +7,10 @@
 - Description: Free-form per-conversation notes, auto-saved to the server. A note with text always shows, with a dot on the note button that follows the draft as it is typed; the button opens and hides an empty note, and deleting the last of the text closes it (Ctrl+Z brings it back). Per-conversation free-form notes, auto-saved to the server.
 - Web:
   - Contributes:
-    - `Demo.Resource` "conversation-notes"
     - `Conversation.AbovePromptInput` → `NotesArea`
     - `Conversation.PromptBar` "Notes" → `NotesToggleButton`
   - Uses:
     - `conversations/conversation-view.Conversation`
-    - `framework/browser-server/demo.demoResource`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
@@ -37,6 +35,16 @@
   - Routes:
     - `PUT /api/conversation-notes/:conversationId`
     - `DELETE /api/conversation-notes/:conversationId`
+- Core:
+  - Uses:
+    - `fields/text/config.textField`
+    - `infra/entity-extensions.defineExtensionShape`
+    - `network/live.liveCollection`
+  - Exports (types): `ConversationNote`
+  - Exports (values):
+    - `conversationNoteRows`
+    - `ConversationNoteSchema`
+    - `conversationNotesShape`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
@@ -51,6 +59,7 @@
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-3xs`
     - `ui/tokens/type-scale --line-height-caption`
+  - Imported by: `apps/agent-manager/demo`
 - Shared:
   - Exports (types): `ConversationNote`
   - Exports (values):

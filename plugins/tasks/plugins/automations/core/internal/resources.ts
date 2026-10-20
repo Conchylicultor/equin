@@ -20,6 +20,10 @@ import { LAUNCH_DECISIONS, ORIGIN_ROLES } from "./settings";
  */
 export const automationsCatalog = liveValue("automations.catalog", {
   schema: z.array(AutomationEntrySchema),
+  // Served by the machine half: the automations it lists are config-bound
+  // (until the config split), so a reader under an in-browser server gets
+  // `unavailable`.
+  needsMachine: { feature: "Automations" },
 });
 
 // Where a task came from: one row per task an automation filed or launched, in

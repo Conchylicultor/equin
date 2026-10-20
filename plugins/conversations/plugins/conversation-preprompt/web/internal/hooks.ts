@@ -5,7 +5,7 @@ import {
 import {
   conversationPrepromptRows,
   type ConversationPreprompt,
-} from "../../shared/schemas";
+} from "../../core";
 
 // This conversation's preprompt snapshot: its row of the lookup-only
 // `conversationPrepromptRows` collection — one O(1) point sub. Called in the

@@ -1,7 +1,7 @@
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { DEFAULT_TASK_TRACK } from "../../core";
-import { taskTrackShape } from "../../shared/resources";
+import { taskTrackShape } from "../../core";
 
 // Per-task track. The column defaults to the field's declared default (main),
 // so a missing row and a defaulted one read the same (`defineExtension`

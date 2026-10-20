@@ -19,11 +19,21 @@ use, so it answers for the account they would run as.
 
 ## Freshness — no polling
 
-The answer is cached per backend and pushed as the `claude-code-status` value
-— the `claudeCodeStatus` `liveValue` (core), served on the external arm as
-`claudeCodeStatusServed` (`server/internal/status.ts`), whose `notify()` fires
-whenever a probe's answer differs from the last one. There is no placeholder:
-until the first check lands, readers see `pending`. It is re-asked:
+The answer is cached per backend (`server/internal/status.ts`) and pushed as
+the `claude-code-status` value — the `claudeCodeStatus` `liveValue` (core),
+served on the external arm as `claudeCodeStatusServed`
+(`machine/internal/status-served.ts`), notified whenever a probe's answer
+differs from the last one. There is no placeholder: until the first check
+lands, readers see `pending`.
+
+The value and the recheck endpoint are declared `needsMachine` ("Checking
+Claude Code") and served from `machine/` — the probe is the computer's CLI —
+while the gate API (`assertClaudeCodeReady`, `requireClaudeBin`, …) stays in
+`server/`, which other plugins' server code imports. Under a host without the
+computer (the demo's browser worker) every reader handles `unavailable`: the
+health row is `unknown` with the sentence, Check again is disabled with it as
+its tooltip, and `useClaudeCodeLaunchBlock()` adds no block (Launch is gated on
+the launch endpoint's own availability). It is re-asked:
 
 - on first read (lazy — nothing probes at boot);
 - by the launch gate, when the last answer is not a `ready` younger than five
@@ -64,15 +74,14 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
 
 ## Plugin reference
 
-- Description: Claude Code availability, shown: the health report's Claude Code row (critical while the CLI is missing or signed out, with the install / sign-in commands and Check again), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code CLI is installed and signed in (`claude --version` + `claude auth status --json`, under the agent panes' host env), serves it as the claude-code-status push resource and POST /api/claude-code/recheck, and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`. onClaudeCodeProbed hands every fresh answer to work keyed off the installed CLI's version.
+- Description: Claude Code availability, shown: the health report's Claude Code row (critical while the CLI is missing or signed out, with the install / sign-in commands and Check again), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code CLI is installed and signed in (`claude --version` + `claude auth status --json`, under the agent panes' host env; the machine half serves the answer as the claude-code-status push value and POST /api/claude-code/recheck) and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`. onClaudeCodeProbed hands every fresh answer to work keyed off the installed CLI's version.
 - Web:
   - Contributes:
-    - `Demo.Resource` "claude-code-status"
     - `Core.Root` → `RecheckOnReturn`
     - `HealthReport.Row` "Claude Code" → `ClaudeCodeDetail`
   - Uses:
-    - `framework/browser-server/demo.demoResource`
     - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useMachineAvailability`
     - `network/live.useLive`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.foldResource`
@@ -87,10 +96,7 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
     - `useClaudeCodeStatus`
 - Server:
   - Contributes: `resource.declare` "claude-code-status"
-  - Uses:
-    - `infra/endpoints.implement`
-    - `infra/paths.resolveClaudeBin`
-    - `network/live.serveValue`
+  - Uses: `infra/paths.resolveClaudeBin`
   - Exports (values):
     - `assertClaudeCodeReady`
     - `checkClaudeCode`
@@ -100,6 +106,10 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
     - `onClaudeCodeReady`
     - `requireClaudeBin`
   - Resources: `claude-code-status` (push, notified)
+- Machine:
+  - Uses:
+    - `infra/endpoints.implementMachine`
+    - `network/live.serveValue`
   - Routes: `POST /api/claude-code/recheck`
 - Core:
   - Uses:
@@ -118,11 +128,10 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
     - `recheckClaudeCode`
 - Cross-plugin:
   - Imported by:
+    - `apps/agent-manager/demo`
     - `apps/agent-manager/welcome`
     - `apps/sonata/transcription`
     - `conversations`
-    - `conversations/agents`
-    - `conversations/model-provider/catalog`
     - `conversations/runtime-sdk`
     - `infra/claude-cli`
     - `primitives/launch`

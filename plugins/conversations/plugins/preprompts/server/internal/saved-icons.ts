@@ -1,6 +1,6 @@
 import { getConfig, watchConfig } from "@plugins/config_v2/server";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
-import { defineSavedIconSource } from "@plugins/ui/plugins/icons/plugins/sprites/server";
+import { defineSavedIconSource } from "@plugins/ui/plugins/icons/plugins/saved-sources/server";
 import { prepromptsConfig } from "../../shared/config";
 
 /**

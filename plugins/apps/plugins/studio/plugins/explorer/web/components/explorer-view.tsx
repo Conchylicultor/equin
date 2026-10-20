@@ -35,6 +35,17 @@ export function ExplorerView() {
     );
   }
 
+  if (tree.status === "unavailable") {
+    // Read from this checkout's `plugins/`, which an in-browser server lacks.
+    return (
+      <Center axis="both" className="h-full p-2xl">
+        <Text variant="caption" tone="muted">
+          {tree.message}
+        </Text>
+      </Center>
+    );
+  }
+
   const { plugins, totals } = tree.data;
 
   // PaneChrome owns the single scroll. The stats band scrolls with the content

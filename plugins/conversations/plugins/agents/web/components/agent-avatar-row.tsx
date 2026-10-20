@@ -12,7 +12,7 @@ import {
   CONV_STATUS_DOT,
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { agentLaunchRows, agentRows } from "../../shared/resources";
+import { agentLaunchRows, agentRows } from "../../core";
 
 export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
   const launchesResult = useLive(agentLaunchRows);

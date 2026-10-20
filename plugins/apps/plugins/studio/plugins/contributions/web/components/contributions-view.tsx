@@ -58,6 +58,16 @@ export function ContributionsView() {
       </Center>
     );
   }
+  if (tree.status === "unavailable") {
+    // Read from this checkout's `plugins/`, which an in-browser server lacks.
+    return (
+      <Center axis="both" className="h-full p-2xl">
+        <Text variant="caption" tone="muted">
+          {tree.message}
+        </Text>
+      </Center>
+    );
+  }
   return <ContributionsTables plugins={tree.data.plugins} />;
 }
 

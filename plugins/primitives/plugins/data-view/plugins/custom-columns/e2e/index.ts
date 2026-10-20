@@ -10,12 +10,12 @@
  */
 import { agentFetch } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { setConfigField } from "@plugins/config_v2/core";
+import type { CustomColumnDef } from "@plugins/primitives/plugins/data-view/plugins/custom-columns/core";
 import {
   deleteCustomColumnValues,
   setCustomColumnValue,
-  type CustomColumnDef,
   type SetCustomColumnValueBody,
-} from "@plugins/primitives/plugins/data-view/plugins/custom-columns/core";
+} from "@plugins/primitives/plugins/data-view/plugins/custom-columns/plugins/values/core";
 
 async function post(route: string, body: unknown): Promise<void> {
   const path = route.replace(/^POST /, "");

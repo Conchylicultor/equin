@@ -2,7 +2,7 @@ import {
   useLiveRow,
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
-import { taskAutoStart, type TaskAutoStartRow } from "../shared/resources";
+import { taskAutoStart, type TaskAutoStartRow } from "../core";
 
 /**
  * The task's auto-start marker: its row of the lookup-only `taskAutoStart`

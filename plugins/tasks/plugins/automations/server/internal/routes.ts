@@ -1,7 +1,7 @@
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { decideLaunchEndpoint } from "../../core";
 import { decideLaunch } from "./decisions";
-import { automationsCatalogServed } from "./live";
+import { catalogChanged } from "./catalog-changed";
 import { registeredAutomation } from "./registry";
 
 /**
@@ -22,7 +22,7 @@ export const handleDecideLaunch = implement(
       );
     }
     await decideLaunch(registered.spec.id, body.taskIds, body.decision);
-    automationsCatalogServed.notify();
+    catalogChanged();
     if (body.decision === "approved") registered.wake();
   },
 );

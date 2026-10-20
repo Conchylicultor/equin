@@ -79,12 +79,14 @@ function FilePeekPaneBody() {
 
   const filesResult = useEditedFiles(convId ?? null);
   // `status` is a derived renderer hint, so an unknown file set (loading, a
-  // failed read, or an unresolved worktree) safely defaults to "clean" — no
-  // display surface here; the file content itself is a separate read. Only a
-  // workspace file has one: a host file sits outside the worktree.
+  // failed read, an unresolved worktree, or a host without the computer to
+  // measure it) safely defaults to "clean" — no display surface here; the file
+  // content itself is a separate read, which renders its own unavailability.
+  // Only a workspace file has one: a host file sits outside the worktree.
   const status = foldResource(filesResult, {
     loading: () => "clean" as const,
     error: () => "clean" as const,
+    unavailable: () => "clean" as const,
     ready: (files) =>
       files.resolved && file.source === "workspace"
         ? (files.value.find((f) => f.path === file.path)?.status ?? "clean")

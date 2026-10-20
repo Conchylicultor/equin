@@ -184,8 +184,9 @@ failing on any file still carrying the seeded `// @review` marker. `alwaysRun` (
 after that run's tree hash was taken.
 
 `config-v2:registrations-paired` (`check/registrations-paired.ts`) — every server
-`ConfigV2.Register` has a matching web `ConfigV2.WebRegister` at the same storePath, and
-vice versa.
+`ConfigV2.Register` (in the plugin's `server/` or `machine/` barrel — a portable plugin
+registers its config from `machine/`) has a matching web `ConfigV2.WebRegister` at the same
+storePath, and vice versa.
 
 ### Mandatory overrides (`requiresAuthoredOverride`)
 

@@ -8,6 +8,7 @@ import { PluginTree } from "@plugins/apps/plugins/studio/plugins/explorer/web";
 import { defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**, and
 // must be declared HERE rather than reusing the Explorer's `studio.explorer.tree`
@@ -38,6 +39,11 @@ export function ClosureTreeSection(): ReactElement {
         refetch={tree.refetch}
       />
     );
+  }
+
+  if (tree.status === "unavailable") {
+    // Read from this checkout's `plugins/`, which an in-browser server lacks.
+    return <Placeholder>{tree.message}</Placeholder>;
   }
 
   // Bounded: unbounded, the full tree dwarfs every sibling section.

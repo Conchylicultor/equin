@@ -1,9 +1,10 @@
 # model-provider/catalog
 
-The host-global model catalog — which model versions this machine knows, which one each family runs today, which are retired — kept on disk and discovered at runtime, so a new Anthropic release reaches every picker and every family launch with no code change. The catalog's shape and pure readers (`resolveModel`, `choiceHint`, `selectableChoices`) and its `modelCatalog` live value live in the parent's `core`; this plugin owns the file, the watcher, the served value and discovery.
+The host-global model catalog — which model versions this machine knows, which one each family runs today, which are retired — kept on disk and discovered at runtime, so a new Anthropic release reaches every picker and every family launch with no code change. The catalog's shape and pure readers (`resolveModel`, `choiceHint`, `selectableChoices`) and its `modelCatalog` live value live in the parent's `core`; this plugin owns the source, the served value, the file and discovery.
 
+- **Two halves.** `server/` (portable) declares the `ModelCatalogSource` host service, `getModelCatalog()` — a sync read over it — and serves `model-provider.catalog` from it (`notifyModelCatalogChanged()` re-pushes it). `machine/` is the desktop's provider: the file, the watcher, discovery, the CLI-version trigger and the `model-unrecognized` report kind. A host without the computer boots `catalog/baseline` instead, whose catalog is `BASELINE_MODELS`.
 - **One file, `state/model-catalog/catalog.json`.** `state`, not `cache`: first-seen and retirement history cannot be re-derived from the CLI. Rewritten whole, atomically (tmp + rename), by `updateModelCatalog` — called only by the discovery job, the catalog's one writer (a singleton job gated on `isHostSingleton()`), so no lock is needed. Absent reads as `BASELINE_MODELS`; an unreadable file throws `ModelCatalogUnreadableError` (it is never papered over with the baseline, which would forget retirements).
-- **`getModelCatalog()`** is the in-memory copy every server launch path passes to `requireModel`. It is dropped and re-read whenever the file changes: an always-on file watcher (started `onReady`, every backend) — not `whileSubscribed`, because launches read it with no tab subscribed. The same invalidation notifies the `model-provider.catalog` value, so every tab sees main's discovery live.
+- **`getModelCatalog()`** is what every server launch path passes to `requireModel`; on the desktop it is the in-memory copy of the file. It is dropped and re-read whenever the file changes: an always-on file watcher (started `onReady`, every backend) — not `whileSubscribed`, because launches read it with no tab subscribed. The same invalidation notifies the `model-provider.catalog` value, so every tab sees main's discovery live.
 - **Discovery, `models.discover`** (daily 05:00 UTC; gated on `isHostSingleton()`): **the CLI's model menu is the truth.** `readCliModels` sends the Claude Agent SDK's `initialize` control request — `claude -p --input-format stream-json --output-format stream-json --verbose --strict-mcp-config --no-session-persistence` with one `{"type":"control_request","request":{"subtype":"initialize"}}` line on stdin, under the agent panes' host env — and reads the one `control_response` line it answers with. The CLI answers locally: no model is called, nothing is billed, it exits in ~2 s when stdin closes. The response's `models` lists each family alias with the version it resolves to (`{value:"sonnet", resolvedModel:"claude-sonnet-5-5"}`) and every older version the CLI still offers (`{value:"claude-opus-4-8", …}`); a strict schema names only `value` / `resolvedModel` / `displayName`, so a changed protocol fails the run loudly instead of reading as an empty menu. `readMenu` places each entry, `applyMenu` folds it in:
   - a family's `current` = what its alias resolves to (through `modelIdFromCliName`); a move rings one bell line ("Sonnet now runs 5.5"). `default` is ignored.
   - every resolved version is offered; a new one is appended (`source: "cli"`); a known one the menu no longer offers is retired ("no longer offered by Claude Code <version>"), and one that reappears is un-retired. A family's current version always counts as offered.
@@ -16,39 +17,33 @@ The host-global model catalog — which model versions this machine knows, which
 
 ## Plugin reference
 
-- Description: The host-global model catalog: getModelCatalog() (catalog.json in memory, re-read by a file watcher, the baseline until the first discovery), the model-provider.catalog live value, and the models.discover job — daily and on every new Claude CLI version, it reads the CLI's model menu (the Agent SDK `initialize` control request, answered locally: no model call), makes each family run what its alias resolves to (with a bell line when that moves), appends new versions, retires versions the menu no longer offers, and files model-unrecognized for an entry it cannot place.
+- Description: The model catalog every launch reads: getModelCatalog() over the ModelCatalogSource host service (the desktop's discovered catalog.json, or the code baseline on a host without the computer), and the model-provider.catalog live value served from it.
 - Server:
   - Contributes:
     - `resource.declare` "model-provider.catalog"
+    - `host-service:model-provider.catalog-source` "model-provider.catalog-source"
     - `report-kind` "model-unrecognized"
-  - Uses:
-    - `infra/claude-cli/availability.checkClaudeCode`
-    - `infra/claude-cli/availability.onClaudeCodeProbed`
-    - `infra/claude-cli/availability.requireClaudeBin`
-    - `infra/file-watcher.defineFileWatcher`
-    - `infra/file-watcher.FileWatcher`
-    - `infra/jobs.defineJob`
-    - `network/live.serveValue`
-    - `primitives/log-channels.Log`
-    - `reports.recordReport`
-    - `reports.ReportKind`
-    - `reports.ReportRow`
-    - `shell/notifications.recordNotification`
-  - Exports (values): `getModelCatalog`
-  - Register:
-    - `defineJob('models.discover')`
-    - `defineFileWatcher('model-provider.catalog')`
+  - Uses: `network/live.serveValue`
+  - Exports (values):
+    - `getModelCatalog`
+    - `ModelCatalogSource`
+    - `notifyModelCatalogChanged`
   - Resources: `model-provider.catalog` (push, notified)
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/transcription`
     - `conversations`
     - `conversations/agents`
+    - `conversations/model-provider/catalog/baseline`
     - `conversations/summary`
     - `infra/claude-cli`
     - `tasks`
     - `tasks/auto-start/launch-option`
-- Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/catalog-file.ts`, `server/internal/cli-models.ts` (debt)
+- Machine:
+  - Register:
+    - `defineJob('models.discover')`
+    - `defineFileWatcher('model-provider.catalog')`
+- Sub-plugins:
+  - **`baseline`** (excluded) — The model catalog of a host without the computer: provides ModelCatalogSource as the code baseline (BASELINE_MODELS) — the catalog of a machine that never probed its Claude CLI, since there is no…
 
 <!-- AUTOGENERATED:END -->

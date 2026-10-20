@@ -31,7 +31,7 @@
     - `conversationPane.Actions` ← `conversations.conversation-view.track`
     - `conversationPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "conversation"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×5
     - `conversations/conversation-view/action-bar.ActionBarView`
     - `conversations/conversation-view/jsonl-viewer.JsonlPane`
@@ -48,7 +48,6 @@
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
-    - `shell/toast.showToast`
     - `tasks/task-draft-form.setActiveRelateContext`
   - Exports (types):
     - `ConversationOpener`
@@ -83,7 +82,7 @@
   - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
   - **`allow-monitor`** — Flags when an agent has created a guard-bypass file (.allow-main, .allow-postgres, …) in its worktree.
   - **`artifacts`** — Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (its own section; its…
-  - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
+  - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive: the git reads…
   - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
   - **`dependencies`** — The task's links in the conversation header: ↑ open blockers · ↓ open dependents (shown only on header hover when none is open: a faint ↕ when all are resolved, a link icon when there are none), one…
   - **`dependent-count`** — Per-row "N blocked" chip on a conversation item: how many tasks are transitively blocked by that conversation's task. The conversation toolbar shows the same count inside its Tasks button instead of…
@@ -118,7 +117,7 @@
   - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.
   - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
   - **`track`** — Displays the conversation's task track (Main / Sidequest) as a chip in the conversation header.
-  - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant)…
+  - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. Serves each conversation's latest turn summary (a one-line…
   - **`user-message`** — The user turn's standard look: <UserMessageCard> (the message-card chrome) and <UserMessageText> (the turn's text through every inline-text walker, so chips render). Shared by the transcript's…
   - **`vscode`** — Opens the conversation's worktree in VSCode.
 

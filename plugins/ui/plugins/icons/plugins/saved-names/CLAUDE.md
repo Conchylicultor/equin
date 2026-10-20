@@ -9,6 +9,7 @@
   - Imported by:
     - `apps/places/places-core`
     - `conversations/agents`
+    - `conversations/conversation-preprompt`
     - `fields/avatar/config`
     - `fields/icon/config`
     - `page/callout`

@@ -10,7 +10,7 @@ import {
   bindExternalServe,
   type LiveExternalServe,
 } from "@plugins/network/plugins/live/core";
-import { unsupportedEndpointResponse } from "@plugins/infra/plugins/endpoints/core";
+import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
 import { RESOURCE_HTTP_ROUTE } from "@plugins/packages/plugins/resource-protocol/core";
 import {
   allResourceDescriptors,
@@ -55,9 +55,10 @@ export interface BrowserServerOptions {
   /** A route handler's throw, before the generic 500. Default: `console.error`. */
   onError?: (err: Error, req: Request, pathname: string) => void;
   /**
-   * The response to a request no route matches. Default: an `/api/…` path is
-   * `unsupportedEndpointResponse` (`infra/endpoints`: the server is real, the
-   * endpoint is simply not part of this one); any other path a 404 naming it.
+   * The response to a request no route matches. Default:
+   * `unmatchedApiResponse` (`infra/endpoints`): an `/api/…` path is the
+   * unsupported refusal (the server is real, the endpoint is simply not part of
+   * this one); any other path a 404 naming it.
    */
   onUnmatched?: (req: Request, pathname: string) => Response;
 }
@@ -93,13 +94,6 @@ export interface BrowserServer {
 
 function defaultOnError(err: Error, req: Request, pathname: string): void {
   console.error(`[browser-server] ${req.method} ${pathname} threw:`, err);
-}
-
-function defaultOnUnmatched(req: Request, pathname: string): Response {
-  if (pathname === "/api" || pathname.startsWith("/api/")) {
-    return unsupportedEndpointResponse(req.method, pathname);
-  }
-  return new Response(`Not found: ${pathname}`, { status: 404 });
 }
 
 /**
@@ -161,7 +155,7 @@ export function createBrowserServer(opts: BrowserServerOptions): BrowserServer {
       [RESOURCE_HTTP_ROUTE, rt.handleResourceHttp],
     ],
     onError: opts.onError ?? defaultOnError,
-    onUnmatched: opts.onUnmatched ?? defaultOnUnmatched,
+    onUnmatched: opts.onUnmatched ?? unmatchedApiResponse,
   });
 
   /** Every open socket, with how the server closes it from its side. */

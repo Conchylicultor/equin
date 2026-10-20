@@ -226,6 +226,8 @@ export function OpDetailBody(): ReactElement {
           error={result.error}
           refetch={result.refetch}
         />
+      ) : result.status === "unavailable" ? (
+        <Placeholder tone="muted">{result.message}</Placeholder>
       ) : !result.found ? (
         <Placeholder tone="muted">Op not found.</Placeholder>
       ) : result.row.closedBy === null ? (

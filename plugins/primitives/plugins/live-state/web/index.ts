@@ -43,6 +43,9 @@ export {
 } from "./resource-utils";
 export type {
   GateInput,
+  PortableGateInput,
+  GateUnavailable,
+  GateStatus,
   GateDataOf,
   CombinedResources,
   FoldResourceHandlers,

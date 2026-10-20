@@ -2,7 +2,7 @@ import { serveValue } from "@plugins/network/plugins/live/server";
 import { DEFAULT_STYLE_KEYS } from "@plugins/ui/plugins/icons/core";
 import { savedIconSprites, savedIconsChanged } from "../../core";
 import { runtimeSymbols, symbolsHash } from "./runtime-symbols";
-import { savedIconSources } from "./saved-sources";
+import { savedIconSources } from "@plugins/ui/plugins/icons/plugins/saved-sources/server";
 
 let changes = 0;
 

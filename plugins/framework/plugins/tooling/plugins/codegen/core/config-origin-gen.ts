@@ -34,7 +34,11 @@ import {
   registerBarrelStubs,
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  asPath,
+  asPluginId,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { HASH_RE } from "./git-layer-config";
 import { mainBundle } from "./main-bundle";
 import { writeGenerated } from "./write-generated";
@@ -79,50 +83,67 @@ async function discoverConfigs(root: string): Promise<DiscoveredConfig[]> {
 
   for (const node of tree.byDir.values()) {
     if (!bundle.has(node.id)) continue;
-    const barrelPath = join(node.dir, "server", "index.ts");
-    if (!existsSync(barrelPath)) continue;
-
-    let mod: Record<string, unknown>;
-    try {
-      mod = await importBarrel(barrelPath);
-    } catch (err) {
-      // A server barrel that fails to import is a real defect — silently
-      // skipping it would drop its config origins from generation and the
-      // breakage would only surface later as a mysterious missing-config. Fail
-      // loudly with the offending path.
-      throw new Error(
-        `Failed to import server barrel for config-origin discovery: ${barrelPath}`,
-        { cause: err },
-      );
-    }
-
-    // Reading `.default` off the imported module record cannot throw, so no
-    // guard is needed — a missing default is simply `undefined`.
-    const def = mod.default as Record<string, unknown> | undefined;
-    if (!def) continue;
-
-    const contributions = def.contributions as unknown[] | undefined;
-    if (!Array.isArray(contributions)) continue;
-
-    for (const c of contributions) {
-      if (!c || typeof c !== "object") continue;
-      const contrib = c as Record<string, unknown>;
-      if (isConfigDescriptor(contrib.descriptor)) {
-        // An explicit `pluginId` on the registration wins over the node the
-        // descriptor was discovered in — this lets a plugin register a descriptor
-        // that belongs under a *different* defining plugin's tree. The override is
-        // a dotted PluginId; config files live under the slash path, via asPath.
-        const explicit =
-          typeof contrib.pluginId === "string" ? contrib.pluginId : undefined;
-        const id = explicit ? asPluginId(explicit) : node.id;
-        results.push({
-          hierarchyPath: asPath(id),
-          descriptor: contrib.descriptor,
-        });
-      }
+    // Both server halves: a portable plugin registers its config from its
+    // `machine/` barrel (config reads need the computer until the config_v2
+    // split), exactly where `config-v2:registrations-paired` looks.
+    for (const runtime of SERVER_HALF_RUNTIMES) {
+      const barrelPath = join(node.dir, runtime, "index.ts");
+      if (!existsSync(barrelPath)) continue;
+      results.push(...(await configsOfBarrel(barrelPath, node.id)));
     }
   }
 
+  return results;
+}
+
+/** The barrels a server-side `ConfigV2.Register` may live in. */
+const SERVER_HALF_RUNTIMES = ["server", "machine"] as const;
+
+/** The config descriptors one server-half barrel registers. */
+async function configsOfBarrel(
+  barrelPath: string,
+  nodeId: PluginId,
+): Promise<DiscoveredConfig[]> {
+  let mod: Record<string, unknown>;
+  try {
+    mod = await importBarrel(barrelPath);
+  } catch (err) {
+    // A barrel that fails to import is a real defect — silently skipping it
+    // would drop its config origins from generation and the breakage would
+    // only surface later as a mysterious missing-config. Fail loudly with the
+    // offending path.
+    throw new Error(
+      `Failed to import barrel for config-origin discovery: ${barrelPath}`,
+      { cause: err },
+    );
+  }
+
+  // Reading `.default` off the imported module record cannot throw, so no
+  // guard is needed — a missing default is simply `undefined`.
+  const def = mod.default as Record<string, unknown> | undefined;
+  if (!def) return [];
+
+  const contributions = def.contributions as unknown[] | undefined;
+  if (!Array.isArray(contributions)) return [];
+
+  const results: DiscoveredConfig[] = [];
+  for (const c of contributions) {
+    if (!c || typeof c !== "object") continue;
+    const contrib = c as Record<string, unknown>;
+    if (isConfigDescriptor(contrib.descriptor)) {
+      // An explicit `pluginId` on the registration wins over the node the
+      // descriptor was discovered in — this lets a plugin register a descriptor
+      // that belongs under a *different* defining plugin's tree. The override is
+      // a dotted PluginId; config files live under the slash path, via asPath.
+      const explicit =
+        typeof contrib.pluginId === "string" ? contrib.pluginId : undefined;
+      const id = explicit ? asPluginId(explicit) : nodeId;
+      results.push({
+        hierarchyPath: asPath(id),
+        descriptor: contrib.descriptor,
+      });
+    }
+  }
   return results;
 }
 

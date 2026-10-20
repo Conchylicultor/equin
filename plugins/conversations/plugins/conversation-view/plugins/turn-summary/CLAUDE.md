@@ -12,12 +12,13 @@ The detail rows are collapsible; the one-liner is always visible.
 
 ## How generation fires
 
-A persistent global trigger on `conversationTurnCompleted` (installed in this plugin's `onReady`) enqueues `turn-summary.generate` for every assistant turn across every conversation. The job is idempotent on `(conversationId, messageId)` — if a row already exists for the assistant message id from the event payload, the job no-ops. This keeps re-emitted events (e.g. after server restart) safe.
+A persistent global trigger on `conversationTurnCompleted` (contributed by this plugin's `machine/` barrel, with the job and its `ConfigV2.Register`) enqueues `turn-summary.generate` for every assistant turn across every conversation. The job is idempotent on `(conversationId, messageId)` — if a row already exists for the assistant message id from the event payload, the job no-ops. This keeps re-emitted events (e.g. after server restart) safe.
 
 ## Boundary notes
 
+- **Server / machine split.** `server/` is `portable: true`: the extension table and the live read, so a browser host (the demo) serves the row from its own DB. `machine/` holds what needs the computer — the Haiku job (Claude CLI), the turn-completed trigger, and the config registration (config is not portable yet).
 - Storage is plugin-owned (the `conversations_ext_turn_summary` entity extension of `_conversations`, cascade-deleted with it). One row per conversation, replaced on every new assistant turn.
-- The live read is `turnSummaryRows` (`shared/schemas.ts`), a lookup-only `liveCollection` keyed on `conversationId` (the extension's primary key), minting `turn-summaries:rows` alone and served by `serveCollection(turnSummaryRows, { from: turnSummaries })` from the extension handle. The card reads `useLiveRow(turnSummaryRows, conversation.id)` and renders nothing while pending or when `found: false` (no summary yet). The `:rows` point routing sends a new summary only to that conversation's card.
+- The live read is `turnSummaryRows` (`core/internal/schemas.ts`), a lookup-only `liveCollection` keyed on `conversationId` (the extension's primary key), minting `turn-summaries:rows` alone and served by `serveCollection(turnSummaryRows, { from: turnSummaries })` from the extension handle. The card reads `useLiveRow(turnSummaryRows, conversation.id)` and renders nothing while pending or when `found: false` (no summary yet). The `:rows` point routing sends a new summary only to that conversation's card.
 - Rendering goes through the new `Conversation.AbovePromptInput` slot on the conversation-view host. Other plugins can contribute banners to the same slot.
 - The Haiku call uses `runClaudePrint({ model: "haiku" })` from the `claude-cli` primitive — no Anthropic SDK plumbing, no API key. Failures are logged and swallowed; no row is written, so the card stays at the previous summary.
 - Markdown bullet parsing is intentionally tolerant — Haiku occasionally drops headers or formats bullets with `*` instead of `-`. The parser recovers: missing sections become empty, dashless leading lines become a single item, and a totally malformed reply still fills `summary` so the user sees something.
@@ -26,16 +27,14 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
 
 ## Plugin reference
 
-- Description: Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
+- Description: Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. Serves each conversation's latest turn summary (a one-line summary, caveats list, and actions list) rendered above the prompt input. The Haiku job that writes it after every assistant turn, and its config, live in the machine half.
 - Web:
   - Contributes:
-    - `Demo.Resource` "turn-summaries"
     - `Conversation.AbovePromptInput` → `TurnSummaryCard`
     - `ConfigV2.WebRegister` "config"
   - Uses:
     - `config_v2.ConfigV2`
     - `conversations/conversation-view.Conversation`
-    - `framework/browser-server/demo.demoResource`
     - `network/live.useLiveRow`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.FoldMotion`
@@ -49,30 +48,29 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
     - `ui/icons.Icon`
 - Server:
   - Contributes:
-    - `ConfigV2.Register` "config"
     - `resource.declare` "turn-summaries:rows"
+    - `ConfigV2.Register` "config"
     - `trigger` "turn-summary.generate"
   - Uses:
-    - `config_v2.ConfigV2`
-    - `config_v2.getConfig`
-    - `conversations.conversationTurnCompleted`
-    - `conversations.readConversationTurns`
-    - `infra/claude-cli.ClaudeCliError`
-    - `infra/claude-cli.runClaudePrint`
     - `infra/entities.defaultNow`
     - `infra/entity-extensions.defineExtension`
-    - `infra/events.Trigger`
-    - `infra/jobs.defineJob`
     - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`
-    - `tasks/tasks-core.getConversation`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_turn_summary`)
-  - Exports (values):
-    - `generateTurnSummaryJob`
-    - `turnSummaries`
-  - Register: `defineJob('turn-summary.generate')`
+  - Exports (values): `turnSummaries`
   - Resources: `turn-summaries:rows` (keyed, point)
+- Core:
+  - Uses:
+    - `fields/date/config.dateField`
+    - `fields/text/config.textField`
+    - `infra/entity-extensions.defineExtensionShape`
+    - `network/live.liveCollection`
+  - Exports (types): `TurnSummary`
+  - Exports (values):
+    - `turnSummaryRows`
+    - `TurnSummarySchema`
+    - `turnSummaryShape`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
@@ -84,11 +82,14 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
+  - Imported by: `apps/agent-manager/demo`
 - Shared:
   - Exports (types): `TurnSummary`
   - Exports (values):
     - `turnSummaryConfig`
     - `turnSummaryRows`
     - `TurnSummarySchema`
+- Machine:
+  - Register: `defineJob('turn-summary.generate')`
 
 <!-- AUTOGENERATED:END -->

@@ -2,7 +2,9 @@
  * The demo's browser host, booted in Bun: its generated plugin graph
  * (`./browser-host.generated.ts`) on PGlite with the real migrations, seeded by
  * the real `./seed`, then read back through the real served resources — the
- * story the page renders, with no pack behind it.
+ * story the page renders, with no pack behind it — and every read the demo
+ * renders (`DEMO_READS`) is either served by that graph or declares
+ * `needsMachine`.
  *
  * One substitution: the host's migration history is bundled text
  * (`migrations/bundled-source`, a vite `import.meta.glob`), which Bun cannot
@@ -26,6 +28,7 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import {
   loadResourceByKey,
+  Resource,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
 import { bootPluginGraph } from "@plugins/framework/plugins/server-core/core/testing";
@@ -38,7 +41,15 @@ import {
 } from "@plugins/database/plugins/migrations/server";
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { DEMO_STORIES, demoTaskId } from "../core";
+import {
+  DEMO_AGENTS,
+  DEMO_STORIES,
+  demoAgentId,
+  demoConversationId,
+  demoTaskId,
+} from "../core";
+import { DEMO_READS } from "../core/internal/demo-reads";
+import { conversationTurns } from "@plugins/conversations/plugins/turn-ledger/core";
 import { DEMO_CONVERSATION_ID } from "../core/internal/scenario";
 import { hostEntries } from "./browser-host.generated";
 import { seed } from "./seed";
@@ -167,5 +178,101 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       events.filter((e) => e.kind === "tool-call").map((e) => e.name),
     ).toEqual(["Grep", "Read", "Edit", "Write", "Write", "Bash"]);
     expect(events.at(-1)?.kind).toBe("assistant-text");
+  });
+
+  test("every read the demo renders is served by the host or declares needsMachine", () => {
+    const served = new Set(
+      Resource.Declare.getContributions().map((c) => c.key),
+    );
+    const uncovered = DEMO_READS.filter(
+      (read) =>
+        read.needsMachine === undefined &&
+        !served.has(read.key) &&
+        !served.has(`${read.key}:rows`),
+    ).map(
+      (read) =>
+        `${read.key} is neither served by the demo host nor needsMachine`,
+    );
+    expect(uncovered).toEqual([]);
+  });
+
+  test("the stories carry their short titles, tracks, progress and notes", async () => {
+    const ids = DEMO_STORIES.map(demoTaskId).join(",");
+    const titles = (await loadResourceByKey("task-short-titles:rows", {
+      ids,
+    })) as { taskId: string; shortTitle: string; sourceTitle: string }[];
+    expect(
+      new Map(titles.map((r) => [r.taskId, [r.shortTitle, r.sourceTitle]])),
+    ).toEqual(
+      new Map(DEMO_STORIES.map((s) => [demoTaskId(s), [s.shortTitle, s.task]])),
+    );
+
+    const tracks = (await loadResourceByKey("task-tracks.all", {})) as {
+      taskId: string;
+      track: string;
+    }[];
+    expect(
+      tracks.filter((r) => r.track === "sidequest").map((r) => r.taskId),
+    ).toEqual(
+      DEMO_STORIES.filter((s) => s.track === "sidequest").map(demoTaskId),
+    );
+
+    const conversations = DEMO_STORIES.map(demoConversationId).join(",");
+    const progress = (await loadResourceByKey("conversation-progress:rows", {
+      ids: conversations,
+    })) as { conversationId: string; phase: string }[];
+    expect(new Map(progress.map((r) => [r.conversationId, r.phase]))).toEqual(
+      new Map(DEMO_STORIES.map((s) => [demoConversationId(s), s.phase])),
+    );
+
+    const notes = (await loadResourceByKey("conversation-notes:rows", {
+      ids: conversations,
+    })) as { conversationId: string; notes: string }[];
+    expect(notes.map((r) => [r.conversationId, r.notes])).toEqual(
+      DEMO_STORIES.flatMap((s) =>
+        s.note === undefined ? [] : [[demoConversationId(s), s.note]],
+      ),
+    );
+  });
+
+  test("the agents roster and the stories' launches", async () => {
+    const roster = (await loadResourceByKey("agents.roster", {})) as Row[];
+    expect(roster.map((r) => [r.id, r.name])).toEqual(
+      DEMO_AGENTS.map((a) => [demoAgentId(a), a.name]),
+    );
+    const launches = (await loadResourceByKey("agent-launches", {})) as (Row & {
+      agentId: string;
+      taskId: string;
+      latestConversationStatus: string | null;
+    })[];
+    const launched = DEMO_STORIES.filter((s) => s.agent !== undefined);
+    expect(
+      launches.map((r) => [r.taskId, r.latestConversationStatus]).sort(),
+    ).toEqual(launched.map((s) => [demoTaskId(s), s.status]).sort());
+  });
+
+  test("the unseeded keys answer empty, and the catalog is the baseline", async () => {
+    expect(
+      await loadResourceByKey(
+        conversationTurns.key,
+        conversationTurns.window.defaultParams,
+      ),
+    ).toEqual([]);
+    expect(
+      await loadResourceByKey("data-view-custom-values", {
+        dataViewId: "tasks",
+      }),
+    ).toEqual([]);
+    expect(
+      await loadResourceByKey("conversation-categories:rows", {
+        ids: DEMO_CONVERSATION_ID,
+      }),
+    ).toEqual([]);
+    const catalog = (await loadResourceByKey("model-provider.catalog", {})) as {
+      versions: unknown[];
+      probedAt: string | null;
+    };
+    expect(catalog.versions.length).toBeGreaterThan(0);
+    expect(catalog.probedAt).toBeNull();
   });
 });

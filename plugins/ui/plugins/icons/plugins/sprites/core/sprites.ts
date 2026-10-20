@@ -56,7 +56,7 @@ export type SavedIconSprites = z.infer<typeof SavedIconSpritesSchema>;
 
 /**
  * The RESIDENT saved-icon symbols: the default style's drawing of every name a
- * saved-icon source (`defineSavedIconSource`, server) reports — agents' avatars,
+ * saved-icon source (`defineSavedIconSource`, saved-sources/server) reports — agents' avatars,
  * page icons, configured category and preprompt avatars. Preloaded, so stored
  * icons are on screen at first paint. Recomputed when a source's tables change
  * (DB-backed) or a source's config changes (the {@link savedIconsChanged} tick).

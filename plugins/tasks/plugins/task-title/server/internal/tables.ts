@@ -1,6 +1,6 @@
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
-import { taskShortTitleShape } from "../../shared/schemas";
+import { taskShortTitleShape } from "../../core";
 
 // Per-task short title, 1:1 with its task (FK cascade on task delete).
 export const tasksShortTitle = defineExtension(

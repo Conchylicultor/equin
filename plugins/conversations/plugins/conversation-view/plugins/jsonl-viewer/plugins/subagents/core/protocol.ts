@@ -312,6 +312,10 @@ export type SubagentTranscriptEvents = JsonlEvent[];
 export const subagentActivity = liveValue("subagent-activity", {
   schema: SubagentActivityPayloadSchema,
   params: ["id"],
+  // Read and watched from the `subagents/` directories on disk, so only the
+  // desktop app answers it: a reader under an in-browser server gets
+  // `unavailable` (cards render from the transcript alone, with no state).
+  needsMachine: { feature: "Watching sub-agents" },
 });
 
 /**
@@ -346,4 +350,5 @@ export type SubagentRef = z.infer<typeof SubagentRefSchema>;
 export const subagentTranscript = liveValue("subagent-transcript", {
   schema: SubagentTranscriptSchema,
   params: ["id", "by", "key"],
+  needsMachine: { feature: "Watching sub-agents" },
 });

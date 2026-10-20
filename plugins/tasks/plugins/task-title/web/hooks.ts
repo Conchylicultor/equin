@@ -2,7 +2,7 @@ import {
   useLiveRow,
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
-import { taskShortTitles, type TaskShortTitle } from "../shared/schemas";
+import { taskShortTitles, type TaskShortTitle } from "../core";
 
 /**
  * The task's short title: its row of the lookup-only `taskShortTitles`

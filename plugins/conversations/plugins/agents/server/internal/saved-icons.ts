@@ -1,6 +1,6 @@
 import { isNotNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineSavedIconSource } from "@plugins/ui/plugins/icons/plugins/sprites/server";
+import { defineSavedIconSource } from "@plugins/ui/plugins/icons/plugins/saved-sources/server";
 import { _agents } from "./tables";
 
 /** Every agent's avatar icon, so agent avatars are drawable at first paint. */

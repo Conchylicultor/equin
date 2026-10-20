@@ -139,8 +139,16 @@ export function AgentToolView({ event }: ToolRendererProps) {
         aside={aside}
         // `result` is a launch acknowledgement for a backgrounded Agent, so the
         // card must not read it as "done" — the sub-agent's own state does.
+        // With no sub-agent reads on this host (an in-browser server), the
+        // card renders from the transcript alone and claims no running state:
+        // a background call's launch receipt would otherwise read as "still
+        // going" or "done", and neither is known.
         running={
-          status.kind === "known" ? status.state.kind === "running" : undefined
+          status.kind === "known"
+            ? status.state.kind === "running"
+            : status.kind === "unavailable"
+              ? false
+              : undefined
         }
       >
         {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}

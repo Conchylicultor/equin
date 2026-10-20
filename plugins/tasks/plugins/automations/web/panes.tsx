@@ -33,7 +33,11 @@ function useResolveAutomation({
 }: {
   automationId: string;
 }): ResolveResult {
-  return resolveFrom(useLive(automationsCatalog), (list) =>
+  const catalog = useLive(automationsCatalog);
+  // No catalog on this host: nothing can say whether the automation exists,
+  // and the body shows why — never "not found".
+  if (catalog.status === "unavailable") return { status: "found" };
+  return resolveFrom(catalog, (list) =>
     list.some((a) => a.id === automationId),
   );
 }
@@ -49,6 +53,8 @@ function useAutomationTitle({
   return foldResource(useLive(automationsCatalog), {
     loading: () => undefined,
     error: () => undefined,
+    // No catalog on this host: untitled, the body says why.
+    unavailable: () => undefined,
     ready: (list) => list.find((a) => a.id === automationId)?.label,
   });
 }

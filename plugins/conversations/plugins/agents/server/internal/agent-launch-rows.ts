@@ -12,7 +12,7 @@ import type { ServeAllCollectionOptions } from "@plugins/network/plugins/live/se
 import {
   AgentLaunchConversationRefSchema,
   type AgentLaunchWithStatus,
-} from "../../core/schemas";
+} from "../../core";
 import { taskLatestConversation } from "./rollup-spec";
 import { _agent_launches } from "./tables";
 

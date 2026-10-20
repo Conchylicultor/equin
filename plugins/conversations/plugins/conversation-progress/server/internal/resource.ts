@@ -1,5 +1,5 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
-import { conversationProgressRows } from "../../shared/schemas";
+import { conversationProgressRows } from "../../core";
 import { conversationProgress } from "./tables";
 
 // Server half of the per-conversation progress read: the lookup-only

@@ -114,9 +114,9 @@ spawn / control-file / banner helpers both scripts share are `e2e/synthetic.ts`.
     - `Item.Chips` → `OpStatusChip`
     - `FieldPresentation.Register` "collection:op-status.queue-row"
     - `queue-actions` "open-conversation" → `OpenConversationAction`
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×6
-    - `primitives/live-state` ×4
+    - `primitives/live-state` ×5
     - `conversations/conversation-view` ×2
     - `conversations` ×2
     - `network/live` ×2

@@ -7,10 +7,12 @@ import { liveValue } from "@plugins/network/plugins/live/core";
  * sdk runtime runs the SYSTEM `claude` instead of the SDK's bundled copy, so
  * the two can drift: the health report flags a different major.minor. Read off
  * the installed package — derived, so an SDK upgrade can never leave a stale
- * copy of it behind.
+ * copy of it behind. Read off the computer's installed package, so only the
+ * desktop app answers it (`needsMachine`).
  */
 export const sdkBundledCli = liveValue("runtime-sdk.bundled-cli", {
   schema: z.object({ sdkVersion: z.string(), cliVersion: z.string() }),
+  needsMachine: { feature: "Reading the bundled Claude Code version" },
 });
 
 /** Whether two `X.Y.Z` versions share their major and minor. */

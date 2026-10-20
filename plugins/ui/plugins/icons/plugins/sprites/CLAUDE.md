@@ -30,7 +30,8 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
   style's `<symbol id="msr-…">` for every name a source reports, plus
   `symbolsHash`), `savedIconsChanged` (the tick config sources bump),
   `runtimeSymbolsEndpoint` (`GET /api/icons/symbols/:hash/:key?names=`).
-- `server/`: `defineSavedIconSource` (registry), the per-style symbol maps
+- `server/`: the sources' list (`savedIconSources()`, from the portable
+  `saved-sources` registry, where every store calls `defineSavedIconSource`), the per-style symbol maps
   (`runtime-symbols.ts`: every saved name's symbol for one style, built in one
   pass over the sets the first time the style is asked for, then kept), the
   resident value (DB-arm: sources' reads are captured; a first subscriber and
@@ -41,7 +42,7 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
 
 ## Plugin reference
 
-- Description: Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks. Builds the icon sprites from the Iconify JSON for the manifest's names — one <svg> of <symbol id="ms-<styleKey>-<name>"> per style key (material-symbols at 400, material-symbols-light at 300) plus a brands sprite — and serves the default style's as the resident icons.sprites value and every one at GET /api/icons/sprite/:hash/:key, immutable. Saved (user-picked) icons are runtime symbols: the resident icons.saved-sprites value draws every name a defineSavedIconSource source reports in the default style, and GET /api/icons/symbols/:hash/:key?names= serves any saved names in any style, immutable.
+- Description: Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks. Builds the icon sprites from the Iconify JSON for the manifest's names — one <svg> of <symbol id="ms-<styleKey>-<name>"> per style key (material-symbols at 400, material-symbols-light at 300) plus a brands sprite — and serves the default style's as the resident icons.sprites value and every one at GET /api/icons/sprite/:hash/:key, immutable. Saved (user-picked) icons are runtime symbols: the resident icons.saved-sprites value draws every name a saved-icon source (ui/icons/saved-sources) reports in the default style, and GET /api/icons/symbols/:hash/:key?names= serves any saved names in any style, immutable.
 - Web:
   - Contributes: `Icons.Root` → `IconSpriteHost`
   - Uses:
@@ -68,8 +69,7 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `ui/icons.resolveSymbol`
     - `ui/icons.SETI_SET`
     - `ui/icons.SymbolSets`
-  - Exports (types): `SavedIconSource`
-  - Exports (values): `defineSavedIconSource`
+    - `ui/icons/saved-sources.savedIconSources`
   - Resources:
     - `icons.saved-icons-changed` (push, notified)
     - `icons.saved-sprites` (push)
@@ -93,14 +93,6 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `savedIconSprites`
     - `SavedIconSpritesSchema`
     - `spriteEndpoint`
-- Cross-plugin:
-  - Imported by:
-    - `conversations/agents`
-    - `conversations/conversation-category`
-    - `conversations/conversation-preprompt`
-    - `conversations/preprompts`
-    - `page/callout`
-    - `primitives/data-view`
 - Exemptions:
   - Exempts itself from:
     - `live/no-endpoint-read` — `web/internal/sprite-host.tsx` (debt)

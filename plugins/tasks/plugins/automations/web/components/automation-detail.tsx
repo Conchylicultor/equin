@@ -55,6 +55,9 @@ export function AutomationDetail({
           refetch={result.refetch}
         />
       );
+    case "unavailable":
+      // The catalog is the machine half's: an in-browser server has none.
+      return <Placeholder>{result.message}</Placeholder>;
     case "ready":
       break;
   }

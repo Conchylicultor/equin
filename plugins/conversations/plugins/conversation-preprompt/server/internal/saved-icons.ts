@@ -1,6 +1,6 @@
 import { isNotNull, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineSavedIconSource } from "@plugins/ui/plugins/icons/plugins/sprites/server";
+import { defineSavedIconSource } from "@plugins/ui/plugins/icons/plugins/saved-sources/server";
 import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import {
   nullable,

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { mapRow, useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { DEFAULT_TASK_TRACK, type TaskTrack } from "../core";
-import { taskTracks, type TaskTrackRow } from "../shared/resources";
+import { taskTracks, type TaskTrackRow } from "../core";
 
 /** One task's track: a read — loading, failed, or the track. */
 export type TaskTrackResult = ResourceResult<TaskTrack>;

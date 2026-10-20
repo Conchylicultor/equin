@@ -112,7 +112,6 @@ dynamic value.
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
     - `plugin-meta/composition`
-    - `plugin-meta/plugin-view`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/fs-snapshot.ts`, `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
 

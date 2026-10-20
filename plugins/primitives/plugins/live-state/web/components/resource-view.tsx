@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   errorOf,
   statusOf,
   type GateDataOf,
   type GateInput,
+  type GateUnavailable,
 } from "../resource-utils";
 import { ResourceErrorInline } from "./resource-error-inline";
 
@@ -22,6 +24,11 @@ export interface MatchResourceHandlers<R extends GateInput> {
   error?: (err: Error, stale?: GateDataOf<R>) => ReactNode;
   /** The only way to reach the data — called once ready. */
   ready: (data: GateDataOf<R>) => ReactNode;
+  /**
+   * Rendered when the read needs the computer and the host has none
+   * (a needsMachine read). Default: the read's own message, muted.
+   */
+  unavailable?: (message: string) => ReactNode;
 }
 
 /**
@@ -54,6 +61,14 @@ export function matchResource<R extends GateInput>(
     }
     case "loading":
       return handlers.loading ? handlers.loading() : <Loading />;
+    case "unavailable": {
+      const { message } = result as GateUnavailable;
+      return handlers.unavailable ? (
+        handlers.unavailable(message)
+      ) : (
+        <Placeholder>{message}</Placeholder>
+      );
+    }
   }
 }
 

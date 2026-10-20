@@ -102,10 +102,13 @@ export const deleteAgent = defineEndpoint({
   route: "DELETE /api/agents/:id",
 });
 
+// Desktop-only: a launch spawns Claude Code, so it is served by
+// `agents/machine` and every client handles "not available".
 export const launchAgent = defineEndpoint({
   route: "POST /api/agents/:id/launch",
   body: LaunchAgentBodySchema,
   response: LaunchAgentResponseSchema,
+  needsMachine: { feature: "Launching an agent" },
 });
 
 export const listAgentLaunches = defineEndpoint({

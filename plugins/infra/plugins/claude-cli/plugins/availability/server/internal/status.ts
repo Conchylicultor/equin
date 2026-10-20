@@ -1,9 +1,7 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { resolveClaudeBin } from "@plugins/infra/plugins/paths/server";
-import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   claudeCodeBlockMessage,
-  claudeCodeStatus,
   type ClaudeCodeBlock,
   type ClaudeCodeStatus,
 } from "../../core";
@@ -27,6 +25,7 @@ let last: Checked | null = null;
 let inflight: Promise<ClaudeCodeStatus> | null = null;
 const readyListeners = new Set<() => void>();
 const probedListeners = new Set<(status: ClaudeCodeStatus) => void>();
+const changedListeners = new Set<() => void>();
 
 /**
  * Probe now, sharing a probe already running: concurrent askers (a burst of
@@ -51,7 +50,7 @@ function record(status: ClaudeCodeStatus): void {
   for (const fn of probedListeners) fn(status);
   if (before !== undefined && JSON.stringify(before) === JSON.stringify(status))
     return;
-  claudeCodeStatusServed.notify();
+  for (const fn of changedListeners) fn();
   // Only a real transition wakes the listeners: the first answer after boot has
   // nothing to catch up on (whatever runs at boot asked for itself).
   if (
@@ -63,15 +62,24 @@ function record(status: ClaudeCodeStatus): void {
   }
 }
 
-// External, not DB-backed: the truth is a CLI on the host, which no change feed
-// observes, so `record` calls its `notify()`. Pushed (the `liveValue` default):
-// one small value, the same for every tab, read by the always-mounted health
-// dot.
-export const claudeCodeStatusServed = serveValue(claudeCodeStatus, {
-  source: "external",
-  changes: "notified",
-  loader: () => (last ? Promise.resolve(last.status) : probe()),
-});
+/**
+ * The last answer, probing first if there is none yet — what the
+ * claude-code-status live value (served by this plugin's machine half) loads.
+ */
+export function currentClaudeCodeStatus(): Promise<ClaudeCodeStatus> {
+  return last ? Promise.resolve(last.status) : probe();
+}
+
+/**
+ * Run `fn` whenever a probe's answer differs from the last one — the live
+ * value's `notify`. Returns the unsubscribe.
+ */
+export function onClaudeCodeStatusChanged(fn: () => void): () => void {
+  changedListeners.add(fn);
+  return () => {
+    changedListeners.delete(fn);
+  };
+}
 
 /**
  * Claude Code's status, fresh enough to act on: a `ready` answer younger than

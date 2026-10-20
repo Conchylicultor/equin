@@ -1,5 +1,5 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
-import { conversationPrepromptRows } from "../../shared/schemas";
+import { conversationPrepromptRows } from "../../core";
 import { conversationPreprompt } from "./tables";
 
 // Server half of the per-conversation preprompt read: the lookup-only

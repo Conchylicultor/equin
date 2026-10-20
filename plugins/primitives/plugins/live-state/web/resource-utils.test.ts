@@ -4,13 +4,16 @@
  * locks the load-bearing invariants: the three states and their precedence
  * (error > loading > ready), per-key data mapping, first-error propagation,
  * `foldResource`'s explicit per-state answers, `mapResource`'s pass-through of
- * the loading and error arms, and acceptance of any `status`-named input
+ * the loading and error arms, the needsMachine `unavailable` arm (precedence
+ * error > unavailable > loading, passed through, folded only by a handler the
+ * type requires), and acceptance of any `status`-named input
  * (`useOptimisticResource`'s result — the named exemption — included).
  */
 
 import { test, expect, describe } from "bun:test";
 import { ResourceError } from "../core";
 import {
+  type GateUnavailable,
   combineResources,
   foldResource,
   mapResource,
@@ -35,6 +38,14 @@ const failed = <T>(error: ResourceError, stale?: T): ResourceResult<T> =>
     : { status: "error", error, stale, refetch };
 
 const boom = new ResourceError("loader-failed", "boom", null);
+const unavailable = (message = "not here"): GateUnavailable => ({
+  status: "unavailable",
+  message,
+});
+/** A needsMachine read's result type: the read's arms plus `unavailable`. */
+type MachineRead<T> = ResourceResult<T> | GateUnavailable;
+/** Widen to the machine-read type (a typed `const` would narrow on assignment). */
+const asMachine = <T>(r: MachineRead<T>): MachineRead<T> => r;
 
 describe("combineResources", () => {
   test("loading until every input is ready", () => {
@@ -102,6 +113,32 @@ describe("combineResources", () => {
     expect(calls).toBe(2);
   });
 
+  test("precedence: error > unavailable > loading — a failure still wins", () => {
+    const r = combineResources({ a: unavailable(), b: failed(boom) });
+    expect(r.status).toBe("error");
+  });
+
+  test("an unavailable input makes the combine unavailable, even while others load", () => {
+    const r = combineResources({
+      a: loading(),
+      b: unavailable("first"),
+      c: unavailable("second"),
+      d: ready(1),
+    });
+    expect(r.status).toBe("unavailable");
+    if (r.status !== "unavailable") throw new Error("unreachable");
+    expect(r.message).toBe("first");
+  });
+
+  test("the unavailable arm is in the type only when an input carries it", () => {
+    const portable = combineResources({ a: ready(1) });
+    // @ts-expect-error -- no input can be unavailable, so neither can the combine
+    void (portable.status === "unavailable");
+    const machine = asMachine<number>(ready(1));
+    const withArm = combineResources({ a: machine });
+    expect(withArm.status === "unavailable").toBe(false);
+  });
+
   test("empty input set is ready", () => {
     expect(combineResources({}).status).toBe("ready");
   });
@@ -135,7 +172,49 @@ describe("foldResource", () => {
   });
 });
 
+describe("foldResource — unavailable", () => {
+  test("a needsMachine read folds through its required unavailable handler", () => {
+    const r = asMachine<number[]>(unavailable("needs the computer"));
+    expect(
+      foldResource(r, {
+        loading: () => "loading",
+        error: () => "error",
+        ready: (rows) => `ready:${rows.length}`,
+        unavailable: (message) => `unavailable:${message}`,
+      }),
+    ).toBe("unavailable:needs the computer");
+  });
+
+  test("the handler is required exactly when the input carries the arm", () => {
+    const r = asMachine<number[]>(ready([1]));
+    // @ts-expect-error -- `unavailable` is missing for a needsMachine read
+    foldResource(r, {
+      loading: () => 0,
+      error: () => 0,
+      ready: (rows) => rows.length,
+    });
+    foldResource(ready([1]), {
+      loading: () => 0,
+      error: () => 0,
+      ready: (rows) => rows.length,
+      // @ts-expect-error -- a portable read has no unavailable arm to handle
+      unavailable: () => 0,
+    });
+  });
+});
+
 describe("mapResource", () => {
+  test("passes the unavailable arm through", () => {
+    const r = asMachine<number[]>(unavailable("away"));
+    const m = mapResource(r, (xs) => xs.length);
+    // The same arm object, passed through (not rebuilt).
+    expect(m as unknown).toBe(r);
+    const ok = asMachine<number[]>(ready([1, 2]));
+    const mapped = mapResource(ok, (xs) => xs.length);
+    if (mapped.status !== "ready") throw new Error("unreachable");
+    expect(mapped.data).toBe(2);
+  });
+
   test("maps the ready arm and a stale value; passes loading and error through", () => {
     const len = (xs: number[]) => xs.length;
     const r = mapResource(ready([1, 2]), len);
@@ -156,6 +235,11 @@ describe("mapResource", () => {
 });
 
 describe("refuseResource", () => {
+  test("passes the unavailable arm through", () => {
+    const r = asMachine<number[]>(unavailable());
+    expect(refuseResource(r, () => boom)).toBe(r);
+  });
+
   const tooMany = (xs: number[]) =>
     xs.length > 2 ? new ResourceError("loader-failed", "too many", null) : null;
 

@@ -79,8 +79,9 @@ newest turn's finished steps, its running step, its accepted results, and
 
 `AgentThread` calls `useMarkConversationViewed` only while the thread is on
 screen (page visible) AND has an answer or result newer than `lastViewedAt`.
-The endpoint does two things: stamps `lastViewedAt` (which also resets the idle
-hibernation timer) and transparently resumes a HIBERNATED conversation. The
+The hook does two things: stamps `lastViewedAt` (which also resets the idle
+hibernation timer) and, when the row's `hibernatedAt` is set, transparently
+resumes the conversation (a desktop-only endpoint). The
 "only when unseen" gate keeps a host that restores its latest run on load from
 waking a hibernated agent with nothing new to show. A refused resume is a toast.
 

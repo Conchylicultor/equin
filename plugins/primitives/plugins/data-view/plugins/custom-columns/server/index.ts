@@ -1,8 +1,4 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { setCustomColumnValue, deleteCustomColumnValues } from "../core";
-import { handleSetCustomColumnValue } from "./internal/handle-set-custom-column-value";
-import { handleDeleteCustomColumnValues } from "./internal/handle-delete-custom-column-values";
-import { customColumnValuesServed } from "./internal/resource";
 import {
   customColumnDefsServed,
   customColumnsScoped,
@@ -11,18 +7,11 @@ import {
 import { IdKinds } from "@plugins/ids/server";
 import { customColumnIdKind } from "../core";
 
-export { _dataViewCustomValues } from "./internal/tables";
-
 export default {
   description:
-    "Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.",
-  httpRoutes: {
-    [setCustomColumnValue.route]: handleSetCustomColumnValue,
-    [deleteCustomColumnValues.route]: handleDeleteCustomColumnValues,
-  },
+    "Custom-column DEFINITIONS on the server: the per-surface definitions read from config (data-view-custom-column-defs) and the `custom` scoped column set a live collection sorts and filters by, joining the values child's table. The values themselves (table, live value, endpoints) are the portable custom-columns/values child's.",
   contributions: [
     IdKinds.Kind({ kind: customColumnIdKind }),
-    ...customColumnValuesServed.declare,
     ...customColumnDefsServed.declare,
     customColumnsScoped,
   ],

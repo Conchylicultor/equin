@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Tasks } from "@plugins/tasks/plugins/task-list/web";
 import { QueuedChipAction } from "./components/queued-chip-action";
 
-export type { TaskAutoStartRow } from "../shared/resources";
+export type { TaskAutoStartRow } from "../core";
 export { useTaskAutoStart } from "./hooks";
 
 export default {

@@ -5,7 +5,7 @@ import {
 import {
   conversationProgressRows,
   type ConversationProgress,
-} from "../../shared/schemas";
+} from "../../core";
 
 // This conversation's progress row: its row of the lookup-only
 // `conversationProgressRows` collection — one O(1) point sub. `found: false`

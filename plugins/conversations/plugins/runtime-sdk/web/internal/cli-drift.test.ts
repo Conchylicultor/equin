@@ -30,4 +30,10 @@ describe("cliDriftVerdict", () => {
       cliDriftVerdict(loaded({ kind: "missing", searched: [] })).state,
     ).toBe("unknown");
   });
+
+  test("no computer to read the versions from is unknown, with why", () => {
+    expect(
+      cliDriftVerdict({ status: "unavailable", message: "Not here." }),
+    ).toEqual({ state: "unknown", summary: "Not here." });
+  });
 });

@@ -38,26 +38,4 @@ export const Demo = {
     id: string;
     useBackend: Hook<() => DemoBackend>;
   }>({ docLabel: (c) => c.id }),
-  /**
-   * A plugin's STATELESS in-browser handler for one of its endpoints, answered
-   * inside every demo scope: `[ep.route, implement(ep, handler)]`. A handler
-   * with per-scope state is a `DemoBackend` route instead.
-   */
-  Route: defineSlot<{
-    route: DemoRoute;
-  }>({ docLabel: (c) => c.route[0] }),
 };
-
-/**
- * A `Demo.Resource` whose answers depend on nothing in the scope's tree — a
- * plugin's neutral demo answer ("no ops in flight", "no notes"), the same for
- * every scenario. `serve` is module-level, so it is stable by construction.
- */
-export function demoResource(
-  id: string,
-  serve: DemoServe,
-): ReturnType<typeof Demo.Resource> {
-  const backend: DemoBackend = { serve };
-  const useBackend = (): DemoBackend => backend;
-  return Demo.Resource({ id, useBackend });
-}

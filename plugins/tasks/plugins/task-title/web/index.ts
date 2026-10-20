@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { useTaskShortTitle } from "./hooks";
-export type { TaskShortTitle } from "../shared/schemas";
+export type { TaskShortTitle } from "../core";
 
 export default {
   description:

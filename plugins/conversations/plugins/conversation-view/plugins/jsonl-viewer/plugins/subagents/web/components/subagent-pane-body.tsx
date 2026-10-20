@@ -104,7 +104,7 @@ function resolveRef(
           : subagents,
     };
   }
-  if (subagents.kind === "pending" || subagents.kind === "failed") {
+  if (subagents.kind !== "known") {
     return { kind: "known", status: subagents, agentToolEvent: undefined };
   }
   const entry = subagents.entries.find((e) => e.row.agentId === ref.key);
@@ -120,6 +120,17 @@ function resolveRef(
       endedAt: entry.endedAt,
     },
   };
+}
+
+/** The whole pane, when this host cannot read sub-agents at all. */
+function UnavailablePane({ message }: { message: string }) {
+  return (
+    <PaneMessage>
+      <Text as="div" variant="caption" className="text-muted-foreground">
+        {message}
+      </Text>
+    </PaneMessage>
+  );
 }
 
 /** The whole pane, when there is nothing to show in it yet. */
@@ -306,6 +317,12 @@ export function SubagentPaneBody({
   // not arrived yet". Everything the pane says about the sub-agent is derived
   // from that event, so the distinction decides whether the header, the state
   // and the report are readings or guesses.
+  // Nothing here can watch sub-agents (an in-browser server: their files are
+  // on a computer this host does not have). Said as what it is — never a
+  // "starting" pane waiting for files that will not arrive.
+  if (subagents.kind === "unavailable") {
+    return <UnavailablePane message={subagents.message} />;
+  }
   if (subagents.kind === "failed") {
     return (
       <PaneMessage>
@@ -350,6 +367,10 @@ function SubagentPaneContent({
     ...subagent,
   });
 
+  // Same declaration-level reason as the sub-agent set: no computer here.
+  if (transcript.status === "unavailable") {
+    return <UnavailablePane message={transcript.message} />;
+  }
   if (resolved.kind === "missing") {
     return (
       <PaneMessage>

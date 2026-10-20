@@ -33,6 +33,7 @@
     - `taskSourceUrlShape`
 - Cross-plugin:
   - Imported by:
+    - `apps/agent-manager/demo`
     - `conversations/conversation-view/open-app`
     - `tasks`
 

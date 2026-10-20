@@ -1,5 +1,5 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
-import { taskTracks } from "../../shared/resources";
+import { taskTracks } from "../../core";
 import { tasksTrack } from "./tables";
 
 // The whole ordered set and its `:rows` point sibling, both routed over

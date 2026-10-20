@@ -10,8 +10,13 @@ import { EditedFilesPayloadSchema } from "./protocol";
 // `load: "on-demand"`: the loader (merge-base + two `git diff` passes + untracked
 // reads) is too slow for the shared flush, so a change sends an `invalidate` and
 // each tab refetches over HTTP.
+//
+// It is measured from git in the worktree on disk, so only the desktop app
+// answers it (`needsMachine`): a reader under an in-browser server gets
+// `unavailable`.
 export const editedFiles = liveValue("edited-files", {
   schema: EditedFilesPayloadSchema,
   params: ["id"],
   load: "on-demand",
+  needsMachine: { feature: "Listing the files an agent edited" },
 });

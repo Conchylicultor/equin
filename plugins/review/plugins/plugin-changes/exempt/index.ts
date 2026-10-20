@@ -14,7 +14,6 @@ export default [
     paths: [
       "server/internal/handle-plugin-changes.ts",
       "server/internal/main-plugins-dir.ts",
-      "server/internal/plugin-changes-resource.ts",
     ],
     kind: "debt",
     task: "task-1792338443-riwqev",

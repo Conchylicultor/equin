@@ -126,7 +126,7 @@ are in `infra/entities/server/internal/`
     - `database/migrations`
     - `debug/profiling/op-log/op-store`
     - `infra/entities`
-    - `primitives/data-view/custom-columns`
+    - `primitives/data-view/custom-columns/values`
     - `primitives/data-view/view-order`
     - `ui/theme-engine/saved-themes`
 - Server:

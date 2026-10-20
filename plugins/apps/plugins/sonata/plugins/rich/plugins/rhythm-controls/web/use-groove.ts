@@ -9,7 +9,7 @@ import { useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   mapResource,
-  type GateInput,
+  type PortableGateInput,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { GrooveFields } from "../shared/groove";
@@ -114,7 +114,7 @@ export function useGroove(): Groove {
   // or settled) and the row read — loading until both have settled, and a
   // failure of either fails the groove. The setting enters the combine through
   // its state alone, so its failure keeps its error.
-  const setting: GateInput =
+  const setting: PortableGateInput =
     store.kind === "failed"
       ? { status: "error", error: store.error }
       : { status: store.kind === "settled" ? "ready" : "loading" };

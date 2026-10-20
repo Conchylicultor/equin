@@ -64,8 +64,16 @@ for nothing.
 
 ## The two live values
 
-Both are `liveValue`s declared in `core/protocol.ts`, served on the external arm
-(`serveValue`, `server/internal/*-resource.ts`) and read with `useLive`. Each
+Both are `liveValue`s declared in `core/protocol.ts` with `needsMachine`
+("Watching sub-agents"), served on the external arm by the machine half
+(`serveValue` from `live/machine`, `machine/internal/*-resource.ts`, over the
+reads in `server/internal/`) and read with `useLive`. Under an in-browser
+server both read `unavailable`: `useConversationSubagents` /
+`useSubagentStatus` return their `unavailable` arm, the `Agent` card renders
+from the transcript alone with no running state, the running-agents band and
+stat hide, a task notification is declined, and the sub-agent pane shows the
+message. `server/` keeps the discovery (`subagentDirOf`,
+`listSubagentEntries`) conversations/usage imports. Each
 watches its files only while its tuple has a subscriber: `whileSubscribed` opens
 a `watchPaths` room (a synchronous start — the sub-ack is never held behind it),
 primes the memo from the room's `{ value, signature }` pair before calling
@@ -416,17 +424,33 @@ downstream can widen the set, because nothing downstream resolves one.
 
 ## Plugin reference
 
-- Description: The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts, and serves two live resources: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation; plus the parent-transcript facts sub-agent state joins on (Agent / Workflow calls, task notifications, idle and resume times), folded over the whole parent transcript.
+- Description: The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts (the discovery conversations/usage accounts over), plus the reads behind the two live values the machine half serves: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation; it serves the parent-transcript facts sub-agent state joins on (Agent / Workflow calls, task notifications, idle and resume times), folded over the whole parent transcript.
+- Server:
+  - Contributes:
+    - `resource.declare` "subagent-activity"
+    - `resource.declare` "subagent-transcript"
+    - `resource.declare` "subagents.parent-facts"
+  - Uses:
+    - `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
+    - `conversations/transcript-watcher.readChainLines`
+    - `conversations/transcript-watcher.readJsonlEventsFromChain`
+    - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+    - `conversations/transcript-watcher.transcriptChainSignature`
+    - `infra/git/git-read-cache.createSignedMemo`
+  - Exports (values):
+    - `listSubagentEntries`
+    - `subagentDirOf`
+  - Resources:
+    - `subagent-activity` (push, notified)
+    - `subagent-transcript` (push, notified)
 - Web:
-  - Contributes: `Demo.Resource` "subagents"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×3
     - `primitives/relative-time` ×3
     - `conversations/conversation-view/jsonl-viewer` ×2
     - `primitives/css/spacing` ×2
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `conversations.useConversationById`
-    - `framework/browser-server/demo.demoResource`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -442,6 +466,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `SubagentEntry`
     - `SubagentStateDisplay`
     - `SubagentStatus`
+    - `SubagentsUnavailable`
   - Exports (values):
     - `SubagentDuration`
     - `SubagentLastStep`
@@ -449,28 +474,8 @@ downstream can widen the set, because nothing downstream resolves one.
     - `subagentStateDisplay`
     - `useConversationSubagents`
     - `useSubagentStatus`
-- Server:
-  - Contributes:
-    - `resource.declare` "subagent-activity"
-    - `resource.declare` "subagent-transcript"
-    - `resource.declare` "subagents.parent-facts"
-  - Uses:
-    - `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
-    - `conversations/transcript-source.transcriptChainReads`
-    - `conversations/transcript-watcher.conversationChainTag`
-    - `conversations/transcript-watcher.readChainLines`
-    - `conversations/transcript-watcher.readJsonlEventsFromChain`
-    - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-    - `conversations/transcript-watcher.transcriptChainSignature`
-    - `conversations/transcript-watcher.watchPaths`
-    - `infra/git/git-read-cache.createSignedMemo`
-    - `network/live.serveValue`
-  - Exports (values):
-    - `listSubagentEntries`
-    - `subagentDirOf`
-  - Resources:
-    - `subagent-activity` (push, notified)
-    - `subagent-transcript` (push, notified)
+- Machine:
+  - Uses: `network/live.serveValue`
 - Core:
   - Uses:
     - `conversations.hasLiveProcess`
@@ -548,6 +553,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
+    - `apps/agent-manager/demo`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/running-agents`
     - `conversations/usage`

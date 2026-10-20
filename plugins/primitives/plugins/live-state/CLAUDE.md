@@ -1094,6 +1094,8 @@ keeps every row's identity rather than re-minting each moved row.
     - `FoldResourceHandlers`
     - `GateDataOf`
     - `GateInput`
+    - `GateStatus`
+    - `GateUnavailable`
     - `HttpStaleDropReport`
     - `LiveStateSocketKind`
     - `MatchResourceHandlers`
@@ -1102,6 +1104,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `PendingMountSnapshot`
     - `PointParams`
     - `PointResourceDescriptor`
+    - `PortableGateInput`
     - `QueryResourceOptions`
     - `ResourceContractMismatch`
     - `ResourceDerivation`

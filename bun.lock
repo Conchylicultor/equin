@@ -2104,6 +2104,10 @@
       "name": "@singularity/plugin-conversations-model-provider-catalog",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/model-provider/plugins/catalog/plugins/baseline": {
+      "name": "@singularity/plugin-conversations-model-provider-catalog-baseline",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/pane-restore": {
       "name": "@singularity/plugin-conversations-pane-restore",
       "version": "0.0.0",
@@ -4994,6 +4998,10 @@
       "name": "@singularity/plugin-primitives-data-view-custom-columns",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/data-view/plugins/custom-columns/plugins/values": {
+      "name": "@singularity/plugin-primitives-data-view-custom-columns-values",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/data-view/plugins/floating-toolbar": {
       "name": "@singularity/plugin-primitives-data-view-floating-toolbar",
       "version": "0.0.1",
@@ -5989,6 +5997,10 @@
       "name": "@singularity/plugin-tasks-task-title",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/task-title/plugins/filed-titles": {
+      "name": "@singularity/plugin-tasks-task-title-filed-titles",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/task-track": {
       "name": "@singularity/plugin-tasks-task-track",
       "version": "0.0.1",
@@ -6038,6 +6050,10 @@
     },
     "plugins/ui/plugins/icons/plugins/saved-names": {
       "name": "@singularity/plugin-ui-icons-saved-names",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/icons/plugins/saved-sources": {
+      "name": "@singularity/plugin-ui-icons-saved-sources",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/icons/plugins/sprites": {
@@ -7929,6 +7945,8 @@
 
     "@singularity/plugin-conversations-model-provider-catalog": ["@singularity/plugin-conversations-model-provider-catalog@workspace:plugins/conversations/plugins/model-provider/plugins/catalog"],
 
+    "@singularity/plugin-conversations-model-provider-catalog-baseline": ["@singularity/plugin-conversations-model-provider-catalog-baseline@workspace:plugins/conversations/plugins/model-provider/plugins/catalog/plugins/baseline"],
+
     "@singularity/plugin-conversations-pane-restore": ["@singularity/plugin-conversations-pane-restore@workspace:plugins/conversations/plugins/pane-restore"],
 
     "@singularity/plugin-conversations-preprompts": ["@singularity/plugin-conversations-preprompts@workspace:plugins/conversations/plugins/preprompts"],
@@ -9277,6 +9295,8 @@
 
     "@singularity/plugin-primitives-data-view-custom-columns": ["@singularity/plugin-primitives-data-view-custom-columns@workspace:plugins/primitives/plugins/data-view/plugins/custom-columns"],
 
+    "@singularity/plugin-primitives-data-view-custom-columns-values": ["@singularity/plugin-primitives-data-view-custom-columns-values@workspace:plugins/primitives/plugins/data-view/plugins/custom-columns/plugins/values"],
+
     "@singularity/plugin-primitives-data-view-floating-toolbar": ["@singularity/plugin-primitives-data-view-floating-toolbar@workspace:plugins/primitives/plugins/data-view/plugins/floating-toolbar"],
 
     "@singularity/plugin-primitives-data-view-gallery": ["@singularity/plugin-primitives-data-view-gallery@workspace:plugins/primitives/plugins/data-view/plugins/gallery"],
@@ -9739,6 +9759,8 @@
 
     "@singularity/plugin-tasks-task-title": ["@singularity/plugin-tasks-task-title@workspace:plugins/tasks/plugins/task-title"],
 
+    "@singularity/plugin-tasks-task-title-filed-titles": ["@singularity/plugin-tasks-task-title-filed-titles@workspace:plugins/tasks/plugins/task-title/plugins/filed-titles"],
+
     "@singularity/plugin-tasks-task-track": ["@singularity/plugin-tasks-task-track@workspace:plugins/tasks/plugins/task-track"],
 
     "@singularity/plugin-tasks-tasks-core": ["@singularity/plugin-tasks-tasks-core@workspace:plugins/tasks/plugins/tasks-core"],
@@ -9762,6 +9784,8 @@
     "@singularity/plugin-ui-icons-emoji": ["@singularity/plugin-ui-icons-emoji@workspace:plugins/ui/plugins/icons/plugins/emoji"],
 
     "@singularity/plugin-ui-icons-saved-names": ["@singularity/plugin-ui-icons-saved-names@workspace:plugins/ui/plugins/icons/plugins/saved-names"],
+
+    "@singularity/plugin-ui-icons-saved-sources": ["@singularity/plugin-ui-icons-saved-sources@workspace:plugins/ui/plugins/icons/plugins/saved-sources"],
 
     "@singularity/plugin-ui-icons-sprites": ["@singularity/plugin-ui-icons-sprites@workspace:plugins/ui/plugins/icons/plugins/sprites"],
 

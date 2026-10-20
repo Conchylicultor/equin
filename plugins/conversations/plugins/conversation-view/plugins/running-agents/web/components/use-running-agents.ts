@@ -23,6 +23,12 @@ export type RunningAgentsState =
   | { kind: "pending" }
   /** A read behind the band FAILED — rendered with Retry, never as "none working". */
   | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
+  /**
+   * This host cannot watch sub-agents (an in-browser server). Not "none
+   * working" — nothing here can tell — so the band is hidden, shells too:
+   * a band of shells alone would read as "no agents running".
+   */
+  | { kind: "unavailable" }
   | { kind: "known"; rows: RunningAgentRow[] };
 
 const NOTHING: Omit<BandSource, "shells"> = { entries: [], workflowRuns: [] };
@@ -73,6 +79,7 @@ export function useRunningAgents(
   // Failed wins over pending: a read that failed will not arrive by waiting.
   if (subagents.kind === "failed") return subagents;
   if (shellRead.kind === "failed") return shellRead;
+  if (subagents.kind === "unavailable") return { kind: "unavailable" };
   if (subagents.kind === "pending" || shellRead.kind === "pending") {
     return { kind: "pending" };
   }

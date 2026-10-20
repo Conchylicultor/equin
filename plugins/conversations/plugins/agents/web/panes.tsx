@@ -17,7 +17,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { AgentSideBody } from "./components/agent-side-body";
-import { agentRows } from "../shared/resources";
+import { agentRows } from "../core";
 import { Agents as AgentsSlots } from "./slots";
 import { AgentsList } from "./components/agents-list";
 import { AgentDetail } from "./components/agent-detail";

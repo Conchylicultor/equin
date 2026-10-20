@@ -42,8 +42,20 @@ function toOptions(
  */
 export function useOriginOptions(): LiveFieldOptionsRead {
   const automations = useAutomations();
-  return useMemo(() => mapResource(automations, toOptions), [automations]);
+  return useMemo(
+    () =>
+      // No catalog on this host (an in-browser server: it is the machine
+      // half's). "By hand" is the NULL value's label whatever the catalog
+      // holds, so it is still true; no automation option is offered, since
+      // none can be named.
+      automations.status === "unavailable"
+        ? BY_HAND_ONLY
+        : mapResource(automations, toOptions),
+    [automations],
+  );
 }
+
+const BY_HAND_ONLY: readonly LiveFieldOption[] = [BY_HAND];
 
 /**
  * The exposed `origin` field (the automation that filed or launched a task)

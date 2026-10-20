@@ -458,6 +458,8 @@ export function RunningAgentsBand({
   }, [rows]);
 
   if (state.kind === "pending") return null;
+  // No sub-agent reads on this host: the band has nothing honest to say.
+  if (state.kind === "unavailable") return null;
   // A failed read is not "nothing working": say so, with Retry, in the band's
   // own place above the prompt box.
   if (state.kind === "failed")

@@ -58,11 +58,8 @@ import {
   type TreeOracle,
   type TreeStep,
 } from "@plugins/tasks/plugins/tasks-core/server/testing";
-import { AgentLaunchWithStatusSchema } from "../../core/schemas";
-import {
-  agentLaunchRows,
-  type AgentLaunchWithStatus,
-} from "../../shared/resources";
+import { AgentLaunchWithStatusSchema } from "../../core";
+import { agentLaunchRows, type AgentLaunchWithStatus } from "../../core";
 import { agentLaunchRowsServeOptions } from "./agent-launch-rows";
 import { taskLatestConversation } from "./rollup-spec";
 

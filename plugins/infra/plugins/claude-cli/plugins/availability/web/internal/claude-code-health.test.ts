@@ -52,4 +52,10 @@ describe("claudeCodeVerdict", () => {
       summary: "Couldn't check Claude Code: timed out",
     });
   });
+
+  test("is unknown with why, never ok, where no computer can answer", () => {
+    expect(
+      claudeCodeVerdict({ status: "unavailable", message: "Not here." }),
+    ).toEqual({ state: "unknown", summary: "Not here." });
+  });
 });

@@ -16,6 +16,7 @@ export { blob, multipart, isCodec } from "./codec";
 export { dateString } from "./schemas";
 export {
   unsupportedEndpointResponse,
+  unmatchedApiResponse,
   isUnsupportedEndpointBody,
   isUnsupportedEndpointRefusal,
 } from "./unsupported";

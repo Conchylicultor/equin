@@ -14,7 +14,7 @@ import {
   agentRows,
   type Agent,
   type AgentLaunchWithStatus,
-} from "../../shared/resources";
+} from "../../core";
 import { agentSidePane } from "../panes";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 

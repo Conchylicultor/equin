@@ -19,14 +19,21 @@ export type ClassifyBody = z.infer<typeof ClassifyBodySchema>;
 
 // --- Endpoint definitions ---
 
+// Classify and set read the categories config (classify also runs the Haiku
+// CLI), so they are desktop-only until config is portable: served by machine/,
+// answered "not available" on a host without the computer. Clear is a pure DB
+// write and is served everywhere.
+
 export const classifyConversation = defineEndpoint({
   route: "POST /api/conversation-category/:conversationId/classify",
   body: ClassifyBodySchema,
+  needsMachine: { feature: "Classifying conversations" },
 });
 
 export const setConversationCategory = defineEndpoint({
   route: "POST /api/conversation-category/:conversationId",
   body: SetCategoryItemBodySchema,
+  needsMachine: { feature: "Setting a conversation's category" },
 });
 
 export const clearConversationCategory = defineEndpoint({

@@ -3,7 +3,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { agentLaunchRows } from "../../shared/resources";
+import { agentLaunchRows } from "../../core";
 
 export function AgentStatus({ agentId }: { agentId: string }) {
   const launchesQ = useLive(agentLaunchRows);

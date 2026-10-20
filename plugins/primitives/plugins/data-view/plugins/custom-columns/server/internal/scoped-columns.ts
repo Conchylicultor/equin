@@ -15,7 +15,7 @@ import {
   type CustomColumnDef,
 } from "../../core";
 import { readCustomColumnDefs } from "../../shared/read-custom-column-defs";
-import { _dataViewCustomValues } from "./tables";
+import { _dataViewCustomValues } from "@plugins/primitives/plugins/data-view/plugins/custom-columns/plugins/values/server";
 
 // Custom columns on a LIVE collection (research/2026-09-29-global-scoped-change-routing.md
 // P3): the `custom` scoped column set. A collection declaring a `columnScope`

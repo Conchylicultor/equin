@@ -16,7 +16,7 @@ import {
   type AutomationSettings,
   type LaunchAutomationConfigFields,
 } from "../../core";
-import { automationsCatalogServed } from "./live";
+import { catalogChanged } from "./catalog-changed";
 import {
   adoptAutomationTasks,
   fileAutomationTask,
@@ -101,7 +101,7 @@ async function runFiling(
       filing,
       description: prompt,
     });
-    automationsCatalogServed.notify();
+    catalogChanged();
     if (filing.onFiled) await filing.onFiled(taskId);
     // The prompt IS the task's description here, so the marker needs none of
     // its own: the launch builds the same text from the task.
@@ -187,7 +187,7 @@ async function runLaunch(
     });
     launched.push(pick.taskId);
   }
-  if (launched.length > 0) automationsCatalogServed.notify();
+  if (launched.length > 0) catalogChanged();
   const spent =
     batchRemaining(config.maxLaunches, launchedBefore + launched.length) === 0
       ? `; ${await turnOffSpent(spec, config.maxLaunches)}`
@@ -235,7 +235,7 @@ async function adoptLegacy(spec: FileAutomationSpec): Promise<void> {
   const adopted = await adoptAutomationTasks(spec.id, await spec.adoptLegacy());
   if (adopted > 0) {
     log.publish(`automation ${spec.id}: adopted ${adopted} legacy task(s)`);
-    automationsCatalogServed.notify();
+    catalogChanged();
   }
 }
 

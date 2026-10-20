@@ -2,6 +2,7 @@ import { type ReactElement, type ReactNode } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
   opsHistory,
   type OpRow,
@@ -89,6 +90,8 @@ function WindowGantt({
         refetch={result.refetch}
       />
     );
+  if (result.status === "unavailable")
+    return <Placeholder tone="muted">{result.message}</Placeholder>;
   return (
     <LiveOpGantt
       rows={result.data}
@@ -126,6 +129,9 @@ export function WorktreeOpGantt({
         refetch={own.refetch}
       />
     );
+  // The ops are this machine's: a host without the computer says so.
+  if (own.status === "unavailable")
+    return <Placeholder tone="muted">{own.message}</Placeholder>;
   const span = windowOf(own.data);
   if (span === null) return <>{empty}</>;
   return (
