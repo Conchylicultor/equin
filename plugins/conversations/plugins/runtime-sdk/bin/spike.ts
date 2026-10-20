@@ -1081,10 +1081,7 @@ function promptTimeline(path: string): { userAt: number; replyAt: number }[] {
 
 async function untilTranscript(path: string, replies: number) {
   const deadline = Date.now() + 180_000;
-  while (
-    !existsSync(path) ||
-    promptTimeline(path).length < replies
-  ) {
+  while (!existsSync(path) || promptTimeline(path).length < replies) {
     if (Date.now() > deadline)
       throw new Error(`no reply ${replies} in ${path} after 180 s`);
     await sleep(200);
@@ -1126,14 +1123,34 @@ async function scenarioColdStart() {
     const tsid = crypto.randomUUID();
     const tmuxLaunchedAt = Date.now();
     execFileSync("tmux", [
-      "new-session", "-d", "-s", tmuxId, "-x", "200", "-y", "50", "-c", cwd,
+      "new-session",
+      "-d",
+      "-s",
+      tmuxId,
+      "-x",
+      "200",
+      "-y",
+      "50",
+      "-c",
+      cwd,
       `exec ${q(claudeBin())} --model haiku --session-id ${tsid} --permission-mode bypassPermissions --settings ${q(JSON.stringify({ promptSuggestionEnabled: false }))} ${q("Reply with exactly ONE.")}`,
-      ";", "set-option", "-t", tmuxId, "@singularity-host", "spike",
+      ";",
+      "set-option",
+      "-t",
+      tmuxId,
+      "@singularity-host",
+      "spike",
     ]);
     const tmuxPath = join(projectDir, `${tsid}.jsonl`);
     const t1 = await untilTranscript(tmuxPath, 1);
     const tmuxSecondAt = Date.now();
-    execFileSync("tmux", ["send-keys", "-t", tmuxId, "-l", "Reply with exactly TWO."]);
+    execFileSync("tmux", [
+      "send-keys",
+      "-t",
+      tmuxId,
+      "-l",
+      "Reply with exactly TWO.",
+    ]);
     await sleep(300);
     execFileSync("tmux", ["send-keys", "-t", tmuxId, "Enter"]);
     const t2 = await untilTranscript(tmuxPath, 2);
