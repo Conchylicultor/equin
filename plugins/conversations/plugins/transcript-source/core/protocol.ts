@@ -87,6 +87,14 @@ const ToolCallResultSchema = z.object({
   at: z.string(),
   content: z.string(),
   isError: z.boolean().optional(),
+  /**
+   * The session ended (a restart, a crash) while the call was in flight, and
+   * the CLI filled this result in when the session resumed (the line's
+   * `toolDenialKind: "interrupted"`). Still `isError` — it is no success, so
+   * nothing parses it as one — but it is no failure either: whether the call
+   * took effect is unknown. Absent otherwise.
+   */
+  outcomeUnknown: z.literal(true).optional(),
   /** The structured answer of an answered AskUserQuestion; absent otherwise. */
   questionAnswer: QuestionAnswerSchema.optional(),
   /**

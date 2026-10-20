@@ -154,7 +154,9 @@ function BashBody({
               <Scroll
                 as="pre"
                 className={`max-h-72 whitespace-pre-wrap break-words px-md py-sm ${
-                  result.isError ? "text-destructive" : "text-muted-foreground"
+                  result.isError && !result.outcomeUnknown
+                    ? "text-destructive"
+                    : "text-muted-foreground"
                 }`}
               >
                 {output ?? (

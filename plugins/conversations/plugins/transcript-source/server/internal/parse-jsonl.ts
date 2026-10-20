@@ -305,6 +305,10 @@ export async function buildJsonlEvents(
   const toolCallByUseId = new Map<string, ToolCallEvent>();
   // Deferred tool results whose call hasn't appeared yet
   const pendingResults: { toolUseId: string; result: ToolCallResult }[] = [];
+  // Lines whose tool result the CLI filled in on resume because the session
+  // ended mid-call (`toolDenialKind: "interrupted"`): the synthetic reply it
+  // appends to such a line ("No response requested.") is skipped below.
+  const sessionEndedResultLines = new Set<string>();
   // The launch preprompt is baked into the first user turn (wrapped in
   // <special_instructions>). Lift it out into a dedicated `preprompt` event so
   // it renders as a collapsed Instructions card, not as raw user text. Only
@@ -395,6 +399,7 @@ export async function buildJsonlEvents(
           role?: string;
           content?: unknown;
           id?: string;
+          model?: string;
           stop_reason?: string;
         }
       | undefined;
@@ -464,6 +469,8 @@ export async function buildJsonlEvents(
             (b) => b?.type === "tool_result",
           ).length,
         );
+        const sessionEnded = obj.toolDenialKind === "interrupted";
+        if (sessionEnded && uuid) sessionEndedResultLines.add(uuid);
         for (const block of content as RawBlock[]) {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           if (block?.type === "tool_result") {
@@ -473,6 +480,7 @@ export async function buildJsonlEvents(
               at: ts,
               content: extractText(block.content),
               isError: block.is_error === true ? true : undefined,
+              outcomeUnknown: sessionEnded ? true : undefined,
               toolReferences: extractToolReferences(block.content),
               questionAnswer,
             };
@@ -511,6 +519,15 @@ export async function buildJsonlEvents(
 
     if (type === "assistant" && msg?.role === "assistant") {
       if (!Array.isArray(msg.content)) continue;
+      // The CLI's own filler after a result it filled in on resume — no model
+      // wrote it, and the result's card already says the session ended.
+      if (
+        msg.model === "<synthetic>" &&
+        typeof obj.parentUuid === "string" &&
+        sessionEndedResultLines.has(obj.parentUuid)
+      ) {
+        continue;
+      }
       if (obj.isApiErrorMessage === true) {
         events.push({
           kind: "api-error",

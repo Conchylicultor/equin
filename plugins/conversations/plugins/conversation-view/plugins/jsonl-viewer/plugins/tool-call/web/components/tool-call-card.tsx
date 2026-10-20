@@ -116,6 +116,14 @@ export function ToolCallFrame({
 
 type ToolCallCardProps = Omit<ToolCallFrameProps, "name"> & {
   event: ToolCallEvent;
+  /**
+   * The session ended while the call was in flight, so whether it took effect
+   * is unknown (`result.outcomeUnknown`): drawn in the neutral tone with an
+   * "outcome unknown" note, not as a failure. Derived from the event unless
+   * the renderer overrides it — one whose tool cannot have taken effect (an
+   * AskUserQuestion, re-answerable as a message) passes `false`.
+   */
+  outcomeUnknown?: boolean;
 };
 
 /** A transcript tool call's card: name, error tone and in-flight state derived from the event. */
@@ -123,13 +131,17 @@ export function ToolCallCard({
   event,
   isError,
   running,
+  outcomeUnknown,
+  note,
   ...frame
 }: ToolCallCardProps) {
+  const unknown = outcomeUnknown ?? event.result?.outcomeUnknown === true;
   return (
     <ToolCallFrame
       {...frame}
       name={event.name || "tool_call"}
-      isError={isError ?? event.result?.isError}
+      isError={isError ?? (event.result?.isError === true && !unknown)}
+      note={note ?? (unknown ? "· session ended, outcome unknown" : undefined)}
       running={running ?? !event.result}
     />
   );

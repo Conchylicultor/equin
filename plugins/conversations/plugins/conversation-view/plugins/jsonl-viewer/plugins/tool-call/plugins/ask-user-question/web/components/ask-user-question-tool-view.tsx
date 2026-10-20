@@ -41,12 +41,14 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
     event,
     conversation.status === "ready" ? conversation.data : null,
   );
-  // The interrupt/rejection result is the tmux-era cancel-to-flush mechanism,
-  // not a failure — only style the card as an error for a genuine error.
+  // Neither the tmux-era cancel-to-flush interrupt nor the result the CLI
+  // filled in after a restart is a failure — a question changes nothing, so
+  // it is just unanswered there. Only a genuine error is styled as one.
   const resultIsInterrupt =
     event.result != null &&
     event.result.isError === true &&
-    isInterruptContent(event.result.content);
+    (event.result.outcomeUnknown === true ||
+      isInterruptContent(event.result.content));
   const showAsError = !resultIsInterrupt && (event.result?.isError ?? false);
   const answerTurn = findAnswerTurn(events, event.toolUseId);
 
@@ -64,6 +66,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
           summary={summaryFor(questions, [])}
           defaultOpen
           isError={showAsError}
+          outcomeUnknown={false}
         >
           {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the form from the question card above (no named margin utility) */}
           <Stack gap="sm" className="mt-2">
@@ -133,6 +136,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
       summary={summary}
       defaultOpen
       isError={showAsError}
+      outcomeUnknown={false}
     >
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the answered view from the question card above (no named margin utility) */}
       <Stack gap="md" className="mt-2">

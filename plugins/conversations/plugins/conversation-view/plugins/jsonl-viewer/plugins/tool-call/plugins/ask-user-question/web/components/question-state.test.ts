@@ -22,6 +22,17 @@ const cancelledQuestion: ToolCall = {
     content: "The user doesn't want to proceed with this tool use.",
   },
 };
+// What the CLI fills in on resume when the session ended mid-question.
+const restartedQuestion: ToolCall = {
+  ...askedQuestion,
+  result: {
+    at: AT,
+    isError: true,
+    outcomeUnknown: true,
+    content:
+      "[Tool call interrupted: the session ended before this call's result was recorded, so its outcome is unknown.]",
+  },
+};
 const answeredQuestion: ToolCall = {
   ...askedQuestion,
   result: {
@@ -81,6 +92,22 @@ describe("questionState", () => {
         idle,
       ),
     ).toBe("orphaned");
+  });
+
+  test("a call the session ended on (filled in on resume) is orphaned", () => {
+    expect(kindOf([restartedQuestion], restartedQuestion, idle)).toBe(
+      "orphaned",
+    );
+  });
+
+  test("an answer turn after a restart-filled call settles it", () => {
+    expect(
+      kindOf(
+        [restartedQuestion, userText(`${ANSWER_MARKER}\n- Which? → A`)],
+        restartedQuestion,
+        idle,
+      ),
+    ).toBe("settled");
   });
 
   test("an orphan in a conversation that can take no turn is settled", () => {

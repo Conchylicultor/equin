@@ -37,14 +37,18 @@ export function GenericToolView({ event }: ToolRendererProps) {
         <Scroll
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 separates the result block from the input block above
           className={`mt-2 max-h-96 rounded-md ${
-            event.result.isError ? "bg-destructive/10" : "bg-muted/60"
+            event.result.isError && !event.result.outcomeUnknown
+              ? "bg-destructive/10"
+              : "bg-muted/60"
           }`}
         >
           <Text
             as="pre"
             variant="caption"
             className={`whitespace-pre-wrap break-words p-sm ${
-              event.result.isError ? "text-destructive" : ""
+              event.result.isError && !event.result.outcomeUnknown
+                ? "text-destructive"
+                : ""
             }`}
           >
             {event.result.content || "(empty)"}

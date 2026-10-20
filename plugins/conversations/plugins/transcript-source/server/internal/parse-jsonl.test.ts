@@ -1,0 +1,80 @@
+import { describe, expect, test } from "bun:test";
+import { buildJsonlEvents } from "./parse-jsonl";
+
+// The session ended (a restart) while a tool call was in flight; on resume the
+// CLI fills the call's result in, then appends a synthetic reply to it.
+
+const AT = "2026-10-20T22:05:23.526Z";
+const PLACEHOLDER =
+  "[Tool call interrupted: the session ended before this call's result was recorded, so its outcome is unknown. Check whether it took effect before relying on it or running it again.]";
+
+const noImages = () => {
+  throw new Error("no image expected");
+};
+
+const toolUse = {
+  type: "assistant",
+  uuid: "a1",
+  parentUuid: null,
+  timestamp: AT,
+  message: {
+    role: "assistant",
+    id: "msg_1",
+    content: [{ type: "tool_use", id: "toolu_1", name: "Bash", input: {} }],
+  },
+};
+const resultLine = (extra: Record<string, unknown>, content: string) => ({
+  type: "user",
+  uuid: "u1",
+  parentUuid: "a1",
+  timestamp: AT,
+  message: {
+    role: "user",
+    content: [
+      { type: "tool_result", tool_use_id: "toolu_1", is_error: true, content },
+    ],
+  },
+  ...extra,
+});
+const syntheticReply = {
+  type: "assistant",
+  uuid: "a2",
+  parentUuid: "u1",
+  timestamp: AT,
+  message: {
+    role: "assistant",
+    id: "msg_2",
+    model: "<synthetic>",
+    content: [{ type: "text", text: "No response requested." }],
+  },
+};
+
+describe("buildJsonlEvents — a call the session ended on", () => {
+  test("its filled-in result is an error of unknown outcome, the synthetic reply dropped", async () => {
+    const events = await buildJsonlEvents(
+      [
+        toolUse,
+        resultLine({ toolDenialKind: "interrupted" }, PLACEHOLDER),
+        syntheticReply,
+      ],
+      noImages,
+    );
+    expect(events).toHaveLength(1);
+    const call = events[0];
+    if (call?.kind !== "tool-call") throw new Error("expected a tool call");
+    expect(call.result?.isError).toBe(true);
+    expect(call.result?.outcomeUnknown).toBe(true);
+  });
+
+  test("a genuine error keeps its known outcome and the reply after it", async () => {
+    const events = await buildJsonlEvents(
+      [toolUse, resultLine({}, "Exit code 1"), syntheticReply],
+      noImages,
+    );
+    const call = events[0];
+    if (call?.kind !== "tool-call") throw new Error("expected a tool call");
+    expect(call.result?.isError).toBe(true);
+    expect(call.result?.outcomeUnknown).toBeUndefined();
+    expect(events.map((e) => e.kind)).toEqual(["tool-call", "assistant-text"]);
+  });
+});

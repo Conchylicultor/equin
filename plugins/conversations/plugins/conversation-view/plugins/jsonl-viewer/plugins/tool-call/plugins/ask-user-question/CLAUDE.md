@@ -23,7 +23,9 @@ re-asks a call already in its transcript.
   never from the result's prose, whose wording the CLI changes across versions.
 - **asking** — the agent is mid-turn and the hold is not registered yet:
   read-only.
-- **orphaned** — unresolved (no result, or the tmux-era interrupt sentinel),
+- **orphaned** — unresolved (no result, the result the CLI fills in on resume
+  after a restart killed the session mid-question — `outcomeUnknown` — or the
+  tmux-era interrupt sentinel),
   the latest thing in the transcript, nothing holds it, and the conversation
   can take a turn: `MarkerAnswerForm` sends the answer as an
   `Answering your questions:` turn. The marker / interrupt `EventFilter`s,

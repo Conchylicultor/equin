@@ -22,7 +22,8 @@ type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
  * - `orphaned` — unresolved, the latest thing in the transcript, nothing holds
  *   it, and the conversation can take a turn: answered as a message
  *   (`MarkerAnswerForm`). The holder died — a crash, a restart, a hibernate
- *   kill, the move off the tmux runtime — or the tmux-era terminal cancelled it.
+ *   kill, the move off the tmux runtime (on resume the CLI fills the call in
+ *   as `outcomeUnknown`) — or the tmux-era terminal cancelled it.
  * - `settled` — answered, superseded by what came after, failed, or in a
  *   conversation that can take no turn: drawn read-only.
  */
@@ -43,10 +44,13 @@ export function questionState(
   toolCall: ToolCallEvent,
   conversation: QuestionHolderView | null,
 ): QuestionState {
-  // Unresolved: no result yet, or the interrupt sentinel the tmux-era terminal
-  // left when it cancelled the call to flush the answer through the input box.
+  // Unresolved: no result yet, the result the CLI filled in on resume after
+  // the session ended mid-question (a restart), or the interrupt sentinel the
+  // tmux-era terminal left when it cancelled the call to flush the answer
+  // through the input box.
   const unresolved =
     toolCall.result == null ||
+    toolCall.result.outcomeUnknown === true ||
     (toolCall.result.isError === true &&
       isInterruptContent(toolCall.result.content));
   if (!unresolved || !isLatest(events, toolCall)) return { kind: "settled" };
