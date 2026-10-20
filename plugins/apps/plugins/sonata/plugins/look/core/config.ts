@@ -7,7 +7,7 @@ import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
  *
  *  - `immersive` — the player's night stage (proto-1792113547-2qr6g7): a
  *                  blue-black lane with bar and beat rules, roomy rounded note
- *                  bars in one colour per track, ivory keys under a sky
+ *                  bars in one colour per track, crisp white/black keys under a sky
  *                  landing line. The default.
  *  - `flat`      — the Synthesia stage with flat keys: a dark lane, faint white
  *                  rules, opaque note bars, and keys as solid fills with strong

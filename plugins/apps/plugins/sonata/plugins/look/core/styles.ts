@@ -137,12 +137,13 @@ export interface SonataLookStyle {
  */
 /**
  * The Synthesia track palette: the first two sampled pixel-exact from
- * Synthesia (blue + green — its default right/left-hand colours), the rest
+ * Synthesia (green + blue — its default right/left-hand colours: a piano
+ * score's first track is the right hand, its second the left), the rest
  * extending the set in the same vivid-but-soft register.
  */
 const SYNTHESIA_TRACKS = [
-  "#87aacf", // 1 — Synthesia blue
-  "#a2e55b", // 2 — Synthesia green
+  "#a2e55b", // 1 — Synthesia green (right hand)
+  "#87aacf", // 2 — Synthesia blue (left hand)
   "#cf87c4", // 3 — magenta
   "#e5b15b", // 4 — amber
   "#5bd2cf", // 5 — cyan
@@ -197,7 +198,7 @@ export const SONATA_LOOK_STYLES: Record<SonataLook, SonataLookStyle> = {
   // The immersive player's night (proto-1792113547-2qr6g7, `roll: immersive`):
   // the stage's blue-black, a rule at every bar and a fainter one at every
   // beat, a column rule at every C (stronger) and F, roomy rounded bars in one
-  // colour per track whatever key they land on, ivory keys, and the sky accent
+  // colour per track whatever key they land on, the flat keys, and the sky accent
   // as the landing line at half strength.
   immersive: {
     laneBg: "#0d0d13",
@@ -205,8 +206,8 @@ export const SONATA_LOOK_STYLES: Record<SonataLook, SonataLookStyle> = {
     laneInk: "#f1efea",
     notes: { insetPx: 2.5, radiusPx: 5, accidentalShade: false },
     tracks: [
-      "#5f8ff0", // 1 — blue
-      "#a6e36b", // 2 — green
+      "#a6e36b", // 1 — green (right hand)
+      "#5f8ff0", // 2 — blue (left hand)
       "#c39bff", // 3 — lilac
       ...SYNTHESIA_TRACKS.slice(3),
     ],

@@ -83,7 +83,7 @@ plus a per-song reset.
   tracks before its chord tracks appear) can sequence on it.
 - **Synthesia colors, with a white-key / black-key pair per track.** `palette.ts`
   holds the **base** (white-key) color per slot — the first two sampled
-  pixel-exact from Synthesia (blue `#87aacf`, green `#a2e55b`); the rest extend
+  pixel-exact from Synthesia (green `#a2e55b` for track 1 — the right hand —, blue `#87aacf` for track 2, the left); the rest extend
   the set in the same register. The base is what the mixer swatch shows and what
   the keyboard lights with, cycled by track index. Each base also has a darker,
   slightly-more-saturated **accidental** partner (`accidentalColor`): exact for the
