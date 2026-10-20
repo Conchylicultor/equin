@@ -40,3 +40,9 @@ export {
 } from "./workflow-join";
 export type { UsageFold } from "./usage";
 export { emptyUsageFold, foldUsageLine } from "./usage";
+export type { ParentFacts } from "./parent-facts";
+export {
+  ParentFactsSchema,
+  conversationParentFacts,
+  parentFactsOf,
+} from "./parent-facts";

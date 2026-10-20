@@ -5,7 +5,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { ArtifactRow } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
-import { researchTitle } from "../internal/research-docs";
+import { researchTitle } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const scienceIcon = symbol("science");

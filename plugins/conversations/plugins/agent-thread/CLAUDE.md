@@ -105,10 +105,10 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
     - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
     - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/pending-turn` ×7
     - `primitives/live-state` ×6
-    - `conversations/conversation-view/jsonl-viewer` ×2
+    - `conversations/conversation-view/jsonl-viewer` ×3
     - `conversations/conversation-view/user-message` ×2
     - `conversations/conversation-view` ×2
     - `infra/endpoints` ×2

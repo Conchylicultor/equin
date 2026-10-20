@@ -6,7 +6,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export function EventCounter() {
   const { convId } = conversationPane.useParams();
-  const result = useLive(jsonlEvents, { id: convId });
+  // The whole transcript's count — the pane holds only its latest events.
+  const result = useLive(jsonlEvents.meta, { id: convId });
 
   if (result.status === "loading") return null;
   if (result.status === "error")
@@ -19,7 +20,7 @@ export function EventCounter() {
       />
     );
 
-  const count = result.data.length;
+  const { count } = result.data;
   if (count === 0) return null;
   return (
     <Text as="span" variant="count" tone="muted">

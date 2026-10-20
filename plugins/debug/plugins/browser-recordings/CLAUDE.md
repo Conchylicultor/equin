@@ -83,8 +83,11 @@ inside one `browser_batch` (one frame per call).
     - `primitives/overlay/image-viewer.ImageGallery`
     - `primitives/overlay/image-viewer.ViewerThumbnail`
 - Server:
-  - Contributes: `resource.declare` "browser-recordings.runs"
+  - Contributes:
+    - `resource.declare` "browser-recordings.runs"
+    - `conversations.artifacts.extractor` "browser-recording"
   - Uses:
+    - `conversations/conversation-view/artifacts.ConversationArtifactExtractor`
     - `infra/file-watcher.acquireDirWatch`
     - `network/live.serveValue`
   - Resources: `browser-recordings.runs` (push, notified)
@@ -96,7 +99,9 @@ inside one `browser_batch` (one frame per call).
     - `RecordingSource`
     - `RecordingStep`
   - Exports (values):
+    - `BROWSER_RECORDING_KIND`
     - `browserRecordingRuns`
+    - `extractBrowserRecordings`
     - `isRecordedToolCall`
     - `MANIFEST_FILE`
     - `RECORDED_BROWSER_TOOLS`

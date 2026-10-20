@@ -1,5 +1,6 @@
 import { defineHostService } from "@plugins/framework/plugins/server-core/core";
 import type { JsonlEvent } from "../../core";
+import type { TranscriptImageRead } from "./image-key";
 
 /** A transcript's events together with the signature they were read under. */
 export interface TranscriptSnapshot {
@@ -30,6 +31,13 @@ export interface TranscriptSourceImpl {
     conversationId: string,
     onChange: (snapshot: TranscriptSnapshot) => void,
   ): () => void;
+  /**
+   * The bytes of an image the transcript shows, by its key
+   * (`TranscriptImage.key`) — any transcript's, a sub-agent's included; the key
+   * says where they are (`readImageKey` answers it over the host's storage).
+   * Throws `TranscriptImageKeyError` on a string that is not a key.
+   */
+  image(key: string): Promise<TranscriptImageRead>;
 }
 
 export const TranscriptSource = defineHostService<TranscriptSourceImpl>(

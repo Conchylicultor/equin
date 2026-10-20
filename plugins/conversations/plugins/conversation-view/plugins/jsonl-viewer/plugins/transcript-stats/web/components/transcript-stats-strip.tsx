@@ -4,7 +4,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useActiveInView } from "@plugins/primitives/plugins/outline/plugins/scroll-spy/web";
 import {
   paneScrollScope,
-  useTranscriptEvents,
+  useTranscriptDrawn,
   useVisibleEvents,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { TranscriptStats } from "../slots";
@@ -19,7 +19,7 @@ export function TranscriptStatsStrip() {
   // The transcript the enclosing view draws — the conversation's own, or a
   // sub-agent's — never a re-fetch by conversation id, which inside a
   // sub-agent pane would name the PARENT and report its numbers instead.
-  const events = useTranscriptEvents();
+  const { events, firstSeq } = useTranscriptDrawn();
   // This strip is a sibling of the transcript scroller inside the pane frame,
   // not inside it, so the scroller has to be published rather than walked to.
   const scroller = paneScrollScope.useRoot();
@@ -46,15 +46,19 @@ export function TranscriptStatsStrip() {
     // No anchor yet (first paint) or a row that is no longer in the transcript:
     // the honest answer is the whole thing, which is also what the strip showed
     // before it could follow the reader at all.
-    if (!anchorEvent) return { events, atEnd: true };
+    if (!anchorEvent) return { events, firstSeq, atEnd: true };
     // Identity, not position: `visible` is a subsequence of `events` sharing its
     // element references, so this is exact where an index would be off by every
     // hidden row before it.
     const rawIndex = events.indexOf(anchorEvent);
-    if (rawIndex < 0) return { events, atEnd: true };
+    if (rawIndex < 0) return { events, firstSeq, atEnd: true };
     const atEnd = rawIndex === events.length - 1;
-    return { events: atEnd ? events : events.slice(0, rawIndex + 1), atEnd };
-  }, [events, visible, anchor]);
+    return {
+      events: atEnd ? events : events.slice(0, rawIndex + 1),
+      firstSeq,
+      atEnd,
+    };
+  }, [events, firstSeq, visible, anchor]);
 
   return (
     <Pin to="bottom" stretch offset="sm" layer="raised" decorative>

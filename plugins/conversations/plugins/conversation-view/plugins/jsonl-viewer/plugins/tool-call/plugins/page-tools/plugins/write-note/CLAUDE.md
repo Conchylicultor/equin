@@ -14,7 +14,6 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageRefChip`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageToolError`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageWriteReport`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.parsePageApplyReport`
     - `primitives/css/spacing.Stack`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`

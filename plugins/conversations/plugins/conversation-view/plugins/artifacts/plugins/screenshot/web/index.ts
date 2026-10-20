@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConversationArtifacts } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
-import { SCREENSHOT_KIND, extractScreenshots } from "./internal/screenshots";
+import { SCREENSHOT_KIND } from "../core";
 import {
   SCREENSHOT_ICON,
   ScreenshotSection,
@@ -14,8 +14,6 @@ export default {
       id: SCREENSHOT_KIND,
       label: "Screenshots",
       icon: SCREENSHOT_ICON,
-      origin: "consumed",
-      extract: extractScreenshots,
       Section: ScreenshotSection,
     }),
   ],

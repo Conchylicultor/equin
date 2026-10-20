@@ -95,8 +95,8 @@ memo degrades to a full chain re-read on every push.
     - `host-service:conversations.transcript-source` "conversations.transcript-source"
   - Uses:
     - `conversations/session-chain.listSessionChain`
-    - `conversations/transcript-source.buildJsonlEvents`
-    - `conversations/transcript-source.mergeChainLines`
+    - `conversations/transcript-source.encodeImageKey`
+    - `conversations/transcript-source.TranscriptLines`
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.CLAUDE_PROJECTS_DIR`

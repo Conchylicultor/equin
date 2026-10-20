@@ -98,6 +98,8 @@ export function useActiveInView(
 ): string | null {
   const [active, setActive] = useState<string | null>(null);
   const watcherRef = useRef<InViewWatcher | null>(null);
+  // The scroller the watcher measures against: where later elements mount.
+  const watcherRootRef = useRef<HTMLElement | null>(null);
   // The reverse of `resolve`, filled at enrollment: the watcher callback hands
   // back Elements, and the ids are opaque strings with no DOM contract of their
   // own (a caller may well have one; a generic primitive cannot assume it). A
@@ -118,6 +120,7 @@ export function useActiveInView(
     return () => {
       watcherRef.current?.disconnect();
       watcherRef.current = null;
+      watcherRootRef.current = null;
       builtForRef.current = null;
       idOfRef.current = new WeakMap();
       onScreenRef.current = new Set();
@@ -130,8 +133,8 @@ export function useActiveInView(
 
   useEffect(() => {
     /**
-     * One enrollment pass. Returns whether we are now watching — i.e. whether
-     * there is anything left to retry.
+     * One enrollment pass. Returns whether it is done: watching, with every id's
+     * element enrolled — nothing left to retry.
      */
     const enroll = (): boolean => {
       const currentIds = idsRef.current;
@@ -195,26 +198,33 @@ export function useActiveInView(
           { root: findScrollParent(first), rootMargin },
         );
         watcherRef.current = watcher;
+        watcherRootRef.current = findScrollParent(first);
         builtForRef.current = position;
       }
 
+      let complete = true;
       for (const id of currentIds) {
         const el = resolveLatest(id);
-        if (!el) continue;
+        if (!el) {
+          complete = false;
+          continue;
+        }
         idOf.set(el, id);
         // Cheap for an element already watched — the watcher owns that rule.
         // Its WeakSet is per-watcher, so a freshly built one re-observes every
         // element here rather than inheriting the retired watcher's enrollment.
         watcher.observe(el);
       }
-      return true;
+      return complete;
     };
 
     if (enroll()) return;
 
     /**
-     * The sections exist but their elements do not yet. Watch the document until
-     * they arrive, then enroll and stop watching.
+     * Some sections exist but their elements do not yet — none at all (not
+     * rendered yet), or only some (a surface that loads older content as the
+     * reader scrolls up mounts its rows later). Watch for them until every one
+     * has arrived, then enroll and stop watching.
      *
      * A retry is REQUIRED, and cannot be keyed on the caller's props. Hosts
      * routinely publish their outline before the surface that renders it: the
@@ -225,14 +235,19 @@ export function useActiveInView(
      * is ever current. Treating "resolved nothing" as terminal is the absorbed
      * failure; this is the fix.
      *
-     * Push-based and self-disarming (no polling): it costs one `resolve` per
-     * mutation batch, only during the gap, and disconnects on the first success.
+     * Push-based and self-disarming (no polling): it costs one `resolve` per id
+     * per mutation batch, only while some id is unmounted, and disconnects once
+     * all are enrolled. Once a watcher exists the mutations watched are its
+     * scroller's, not the whole document's.
      */
     if (idsRef.current.length === 0) return;
     const pending = new MutationObserver(() => {
       if (enroll()) pending.disconnect();
     });
-    pending.observe(document.body, { childList: true, subtree: true });
+    pending.observe(watcherRootRef.current ?? document.body, {
+      childList: true,
+      subtree: true,
+    });
     return () => pending.disconnect();
   }, [idsKey, idsRef, resolveLatest, resolve, position]);
 

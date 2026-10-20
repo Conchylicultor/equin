@@ -15,7 +15,7 @@ export { RelationMarker } from "./components/relation-marker";
 
 export default {
   description:
-    "Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (a pure extractor over transcript events plus its own section), the aggregation over the already-open jsonl-events subscription, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind.",
+    "Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (its own section; its pure extractor contributes to the server-side ConversationArtifactExtractor), the server-derived whole-transcript aggregation, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind.",
   slots: ConversationArtifacts,
   contributions: [
     Conversation.ActionBar({

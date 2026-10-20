@@ -8,7 +8,7 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { resolveConversationTranscriptPaths } from "./resolve-chain";
-import { readJsonlEventsFromChain } from "./parse-jsonl";
+import { readChain, type ChainRead } from "./parse-jsonl";
 import { transcriptChainSignature } from "./chain-signature";
 import { notifySessionTranscriptWrites } from "./session-writes";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
@@ -60,8 +60,12 @@ export interface WatchSpec<T> {
   key: string;
   /** Resolve what to watch. Called on creation, on every refresh, and — for a discovered room — on every event. */
   resolve: () => Promise<WatchTargets>;
-  /** Read the room's value from the resolved paths. */
-  read: (paths: readonly string[]) => Promise<T>;
+  /**
+   * Read the room's value from the resolved paths. `previous` is the value it
+   * last read (undefined on the first read), for a reader that continues from
+   * it rather than starting over — a transcript reads only what was appended.
+   */
+  read: (paths: readonly string[], previous: T | undefined) => Promise<T>;
   /**
    * Refresh group. `refreshWatchTag(tag)` re-resolves and re-processes every room
    * carrying it — how one authority (a recorded session switch) reaches every
@@ -196,17 +200,19 @@ export function watchPaths<T>(
   spec: WatchSpec<T>,
   onChange: (snapshot: PathsSnapshot<T>) => void,
 ): () => void {
-  // One cast, at the one boundary where a heterogeneous registry meets a typed
+  // Two casts, at the one boundary where a heterogeneous registry meets a typed
   // caller: the room stores `unknown`, and only this closure knows the T that
-  // `spec.read` produced.
+  // `spec.read` produced — and is handed back as `previous`, since the room
+  // only ever passes `read` its own last value.
   const listener: Listener = (snapshot) =>
     onChange(snapshot as PathsSnapshot<T>);
+  const roomSpec = spec as unknown as WatchSpec<unknown>;
 
   let room = rooms.get(spec.key);
   if (!room) {
     room = {
       key: spec.key,
-      spec,
+      spec: roomSpec,
       paths: [],
       watchKeys: [],
       discovered: false,
@@ -349,7 +355,10 @@ async function processRoom(room: Room): Promise<void> {
     // on a size-only change and on set growth), and over-firing is safe.
     const signature = await transcriptChainSignature(room.paths);
     if (signature === room.lastSignature) return;
-    const value = await room.spec.read(room.paths);
+    const value = await room.spec.read(
+      room.paths,
+      room.lastSignature === "" ? undefined : room.lastValue,
+    );
     // Assigned together, AFTER a successful read. The old code stored the mtimes
     // before reading, so a transient read failure permanently dropped those events
     // until the next mtime change.
@@ -415,12 +424,27 @@ export function conversationChainTag(conversationId: string): string {
   return `conversation:${conversationId}`;
 }
 
+/** A transcript room's value: the chain read so far, and the events built from it. */
+interface TranscriptRead {
+  chain: ChainRead;
+  events: JsonlEvent[];
+}
+
+/** Read a transcript room's files, continuing its previous read: an append costs the bytes appended. */
+async function readTranscript(
+  paths: readonly string[],
+  previous: TranscriptRead | undefined,
+): Promise<TranscriptRead> {
+  const chain = await readChain(paths, previous?.chain);
+  return { chain, events: await chain.lines.events() };
+}
+
 /** Watch a conversation's whole session chain, merged and parsed. */
 export function watchTranscript(
   conversationId: string,
   onChange: (snapshot: TranscriptSnapshot) => void,
 ): () => void {
-  return watchPaths<JsonlEvent[]>(
+  return watchPaths<TranscriptRead>(
     {
       key: `transcript:${conversationId}`,
       refreshOn: conversationChainTag(conversationId),
@@ -429,9 +453,9 @@ export function watchTranscript(
       resolve: async () => ({
         paths: await resolveConversationTranscriptPaths(conversationId),
       }),
-      read: (paths) => readJsonlEventsFromChain([...paths]),
+      read: readTranscript,
     },
-    ({ value, signature }) => onChange({ events: value, signature }),
+    ({ value, signature }) => onChange({ events: value.events, signature }),
   );
 }
 
@@ -447,13 +471,13 @@ export function watchTranscriptFile(
   path: string,
   onChange: (snapshot: TranscriptSnapshot) => void,
 ): () => void {
-  return watchPaths<JsonlEvent[]>(
+  return watchPaths<TranscriptRead>(
     {
       key: `file:${path}`,
       resolve: () => Promise.resolve({ paths: [path] }),
-      read: (paths) => readJsonlEventsFromChain([...paths]),
+      read: readTranscript,
     },
-    ({ value, signature }) => onChange({ events: value, signature }),
+    ({ value, signature }) => onChange({ events: value.events, signature }),
   );
 }
 

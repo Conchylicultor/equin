@@ -1,10 +1,10 @@
-import { useMemo } from "react";
 import { formatTokenCount } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import {
   StatBadge,
-  useTranscriptRead,
+  useTranscriptFold,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web";
-import { readBudget } from "../budget";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { budgetFold, budgetStatus, type BudgetStatus } from "../../core";
 
 // The reading is the total charged, so it only ever climbs — and scrolling back
 // through history walks it down to what it was at the row on screen. There is
@@ -12,11 +12,20 @@ import { readBudget } from "../budget";
 // far beyond what a session spends, so a share of it means nothing and the stat
 // stays a plain grey reading rather than inventing an alarm.
 export function TokenBudgetStat() {
-  const { events } = useTranscriptRead();
-  const status = useMemo(() => readBudget(events), [events]);
-  // The harness has not reported an allowance in this stretch of the transcript.
-  if (!status) return null;
+  const budget = useTranscriptFold(budgetFold);
+  // A reading in the strip: nothing until it is known.
+  return matchResource(budget, {
+    loading: () => null,
+    error: () => null,
+    // The harness has not reported an allowance in this stretch of the transcript.
+    ready: (state) => {
+      const status = budgetStatus(state);
+      return status ? <BudgetBadge status={status} /> : null;
+    },
+  });
+}
 
+function BudgetBadge({ status }: { status: BudgetStatus }) {
   const { spent, spentThisRequest, requests, allowance } = status;
 
   const title = [

@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConversationArtifacts } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
-import { extractPrototypeHits, PROTOTYPE_KIND } from "./internal/extract";
+import { PROTOTYPE_KIND } from "../core";
 import {
   PrototypeSection,
   PROTOTYPE_ICON,
@@ -14,8 +14,6 @@ export default {
       id: PROTOTYPE_KIND,
       label: "Prototypes",
       icon: PROTOTYPE_ICON,
-      origin: "produced",
-      extract: extractPrototypeHits,
       Section: PrototypeSection,
     }),
   ],

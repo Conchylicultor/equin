@@ -1,32 +1,49 @@
 # jsonl-viewer
 
-## `jsonl-events`: the ETag and the value share one authority
+## `jsonl-events`: paged, newest first — the page never holds the whole transcript
 
-`jsonlEvents` (`core/protocol.ts`) is a `liveValue` keyed `{ id }` — one
-conversation's parsed transcript chain — read with `useLive(jsonlEvents, { id })`.
-Not loaded yet is `pending`; there is no `[]` placeholder that would read as a
-conversation that has said nothing. `jsonlEventsServed`
-(`server/internal/jsonl-events-resource.ts`) serves it on the external arm.
+`jsonlEvents` (`core/protocol.ts`) is a key-range-paged `liveValue` (query
+`{ id }`): rows `{ id, seq, event }`, newest first, 200 per page. A
+conversation opens on its latest events; `TranscriptView` loads older pages as
+the reader scrolls to the top (`older`, a top sentinel) and keeps the reader in
+place (`KeepAnchorAcross`). A change ships a keyed delta — an appended line is
+one row, a tool result landing an upsert of its call — never the array. Read it
+through `useTranscriptWindow(conversationId)` (events oldest first, row ids, the
+window's `firstSeq`, the paging handles); `jsonlEvents.meta` answers what only
+the whole transcript knows (count, the first assistant event's seq).
 
-Its `revalidate` and `loader` are the two **bound halves of one `createSignedMemo`**
-(`jsonl-events-cache.ts`): `memo.signature` feeds the former, `memo.get` the latter,
-over the same `transcriptChainSignature ∘ resolve` and `readJsonlEventsFromChain ∘
-resolve`. They cannot drift, because there is nothing to pass.
+**A reader of the whole conversation never folds the window.** A tail window is
+closed under "after" (every event after a loaded one is loaded), so a forward
+scan from a drawn event is complete (AskUserQuestion finding its answer); a
+whole-conversation fact is a small server-derived value instead:
+`serveTranscriptValue(value, derive)` (server) runs `derive` over every event in
+memory once per change and pushes only when the result changed;
+`useWholeTranscript(value, derive)` (web) reads it — or derives it locally when
+the view draws a whole transcript (a sub-agent's pane). Owners: the outline's
+turns, the task aggregate, background shells, sub-agent facts, artifacts. A
+stat "as of the row on screen" is a resumable fold (`transcript-stats`'
+`TranscriptFold` + `serveTranscriptFold` + `useTranscriptFold`): the server folds
+everything before the window, the page continues over the loaded rows. One
+tool call by id, from outside the transcript, is `transcriptToolCall`.
 
-Consequently **push delivery (the declaration's default) is a delivery choice, not
-a correctness crutch.** It was once the latter: `revalidate` `lstat`ed the chain
-(instantly fresh) while the loader returned a watcher-populated `cachedEvents` map
-(fresh only after the watcher fired), so a read landing in between shipped a stale
-value under a current ETag. Only value-carrying `update` frames masked it. Switching
-to `load: "on-demand"` — whose frames are a few bytes where push re-ships the entire
-event array — would have silently reintroduced a permanent stale pin. It is now a
-purely size-driven decision.
+**One watch, one memo, per conversation.** Every value served from a
+conversation's events (the pages, the meta, every derived value) reads
+`conversationEvents(id)` and watches through `watchConversationEvents`
+(`server/internal/conversation-events.ts`): a refcounted hub over ONE
+`TranscriptSource.watch`, whose snapshot primes the shared `createSignedMemo`
+(`jsonl-events-cache.ts`) before anyone is notified, so every recompute reads
+memory. The memo's signature and value come from one authority (the host's
+`TranscriptSource`), so push vs on-demand stays a delivery choice — see
+`research/2026-07-10-conversations-jsonl-events-shared-authority.md`. The
+desktop host reads only the bytes appended since its last read
+(`transcript-watcher`'s `readChain`).
 
-The transcript watcher runs for as long as the tuple has a subscriber
-(`whileSubscribed`: a synchronous `watchTranscript` start, a stop that unsubscribes
-and evicts the memo). It primes the memo from its `{ events, signature }` snapshot
-before calling `notify`, so the full chain read stays off the read path. See
-`research/2026-07-10-conversations-jsonl-events-shared-authority.md`.
+**Images ride by reference.** An event carries `TranscriptImage { key, mime }`;
+the page loads the bytes from `transcriptImageUrl(key)` (`GET
+/api/transcript-images/:key`, cached immutably — the key names its line by
+offset and uuid, or its file by mtime and size, and a changed source is a 410,
+never other bytes). Design and measurements:
+`research/2026-10-20-conversations-transcript-delivery-phase2.md`.
 
 ## Rules for `EventRenderer` contributors
 
@@ -134,7 +151,7 @@ back.
 
 ## Plugin reference
 
-- Description: Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Streams a conversation's transcript as structured events via the jsonl-events resource, read from the host's TranscriptSource (Claude's JSONL session log on the desktop).
+- Description: Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Streams a conversation's transcript as structured events via the paged jsonl-events resource (newest first; a change ships the rows it touched), read from the host's TranscriptSource (Claude's JSONL session log on the desktop), and serves its images by key.
 - Web:
   - Slots:
     - `JsonlViewer.EventRenderer`
@@ -155,13 +172,13 @@ back.
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×7
     - `primitives/collapsible` ×4
+    - `primitives/dom/auto-scroll` ×4
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
     - `conversations/conversation-view/pending-turn` ×3
     - `primitives/css/ui-kit` ×3
-    - `primitives/live-state` ×3
-    - `primitives/dom/auto-scroll` ×2
     - `primitives/relative-time` ×2
     - `primitives/slot-render` ×2
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
@@ -175,6 +192,7 @@ back.
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
+    - `primitives/dom/in-view.useInView`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
@@ -192,8 +210,11 @@ back.
     - `EventRendererMeta`
     - `OverlayContribution`
     - `SectionExpand`
+    - `TranscriptEvents`
+    - `TranscriptOlder`
     - `TranscriptSubject`
     - `TranscriptViewProps`
+    - `TranscriptWindow`
   - Exports (values):
     - `ContextFold`
     - `EventLine`
@@ -208,24 +229,56 @@ back.
     - `useJsonlConversationId`
     - `useRowMarkdown`
     - `useSectionExpand`
+    - `useTranscriptDrawn`
     - `useTranscriptEvents`
     - `useTranscriptSubject`
+    - `useTranscriptWindow`
     - `useVisibleEvents`
+    - `useWholeTranscript`
 - Server:
-  - Contributes: `resource.declare` "jsonl-events"
+  - Contributes:
+    - `resource.declare` "jsonl-events"
+    - `resource.declare` "jsonl-events.tool-call"
+    - `resource.declare` "jsonl-events:meta"
   - Uses:
-    - `conversations/transcript-source.transcriptChainReads`
+    - `conversations/transcript-source.TranscriptImageKeyError`
     - `conversations/transcript-source.TranscriptSource`
     - `infra/git/git-read-cache.createSignedMemo`
     - `network/live.serveValue`
-  - Resources: `jsonl-events` (push, notified)
+    - `network/live.sliceRange`
+  - Exports (values):
+    - `conversationEvents`
+    - `conversationEventsSignature`
+    - `serveTranscriptValue`
+    - `watchConversationEvents`
+  - Resources:
+    - `jsonl-events` (keyed, window, notified)
+    - `jsonl-events:meta` (push, notified)
+    - `jsonl-events.tool-call` (push, notified)
+  - Routes: `GET /api/transcript-images/:key`
 - Core:
   - Uses:
     - `conversations/transcript-source.JsonlEventSchema`
+    - `infra/endpoints.blob`
+    - `infra/endpoints.defineEndpoint`
+    - `infra/endpoints.interpolatePath`
     - `network/live.liveValue`
+  - Exports (types):
+    - `JsonlEventsQuery`
+    - `TranscriptEventRow`
+    - `TranscriptMeta`
   - Exports (values):
     - `eventKey`
+    - `getTranscriptImage`
+    - `JSONL_EVENTS_MAX`
+    - `JSONL_EVENTS_PAGE`
     - `jsonlEvents`
+    - `JsonlEventsQuerySchema`
+    - `seqKey`
+    - `TranscriptEventRowSchema`
+    - `transcriptImageUrl`
+    - `TranscriptMetaSchema`
+    - `transcriptToolCall`
 - Cross-plugin:
   - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/type-scale` ×8
@@ -233,8 +286,8 @@ back.
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×42
+  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×44
     - `tasks/outcome-report`
 - Exemptions:
   - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)

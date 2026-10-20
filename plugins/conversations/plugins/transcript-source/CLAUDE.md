@@ -31,18 +31,24 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `conversations/session-chain._conversationSessions`
     - `tasks/tasks-core._conversations`
   - Exports (types):
+    - `TranscriptImageIo`
+    - `TranscriptImageRead`
     - `TranscriptImageReader`
     - `TranscriptSnapshot`
     - `TranscriptSourceImpl`
   - Exports (values):
     - `buildJsonlEvents`
-    - `mergeChainLines`
+    - `encodeImageKey`
+    - `readImageKey`
     - `transcriptChainReads`
+    - `TranscriptImageKeyError`
+    - `TranscriptLines`
     - `TranscriptSource`
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
+    - `conversations/conversation-view/jsonl-viewer/outline`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/transcript-source/memory`
     - `conversations/transcript-watcher`
@@ -59,6 +65,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `TeammateMessage`
     - `TokenUsage`
     - `ToolCallResult`
+    - `TranscriptImage`
     - `UserTextSegment`
   - Exports (values):
     - `activeLineUuids`
@@ -76,6 +83,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `stripRelayBoilerplate`
     - `tokenUsageOf`
     - `TokenUsageSchema`
+    - `TranscriptImageSchema`
     - `unwrapPastedContent`
     - `unwrapRelayEnvelopes`
     - `userPromptText`

@@ -50,3 +50,43 @@ export const shellOutput = liveValue("background-shell-output", {
   schema: ShellOutputSchema,
   params: ["id", "shellId"],
 });
+
+const ShellStateSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("running") }),
+  z.object({
+    kind: z.literal("completed"),
+    exitCode: z.number().int().nullable(),
+  }),
+  z.object({
+    kind: z.literal("failed"),
+    exitCode: z.number().int().nullable(),
+  }),
+  z.object({ kind: z.literal("killed") }),
+  z.object({
+    kind: z.literal("ended-unrecognized"),
+    status: z.string(),
+    exitCode: z.number().int().nullable(),
+  }),
+  z.object({ kind: z.literal("ended-without-reporting") }),
+]);
+
+/** One shell as the transcript records it — see `ShellFact` (shells.ts). */
+export const ShellFactSchema = z.object({
+  shellId: z.string(),
+  toolUseId: z.string(),
+  command: z.string(),
+  description: z.string().optional(),
+  outputFile: z.string(),
+  startedAt: z.string(),
+  end: z.object({ state: ShellStateSchema, endedAt: z.string() }).nullable(),
+});
+
+/**
+ * A conversation's background shells as its WHOLE transcript records them
+ * (`shellFactsOf`), served by the server so a pane holding only the latest
+ * events still sees a shell launched long ago. Small: one entry per shell.
+ */
+export const conversationShellFacts = liveValue("background-shells.facts", {
+  schema: z.array(ShellFactSchema),
+  params: ["id"],
+});

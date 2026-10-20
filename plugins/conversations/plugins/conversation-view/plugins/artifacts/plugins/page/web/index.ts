@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConversationArtifacts } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
-import { extractPageHits, PAGE_KIND } from "./internal/extract";
+import { PAGE_KIND } from "../core";
 import { PageSection, PAGE_ICON } from "./components/page-section";
 
 export default {
@@ -11,8 +11,6 @@ export default {
       id: PAGE_KIND,
       label: "Pages",
       icon: PAGE_ICON,
-      origin: "produced",
-      extract: extractPageHits,
       Section: PageSection,
     }),
   ],

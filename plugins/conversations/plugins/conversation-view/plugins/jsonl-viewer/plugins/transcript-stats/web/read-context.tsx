@@ -9,6 +9,12 @@ export interface TranscriptRead {
    * of the rows and into the strip).
    */
   events: JsonlEvent[];
+  /**
+   * The seq of `events[0]`: how many events precede it that the page does not
+   * hold (a conversation opens on its latest events). A stat folds them through
+   * `useTranscriptFold`, never by reading `events` alone.
+   */
+  firstSeq: number;
   /** True while the strip is describing the whole transcript (scrolled to the end). */
   atEnd: boolean;
 }

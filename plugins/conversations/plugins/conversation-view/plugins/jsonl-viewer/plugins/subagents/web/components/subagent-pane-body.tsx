@@ -2,11 +2,9 @@ import type { ReactNode } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   ResourceErrorInline,
-  ResourceView,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import {
   JsonlViewer,
   TranscriptView,
@@ -72,16 +70,6 @@ function readAgentInput(input: unknown): {
   };
 }
 
-function findAgentToolEvent(
-  events: JsonlEvent[],
-  toolUseId: string,
-): ToolCallEvent | undefined {
-  return events.find(
-    (e): e is ToolCallEvent =>
-      e.kind === "tool-call" && e.toolUseId === toolUseId,
-  );
-}
-
 /**
  * The sub-agent a ref names, as the pane reads it: how it is going, and the
  * parent's `Agent` call that launched it when the parent transcript holds one.
@@ -101,10 +89,12 @@ type ResolvedRef =
 function resolveRef(
   subagents: ConversationSubagents,
   ref: SubagentRef,
-  parentEvents: JsonlEvent[],
 ): ResolvedRef {
   if (ref.by === "call") {
-    const agentToolEvent = findAgentToolEvent(parentEvents, ref.key);
+    const agentToolEvent =
+      subagents.kind === "known"
+        ? subagents.agentCalls.find((c) => c.toolUseId === ref.key)
+        : undefined;
     return {
       kind: "known",
       agentToolEvent,
@@ -309,58 +299,13 @@ export function SubagentPaneBody({
   /** Which sub-agent: by the call that launched it, or by its own id. */
   subagent: SubagentRef;
 }) {
-  const events = useLive(jsonlEvents, { id: conversationId });
-  // The parent transcript is gated HERE, so that below this line a missing
+  const subagents = useConversationSubagents(conversationId);
+  // The parent's `Agent` calls (read over the WHOLE parent transcript, served
+  // with the sub-agent set) are gated HERE, so that below this line a missing
   // `Agent` event means the parent really has not recorded one — never "it has
   // not arrived yet". Everything the pane says about the sub-agent is derived
   // from that event, so the distinction decides whether the header, the state
   // and the report are readings or guesses.
-  return (
-    <ResourceView
-      resource={events}
-      fallback={
-        <PaneMessage>
-          <Loading />
-        </PaneMessage>
-      }
-      errorFallback={(err) => (
-        <PaneMessage>
-          <Text as="div" variant="caption" className="text-destructive">
-            {err.message}
-          </Text>
-        </PaneMessage>
-      )}
-    >
-      {(parentEvents) => (
-        <SubagentPaneContent
-          conversationId={conversationId}
-          subagent={subagent}
-          parentEvents={parentEvents}
-        />
-      )}
-    </ResourceView>
-  );
-}
-
-function SubagentPaneContent({
-  conversationId,
-  subagent,
-  parentEvents,
-}: {
-  conversationId: string;
-  subagent: SubagentRef;
-  /** The parent transcript, already arrived. */
-  parentEvents: JsonlEvent[];
-}) {
-  const subagents = useConversationSubagents(conversationId);
-  const resolved = resolveRef(subagents, subagent, parentEvents);
-  const transcript = useLive(subagentTranscript, {
-    id: conversationId,
-    ...subagent,
-  });
-
-  // The sub-agent set could not be read: say so, with Retry — never a status
-  // that stays "pending" forever.
   if (subagents.kind === "failed") {
     return (
       <PaneMessage>
@@ -373,6 +318,37 @@ function SubagentPaneContent({
       </PaneMessage>
     );
   }
+  if (subagents.kind === "pending") {
+    return (
+      <PaneMessage>
+        <Loading />
+      </PaneMessage>
+    );
+  }
+  return (
+    <SubagentPaneContent
+      conversationId={conversationId}
+      subagent={subagent}
+      subagents={subagents}
+    />
+  );
+}
+
+function SubagentPaneContent({
+  conversationId,
+  subagent,
+  subagents,
+}: {
+  conversationId: string;
+  subagent: SubagentRef;
+  /** The sub-agent set, already arrived. */
+  subagents: Extract<ConversationSubagents, { kind: "known" }>;
+}) {
+  const resolved = resolveRef(subagents, subagent);
+  const transcript = useLive(subagentTranscript, {
+    id: conversationId,
+    ...subagent,
+  });
 
   if (resolved.kind === "missing") {
     return (

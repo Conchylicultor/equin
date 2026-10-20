@@ -12,7 +12,12 @@ import {
   FoldMotion,
   useCollapsible,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { useTaskAggregate, type TaskEntry } from "./use-task-aggregate";
+import {
+  useTaskAggregate,
+  type TaskAggregate,
+  type TaskEntry,
+} from "./use-task-aggregate";
+import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -87,7 +92,17 @@ function TaskRow({ task }: { task: TaskEntry }) {
 }
 
 export function TaskProgressOverlay() {
-  const { tasks, completedCount, totalCount, shouldShow } = useTaskAggregate();
+  const aggregate = useTaskAggregate();
+  // An overlay: nothing until the task list has landed (or if it cannot be read).
+  return matchResource(aggregate, {
+    loading: () => null,
+    error: () => null,
+    ready: (data) => <TaskProgress aggregate={data} />,
+  });
+}
+
+function TaskProgress({ aggregate }: { aggregate: TaskAggregate }) {
+  const { tasks, completedCount, totalCount, shouldShow } = aggregate;
   const [dismissed, setDismissed] = useState(false);
   const {
     open: expanded,

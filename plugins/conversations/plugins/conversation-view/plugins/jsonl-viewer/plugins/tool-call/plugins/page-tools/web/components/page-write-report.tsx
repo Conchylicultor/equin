@@ -1,6 +1,6 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import type { PageApplyReport } from "../internal/apply-report";
+import type { PageApplyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/core";
 
 /**
  * What the write did to the page, one chip per kind of change.

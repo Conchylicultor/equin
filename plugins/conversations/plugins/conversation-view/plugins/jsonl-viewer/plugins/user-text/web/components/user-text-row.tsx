@@ -1,7 +1,9 @@
 import type {
   JsonlEvent,
+  TranscriptImage,
   UserTextSegment,
 } from "@plugins/conversations/plugins/transcript-source/core";
+import { transcriptImageUrl } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import {
   useRowMarkdown,
   useSectionExpand,
@@ -16,13 +18,13 @@ import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/ima
 
 type UserTextEvent = Extract<JsonlEvent, { kind: "user-text" }>;
 
-function InlineImage({ mime, data }: { mime: string; data: string }) {
+function InlineImage({ image }: { image: TranscriptImage }) {
   // `image/svg+xml` → `svg`: the name is also the download's file name.
-  const ext = mime.slice(mime.indexOf("/") + 1).split("+")[0];
+  const ext = image.mime.slice(image.mime.indexOf("/") + 1).split("+")[0];
   return (
     <ViewerThumbnail
       image={{
-        src: `data:${mime};base64,${data}`,
+        src: transcriptImageUrl(image.key),
         name: `pasted-image.${ext}`,
         sourceLabel: "Pasted",
         alt: "Attached image",
@@ -46,7 +48,7 @@ function SegmentedContent({
         ) : (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1.5 spaces an inline image segment from the preceding text segment
           <div key={i} className="mt-1.5">
-            <InlineImage mime={seg.mime} data={seg.data} />
+            <InlineImage image={seg.image} />
           </div>
         ),
       )}

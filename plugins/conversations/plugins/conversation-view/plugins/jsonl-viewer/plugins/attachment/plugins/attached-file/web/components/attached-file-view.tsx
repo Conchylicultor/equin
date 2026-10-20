@@ -3,11 +3,17 @@ import { CodeListing } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
 import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import type { TranscriptImage } from "@plugins/conversations/plugins/transcript-source/core";
+import { transcriptImageUrl } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 
 interface ImageContent {
   type: "image";
   file: {
-    base64: string;
+    /**
+     * The image by reference: the transcript reader put its key where the
+     * line's base64 was, and the page loads the bytes by URL.
+     */
+    image: TranscriptImage;
     /** MIME type — `image/png` for every sample seen so far. */
     type: string;
     /** Byte size of the file the user attached, before base64 expansion. */
@@ -85,7 +91,7 @@ export function AttachedFileView({ event }: AttachmentRendererProps) {
   const content = readContent(event.attachment);
 
   if (content.type === "image") {
-    const { base64, type, originalSize, dimensions } = content.file;
+    const { image, originalSize, dimensions } = content.file;
     const width = dimensions?.originalWidth;
     const height = dimensions?.originalHeight;
     const path = payload.filename ?? payload.displayPath;
@@ -100,7 +106,7 @@ export function AttachedFileView({ event }: AttachmentRendererProps) {
       >
         <ViewerThumbnail
           image={{
-            src: `data:${type};base64,${base64}`,
+            src: transcriptImageUrl(image.key),
             // The `<uuid>.png` blob name: meaningless on the row, but it is
             // the file a download saves as.
             name: path

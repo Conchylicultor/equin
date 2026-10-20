@@ -4,8 +4,6 @@ export { PageRefChip } from "./components/page-ref-chip";
 export { PageWriteReport } from "./components/page-write-report";
 export { PageMarkdown } from "./components/page-markdown";
 export { PageToolError } from "./components/page-tool-error";
-export { parsePageApplyReport } from "./internal/apply-report";
-export type { PageApplyReport } from "./internal/apply-report";
 
 export default {
   collapsed: true,

@@ -11,7 +11,7 @@ export type {
   JumpToBottomButtonProps,
   JumpToBottomView,
 } from "./jump-to-bottom-button";
-export { scrollToBottom } from "./scroll-to-bottom";
+export { scrollToBottom, scrollToTop } from "./scroll-to-bottom";
 export type { ScrollToBottomOptions } from "./scroll-to-bottom";
 export { scrollChildIntoView } from "./scroll-child-into-view";
 export type {

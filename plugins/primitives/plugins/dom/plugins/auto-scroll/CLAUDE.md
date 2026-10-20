@@ -190,6 +190,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `restoreDocumentScroll`
     - `scrollChildIntoView`
     - `scrollToBottom`
+    - `scrollToTop`
     - `useEdgeAutoScroll`
     - `useStickyScroll`
 - Cross-plugin:

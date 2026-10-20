@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useLive } from "@plugins/network/plugins/live/web";
 import {
   foldResource,
   mapResource,
@@ -7,8 +6,11 @@ import {
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
-import { useVisibleEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { JSONL_EVENTS_MAX } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import {
+  useTranscriptWindow,
+  useVisibleEvents,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { useOptimisticConversationStatus } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useConversation } from "@plugins/conversations/web";
 import type { ConversationEntry } from "@plugins/conversations/core";
@@ -40,6 +42,20 @@ export function useVisibleTranscript(
   });
   const visible = useVisibleEvents(raw);
   return useMemo(() => mapResource(events, () => visible), [events, visible]);
+}
+
+/**
+ * A thread's transcript: the conversation whole (up to `jsonlEvents`' ceiling,
+ * in one page — a thread is drawn whole and cannot scroll back), kept live by
+ * keyed deltas.
+ */
+export function useThreadTranscript(
+  conversationId: string,
+): ResourceResult<JsonlEvent[]> {
+  const window = useTranscriptWindow(conversationId, {
+    limit: JSONL_EVENTS_MAX,
+  });
+  return useMemo(() => mapResource(window, (w) => w.events), [window]);
 }
 
 /**
@@ -77,9 +93,7 @@ export function useThread<D extends ThreadResultDef>(
   conversationId: string,
   results: readonly D[],
 ): ResourceResult<ThreadSnapshot<D> | null> {
-  const events = useVisibleTranscript(
-    useLive(jsonlEvents, { id: conversationId }),
-  );
+  const events = useVisibleTranscript(useThreadTranscript(conversationId));
   const row = useConversation(conversationId);
   const loadedRow = foldResource(row, {
     loading: () => null,

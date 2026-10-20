@@ -3,17 +3,13 @@ import { combineResources } from "@plugins/primitives/plugins/live-state/web";
 import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import { useConversationById } from "@plugins/conversations/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import {
   agentCallForSubagent,
-  agentCallsIn,
   agentCallJoin,
   describedSubagent,
-  agentResumeTimes,
+  conversationParentFacts,
   subagentActivity,
   subagentRunState,
-  teammateIdleTimes,
-  workflowCallsIn,
   workflowRunsOf,
   type DescribedSubagent,
   type LastStep,
@@ -25,6 +21,10 @@ import {
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
+
+function agentCallsOf(events: readonly JsonlEvent[]): ToolCallEvent[] {
+  return events.filter((e): e is ToolCallEvent => e.kind === "tool-call");
+}
 
 /**
  * One sub-agent of a conversation, with everything a list of them needs said
@@ -116,6 +116,12 @@ export type ConversationSubagents =
         agentToolEvent: ToolCallEvent | undefined;
       }) => SubagentStatus;
       /**
+       * Every `Agent` tool-call of the WHOLE parent transcript, in order —
+       * the pane's header and report read the call that launched its
+       * sub-agent from here, however far back it sits.
+       */
+      agentCalls: ToolCallEvent[];
+      /**
        * Every `Workflow` run one of the entries belongs to, in start order —
        * the parent a list draws a run's agents under. Derived here, once, from
        * the same reads, so the state a run row shows and the
@@ -141,7 +147,7 @@ export function useConversationSubagents(
   // pending, as the gate below reports.
   const params = conversationId === null ? null : { id: conversationId };
   const activity = useLive(subagentActivity, params);
-  const events = useLive(jsonlEvents, params);
+  const facts = useLive(conversationParentFacts, params);
   const conversation = useConversationById(conversationId);
 
   // Gate FIRST, derive after — nothing below may run on a half-arrived read.
@@ -150,7 +156,7 @@ export function useConversationSubagents(
   // finished sub-agent as running until it landed: a surface asserting
   // something false about the user's work, which is the whole reason this arm
   // exists.
-  const reads = combineResources({ activity, events });
+  const reads = combineResources({ activity, facts });
   if (reads.status === "error") {
     return { kind: "failed", error: reads.error, refetch: reads.refetch };
   }
@@ -159,14 +165,16 @@ export function useConversationSubagents(
   }
 
   const rows = reads.data.activity;
-  const eventList = reads.data.events;
-  const taskNotifications = eventList.filter(
+  const { idleTimes, resumeTimes } = reads.data.facts;
+  // The server filtered these by kind; the wire type is the whole event union.
+  const taskNotifications = reads.data.facts.taskNotifications.filter(
     (e): e is TaskNotificationEvent => e.kind === "task-notification",
   );
-  const agentCalls = agentCallsIn(eventList);
+  const agentCalls = agentCallsOf(reads.data.facts.agentCalls);
+  const workflowCalls = reads.data.facts.workflowCalls.filter(
+    (e): e is ToolCallEvent => e.kind === "tool-call",
+  );
   const conversationStatus = conversation.status;
-  const idleTimes = teammateIdleTimes(eventList);
-  const resumeTimes = agentResumeTimes(eventList);
   // A resumed sub-agent's later notifications carry the resuming
   // `SendMessage`'s tool-use id, so they join by its own id; and any completion
   // older than its newest resume ended an earlier turn.
@@ -174,7 +182,7 @@ export function useConversationSubagents(
     row: SubagentActivityRow | undefined,
   ): Pick<SubagentRunStateInput, "agentId" | "resumedAt"> => {
     if (row === undefined) return {};
-    const resumedAt = resumeTimes.get(row.agentId);
+    const resumedAt = resumeTimes[row.agentId];
     return resumedAt === undefined
       ? { agentId: row.agentId }
       : { agentId: row.agentId, resumedAt };
@@ -193,7 +201,7 @@ export function useConversationSubagents(
   ): Pick<SubagentRunStateInput, "teammateIdle"> => {
     if (row?.kind !== "described" || row.name === undefined) return {};
     if (nameCounts.get(row.name) !== 1) return {};
-    const idleAt = idleTimes.get(row.name);
+    const idleAt = idleTimes[row.name];
     return idleAt === undefined
       ? {}
       : { teammateIdle: { idleAt, newestTurnLineAt: row.newestTurnLineAt } };
@@ -201,7 +209,7 @@ export function useConversationSubagents(
 
   const workflowRuns = workflowRunsOf({
     rows,
-    workflowCalls: workflowCallsIn(eventList),
+    workflowCalls,
     taskNotifications,
     conversationStatus,
   });
@@ -255,6 +263,7 @@ export function useConversationSubagents(
   return {
     kind: "known",
     entries,
+    agentCalls,
     workflowRuns,
     statusOf: ({ toolUseId, agentToolEvent }) => {
       // The one sanctioned card → row join, which needs BOTH of a sub-agent's

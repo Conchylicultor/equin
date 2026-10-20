@@ -19,13 +19,11 @@
     - `primitives/pane.useOpenPane`
     - `primitives/syntax-highlight.HighlightedCode`
     - `ui/icons.Icon`
-  - Exports (types): `PageApplyReport`
   - Exports (values):
     - `PageMarkdown`
     - `PageRefChip`
     - `PageToolError`
     - `PageWriteReport`
-    - `parsePageApplyReport`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
@@ -35,6 +33,9 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
+- Core:
+  - Exports (types): `PageApplyReport`
+  - Exports (values): `parsePageApplyReport`
 - Sub-plugins:
   - **`edit-page`** — Renders edit_page MCP tool calls as a side-by-side markdown diff, with the edited page as a clickable chip and what the write changed.
   - **`read-page`** — Renders read_page MCP tool calls: the page the read was scoped to as a clickable chip, and the markdown it returned.

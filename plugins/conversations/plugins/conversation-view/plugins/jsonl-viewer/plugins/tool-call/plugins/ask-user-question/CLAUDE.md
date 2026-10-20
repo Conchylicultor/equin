@@ -82,19 +82,18 @@ answer lives inside the tool result, not in a message a rewind can cut at.
     - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
     - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/persistent-draft` ×4
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
+    - `conversations/conversation-view/jsonl-viewer` ×2
     - `primitives/css/selection-indicator` ×2
-    - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/pending-turn.sendConversationTurn`
     - `conversations/conversation-view/rewind.useGoBackToMessage`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversation`
     - `infra/endpoints.fetchEndpoint`
-    - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -102,7 +101,6 @@ answer lives inside the tool result, not in a message a rewind can cut at.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/dom/web-storage.defineStore`
-    - `primitives/live-state.ResourceErrorInline`
     - `ui/icons.Icon`
   - Exports (types):
     - `AnswerSelections`

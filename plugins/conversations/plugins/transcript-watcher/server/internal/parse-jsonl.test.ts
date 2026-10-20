@@ -1,7 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mergeChainLines } from "@plugins/conversations/plugins/transcript-source/server";
 import { readJsonlEvents, readJsonlEventsFromChain } from "./parse-jsonl";
 
 // readJsonlEvents only takes a file path (it reads via Bun.file), so each
@@ -380,94 +379,10 @@ const summaryLine = (text: string, at: string) => ({
   summary: text,
 });
 
-const chainFile = (path: string, lines: Record<string, unknown>[]) => ({
-  path,
-  raw: lines.map((l) => JSON.stringify(l)).join("\n") + "\n",
-});
-
-const uuidsOf = (lines: Record<string, unknown>[]) => lines.map((l) => l.uuid);
-const stampsOf = (lines: Record<string, unknown>[]) =>
-  lines.map((l) => l.timestamp);
 const textsOf = (events: { kind: string }[], kind: string) =>
   events
     .filter((e): e is { kind: string; text: string } => e.kind === kind)
     .map((e) => e.text);
-
-describe("mergeChainLines", () => {
-  test("superset fork — shared uuids appear once, with the ancestor's timestamps", () => {
-    // B is what Claude writes when it forks A: every one of A's lines is copied
-    // verbatim (same uuid, restamped), then B continues past the copy.
-    const a = chainFile("a.jsonl", [
-      userLine("u1", null, "hello", T1),
-      assistantLine("u2", "u1", "hi", T2),
-    ]);
-    const b = chainFile("b.jsonl", [
-      userLine("u1", null, "hello", FORK_T1),
-      assistantLine("u2", "u1", "hi", FORK_T2),
-      userLine("u3", "u2", "continue", T3),
-    ]);
-
-    const merged = mergeChainLines([a, b]);
-    expect(uuidsOf(merged)).toEqual(["u1", "u2", "u3"]);
-    expect(stampsOf(merged)).toEqual([T1, T2, T3]);
-  });
-
-  test("disjoint fresh session — nothing is deduped, chain order is preserved", () => {
-    const a = chainFile("a.jsonl", [userLine("u1", null, "hello", T1)]);
-    const c = chainFile("c.jsonl", [
-      userLine("c1", null, "fresh start", T3),
-      assistantLine("c2", "c1", "ok", T4),
-    ]);
-
-    expect(uuidsOf(mergeChainLines([a, c]))).toEqual(["u1", "c1", "c2"]);
-  });
-
-  test("midpoint fork — the ancestor's post-fork lines survive the merge itself", () => {
-    // The merge is uuid-dedup only; dropping `a2` is the branch filter's doing,
-    // which runs one level up. Asserted end-to-end below.
-    const a = chainFile("a.jsonl", [
-      userLine("u1", null, "hello", T1),
-      assistantLine("u2", "u1", "hi", T2),
-      userLine("a2", "u2", "ancestor kept talking", T3),
-    ]);
-    const b = chainFile("b.jsonl", [
-      userLine("u1", null, "hello", FORK_T1),
-      assistantLine("u2", "u1", "hi", FORK_T2),
-      userLine("b1", "u2", "fork kept talking", T4),
-    ]);
-
-    expect(uuidsOf(mergeChainLines([a, b]))).toEqual(["u1", "u2", "a2", "b1"]);
-  });
-
-  test("uuid-less metadata lines survive from every file, even when identical", () => {
-    // Dedup is keyed on uuid; metadata markers carry none, so each file's copy
-    // is kept. They are not in the forest, so the branch filter never sees them.
-    const a = chainFile("a.jsonl", [
-      { type: "ai-title", title: "shared" },
-      userLine("u1", null, "hello", T1),
-    ]);
-    const b = chainFile("b.jsonl", [
-      { type: "ai-title", title: "shared" },
-      userLine("u1", null, "hello", FORK_T1),
-      { type: "permission-mode", mode: "default" },
-    ]);
-
-    const merged = mergeChainLines([a, b]);
-    expect(merged.map((l) => l.type)).toEqual([
-      "ai-title",
-      "user",
-      "ai-title",
-      "permission-mode",
-    ]);
-  });
-
-  test("a malformed line is skipped; the rest of the file still parses", () => {
-    const files = [
-      { path: "a.jsonl", raw: `{"uuid":"u1"}\nnot json\n{"uuid":"u2"}\n` },
-    ];
-    expect(uuidsOf(mergeChainLines(files))).toEqual(["u1", "u2"]);
-  });
-});
 
 describe("readJsonlEventsFromChain", () => {
   test("superset fork — the copied spine renders once, at the ancestor's times", async () => {

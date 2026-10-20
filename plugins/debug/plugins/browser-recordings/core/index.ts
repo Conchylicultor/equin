@@ -14,3 +14,7 @@ export {
 } from "./internal/recorded-call";
 export { browserRecordingRuns } from "./internal/live";
 export type { BrowserRecordingRun } from "./internal/live";
+export {
+  BROWSER_RECORDING_KIND,
+  extractBrowserRecordings,
+} from "./internal/extract";

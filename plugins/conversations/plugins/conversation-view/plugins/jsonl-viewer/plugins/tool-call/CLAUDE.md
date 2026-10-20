@@ -108,7 +108,7 @@
   - **`page-tools`** [3 sub-plugins] — Shared appearance for the Singularity page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block.…
   - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
   - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
-  - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.
+  - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay. Serves a conversation's task list folded from its Task* tool calls over the whole transcript…
   - **`tool-search`** — Renders ToolSearch calls as the deferred tools they loaded: the tool names in the row, a select's not-found names flagged, a keyword search's query and match count.
   - **`web-search`** — Renders WebSearch calls as the query and its source count; opened, the model-written summary in full and the sources grouped by site, folded beneath it.
   - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.

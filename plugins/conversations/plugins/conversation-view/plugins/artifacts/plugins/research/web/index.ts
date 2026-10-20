@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConversationArtifacts } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
-import { RESEARCH_KIND, extractResearch } from "./internal/research-docs";
+import { RESEARCH_KIND } from "../core";
 import { RESEARCH_ICON, ResearchSection } from "./components/research-section";
 
 export default {
@@ -11,8 +11,6 @@ export default {
       id: RESEARCH_KIND,
       label: "Research",
       icon: RESEARCH_ICON,
-      origin: "produced",
-      extract: extractResearch,
       Section: ResearchSection,
     }),
   ],

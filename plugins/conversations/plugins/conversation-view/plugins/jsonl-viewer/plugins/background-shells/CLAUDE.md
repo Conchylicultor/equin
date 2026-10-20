@@ -14,9 +14,11 @@ When an agent runs `Bash` with `run_in_background: true`, Claude Code records:
 
 ## Discovery is a fold, not a read
 
-`backgroundShellsOf({ events, conversationStatus })` (core) is a pure fold over
-the `jsonl-events` value the conversation view already subscribes to — no new
-server read. A launch is a background `Bash` call whose result parses as the
+`backgroundShellsOf({ events, conversationStatus })` (core) is a pure fold, split in
+two: `shellFactsOf(events)` runs on the server over the WHOLE transcript (the
+served `background-shells.facts` value — the pane's `jsonl-events` holds only its
+latest window) and `shellsFromFacts(facts, conversationStatus)` applies liveness
+on the page. A launch is a background `Bash` call whose result parses as the
 acknowledgement; a result that does not is a failed launch, never a shell. The
 end joins the `task-notification` by `taskId === shellId` (fallback: the
 notification's `toolUseId`). A shell the agent stopped itself with a
@@ -117,8 +119,11 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
     - `useConversationShells`
     - `useShellOutput`
 - Server:
-  - Contributes: `resource.declare` "background-shell-output"
+  - Contributes:
+    - `resource.declare` "background-shell-output"
+    - `resource.declare` "background-shells.facts"
   - Uses:
+    - `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
     - `conversations/transcript-source.transcriptChainReads`
     - `conversations/transcript-watcher.readJsonlEventsFromChain`
     - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
@@ -136,20 +141,25 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
     - `BackgroundShell`
     - `BackgroundShellsInput`
     - `BackgroundShellState`
+    - `ShellFact`
     - `ShellLaunch`
     - `ShellOutput`
   - Exports (values):
     - `backgroundShellsOf`
     - `BASH_TOOL_NAME`
+    - `conversationShellFacts`
     - `exitCodeOfSummary`
     - `lastOutputLine`
     - `parseShellAck`
     - `SHELL_ID_PATTERN`
     - `SHELL_OUTPUT_TAIL_BYTES`
+    - `ShellFactSchema`
+    - `shellFactsOf`
     - `shellLaunchesIn`
     - `shellLaunchOf`
     - `shellOutput`
     - `ShellOutputSchema`
+    - `shellsFromFacts`
     - `stripAnsi`
     - `terminalText`
 - Cross-plugin:

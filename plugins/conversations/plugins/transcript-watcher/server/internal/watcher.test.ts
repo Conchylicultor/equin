@@ -18,16 +18,20 @@ void mock.module("./resolve-chain", () => ({
 // way to land a filesystem change strictly between `processRoom`'s signature probe
 // and its read — the interleaving the ordering contract is about.
 const parseJsonl = await import("./parse-jsonl");
-const realReadChain = parseJsonl.readJsonlEventsFromChain;
+const realReadChain = parseJsonl.readChain;
 let duringRead: (() => Promise<void>) | null = null;
 void mock.module("./parse-jsonl", () => ({
   readChainLines: parseJsonl.readChainLines,
   readJsonlEvents: parseJsonl.readJsonlEvents,
-  readJsonlEventsFromChain: async (paths: string[]) => {
+  readJsonlEventsFromChain: parseJsonl.readJsonlEventsFromChain,
+  readChain: async (
+    paths: readonly string[],
+    previous?: Parameters<typeof realReadChain>[1],
+  ) => {
     const hook = duringRead;
     duringRead = null;
     await hook?.();
-    return realReadChain(paths);
+    return realReadChain(paths, previous);
   },
 }));
 

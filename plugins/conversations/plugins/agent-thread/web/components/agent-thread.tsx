@@ -1,5 +1,4 @@
 import { useEffect, useMemo, type ReactNode } from "react";
-import { useLive } from "@plugins/network/plugins/live/web";
 import {
   ResourceErrorInline,
   ResourceView,
@@ -13,7 +12,6 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
@@ -32,7 +30,10 @@ import {
   threadStateOf,
   type ThreadResultDef,
 } from "../../core";
-import { useVisibleTranscript } from "../internal/use-thread";
+import {
+  useThreadTranscript,
+  useVisibleTranscript,
+} from "../internal/use-thread";
 import { AgentThreadView, type RenderThreadResult } from "./agent-thread-view";
 import { ThreadComposer } from "./composer";
 
@@ -207,7 +208,7 @@ export function AgentThread<D extends ThreadResultDef>({
   renderResult,
   placeholder = "Reply…",
 }: AgentThreadProps<D>) {
-  const raw = useLive(jsonlEvents, { id: conversationId });
+  const raw = useThreadTranscript(conversationId);
   const events = useVisibleTranscript(raw);
   const row = useConversation(conversationId);
   // The echoes stand until the transcript holds their turn.

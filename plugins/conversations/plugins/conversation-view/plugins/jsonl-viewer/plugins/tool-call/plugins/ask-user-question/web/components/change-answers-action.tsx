@@ -4,10 +4,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useLive } from "@plugins/network/plugins/live/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { useTranscriptEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { RowActionButton } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { useGoBackToMessage } from "@plugins/conversations/plugins/conversation-view/plugins/rewind/web";
 import { restoreAnswerDraft } from "./answer-draft";
@@ -41,14 +40,12 @@ export function ChangeAnswersAction({ event }: { event: JsonlEvent }) {
 
 function ChangeAnswersMenu({ event }: { event: ToolCallEvent }) {
   const { convId } = conversationPane.useParams();
-  const eventsResult = useLive(jsonlEvents, { id: convId });
-  // A failed read offers no rewind, deliberately: this is an optional row
-  // action, and the question card on the same row renders that read's failure.
-  if (eventsResult.status === "loading" || eventsResult.status === "error")
-    return null;
+  // The transcript this row is drawn in: a window of a long conversation
+  // still holds every event after this call, which is where its answer is.
+  const events = useTranscriptEvents();
   // Only an answer sent from here is a message a rewind can cut at; one given
   // in the terminal lives inside the tool result.
-  const answerTurn = findAnswerTurn(eventsResult.data, event.toolUseId);
+  const answerTurn = findAnswerTurn(events, event.toolUseId);
   if (answerTurn == null) return null;
   return (
     <ChangeAnswersMenuFor

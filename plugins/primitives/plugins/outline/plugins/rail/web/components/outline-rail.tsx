@@ -39,6 +39,20 @@ export interface OutlineRailProps {
    * click. Scope it to a container your host already holds.
    */
   resolve: (id: string) => Element | null;
+  /**
+   * An entry was picked whose element is not mounted (`resolve` gave null) —
+   * content the host has not loaded yet (the older part of a long
+   * transcript). The host brings it in and reveals it; without this, such a
+   * pick does nothing.
+   */
+  onUnmounted?: (id: string) => void;
+  /**
+   * How a pick scrolls to its element; `smooth` by default. `auto` (instant)
+   * for a host whose content can land ABOVE the target while it scrolls (one
+   * that loads older content as the top nears): a smooth scroll aims at an
+   * offset fixed when it starts, which that content moves.
+   */
+  revealBehavior?: ScrollBehavior;
   /** Extra affordance pinned under the expanded panel's list. */
   footer?: ReactNode;
   /** Accessible name of the `<nav>`. Defaults to "Outline". */
@@ -69,6 +83,8 @@ export function OutlineRail(props: OutlineRailProps): ReactElement | null {
 function OutlineRailBody({
   entries,
   resolve,
+  onUnmounted,
+  revealBehavior = "smooth",
   footer,
   label,
 }: OutlineRailProps): ReactElement {
@@ -89,9 +105,11 @@ function OutlineRailBody({
 
   const jump = useCallback(
     (id: string) => {
-      revealElement(resolve(id), { behavior: "smooth", block: "start" });
+      const element = resolve(id);
+      if (element === null && onUnmounted) onUnmounted(id);
+      else revealElement(element, { behavior: revealBehavior, block: "start" });
     },
-    [resolve],
+    [resolve, onUnmounted, revealBehavior],
   );
 
   const activeIndex = Math.max(

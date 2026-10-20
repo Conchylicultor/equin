@@ -6,10 +6,7 @@ import {
   BROWSER_RECORDING_ICON,
   RecordingsSection,
 } from "./components/recordings-section";
-import {
-  BROWSER_RECORDING_KIND,
-  extractBrowserRecordings,
-} from "./internal/extract";
+import { BROWSER_RECORDING_KIND } from "../core";
 
 export default {
   description:
@@ -23,10 +20,6 @@ export default {
       id: BROWSER_RECORDING_KIND,
       label: "Browser recordings",
       icon: BROWSER_RECORDING_ICON,
-      // Verification the agent ran on the way, like its screenshots — listed,
-      // never counted on the button as something the conversation made.
-      origin: "consumed",
-      extract: extractBrowserRecordings,
       Section: RecordingsSection,
     }),
   ],

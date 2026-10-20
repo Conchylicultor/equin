@@ -6,7 +6,7 @@ Renders Claude Code's native task tools (TaskCreate, TaskUpdate, TaskGet, TaskLi
 
 ## Plugin reference
 
-- Description: Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.
+- Description: Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay. Serves a conversation's task list folded from its Task* tool calls over the whole transcript (jsonl-viewer.task-tools.aggregate), for the progress overlay of a pane that holds only the latest events.
 - Web:
   - Contributes:
     - `JsonlViewerTool.Renderer` "TaskCreate" → `TaskCreateToolView`
@@ -18,7 +18,7 @@ Renders Claude Code's native task tools (TaskCreate, TaskUpdate, TaskGet, TaskLi
     - `JsonlViewer.Overlay` "task-progress" → `TaskProgressOverlay`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-    - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
+    - `conversations/conversation-view/jsonl-viewer.useWholeTranscript`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
     - `primitives/collapsible.FoldMotion`
@@ -34,7 +34,19 @@ Renders Claude Code's native task tools (TaskCreate, TaskUpdate, TaskGet, TaskLi
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/live-state.matchResource`
     - `ui/icons.Icon`
+- Server:
+  - Contributes: `resource.declare` "jsonl-viewer.task-tools.aggregate"
+  - Uses: `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
+- Core:
+  - Uses: `network/live.liveValue`
+  - Exports (types):
+    - `TaskAggregate`
+    - `TaskEntry`
+  - Exports (values):
+    - `buildAggregate`
+    - `conversationTaskAggregate`
 - Cross-plugin:
   - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×9

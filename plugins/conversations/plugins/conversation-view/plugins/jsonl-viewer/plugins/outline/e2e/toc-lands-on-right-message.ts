@@ -196,18 +196,25 @@ await withBrowser(async (h) => {
   // ids the outline hands the rail must BE the keys the transcript stamped on its
   // rendered user rows, in the same order. An entry pointing one row off, or at a
   // row an EventFilter hid, fails here before anything is even clicked.
+  //
+  // A long conversation opens on its latest events, so the rendered rows are
+  // the TAIL of the outline (older turns load as the reader scrolls up, or as
+  // an entry is clicked): they must match its last entries, in order.
   const userRows = await userRowKeys(page);
   r.note(`${userRows.length} user-text rows rendered`);
   const ids = entries.map((e) => e.id);
-  const firstMismatch = ids.findIndex((id, i) => id !== userRows[i]);
+  const tail = ids.slice(ids.length - userRows.length);
+  const firstMismatch = tail.findIndex((id, i) => id !== userRows[i]);
   r.ok(
-    "every entry names a rendered user message, in order",
-    ids.length === userRows.length && firstMismatch === -1,
-    ids.length !== userRows.length
+    "the rendered user messages are the outline's last entries, in order",
+    userRows.length > 0 &&
+      userRows.length <= ids.length &&
+      firstMismatch === -1,
+    userRows.length > ids.length
       ? `the outline lists ${ids.length} messages but ${userRows.length} user rows are rendered ` +
           `— the list and the transcript disagree about which events exist`
-      : `entry ${firstMismatch + 1} names ${ids[firstMismatch]} but the transcript's ` +
-          `${firstMismatch + 1}th user row is ${userRows[firstMismatch]}`,
+      : `entry ${ids.length - userRows.length + firstMismatch + 1} names ${tail[firstMismatch]} but the ` +
+          `matching rendered user row is ${userRows[firstMismatch]}`,
   );
 
   // Check a spread of entries, not just the first: the off-by-filter bug grows
@@ -235,6 +242,14 @@ await withBrowser(async (h) => {
       continue;
     }
     await button.click();
+    // An entry older than the loaded window loads it first.
+    await page
+      .waitForSelector(`[data-event-key="${attrValue(entry.id)}"]`, {
+        timeout: 30_000,
+      })
+      .catch((err: unknown) => {
+        if (!(err instanceof Error && err.name === "TimeoutError")) throw err;
+      });
     await settleScroll(page);
 
     const at = await targetPosition(page, entry.id);

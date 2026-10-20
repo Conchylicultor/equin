@@ -35,7 +35,7 @@ const OWN_WRITES = numArg("own-writes", 2);
 const GAP_MS = numArg("gap-ms", 1500);
 
 const SUBS: { key: string; params: Record<string, string> }[] = [
-  { key: "jsonl-events", params: { id: CONV } },
+  { key: "jsonl-viewer.outline.turns", params: { id: CONV } },
   { key: "subagent-activity", params: { id: CONV } },
   { key: "background-shell-output", params: { id: CONV, shellId: SHELL } },
   {

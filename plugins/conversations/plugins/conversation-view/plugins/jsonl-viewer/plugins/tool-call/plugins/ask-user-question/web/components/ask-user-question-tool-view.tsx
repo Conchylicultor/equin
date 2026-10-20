@@ -1,11 +1,9 @@
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { useLive } from "@plugins/network/plugins/live/web";
-import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { useTranscriptEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import {
   isInterruptContent,
   replyOf,
@@ -29,22 +27,15 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   const questions = Array.isArray(input?.questions) ? input.questions : [];
 
   const { convId } = conversationPane.useParams();
-  const eventsResult = useLive(jsonlEvents, { id: convId });
+  // The transcript this card is drawn in. On a long conversation that is its
+  // latest window — which holds every event after any event it holds, so the
+  // scans below (from this call forward) see all they would in the whole
+  // transcript.
+  const events = useTranscriptEvents();
   const conversation = useConversation(convId);
 
-  if (eventsResult.status === "loading" || conversation.status === "loading")
-    return null;
-  if (eventsResult.status === "error")
-    return (
-      <ResourceErrorInline
-        variant="inline"
-        subject="the question's answer state"
-        error={eventsResult.error}
-        refetch={eventsResult.refetch}
-      />
-    );
+  if (conversation.status === "loading") return null;
 
-  const events = eventsResult.data;
   const state = questionState(
     events,
     event,

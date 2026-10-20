@@ -21,6 +21,10 @@ import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  jsonlEvents,
+  JSONL_EVENTS_MAX,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import {
   loadResourceByKey,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
@@ -149,9 +153,15 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
   });
 
   test("the open conversation's transcript parses from its JSONL", async () => {
-    const events = (await loadResourceByKey("jsonl-events", {
-      id: DEMO_CONVERSATION_ID,
-    })) as { kind: string; name?: string }[];
+    // One page as large as the ceiling: the whole (short) transcript, newest first.
+    const rows = (await loadResourceByKey(
+      jsonlEvents.key,
+      jsonlEvents.query.encode(
+        { id: DEMO_CONVERSATION_ID },
+        { limit: JSONL_EVENTS_MAX, after: null, until: null },
+      ),
+    )) as { event: { kind: string; name?: string } }[];
+    const events = rows.map((r) => r.event).reverse();
     expect(events[0]?.kind).toBe("user-text");
     expect(
       events.filter((e) => e.kind === "tool-call").map((e) => e.name),

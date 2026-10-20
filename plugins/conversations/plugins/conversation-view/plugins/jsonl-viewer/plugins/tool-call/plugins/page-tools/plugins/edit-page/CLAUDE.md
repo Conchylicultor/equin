@@ -13,7 +13,6 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageRefChip`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageToolError`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageWriteReport`
-    - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.parsePageApplyReport`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`

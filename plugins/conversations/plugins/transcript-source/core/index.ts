@@ -3,10 +3,12 @@ export type {
   QuestionAnswer,
   TokenUsage,
   ToolCallResult,
+  TranscriptImage,
   UserTextSegment,
 } from "./protocol";
 export {
   JsonlEventSchema,
+  TranscriptImageSchema,
   QuestionAnswerSchema,
   TokenUsageSchema,
   PREPROMPT_TAG,

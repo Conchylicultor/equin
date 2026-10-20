@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConversationArtifacts } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
-import { SKILL_KIND, extractSkills } from "./internal/skills";
+import { SKILL_KIND } from "../core";
 import { SKILL_ICON, SkillSection } from "./components/skill-section";
 
 export default {
@@ -11,8 +11,6 @@ export default {
       id: SKILL_KIND,
       label: "Skills",
       icon: SKILL_ICON,
-      origin: "consumed",
-      extract: extractSkills,
       Section: SkillSection,
     }),
   ],

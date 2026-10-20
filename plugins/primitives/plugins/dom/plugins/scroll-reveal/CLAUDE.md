@@ -41,6 +41,7 @@ Extend this primitive rather than hand-rolling `scrollIntoView` again.
     - `apps/sonata/songsheet`
     - `apps/sonata/sources/ultimate-guitar`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/outline`
     - `page/editor`
     - `page/map`
     - `primitives/command-palette`

@@ -42,11 +42,15 @@ function isFoldable(role: ContextRole | undefined): boolean {
  *
  * A run never crosses a conversation event (a user prompt included), so the
  * per-prompt sections built on top of these items are unchanged.
+ *
+ * `answeredBefore`: `events` is a window that starts after the agent first
+ * answered (older events are not loaded), so every fold in it is an update.
  */
 export function groupContextRuns(
   events: readonly JsonlEvent[],
   roleOf: (event: JsonlEvent) => ContextRole | undefined,
   isHost: (event: JsonlEvent) => boolean,
+  answeredBefore = false,
 ): TranscriptItem[] {
   const firstAssistant = events.findIndex((e) => ASSISTANT_KINDS.has(e.kind));
   const items: TranscriptItem[] = [];
@@ -75,7 +79,8 @@ export function groupContextRuns(
       items[items.length - 1] = { ...prev, hosted: members };
     } else if (hasContext && members.length >= 2) {
       const phase =
-        firstAssistant === -1 || members[0]! < firstAssistant
+        !answeredBefore &&
+        (firstAssistant === -1 || members[0]! < firstAssistant)
           ? "session"
           : "update";
       items.push({ kind: "fold", phase, members });

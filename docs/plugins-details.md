@@ -5890,6 +5890,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/canvas`
               - `apps/prototypes/checkpoints`
               - `apps/prototypes/thumbnails`
+              - `conversations/conversation-view/artifacts/prototype`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/status.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts` (debt)
         - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, grouped (Pinned / In progress / Done) and filterable by a pin and a Done checkbox on every card (and in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
@@ -12672,10 +12673,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
           - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
           - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-        - Uses: 55 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
+        - Uses: 56 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
           - `conversations/conversation-view/pending-turn` ×7
           - `primitives/live-state` ×6
-          - `conversations/conversation-view/jsonl-viewer` ×2
+          - `conversations/conversation-view/jsonl-viewer` ×3
           - `conversations/conversation-view/user-message` ×2
           - `conversations/conversation-view` ×2
           - `infra/endpoints` ×2
@@ -13561,7 +13562,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Shared:
             - Exports (types): `AllowFiles`
             - Exports (values): `allowFiles`
-        - **`artifacts`** — Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (a pure extractor over transcript events plus its own section), the aggregation over the already-open jsonl-events subscription, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind.
+        - **`artifacts`** — Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (its own section; its pure extractor contributes to the server-side ConversationArtifactExtractor), the server-derived whole-transcript aggregation, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind. Serves what a conversation made, changed or looked at over its whole transcript (conversations.conversation-view.artifacts): owns the ConversationArtifactExtractor contribution each kind of artifact adds its pure extractor to, and runs every one over the transcript on the server.
           - Web:
             - Slots: `ConversationArtifacts.Kind`
             - Slot contributors:
@@ -13601,6 +13602,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RelationMarker`
               - `useCloseArtifacts`
               - `useConversationArtifacts`
+          - Server:
+            - Contributes: `resource.declare` "conversations.conversation-view.artifacts"
+            - Uses: `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
+            - Exports (values): `ConversationArtifactExtractor`
+          - Core:
+            - Uses: `network/live.liveValue`
+            - Exports (types):
+              - `ArtifactHit`
+              - `ArtifactItem`
+              - `ConversationArtifactSet`
+              - `KindExtractor`
+              - `Relation`
+            - Exports (values):
+              - `collectArtifacts`
+              - `conversationArtifacts`
+              - `ConversationArtifactSetSchema`
+              - `mergeHits`
+              - `RELATION_LABEL`
+              - `strongestRelation`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
@@ -13618,17 +13638,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/artifacts/screenshot`
               - `conversations/conversation-view/artifacts/skill`
               - `debug/browser-recordings`
-          - Core:
-            - Exports (types):
-              - `ArtifactHit`
-              - `ArtifactItem`
-              - `Relation`
-            - Exports (values):
-              - `mergeHits`
-              - `RELATION_LABEL`
-              - `strongestRelation`
           - Plugins:
-            - **`page`** — Singularity pages as a conversation artifact: every page the transcript's edit_page / write_agent_note / read_page calls acted on, listed as a row that opens the page beside the chat — or, for a call scoped to one block of a page, the block view. A write edited the page it wrote into and created every <agent-page> its report says it minted (each its own row), and a read referenced it. Keyed by the page id the apply report names, falling back to the block the call was scoped to; each key resolves through page-tree's useBlockTarget, titled with its page (and, for a block, its type's label).
+            - **`page`** — Singularity pages as a conversation artifact: every page the transcript's edit_page / write_agent_note / read_page calls acted on, listed as a row that opens the page beside the chat — or, for a call scoped to one block of a page, the block view. A write edited the page it wrote into and created every <agent-page> its report says it minted (each its own row), and a read referenced it. Keyed by the page id the apply report names, falling back to the block the call was scoped to; each key resolves through page-tree's useBlockTarget, titled with its page (and, for a block, its type's label). Server half of the page artifact kind: its pure extractor, run over the whole transcript by the artifacts host.
               - Web:
                 - Contributes: `ConversationArtifacts.Kind` "Pages"
                 - Uses:
@@ -13637,11 +13648,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/pages/page-tree.useBlockTargetTitle`
                   - `conversations/conversation-view/artifacts.ArtifactRow`
                   - `conversations/conversation-view/artifacts.ConversationArtifacts`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageApplyReport`
-                  - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.parsePageApplyReport`
                   - `primitives/css/spacing.Stack`
                   - `primitives/loading.Loading`
-            - **`prototype`** — Prototypes as a conversation artifact: every `proto-…` id the transcript names — in a tool input or in the agent's or user's own words — listed as a row that opens the mock beside the chat. A `prototype new` command created what it printed, a Write/Edit inside the folder edited it, anything else referenced it. Titles come from the live prototypes list.
+              - Server:
+                - Contributes: `conversations.artifacts.extractor` "page"
+                - Uses: `conversations/conversation-view/artifacts.ConversationArtifactExtractor`
+              - Core:
+                - Uses:
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageApplyReport`
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.parsePageApplyReport`
+                - Exports (values):
+                  - `extractPageHits`
+                  - `PAGE_KIND`
+            - **`prototype`** — Prototypes as a conversation artifact: every `proto-…` id the transcript names — in a tool input or in the agent's or user's own words — listed as a row that opens the mock beside the chat. A `prototype new` command created what it printed, a Write/Edit inside the folder edited it, anything else referenced it. Titles come from the live prototypes list. Server half of the prototype artifact kind: its pure extractor, run over the whole transcript by the artifacts host.
               - Web:
                 - Contributes: `ConversationArtifacts.Kind` "Prototypes"
                 - Uses:
@@ -13654,7 +13673,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/live-state.matchResource`
                   - `primitives/loading.Loading`
                   - `primitives/pane.useOpenPane`
-            - **`research`** — Research docs as a conversation artifact: the design docs it wrote, changed or read (research/*.md, and a sidequest's own), listed as rows that open in the file-peek pane beside the conversation.
+              - Server:
+                - Contributes: `conversations.artifacts.extractor` "prototype"
+                - Uses: `conversations/conversation-view/artifacts.ConversationArtifactExtractor`
+              - Core:
+                - Uses: `apps/prototypes/files.prototypeIdsIn`
+                - Exports (values):
+                  - `extractPrototypeHits`
+                  - `PROTOTYPE_KIND`
+            - **`research`** — Research docs as a conversation artifact: the design docs it wrote, changed or read (research/*.md, and a sidequest's own), listed as rows that open in the file-peek pane beside the conversation. Server half of the research artifact kind: its pure extractor, run over the whole transcript by the artifacts host.
               - Web:
                 - Contributes: `ConversationArtifacts.Kind` "Research"
                 - Uses:
@@ -13665,7 +13692,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/code/file-pane.filePeekPane`
                   - `primitives/css/spacing.Stack`
                   - `primitives/pane.useOpenPane`
-            - **`screenshot`** — Screenshots as a conversation artifact: every picture the agent read, shown as a four-up thumbnail grid that is one ← / → set in the full-window image viewer.
+              - Server:
+                - Contributes: `conversations.artifacts.extractor` "research"
+                - Uses: `conversations/conversation-view/artifacts.ConversationArtifactExtractor`
+              - Core:
+                - Exports (values):
+                  - `extractResearch`
+                  - `RESEARCH_KIND`
+                  - `researchPathOf`
+                  - `researchTitle`
+            - **`screenshot`** — Screenshots as a conversation artifact: every picture the agent read, shown as a four-up thumbnail grid that is one ← / → set in the full-window image viewer. Server half of the screenshot artifact kind: its pure extractor, run over the whole transcript by the artifacts host.
               - Web:
                 - Contributes: `ConversationArtifacts.Kind` "Screenshots"
                 - Uses:
@@ -13676,9 +13712,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/loading.Loading`
                   - `primitives/overlay/image-viewer.ImageGallery`
                   - `primitives/overlay/image-viewer.ViewerThumbnail`
+              - Server:
+                - Contributes: `conversations.artifacts.extractor` "screenshot"
+                - Uses: `conversations/conversation-view/artifacts.ConversationArtifactExtractor`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/density --space-sm`
-            - **`skill`** — Skills as a conversation artifact: every skill the agent loaded, as a wrapped strip of monospace name chips — a repo skill opens its SKILL.md in the file-peek pane, a plugin-packaged skill has no file here and says so.
+              - Core:
+                - Exports (values):
+                  - `extractScreenshots`
+                  - `isImagePath`
+                  - `SCREENSHOT_KIND`
+                  - `screenshotName`
+            - **`skill`** — Skills as a conversation artifact: every skill the agent loaded, as a wrapped strip of monospace name chips — a repo skill opens its SKILL.md in the file-peek pane, a plugin-packaged skill has no file here and says so. Server half of the skill artifact kind: its pure extractor, run over the whole transcript by the artifacts host.
               - Web:
                 - Contributes: `ConversationArtifacts.Kind` "Skills"
                 - Uses:
@@ -13691,8 +13736,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/link-chip.LinkChip`
                   - `primitives/pane.useOpenPane`
+              - Server:
+                - Contributes: `conversations.artifacts.extractor` "skill"
+                - Uses: `conversations/conversation-view/artifacts.ConversationArtifactExtractor`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/density --space-sm`
+              - Core:
+                - Exports (values):
+                  - `extractSkills`
+                  - `PACKAGED_SKILL_REASON`
+                  - `SKILL_KIND`
+                  - `skillFilePath`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Web:
             - Contributes: `Demo.Resource` "edited-files"
@@ -14068,7 +14122,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/shape --spacing`
           - Shared:
             - Exports (values): `holdAndExit`
-        - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Streams a conversation's transcript as structured events via the jsonl-events resource, read from the host's TranscriptSource (Claude's JSONL session log on the desktop).
+        - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Streams a conversation's transcript as structured events via the paged jsonl-events resource (newest first; a change ships the rows it touched), read from the host's TranscriptSource (Claude's JSONL session log on the desktop), and serves its images by key.
           - Web:
             - Slots:
               - `JsonlViewer.EventRenderer`
@@ -14089,13 +14143,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 42 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 49 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `primitives/live-state` ×7
               - `primitives/collapsible` ×4
+              - `primitives/dom/auto-scroll` ×4
               - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
               - `conversations/conversation-view/pending-turn` ×3
               - `primitives/css/ui-kit` ×3
-              - `primitives/live-state` ×3
-              - `primitives/dom/auto-scroll` ×2
               - `primitives/relative-time` ×2
               - `primitives/slot-render` ×2
               - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
@@ -14109,6 +14163,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
               - `primitives/css/text.Text`
+              - `primitives/dom/in-view.useInView`
               - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
@@ -14126,8 +14181,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EventRendererMeta`
               - `OverlayContribution`
               - `SectionExpand`
+              - `TranscriptEvents`
+              - `TranscriptOlder`
               - `TranscriptSubject`
               - `TranscriptViewProps`
+              - `TranscriptWindow`
             - Exports (values):
               - `ContextFold`
               - `EventLine`
@@ -14142,24 +14200,56 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useJsonlConversationId`
               - `useRowMarkdown`
               - `useSectionExpand`
+              - `useTranscriptDrawn`
               - `useTranscriptEvents`
               - `useTranscriptSubject`
+              - `useTranscriptWindow`
               - `useVisibleEvents`
+              - `useWholeTranscript`
           - Server:
-            - Contributes: `resource.declare` "jsonl-events"
+            - Contributes:
+              - `resource.declare` "jsonl-events"
+              - `resource.declare` "jsonl-events.tool-call"
+              - `resource.declare` "jsonl-events:meta"
             - Uses:
-              - `conversations/transcript-source.transcriptChainReads`
+              - `conversations/transcript-source.TranscriptImageKeyError`
               - `conversations/transcript-source.TranscriptSource`
               - `infra/git/git-read-cache.createSignedMemo`
               - `network/live.serveValue`
-            - Resources: `jsonl-events` (push, notified)
+              - `network/live.sliceRange`
+            - Exports (values):
+              - `conversationEvents`
+              - `conversationEventsSignature`
+              - `serveTranscriptValue`
+              - `watchConversationEvents`
+            - Resources:
+              - `jsonl-events` (keyed, window, notified)
+              - `jsonl-events:meta` (push, notified)
+              - `jsonl-events.tool-call` (push, notified)
+            - Routes: `GET /api/transcript-images/:key`
           - Core:
             - Uses:
               - `conversations/transcript-source.JsonlEventSchema`
+              - `infra/endpoints.blob`
+              - `infra/endpoints.defineEndpoint`
+              - `infra/endpoints.interpolatePath`
               - `network/live.liveValue`
+            - Exports (types):
+              - `JsonlEventsQuery`
+              - `TranscriptEventRow`
+              - `TranscriptMeta`
             - Exports (values):
               - `eventKey`
+              - `getTranscriptImage`
+              - `JSONL_EVENTS_MAX`
+              - `JSONL_EVENTS_PAGE`
               - `jsonlEvents`
+              - `JsonlEventsQuerySchema`
+              - `seqKey`
+              - `TranscriptEventRowSchema`
+              - `transcriptImageUrl`
+              - `TranscriptMetaSchema`
+              - `transcriptToolCall`
           - Cross-plugin:
             - Uses tokens: 23 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `ui/tokens/type-scale` ×8
@@ -14167,8 +14257,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 43 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×42
+            - Imported by: 45 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×44
               - `tasks/outcome-report`
           - Exemptions:
             - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
@@ -14722,8 +14812,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `useConversationShells`
                   - `useShellOutput`
               - Server:
-                - Contributes: `resource.declare` "background-shell-output"
+                - Contributes:
+                  - `resource.declare` "background-shell-output"
+                  - `resource.declare` "background-shells.facts"
                 - Uses:
+                  - `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
                   - `conversations/transcript-source.transcriptChainReads`
                   - `conversations/transcript-watcher.readJsonlEventsFromChain`
                   - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
@@ -14741,20 +14834,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `BackgroundShell`
                   - `BackgroundShellsInput`
                   - `BackgroundShellState`
+                  - `ShellFact`
                   - `ShellLaunch`
                   - `ShellOutput`
                 - Exports (values):
                   - `backgroundShellsOf`
                   - `BASH_TOOL_NAME`
+                  - `conversationShellFacts`
                   - `exitCodeOfSummary`
                   - `lastOutputLine`
                   - `parseShellAck`
                   - `SHELL_ID_PATTERN`
                   - `SHELL_OUTPUT_TAIL_BYTES`
+                  - `ShellFactSchema`
+                  - `shellFactsOf`
                   - `shellLaunchesIn`
                   - `shellLaunchOf`
                   - `shellOutput`
                   - `ShellOutputSchema`
+                  - `shellsFromFacts`
                   - `stripAnsi`
                   - `terminalText`
               - Cross-plugin:
@@ -14956,17 +15054,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses tokens:
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/shape --spacing`
-            - **`outline`** — The transcript's outline: one dash per user turn pinned to the right edge of the conversation, the current turn highlighted, expanding on hover into a clickable list of turns. An adapter over the outline rail primitive — this plugin owns only which turns exist and how a turn maps to its row.
+            - **`outline`** — The transcript's outline: one dash per user turn pinned to the right edge of the conversation, the current turn highlighted, expanding on hover into a clickable list of turns. An adapter over the outline rail primitive — this plugin owns only which turns exist and how a turn maps to its row. Serves a conversation's user turns over its whole transcript (jsonl-viewer.outline.turns), for the outline of a pane that holds only the latest events.
               - Web:
                 - Contributes: `JsonlViewer.Overlay` "outline" → `ConversationOutline`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.paneScrollScope`
-                  - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
+                  - `conversations/conversation-view/jsonl-viewer.TranscriptOlder`
+                  - `conversations/conversation-view/jsonl-viewer.useTranscriptDrawn`
                   - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
+                  - `conversations/conversation-view/jsonl-viewer.useWholeTranscript`
                   - `primitives/dom/auto-scroll.scrollToBottom`
+                  - `primitives/dom/scroll-reveal.revealElement`
                   - `primitives/icon-button.IconButton`
+                  - `primitives/live-state.matchResource`
                   - `primitives/outline/rail.OutlineRail`
+              - Server:
+                - Contributes: `resource.declare` "jsonl-viewer.outline.turns"
+                - Uses: `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
+              - Core:
+                - Uses:
+                  - `conversations/transcript-source.JsonlEvent`
+                  - `conversations/transcript-source.JsonlEventSchema`
+                  - `network/live.liveValue`
+                - Exports (types): `OutlineTurn`
+                - Exports (values):
+                  - `conversationTurns`
+                  - `OutlineTurnSchema`
+                  - `userTurnsOf`
             - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "preprompt" → `PrepromptRow`
@@ -15084,11 +15199,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/user-image`
                   - `conversations/conversation-view/jsonl-viewer/user-text`
                   - `conversations/conversation-view/rewind`
-            - **`subagents`** — The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts, and serves two live resources: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation.
+            - **`subagents`** — The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts, and serves two live resources: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation; plus the parent-transcript facts sub-agent state joins on (Agent / Workflow calls, task notifications, idle and resume times), folded over the whole parent transcript.
               - Web:
                 - Contributes: `Demo.Resource` "subagents"
-                - Uses: 25 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md)
-                  - `primitives/live-state` ×4
+                - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md)
+                  - `primitives/live-state` ×3
                   - `primitives/relative-time` ×3
                   - `conversations/conversation-view/jsonl-viewer` ×2
                   - `primitives/css/spacing` ×2
@@ -15121,7 +15236,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `resource.declare` "subagent-activity"
                   - `resource.declare` "subagent-transcript"
+                  - `resource.declare` "subagents.parent-facts"
                 - Uses:
+                  - `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
                   - `conversations/transcript-source.transcriptChainReads`
                   - `conversations/transcript-watcher.conversationChainTag`
                   - `conversations/transcript-watcher.readChainLines`
@@ -15151,6 +15268,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (types):
                   - `DescribedSubagent`
                   - `LastStep`
+                  - `ParentFacts`
                   - `SubagentActivityRow`
                   - `SubagentJoin`
                   - `SubagentRef`
@@ -15170,6 +15288,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `agentCallsIn`
                   - `agentResumeTimes`
                   - `classifyLastStep`
+                  - `conversationParentFacts`
                   - `describedSubagent`
                   - `DescribedSubagentSchema`
                   - `emptyUsageFold`
@@ -15178,6 +15297,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `lastStepOfLines`
                   - `LastStepSchema`
                   - `newestTurnLineAt`
+                  - `parentFactsOf`
+                  - `ParentFactsSchema`
                   - `SEND_MESSAGE_TOOL_NAME`
                   - `subagentActivity`
                   - `SubagentActivityPayloadSchema`
@@ -15453,19 +15574,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlRowActions.Item` "change-answers" → `ChangeAnswersAction`
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
                       - `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: 36 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
+                    - Uses: 35 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question/REFERENCE.md)
                       - `primitives/css/ui-kit` ×9
                       - `primitives/persistent-draft` ×4
                       - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
                       - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
+                      - `conversations/conversation-view/jsonl-viewer` ×2
                       - `primitives/css/selection-indicator` ×2
-                      - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                       - `conversations/conversation-view/pending-turn.sendConversationTurn`
                       - `conversations/conversation-view/rewind.useGoBackToMessage`
                       - `conversations/conversation-view.conversationPane`
                       - `conversations.useConversation`
                       - `infra/endpoints.fetchEndpoint`
-                      - `network/live.useLive`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/fill.Fill`
                       - `primitives/css/line.Line`
@@ -15473,7 +15593,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/dom/web-storage.defineStore`
-                      - `primitives/live-state.ResourceErrorInline`
                       - `ui/icons.Icon`
                     - Exports (types):
                       - `AnswerSelections`
@@ -15606,13 +15725,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/pane.useOpenPane`
                       - `primitives/syntax-highlight.HighlightedCode`
                       - `ui/icons.Icon`
-                    - Exports (types): `PageApplyReport`
                     - Exports (values):
                       - `PageMarkdown`
                       - `PageRefChip`
                       - `PageToolError`
                       - `PageWriteReport`
-                      - `parsePageApplyReport`
                   - Cross-plugin:
                     - Uses tokens:
                       - `ui/tokens/color-palette --destructive`
@@ -15622,6 +15739,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
                       - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/read-page`
                       - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/write-note`
+                  - Core:
+                    - Exports (types): `PageApplyReport`
+                    - Exports (values): `parsePageApplyReport`
                   - Plugins:
                     - **`edit-page`** — Renders edit_page MCP tool calls as a side-by-side markdown diff, with the edited page as a clickable chip and what the write changed.
                       - Web:
@@ -15632,7 +15752,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageRefChip`
                           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageToolError`
                           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageWriteReport`
-                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.parsePageApplyReport`
                           - `primitives/css/badge.Badge`
                           - `primitives/css/inline.Inline`
                           - `primitives/css/spacing.Stack`
@@ -15661,7 +15780,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageRefChip`
                           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageToolError`
                           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.PageWriteReport`
-                          - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools.parsePageApplyReport`
                           - `primitives/css/spacing.Stack`
                       - Cross-plugin:
                         - Uses tokens: `ui/tokens/shape --spacing`
@@ -15712,7 +15830,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/type-scale --font-size-caption`
                       - `ui/tokens/type-scale --font-weight-normal`
                       - `ui/tokens/type-scale --line-height-caption`
-                - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.
+                - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay. Serves a conversation's task list folded from its Task* tool calls over the whole transcript (jsonl-viewer.task-tools.aggregate), for the progress overlay of a pane that holds only the latest events.
                   - Web:
                     - Contributes:
                       - `JsonlViewerTool.Renderer` "TaskCreate" → `TaskCreateToolView`
@@ -15724,7 +15842,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `JsonlViewer.Overlay` "task-progress" → `TaskProgressOverlay`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                      - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
+                      - `conversations/conversation-view/jsonl-viewer.useWholeTranscript`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
                       - `primitives/collapsible.FoldMotion`
@@ -15740,7 +15858,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
+                      - `primitives/live-state.matchResource`
                       - `ui/icons.Icon`
+                  - Server:
+                    - Contributes: `resource.declare` "jsonl-viewer.task-tools.aggregate"
+                    - Uses: `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
+                  - Core:
+                    - Uses: `network/live.liveValue`
+                    - Exports (types):
+                      - `TaskAggregate`
+                      - `TaskEntry`
+                    - Exports (values):
+                      - `buildAggregate`
+                      - `conversationTaskAggregate`
                   - Cross-plugin:
                     - Uses tokens: 22 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/task-tools/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/task-tools/REFERENCE.md)
                       - `ui/tokens/color-palette` ×9
@@ -15861,7 +15991,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses tokens:
                       - `ui/tokens/color-palette --destructive`
                       - `ui/tokens/shape --spacing`
-            - **`transcript-stats`** — The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as far as the reader has scrolled, so scrolling back through history walks the numbers back with it.
+            - **`transcript-stats`** — The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as far as the reader has scrolled, so scrolling back through history walks the numbers back with it. serveTranscriptFold: serves a transcript stat's fold of everything before the page's window, which the strip continues over the loaded rows.
               - Web:
                 - Slots: `TranscriptStats.Item`
                 - Slot contributors:
@@ -15872,12 +16002,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.paneScrollScope`
-                  - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
+                  - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+                  - `conversations/conversation-view/jsonl-viewer.useTranscriptDrawn`
                   - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
+                  - `network/live.useLive`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/live-state.mapResource`
+                  - `primitives/live-state.readyResource`
+                  - `primitives/live-state.ResourceResult`
                   - `primitives/outline/scroll-spy.useActiveInView`
                   - `primitives/slot-render.defineRenderSlot`
                   - `ui/icons.Icon`
@@ -15888,7 +16023,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `StatBadge`
                   - `TranscriptStats`
+                  - `useTranscriptFold`
                   - `useTranscriptRead`
+              - Server:
+                - Uses:
+                  - `conversations/conversation-view/jsonl-viewer.conversationEvents`
+                  - `conversations/conversation-view/jsonl-viewer.watchConversationEvents`
+                  - `network/live.serveValue`
+                - Exports (values): `serveTranscriptFold`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --background`
@@ -15903,8 +16045,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/transcript-stats/token-budget`
                   - `conversations/conversation-view/jsonl-viewer/transcript-stats/usage`
                   - `conversations/conversation-view/running-agents`
+              - Core:
+                - Exports (types): `TranscriptFold`
+                - Exports (values):
+                  - `foldEvents`
+                  - `TRANSCRIPT_FOLD_PARAMS`
               - Plugins:
-                - **`token-budget`** — The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports the total spent rather than the number the harness prints, which is a padded per-request allowance handed to the model and so reads as a constant. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering.
+                - **`token-budget`** — The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports the total spent rather than the number the harness prints, which is a padded per-request allowance handed to the model and so reads as a constant. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering. Serves the token-budget stat's fold of a conversation's transcript before the page's window.
                   - Web:
                     - Contributes:
                       - `TranscriptStats.Item` "token-budget" → `TokenBudgetStat`
@@ -15914,15 +16061,52 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
-                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptRead`
-                - **`usage`** — Context and output token usage as a transcript stat: the current context window and the output produced, folded from each message's own usage record up to the reading position.
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptFold`
+                      - `primitives/live-state.matchResource`
+                  - Server:
+                    - Contributes: `resource.declare` "transcript-stats.token-budget.before"
+                    - Uses: `conversations/conversation-view/jsonl-viewer/transcript-stats.serveTranscriptFold`
+                  - Core:
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.foldEvents`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.TRANSCRIPT_FOLD_PARAMS`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptFold`
+                      - `network/live.liveValue`
+                    - Exports (types):
+                      - `BudgetState`
+                      - `BudgetStatus`
+                      - `ParsedBudget`
+                    - Exports (values):
+                      - `budgetFold`
+                      - `budgetStatus`
+                      - `isTotalTokensReminder`
+                      - `parseBudgetAttachment`
+                      - `parseBudgetText`
+                      - `readBudget`
+                      - `TOTAL_TOKENS_SUBTYPE`
+                - **`usage`** — Context and output token usage as a transcript stat: the current context window and the output produced, folded from each message's own usage record up to the reading position. Serves the usage stat's fold of a conversation's transcript before the page's window.
                   - Web:
                     - Contributes: `TranscriptStats.Item` "usage" → `UsageStat`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.formatTokenCount`
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
-                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptRead`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.useTranscriptFold`
+                      - `primitives/live-state.matchResource`
+                  - Server:
+                    - Contributes: `resource.declare` "transcript-stats.usage.before"
+                    - Uses: `conversations/conversation-view/jsonl-viewer/transcript-stats.serveTranscriptFold`
+                  - Core:
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.TRANSCRIPT_FOLD_PARAMS`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptFold`
+                      - `network/live.liveValue`
+                    - Exports (types):
+                      - `UsageState`
+                      - `UsageTotals`
+                    - Exports (values):
+                      - `usageFold`
+                      - `usageTotals`
             - **`user-image`** — Renders inline image thumbnails for user-image events.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "user-image" → `UserImageRow`
@@ -16490,15 +16674,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Conversation.AbovePromptInput` → `RunningAgentsBand`
               - `TranscriptStats.Item` "agents" → `AgentsStat`
-            - Uses: 37 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/running-agents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/running-agents/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/running-agents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/running-agents/REFERENCE.md)
               - `conversations/conversation-view/jsonl-viewer/background-shells` ×4
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×4
               - `primitives/collapsible` ×4
-              - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×3
               - `conversations/conversation-view/jsonl-viewer` ×3
               - `primitives/persistent-draft` ×3
               - `conversations/conversation-view/jsonl-viewer/subagents` ×2
               - `primitives/css/fill` ×2
               - `primitives/data-view` ×2
+              - `primitives/live-state` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent.agentReportPane`
               - `conversations/conversation-view.Conversation`
               - `primitives/css/clip.Clip`
@@ -16509,7 +16694,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/dom/web-storage.defineStore`
-              - `primitives/live-state.ResourceErrorInline`
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.ElapsedTime`
               - `ui/icons.Icon`
@@ -17611,18 +17795,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/session-chain._conversationSessions`
           - `tasks/tasks-core._conversations`
         - Exports (types):
+          - `TranscriptImageIo`
+          - `TranscriptImageRead`
           - `TranscriptImageReader`
           - `TranscriptSnapshot`
           - `TranscriptSourceImpl`
         - Exports (values):
           - `buildJsonlEvents`
-          - `mergeChainLines`
+          - `encodeImageKey`
+          - `readImageKey`
           - `transcriptChainReads`
+          - `TranscriptImageKeyError`
+          - `TranscriptLines`
           - `TranscriptSource`
       - Cross-plugin:
         - Imported by:
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/background-shells`
+          - `conversations/conversation-view/jsonl-viewer/outline`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/transcript-source/memory`
           - `conversations/transcript-watcher`
@@ -17639,6 +17829,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TeammateMessage`
           - `TokenUsage`
           - `ToolCallResult`
+          - `TranscriptImage`
           - `UserTextSegment`
         - Exports (values):
           - `activeLineUuids`
@@ -17656,6 +17847,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stripRelayBoilerplate`
           - `tokenUsageOf`
           - `TokenUsageSchema`
+          - `TranscriptImageSchema`
           - `unwrapPastedContent`
           - `unwrapRelayEnvelopes`
           - `userPromptText`
@@ -17666,8 +17858,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `host-service:conversations.transcript-source` "conversations.transcript-source"
             - Uses:
-              - `conversations/transcript-source.buildJsonlEvents`
-              - `conversations/transcript-source.mergeChainLines`
+              - `conversations/transcript-source.readImageKey`
+              - `conversations/transcript-source.TranscriptImageIo`
+              - `conversations/transcript-source.TranscriptLines`
               - `conversations/transcript-source.TranscriptSnapshot`
               - `conversations/transcript-source.TranscriptSource`
               - `conversations/transcript-source.TranscriptSourceImpl`
@@ -17685,8 +17878,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `host-service:conversations.transcript-source` "conversations.transcript-source"
         - Uses:
           - `conversations/session-chain.listSessionChain`
-          - `conversations/transcript-source.buildJsonlEvents`
-          - `conversations/transcript-source.mergeChainLines`
+          - `conversations/transcript-source.encodeImageKey`
+          - `conversations/transcript-source.TranscriptLines`
           - `infra/file-watcher.defineFileWatcher`
           - `infra/file-watcher.FileWatcher`
           - `infra/paths.CLAUDE_PROJECTS_DIR`
@@ -19131,8 +19324,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/image-viewer.ImageGallery`
           - `primitives/overlay/image-viewer.ViewerThumbnail`
       - Server:
-        - Contributes: `resource.declare` "browser-recordings.runs"
+        - Contributes:
+          - `resource.declare` "browser-recordings.runs"
+          - `conversations.artifacts.extractor` "browser-recording"
         - Uses:
+          - `conversations/conversation-view/artifacts.ConversationArtifactExtractor`
           - `infra/file-watcher.acquireDirWatch`
           - `network/live.serveValue`
         - Resources: `browser-recordings.runs` (push, notified)
@@ -19144,7 +19340,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RecordingSource`
           - `RecordingStep`
         - Exports (values):
+          - `BROWSER_RECORDING_KIND`
           - `browserRecordingRuns`
+          - `extractBrowserRecordings`
           - `isRecordedToolCall`
           - `MANIFEST_FILE`
           - `RECORDED_BROWSER_TOOLS`
@@ -26498,9 +26696,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unavailableMessage`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 203 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 204 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×55
-          - `conversations` ×28
+          - `conversations` ×29
           - `debug` ×17
           - `infra` ×16
           - `page` ×14
@@ -30148,9 +30346,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 249 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 253 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×70
-          - `conversations` ×44
+          - `conversations` ×48
           - `tasks` ×27
           - `debug` ×26
           - `infra` ×14
@@ -37955,6 +38153,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `restoreDocumentScroll`
               - `scrollChildIntoView`
               - `scrollToBottom`
+              - `scrollToTop`
               - `useEdgeAutoScroll`
               - `useStickyScroll`
           - Cross-plugin:
@@ -38047,6 +38246,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/website/pages/foundations`
+              - `conversations/conversation-view/jsonl-viewer`
               - `primitives/cursor-pagination`
               - `primitives/data-view`
               - `primitives/dom/auto-scroll`
@@ -38094,6 +38294,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/songsheet`
               - `apps/sonata/sources/ultimate-guitar`
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/outline`
               - `page/editor`
               - `page/map`
               - `primitives/command-palette`
@@ -39080,6 +39281,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `NotificationsProvider`
           - `pendingMountSnapshot`
           - `queryKeyFor`
+          - `readyResource`
           - `refuseResource`
           - `resourceDescriptorByKey`
           - `ResourceError`
@@ -39107,9 +39309,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 249 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 253 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×69
-          - `conversations` ×44
+          - `conversations` ×48
           - `debug` ×23
           - `ui` ×23
           - `tasks` ×22

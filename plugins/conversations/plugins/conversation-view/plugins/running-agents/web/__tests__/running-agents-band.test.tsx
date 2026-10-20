@@ -236,6 +236,7 @@ const known = (
   kind: "known",
   entries,
   workflowRuns,
+  agentCalls: [],
   statusOf: () => ({ kind: "pending" }),
 });
 

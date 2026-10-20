@@ -1,6 +1,6 @@
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
-import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { transcriptToolCall } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { useWorkflowTrace } from "./use-workflow-trace";
 import type { TracedGraph, TracedNode, TraceStatus } from "./trace-types";
 
@@ -25,8 +25,9 @@ export type WorkflowNodeState =
     };
 
 /**
- * One step of a Workflow tool call: the conversation's transcript (the global
- * `jsonlEvents` value) → the call's script → its traced DAG → the node.
+ * One step of a Workflow tool call: the call itself (`transcriptToolCall`,
+ * read by id from the conversation's transcript, whether or not its pane
+ * holds it) → the call's script → its traced DAG → the node.
  *
  * Reads only its arguments and global resources, so it serves both the pane
  * body and the pane's `title.text` (which runs outside the app's providers).
@@ -38,17 +39,15 @@ export function useWorkflowNode(
   nodeId: string,
 ): WorkflowNodeState {
   const eventsResult = useLive(
-    jsonlEvents,
-    convId === undefined ? null : { id: convId },
+    transcriptToolCall,
+    convId === undefined ? null : { id: convId, toolUseId },
   );
   // The trace hook runs unconditionally, so the script is read here without an
   // early return; a transcript not read yet has no script (and is reported as
   // loading / failed below, never as an empty trace).
   let input: WorkflowInput | null = null;
   if (eventsResult.status === "ready") {
-    const event = eventsResult.data.find(
-      (e) => e.kind === "tool-call" && e.toolUseId === toolUseId,
-    );
+    const event = eventsResult.data;
     if (event?.kind === "tool-call") input = event.input as WorkflowInput;
   }
 

@@ -89,12 +89,15 @@ async function ask(id: string, text: string, replies: number): Promise<string> {
   return turns.filter((t) => t.role === "assistant").at(-1)?.text ?? "";
 }
 
+// Every user turn of the conversation, whole: the outline's value (the
+// transcript itself is paged, newest first).
 async function userRows(id: string): Promise<UserTextEvent[]> {
-  const body = await api<UserTextEvent[] | { value: UserTextEvent[] }>(
-    `/api/resources/jsonl-events?id=${encodeURIComponent(id)}`,
+  type Turns = { event: UserTextEvent }[];
+  const body = await api<Turns | { value: Turns }>(
+    `/api/resources/jsonl-viewer.outline.turns?id=${encodeURIComponent(id)}`,
   );
-  const events = Array.isArray(body) ? body : body.value;
-  return events.filter((e) => e.kind === "user-text");
+  const turns = Array.isArray(body) ? body : body.value;
+  return turns.map((t) => t.event).filter((e) => e.kind === "user-text");
 }
 
 const REWIND = "Rewind to here";

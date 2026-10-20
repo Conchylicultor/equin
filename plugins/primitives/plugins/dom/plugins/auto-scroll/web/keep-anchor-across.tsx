@@ -15,10 +15,12 @@ export interface KeepAnchorAcrossProps {
    */
   anchorAttr: string;
   /**
-   * Candidates carrying this attribute are a last resort: the anchor is the
-   * first visible candidate without it, and one with it only when no other
-   * is on screen (a stand-in that is about to be replaced makes a poor
-   * anchor).
+   * Candidates carrying this attribute — on themselves or an ancestor inside
+   * the region — are a last resort: the anchor is the first visible candidate
+   * without it, and one with it only when no other is on screen (a stand-in
+   * that is about to be replaced makes a poor anchor, and so does content
+   * pinned with `position: sticky`, which does not move when content is
+   * inserted above it).
    */
   weakAttr?: string;
   /**
@@ -95,7 +97,9 @@ export class KeepAnchorAcross extends Component<
         name: el.getAttribute(anchorAttr)!,
         top: rect.top,
       };
-      if (weakAttr === undefined || !el.hasAttribute(weakAttr)) return anchor;
+      if (weakAttr === undefined || el.closest(`[${weakAttr}]`) === null) {
+        return anchor;
+      }
       weak ??= anchor;
     }
     return weak;

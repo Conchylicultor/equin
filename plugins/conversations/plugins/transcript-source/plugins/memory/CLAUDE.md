@@ -17,8 +17,9 @@ never boots it (`base-exclusions`).
 - Server:
   - Contributes: `host-service:conversations.transcript-source` "conversations.transcript-source"
   - Uses:
-    - `conversations/transcript-source.buildJsonlEvents`
-    - `conversations/transcript-source.mergeChainLines`
+    - `conversations/transcript-source.readImageKey`
+    - `conversations/transcript-source.TranscriptImageIo`
+    - `conversations/transcript-source.TranscriptLines`
     - `conversations/transcript-source.TranscriptSnapshot`
     - `conversations/transcript-source.TranscriptSource`
     - `conversations/transcript-source.TranscriptSourceImpl`

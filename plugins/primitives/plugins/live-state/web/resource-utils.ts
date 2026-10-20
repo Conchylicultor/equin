@@ -178,6 +178,19 @@ export function mapResource<T, U>(
   }
 }
 
+const NOTHING_TO_REFETCH = (): Promise<void> => Promise.resolve();
+
+/**
+ * A value already in hand, as a read: the ready arm. For a hook whose answer
+ * is sometimes read from the server and sometimes derived from data the caller
+ * already holds (a transcript view folding the events it draws), so both paths
+ * hand back one `ResourceResult`. Never a stand-in for something not known yet
+ * — that is the loading arm, which only a real read produces.
+ */
+export function readyResource<T>(data: T): ResourceResult<T> {
+  return { status: "ready", data, refetch: NOTHING_TO_REFETCH };
+}
+
 /**
  * Refuse a ready value the consumer cannot accept: when `refuse(data)` names a
  * failure, the ready arm becomes the error arm — that failure, the refused

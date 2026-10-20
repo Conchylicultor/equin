@@ -1,10 +1,10 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { parsePageApplyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/core";
 import {
   PageRefChip,
   PageToolError,
   PageWriteReport,
-  parsePageApplyReport,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";

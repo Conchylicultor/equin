@@ -46,7 +46,7 @@ export interface ShellLaunch {
   toolUseId: string;
   command: string;
   /** The call's `description`, when the agent gave one. */
-  description: string | undefined;
+  description?: string;
   /** Absolute path of the file the shell's stdout/stderr is written to. */
   outputFile: string;
   /** The launching call's time. */
@@ -106,7 +106,7 @@ export function exitCodeOfSummary(summary: string): number | null {
 function readInput(input: unknown): {
   background: boolean;
   command: string | undefined;
-  description: string | undefined;
+  description?: string;
 } {
   if (typeof input !== "object" || input === null) {
     return { background: false, command: undefined, description: undefined };
@@ -195,6 +195,83 @@ function taskStopsIn(events: readonly JsonlEvent[]): Map<string, Date> {
 }
 
 /**
+ * What a transcript says about one background shell, before the conversation's
+ * liveness is applied — the part derivable from the transcript alone, so the
+ * server can fold it over the WHOLE transcript and push only this. Times are
+ * ISO strings (the wire form of a `Date`).
+ *
+ * `end` is `null` when the transcript records no end (no notification, no
+ * `TaskStop`): whether such a shell is `running` or `ended-without-reporting`
+ * is decided by {@link shellsFromFacts} from the conversation's status.
+ */
+export interface ShellFact {
+  shellId: string;
+  toolUseId: string;
+  command: string;
+  description?: string;
+  outputFile: string;
+  startedAt: string;
+  end: { state: BackgroundShellState; endedAt: string } | null;
+}
+
+/** The transcript half of {@link backgroundShellsOf}: every shell's launch and recorded end. */
+export function shellFactsOf(events: readonly JsonlEvent[]): ShellFact[] {
+  const byTaskId = new Map<string, TaskNotificationEvent>();
+  const byToolUseId = new Map<string, TaskNotificationEvent>();
+  for (const event of events) {
+    if (event.kind !== "task-notification") continue;
+    // First wins: a shell ends once.
+    if (!byTaskId.has(event.taskId)) byTaskId.set(event.taskId, event);
+    if (event.toolUseId !== undefined && !byToolUseId.has(event.toolUseId)) {
+      byToolUseId.set(event.toolUseId, event);
+    }
+  }
+  const stops = taskStopsIn(events);
+
+  return shellLaunchesIn(events).map((launch): ShellFact => {
+    const base = { ...launch, startedAt: launch.startedAt.toISOString() };
+    const notification =
+      byTaskId.get(launch.shellId) ?? byToolUseId.get(launch.toolUseId);
+    if (notification !== undefined) {
+      return {
+        ...base,
+        end: {
+          state: stateOfNotification(notification),
+          endedAt: new Date(notification.at).toISOString(),
+        },
+      };
+    }
+    const stoppedAt = stops.get(launch.shellId);
+    if (stoppedAt !== undefined) {
+      return {
+        ...base,
+        end: { state: { kind: "killed" }, endedAt: stoppedAt.toISOString() },
+      };
+    }
+    return { ...base, end: null };
+  });
+}
+
+/** The conversation half: decide a shell with no recorded end from the conversation's liveness. */
+export function shellsFromFacts(
+  facts: readonly ShellFact[],
+  conversationStatus: ConversationStatus,
+): BackgroundShell[] {
+  const live = hasLiveProcess(conversationStatus);
+  return facts.map(({ end, startedAt, ...launch }): BackgroundShell => {
+    const started = { ...launch, startedAt: new Date(startedAt) };
+    if (end !== null) {
+      return { ...started, state: end.state, endedAt: new Date(end.endedAt) };
+    }
+    return {
+      ...started,
+      state: live ? { kind: "running" } : { kind: "ended-without-reporting" },
+      endedAt: null,
+    };
+  });
+}
+
+/**
  * Every background shell of a conversation, in start order, with its state —
  * the ONE fold every surface (band row, `Bash` card, output pane) reads, so
  * they cannot disagree.
@@ -211,37 +288,5 @@ export function backgroundShellsOf({
   events,
   conversationStatus,
 }: BackgroundShellsInput): BackgroundShell[] {
-  const byTaskId = new Map<string, TaskNotificationEvent>();
-  const byToolUseId = new Map<string, TaskNotificationEvent>();
-  for (const event of events) {
-    if (event.kind !== "task-notification") continue;
-    // First wins: a shell ends once.
-    if (!byTaskId.has(event.taskId)) byTaskId.set(event.taskId, event);
-    if (event.toolUseId !== undefined && !byToolUseId.has(event.toolUseId)) {
-      byToolUseId.set(event.toolUseId, event);
-    }
-  }
-  const stops = taskStopsIn(events);
-  const live = hasLiveProcess(conversationStatus);
-
-  return shellLaunchesIn(events).map((launch): BackgroundShell => {
-    const notification =
-      byTaskId.get(launch.shellId) ?? byToolUseId.get(launch.toolUseId);
-    if (notification !== undefined) {
-      return {
-        ...launch,
-        state: stateOfNotification(notification),
-        endedAt: new Date(notification.at),
-      };
-    }
-    const stoppedAt = stops.get(launch.shellId);
-    if (stoppedAt !== undefined) {
-      return { ...launch, state: { kind: "killed" }, endedAt: stoppedAt };
-    }
-    return {
-      ...launch,
-      state: live ? { kind: "running" } : { kind: "ended-without-reporting" },
-      endedAt: null,
-    };
-  });
+  return shellsFromFacts(shellFactsOf(events), conversationStatus);
 }

@@ -7,8 +7,13 @@ import { groupContextRuns, type TranscriptItem } from "./context-runs";
  * The visible events as transcript items: runs of harness context folded,
  * per the `JsonlViewer.ContextRole` classifiers and the `hostsContext`
  * renderers. A rendering of `useVisibleEvents`' output, never a filter of it.
+ * `answeredBefore`: the agent answered before the first of `events` (a window
+ * of a longer transcript).
  */
-export function useContextRuns(events: JsonlEvent[]): TranscriptItem[] {
+export function useContextRuns(
+  events: JsonlEvent[],
+  answeredBefore = false,
+): TranscriptItem[] {
   const classifiers = JsonlViewer.ContextRole.useContributions();
   const renderers = JsonlViewer.EventRenderer.useContributions();
   return useMemo(() => {
@@ -30,6 +35,11 @@ export function useContextRuns(events: JsonlEvent[]): TranscriptItem[] {
         r.hostsContext && typeof r.match === "string" ? [r.match] : [],
       ),
     );
-    return groupContextRuns(events, roleOf, (e) => hostKinds.has(e.kind));
-  }, [events, classifiers, renderers]);
+    return groupContextRuns(
+      events,
+      roleOf,
+      (e) => hostKinds.has(e.kind),
+      answeredBefore,
+    );
+  }, [events, classifiers, renderers, answeredBefore]);
 }

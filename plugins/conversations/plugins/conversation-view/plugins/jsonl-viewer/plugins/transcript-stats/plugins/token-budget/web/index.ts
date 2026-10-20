@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { TranscriptStats } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web";
 import { TokenBudgetStat } from "./components/token-budget-stat";
-import { isTotalTokensReminder } from "./budget";
+import { isTotalTokensReminder } from "../core";
 
 export default {
   collapsed: true,

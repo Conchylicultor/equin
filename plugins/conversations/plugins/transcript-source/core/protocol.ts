@@ -40,9 +40,22 @@ export const TokenUsageSchema = z.object({
 });
 export type TokenUsage = z.infer<typeof TokenUsageSchema>;
 
+/**
+ * An image the transcript shows, by reference: its bytes stay where they are
+ * (inline in a transcript line, or the file a prompt names) and the page loads
+ * them from their own URL (`transcriptImageUrl`). `key` is opaque to the page —
+ * the server's encoding of where the bytes are — and immutable: a key always
+ * names the same bytes, so the URL is cached forever.
+ */
+export const TranscriptImageSchema = z.object({
+  key: z.string(),
+  mime: z.string(),
+});
+export type TranscriptImage = z.infer<typeof TranscriptImageSchema>;
+
 const UserTextSegmentSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("text"), value: z.string() }),
-  z.object({ kind: z.literal("image"), mime: z.string(), data: z.string() }),
+  z.object({ kind: z.literal("image"), image: TranscriptImageSchema }),
 ]);
 export type UserTextSegment = z.infer<typeof UserTextSegmentSchema>;
 
@@ -103,8 +116,7 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("user-image"),
     at: z.string(),
-    mime: z.string(),
-    data: z.string(),
+    image: TranscriptImageSchema,
   }),
   z.object({
     kind: z.literal("tool-call"),

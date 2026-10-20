@@ -6,11 +6,13 @@ toolbar button that lists them and opens each one where it already lives.
 
 ## Where the data comes from
 
-Nothing new on the server, and no second pass over the transcript. The
-conversation view already subscribes to the parsed event array
-(`useLive(jsonlEvents, { id })`); `useConversationArtifacts` joins that subscription and
-derives everything here, in a `useMemo` over the array. So the cost of the
-button is one pass per new turn, not a query.
+The conversation pane holds only the latest window of the transcript, so the
+button cannot count from it. Instead the server derives the answer over the WHOLE
+transcript: `conversationArtifacts` (`core/collect.ts`, a `liveValue` keyed by
+conversation id) is served with `serveTranscriptValue` (jsonl-viewer/server), which
+runs every registered kind's extractor over the events in memory once per change and
+pushes only when the result changed. `useConversationArtifacts` reads that small
+value with `useLive` — `loading` until the server answers, never a zero.
 
 Known gap: work an agent delegated to a **subagent** happens in its own
 transcript, which is not part of this one. A prototype a subagent edited only
@@ -19,16 +21,23 @@ does, in the `Agent` prompt.
 
 ## Adding a kind
 
-A kind is one sub-plugin under `plugins/<kind>/web/`, contributing to
-`ConversationArtifacts.Kind`:
+A kind is one sub-plugin with three folders. Its pure extractor lives in
+`core/` (so web tests and the server share it), its presentation in `web/`, and
+the server half contributes the extractor to the host:
 
 ```ts
+// plugins/<kind>/server/index.ts
+ConversationArtifactExtractor({
+  id: "prototype",
+  origin: "produced",      // or "consumed" — see "What the closed button shows"
+  extract: extractPrototypeHits, // PURE over one JsonlEvent
+});
+
+// plugins/<kind>/web/index.ts — same id
 ConversationArtifacts.Kind({
   id: "prototype",
   label: "Prototypes",
   icon: MdDesktopWindows,
-  origin: "produced",      // or "consumed" — see "What the closed button shows"
-  extract: (event) => …,   // PURE — runs per event, before anything renders
   Section: PrototypeSection,
 });
 ```
@@ -36,13 +45,14 @@ ConversationArtifacts.Kind({
 The two halves exist for two different reasons, and neither can do the other's
 job:
 
-- **`extract` is a pure function**, not a component, because the count on the
-  closed button has to exist before any section is mounted. It may not call
-  hooks or fetch. It gets one `JsonlEvent` and returns a hit per sighting, one
-  per `(kind, key)` it saw — the host folds repeats together, keeping the
-  strongest relation (`created` > `edited` > `referenced`) and the first/last
-  instant. An extractor that reports under another kind's `id` **throws**: those
-  rows would otherwise land in a section that never looked for them.
+- **`extract` is a pure function** run on the server over the whole transcript,
+  because the count on the closed button has to exist before any section is
+  mounted. It may not call hooks or fetch. It gets one `JsonlEvent` and returns
+  a hit per sighting, one per `(kind, key)` it saw — the host folds repeats
+  together, keeping the strongest relation (`created` > `edited` >
+  `referenced`) and the first/last instant. An extractor that reports under
+  another kind's `id` **throws**: those rows would otherwise land in a section
+  that never looked for them.
 - **`Section` is the component**, because a kind's titles need a lookup (the
   prototypes list, a page's name) and a lookup is a hook. It is mounted only
   while the popover is open, and only when the kind found something.
@@ -57,7 +67,7 @@ surface; there is no separate Docs button.
 
 Two filters decide what reaches the button, and neither touches the panel:
 
-- **The kind's `origin`**, required so a new kind decides rather than cluttering
+- **The kind's `origin`** (declared on its server extractor), required so a new kind decides rather than cluttering
   the button by existing:
   - `"produced"` — prototypes, pages, research docs. These show.
   - `"consumed"` — the pictures the agent read, the skills it loaded. These get
@@ -142,7 +152,7 @@ here.
 
 ## Plugin reference
 
-- Description: Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (a pure extractor over transcript events plus its own section), the aggregation over the already-open jsonl-events subscription, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind.
+- Description: Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (its own section; its pure extractor contributes to the server-side ConversationArtifactExtractor), the server-derived whole-transcript aggregation, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind. Serves what a conversation made, changed or looked at over its whole transcript (conversations.conversation-view.artifacts): owns the ConversationArtifactExtractor contribution each kind of artifact adds its pure extractor to, and runs every one over the transcript on the server.
 - Web:
   - Slots: `ConversationArtifacts.Kind`
   - Slot contributors:
@@ -182,6 +192,25 @@ here.
     - `RelationMarker`
     - `useCloseArtifacts`
     - `useConversationArtifacts`
+- Server:
+  - Contributes: `resource.declare` "conversations.conversation-view.artifacts"
+  - Uses: `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
+  - Exports (values): `ConversationArtifactExtractor`
+- Core:
+  - Uses: `network/live.liveValue`
+  - Exports (types):
+    - `ArtifactHit`
+    - `ArtifactItem`
+    - `ConversationArtifactSet`
+    - `KindExtractor`
+    - `Relation`
+  - Exports (values):
+    - `collectArtifacts`
+    - `conversationArtifacts`
+    - `ConversationArtifactSetSchema`
+    - `mergeHits`
+    - `RELATION_LABEL`
+    - `strongestRelation`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
@@ -199,20 +228,11 @@ here.
     - `conversations/conversation-view/artifacts/screenshot`
     - `conversations/conversation-view/artifacts/skill`
     - `debug/browser-recordings`
-- Core:
-  - Exports (types):
-    - `ArtifactHit`
-    - `ArtifactItem`
-    - `Relation`
-  - Exports (values):
-    - `mergeHits`
-    - `RELATION_LABEL`
-    - `strongestRelation`
 - Sub-plugins:
   - **`page`** — Singularity pages as a conversation artifact: every page the transcript's edit_page / write_agent_note / read_page calls acted on, listed as a row that opens the page beside the chat — or, for a…
   - **`prototype`** — Prototypes as a conversation artifact: every `proto-…` id the transcript names — in a tool input or in the agent's or user's own words — listed as a row that opens the mock beside the chat. A…
-  - **`research`** — Research docs as a conversation artifact: the design docs it wrote, changed or read (research/*.md, and a sidequest's own), listed as rows that open in the file-peek pane beside the conversation.
-  - **`screenshot`** — Screenshots as a conversation artifact: every picture the agent read, shown as a four-up thumbnail grid that is one ← / → set in the full-window image viewer.
+  - **`research`** — Research docs as a conversation artifact: the design docs it wrote, changed or read (research/*.md, and a sidequest's own), listed as rows that open in the file-peek pane beside the conversation.…
+  - **`screenshot`** — Screenshots as a conversation artifact: every picture the agent read, shown as a four-up thumbnail grid that is one ← / → set in the full-window image viewer. Server half of the screenshot artifact…
   - **`skill`** — Skills as a conversation artifact: every skill the agent loaded, as a wrapped strip of monospace name chips — a repo skill opens its SKILL.md in the file-peek pane, a plugin-packaged skill has no…
 
 <!-- AUTOGENERATED:END -->

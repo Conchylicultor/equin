@@ -1,6 +1,7 @@
 import {
   Fragment,
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -9,8 +10,12 @@ import {
 } from "react";
 import {
   JumpToBottomButton,
+  KeepAnchorAcross,
+  scrollToTop,
   useStickyScroll,
 } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -52,6 +57,7 @@ function StickyUserHeader({ children }: { children: ReactNode }) {
     <SectionExpandProvider value={value}>
       <Sticky
         ref={ref}
+        data-pinned-header=""
         active={!expanded}
         edge="top"
         layer="nav"
@@ -63,13 +69,25 @@ function StickyUserHeader({ children }: { children: ReactNode }) {
   );
 }
 
+/** The anchor's change key while seeking: constant, so nothing is anchored. */
+const SEEKING = Symbol("seeking");
+
 const FOLD_LABEL: Record<ContextFoldPhase, string> = {
   session: "Session context",
   update: "Context update",
 };
 
-function EventSections({ events }: { events: JsonlEvent[] }) {
-  const items = useContextRuns(events);
+function EventSections({
+  events,
+  idOf,
+  answeredBefore,
+}: {
+  events: JsonlEvent[];
+  /** A visible event's stable row id (its position in the visible array changes as older events load). */
+  idOf: (event: JsonlEvent, index: number) => string;
+  answeredBefore: boolean;
+}) {
+  const items = useContextRuns(events, answeredBefore);
   // Sections open at each user prompt. A context run never contains one (a
   // prompt is conversation), so a prompt is always a plain event item.
   const sections = useMemo(() => {
@@ -96,7 +114,10 @@ function EventSections({ events }: { events: JsonlEvent[] }) {
     if (item.kind === "fold") {
       const first = events[item.members[0]!]!;
       return (
-        <div key={`fold:${item.members[0]}`} data-event-key={eventKey(first)}>
+        <div
+          key={`fold:${idOf(first, item.members[0]!)}`}
+          data-event-key={eventKey(first)}
+        >
           <ContextFold
             label={FOLD_LABEL[item.phase]}
             members={membersOf(item.members)}
@@ -107,7 +128,7 @@ function EventSections({ events }: { events: JsonlEvent[] }) {
     const event = events[item.index]!;
     return (
       <EventRow
-        key={event.kind === "tool-call" ? event.toolUseId : item.index}
+        key={idOf(event, item.index)}
         event={event}
         index={item.index}
         hosted={item.hosted && membersOf(item.hosted)}
@@ -122,9 +143,11 @@ function EventSections({ events }: { events: JsonlEvent[] }) {
     <ImageGallery>
       {sections.map((section) => {
         const first = items[section.start]!;
-        // Keyed by the first EVENT's index, as before folding existed, so a run
-        // forming or growing does not remount the sections after it.
-        const key = first.kind === "fold" ? first.members[0]! : first.index;
+        // Keyed by the first EVENT's row id, so a run forming or growing — or
+        // older events loading above — does not remount the sections after it.
+        const firstIndex =
+          first.kind === "fold" ? first.members[0]! : first.index;
+        const key = idOf(events[firstIndex]!, firstIndex);
         const opensWithPrompt =
           first.kind === "event" && events[first.index]?.kind === "user-text";
         if (!opensWithPrompt) {
@@ -149,9 +172,37 @@ function EventSections({ events }: { events: JsonlEvent[] }) {
   );
 }
 
+/**
+ * The events a `TranscriptView` draws are the transcript's LATEST ones; older
+ * ones load as the reader scrolls to the top (a long conversation opens on its
+ * end). Absent: the view draws a whole transcript.
+ */
+export interface TranscriptOlder {
+  /** Older events exist — scrolling to the top loads them. */
+  canGrow: boolean;
+  /** Older events are loading. */
+  growing: boolean;
+  loadMore: () => void;
+  /**
+   * The agent had already answered before the first loaded event, so a fold of
+   * harness context in the window is an update, never the session's opening.
+   */
+  answeredBefore: boolean;
+}
+
 export interface TranscriptViewProps {
   /** The transcript, unfiltered — the view applies the `EventFilter` set. */
   events: JsonlEvent[];
+  /** The seq of `events[0]` in the whole transcript (a window's start); 0 by default. */
+  firstSeq?: number;
+  /**
+   * Each event's stable id, aligned with `events` — what a row is keyed by, so
+   * events loading ABOVE it do not remount it. Absent: positions (a whole
+   * transcript, which only ever grows at its end).
+   */
+  ids?: readonly string[];
+  /** The view draws a window of the transcript; see {@link TranscriptOlder}. */
+  older?: TranscriptOlder;
   /**
    * The conversation these rows belong to.
    *
@@ -203,18 +254,35 @@ export interface TranscriptViewProps {
 
 function TranscriptViewInner({
   events,
+  firstSeq: _firstSeq,
+  ids,
+  older,
+  seeking,
   persistKey,
   followKey,
   empty,
   overlay,
   dimmed,
   children,
-}: Omit<TranscriptViewProps, "conversationId" | "subject">) {
+}: Omit<TranscriptViewProps, "conversationId" | "subject"> & {
+  /** `seekOlder` is on: sit at the top and keep loading, no anchoring. */
+  seeking: boolean;
+}) {
   const surfaceTabId = useSurfaceTabId();
 
   // Plugin-contributed hide predicates, via the shared owner — every surface
   // that enumerates the transcript must agree on which events exist.
   const visibleEvents = useVisibleEvents(events);
+
+  // Row identity: the caller's ids, else the event's position (a whole
+  // transcript, which only grows at its end).
+  const idByEvent = useMemo(
+    () =>
+      ids ? new Map(events.map((event, i) => [event, ids[i]!] as const)) : null,
+    [events, ids],
+  );
+  const idOf = (event: JsonlEvent, index: number) =>
+    idByEvent?.get(event) ?? String(index);
 
   // Destructure at the call site: react-hooks/refs taints the handle object
   // (it carries scrollRef), so member access on it during render is flagged;
@@ -247,10 +315,36 @@ function TranscriptViewInner({
       // ref to the div it renders — the same node either way, as when this was
       // `ref={scrollRef}`.
       scrollRef.current = node as HTMLDivElement | null;
+      scrollRoot.current = node;
       publishPaneScroll(node);
     },
     [scrollRef, publishPaneScroll],
   );
+
+  // Scrolling near the top loads older events. A fresh observer re-delivers
+  // against a sentinel still in view, so it is rebuilt each time a load lands
+  // (`deps`) — that is what keeps loading while the reader stays at the top.
+  const topSentinel = useRef<HTMLDivElement>(null);
+  const scrollRoot = useRef<HTMLElement | null>(null);
+  const canLoadOlder = !!older && older.canGrow && !older.growing;
+  useInView(
+    topSentinel,
+    (entry) => {
+      if (entry.isIntersecting && canLoadOlder) older.loadMore();
+    },
+    {
+      root: scrollRoot,
+      rootMargin: "1500px 0px 0px 0px",
+      deps: [canLoadOlder, events.length],
+    },
+  );
+
+  // Seeking: go to the top, where the sentinel loads older pages — and back to
+  // it after each page lands, since the browser's own scroll anchoring (the
+  // parked reader's, `useStickyScroll`) holds the old first row in place.
+  useEffect(() => {
+    if (seeking) scrollToTop(scrollRoot.current);
+  }, [seeking, events.length]);
 
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column; hosts the scroller plus the Pin'd overlays as siblings so they don't scroll
@@ -266,17 +360,35 @@ function TranscriptViewInner({
             into an empty transcript lands where its real row will). It fills
             the scroller, so an `empty` that grows (`growClass()`) can centre
             itself in the pane rather than sit on its first line. */}
-        <Stack
-          gap="sm"
-          className="mx-auto min-h-full max-w-reading p-sm pb-2xl"
+        <div ref={topSentinel} />
+        {/* Older events land ABOVE the reader: the anchor keeps the row they
+            are looking at where it is, keyed by the first loaded row. A row in
+            a pinned prompt is a last resort — it does not move when content is
+            inserted above it. With no rows the region fills the pane, so an
+            `empty` that grows can centre. */}
+        <KeepAnchorAcross
+          changeKey={seeking ? SEEKING : (ids?.[0] ?? events.length)}
+          anchorAttr="data-event-key"
+          weakAttr="data-pinned-header"
+          fill={visibleEvents.length === 0}
         >
-          {visibleEvents.length === 0 ? (
-            empty
-          ) : (
-            <EventSections events={visibleEvents} />
-          )}
-          {children}
-        </Stack>
+          <Stack
+            gap="sm"
+            className="mx-auto min-h-full max-w-reading p-sm pb-2xl"
+          >
+            {older?.growing && <Loading className="px-md py-sm" />}
+            {visibleEvents.length === 0 ? (
+              empty
+            ) : (
+              <EventSections
+                events={visibleEvents}
+                idOf={idOf}
+                answeredBefore={older?.answeredBefore ?? false}
+              />
+            )}
+            {children}
+          </Stack>
+        </KeepAnchorAcross>
         {/* Must stay the last child: it marks the true end of the content. */}
         {bottomSentinel}
       </Scroll>
@@ -309,6 +421,17 @@ export function TranscriptView({
   subject,
   ...props
 }: TranscriptViewProps) {
+  const [seeking, setSeeking] = useState(false);
+  const windowed = props.older !== undefined;
+  const drawn = useMemo(
+    () => ({
+      events: props.events,
+      firstSeq: props.firstSeq ?? 0,
+      older: props.older ?? null,
+      seekOlder: windowed ? setSeeking : null,
+    }),
+    [props.events, props.firstSeq, props.older, windowed],
+  );
   return (
     // Both scopes are declared HERE, not in `TranscriptViewInner`: a component
     // may not render a Provider and use it in its own body, and the inner view
@@ -319,8 +442,8 @@ export function TranscriptView({
     <paneScrollScope.Provider>
       <ConversationIdProvider id={conversationId}>
         <TranscriptSubjectProvider subject={subject}>
-          <TranscriptEventsProvider events={props.events}>
-            <TranscriptViewInner {...props} />
+          <TranscriptEventsProvider value={drawn}>
+            <TranscriptViewInner {...props} seeking={seeking} />
           </TranscriptEventsProvider>
         </TranscriptSubjectProvider>
       </ConversationIdProvider>

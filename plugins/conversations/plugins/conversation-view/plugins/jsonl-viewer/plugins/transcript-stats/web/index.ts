@@ -7,6 +7,7 @@ export { TranscriptStats } from "./slots";
 export type { TranscriptStatContribution } from "./slots";
 export { useTranscriptRead } from "./read-context";
 export type { TranscriptRead } from "./read-context";
+export { useTranscriptFold } from "./use-transcript-fold";
 export { StatBadge } from "./components/stat-badge";
 export type { StatTone } from "./components/stat-badge";
 

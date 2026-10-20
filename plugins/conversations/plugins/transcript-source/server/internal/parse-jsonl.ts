@@ -17,9 +17,11 @@ import type {
   JsonlEvent,
   QuestionAnswer,
   RequestShape,
+  UserTextSegment,
   ToolCallResult,
 } from "../../core";
 import { requestConfigOf, requestShapeOf } from "./api-request";
+import { imageMimeOf } from "./image-key";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 type ApiRequestEvent = Extract<JsonlEvent, { kind: "api-request" }>;
@@ -71,20 +73,7 @@ function compactionFile(
 
 const xmlParser = new XMLParser({ parseTagValue: false, trimValues: true });
 
-const IMAGE_MIME: Record<string, string> = {
-  png: "image/png",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  gif: "image/gif",
-  webp: "image/webp",
-  svg: "image/svg+xml",
-  bmp: "image/bmp",
-  tiff: "image/tiff",
-};
-
-type Segment =
-  | { kind: "text"; value: string }
-  | { kind: "image"; mime: string; data: string };
+type Segment = UserTextSegment;
 
 const KNOWN_NOTIFICATION_KEYS = new Set([
   "task-id",
@@ -157,10 +146,10 @@ function extractTaskNotifications(
 }
 
 /**
- * Reads an image a prompt references by absolute path (`@/path/shot.png`), as
- * base64 — `null` when the host has no such image, which renders the reference
- * as plain text. The host's own: a desktop reads the file, a host without one
- * has none.
+ * Keys an image a prompt references by absolute path (`@/path/shot.png`) — its
+ * `TranscriptImage.key`, the page loading the bytes by URL — or `null` when the
+ * host has no such image, which renders the reference as plain text. The
+ * host's own: a desktop stats the file, a host without one has none.
  */
 export type TranscriptImageReader = (path: string) => Promise<string | null>;
 
@@ -190,13 +179,11 @@ async function pushTextWithImages(
     if (before) segments.push({ kind: "text", value: before });
 
     const path = m[1]!;
-    const ext = path.slice(path.lastIndexOf(".") + 1).toLowerCase();
-    const data = await readImage(path);
-    if (data !== null) {
+    const key = await readImage(path);
+    if (key !== null) {
       segments.push({
         kind: "image",
-        mime: IMAGE_MIME[ext] ?? "image/png",
-        data,
+        image: { key, mime: imageMimeOf(path) },
       });
       hasImages = true;
     } else {
@@ -293,58 +280,12 @@ function extractQuestionAnswer(
 }
 
 /**
- * Merge a conversation's chained transcript files into one line array, in chain
- * order, keeping the first copy of each `uuid`.
- *
- * A conversation spans several Claude session files: the session id changes when
- * Claude forks or restarts a session, and each id gets its own file. A forked
- * session copies its ancestor's lines *verbatim, `uuid` included*, so first-wins
- * uuid dedup collapses the overlap and preserves the ancestor's original
- * timestamps. A fresh session shares no uuids and lands as a disjoint root tree,
- * which `activeLineUuids` keeps whole. Lines with no `uuid` (`mode`,
- * `permission-mode`, `ai-title`, `file-history-snapshot`, `last-prompt`) are not
- * in the forest and all survive.
- *
- * CAVEAT — this is the one place the merge can hide a line. A fork taken from a
- * *midpoint* (just before a prompt) leaves the ancestor's post-fork prompt and
- * the fork's own next prompt as siblings in ONE tree, and the `activeLineUuids`
- * pass the callers run drops the ancestor's as a rewound branch. Arguably
- * correct (it was abandoned), but it is a loss the per-file parse would not have
- * had. Pinned by a test in `parse-jsonl.test.ts`.
- */
-export function mergeChainLines(
-  files: readonly { path: string; raw: string }[],
-): Record<string, unknown>[] {
-  const merged: Record<string, unknown>[] = [];
-  const seenUuids = new Set<string>();
-  for (const { raw } of files) {
-    for (const line of raw.split("\n")) {
-      if (!line) continue;
-      let obj: Record<string, unknown>;
-      try {
-        obj = JSON.parse(line) as Record<string, unknown>;
-      } catch (err) {
-        if (!(err instanceof SyntaxError)) throw err;
-        continue;
-      }
-      const uuid = typeof obj.uuid === "string" ? obj.uuid : null;
-      if (uuid) {
-        if (seenUuids.has(uuid)) continue;
-        seenUuids.add(uuid);
-      }
-      merged.push(obj);
-    }
-  }
-  return merged;
-}
-
-/**
  * The transcript's events, from its merged chain lines (`mergeChainLines`):
  * the live branch only, tool calls paired with their results, prompts'
  * referenced images inlined through `readImage`.
  */
 export async function buildJsonlEvents(
-  parsed: Record<string, unknown>[],
+  parsed: readonly Record<string, unknown>[],
   readImage: TranscriptImageReader,
 ): Promise<JsonlEvent[]> {
   // The merged transcript is a forest (uuid / parentUuid); a rewind/edit leaves
@@ -547,17 +488,20 @@ export async function buildJsonlEvents(
           } else if (
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
             block?.type === "image" &&
-            block.source?.type === "base64" &&
+            block.source?.type === "ref" &&
             typeof block.source.data === "string"
           ) {
+            // `TranscriptLines` put the image's key where its bytes were.
             events.push({
               kind: "user-image",
               at: ts,
-              mime:
-                typeof block.source.media_type === "string"
-                  ? block.source.media_type
-                  : "image/jpeg",
-              data: block.source.data,
+              image: {
+                key: block.source.data,
+                mime:
+                  typeof block.source.media_type === "string"
+                    ? block.source.media_type
+                    : "image/jpeg",
+              },
             });
           }
         }

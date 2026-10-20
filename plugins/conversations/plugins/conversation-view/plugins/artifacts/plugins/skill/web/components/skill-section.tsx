@@ -8,7 +8,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { useCloseArtifacts } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
-import { PACKAGED_SKILL_REASON, skillFilePath } from "../internal/skills";
+import { PACKAGED_SKILL_REASON, skillFilePath } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const boltIcon = symbol("bolt");

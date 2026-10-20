@@ -1,11 +1,11 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { parsePageApplyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/core";
 import {
   PageMarkdown,
   PageRefChip,
   PageToolError,
   PageWriteReport,
-  parsePageApplyReport,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 

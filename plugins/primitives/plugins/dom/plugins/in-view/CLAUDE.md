@@ -69,6 +69,7 @@ allowlisting a copy.
 - Cross-plugin:
   - Imported by:
     - `apps/website/pages/foundations`
+    - `conversations/conversation-view/jsonl-viewer`
     - `primitives/cursor-pagination`
     - `primitives/data-view`
     - `primitives/dom/auto-scroll`

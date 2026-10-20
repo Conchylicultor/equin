@@ -1,51 +1,111 @@
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveValue, sliceRange } from "@plugins/network/plugins/live/server";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import {
-  TranscriptSource,
-  transcriptChainReads,
-} from "@plugins/conversations/plugins/transcript-source/server";
-import { jsonlEvents } from "../../core";
+  jsonlEvents,
+  transcriptToolCall,
+  type TranscriptEventRow,
+  type TranscriptMeta,
+} from "../../core";
 import {
-  evictJsonlEvents,
-  jsonlEventsMemo,
-  primeJsonlEvents,
-} from "./jsonl-events-cache";
+  conversationEvents,
+  watchConversationEvents,
+} from "./conversation-events";
 
-// Pushed (the declaration's default): a change ships the whole event array, and
-// the client renders it without a refetch. That is a DELIVERY choice, not a
-// correctness crutch: the ETag and the value come from one authority
-// (jsonl-events-cache.ts), so the value is sound under `load: "on-demand"` too.
-// Switching is a pure frame-size decision, which is the entire point of that
-// binding.
+// Rows are derived once per events array (the memo hands out the same array
+// until the transcript changes), so every page of one change slices one list.
+const rowsByEvents = new WeakMap<readonly JsonlEvent[], TranscriptEventRow[]>();
+
+/**
+ * The transcript's events as rows: a tool call keyed by its tool-use id (it
+ * keeps that identity while events before it change), anything else by its
+ * position. A tool-use id seen twice (an orphan result's empty id) falls back
+ * to the position, so ids stay unique.
+ */
+export function transcriptRows(
+  events: readonly JsonlEvent[],
+): TranscriptEventRow[] {
+  const cached = rowsByEvents.get(events);
+  if (cached) return cached;
+  const seenToolIds = new Set<string>();
+  const rows = events.map((event, seq): TranscriptEventRow => {
+    if (
+      event.kind === "tool-call" &&
+      event.toolUseId !== "" &&
+      !seenToolIds.has(event.toolUseId)
+    ) {
+      seenToolIds.add(event.toolUseId);
+      return { id: `tool:${event.toolUseId}`, seq, event };
+    }
+    return { id: `s${seq}`, seq, event };
+  });
+  rowsByEvents.set(events, rows);
+  return rows;
+}
+
+export function transcriptMeta(events: readonly JsonlEvent[]): TranscriptMeta {
+  const firstAssistant = events.findIndex(
+    (e) =>
+      e.kind === "assistant-text" ||
+      e.kind === "assistant-thinking" ||
+      e.kind === "tool-call",
+  );
+  return {
+    count: events.length,
+    firstAssistantSeq: firstAssistant === -1 ? null : firstAssistant,
+  };
+}
+
+// Paged: a page is a keyed window, so a change ships the rows it touched — an
+// appended line is one row — instead of the whole transcript. Every page and
+// the meta read the conversation's events (conversation-events.ts: one memo,
+// primed by one watch before anything is notified), so the recompute `notify`
+// schedules slices memory.
 export const jsonlEventsServed = serveValue(jsonlEvents, {
   source: "external",
   changes: "notified",
-  // On the desktop the loader resolves the transcript chain from Postgres before
-  // reading files.
-  reads: transcriptChainReads,
-  // The ETag and the value are produced by ONE authority: `jsonlEventsMemo` is a
-  // `createSignedMemo` binding the host's `TranscriptSource.signature` to its
-  // `events` at its single declaration site. `revalidate` and `loader` are therefore provably the same function of the
-  // same inputs, not two probes agreeing by convention — which is what they were.
-  loader: ({ id }) => jsonlEventsMemo.get(id),
-  revalidate: ({ id }) => jsonlEventsMemo.signature(id),
-  // Watch the conversation's transcript while it is on screen. The start is
-  // synchronous (`watch` hands back its unsubscribe at once), so the sub-ack is
-  // never held behind it.
-  whileSubscribed: ({ id }, notify) => {
-    const unsub = TranscriptSource.get().watch(id, ({ events, signature }) => {
-      // Prime BEFORE notify: the watcher holds both halves of the pair, and the
-      // recompute that `notify` schedules calls the loader — which is then a memo
-      // hit instead of a second full read + parse of the chain the watcher just read.
-      primeJsonlEvents(id, signature, events);
-      notify();
-    });
+  loader: async ({ id }, range) =>
+    sliceRange(
+      jsonlEvents,
+      transcriptRows(await conversationEvents(id)),
+      range,
+    ),
+  meta: async ({ id }) => transcriptMeta(await conversationEvents(id)),
+  // Watch the conversation's transcript while any page of it is on screen
+  // (once per question, however its pages split).
+  whileSubscribed: (query, notify) => watchConversationEvents(query.id, notify),
+});
+
+// One tool call by id, from the same events. Events are rebuilt on every
+// change, so an unchanged call is handed back as the object last served —
+// which the runtime sends as nothing; it is pushed only when it changes (its
+// result lands).
+const lastToolCall = new Map<
+  string,
+  { json: string; value: JsonlEvent | null }
+>();
+const toolCallKey = (id: string, toolUseId: string) =>
+  `${id}\u0000${toolUseId}`;
+
+export const transcriptToolCallServed = serveValue(transcriptToolCall, {
+  source: "external",
+  changes: "notified",
+  loader: async ({ id, toolUseId }) => {
+    const call =
+      (await conversationEvents(id)).find(
+        (e) => e.kind === "tool-call" && e.toolUseId === toolUseId,
+      ) ?? null;
+    const key = toolCallKey(id, toolUseId);
+    const json = JSON.stringify(call);
+    const previous = lastToolCall.get(key);
+    if (previous?.json === json) return previous.value;
+    lastToolCall.set(key, { json, value: call });
+    return call;
+  },
+  whileSubscribed: (params, notify) => {
+    const stop = watchConversationEvents(params.id, notify);
     return () => {
-      unsub();
-      // Pure lifecycle cleanup. A late prime landing across this evict is harmless:
-      // the entry it resurrects carries its own signature, and any reader probes the
-      // CURRENT one, so a surviving entry is served only if it still matches the
-      // chain on disk.
-      evictJsonlEvents(id);
+      stop();
+      lastToolCall.delete(toolCallKey(params.id, params.toolUseId));
     };
   },
 });

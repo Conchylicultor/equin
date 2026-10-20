@@ -65,7 +65,7 @@ const SUBS: { key: string; params: Record<string, string> }[] = [
   { key: "commits-graph.graph", params: { attemptId: ATTEMPT } },
   { key: "edited-files", params: { id: CONV } },
   { key: "allow-files", params: { id: CONV } },
-  { key: "jsonl-events", params: { id: CONV } },
+  { key: "jsonl-viewer.outline.turns", params: { id: CONV } },
   { key: "subagent-activity", params: { id: CONV } },
 ];
 const KEYS = [...new Set(SUBS.map((s) => s.key))];

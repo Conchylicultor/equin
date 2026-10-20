@@ -5,10 +5,10 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import { useConversationById } from "@plugins/conversations/web";
-import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import {
-  backgroundShellsOf,
+  conversationShellFacts,
   shellOutput,
+  shellsFromFacts,
   type BackgroundShell,
   type ShellOutput,
 } from "../../core";
@@ -42,11 +42,11 @@ export function useConversationShells(
   conversationId: string | null,
 ): ConversationShells {
   const params = conversationId === null ? null : { id: conversationId };
-  const events = useLive(jsonlEvents, params);
+  const facts = useLive(conversationShellFacts, params);
   const conversation = useConversationById(conversationId);
 
   // Gate FIRST, derive after — nothing below may run on a half-arrived read.
-  const reads = combineResources({ events });
+  const reads = combineResources({ events: facts });
   if (reads.status === "error") {
     return { kind: "failed", error: reads.error, refetch: reads.refetch };
   }
@@ -55,10 +55,7 @@ export function useConversationShells(
   }
   return {
     kind: "known",
-    shells: backgroundShellsOf({
-      events: reads.data.events,
-      conversationStatus: conversation.status,
-    }),
+    shells: shellsFromFacts(reads.data.events, conversation.status),
   };
 }
 

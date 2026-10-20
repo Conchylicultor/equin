@@ -11,7 +11,7 @@ import {
 import { useConversationById } from "@plugins/conversations/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
-import { screenshotName } from "../internal/screenshots";
+import { screenshotName } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const photoCameraIcon = symbol("photo-camera");

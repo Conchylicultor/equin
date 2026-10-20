@@ -1,14 +1,16 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  mapResource,
   ResourceErrorInline,
   ResourceView,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
-import { jsonlEvents } from "../../core";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import {
+  useTranscriptWindow,
+  type TranscriptWindow,
+} from "../use-transcript-window";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -96,11 +98,12 @@ function StartingTranscript({ startAt }: { startAt: number | null }) {
 
 function JsonlPaneInner({
   conversation,
-  events,
+  window,
   pending,
 }: {
   conversation: Conversation;
-  events: JsonlEvent[];
+  /** The transcript's latest events; older ones load on scroll. */
+  window: TranscriptWindow;
   /** The turn ledger's cards — answered (ready, or failed); see JsonlPane. */
   pending: Exclude<ResourceResult<PendingTurn[]>, { status: "loading" }>;
 }) {
@@ -108,6 +111,7 @@ function JsonlPaneInner({
     conversation.status === "working" || conversation.status === "starting";
   const isGone =
     conversation.status === "gone" || conversation.status === "done";
+  const { events } = window;
 
   // The turn ledger's cards (echo, merged warning, Retry), shown while working
   // too — that is exactly when messages queue. A ledger read that failed shows
@@ -145,6 +149,9 @@ function JsonlPaneInner({
   return (
     <TranscriptView
       events={events}
+      ids={window.ids}
+      firstSeq={window.firstSeq}
+      older={window.older}
       conversationId={conversation.id}
       subject={CONVERSATION_SUBJECT}
       // The surface tab is appended by the view — name only the subject here.
@@ -211,9 +218,14 @@ export function JsonlPane({
   conversation: Conversation;
   children?: ReactNode;
 }) {
-  const eventsResult = useLive(jsonlEvents, { id: conversation.id });
+  const windowResult = useTranscriptWindow(conversation.id);
   // The pending cards are read against the transcript this pane renders: an
-  // echo stands until the transcript shows its turn.
+  // echo stands until the transcript shows its turn — which lands at its end,
+  // inside the window.
+  const eventsResult = useMemo(
+    () => mapResource(windowResult, (w) => w.events),
+    [windowResult],
+  );
   const pending = usePendingTurns(conversation.id, eventsResult);
 
   return (
@@ -230,7 +242,7 @@ export function JsonlPane({
           // Loading until the turn ledger has answered too: the cards it draws
           // decide whether the pane is empty, starting or neither. Its failure
           // does not hide the transcript — the inner pane shows it inline.
-          resource={pending.status === "loading" ? pending : eventsResult}
+          resource={pending.status === "loading" ? pending : windowResult}
           fallback={
             // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors TranscriptView)
             <div className="relative min-h-0 flex-1 isolate">
@@ -254,11 +266,11 @@ export function JsonlPane({
             </div>
           )}
         >
-          {(events) =>
+          {(window) =>
             pending.status === "loading" ? null : (
               <JsonlPaneInner
                 conversation={conversation}
-                events={events}
+                window={window}
                 pending={pending}
               />
             )

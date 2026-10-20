@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import {
   formatTokenCount,
   useJsonlConversationId,
@@ -7,8 +6,11 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import {
   StatBadge,
+  useTranscriptFold,
   useTranscriptRead,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web";
+import { usageFold } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/usage/core";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { useConversationSubagents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import {
   allAgentRows,
@@ -16,16 +18,6 @@ import {
   type AgentBandRow,
 } from "../internal/agent-rows";
 import { useAgentsBandView } from "./band-view";
-
-/** Every output token the transcript's own messages recorded. */
-function outputOf(events: readonly JsonlEvent[]): number {
-  let output = 0;
-  for (const event of events) {
-    if (event.kind !== "assistant-text" && event.kind !== "tool-call") continue;
-    output += event.usage?.output ?? 0;
-  }
-  return output;
-}
 
 function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
@@ -57,11 +49,19 @@ export function AgentsStat() {
 function AgentsStatFor({ conversationId }: { conversationId: string }) {
   const subject = useTranscriptSubject();
   const { events, atEnd } = useTranscriptRead();
+  // The transcript's own output up to the reading position — the usage stat's
+  // fold, which also covers the events before the page's window.
+  const usage = useTranscriptFold(usageFold);
+  const ownOutputRead = foldResource(usage, {
+    loading: () => null,
+    error: () => null,
+    ready: (state) => state.output,
+  });
   const subagents = useConversationSubagents(conversationId);
   const { view, toggleShowAll } = useAgentsBandView(conversationId);
 
   const reading = useMemo(() => {
-    if (subagents.kind !== "known") return null;
+    if (subagents.kind !== "known" || ownOutputRead === null) return null;
     const under = rowsUnder(
       allAgentRows(subagents),
       subject.kind === "subagent" ? subject.agentId : null,
@@ -75,10 +75,10 @@ function AgentsStatFor({ conversationId }: { conversationId: string }) {
     return {
       agents: agents.length,
       running: agents.filter((row) => row.state.kind === "running").length,
-      ownOutput: outputOf(events),
+      ownOutput: ownOutputRead,
       agentsOutput: agents.reduce((sum, row) => sum + row.usage.output, 0),
     };
-  }, [subagents, subject, events, atEnd]);
+  }, [subagents, subject, events, atEnd, ownOutputRead]);
 
   if (subagents.kind === "failed") {
     return (

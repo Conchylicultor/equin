@@ -17,11 +17,21 @@ export { useHostedContext } from "./components/hosted-context";
 export type { ContextMember } from "./components/hosted-context";
 export { JsonlPane } from "./components/jsonl-pane";
 export { TranscriptView } from "./components/transcript-view";
-export type { TranscriptViewProps } from "./components/transcript-view";
+export type {
+  TranscriptViewProps,
+  TranscriptOlder,
+} from "./components/transcript-view";
+export { useTranscriptWindow } from "./use-transcript-window";
+export { useWholeTranscript } from "./use-whole-transcript";
+export type { TranscriptWindow } from "./use-transcript-window";
 export { useVisibleEvents } from "./use-visible-events";
 export { EventLine } from "./components/event-line";
 export { useRowMarkdown } from "./components/row-markdown-context";
-export { useTranscriptEvents } from "./components/transcript-events-context";
+export {
+  useTranscriptEvents,
+  useTranscriptDrawn,
+} from "./components/transcript-events-context";
+export type { TranscriptEvents } from "./components/transcript-events-context";
 export { useTranscriptSubject } from "./components/transcript-subject-context";
 export type { TranscriptSubject } from "./components/transcript-subject-context";
 export { useJsonlConversationId } from "./components/conversation-id-context";

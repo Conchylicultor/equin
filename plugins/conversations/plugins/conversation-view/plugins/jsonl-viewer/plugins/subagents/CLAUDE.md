@@ -303,7 +303,11 @@ of it: `useConversationSubagents(conversationId)` is that read, and
 `useSubagentStatus` is now a thin reading of it (`use-subagent-statuses.ts`).
 
 One hook, because the two directions are the same three reads (activity,
-`jsonl-events`, the conversation) and the same `pending` gate. Every caller in a
+`subagents.parent-facts`, the conversation) and the same `pending` gate. `subagents.parent-facts` (`parentFactsOf`, core) is served by the
+server over the WHOLE parent transcript — the pane's `jsonl-events` holds only its
+latest window, and an `Agent` call, notification or resume can be older: the
+`task-notification` events, `Agent` / `Workflow` calls and the idle / resume
+maps. The pane's header and report read their `Agent` call from it too. Every caller in a
 conversation subscribes on the same id, so a band listing ten sub-agents and a
 hundred cards each reading their own still cost one query and one subscription
 each.
@@ -412,11 +416,11 @@ downstream can widen the set, because nothing downstream resolves one.
 
 ## Plugin reference
 
-- Description: The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts, and serves two live resources: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation.
+- Description: The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. Discovers a conversation's sub-agents from the `subagents/` directory beside each of its anchored session transcripts, and serves two live resources: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation; plus the parent-transcript facts sub-agent state joins on (Agent / Workflow calls, task notifications, idle and resume times), folded over the whole parent transcript.
 - Web:
   - Contributes: `Demo.Resource` "subagents"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×4
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×3
     - `primitives/relative-time` ×3
     - `conversations/conversation-view/jsonl-viewer` ×2
     - `primitives/css/spacing` ×2
@@ -449,7 +453,9 @@ downstream can widen the set, because nothing downstream resolves one.
   - Contributes:
     - `resource.declare` "subagent-activity"
     - `resource.declare` "subagent-transcript"
+    - `resource.declare` "subagents.parent-facts"
   - Uses:
+    - `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
     - `conversations/transcript-source.transcriptChainReads`
     - `conversations/transcript-watcher.conversationChainTag`
     - `conversations/transcript-watcher.readChainLines`
@@ -479,6 +485,7 @@ downstream can widen the set, because nothing downstream resolves one.
   - Exports (types):
     - `DescribedSubagent`
     - `LastStep`
+    - `ParentFacts`
     - `SubagentActivityRow`
     - `SubagentJoin`
     - `SubagentRef`
@@ -498,6 +505,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `agentCallsIn`
     - `agentResumeTimes`
     - `classifyLastStep`
+    - `conversationParentFacts`
     - `describedSubagent`
     - `DescribedSubagentSchema`
     - `emptyUsageFold`
@@ -506,6 +514,8 @@ downstream can widen the set, because nothing downstream resolves one.
     - `lastStepOfLines`
     - `LastStepSchema`
     - `newestTurnLineAt`
+    - `parentFactsOf`
+    - `ParentFactsSchema`
     - `SEND_MESSAGE_TOOL_NAME`
     - `subagentActivity`
     - `SubagentActivityPayloadSchema`
