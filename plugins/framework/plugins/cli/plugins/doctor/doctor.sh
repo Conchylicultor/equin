@@ -84,7 +84,7 @@ fi
 
 if [ -z "$mise_bin" ]; then
   miss "mise" \
-    "It installs the exact Bun, Go, tmux and Rust releases mise.lock records." \
+    "It installs the exact Bun, Go and Rust releases mise.lock records." \
     "curl https://mise.run | sh" "$activate" "mise install"
 else
   # Active = either `mise activate` ran in this shell (it exports MISE_SHELL),
@@ -117,7 +117,7 @@ else
   done
   if [ -n "$broken" ]; then
     miss "mise shims do not resolve (a symlink loop, or mise moved):$broken" \
-      "No bun, go or tmux can start through them (backends fail with posix_spawn ENOENT)." \
+      "No bun or go can start through them (backends fail with posix_spawn ENOENT)." \
       "$mise_bin reshim --force"
   fi
 

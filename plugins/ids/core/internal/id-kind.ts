@@ -87,8 +87,8 @@ export interface IdKind<P extends string, S extends IdShape = IdShape> {
    * Recognition-only legacy prefixes (`claude` for att/conv). Never minted,
    * and never read by {@link pattern}: an alias is recognised only where the
    * caller already KNOWS the kind it is reading ({@link is}, {@link parse},
-   * {@link schema}, {@link recognitionPattern} — a worktree name, a tmux
-   * session, a route param). Inline detection infers the kind FROM the text,
+   * {@link schema}, {@link recognitionPattern} — a worktree name, a
+   * route param). Inline detection infers the kind FROM the text,
    * and an alias two kinds share (`claude-…` named both an attempt and its
    * conversation) cannot say which one it is.
    */

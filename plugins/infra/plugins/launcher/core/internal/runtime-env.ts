@@ -6,11 +6,9 @@
 // spawned the gateway with `{ ...process.env }`, and the gateway handed every
 // child its own `os.Environ()` plus a few additions. So `./singularity start`
 // run from an agent shell gave every backend on the host that shell's
-// SINGULARITY_CONVERSATION_ID, its TMUX socket and its CLAUDE_* session
+// SINGULARITY_CONVERSATION_ID and its CLAUDE_* session
 // variables (observed 2026-09-15). Every op-log record and every commit a
-// backend's build made was then stamped with one agent's conversation, and
-// tmux clients the backend ran talked to whichever tmux server the starter was
-// inside instead of the default one.
+// backend's build made was then stamped with one agent's conversation.
 //
 // So what travels is DECLARED here, as a closed list. The launcher spawns the
 // gateway with exactly this subset of its own environment (`pickRuntimeEnv`),
@@ -22,16 +20,16 @@
 //
 // An allowlist, not a denylist of known-bad names: what a starter's environment
 // may carry is an open set, so naming the bad ones only ever catches the last
-// leak somebody noticed. The agent pane already works this way, one level
-// down: runtime-tmux/server/internal/agent-session-env.ts rebuilds each pane's
-// environment from a closed list under `env -i`.
+// leak somebody noticed. An agent process already works this way, one
+// level down: agent-launch rebuilds each agent's environment from a closed
+// allowlist.
 //
 // Deliberately NOT on the list:
 //
-// - Session and terminal state: TMUX*, CLAUDE*, TERM*, WARP_*, SSH_*, XPC_*,
+// - Session and terminal state: CLAUDE*, TERM*, WARP_*, SSH_*, XPC_*,
 //   SECURITYSESSIONID. They describe the starter's terminal, not the host. The
 //   keychain works without them (secrets use the native keyring addon), and
-//   agent panes already run `claude` under `env -i`.
+//   agent processes start from their own allowlisted environment.
 // - SOCKET_PATH: a backend's socket is per process, so it travels on the
 //   backend's argv (`--socket`), where no descendant inherits it.
 // - PG*: the database location is declared in `database.json`. libpq lets the
@@ -154,11 +152,11 @@ export const RUNTIME_FORWARDED_TOOL_ENV: Readonly<Record<string, string>> = {};
  */
 export const RUNTIME_WITHHELD_ENV = {
   SINGULARITY_CONVERSATION_ID:
-    "agent-session identity; the tmux runtime delivers it into that agent's own pane with `tmux -e`, where the commit hook and op-log read it",
+    "agent-session identity; the agent launcher delivers it into that agent's own process environment, where the commit hook and op-log read it",
   SINGULARITY_TOOL_USE_ID:
     "the Bash tool call an e2e script was launched by; a PreToolUse guard exports it into that one command, never a backend's",
   SINGULARITY_PARENT_HOST:
-    "the host an agent's MCP client dials back to; delivered into that agent's own pane with `tmux -e`",
+    "the host an agent's MCP client dials back to; delivered into that agent's own process environment by the agent launcher",
   SINGULARITY_PARENT_LIFELINE:
     "the lock file one spawn holds for the child it starts, set by infra/spawn for that child only (packages/flock lifeline.ts)",
   SINGULARITY_HOST_GRANT:
@@ -207,7 +205,7 @@ export function isRuntimeEnvName(name: string): boolean {
 
 /**
  * A directory mise creates when it installs one version of one tool, e.g.
- * `~/.local/share/mise/installs/bun/1.4.2/bin` or `…/installs/tmux/3.6a`. The
+ * `~/.local/share/mise/installs/bun/1.4.2/bin` or `…/installs/rust/1.99.1`. The
  * version is part of the path, so the entry names ONE build forever.
  */
 const MISE_INSTALL_DIR = /(^|\/)mise\/installs\//;
@@ -259,13 +257,13 @@ export function miseShimsDir(
  *
  * The shims then go to the FRONT. The same day showed the other half of the
  * hole: the gateway's PATH listed `/opt/homebrew/bin` and `~/.cargo/bin` ahead
- * of the shims, so the runtime ran Homebrew's tmux and rustup's default rust
+ * of the shims, so the runtime ran rustup's default rust
  * while `mise.toml` declared versions nothing used.
  *
  * And the shims are there even when the starter's PATH never mentioned mise —
  * a shell that installed mise but never activated it, or a service unit. The
- * 2026-09-18 clean-VM run was that case: the PATH came back unchanged, tmux and
- * rustc were simply absent, and the toolchain check failed the build. So the
+ * 2026-09-18 clean-VM run was that case: the PATH came back unchanged and
+ * rustc was simply absent, and the toolchain check failed the build. So the
  * shims directory comes, strongest first, from: an explicit `…/mise/shims`
  * entry (the one the starter's own mise uses), one derived from a stripped
  * `…/mise/installs/…` entry, or `miseShimsDir(env)`. A machine with no mise at

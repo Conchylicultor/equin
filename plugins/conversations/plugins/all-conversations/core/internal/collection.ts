@@ -20,7 +20,7 @@ import { CONVERSATION_SORTABLE } from "./fields";
 // own columns plus its owners' (`worktreePath`, `taskId`, and the task's
 // current `taskTitle`). It leaves out what no list reads — `active`,
 // `waitingFor`, `lastViewedAt`, `claudeSessionId`, `closeRequested`,
-// `hibernatedAt`, `attemptId` — so the tmux poller's `waitingFor` /
+// `hibernatedAt`, `attemptId` — so the status reconciler's `waitingFor` /
 // `lastViewedAt` writes fall outside every list's route gate and load nothing.
 
 /** The conversation fields a list shows, in list order. */

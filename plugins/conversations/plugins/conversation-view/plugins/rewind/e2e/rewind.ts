@@ -5,7 +5,7 @@
  *
  * It creates its own throwaway conversation (Haiku, two one-word turns) and acts
  * only on that one. That is not tidiness: transcripts live in `~/.claude` and
- * panes on one tmux server, both shared by every worktree, so rewinding a
+ * agent processes are shared by every worktree, so rewinding a
  * conversation this deploy merely inherited from main's database would cut the
  * real one.
  *

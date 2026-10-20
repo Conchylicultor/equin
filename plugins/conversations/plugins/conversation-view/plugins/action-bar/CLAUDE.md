@@ -16,7 +16,6 @@
     - `Conversation.ActionBar` ← `conversations.conversation-view.open-app`
     - `Conversation.ActionBar` ← `conversations.conversation-view.push-profiling`
     - `Conversation.ActionBar` ← `conversations.conversation-view.tasks-panel`
-    - `Conversation.ActionBar` ← `conversations.conversation-view.terminal-pane`
     - `Conversation.ActionBar` ← `conversations.conversation-view.vscode`
     - `Conversation.ActionBar` ← `review`
     - `Conversation.ActionBar` ← `tasks.attempt-view`
@@ -37,7 +36,6 @@
     - `conversations/conversation-view/open-app`
     - `conversations/conversation-view/push-profiling`
     - `conversations/conversation-view/tasks-panel`
-    - `conversations/conversation-view/terminal-pane`
     - `conversations/conversation-view/vscode`
     - `review`
     - `tasks/attempt-view`

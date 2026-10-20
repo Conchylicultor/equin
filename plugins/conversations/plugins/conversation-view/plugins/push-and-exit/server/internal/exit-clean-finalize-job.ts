@@ -13,7 +13,7 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
 const FINALIZE_TIMEOUT_MS = 60_000;
 
 // Spawned by the `exit_clean` MCP tool. Defers `deleteConversation` until
-// after the model's current turn ends, so the closing tmux kill doesn't
+// after the model's current turn ends, so the closing agent kill doesn't
 // race against a still-streaming response. If end_turn doesn't arrive
 // within FINALIZE_TIMEOUT_MS we delete anyway — the model has already
 // signalled clean exit, so missing the end_turn (transcript poll lag,
@@ -26,7 +26,7 @@ export const exitCleanFinalizeJob = defineJob({
   // number bounds a `ctx.waitFor`, which RETURNS from `run` and releases the
   // slot. The wait costs no hold at all. What this classifies is the resumed
   // dispatch: `dropTaskOnExit` (git-measured attempt standing) plus one untimed
-  // `tmux kill-session`, both bounded local subprocesses.
+  // agent stop, both bounded local operations.
   hold: "seconds",
   input: z.object({ conversationId: z.string() }),
   // Direct-enqueue only (spawned by the exit_clean MCP tool).

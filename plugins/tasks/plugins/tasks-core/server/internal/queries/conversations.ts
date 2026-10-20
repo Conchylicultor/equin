@@ -85,7 +85,7 @@ function queryConversations(
 }
 
 // Infra paths only: the conversations status reconciler; turn-emitter boot
-// reconcile. Returns active (non-`done`) rows including system kinds so tmux
+// reconcile. Returns active (non-`done`) rows including system kinds so agent
 // death is detected and turn events are emitted for system conversations.
 //
 // Scoped to `active` (status <> 'done') because both callers only ever act on

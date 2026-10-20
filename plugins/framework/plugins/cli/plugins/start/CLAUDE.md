@@ -50,8 +50,8 @@ enabled into `default.target`. Same relaunch policy as the plist. It needs
 stops the user's manager — gateway, backends and agents — when the last session
 closes, so `start` refuses with that fix. With it the gateway starts at boot,
 nobody logged in (nothing is locked until login: the secrets key is a file on
-Linux). `KillMode=process`: a stop signals the gateway alone, because the tmux
-server holding every agent lives in the unit's cgroup.
+Linux). `KillMode=process`: a stop signals the gateway alone, because every running
+agent process (started detached) lives in the unit's cgroup.
 
 `start` and `stop` drive both through one `GatewayLoginService` interface
 (`gatewayLoginService()`), so the bullets above hold for systemd too (reload is

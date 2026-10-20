@@ -78,26 +78,6 @@ export const TOOLS: readonly ToolSpec[] = [
     ],
   },
   {
-    name: "tmux",
-    versionArgv: ["tmux", "-V"],
-    versionPattern: /^tmux (\S+)/,
-    smoke: [
-      {
-        // A private server on its own socket, so the smoke test never touches
-        // the server the agent sessions live in.
-        name: "tmux server round-trip",
-        argv: [
-          "sh",
-          "-c",
-          "tmux -L singularity-toolchain-smoke -f /dev/null new-session -d 'sleep 30' && " +
-            "tmux -L singularity-toolchain-smoke list-sessions && " +
-            "tmux -L singularity-toolchain-smoke kill-server",
-        ],
-        timeoutMs: MINUTE,
-      },
-    ],
-  },
-  {
     name: "rust",
     versionArgv: ["rustc", "--version"],
     versionPattern: /^rustc (\d+\.\d+\.\d+)/,

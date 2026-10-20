@@ -267,7 +267,7 @@ export async function probeWorktreeOp(
 // scans; per-file probes run in parallel.
 //
 // The one scan, so the questions asked of these markers — "is anything running
-// here" (the tmux status poller), "what is running everywhere" (the stop guard)
+// here" (the status reconciler), "what is running everywhere" (the stop guard)
 // and "is MY op still running" (`./singularity await`) — read the directory the
 // same way and reap on the same rule.
 export async function listWorktreeOps(slug: string): Promise<WorktreeOpInfo[]> {

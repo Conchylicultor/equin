@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-toolchain",
   "version": "0.0.1",
   "private": true,
-  "description": "The mise toolchain (bun, go, tmux, rust, uv) this checkout runs: the declared tools with their floors and holds, the lock parsing, the toolchain:resolved check, and `toolchain upgrade` \u2014 the alias of `deps upgrade mise` (the loop itself lives in infra/deps)."
+  "description": "The mise toolchain (bun, go, rust, uv) this checkout runs: the declared tools with their floors and holds, the lock parsing, the toolchain:resolved check, and `toolchain upgrade` \u2014 the alias of `deps upgrade mise` (the loop itself lives in infra/deps)."
 }

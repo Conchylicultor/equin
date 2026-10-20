@@ -506,8 +506,7 @@ export async function finishConversation(
     );
   } catch (err) {
     // Without this, the row stays at "starting" forever — the status reconciler
-    // leaves starting rows alone while they have no pane, and the UI just shows "Starting…" with a terminal pane
-    // that prints "can't find session" because tmux never created one.
+    // leaves starting rows alone while they have no agent, and the UI just shows "Starting…" forever.
     // eslint-disable-next-line promise-safety/no-bare-catch
     await updateConversation(p.conversationId, {
       status: "gone",
@@ -622,8 +621,7 @@ async function respawnResume(row: Conversation): Promise<void> {
   }
 
   const runtime = Runtime.get(row.runtime);
-  // tmux refuses `new-session -s <name>` when a (dead) session by that name
-  // still exists. Clear any stale pane before re-spawning.
+  // Clear any stale agent for this conversation before re-spawning.
   await runtime.delete(row.id);
 
   // Reset status so the status reconciler can track the new session. Without this,

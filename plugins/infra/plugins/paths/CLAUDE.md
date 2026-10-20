@@ -311,17 +311,17 @@ run everywhere.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×9
     - `infra` ×8
     - `build` ×7
     - `backup` ×4
     - `framework` ×4
     - `conversations` ×3
-    - `primitives` ×3
     - `release` ×3
     - `code-explorer` ×2
     - `plugin-meta` ×2
+    - `primitives` ×2
     - `stats` ×2
     - `apps/deploy/deployments`
     - `config_v2`
@@ -388,7 +388,6 @@ run everywhere.
     - `RUN_TRANSCRIPT_SUFFIX`
     - `SERVER_CORE_RELATIVE`
     - `setReleaseIdentity`
-    - `TMUX`
     - `WEB_CORE_RELATIVE`
     - `webDistDir`
     - `worktreeArtifacts`

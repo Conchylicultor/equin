@@ -33,12 +33,12 @@ function renderDescription(row: ReportRow): string {
   const lines: string[] = [];
 
   lines.push(
-    `A sent turn was **never confirmed in the transcript**. The pending-turn state machine POSTed the user's message for conversation \`${data.conversationId}\`, the server acked it (2xx) — but after ${Math.round(data.elapsedMs / 1000)}s the message text never appeared in the conversation's transcript, so the turn entered the \`unconfirmed\` state. The user's text is safe (kept on the pending-turn card with a Retry affordance), but the agent very likely **never received the message** — the silent paste-race symptom this report exists to catch.`,
+    `A sent turn was **never confirmed in the transcript**. The pending-turn state machine POSTed the user's message for conversation \`${data.conversationId}\`, the server acked it (2xx) — but after ${Math.round(data.elapsedMs / 1000)}s the message text never appeared in the conversation's transcript, so the turn entered the \`unconfirmed\` state. The user's text is safe (kept on the pending-turn card with a Retry affordance), but the agent very likely **never received the message** — the silent dropped-turn symptom this report exists to catch.`,
   );
   lines.push("");
   lines.push(`**What it means**`);
   lines.push(
-    `The POST → tmux paste → transcript pipeline dropped the turn after the ack: usually the paste race (the text was pasted into a pane that was not ready to receive it), a wedged agent session, or a transcript/reconcile mismatch (the disk transcript rewrote the text in a way reconciliation could not match). A recurring report on the same conversation means that conversation's delivery path is systematically broken, not a one-off race.`,
+    `The POST → agent process → transcript pipeline dropped the turn after the ack: usually an agent process that was not ready to take it, a wedged agent process, or a transcript/reconcile mismatch (the disk transcript rewrote the text in a way reconciliation could not match). A recurring report on the same conversation means that conversation's delivery path is systematically broken, not a one-off race.`,
   );
   lines.push("");
   lines.push(`**Unconfirmed turn**`);
@@ -60,7 +60,7 @@ function renderDescription(row: ReportRow): string {
   lines.push("");
   lines.push(`**How to fix**`);
   lines.push(
-    `Open conversation \`${data.conversationId}\` and compare the transcript on disk with what the send endpoint claims it delivered: did the text reach the agent session at all (check the tmux pane / session logs), or did it land but in a rewritten form the pending-turn reconciler failed to match (compare against the endpoint's \`resolvedText\`)? If the count keeps growing on this conversation, the delivery path is systematically broken — inspect the runtime-tmux paste path and the conversation's session state rather than the reconciler. A rare, isolated report is the paste race the Retry affordance already covers.`,
+    `Open conversation \`${data.conversationId}\` and compare the transcript on disk with what the send endpoint claims it delivered: did the text reach the agent session at all (check the agent's \`agent.log\`, beside its \`events.jsonl\` in the \`state/sdk-agents/<namespace>/<conversationId>/\` data dir), or did it land but in a rewritten form the pending-turn reconciler failed to match (compare against the endpoint's \`resolvedText\`)? If the count keeps growing on this conversation, the delivery path is systematically broken — inspect the sdk runtime's delivery to the agent process and the conversation's session state rather than the reconciler. A rare, isolated report is the race the Retry affordance already covers.`,
   );
   return lines.join("\n");
 }

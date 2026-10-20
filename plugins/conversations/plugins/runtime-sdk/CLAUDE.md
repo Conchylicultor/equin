@@ -5,14 +5,27 @@ Agent Manager → SDK Claude*). Design:
 [`research/2026-10-19-conversations-sdk-runtime-phase1.md`](../../../../research/2026-10-19-conversations-sdk-runtime-phase1.md);
 spike: [`research/2026-10-19-conversations-sdk-agent-spike.md`](../../../../research/2026-10-19-conversations-sdk-agent-spike.md);
 the default flip and the tmux runtime's removal:
-[`research/2026-10-20-conversations-sdk-default-and-tmux-removal.md`](../../../../research/2026-10-20-conversations-sdk-default-and-tmux-removal.md).
+[`research/2026-10-20-conversations-sdk-default-and-tmux-removal.md`](../../../../research/2026-10-20-conversations-sdk-default-and-tmux-removal.md);
+agents without tmux, per-namespace paths, the Claude Code health row:
+[`research/2026-10-20-conversations-sdk-tmux-removal.md`](../../../../research/2026-10-20-conversations-sdk-tmux-removal.md).
 
-- `machine/` — the runtime (`sdkRuntime`): launch in tmux, liveness = the
-  socket answers `hello`, the `events.jsonl` consumer (one file watcher, DB
+- `machine/` — the runtime (`sdkRuntime`): launch detached
+  (`agent-process.ts`: one `runtime-sdk.agent` daemon instance per agent,
+  followed by its pid file, re-attached after a restart; stop = `shutdown`,
+  SIGKILL when it will not), liveness = the socket answers `hello`, the `events.jsonl` consumer (one file watcher, DB
   cursor, reads rotated generations, reports a seq gap), questions into
   question-relay, and the partial message (`partial-stream.ts`: one
   `subscribe` connection per watched conversation, reconnected when the
-  consumer sees the agent's `ready`).
+  consumer sees the agent's `ready`). `agent-processes.ts` serves
+  `runtime-sdk.agent-processes`, the agents running here and in every other
+  namespace (one watch of the pid files). `legacy-handover.ts` is one-time:
+  main shuts down agents still on the pre-namespace paths.
+- **Every agent path is under the launching backend's namespace**
+  (`machine/internal/paths.ts`, which reads `runtimeNamespace()` itself): a
+  worktree's DB is a fork of main's, and with paths keyed by conversation id
+  alone a worktree backend found main's agents answering and commanded them.
+  Layout: `state/sdk-agents/<ns>/<id>/` (launch.json, events.jsonl, agent.log),
+  `locks/sdk-agents/<ns>/<id>.pid`, `sockets/agents/<ns>/<id>.sock`.
 - `server/` — the `conversations_ext_sdk_agent` side table, the pure event
   reducer, the launch → options-file mapping.
 - Conversations left on the retired tmux runtime were moved by the data
@@ -20,19 +33,18 @@ the default flip and the tmux runtime's removal:
   next Send resumes it from its transcript).
 
 - `bin/agent.ts` — one detached agent process per conversation: the Agent SDK's
-  `query()` in streaming-input mode, commands over
-  `sockets/agents/<id>.sock`, every SDK message unchanged as a numbered line of
-  `state/sdk-agents/<id>/events.jsonl`, a readable log on stdout (the terminal
-  button's view). Launched inside tmux, which only supervises and shows it.
+  `query()` in streaming-input mode, commands over its socket, every SDK
+  message unchanged as a numbered line of its `events.jsonl`, its pid file, a
+  readable log on stdout (`agent.log`, for debugging).
 - `core/protocol.ts` — the wire: commands, replies, event lines, `PROTOCOL_VERSION`.
 - `core/partial.ts` — token streaming: the agent folds the SDK's
   `stream_event`s (`includePartialMessages`) into frames — never written to
   `events.jsonl` — and streams them on `subscribe` connections; the backend
   folds the same frames into the `conversations.partial-message` value.
   Design: [`research/2026-10-20-conversations-token-streaming.md`](../../../../research/2026-10-20-conversations-token-streaming.md).
-- `bin/spike.ts <scenario>` — the experiments (restart, ask, auth, rewind,
-  terminal, latency), run with `./singularity run`; results land
-  in `state/sdk-agents/_spike/results/`.
+- `web/` — the health report's Claude Code row: Claude Code (its own verdict),
+  the Agent SDK's version drift, and the agents running here and elsewhere
+  (each other worktree as its task's chip, in the expanded detail).
 
 Gotchas the spike hit:
 
@@ -48,16 +60,28 @@ Gotchas the spike hit:
 
 ## Plugin reference
 
-- Description: The health report's Agent SDK row: attention when the system Claude Code the sdk runtime runs differs in major.minor from the CLI version the pinned Agent SDK was built for. The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file.
+- Description: The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, and the agent processes running — here, and in every other worktree (each as its task's chip). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file.
 - Web:
-  - Contributes: `HealthReport.Row` "Agent SDK"
+  - Contributes: `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
   - Uses:
+    - `infra/claude-cli/availability.ClaudeCodeActions`
+    - `infra/claude-cli/availability.ClaudeCodeDetail`
+    - `infra/claude-cli/availability.useClaudeCodeHealth`
     - `infra/claude-cli/availability.useClaudeCodeStatus`
     - `network/live.useLive`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.Rigid`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
     - `primitives/live-state.combineResources`
+    - `primitives/text-editor/inline-chip.renderInlineChip`
     - `shell/health-report.HealthReport`
 - Server:
-  - Contributes: `resource.declare` "runtime-sdk.bundled-cli"
+  - Contributes:
+    - `resource.declare` "runtime-sdk.agent-processes"
+    - `resource.declare` "runtime-sdk.bundled-cli"
   - Uses:
     - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
     - `conversations/agent-launch.mergeLaunchSettings`
@@ -66,10 +90,14 @@ Gotchas the spike hit:
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/runtime-sdk/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
-  - Resources: `runtime-sdk.bundled-cli` (push, fixed)
+  - Resources:
+    - `runtime-sdk.agent-processes` (push, notified)
+    - `runtime-sdk.bundled-cli` (push, fixed)
 - Machine:
   - Uses: `network/live.serveValue`
-  - Register: `defineFileWatcher('runtime-sdk.events')`
+  - Register:
+    - `defineFileWatcher('runtime-sdk.events')`
+    - `defineDaemon('runtime-sdk.agent')`
 - Core:
   - Uses: `network/live.liveValue`
   - Exports (types):
@@ -78,6 +106,7 @@ Gotchas the spike hit:
     - `AgentEvent`
     - `AgentLaunchOptions`
     - `AgentLifecycle`
+    - `AgentProcesses`
     - `CommandReply`
     - `HelloReply`
     - `OpenRequest`
@@ -91,6 +120,7 @@ Gotchas the spike hit:
     - `AgentEventSchema`
     - `AgentLaunchOptionsSchema`
     - `AgentLifecycleSchema`
+    - `AgentProcessesSchema`
     - `applyPartialFrame`
     - `CommandReplySchema`
     - `DismissReplySchema`
@@ -101,10 +131,12 @@ Gotchas the spike hit:
     - `PartialStreamLineSchema`
     - `PROTOCOL_VERSION`
     - `sameMajorMinor`
+    - `sdkAgentProcesses`
     - `sdkBundledCli`
     - `SubscribeReplySchema`
     - `TurnReplySchema`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --foreground`
   - Imported by: `apps/agent-manager/demo`
 
 <!-- AUTOGENERATED:END -->

@@ -15,7 +15,7 @@ service through `gatewayLoginService()` (`server/internal/login-service.ts`), on
 LaunchAgent on macOS (`launchd-service.ts` + the pure `launchd-plist.ts`) and a
 systemd user unit on Linux (`systemd-service.ts` + the pure `systemd-unit.ts`,
 which requires lingering and uses `KillMode=process` so a restart never kills
-the tmux server running the agents). That is what makes the dev gateway come
+the running agent processes). That is what makes the dev gateway come
 back after a reboot. `start` and `stop` name no manager. The gateway writes its own
 pidfile (`-pid-file`) because no launcher sees a launchd relaunch; the detached
 spawn writes it too, so a gateway that dies before getting that far still
@@ -120,7 +120,7 @@ The runtime tree is the gateway and everything it starts: every backend (main,
 central, each worktree) and Postgres / PgBouncer. It
 starts from a **declared** environment, never from whoever started it. (It used
 to inherit: `./singularity start` from an agent shell put that shell's
-`SINGULARITY_CONVERSATION_ID`, `TMUX` and `CLAUDE_*` into every backend on the
+`SINGULARITY_CONVERSATION_ID` and `CLAUDE_*` into every backend on the
 host, so their builds' op-log records and commits named one agent's
 conversation.)
 
@@ -155,14 +155,14 @@ Two boundaries, one declaration:
 (`…/mise/installs/<tool>/<version>/bin`) out of it and puts the shims **first**,
 so the runtime tree re-resolves its tools per invocation from the committed
 `mise.toml` + `mise.lock`. First, because a PATH that lists `/opt/homebrew/bin` or
-`~/.cargo/bin` ahead of the shims runs Homebrew's tmux and rustup's default rust
+`~/.cargo/bin` ahead of the shims runs rustup's default rust
 whatever the lock says. It takes the whole environment, not a PATH string: the
 shims directory is an explicit `…/mise/shims` entry if PATH has one, else derived
 from a stripped install dir, else located from the environment by mise's own
 order (`MISE_DATA_DIR`, `XDG_DATA_HOME/mise`, `~/.local/share/mise`). So a starter
 whose shell never ran `mise activate` (a fresh machine, a service unit) still
 hands the runtime mise's tools — before this, its PATH passed through unchanged
-and tmux / rustc were simply missing. `runtimeShimsDir(env)` names the directory
+and rustc was simply missing. `runtimeShimsDir(env)` names the directory
 it chose.
 A shell with mise activated puts those resolved directories ahead
 of the shims — right for a shell, re-activated per directory; wrong for a daemon
@@ -175,7 +175,7 @@ to reach the already-running gateway.
 
 A shim resolves from its **cwd**, so the shims alone are not enough. With no
 `mise.toml` above the directory a tool runs in, mise runs the next non-mise copy
-on PATH (Homebrew's tmux, unlocked) or, with none, fails:
+on PATH (Homebrew's, unlocked) or, with none, fails:
 `mise ERROR No version is set for shim: bun`. So each backend and central pins
 its own checkout at boot — `toolchainPin()` (paths/core), i.e.
 `MISE_GLOBAL_CONFIG_FILE=<checkout>/mise.toml`, plus a re-normalised

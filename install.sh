@@ -70,7 +70,7 @@ main() {
        nobody logged in (Linux); asks for your password once
     2. install mise, and add one line to $RC so new terminals find its tools
     3. $( [ -n "$SELF_DIR" ] && echo "use the checkout at $INSTALL_DIR" || echo "clone $REPO_URL into $INSTALL_DIR" )
-    4. install the exact Bun, Go, tmux and Rust releases mise.lock records
+    4. install the exact Bun, Go and Rust releases mise.lock records
     5. install Claude Code — agents run on it and need a Claude account to sign in
     6. start the app (gateway + its own Postgres) and build it: ~10-15 minutes
 EOF
@@ -139,7 +139,7 @@ EOF
   if [ "$EDIT_RC" = "1" ]; then
     if ! grep -qs "mise activate" "$RC"; then
       say "Activating mise in new terminals ($RC)"
-      printf '\n# mise: the Bun/Go/tmux/Rust releases Singularity runs on\n%s\n' "$ACTIVATE" >> "$RC"
+      printf '\n# mise: the Bun/Go/Rust releases Singularity runs on\n%s\n' "$ACTIVATE" >> "$RC"
     fi
   fi
   # This process: mise's shims on PATH, which is what the doctor calls active.

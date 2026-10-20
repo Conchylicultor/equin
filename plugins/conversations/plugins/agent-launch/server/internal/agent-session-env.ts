@@ -1,34 +1,29 @@
 import { runtimeShimsDir } from "@plugins/infra/plugins/launcher/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
-// What environment does an agent's shell start from? (Every app-launched agent
-// runs in a tmux session the sdk runtime hosts its agent process in, so it
-// starts here.)
+// What environment does an agent's shell start from? Every app-launched agent
+// is an sdk agent process the runtime starts detached, and its CLI and every
+// tool it runs inherit this environment.
 //
-// Not ours. The tmux server is started by whichever process first talks to the
-// default socket — in practice the main backend, after a machine restart — and
-// it keeps that process's environment for its whole life. Every `tmux
-// new-session` forks from the server, so every agent pane on the box inherited
-// the main backend's variables: its namespace, its Unix socket path, its cwd.
-// Nobody chose that; the panes simply picked them up. `-e` only ADDS to what
-// the server already carries, so it cannot undo any of it.
+// Not the backend's. A backend's own environment is whatever its spawner and
+// the gateway handed it — its namespace, its Unix socket path, its cwd — and an
+// agent that inherited them acted as that backend: its commits, pushes and MCP
+// calls carried the wrong identity. (When agents ran in tmux panes, the tmux
+// server leaked main's environment into every pane the same way.)
 //
-// So the pane's first act is to throw its environment away and rebuild it from
-// a closed set. The exec'd process is `/bin/sh`, which immediately re-execs
-// `env -i <allowlist> PATH=<toolchain> <login shell> -l -c '<claude command>'`:
-// the outer shell exists only to expand `$NAME` (it is the one process that can
-// still see tmux's injected TMUX / TMUX_PANE and the `-e` values), and the
-// inner login shell — the ACCOUNT's own (`agentLoginShell`) — starts from
-// exactly this list, its profile adding to a PATH that already finds the
-// toolchain (`agentSessionPath`).
+// So the agent starts from a closed set. The spawned process is `/bin/sh`,
+// which immediately re-execs `env -i <allowlist> PATH=<toolchain> <login
+// shell> -l -c '<command>'`: the outer shell is handed exactly the allowlisted
+// values (`agentSessionLaunch`), and the inner login shell — the ACCOUNT's own
+// (`agentLoginShell`) — starts from exactly this list, its profile adding to a
+// PATH that already finds the toolchain (`agentSessionPath`).
 //
-// Why an allowlist and not `tmux set-environment -g -u` per bad variable: the
-// set of things a backend's ambient environment may carry is open-ended, so
-// naming the bad ones only ever catches the last leak somebody noticed. An
-// allowlist makes the tmux server's environment irrelevant by construction.
+// Why an allowlist and not a list of bad variables: the set of things a
+// backend's ambient environment may carry is open-ended, so naming the bad ones
+// only ever catches the last leak somebody noticed.
 
 /**
- * The variables the launch delivers with `tmux new-session -e`, valued by
+ * The variables the launch delivers, valued by
  * {@link agentSessionEnv} — whose return type is keyed by this list, so a name
  * here without a value (or the reverse) is a type error, and the allowlist
  * below spreads it, so a delivered name is never dropped by `env -i`.
@@ -37,9 +32,9 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
  *   prepare-commit-msg hook stamps trailers from (and every hook command names
  *   its conversation by).
  * - `SINGULARITY_PARENT_HOST` — the host the agent's `.mcp.json` dials back to.
- * - `CLAUDE_CODE_DISABLE_AGENT_VIEW` — pins the Claude session to this tmux
- *   session, so it can never migrate into Claude Code's background daemon and
- *   inherit whichever pane first spawned that daemon (the Sep 9 misattributed
+ * - `CLAUDE_CODE_DISABLE_AGENT_VIEW` — pins the Claude session to this agent
+ *   process, so it can never migrate into Claude Code's background daemon and
+ *   inherit whichever process first spawned that daemon (the Sep 9 misattributed
  *   push).
  */
 export const AGENT_SESSION_DELIVERED_ENV = [
@@ -48,7 +43,7 @@ export const AGENT_SESSION_DELIVERED_ENV = [
   "CLAUDE_CODE_DISABLE_AGENT_VIEW",
 ] as const;
 
-/** The `-e` values one agent session is launched with. */
+/** The values one agent session is launched with. */
 export type AgentSessionEnv = Record<
   (typeof AGENT_SESSION_DELIVERED_ENV)[number],
   string
@@ -64,8 +59,8 @@ export type AgentSessionEnv = Record<
  * CLAUDE_CODE_DISABLE_AGENT_VIEW: Claude Code's agent view can otherwise move a
  * live session into its per-machine background daemon (`←` on an empty prompt,
  * `/background`, the exit dialog), and the daemon hands every session it hosts
- * ITS OWN environment — the one of whichever pane first spawned it. A session
- * moved that way keeps working through a stub in this pane, so the app cannot
+ * ITS OWN environment — the one of whichever process first spawned it. A
+ * session moved that way keeps working through a stub in this process, so the app cannot
  * tell, but its commits, pushes and MCP calls then carry another
  * conversation's id. The app never uses background sessions, so the session it
  * launched is the only place an agent may run.
@@ -86,16 +81,13 @@ export const AGENT_SESSION_ENV_ALLOWLIST = [
   "USER",
   "LOGNAME",
   "SHELL",
-  // Terminal + locale. TERM is set by tmux for the pane; the locale variables
-  // may be unset upstream, in which case they arrive empty, which POSIX
-  // already treats as "not set" for locale resolution.
+  // Terminal + locale. TERM is `dumb` (no terminal: tool output carries no
+  // colour codes); the locale variables may be unset upstream, in which case
+  // they arrive empty, which POSIX already treats as "not set".
   "TERM",
   "LANG",
   "LC_ALL",
   "LC_CTYPE",
-  // tmux's own injection.
-  "TMUX",
-  "TMUX_PANE",
   // What the launch delivers with `-e` (`agentSessionEnv`).
   ...AGENT_SESSION_DELIVERED_ENV,
 ] as const;
@@ -108,7 +100,7 @@ export const AGENT_SESSION_PATH_SEED = "/usr/bin:/bin:/usr/sbin:/sbin";
 /**
  * The PATH the inner login shell starts from: the toolchain the runtime itself
  * resolves its tools through (mise's shims — `runtimeShimsDir`, the rule the
- * gateway hands every backend), the directory of the `claude` the pane runs,
+ * gateway hands every backend), the directory of the `claude` the agent runs,
  * then the system seed. The user's profile adds to it (macOS's path_helper
  * re-orders the system entries first and keeps the rest).
  *
@@ -116,7 +108,7 @@ export const AGENT_SESSION_PATH_SEED = "/usr/bin:/bin:/usr/sbin:/sbin";
  * `./singularity` at all — only when the user's own shell profile put mise on
  * PATH for a NON-interactive login shell: a `~/.zshenv` line on the one Mac it
  * ran on, which `install.sh` (writing `~/.zshrc`) never creates. On Linux the
- * pane came up with no `bun` and no `claude`.
+ * agent came up with no `bun` and no `claude`.
  */
 export function agentSessionPath(opts: {
   shimsDir: string | undefined;
@@ -150,8 +142,8 @@ const POSIX_LOGIN_SHELLS = new Set([
 ]);
 
 /**
- * The login shell an agent pane runs in: the account's own (its passwd entry),
- * so the pane reads the profile the user actually keeps — zsh on a Mac, usually
+ * The login shell an agent runs in: the account's own (its passwd entry),
+ * so the agent reads the profile the user actually keeps — zsh on a Mac, usually
  * bash on Linux — and no particular shell is a prerequisite. One without POSIX
  * `-c` argument semantics (fish, nushell) cannot carry the command and prompt
  * as positional words; it gets `/bin/sh`, which every host has.
@@ -162,15 +154,14 @@ export function agentLoginShell(accountShell: string): string {
     : "/bin/sh";
 }
 
-// The command string tmux execs, as
-// `/bin/sh -c <wrapper> sh <loginShell> <path> <claudeCmd> [prompt]`.
+// The command the agent is spawned as:
+// `/bin/sh -c <wrapper> sh <loginShell> <path> <command> [args…]`.
 //
 // Nothing is interpolated into it: the login shell rides in as `$1`, the PATH
-// as `$2`, the Claude command as `$3` and the prompt as `$4`, so a command
-// containing single quotes (`--settings '{…}'`) needs no escaping and cannot be
-// re-parsed on the way through. After `shift 3`, `"$@"` is the prompt when there
-// is one and expands to nothing when there is not — which is what keeps the
-// existing contract that a short prompt reaches Claude as the inner shell's `$1`.
+// as `$2`, the command as `$3` and its arguments after, so a command
+// containing single quotes needs no escaping and cannot be re-parsed on the way
+// through. After `shift 3`, `"$@"` is the arguments when there are any and
+// expands to nothing when there are not.
 export const AGENT_SESSION_WRAPPER = [
   'shell="$1"; path="$2"; cmd="$3"; shift 3; exec env -i',
   ...AGENT_SESSION_ENV_ALLOWLIST.map((name) => `${name}="$${name}"`),
@@ -179,38 +170,43 @@ export const AGENT_SESSION_WRAPPER = [
 ].join(" ");
 
 /**
- * Everything after `tmux new-session -d -s <id> -c <cwd>` that starts an
- * agent session: the `-e` values ({@link agentSessionEnv}), then the shell
- * command tmux execs — `/bin/sh -c <wrapper> sh <loginShell> <path> <command>
- * [args…]`, which re-execs `command` under the account's login shell in the
- * allowlisted environment. `command` is one shell string (the inner login
- * shell runs it with `-c`); `args` become its positional `$1…`. Callers chain
- * further tmux commands after it.
+ * How an agent process is spawned: the argv (`/bin/sh -c <wrapper> sh
+ * <loginShell> <path> <command> [args…]`, which re-execs `command` under the
+ * account's login shell in the allowlisted environment) and the closed
+ * environment that outer shell is given — the delivered values
+ * ({@link agentSessionEnv}), `TERM=dumb`, and the rest of the allowlist from
+ * this process. `command` is one shell string (the inner login shell runs it
+ * with `-c`); `args` become its positional `$1…`.
  */
-export function agentSessionArgs(opts: {
+export function agentSessionLaunch(opts: {
   env: AgentSessionEnv;
   /** The account's shell (its passwd entry), see {@link agentLoginShell}. */
   accountShell: string;
-  /** The `claude` the session runs, whose directory goes on PATH. */
+  /** The `claude` the agent runs, whose directory goes on PATH. */
   claudeBin: string;
   command: string;
   args?: readonly string[];
-}): string[] {
-  return [
-    ...Object.entries(opts.env).flatMap(([name, value]) => [
-      "-e",
-      `${name}=${value}`,
-    ]),
-    "/bin/sh",
-    "-c",
-    AGENT_SESSION_WRAPPER,
-    "sh",
-    agentLoginShell(opts.accountShell),
-    agentSessionPath({
-      shimsDir: runtimeShimsDir(process.env),
-      claudeBin: opts.claudeBin,
-    }),
-    opts.command,
-    ...(opts.args ?? []),
-  ];
+}): { argv: string[]; env: Record<string, string> } {
+  const delivered: Record<string, string> = opts.env;
+  const env: Record<string, string> = {};
+  for (const name of AGENT_SESSION_ENV_ALLOWLIST) {
+    env[name] =
+      delivered[name] ?? (name === "TERM" ? "dumb" : (process.env[name] ?? ""));
+  }
+  return {
+    argv: [
+      "/bin/sh",
+      "-c",
+      AGENT_SESSION_WRAPPER,
+      "sh",
+      agentLoginShell(opts.accountShell),
+      agentSessionPath({
+        shimsDir: runtimeShimsDir(process.env),
+        claudeBin: opts.claudeBin,
+      }),
+      opts.command,
+      ...(opts.args ?? []),
+    ],
+    env,
+  };
 }

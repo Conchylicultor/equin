@@ -1,15 +1,6 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 
-function resolveBin(name: string, extraCandidates: string[]): string {
-  const fromPath = Bun.which(name);
-  if (fromPath) return fromPath;
-  for (const p of extraCandidates) {
-    if (existsSync(p)) return p;
-  }
-  return name;
-}
-
 export const GIT = Bun.which("git") ?? "git";
 export const PGREP = Bun.which("pgrep") ?? "pgrep";
 export const PS = Bun.which("ps") ?? "ps";
@@ -59,10 +50,3 @@ export function resolveClaudeBin(): ClaudeBinLookup {
   if (hit) return { kind: "found", path: hit };
   return { kind: "missing", searched: ["$PATH", ...CLAUDE_CANDIDATES] };
 }
-
-export const TMUX = resolveBin("tmux", [
-  `${homedir()}/.local/share/mise/shims/tmux`,
-  "/opt/homebrew/bin/tmux",
-  "/usr/local/bin/tmux",
-  "/usr/bin/tmux",
-]);

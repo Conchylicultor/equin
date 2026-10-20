@@ -862,9 +862,9 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 89 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×89
-  - Contributes: 116 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 88 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×88
+  - Contributes: 115 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ItemMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -903,7 +903,6 @@ See "Open questions" in the design doc.
     - `conv-file-tree.actions` "title" → `PaneTitleItem`
     - `conv-push-profiling.actions` "title" → `PaneTitleItem`
     - `conv-summary.actions` "title" → `PaneTitleItem`
-    - `conv-terminal.actions` "title" → `PaneTitleItem`
     - `convReviewPane.Actions` "title" → `PaneTitleItem`
     - `conversationPane.Actions` "title" → `PaneTitleItem`
     - `debug-boot-profile-detail.actions` "title" → `PaneTitleItem`
@@ -1099,9 +1098,9 @@ See "Open questions" in the design doc.
     - `ui/tokens/color-palette --background`
     - `ui/tokens/density --chrome-pane-pad-end`
     - `ui/tokens/shape --spacing`
-  - Imported by: 172 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 171 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×62
-    - `conversations` ×30
+    - `conversations` ×29
     - `debug` ×26
     - `active-data` ×10
     - `tasks` ×9

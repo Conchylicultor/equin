@@ -1,6 +1,6 @@
 # toolchain
 
-Keeps the mise toolchain (bun, go, tmux, rust, uv) on its latest releases, with
+Keeps the mise toolchain (bun, go, rust, uv) on its latest releases, with
 every move proven before it lands.
 
 - `mise.toml` requests `latest` for every tool. `mise.lock` (committed) records
@@ -45,8 +45,8 @@ every move proven before it lands.
   the one main and every other worktree run.
 - The runtime only obeys the lock because `launcher/core`'s `runtimePath`
   puts mise's shims first on PATH — located from the environment, so it holds
-  even when the starting shell never activated mise. Otherwise Homebrew's tmux
-  and rustup's default rust win, or mise's tools are missing outright.
+  even when the starting shell never activated mise. Otherwise rustup's default rust
+  wins, or mise's tools are missing outright.
   `toolchain:resolved` and the upgrade gates probe that same PATH. The running gateway picks up that PATH
   rule only on `./singularity start`.
 

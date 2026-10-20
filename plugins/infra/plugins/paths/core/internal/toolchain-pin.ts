@@ -9,7 +9,7 @@ import { isRelease, REPO_ROOT } from "./paths";
  * The runtime PATH puts mise's shims first (launcher/core `runtimePath`), and a
  * shim picks its version from the `mise.toml` + `mise.lock` found by walking up
  * from its cwd. With none above it, mise runs the next NON-mise copy of the
- * tool on PATH if there is one — Homebrew's tmux, unlocked — and otherwise
+ * tool on PATH if there is one — Homebrew's, unlocked — and otherwise
  * fails: `mise ERROR No version is set for shim: bun`. Neither is the version
  * `mise.lock` declares. A cwd is incidental to which toolchain a process belongs
  * to; the checkout it runs from is not.

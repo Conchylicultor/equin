@@ -46,9 +46,10 @@ const COMMAND_TIMEOUT_MS = 10_000;
 function exchange(
   conversationId: string,
   commands: readonly AgentCommand[],
+  socketPath = agentSocketPath(conversationId),
 ): Promise<unknown[]> {
   return new Promise((resolve, reject) => {
-    const conn = connect(agentSocketPath(conversationId));
+    const conn = connect(socketPath);
     const replies: unknown[] = [];
     let buf = "";
     let settled = false;
@@ -122,6 +123,18 @@ export async function commandAgent<T>(
 ): Promise<T> {
   const [, reply] = await exchange(conversationId, [hello, command]);
   return schema.parse(reply);
+}
+
+/**
+ * `shutdown` to an agent listening on `socketPath` rather than on its own
+ * namespace's path — only for the agents started before agent paths were per
+ * namespace (`legacy-handover.ts`).
+ */
+export async function shutdownAgentAt(
+  conversationId: string,
+  socketPath: string,
+): Promise<void> {
+  await exchange(conversationId, [hello, { type: "shutdown" }], socketPath);
 }
 
 /** An open `subscribe` connection. */

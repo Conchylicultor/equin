@@ -92,7 +92,7 @@ const noHardcodedPathsCheck: Check = {
     return {
       ok: false,
       message: `hardcoded path found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Import path constants from `@plugins/infra/plugins/paths/core` (e.g. HOME_DIR, REPO_ROOT) or `@plugins/infra/plugins/paths/server` (e.g. GIT, TMUX, resolveClaudeBin) instead of constructing paths from homedir() or hardcoding binary paths. For anything under the singularity data root, declare it with `defineDataDir` — or, for an app's content, use an area of that app's one data dir (`defineAppDataDir` at the app's root, `.subdir(…)` from sub-plugins) — there is no root constant to join.",
+      hint: "Import path constants from `@plugins/infra/plugins/paths/core` (e.g. HOME_DIR, REPO_ROOT) or `@plugins/infra/plugins/paths/server` (e.g. GIT, resolveClaudeBin) instead of constructing paths from homedir() or hardcoding binary paths. For anything under the singularity data root, declare it with `defineDataDir` — or, for an app's content, use an area of that app's one data dir (`defineAppDataDir` at the app's root, `.subdir(…)` from sub-plugins) — there is no root constant to join.",
     };
   },
 };

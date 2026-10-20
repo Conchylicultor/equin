@@ -86,7 +86,7 @@ function assertSound(root: string): {
 }
 
 /**
- * The mise toolchain (bun, go, tmux, rust, uv) as an updater: moves
+ * The mise toolchain (bun, go, rust, uv) as an updater: moves
  * `mise.lock` to the newest non-held release of each tool. This is the logic
  * `plugins/toolchain` ran as `toolchain upgrade`, moved onto the generic runner
  * (`toolchain upgrade` stays, as an alias). Declared tools, floors, holds and
@@ -96,7 +96,7 @@ function assertSound(root: string): {
 export const miseUpdater: Updater = {
   id: "mise",
   description:
-    "The mise toolchain (bun, go, tmux, rust, uv): mise.lock, one exact release per tool",
+    "The mise toolchain (bun, go, rust, uv): mise.lock, one exact release per tool",
   files: async () => ["mise.lock"],
 
   // mise itself is part of the toolchain: an old mise resolves, installs and

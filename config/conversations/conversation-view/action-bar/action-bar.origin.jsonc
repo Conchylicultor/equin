@@ -1,4 +1,4 @@
-// @hash f8e52ad0bd94
+// @hash 5e5ff89278c4
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -15,7 +15,6 @@
     "conversations.conversation-view.open-app:open-app",
     "conversations.conversation-view.push-profiling:push-profiling",
     "conversations.conversation-view.tasks-panel:tasks",
-    "conversations.conversation-view.terminal-pane:terminal",
     "conversations.conversation-view.vscode:vscode",
     "review:review",
     "tasks.attempt-view:attempt-switch"

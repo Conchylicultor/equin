@@ -18,7 +18,7 @@
  * row on the next boot — `server/internal/mailbox.test.ts` pins the boot drain.
  *
  * It creates its own throwaway conversation (Haiku) and acts only on that one:
- * panes share one tmux server and transcripts live in `~/.claude`, so driving a
+ * agent processes and transcripts live in `~/.claude`, so driving a
  * conversation this deploy merely inherited from main's database would type
  * into the real one. The ledger is read from this deploy's database
  * (read-only).

@@ -7,6 +7,8 @@ export {
   daemonRecentRuns,
   listDaemons,
   onDaemonActivity,
+  pidAlive,
+  readPidFile,
 } from "./internal/registry";
 export type {
   AttachOptions,
@@ -23,6 +25,7 @@ export type {
   DaemonTransition,
   DaemonWhere,
   DetachedLaunch,
+  PidFileRead,
   ProcessLaunch,
   UnsupervisedDeclExtras,
   WorkerDaemonInstance,

@@ -4,7 +4,7 @@ import { defineIdKind, type IdOf } from "@plugins/ids/core";
  * The three id kinds `tasks-core`'s tables are keyed by — `tasks.id`,
  * `attempts.id` and `conversations.id` — declared once with `defineIdKind`, so
  * the mint, the branded type, validation and inline recognition (the
- * active-data chips, the worktree / tmux-session name parsers) all read one
+ * active-data chips, the worktree name parsers) all read one
  * declaration rather than each re-typing the shape.
  *
  * All three are `stamped` (`<prefix>-<epochSeconds>-<6 base36>`). Live rows

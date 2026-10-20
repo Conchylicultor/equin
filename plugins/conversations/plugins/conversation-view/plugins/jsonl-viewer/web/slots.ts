@@ -21,19 +21,6 @@ export interface OverlayContribution {
 }
 
 /**
- * Action rendered alongside a "content pending in terminal" indicator — the
- * generic fallback and the AskUserQuestion "Answer here" surface both host it.
- * Owned here so the plugin that owns the terminal pane (terminal-pane) can
- * contribute an "Open terminal" affordance without jsonl-viewer importing it
- * (which would form an import cycle). Contributions read their own conversation
- * context (e.g. `conversationPane.useParams()`); no props are passed.
- */
-export interface PendingPromptActionContribution {
-  id: string;
-  component: ComponentType;
-}
-
-/**
  * Logic-only contribution: a predicate that, when it returns true for an event,
  * removes that event from the rendered JSONL flow. Generic — contributors own
  * the rule (e.g. suppress a raw answer turn already shown inside a card). This
@@ -124,9 +111,6 @@ export const JsonlViewer = {
   EventFilter: defineSlot<EventFilterContribution>({ docLabel: (p) => p.id }),
   ContextRole: defineSlot<ContextRoleContribution>({ docLabel: (p) => p.id }),
   Overlay: defineRenderSlot<OverlayContribution>({ docLabel: (p) => p.id }),
-  PendingPromptAction: defineRenderSlot<PendingPromptActionContribution>({
-    docLabel: (p) => p.id,
-  }),
   TranscriptEnd: defineRenderSlot<TranscriptEndContribution>({
     docLabel: (p) => p.id,
   }),

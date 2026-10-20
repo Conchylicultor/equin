@@ -49,14 +49,14 @@ func TestParseChildEnvFlag(t *testing.T) {
 }
 
 // TestNewChildEnvKeepsOnlyDeclared is the incident regression: an agent
-// shell's identity and terminal state (SINGULARITY_CONVERSATION_ID, TMUX,
+// shell's identity and terminal state (SINGULARITY_CONVERSATION_ID,
 // CLAUDE_*) must not survive into the base, and must be reported as dropped.
 func TestNewChildEnvKeepsOnlyDeclared(t *testing.T) {
 	environ := []string{
 		"HOME=/home/me",
 		"SINGULARITY_CONVERSATION_ID=conv-1",
 		"PATH=/usr/bin:/bin",
-		"TMUX=/tmp/tmux-501/default,1,0",
+		"TERM_SESSION_ID=w0t0p0",
 		"HOMEBREW_PREFIX=/opt/homebrew", // shares a prefix with HOME, but HOME is exact
 		"SINGULARITY_AUTH_GOOGLE_CLIENT_ID=abc",
 		"SINGULARITY_AUTHX=nope", // the prefix is SINGULARITY_AUTH_, underscore included
@@ -68,7 +68,7 @@ func TestNewChildEnvKeepsOnlyDeclared(t *testing.T) {
 	if got := env.With(); !reflect.DeepEqual(got, wantBase) {
 		t.Fatalf("base = %q, want %q", got, wantBase)
 	}
-	wantDropped := []string{"SINGULARITY_CONVERSATION_ID", "TMUX", "HOMEBREW_PREFIX", "SINGULARITY_AUTHX", "CLAUDE_CODE_SESSION_ID"}
+	wantDropped := []string{"SINGULARITY_CONVERSATION_ID", "TERM_SESSION_ID", "HOMEBREW_PREFIX", "SINGULARITY_AUTHX", "CLAUDE_CODE_SESSION_ID"}
 	if !reflect.DeepEqual(dropped, wantDropped) {
 		t.Fatalf("dropped = %q, want %q", dropped, wantDropped)
 	}

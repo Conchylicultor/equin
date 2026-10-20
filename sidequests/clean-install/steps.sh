@@ -293,21 +293,10 @@ step_20_build_retry3_TAG="from-docs"
 # the way to its checks and the frontend compiles — then one check crashes:
 #   toolchain:resolved ... FAIL
 #   threw instead of returning a result:
-#   Error: Executable not found in $PATH: "tmux"
-# tmux is a prerequisite no doc names (it is pinned in mise.toml, which
-# docs/setup.md never mentions), and the check throws rather than reporting a
-# failure it could name. The whole build is discarded for it.
+#   Error: Executable not found in $PATH: "<tool>"
+# The toolchain is pinned in mise.toml, which docs/setup.md never mentions, and
+# the check throws rather than reporting a failure it could name. The whole build is discarded for it.
 step_20_build_retry3_EXPECT_FAIL=1
-
-step_21_tmux() {
-  cat <<'CMD'
-eval "$(/opt/homebrew/bin/brew shellenv)"
-brew install tmux
-tmux -V
-CMD
-}
-step_21_tmux_DOC="Not in docs/setup.md. Named only by the check's own crash message, and pinned in mise.toml."
-step_21_tmux_TAG="undocumented-knowledge"
 
 step_22_build_retry4() {
   cat <<'CMD'
@@ -316,12 +305,12 @@ cd ~/singularity
 ./singularity build --allow-main
 CMD
 }
-step_22_build_retry4_DOC="The build again, now that tmux exists."
+step_22_build_retry4_DOC="The build again."
 step_22_build_retry4_TAG="from-docs"
 # Recorded finding (run 1): the same check now names the NEXT missing tool,
 #   toolchain:resolved ... FAIL  Error: Executable not found in $PATH: "rustc"
 # and each missing tool costs another full build (~5 min) to discover, one at
-# a time. mise.toml pins four tools (bun, go, tmux, rust) and says of rust
+# a time. mise.toml pins three tools (bun, go, rust) and says of rust
 # "end users need none of this" — yet the check demands it on every build.
 step_22_build_retry4_EXPECT_FAIL=1
 
@@ -332,7 +321,7 @@ SHIMS="$HOME/.local/share/mise/shims"
 echo "export PATH=\"$SHIMS:\$PATH\"" >> ~/.bash_profile
 echo "export PATH=\"$SHIMS:\$PATH\"" >> ~/.zprofile
 export PATH="$SHIMS:$PATH"
-for t in bun go tmux rustc cargo; do printf "%-7s %s\n" "$t" "$(command -v $t || echo MISSING)"; done
+for t in bun go rustc cargo; do printf "%-7s %s\n" "$t" "$(command -v $t || echo MISSING)"; done
 CMD
 }
 step_23_mise_path_DOC="Not in any doc. mise installs the pinned tools but nothing puts them on the PATH, so the toolchain check cannot see them."
@@ -399,7 +388,6 @@ STEPS=(
   step_18_build_retry2
   step_19_apply_migrations_by_hand
   step_20_build_retry3
-  step_21_tmux
   step_22_build_retry4
   step_23_mise_path
   step_24_build_retry5

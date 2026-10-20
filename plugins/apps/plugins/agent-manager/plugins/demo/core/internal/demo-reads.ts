@@ -33,7 +33,10 @@ import {
   agentLaunchRows,
   agentRows,
 } from "@plugins/conversations/plugins/agents/core";
-import { sdkBundledCli } from "@plugins/conversations/plugins/runtime-sdk/core";
+import {
+  sdkAgentProcesses,
+  sdkBundledCli,
+} from "@plugins/conversations/plugins/runtime-sdk/core";
 import { claudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
 import { machineSleep } from "@plugins/infra/plugins/host/plugins/machine-sleep/core";
 import { usageStats } from "@plugins/primitives/plugins/usage-rank/core";
@@ -97,6 +100,7 @@ export const DEMO_READS: readonly DemoRead[] = [
   allowFiles,
   editedFiles,
   sdkBundledCli,
+  sdkAgentProcesses,
   claudeCodeStatus,
   machineSleep,
   opsInFlight,

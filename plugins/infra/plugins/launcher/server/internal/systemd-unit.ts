@@ -14,9 +14,9 @@
  * - `KillMode=process` — a stop signals the gateway ALONE, as launchd does. The
  *   gateway tears its own children (backends, Postgres, PgBouncer) down in
  *   order; and everything a backend spawned lives in this unit's cgroup too —
- *   the tmux server holding every running agent among them — so systemd's
- *   default (SIGTERM the whole cgroup, SIGKILL what is left) would kill every
- *   agent on each `start --force`.
+ *   every running agent process among them, started detached to outlive its
+ *   backend — so systemd's default (SIGTERM the whole cgroup, SIGKILL what is
+ *   left) would kill every agent on each `start --force`.
  */
 export function renderSystemdUserUnit(job: {
   description: string;

@@ -119,9 +119,11 @@ export const turnUnverifiedKind = ReportKind({
           "the agent's input box, but the submit check never saw the box empty after " +
           `Enter: ${d.reason}`,
         "",
-        "Look at the tmux pane: an unrecognized CLI render (`parseInputDraft` " +
-          "returning null) or a host under load both read this way. If the CLI did " +
-          "take the turn, its UserPromptSubmit hook will still resolve the row.",
+        "Look at the agent's log (`agent.log`, beside its `events.jsonl` in the " +
+          "`state/sdk-agents/<namespace>/<conversationId>/` data dir): an agent " +
+          "process that is wedged or slow to answer over its socket reads this way. " +
+          "If the agent did take the turn, the transcript reaching it will still " +
+          "resolve the row.",
         "",
         ...occurrences(row),
       ].join("\n"),

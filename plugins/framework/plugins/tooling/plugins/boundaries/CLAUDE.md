@@ -273,7 +273,6 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
     - `primitives/css/layout-harness` (2 debt)
     - `primitives/icon-picker` (1 debt)
     - `primitives/log-channels/log-files` (3 debt)
-    - `primitives/terminal` (1 debt)
     - `release` (4 debt)
     - `release/bundles` (5 debt)
     - `release/source-checkout` (1 debt)

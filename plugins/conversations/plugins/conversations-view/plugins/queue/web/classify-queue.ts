@@ -44,7 +44,7 @@ export interface ClassifiedQueue<C extends Conversation = Conversation> {
   /**
    * Live conversations nothing launched: sessions main found running and
    * adopted (`isAdoptedConversation`) — typically an agent's own
-   * `tmux new-session` from its checkout. Kept out of the ranked sections
+   * session started from its checkout. Kept out of the ranked sections
    * whatever their rank or status, so they are visible without passing for
    * the user's work.
    */

@@ -15,7 +15,7 @@ import { launchWithHeldTurn } from "./turns";
 
 // Durable, self-healing conversation spawn. Mirrors `databaseForkJob`: the
 // enqueue is a committed graphile-worker row, so an interrupted spawn (backend
-// restart mid-checkout, or a crash between `tmux new-session` and the job
+// restart mid-checkout, or a crash between starting the agent and the job
 // commit) re-runs when the worker reboots instead of leaving the conversation
 // stuck `starting` with no session. Both steps are idempotent — the workspace's
 // `prepare` (`setupWorktree` no-ops once the checkout landed, and redoes a
@@ -30,7 +30,7 @@ export const spawnConversationJob = defineJob({
   description:
     "Prepares the workspace (the git worktree) and starts the agent session for a new conversation.",
   // minutes: preparing a worktree is a `git worktree add` checkout and
-  // `runtime.create` opens a tmux session running the `claude` CLI. Nothing
+  // `runtime.create` starts the agent process. Nothing
   // shorter than the work bounds either.
   hold: "minutes",
   inProcess:
@@ -77,7 +77,7 @@ export const spawnConversationJob = defineJob({
     let step: "worktree" | "runtime" = "worktree";
     try {
       // The workspace's `prepare` (git worktree add) MUST precede
-      // `runtime.create`: tmux's `-c <worktreePath>` needs the dir to exist.
+      // `runtime.create`: the agent's cwd must exist.
       // Both are idempotent, so a mid-step crash re-runs the whole body safely.
       // `signal` is this dispatch's deadline, handed down to the work.
       await workspace.prepare(at, signal);

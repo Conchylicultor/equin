@@ -1,16 +1,16 @@
 # agent-launch
 
-What every app-launched agent starts with: the tmux session the sdk runtime
-runs its agent process in, its environment, and the CLI settings. A variable,
+What every app-launched agent starts with: the environment the sdk runtime
+spawns its agent process in, and the CLI settings. A variable,
 setting or hook every agent needs is stated once here (the SDK spike's MCP
-failure was exactly a launch that left the `-e` values out).
+failure was exactly a launch that left the delivered values out).
 
 - `server/internal/agent-session-env.ts` — the session's allowlisted
-  environment: `agentSessionArgs` is everything after
-  `tmux new-session -d -s <id> -c <cwd>` — the `-e` values
-  (`agentSessionEnv`, keyed by `AGENT_SESSION_DELIVERED_ENV`, which the
-  `env -i` allowlist spreads), then the wrapper that re-execs the command under
-  the account's login shell with the toolchain on PATH. Why an allowlist, and
+  environment: `agentSessionLaunch` is the argv and closed env an agent is
+  spawned with — the delivered values (`agentSessionEnv`, keyed by
+  `AGENT_SESSION_DELIVERED_ENV`, which the `env -i` allowlist spreads), and the
+  wrapper that re-execs the command under the account's login shell with the
+  toolchain on PATH. Why an allowlist, and
   which names are load-bearing: the comments there.
 - `server/internal/launch-settings.ts` — the launch's one settings object:
   `LAUNCH_CLI_SETTINGS`, `agentLaunchHooks()` (compaction-context's
@@ -21,7 +21,7 @@ failure was exactly a launch that left the `-e` values out).
 
 ## Plugin reference
 
-- Description: What every app-launched agent starts with, whatever runtime hosts it: the tmux session's allowlisted environment (the env -i wrapper, the -e values it delivers, its PATH and login shell — agentSessionArgs), the fixed CLI settings, the hooks every runtime runs (the compaction hook) and the one merge of the launch's settings fragments.
+- Description: What every app-launched agent starts with, whatever runtime hosts it: the agent process's allowlisted environment (the env -i wrapper, the values it delivers, its PATH and login shell — agentSessionLaunch), the fixed CLI settings, the hooks every runtime runs (the compaction hook) and the one merge of the launch's settings fragments.
 - Server:
   - Uses: `conversations/compaction-context.compactionHookEntry`
   - Exports (types):
@@ -29,8 +29,8 @@ failure was exactly a launch that left the `-e` values out).
     - `LaunchHooks`
   - Exports (values):
     - `agentLaunchHooks`
-    - `agentSessionArgs`
     - `agentSessionEnv`
+    - `agentSessionLaunch`
     - `LAUNCH_CLI_SETTINGS`
     - `mergeLaunchSettings`
 - Cross-plugin:

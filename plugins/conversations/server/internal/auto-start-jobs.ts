@@ -200,8 +200,8 @@ export const maybeLaunchTaskJob = defineJob({
     // Main-only: a forked sub-worktree DB inherits the autoStart marker and
     // taskStatusChanged triggers from main at fork time, so the same job
     // would fire independently in every worktree's worker — each calling
-    // createConversation against its own DB and producing a parallel tmux
-    // session. CAS protects within a single DB, not across forks.
+    // createConversation against its own DB and producing a parallel agent
+    // process. CAS protects within a single DB, not across forks.
     if (!isMain()) return;
     const t = await getTask(taskId);
     if (!t) {

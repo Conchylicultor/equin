@@ -18,8 +18,8 @@ export const deliverHeldTurnsJob = defineJob({
   description:
     "Types the messages a user sent while their agent was still starting, once the agent has drawn its input box.",
   // minutes: it waits (bounded at 60 s) for a just-started agent to draw its
-  // input box, then types each held turn through the verified send — tmux
-  // children, several seconds each. Nothing shorter than the work bounds it.
+  // input box, then delivers each held turn through the verified send to
+  // the agent process, several seconds each. Nothing shorter than the work bounds it.
   hold: "minutes",
   inProcess:
     "A held turn leaves `held` only as its delivery starts, so a run killed " +
@@ -82,9 +82,10 @@ export const heldTurnUndeliveredKind = ReportKind({
           "They are still `held` in `conversation_turns`; the next flip out of " +
           "`starting` or a Resume delivers them.",
         "",
-        "Look at the conversation's tmux pane: an unrecognized CLI render " +
-          "(`parseInputDraft` returning null) reads exactly like a box that " +
-          "never appeared.",
+        "Look at the agent's log (`agent.log`, beside its `events.jsonl` in the " +
+          "`state/sdk-agents/<namespace>/<conversationId>/` data dir): an " +
+          "agent process that never answered over its socket reads exactly like " +
+          "a box that never appeared.",
         "",
         `**Occurrences:** ${row.count}`,
         `**First seen:** ${row.firstSeenAt.toISOString()}`,

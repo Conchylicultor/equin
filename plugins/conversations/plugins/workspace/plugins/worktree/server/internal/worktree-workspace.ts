@@ -79,8 +79,8 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
   },
 
   // A conversation's checkout can be reclaimed underneath it while its branch
-  // and transcript survive, and `tmux new-session -c <missing-dir>` does NOT
-  // fail on a missing directory — it silently starts the pane in $HOME.
+  // and transcript survive, and a process started with a missing cwd can
+  // end up running somewhere else entirely, e.g. $HOME.
   // Unchecked, resuming such a conversation boots the agent in the user's home
   // directory with a transcript full of repo-relative paths, and the only
   // symptom is a trust prompt for `~`.

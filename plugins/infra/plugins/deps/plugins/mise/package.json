@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-infra-deps-mise",
   "version": "0.0.1",
   "private": true,
-  "description": "The mise toolchain (bun, go, tmux, rust, uv) as the first updater: moves mise.lock to each tool's newest non-held release (mise self-update, ls-remote, side-by-side install, mise lock under MISE_CEILING_PATHS), gated by the generic runner."
+  "description": "The mise toolchain (bun, go, rust, uv) as the first updater: moves mise.lock to each tool's newest non-held release (mise self-update, ls-remote, side-by-side install, mise lock under MISE_CEILING_PATHS), gated by the generic runner."
 }

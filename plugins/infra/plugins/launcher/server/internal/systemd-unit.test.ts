@@ -46,8 +46,8 @@ describe("renderSystemdUserUnit", () => {
     expect(unit).toContain(
       "Restart=on-failure\nRestartSec=10\nTimeoutStopSec=20",
     );
-    // A stop signals the gateway alone: the tmux server running every agent
-    // shares its cgroup.
+    // A stop signals the gateway alone: every running agent process shares
+    // its cgroup.
     expect(unit).toContain("KillMode=process");
     expect(unit).toContain(`StandardOutput=append:${job.stdioLog}`);
     expect(unit).toContain("WantedBy=default.target");

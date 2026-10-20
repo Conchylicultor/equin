@@ -1,3 +1,4 @@
+import { mkdirSync } from "node:fs";
 import { relative, sep } from "node:path";
 import type { RuntimeSignal } from "@plugins/conversations/server";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
@@ -15,7 +16,6 @@ import {
   DismissReplySchema,
   type OpenRequest,
 } from "../../core";
-import { sdkAgentsDir } from "../../data-dirs";
 import {
   reduceEvents,
   type AgentEffect,
@@ -29,7 +29,7 @@ import {
 } from "../../server/internal/rows";
 import { readAgentEvents, type ReadPosition } from "./event-reader";
 import { agentReady } from "./partial-stream";
-import { agentEventsPath } from "./paths";
+import { agentEventsPath, ownAgentsRoot } from "./paths";
 import {
   AgentNotRunningError,
   commandAgent,
@@ -47,7 +47,7 @@ import { z } from "zod";
 // did X" (stop, ready).
 
 /**
- * The one watch over `state/sdk-agents/`: an append to any agent's events file
+ * The one watch over this namespace's `state/sdk-agents/<ns>/`: an append to any agent's events file
  * wakes that conversation's catch-up. kqueue (`writesWhileOpen`) because
  * FSEvents coalesces appends to an open file; the directory holds a handful of
  * files per agent and is reclaimed after 14 days, far under the entry ceiling.
@@ -278,7 +278,8 @@ export async function startConsumer(
 ): Promise<() => Promise<void>> {
   if (signal) throw new Error("runtime-sdk consumer: already started");
   signal = onSignal;
-  const root = sdkAgentsDir.ensure();
+  const root = ownAgentsRoot();
+  mkdirSync(root, { recursive: true });
   const watcher = await sdkEventsWatcher.start({
     dirs: [root],
     onChange: async (events) => {

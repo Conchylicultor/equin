@@ -5,8 +5,7 @@ import { z } from "zod";
  * runtime registry's ids, a conversation row's `runtime`):
  *
  * - `sdk` — one Agent SDK process per conversation, driven over a socket
- *   (conversations/runtime-sdk), hosted in tmux only as a supervisor and a
- *   read-only view.
+ *   (conversations/runtime-sdk), a detached process.
  */
 export const CONVERSATION_RUNTIMES = {
   sdk: {

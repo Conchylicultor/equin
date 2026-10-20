@@ -25,7 +25,7 @@ export const RelayQuestionsSchema = z.array(RelayQuestionSchema).min(1);
  * - `abandoned` — the holder stopped waiting (the agent withdrew the question,
  *   or died).
  *
- * `released` is history: "Answer in terminal" on the retired tmux runtime,
+ * `released` is history: "Answer in terminal" on a retired runtime,
  * kept so the rows it wrote still parse. Nothing writes it any more.
  */
 export const RelayStateSchema = z.enum([

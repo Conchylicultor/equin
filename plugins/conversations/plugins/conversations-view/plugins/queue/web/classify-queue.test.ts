@@ -4,7 +4,7 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { QueueData } from "../core";
 import { classifyQueue } from "./classify-queue";
 
-// The `spawnedBy` rows adopted by the retired tmux runtime carry.
+// The `spawnedBy` rows adopted by the retired runtime carry.
 const ADOPTED_SPAWNED_BY = "poller";
 
 const conv = (o: Partial<Conversation> & { id: string }): Conversation =>

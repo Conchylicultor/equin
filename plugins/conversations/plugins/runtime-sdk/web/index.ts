@@ -1,18 +1,27 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { HealthReport } from "@plugins/shell/plugins/health-report/web";
-import { useCliDriftHealth } from "./internal/use-cli-drift";
+import { ClaudeCodeActions } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
+import {
+  ClaudeCodeGlance,
+  ClaudeCodeRowDetail,
+} from "./components/claude-code-row";
+import { useClaudeCodeRowHealth } from "./internal/use-claude-code-row";
 
 export default {
   description:
-    "The health report's Agent SDK row: attention when the system Claude Code the sdk runtime runs differs in major.minor from the CLI version the pinned Agent SDK was built for.",
+    "The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, and the agent processes running — here, and in every other worktree (each as its task's chip).",
   contributions: [
     HealthReport.Row({
       kind: "status",
-      id: "agent-sdk-cli",
-      title: "Agent SDK",
-      // Right after Claude Code (5): it qualifies that row.
-      order: 6,
-      useStatus: useCliDriftHealth,
+      id: "claude-code",
+      title: "Claude Code",
+      // Before Connection (10): "can this app run an agent at all" is the
+      // first thing a new user needs answered.
+      order: 5,
+      useStatus: useClaudeCodeRowHealth,
+      glance: ClaudeCodeGlance,
+      actions: ClaudeCodeActions,
+      component: ClaudeCodeRowDetail,
     }),
   ],
 } satisfies PluginDefinition;

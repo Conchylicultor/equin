@@ -650,8 +650,8 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // This build's liveness marker (see worktree-op.ts): a flocked
   // `ops/<buildId>.json`, published BEFORE `requested` so the op log never
   // holds a build no marker vouches for, and released in finalizeBuild only
-  // AFTER the terminal is appended. The tmux status poller keeps the agent's
-  // pane "working" while it is held; a SIGKILL drops the lock with the process
+  // AFTER the terminal is appended. The status reconciler keeps the agent
+  // "working" while it is held; a SIGKILL drops the lock with the process
   // and the op-store reconciler closes the build as interrupted.
   const marker = markWorktreeOpStart(name, "build", buildId);
   profiler.markRequested();
@@ -1250,7 +1250,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // A background-lane build additionally runs its heavy children (vite, the
   // server bundle) darwinbg-demoted so even a single build can't starve the
   // interactive main backend (one build legitimately fans across every core).
-  // Usually redundant — a build started from an agent's tmux session already
+  // Usually redundant — a build started from an agent's session already
   // inherits darwinbg — but it keeps the invariant when an agent branch is
   // built from an undemoted shell. Derived from the LANE, the same fact the
   // grant carries, never re-derived from the branch: the type-check worker

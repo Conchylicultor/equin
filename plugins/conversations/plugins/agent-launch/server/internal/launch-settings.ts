@@ -4,8 +4,8 @@ import {
 } from "@plugins/conversations/plugins/compaction-context/core";
 import { compactionHookEntry } from "@plugins/conversations/plugins/compaction-context/server";
 
-// The one settings object a launch hands Claude Code — `--settings` for the
-// tmux runtime, the SDK's `settings` option for the sdk runtime. Several
+// The one settings object a launch hands Claude Code — the SDK's `settings`
+// option. Several
 // contributors share it: the thinking mode (`{"ultracode":true}`, from
 // effort-provider), the fixed CLI preferences (`LAUNCH_CLI_SETTINGS`), the
 // hooks (the ones every runtime needs, `agentLaunchHooks`, plus the runtime's

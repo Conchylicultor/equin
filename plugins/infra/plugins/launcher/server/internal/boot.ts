@@ -444,7 +444,7 @@ export interface GatewayLaunchOptions {
  * The gateway starts from the DECLARED runtime environment, not from ours:
  * `pickRuntimeEnv(process.env)` keeps only the names `launcher/core` declares.
  * Whatever else the starting shell carries — an agent's
- * `SINGULARITY_CONVERSATION_ID`, its `TMUX`, its `CLAUDE_*` — stays here instead
+ * `SINGULARITY_CONVERSATION_ID`, its `CLAUDE_*` — stays here instead
  * of reaching every backend on the host. `-child-env` hands the gateway the same
  * list of names, and the gateway forwards only those to the backends and
  * Postgres / PgBouncer it starts.

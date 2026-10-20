@@ -6,14 +6,14 @@
 //   commands  → --socket            (newline-delimited JSON, core/protocol.ts)
 //   events    ← <dir>/events.jsonl  (every SDK message, numbered, unchanged)
 //   partial   ← --socket, `subscribe` (the text being streamed, never on disk)
-//   stdout    → a human-readable log: what the terminal button shows
+//   pid       → --pid-file          (written at start, removed on exit)
+//   stdout    → a human-readable log (the backend points it at `agent.log`)
 //
 // A dumb relay: it never interprets Claude's messages beyond what it needs for
 // the log; the event file is the contract, so a backend that was down replays
-// from its cursor. Launched detached inside tmux (supervisor + viewer only —
-// nothing types into it; the terminal button attaches read-only). It exits only
-// through `shutdown` (or SIGTERM / SIGHUP from tmux): SIGINT is ignored, so a
-// stray Ctrl-C in the pane cannot kill the agent and its CLI.
+// from its cursor. Started detached (its own session and process group), so a
+// backend restart or crash does not reach it. It exits through `shutdown`, or
+// SIGTERM.
 import {
   query,
   type CanUseTool,
@@ -21,7 +21,7 @@ import {
   type SDKMessage,
   type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Socket } from "node:net";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
 import { basename, dirname, join } from "node:path";
@@ -48,15 +48,17 @@ const { values: args } = parseArgs({
   options: {
     dir: { type: "string" },
     socket: { type: "string" },
+    "pid-file": { type: "string" },
   },
 });
-if (!args.dir || !args.socket)
-  throw new Error("agent: --dir and --socket are required");
+if (!args.dir || !args.socket || !args["pid-file"])
+  throw new Error("agent: --dir, --socket and --pid-file are required");
 const dir = args.dir;
 mkdirSync(dir, { recursive: true });
 const eventsPath = join(dir, AGENT_EVENTS_FILE);
 const socketPath = args.socket;
 mkdirSync(dirname(socketPath), { recursive: true });
+const pidPath = args["pid-file"];
 const options = AgentLaunchOptionsSchema.parse(
   JSON.parse(readFileSync(join(dir, AGENT_OPTIONS_FILE), "utf8")),
 );
@@ -103,13 +105,10 @@ function emit(body: EventBody): void {
   events.append(JSON.stringify(line));
 }
 
-// ── human log (the terminal button's view) ────────────────────────────────
-const dim = (s: string) => `\x1b[2m${s}\x1b[0m`;
+// ── human log (agent.log) ──────────────────────────────────────────────────
 const clip = (s: string, n = 200) => (s.length > n ? `${s.slice(0, n)}…` : s);
 function log(line: string): void {
-  process.stdout.write(
-    `${dim(new Date().toISOString().slice(11, 19))} ${line}\n`,
-  );
+  process.stdout.write(`${new Date().toISOString().slice(11, 19)} ${line}\n`);
 }
 function logMessage(msg: SDKMessage): void {
   switch (msg.type) {
@@ -123,9 +122,7 @@ function logMessage(msg: SDKMessage): void {
       for (const block of msg.message.content) {
         if (block.type === "text") log(block.text);
         else if (block.type === "tool_use")
-          log(
-            `\x1b[36m⏺ ${block.name}\x1b[0m ${clip(JSON.stringify(block.input))}`,
-          );
+          log(`⏺ ${block.name} ${clip(JSON.stringify(block.input))}`);
       }
       return;
     case "user":
@@ -133,9 +130,7 @@ function logMessage(msg: SDKMessage): void {
         for (const block of msg.message.content)
           if (typeof block === "object" && block.type === "tool_result")
             log(
-              dim(
-                `  ⎿ ${clip(typeof block.content === "string" ? block.content : JSON.stringify(block.content), 160)}`,
-              ),
+              `  ⎿ ${clip(typeof block.content === "string" ? block.content : JSON.stringify(block.content), 160)}`,
             );
       return;
     case "result":
@@ -213,7 +208,7 @@ function pushInput(text: string, turnId: string | null): string {
     turnId,
     text,
   });
-  log(`\x1b[1m› ${clip(text)}\x1b[0m`);
+  log(`› ${clip(text)}`);
   wakeInput?.();
   return uuid;
 }
@@ -235,7 +230,7 @@ function park(
   emit({ kind: "permission_request", payload: request });
   openRequests.set(requestId, request);
   log(
-    `\x1b[33m? ${toolName}\x1b[0m ${clip(JSON.stringify(input))} — waiting for an answer (${requestId})`,
+    `? ${toolName} ${clip(JSON.stringify(input))} — waiting for an answer (${requestId})`,
   );
   return new Promise<Verdict | undefined>((resolve) => {
     const settle = (
@@ -322,7 +317,7 @@ const session = query({
     ...(options.resume === null || options.fork
       ? { sessionId: options.sessionId }
       : {}),
-    stderr: (data: string) => process.stderr.write(dim(data)),
+    stderr: (data: string) => process.stderr.write(data),
   },
 });
 
@@ -435,7 +430,7 @@ function serve(conn: Socket): void {
     }
   });
   conn.on("close", () => subscribers.delete(conn));
-  conn.on("error", (err) => log(dim(`socket client error: ${err.message}`)));
+  conn.on("error", (err) => log(`socket client error: ${err.message}`));
 }
 
 rmSync(socketPath, { force: true });
@@ -448,14 +443,11 @@ function shutdown(reason: string): void {
   emit({ kind: "agent", payload: { event: "exited", reason } });
   server.close();
   rmSync(socketPath, { force: true });
+  rmSync(pidPath, { force: true });
   session.close();
   process.exit(0);
 }
 process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGHUP", () => shutdown("SIGHUP"));
-process.on("SIGINT", () =>
-  log(dim("SIGINT ignored — the agent stops only through the app")),
-);
 
 emit({
   kind: "agent",
@@ -467,6 +459,10 @@ emit({
     fork: options.fork,
   },
 });
+// The pid file is what says "running" to every backend counting agents; a
+// crash leaves it behind, so readers check the pid is alive.
+mkdirSync(dirname(pidPath), { recursive: true });
+writeFileSync(pidPath, `${process.pid}\n`);
 log(`● agent ${process.pid} · ${dir}`);
 if (options.prompt !== null) pushInput(options.prompt, null);
 

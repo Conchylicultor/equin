@@ -10,7 +10,7 @@ import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
 //
 // `exit_clean` marks the conversation close-requested and enqueues a finalize
 // job that waits for end_turn before tearing down the runtime — calling
-// `deleteConversation` here would yank the tmux session out from under a
+// `deleteConversation` here would yank the agent process out from under a
 // still-streaming response. `flag_raise` is a pure no-op signal: the
 // conversation stays open (returns to `waiting`) and the flag text is rendered
 // inline in the transcript by the flag-raise tool-call renderer.

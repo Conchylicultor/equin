@@ -12,7 +12,7 @@
  * but a person.
  *
  * Which Bun a command runs on is a fact about the CALLER (a shell activated last
- * week, a tmux session, a long-lived backend), while which Bun it SHOULD run on
+ * week, a long-lived agent shell, a long-lived backend), while which Bun it SHOULD run on
  * is a fact about the checkout. This makes the checkout's answer win: when the
  * running Bun is not the one the cwd's `mise.lock` records (the wrapper `cd`s to
  * the checkout root), hand the command to mise's install of that release and

@@ -159,15 +159,13 @@ back.
     - `JsonlViewer.EventFilter`
     - `JsonlViewer.ContextRole`
     - `JsonlViewer.Overlay`
-    - `JsonlViewer.PendingPromptAction`
     - `JsonlViewer.TranscriptEnd`
-  - Slot contributors: 59 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 58 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `JsonlViewer.ContextRole` ×31
     - `JsonlViewer.EventRenderer` ×18
     - `JsonlViewer.Overlay` ×4
     - `JsonlViewer.EventFilter` ×2
     - `JsonlViewer.TranscriptEnd` ×2
-    - `JsonlViewer.PendingPromptAction` ← `conversations.conversation-view.terminal-pane`
     - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
@@ -286,8 +284,8 @@ back.
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 46 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×44
+  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×43
     - `apps/agent-manager/demo`
     - `tasks/outcome-report`
 - Exemptions:

@@ -4,15 +4,6 @@ export interface AutoStubEntry {
 }
 
 export const AUTO_STUB_PACKAGES: AutoStubEntry[] = [
-  { pkg: "@xterm/xterm", resolveFrom: "plugins/primitives/plugins/terminal" },
-  {
-    pkg: "@xterm/addon-fit",
-    resolveFrom: "plugins/primitives/plugins/terminal",
-  },
-  {
-    pkg: "@xterm/addon-web-links",
-    resolveFrom: "plugins/primitives/plugins/terminal",
-  },
   { pkg: "@dnd-kit/core" },
   { pkg: "@dnd-kit/sortable" },
   { pkg: "@dnd-kit/utilities" },
@@ -23,7 +14,4 @@ export const AUTO_STUB_PACKAGES: AutoStubEntry[] = [
   { pkg: "recharts", resolveFrom: "plugins/stats" },
 ];
 
-export const AUTO_STUB_CSS: string[] = [
-  "@xterm/xterm/css/xterm.css",
-  "react-diff-view/style/index.css",
-];
+export const AUTO_STUB_CSS: string[] = ["react-diff-view/style/index.css"];

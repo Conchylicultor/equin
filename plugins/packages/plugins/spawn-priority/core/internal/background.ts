@@ -38,9 +38,8 @@ export function backgroundArgv(argv: string[]): string[] {
 }
 
 // Same demotion as a shell-command prefix, for call sites that build a command
-// STRING executed by a shell we don't spawn ourselves (e.g. a tmux session
-// command, which the shared tmux server forks — demoting the tmux client
-// would be a no-op). The prefix is a fixed literal, never interpolated data,
+// STRING executed by a shell we don't spawn ourselves (e.g. a command handed
+// to a long-lived server that forks it — demoting the client would be a no-op). The prefix is a fixed literal, never interpolated data,
 // so it is shell-safe by construction.
 export function backgroundPrefix(): string {
   const tokens = prefixTokens();

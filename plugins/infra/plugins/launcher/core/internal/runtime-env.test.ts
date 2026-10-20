@@ -48,8 +48,7 @@ describe("pickRuntimeEnv", () => {
 
   test("drops names it has never heard of", () => {
     const picked = pickRuntimeEnv({
-      TMUX: "/tmp/tmux-501/default,1,0",
-      TMUX_PANE: "%3",
+      TERM_SESSION_ID: "w0t0p0",
       CLAUDECODE: "1",
       CLAUDE_CODE_SESSION_ID: "s",
       WARP_IS_LOCAL_SHELL_SESSION: "1",
@@ -147,14 +146,14 @@ describe("runtimePath", () => {
   test("drops mise's resolved tool directories and puts its shims first", () => {
     expect(
       at(
-        `/fixture/pkg/bin:${MISE}/installs/bun/latest/bin:${MISE}/installs/go/1.24.13/bin:${MISE}/installs/tmux/3.6a:${MISE}/shims:/fixture/bin`,
+        `/fixture/pkg/bin:${MISE}/installs/bun/latest/bin:${MISE}/installs/go/1.24.13/bin:${MISE}/installs/rust/1.99.1:${MISE}/shims:/fixture/bin`,
       ),
     ).toBe(`${MISE}/shims:/fixture/pkg/bin:/fixture/bin`);
   });
 
   test("a system copy of a tool can never shadow the one mise declares", () => {
     // The 2026-09-16 shape: Homebrew and rustup ahead of the shims, so the
-    // runtime ran their tmux and rust instead of mise's.
+    // runtime ran their rust instead of mise's.
     expect(
       at(`/fixture/homebrew/bin:/fixture/home/.cargo/bin:${MISE}/shims`),
     ).toBe(`${MISE}/shims:/fixture/homebrew/bin:/fixture/home/.cargo/bin`);
@@ -186,7 +185,7 @@ describe("runtimePath", () => {
 
   test("a PATH that never mentions mise still gets mise's shims first", () => {
     // The 2026-09-18 clean-VM shape: mise installed, never activated, so the
-    // starter's PATH has no mise entry and tmux / rustc were simply absent.
+    // starter's PATH has no mise entry and rustc was simply absent.
     expect(at("/fixture/pkg/bin:/fixture/bin")).toBe(
       `${MISE}/shims:/fixture/pkg/bin:/fixture/bin`,
     );

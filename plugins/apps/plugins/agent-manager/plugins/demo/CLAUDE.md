@@ -37,11 +37,12 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
 
 - Description: The Agent Manager's demo scenario (core: agentManagerDemo — the app, the route /c/conv-demo-dark-mode and its browser host: real server code in a Web Worker on PGlite, seeded with a queue of agents and one conversation fixing a bug, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
 - Core:
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×5
     - `conversations/agents` ×4
     - `conversations/conversation-view/jsonl-viewer/subagents` ×2
     - `conversations/model-provider` ×2
+    - `conversations/runtime-sdk` ×2
     - `debug/profiling/op-log/op-store` ×2
     - `plugin-meta/plugin-view` ×2
     - `apps/deploy.DEPLOY_CATEGORY_ID`
@@ -56,7 +57,6 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
     - `conversations/conversation-view/notes.conversationNoteRows`
     - `conversations/conversation-view/turn-summary.turnSummaryRows`
     - `conversations/conversations-view/queue.queueRanks`
-    - `conversations/runtime-sdk.sdkBundledCli`
     - `conversations/spawn-failure.spawnFailureRows`
     - `conversations/turn-ledger.conversationTurns`
     - `infra/claude-cli/availability.claudeCodeStatus`

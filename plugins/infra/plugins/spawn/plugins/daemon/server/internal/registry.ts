@@ -132,15 +132,36 @@ export interface WorkerLaunch extends DaemonStartCommon {
   backoff?: { minMs: number; maxMs: number };
 }
 
-export interface DetachedLaunch extends DaemonStartCommon {
-  /** A bootstrap that starts the long-lived process detached, then exits. */
+/**
+ * A detached start: either a bootstrap that starts the long-lived process and
+ * exits (a release preview), or the long-lived process itself (an sdk agent),
+ * which writes its own pid file. Either way it gets its own session and process
+ * group, so a backend restart — which signals the backend's whole group — does
+ * not reach it.
+ */
+export type DetachedLaunch = DaemonStartCommon & {
   argv: string[];
   env?: Record<string, string | undefined>;
-  /** Each line the bootstrap prints, while it runs. */
-  onOutputLine?: (line: string, stream: "stdout" | "stderr") => void;
+  cwd?: string;
   /** Where the long-lived process writes its pid (first line). */
   pidFile: string;
-}
+} & (
+    | {
+        /** Each line the bootstrap prints, while it runs. */
+        onOutputLine?: (line: string, stream: "stdout" | "stderr") => void;
+        outputFd?: never;
+      }
+    | {
+        /**
+         * stdout and stderr both go to this open descriptor (a log file opened
+         * for append) — for a process that outlives this backend, which no pipe
+         * of ours could keep draining. The child gets its own duplicate; the
+         * caller closes its copy once this returns.
+         */
+        outputFd: number;
+        onOutputLine?: never;
+      }
+  );
 
 export interface AttachOptions extends DaemonStartCommon {
   /** The pid file of a process this backend did not start but depends on. */

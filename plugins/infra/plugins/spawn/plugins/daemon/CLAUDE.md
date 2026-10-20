@@ -116,6 +116,7 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `DaemonTransition`
     - `DaemonWhere`
     - `DetachedLaunch`
+    - `PidFileRead`
     - `ProcessLaunch`
     - `UnsupervisedDeclExtras`
     - `WorkerDaemonInstance`
@@ -128,6 +129,8 @@ declaration (tsc): nothing here can respawn what it is not the parent of.
     - `defineDaemon`
     - `listDaemons`
     - `onDaemonActivity`
+    - `pidAlive`
+    - `readPidFile`
 - Sub-plugins:
   - **`background-arm`** — Long-lived processes in the Background activity catalog: registers the `daemon` background kind — every declaration made with defineDaemon under Long-lived processes, triggered at boot or on demand…
 

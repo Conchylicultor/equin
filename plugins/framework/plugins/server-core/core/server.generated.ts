@@ -431,7 +431,6 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/log-channels", id: "primitives.log-channels", loader: () => import("@plugins/primitives/plugins/log-channels/server"), dependsOn: ["infra/plugins/endpoints"] },
   { pluginPath: "primitives/plugins/metrics", id: "primitives.metrics", loader: () => import("@plugins/primitives/plugins/metrics/server"), dependsOn: ["network/plugins/live", "primitives/plugins/data-view/plugins/view-core"] },
   { pluginPath: "primitives/plugins/rank", id: "primitives.rank", loader: () => import("@plugins/primitives/plugins/rank/server"), dependsOn: ["database"] },
-  { pluginPath: "primitives/plugins/terminal", id: "primitives.terminal", loader: () => import("@plugins/primitives/plugins/terminal/server"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "primitives/plugins/text-editor/plugins/inline-chip", id: "primitives.text-editor.inline-chip", loader: () => import("@plugins/primitives/plugins/text-editor/plugins/inline-chip/server"), dependsOn: ["infra/plugins/query-resource"] },
   { pluginPath: "primitives/plugins/usage-rank", id: "primitives.usage-rank", loader: () => import("@plugins/primitives/plugins/usage-rank/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/entities", "network/plugins/live"] },
   { pluginPath: "release/plugins/bundles", id: "release.bundles", loader: () => import("@plugins/release/plugins/bundles/server"), dependsOn: ["infra/plugins/paths", "infra/plugins/spawn"] },

@@ -31,7 +31,6 @@ experimental = true  # required for the [hooks] block below
 # thing that moves `mise.lock`; a daily job files the task that runs it.
 bun = "latest"
 go = "latest"
-tmux = "latest"
 rust = "latest"  # cargo + rustc for the Tauri desktop release shell (tauri/); end users need none of this
 uv = "latest"    # Python projects (`python/` folders), installed on demand by infra/deps; uv fetches its own CPython
 
@@ -40,7 +39,7 @@ description = "Trust every worktree's mise.toml, stop shims auto-installing, and
 run = '''
 # Trust every current & future worktree's mise.toml in one shot. Each `git
 # worktree add` inherits this committed config at a fresh, untrusted path, so
-# shim invocations (bun/go/tmux) inside .claude/worktrees/<wt> otherwise emit
+# shim invocations (bun/go) inside .claude/worktrees/<wt> otherwise emit
 # "config not trusted" errors — including from Claude Code's PreToolUse Bash
 # hook. Registering the directory is path-glob based, so it covers worktrees
 # created by the server, by config-staging, AND by the Claude Code harness

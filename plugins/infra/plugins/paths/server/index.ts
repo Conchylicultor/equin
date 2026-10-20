@@ -56,7 +56,6 @@ export {
   GIT,
   PGREP,
   PS,
-  TMUX,
   CLAUDE_CANDIDATES,
   resolveClaudeBin,
 } from "./internal/bins";

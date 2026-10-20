@@ -11,10 +11,10 @@ import { hibernationConfig } from "@plugins/conversations/core";
 
 const HOUR_MS = 60 * 60 * 1000;
 
-// Proactively reclaim resources held by long-idle waiting conversations: kill
-// the tmux pane and mark the row hibernated (status stays `waiting`; it resumes
-// transparently on open). Runs every 30 min on the main runtime only — tmux is a
-// global host resource and only main owns the canonical conversation rows.
+// Proactively reclaim resources held by long-idle waiting conversations: stop
+// the agent process and mark the row hibernated (status stays `waiting`; it
+// resumes transparently on open). Runs every 30 min on the main runtime only —
+// only main owns the canonical conversation rows.
 //
 // Kill-first ordering is deliberate: if the job dies between deleteConversation
 // and setConversationHibernated, the status reconciler's suspend branch self-heals the row
@@ -23,8 +23,8 @@ export const hibernateIdleJob = defineJob({
   name: "conversations.hibernate-idle",
   description:
     "Shuts down the agent sessions of long-idle waiting conversations to free resources; they resume when opened.",
-  // seconds: `deleteConversation` spawns one untimed `tmux kill-session` per
-  // idle candidate, and the candidate count is not bounded up front.
+  // seconds: `deleteConversation` shuts down one agent per idle candidate
+  // (waiting for it to exit), and the candidate count is not bounded up front.
   hold: "seconds",
   input: z.object({}),
   event: z.never(),

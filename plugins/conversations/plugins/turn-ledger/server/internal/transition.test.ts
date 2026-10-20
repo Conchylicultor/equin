@@ -18,7 +18,7 @@ const EVENTS = {
   release: { kind: "release", typedText: TYPED },
   typed: { kind: "typed" },
   unverified: { kind: "unverified", reason: "box kept text" },
-  failed: { kind: "failed", error: "tmux exploded" },
+  failed: { kind: "failed", error: "agent exploded" },
   "confirmed-equal": { kind: "confirmed", prompt: TYPED, at: AT },
   "confirmed-merged": {
     kind: "confirmed",

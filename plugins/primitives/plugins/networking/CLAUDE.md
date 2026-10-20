@@ -153,7 +153,6 @@ built on them — see
     - `primitives/log-channels`
     - `primitives/optimistic-mutation`
     - `primitives/overlay/image-viewer`
-    - `primitives/terminal`
     - `shell/notifications`
     - `tasks/task-attachments`
     - `tasks/tasks-core`

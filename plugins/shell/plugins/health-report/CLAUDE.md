@@ -117,7 +117,6 @@ detail is rendered through `renderIsolated`.
     - `HealthReport.Row` ← `database.query-deadline`
     - `HealthReport.Row` ← `debug.queue-health`
     - `HealthReport.Row` ← `debug.sentinel`
-    - `HealthReport.Row` ← `infra.claude-cli.availability`
     - `HealthReport.Row` ← `infra.health`
     - `HealthReport.Row` ← `infra.mcp.browser`
     - `HealthReport.Row` ← `primitives.dom.web-storage.health`
@@ -171,7 +170,6 @@ detail is rendered through `renderIsolated`.
     - `database/query-deadline`
     - `debug/queue-health`
     - `debug/sentinel`
-    - `infra/claude-cli/availability`
     - `infra/health`
     - `infra/mcp/browser`
     - `primitives/dom/web-storage/health`

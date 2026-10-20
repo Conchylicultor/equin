@@ -131,7 +131,7 @@ export type ClassifyResult = ReapTarget | null | typeof NEEDS_HYGIENE;
 //
 // "Retained" is USER INTENT (attempts_v.retained — no conversation left
 // un-closed), NOT process liveness. This guard used to read `attempt.active`,
-// the progress notion: a conversation whose tmux pane was killed to reclaim
+// the progress notion: a conversation whose agent process was killed to reclaim
 // resources was written `gone`, flipping `active` false and handing this reaper
 // the checkouts of 22 conversations the user could still resume. `gone` is not
 // terminal — it is the exact status `resumeConversation` requires. Only an

@@ -6,11 +6,11 @@ import {
   AGENT_SESSION_PATH_SEED,
   AGENT_SESSION_WRAPPER,
   agentLoginShell,
-  agentSessionArgs,
+  agentSessionLaunch,
   agentSessionPath,
 } from "./agent-session-env";
 
-// The namespace variable the tmux server used to leak into every pane. Spelled
+// The namespace variable a backend's environment used to leak into agents. Spelled
 // from its parts so the identifier itself stays out of the tree: the rule that
 // bans it does not need an exception for the test that proves it is gone.
 const LEAKED_NAMESPACE_VAR = ["SINGULARITY", "WORKTREE"].join("_");
@@ -47,12 +47,6 @@ describe("the agent-session wrapper", () => {
     expect(AGENT_SESSION_WRAPPER).not.toContain("SOCKET_PATH");
   });
 
-  test("keeps the pane-ownership stamp", () => {
-    // Tier-1 pane ownership matches a session file's tmux stamp against the
-    // pane id, which the CLI can only write if it inherits it.
-    expect(AGENT_SESSION_ENV_ALLOWLIST).toContain("TMUX_PANE");
-  });
-
   test("interpolates nothing, so a command needs no escaping", () => {
     expect(AGENT_SESSION_WRAPPER).toContain(
       '"$shell" -l -c "$cmd" "$shell" "$@"',
@@ -61,13 +55,13 @@ describe("the agent-session wrapper", () => {
   });
 });
 
-describe("agentSessionArgs", () => {
+describe("agentSessionLaunch", () => {
   const ENV = {
     SINGULARITY_CONVERSATION_ID: "conv-test",
     SINGULARITY_PARENT_HOST: "att-test-w6l1",
     CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
   };
-  const args = agentSessionArgs({
+  const launch = agentSessionLaunch({
     env: ENV,
     accountShell: "/fixture/bin/fish",
     claudeBin: "/opt/claude/claude",
@@ -75,19 +69,18 @@ describe("agentSessionArgs", () => {
     args: ["the prompt"],
   });
 
-  test("delivers every allowlisted -e value, then the wrapper", () => {
-    expect(args.slice(0, 6)).toEqual([
-      "-e",
-      "SINGULARITY_CONVERSATION_ID=conv-test",
-      "-e",
-      "SINGULARITY_PARENT_HOST=att-test-w6l1",
-      "-e",
-      "CLAUDE_CODE_DISABLE_AGENT_VIEW=1",
-    ]);
+  test("the environment is exactly the allowlist, delivered values included", () => {
+    expect(Object.keys(launch.env).sort()).toEqual(
+      [...AGENT_SESSION_ENV_ALLOWLIST].sort(),
+    );
     for (const name of AGENT_SESSION_DELIVERED_ENV) {
-      expect(AGENT_SESSION_ENV_ALLOWLIST).toContain(name);
+      expect(launch.env[name]).toBe(ENV[name]);
     }
-    expect(args.slice(6, 11)).toEqual([
+    expect(launch.env.TERM).toBe("dumb");
+  });
+
+  test("the wrapper under /bin/sh, then the login shell", () => {
+    expect(launch.argv.slice(0, 5)).toEqual([
       "/bin/sh",
       "-c",
       AGENT_SESSION_WRAPPER,
@@ -97,12 +90,12 @@ describe("agentSessionArgs", () => {
   });
 
   test("the PATH, then the command and its positional args", () => {
-    expect(args[11]).toEndWith(`/opt/claude:${AGENT_SESSION_PATH_SEED}`);
-    expect(args.slice(12)).toEqual(["claude --x", "the prompt"]);
+    expect(launch.argv[5]).toEndWith(`/opt/claude:${AGENT_SESSION_PATH_SEED}`);
+    expect(launch.argv.slice(6)).toEqual(["claude --x", "the prompt"]);
   });
 });
 
-describe("the pane's PATH and shell", () => {
+describe("the agent's PATH and shell", () => {
   test("the toolchain and claude come before the system seed", () => {
     expect(
       agentSessionPath({
@@ -136,7 +129,7 @@ describe("the pane's PATH and shell", () => {
   });
 });
 
-// Drives the real shells with the exact argv shape tmux execs, minus tmux:
+// Drives the real shells with the exact argv shape an agent is spawned as:
 // `/bin/sh -c <wrapper> sh <loginShell> <path> <claudeCmd> [prompt]`, under an
 // environment that carries the leak. Run once per login shell the host has.
 async function runWrapper(
@@ -152,16 +145,13 @@ async function runWrapper(
     USER: "fixture-user",
     LOGNAME: "fixture-user",
     SHELL: "/bin/zsh",
-    TERM: "tmux-256color",
+    TERM: "dumb",
     LANG: "C.UTF-8",
-    // What tmux injects when it forks the pane.
-    TMUX: "/fixture/tmux-socket,1,0",
-    TMUX_PANE: "%99",
-    // What the runtime delivers with `-e`.
+    // What the runtime delivers.
     SINGULARITY_CONVERSATION_ID: "conv-test",
     SINGULARITY_PARENT_HOST: "att-test-w6l1",
     CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
-    // What the tmux server carried in from whoever started it.
+    // What a backend's ambient environment carries.
     [LEAKED_NAMESPACE_VAR]: "fixture-namespace",
     SOCKET_PATH: "/fixture/backend.sock",
     ZZ_ENVTEST_PROBE: "leaked",
@@ -205,8 +195,7 @@ describe.each(LOGIN_SHELLS)("the wrapper, executed under %s", (loginShell) => {
     expect(res.stdout).toContain(`SETTINGS<${SETTINGS}>`);
     expect(res.stdout).toContain(`PROMPT<${prompt}>`);
 
-    // The pane keeps what it was given...
-    expect(res.stdout).toContain("TMUX_PANE=%99");
+    // The agent keeps what it was given...
     expect(res.stdout).toContain("SINGULARITY_CONVERSATION_ID=conv-test");
     expect(res.stdout).toContain("SINGULARITY_PARENT_HOST=att-test-w6l1");
     // ...including the toolchain on PATH, whatever the login profile does...

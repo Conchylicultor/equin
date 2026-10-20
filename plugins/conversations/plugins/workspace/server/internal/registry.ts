@@ -15,8 +15,7 @@ export interface LaunchMcpServer {
 /**
  * What a workspace adds to the agent's launch, as typed options — never CLI
  * flags, which would collide with an SDK runtime's own `settingSources` /
- * `mcpServers`. Each runtime renders it its own way (tmux to argv, the SDK to
- * query options).
+ * `mcpServers`. The SDK runtime renders it to query options.
  *
  * - `settingSources` — absent: the CLI's default sources.
  * - `mcpServers` — servers added to the agent's own, by name.
@@ -46,7 +45,7 @@ type SpecOf<K extends WorkspaceKind> = Extract<WorkspaceSpec, { kind: K }>;
 
 /**
  * One kind of workspace — where a conversation runs, and every step of its
- * life that depends on that. Orthogonal to the runtime (tmux | sdk), which
+ * life that depends on that. Orthogonal to the runtime, which
  * only ever sees the cwd and the {@link LaunchFragment}.
  */
 /** What a launch adds per session, beyond the workspace itself. */

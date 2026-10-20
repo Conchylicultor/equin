@@ -70,8 +70,8 @@
     - `ui/tokens/density --space-xl`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/type-scale --measure-reading`
-  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×50
+  - Imported by: 60 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×49
     - `active-data` ×5
     - `tasks` ×2
     - `debug/profiling/ops`
@@ -115,7 +115,6 @@
   - **`selection-actions`** — Selecting text in an agent's reply pops a toolbar above it: Quote puts the selection in the prompt as a quote, and the quick answers (Go, Explain — a setting of its own) are the prompt templates'…
   - **`status`** — Displays the conversation status as a colored badge in the toolbar.
   - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.
-  - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
   - **`track`** — Displays the conversation's task track (Main / Sidequest) as a chip in the conversation header.
   - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. Serves each conversation's latest turn summary (a one-line…
   - **`user-message`** — The user turn's standard look: <UserMessageCard> (the message-card chrome) and <UserMessageText> (the turn's text through every inline-text walker, so chips render). Shared by the transcript's…

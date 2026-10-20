@@ -2,8 +2,7 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 
 export default defineCliCommand({
   name: "toolchain",
-  description:
-    "The mise toolchain (bun, go, tmux, rust, uv) this checkout runs",
+  description: "The mise toolchain (bun, go, rust, uv) this checkout runs",
   subcommands: [
     defineCliCommand<[], { tool?: string }>({
       name: "upgrade",

@@ -205,12 +205,6 @@
       "parent": null
     },
     {
-      "paneId": "conv-terminal",
-      "segment": "terminal",
-      "appIndex": false,
-      "parent": null
-    },
-    {
       "paneId": "conversation",
       "segment": "c/:convId",
       "appIndex": false,

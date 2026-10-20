@@ -160,8 +160,8 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
 - Web:
   - Slots: `ReorderSlots.AreaEditor`
   - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
-  - Contributes: 241 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×241
+  - Contributes: 239 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×239
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
@@ -196,8 +196,8 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `ReorderSlots`
     - `useReorderedEntries`
 - Server:
-  - Contributes: 240 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×240
+  - Contributes: 238 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×238
   - Uses: `config_v2.ConfigV2`
   - Exports (values):
     - `reorderableSlots`

@@ -14,11 +14,10 @@ import (
 // (`append(os.Environ(), "SOCKET_PATH=…")`), and the exec sites that set no Env
 // at all got the same thing implicitly: a nil Cmd.Env in Go means "inherit
 // everything". The gateway's own environment is whatever its starter carried.
-// Started from an agent shell, that was the shell's SINGULARITY_CONVERSATION_ID,
-// TMUX and CLAUDE_* — so every backend on the host (main, central, each
+// Started from an agent shell, that was the shell's SINGULARITY_CONVERSATION_ID
+// and CLAUDE_* — so every backend on the host (main, central, each
 // worktree) ran as that one conversation, and so did everything they spawned:
-// op-log records and commit trailers named it, and tmux clients followed its
-// TMUX socket instead of the default one.
+// op-log records and commit trailers named it.
 //
 // So the environment a child gets is now DECLARED. The launcher passes the
 // declared names as `-child-env` (from runtimeEnvNames() in

@@ -5,10 +5,10 @@
  * - `"leave-unowned"`: not this runtime's row to classify (non-main) → no write.
  * - `"gone"`: nothing to resume (no `claudeSessionId`) → mark disconnected.
  *
- * A MISSING PROCESS NEVER CHANGES STATUS. tmux presence is an internal resource
- * detail: panes are idle-killed to reclaim resources and transparently respawned
- * by `ensureResumed` when the user opens the conversation. A `waiting` row stays
- * `waiting` when its pane disappears — only an explicit close (`exit_clean` /
+ * A MISSING PROCESS NEVER CHANGES STATUS. An agent process is an internal
+ * resource detail: idle ones are stopped to reclaim resources and transparently
+ * respawned by `ensureResumed` when the user opens the conversation. A `waiting`
+ * row stays `waiting` when its agent disappears — only an explicit close (`exit_clean` /
  * the UI's Exit, via `closeRequested` → `markConversationClosed`) moves a
  * conversation to a terminal status. (The reconciler separately settles a
  * `working` row to `waiting`, since nothing computes without a process — see
@@ -21,9 +21,9 @@
  *   - the NOT-LIVE state: `has_live_conv = status NOT IN ('gone','done')` feeds
  *     `attempts_v.active`, which is the worktree reaper's `if (attempt.active)
  *     return null` guard.
- * So the moment a vanished pane wrote `gone`, the conversation was marked
+ * So the moment a vanished agent wrote `gone`, the conversation was marked
  * resumable and its git worktree became collectable in the same write. A reboot
- * or `tmux kill-server` while an agent was mid-turn was enough to get a live
+ * or a killed agent process while an agent was mid-turn was enough to get a live
  * conversation's checkout reaped out from under it.
  *
  * The old shape had this inverted: hibernation was a narrow exception
@@ -47,17 +47,17 @@ export function decideMissingProcessAction(
   row: { claudeSessionId: string | null; hibernatedAt: Date | null },
   opts: { onMain: boolean },
 ): MissingProcessAction {
-  // Conversation rows are owned by main. tmux is host-global, so every
-  // worktree's status reconciler sees every other worktree's sessions, and each worktree's
-  // forked DB holds stale copies of rows it did not spawn. A non-main reconciler
-  // classifying those would write `gone` into its fork for conversations that
-  // are alive elsewhere — the same mislabelling, just scoped to one fork.
+  // Conversation rows are owned by main. Each worktree's forked DB holds stale
+  // copies of rows it did not spawn, whose agents it cannot see (agent paths
+  // are per namespace). A non-main reconciler classifying those would write
+  // `gone` into its fork for conversations that are alive elsewhere — the same
+  // mislabelling, just scoped to one fork.
   if (!opts.onMain) return "leave-unowned";
 
   // Resumable ⇒ hibernated, whatever the status was and whatever the
   // hibernation config says. `hibernationConfig.enabled` gates the PROACTIVE
   // idle-kill job (`conversations.hibernate-idle`) — whether we go looking for
-  // panes to reclaim. It must not decide what we do with a pane we have already
+  // agents to reclaim. It must not decide what we do with an agent we have already
   // found missing: turning the config off must not convert "reclaim resources"
   // into "lose the conversation".
   if (row.claudeSessionId)

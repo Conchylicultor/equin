@@ -64,7 +64,7 @@ describe("setLockedVersion", () => {
     expect(parseMiseLock(next).get("go")).toEqual(["1.24.13"]);
   });
   test("a tool the lock does not record is an error, not a no-op", () => {
-    expect(() => setLockedVersion(LOCK, "tmux", "3.7c")).toThrow();
+    expect(() => setLockedVersion(LOCK, "nonesuch", "1.0.0")).toThrow();
   });
 });
 
@@ -91,11 +91,10 @@ const bunHold = (reviewBy: string): Hold => ({
 
 describe("lockProblems", () => {
   const all = (request: string) =>
-    new Map(["bun", "go", "tmux", "rust", "uv"].map((t) => [t, request]));
+    new Map(["bun", "go", "rust", "uv"].map((t) => [t, request]));
   const locked = new Map([
     ["bun", ["1.4.2"]],
     ["go", ["1.24.13"]],
-    ["tmux", ["3.7c"]],
     ["rust", ["1.98.1"]],
     ["uv", ["0.12.19"]],
   ]);
@@ -119,7 +118,7 @@ describe("lockProblems", () => {
   });
   test("a missing, doubled or non-exact lock entry is a problem", () => {
     const bad = new Map(locked);
-    bad.delete("tmux");
+    bad.delete("uv");
     bad.set("go", ["1.24.13", "1.27.1"]);
     bad.set("rust", ["stable"]);
     expect(lockProblems(all("latest"), bad, NO_HOLDS)).toHaveLength(3);

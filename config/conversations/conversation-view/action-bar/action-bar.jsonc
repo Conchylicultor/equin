@@ -1,4 +1,4 @@
-// @hash f8e52ad0bd94
+// @hash 5e5ff89278c4
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -20,7 +20,6 @@
     "tasks.attempt-view:attempt-switch",
     { "type": "spacer", "id": "spacer-1" },
     "conversations.conversation-view.tasks-panel:tasks",
-    "conversations.conversation-view.terminal-pane:terminal",
     "conversations.conversation-view.open-app:open-app",
     "conversations.conversation-view.explorer:explorer",
     "apps.agent-manager.pages-nav:pages",

@@ -8,7 +8,7 @@
  * needs two transactions that genuinely block on each other and COMMIT, which a
  * single always-rolled-back scenario cannot hold. And a throwaway has no worker
  * attached, so a committed `conversations.spawn` row is just a row — nothing
- * checks out a worktree or opens a tmux session. Every statement the code under
+ * checks out a worktree or starts an agent. Every statement the code under
  * test runs goes through the transaction handed to it, so pointing that
  * transaction at the throwaway is enough; the view + rollup DDL the launch reads
  * is installed by tasks-core's `installTaskDerivedSchema`.

@@ -13,30 +13,6 @@ type BuildModule = {
 export function registerAutoStubs(build: BuildModule): void {
   const noop = (() => {}) as any;
 
-  build.module("@xterm/xterm", () => ({
-    exports: {
-      Terminal: noop,
-      __esModule: true,
-    },
-    loader: "object",
-  }));
-
-  build.module("@xterm/addon-fit", () => ({
-    exports: {
-      FitAddon: noop,
-      __esModule: true,
-    },
-    loader: "object",
-  }));
-
-  build.module("@xterm/addon-web-links", () => ({
-    exports: {
-      WebLinksAddon: noop,
-      __esModule: true,
-    },
-    loader: "object",
-  }));
-
   build.module("@dnd-kit/core", () => ({
     exports: {
       AutoScrollActivator: noop,
@@ -242,7 +218,6 @@ export function registerAutoStubs(build: BuildModule): void {
   }));
 
   for (const mod of [
-    "@xterm/xterm/css/xterm.css",
     "react-diff-view/style/index.css",
   ]) {
     build.module(mod, () => ({ exports: {}, loader: "object" }));

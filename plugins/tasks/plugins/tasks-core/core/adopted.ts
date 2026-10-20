@@ -1,6 +1,6 @@
 /**
- * The `spawnedBy` of a conversation main ADOPTED: a live tmux session the
- * retired tmux runtime found running with no conversation row. Nothing
+ * The `spawnedBy` of a conversation main ADOPTED: a live agent session a
+ * retired runtime found running with no conversation row. Nothing
  * launched it on purpose, so the queue shows it in its own Lost section rather
  * than ranking it among the user's work. Nothing adopts any more; the rows it
  * made keep the value ("poller", from the 1 s poller that adopted first).

@@ -24,6 +24,8 @@ export type {
   OpenRequest,
 } from "./protocol";
 export { sdkBundledCli, sameMajorMinor } from "./cli-version";
+export { AgentProcessesSchema, sdkAgentProcesses } from "./agent-processes";
+export type { AgentProcesses } from "./agent-processes";
 export {
   applyPartialFrame,
   partialFrameOf,

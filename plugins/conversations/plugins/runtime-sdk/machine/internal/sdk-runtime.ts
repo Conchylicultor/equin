@@ -1,5 +1,4 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { userInfo } from "node:os";
 import { z } from "zod";
 import type {
   ConversationRuntime,
@@ -10,13 +9,8 @@ import type {
 import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
-import {
-  agentLaunchHooks,
-  agentSessionArgs,
-  agentSessionEnv,
-} from "@plugins/conversations/plugins/agent-launch/server";
+import { agentLaunchHooks } from "@plugins/conversations/plugins/agent-launch/server";
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
-import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import {
   AgentLaunchOptionsSchema,
   DismissReplySchema,
@@ -42,25 +36,24 @@ import {
   startConsumer,
   waitForProjection,
 } from "./consumer";
+import { agentDir, agentEventsPath, agentOptionsPath } from "./paths";
 import {
-  AGENT_SCRIPT,
-  agentDir,
-  agentEventsPath,
-  agentOptionsPath,
-  agentSocketPath,
-  agentStderrPath,
-} from "./paths";
+  attachRunningAgents,
+  forgetAgentProcess,
+  killAgentProcess,
+  startAgentProcess,
+} from "./agent-process";
+import { recountAgentProcesses } from "./agent-processes";
+import { handOverLegacyAgents } from "./legacy-handover";
 import {
   AgentNotRunningError,
   commandAgent,
   helloAgent,
 } from "./socket-client";
 import { watchPartialMessage } from "./partial-stream";
-import { hasTmuxSession, tmux } from "./tmux";
 
 // The sdk runtime: one Agent SDK process per conversation (bin/agent.ts),
-// hosted in a tmux session named after the conversation — tmux supervises it
-// and the terminal button shows its log (read-only), nothing types into it.
+// started detached (agent-process.ts), so it outlives a backend restart.
 // Commands go over the agent's socket; everything it does comes back as lines
 // of its events.jsonl, which the consumer applies to the conversation's
 // `conversations_ext_sdk_agent` row. Liveness is "does the socket answer
@@ -94,56 +87,6 @@ function eventsExist(id: string): boolean {
   );
 }
 
-function shellWord(value: string): string {
-  return `'${value.replaceAll("'", `'\\''`)}'`;
-}
-
-/**
- * Start the agent process for `id` in a new tmux session, from the options
- * file already written in its directory.
- */
-async function startAgentSession(
-  id: string,
-  options: AgentLaunchOptions,
-): Promise<void> {
-  const command =
-    backgroundPrefix() +
-    // This backend's own bun, by path: the pane's PATH is the account's.
-    [
-      process.execPath,
-      AGENT_SCRIPT,
-      "--dir",
-      agentDir(id),
-      "--socket",
-      agentSocketPath(id),
-    ]
-      .map(shellWord)
-      .join(" ") +
-    // stderr (the SDK's and the CLI's warnings, a crash before the first
-    // event) is kept beside the events: the pane dies with the process.
-    ` 2>>${shellWord(agentStderrPath(id))}`;
-  const r = await tmux([
-    "-u",
-    "new-session",
-    "-d",
-    "-s",
-    id,
-    "-c",
-    options.cwd,
-    ...agentSessionArgs({
-      env: agentSessionEnv(id),
-      accountShell: userInfo().shell ?? "/bin/sh",
-      claudeBin: options.claudeBin,
-      command,
-    }),
-  ]);
-  if (r.exitCode !== 0) {
-    throw new Error(
-      `tmux new-session for SDK agent ${id} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
-    );
-  }
-}
-
 function writeOptions(id: string, options: AgentLaunchOptions): void {
   mkdirSync(agentDir(id), { recursive: true });
   writeFileSync(agentOptionsPath(id), JSON.stringify(options, null, 2));
@@ -155,25 +98,32 @@ function readOptions(id: string): AgentLaunchOptions {
   );
 }
 
-/** Ask the agent to exit and wait for it to; then make sure its tmux session is gone. */
+/**
+ * Ask the agent to exit and wait for it to; kill it when it does not answer or
+ * does not exit.
+ */
 async function stopAgent(id: string): Promise<void> {
-  let running = true;
   try {
     await commandAgent(id, { type: "shutdown" }, UnknownReplySchema);
   } catch (err) {
     if (!(err instanceof AgentNotRunningError)) throw err;
-    running = false;
+    // Not answering: gone, or wedged — either way nothing will exit by itself.
+    await killAgentProcess(id);
+    return;
   }
-  if (running) {
+  try {
     await waitForProjection(
       id,
       (s) => s.agentPid === null,
       EXIT_TIMEOUT_MS,
       "exit after shutdown",
     );
+  } catch (err) {
+    if (!(err instanceof ProjectionTimeoutError)) throw err;
+    await killAgentProcess(id);
+    return;
   }
-  // Idempotent: a session already gone is the goal.
-  if (await hasTmuxSession(id)) await tmux(["kill-session", "-t", id]);
+  await forgetAgentProcess(id);
 }
 
 /** The live state of each of `ids` that is this DB's sdk conversation. */
@@ -214,12 +164,18 @@ export const sdkRuntime: ConversationRuntime = {
   id: "sdk",
 
   async list() {
-    return inspectAgents(await liveSdkConversationIds());
+    const live = await inspectAgents(await liveSdkConversationIds());
+    // The reconciler's pass is also what notices an agent killed outright (its
+    // pid file left behind, no watch event).
+    recountAgentProcesses();
+    return live;
   },
 
   inspect: inspectAgents,
 
   async subscribe(onSignal: (signal: RuntimeSignal) => void) {
+    await handOverLegacyAgents();
+    attachRunningAgents();
     const stop = await startConsumer(onSignal);
     return () => void stop();
   },
@@ -260,11 +216,8 @@ export const sdkRuntime: ConversationRuntime = {
     await prepareAgentRow(id, cwd, !fresh, options.sessionId);
     if (fresh) forgetPosition(id);
     adoptAgent(id);
-    // A dead agent's tmux session (its pane kept by nothing) is cleared first:
-    // tmux refuses a duplicate session name.
-    if (await hasTmuxSession(id)) await tmux(["kill-session", "-t", id]);
     writeOptions(id, options);
-    await startAgentSession(id, options);
+    await startAgentProcess(id, options);
   },
 
   async delete(id: string) {
@@ -289,8 +242,7 @@ export const sdkRuntime: ConversationRuntime = {
       INTERRUPT_SETTLE_MS,
       "the interrupted turn's result",
     );
-    // The same rule as tmux's transcript rewind: a turn the agent has begun
-    // answering (an assistant message or a tool result) stays.
+    // A turn the agent has begun answering (an assistant message or a tool result) stays.
     if (settled.turnReplied || !settled.lastPromptUuid) {
       return { returnedText: null };
     }
@@ -307,7 +259,7 @@ export const sdkRuntime: ConversationRuntime = {
     await stopAgent(id);
     writeOptions(id, relaunch);
     await recordLaunchSession(id, relaunch.sessionId);
-    await startAgentSession(id, relaunch);
+    await startAgentProcess(id, relaunch);
     await waitForProjection(
       id,
       (s) => s.agentPid !== null,
