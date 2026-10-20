@@ -15,9 +15,11 @@ import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { BottomSentinel } from "./internal/bottom-sentinel";
 import { scrollChildIntoView } from "./scroll-child-into-view";
 import { FOLLOW_MOTION_ATTR } from "./follow-motion";
+import { findViewAnchor } from "./internal/view-anchor";
 import {
   followAction,
   isAtBottom,
+  isAtEnd,
   nextMode,
   resolveRestore,
   sentinelObserverOptions,
@@ -41,6 +43,14 @@ export interface StickyScrollPersist {
    * prepends to or compacts the list.
    */
   anchorAttr: string;
+  /**
+   * Candidates inside an element carrying this attribute are saved only when
+   * nothing else is on screen — content pinned with `position: sticky` (a
+   * transcript's turn header) stays on screen through its whole section, so
+   * saving it would restore to the section's start, not the row being read.
+   * Same meaning as `KeepAnchorAcross`'s `weakAttr`.
+   */
+  weakAttr?: string;
 }
 
 export interface UseStickyScrollOptions {
@@ -85,7 +95,11 @@ const positionStore = defineStore<PersistedMode>({
   whenFull: "evict-oldest",
   schema: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("following") }),
-    z.object({ kind: z.literal("anchored"), key: z.string() }),
+    z.object({
+      kind: z.literal("anchored"),
+      key: z.string(),
+      offset: z.number().optional(),
+    }),
   ]),
   // Written before the primitive as `singularity:draft:<persistKey>:<tab>`.
   // Positions are not worth carrying over: the old entries are only deleted.
@@ -152,21 +166,6 @@ export function useStickyScroll(
     lastWrittenTopRef.current = el.scrollTop;
   }, []);
 
-  /** The topmost anchored row still on screen — resolved lazily, at persist time. */
-  const currentAnchorKey = useCallback((): string | null => {
-    const el = scrollRef.current;
-    const cfg = persistRef.current;
-    if (!el || !cfg) return null;
-    const top = el.getBoundingClientRect().top;
-    const rows = el.querySelectorAll<HTMLElement>(`[${cfg.anchorAttr}]`);
-    for (const row of rows) {
-      if (row.getBoundingClientRect().bottom > top) {
-        return row.getAttribute(cfg.anchorAttr);
-      }
-    }
-    return null;
-  }, []);
-
   const persistNow = useCallback(() => {
     const cfg = persistRef.current;
     if (!cfg) return;
@@ -174,12 +173,20 @@ export function useStickyScroll(
       positionStore.write(cfg.key, { kind: "following" });
       return;
     }
-    const key = currentAnchorKey();
+    const el = scrollRef.current;
+    if (!el) return;
+    // The row being read — resolved lazily, here, never per scroll event.
+    const viewTop = el.getBoundingClientRect().top;
+    const anchor = findViewAnchor(el, viewTop, cfg.anchorAttr, cfg.weakAttr);
     // Parked with nothing identifiable on screen (an empty or unanchored list):
     // leave whatever was stored alone rather than overwriting it with a guess.
-    if (key === null) return;
-    positionStore.write(cfg.key, { kind: "anchored", key });
-  }, [currentAnchorKey]);
+    if (anchor === null) return;
+    positionStore.write(cfg.key, {
+      kind: "anchored",
+      key: anchor.name,
+      offset: anchor.top - viewTop,
+    });
+  }, []);
 
   const schedulePersist = useCallback(() => {
     if (!persistRef.current) return;
@@ -264,7 +271,15 @@ export function useStickyScroll(
       modeRef.current = { kind: "anchored" };
       setIsFollowing(false);
       applyAnchoring(false);
-      scrollChildIntoView(el, outcome.el, { block: "start" });
+      if (outcome.offset === undefined) {
+        scrollChildIntoView(el, outcome.el, { block: "start" });
+      } else {
+        // Put the row's top back exactly where it was on screen, so the view
+        // (pinned headers included) is the one the reader left.
+        const viewTop = el.getBoundingClientRect().top;
+        el.scrollTop +=
+          outcome.el.getBoundingClientRect().top - viewTop - outcome.offset;
+      }
       lastWrittenTopRef.current = el.scrollTop;
       return;
     }
@@ -381,7 +396,12 @@ export function useStickyScroll(
       const atBottom = isAtBottom(el, threshold);
       sentinelVisibleRef.current = atBottom;
       applyMode(
-        nextMode({ t: "foreign-scroll", sentinelVisible: atBottom, movedUp }),
+        nextMode({
+          t: "foreign-scroll",
+          sentinelVisible: atBottom,
+          movedUp,
+          atEnd: isAtEnd(el),
+        }),
       );
     };
     el.addEventListener("scroll", onScroll, { passive: true });

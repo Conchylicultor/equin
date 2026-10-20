@@ -329,6 +329,9 @@ function TranscriptViewInner({
         // transcript and are allowed to sit at different positions.
         key: `${persistKey}:${surfaceTabId ?? "detached"}`,
         anchorAttr: "data-event-key",
+        // A turn's prompt stays pinned through its whole turn: never the row
+        // being read.
+        weakAttr: "data-pinned-header",
       },
     });
 

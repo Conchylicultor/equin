@@ -24,13 +24,23 @@ describe("nextMode", () => {
 
   test("a foreign scroll arriving at the bottom resumes following", () => {
     expect(
-      nextMode({ t: "foreign-scroll", sentinelVisible: true, movedUp: false }),
+      nextMode({
+        t: "foreign-scroll",
+        sentinelVisible: true,
+        movedUp: false,
+        atEnd: false,
+      }),
     ).toEqual(following);
   });
 
   test("a foreign scroll away from the bottom parks", () => {
     expect(
-      nextMode({ t: "foreign-scroll", sentinelVisible: false, movedUp: true }),
+      nextMode({
+        t: "foreign-scroll",
+        sentinelVisible: false,
+        movedUp: true,
+        atEnd: false,
+      }),
     ).toEqual(anchored);
   });
 
@@ -39,13 +49,38 @@ describe("nextMode", () => {
     // within the threshold, so position alone says "you are at the bottom" and
     // the follow loop drags the user back, cancelling the navigation.
     expect(
-      nextMode({ t: "foreign-scroll", sentinelVisible: true, movedUp: true }),
+      nextMode({
+        t: "foreign-scroll",
+        sentinelVisible: true,
+        movedUp: true,
+        atEnd: false,
+      }),
     ).toEqual(anchored);
+  });
+
+  test("a clamp to the end (content shrank below) keeps following", () => {
+    // Measured on a live transcript: the hook wrote the bottom, a tool card
+    // then shrank as its result landed, and the browser clamped the offset
+    // up — a scroll that moved up and was not ours. It is not the reader
+    // leaving: a reader moving up cannot land at the maximum offset.
+    expect(
+      nextMode({
+        t: "foreign-scroll",
+        sentinelVisible: true,
+        movedUp: true,
+        atEnd: true,
+      }),
+    ).toEqual(following);
   });
 
   test("moving down but not yet at the bottom stays parked", () => {
     expect(
-      nextMode({ t: "foreign-scroll", sentinelVisible: false, movedUp: false }),
+      nextMode({
+        t: "foreign-scroll",
+        sentinelVisible: false,
+        movedUp: false,
+        atEnd: false,
+      }),
     ).toEqual(anchored);
   });
 });
@@ -132,6 +167,14 @@ describe("resolveRestore", () => {
     expect(resolveRestore(savedAnchor, found)).toEqual({
       kind: "anchored",
       el,
+    });
+  });
+
+  test("a saved anchor carries its offset into the row", () => {
+    expect(resolveRestore({ ...savedAnchor, offset: -320 }, found)).toEqual({
+      kind: "anchored",
+      el,
+      offset: -320,
     });
   });
 

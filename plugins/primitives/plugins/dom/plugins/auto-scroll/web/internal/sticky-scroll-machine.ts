@@ -19,9 +19,16 @@
  */
 export type ScrollMode = { kind: "following" } | { kind: "anchored" };
 
-/** The storage shape: a parked surface is only worth saving with a row to park on. */
+/**
+ * The storage shape: a parked surface is only worth saving with a row to park on.
+ *
+ * `offset` is where that row's top sat relative to the viewport's top (negative
+ * once the reader is partway into it), so a tall row — a long reply, a big diff
+ * — restores to the line being read rather than to its first line. Absent on
+ * records written before it existed: those restore to the row's start.
+ */
 export type PersistedMode =
-  { kind: "following" } | { kind: "anchored"; key: string };
+  { kind: "following" } | { kind: "anchored"; key: string; offset?: number };
 
 export type StickySignal =
   /**
@@ -34,9 +41,24 @@ export type StickySignal =
    * concludes the user scrolled *to* the bottom, keeps following, and the follow
    * loop drags them back — cancelling any smooth navigation that starts from the
    * bottom (a table-of-contents jump, a `revealElement`). Direction is
-   * unambiguous where position is not: moving up is leaving, full stop.
+   * unambiguous where position is not: moving up is leaving — unless it ended
+   * at the very end (`atEnd`).
+   *
+   * `atEnd` (scrolled to the maximum offset) is what tells a reader leaving
+   * the bottom from the browser CLAMPING the offset because content below
+   * shrank — a tool card collapsing as its result lands, a placeholder giving
+   * way to a shorter row. A clamp moves up and is not ours, so without it the
+   * surface parked whenever the transcript shrank under a following reader,
+   * and new rows then arrived off screen. A scroll that ends at the very end
+   * did not leave it, whatever its direction; a reader moving up cannot land
+   * there.
    */
-  | { t: "foreign-scroll"; sentinelVisible: boolean; movedUp: boolean }
+  | {
+      t: "foreign-scroll";
+      sentinelVisible: boolean;
+      movedUp: boolean;
+      atEnd: boolean;
+    }
   /** The user pressed the jump-to-bottom affordance. */
   | { t: "jump" }
   /** The consumer's `followKey` changed — an explicit "the user just acted". */
@@ -55,6 +77,7 @@ export function nextMode(signal: StickySignal): ScrollMode {
     case "follow-key":
       return { kind: "following" };
     case "foreign-scroll":
+      if (signal.atEnd) return { kind: "following" };
       if (signal.movedUp) return { kind: "anchored" };
       return signal.sentinelVisible
         ? { kind: "following" }
@@ -151,10 +174,23 @@ export function isAtBottom(
   return distance <= Math.max(0, threshold);
 }
 
+/**
+ * Scrolled to the maximum offset — where the browser clamps to when content
+ * shrinks. 1px of slack: `scrollTop` is fractional on a zoomed or high-DPI
+ * display, the maximum is not always reachable to the exact pixel.
+ */
+export function isAtEnd(metrics: {
+  scrollHeight: number;
+  scrollTop: number;
+  clientHeight: number;
+}): boolean {
+  return isAtBottom(metrics, 1);
+}
+
 export type RestoreOutcome =
   | { kind: "none" }
   | { kind: "following" }
-  | { kind: "anchored"; el: HTMLElement }
+  | { kind: "anchored"; el: HTMLElement; offset?: number }
   /** Saved, but the row it named is gone. Distinct from `none` on purpose. */
   | { kind: "missing"; key: string };
 
@@ -174,5 +210,8 @@ export function resolveRestore(
   if (saved === null) return { kind: "none" };
   if (saved.kind === "following") return { kind: "following" };
   const el = lookup(saved.key);
-  return el ? { kind: "anchored", el } : { kind: "missing", key: saved.key };
+  if (!el) return { kind: "missing", key: saved.key };
+  return saved.offset === undefined
+    ? { kind: "anchored", el }
+    : { kind: "anchored", el, offset: saved.offset };
 }

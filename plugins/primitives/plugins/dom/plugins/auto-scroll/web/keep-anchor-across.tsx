@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { findScrollParent } from "./internal/find-scroll-parent";
+import { findViewAnchor } from "./internal/view-anchor";
 
 export interface KeepAnchorAcrossProps {
   /**
@@ -88,21 +89,8 @@ export class KeepAnchorAcross extends Component<
       scroller === document.scrollingElement
         ? 0
         : scroller.getBoundingClientRect().top;
-    let weak: Anchor | null = null;
-    for (const el of container.querySelectorAll(`[${anchorAttr}]`)) {
-      const rect = el.getBoundingClientRect();
-      if (rect.bottom <= viewTop) continue;
-      const anchor = {
-        scroller,
-        name: el.getAttribute(anchorAttr)!,
-        top: rect.top,
-      };
-      if (weakAttr === undefined || el.closest(`[${weakAttr}]`) === null) {
-        return anchor;
-      }
-      weak ??= anchor;
-    }
-    return weak;
+    const anchor = findViewAnchor(container, viewTop, anchorAttr, weakAttr);
+    return anchor && { scroller, name: anchor.name, top: anchor.top };
   }
 
   override componentDidUpdate(
