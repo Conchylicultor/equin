@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { FieldsCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/fields-card/web";
 import {

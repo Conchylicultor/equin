@@ -3,7 +3,7 @@ import {
   useActiveDataSegments,
 } from "@plugins/active-data/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { useRowMarkdown } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";

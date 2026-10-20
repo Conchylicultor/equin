@@ -119,9 +119,9 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
 - Server:
   - Contributes: `resource.declare` "background-shell-output"
   - Uses:
+    - `conversations/transcript-source.transcriptChainReads`
     - `conversations/transcript-watcher.readJsonlEventsFromChain`
     - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-    - `conversations/transcript-watcher.transcriptChainReads`
     - `conversations/transcript-watcher.transcriptChainSignature`
     - `infra/file-watcher.defineFileWatcher`
     - `infra/git/git-read-cache.createSignedMemo`

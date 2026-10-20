@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { defineThreadResult, type ThreadConversation } from "../../core";
 
 // A recorded-shape transcript of a place-finding agent, for the exhibits only:

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { JsonlViewer, type ContextRole } from "./slots";
 import { groupContextRuns, type TranscriptItem } from "./context-runs";
 

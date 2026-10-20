@@ -35,17 +35,16 @@ function argvSocket(argv: readonly string[]): string | undefined {
 }
 
 /**
- * Read the socket the gateway handed this serving backend, record it, and
- * return it. Called ONCE, by each serving entry point, just before it binds
+ * Read the socket the gateway handed this serving backend (from its argv,
+ * passed by the entry point so this module never reads `process`), record it,
+ * and return it. Called ONCE, by each serving entry point, just before it binds
  * (`server-core/bin/index.ts`, `central-core/bin/index.ts`). An `exec` child
  * serves nothing and never calls it.
  *
  * Throws when `--socket` is missing. A backend with no socket is unreachable,
  * so booting on would only fail later and less clearly.
  */
-export function readServingSocket(
-  argv: readonly string[] = process.argv,
-): string {
+export function readServingSocket(argv: readonly string[]): string {
   const path = argvSocket(argv);
   if (path === undefined) {
     throw new Error(

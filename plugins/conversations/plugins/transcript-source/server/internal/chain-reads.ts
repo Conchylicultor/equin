@@ -3,8 +3,8 @@ import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import type { ValueReads } from "@plugins/infra/plugins/query-resource/server";
 
 /**
- * The Postgres reads of `resolveConversationTranscriptPaths` (resolve-chain.ts),
- * declared once beside it: every served value whose loader resolves a
+ * The Postgres reads of `resolveConversationTranscriptPaths` (transcript-watcher),
+ * declared once: every served value whose loader resolves a
  * conversation's transcript chain passes this as its `reads`, so a write to
  * either table routes a recompute of its open tuples.
  *

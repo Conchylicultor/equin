@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { rowActionsAnchor } from "@plugins/primitives/plugins/row-actions/web";
 import { JsonlViewer } from "../slots";
 import { EventActionProvider } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";

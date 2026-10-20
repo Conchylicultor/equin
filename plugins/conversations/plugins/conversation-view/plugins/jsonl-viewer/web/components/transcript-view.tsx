@@ -12,7 +12,7 @@ import {
   useStickyScroll,
 } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";

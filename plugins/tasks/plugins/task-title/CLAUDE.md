@@ -12,7 +12,6 @@
     - `trigger` "task-title.on-user-turn-sent"
     - `trigger` "task-title.short-on-title-changed"
   - Uses:
-    - `conversations.conversationCreated`
     - `conversations/turn-ledger.userTurnSent`
     - `database.db`
     - `infra/claude-cli.runClaudePrint`
@@ -25,6 +24,7 @@
     - `tasks/tasks-core._attempts`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core._tasks`
+    - `tasks/tasks-core.conversationCreated`
     - `tasks/tasks-core.getTask`
     - `tasks/tasks-core.taskTitleChanged`
     - `tasks/tasks-core.updateConversationsTitleForTask`

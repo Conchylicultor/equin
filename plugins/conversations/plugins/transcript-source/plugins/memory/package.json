@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-conversations-transcript-source-memory",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it. Never booted by the desktop."
+}

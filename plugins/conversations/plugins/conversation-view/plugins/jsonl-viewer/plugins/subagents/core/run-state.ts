@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { hasLiveProcess } from "@plugins/conversations/core";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { toolResultIsOutcome, type SubagentRequestShape } from "./protocol";

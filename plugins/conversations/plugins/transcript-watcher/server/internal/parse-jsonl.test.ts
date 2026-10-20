@@ -1,11 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  mergeChainLines,
-  readJsonlEvents,
-  readJsonlEventsFromChain,
-} from "./parse-jsonl";
+import { mergeChainLines } from "@plugins/conversations/plugins/transcript-source/server";
+import { readJsonlEvents, readJsonlEventsFromChain } from "./parse-jsonl";
 
 // readJsonlEvents only takes a file path (it reads via Bun.file), so each
 // fixture is written to a temp JSONL file and parsed end-to-end. This also

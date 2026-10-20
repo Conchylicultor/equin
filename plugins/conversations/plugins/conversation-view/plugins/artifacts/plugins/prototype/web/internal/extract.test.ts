@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { extractPrototypeHits, PROTOTYPE_KIND } from "./extract";
 
 const A = "proto-1789731211-jeis";

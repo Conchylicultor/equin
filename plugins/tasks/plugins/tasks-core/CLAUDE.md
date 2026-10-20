@@ -326,6 +326,7 @@ serves them.
     - `AttemptStatus`
     - `AttemptWithConversations`
     - `Conversation`
+    - `ConversationCreatedPayload`
     - `ConversationKind`
     - `ConversationStatusChangedPayload`
     - `ConversationSummary`
@@ -348,6 +349,7 @@ serves them.
   - Exports (values):
     - `_attemptDeliveries`
     - `_attempts`
+    - `_conversationCreatedTriggers`
     - `_conversations`
     - `_conversationStatusChangedTriggers`
     - `_pushLandedTriggers`
@@ -359,6 +361,7 @@ serves them.
     - `AttemptStatusSchema`
     - `clusterLabelOf`
     - `conversationAttachments`
+    - `conversationCreated`
     - `ConversationKindSchema`
     - `conversationOwnerColumns`
     - `conversationOwnerJoins`
@@ -428,6 +431,7 @@ serves them.
     - `defineTriggerEvent('tasks.statusChanged')`
     - `defineTriggerEvent('tasks.titleChanged')`
     - `defineTriggerEvent('conversation.statusChanged')`
+    - `defineTriggerEvent('conversation.created')`
   - Resources:
     - `attempt-workspaces:rows` (keyed, point)
     - `attempts` (keyed)
@@ -520,18 +524,19 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×31
+  - Imported by: 72 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×32
     - `tasks` ×17
     - `active-data` ×5
     - `debug` ×4
     - `page` ×3
-    - `apps` ×2
     - `infra` ×2
     - `stats` ×2
+    - `apps/sonata/transcription`
     - `backup/sources/transcripts`
     - `code-explorer`
     - `database/query`
+    - `improve`
     - `plugin-meta/plugin-health`
     - `review/plugin-changes`
   - Extended by:

@@ -15,6 +15,7 @@
     - `network/live.useLive`
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useCombinedResources`
     - `shell/notifications.toast`
     - `ui/icons.Icon`

@@ -125,7 +125,12 @@ if (!IN_CHILD) {
       {
         // The repo root, so the child reads the same bunfig (test preload).
         cwd: REPO_ROOT,
-        env: { ...process.env, PORTABLE_BOOT_CHILD: "1" },
+        // Its own graph: no desktop providers from the test preload.
+        env: {
+          ...process.env,
+          PORTABLE_BOOT_CHILD: "1",
+          BOOTS_OWN_PLUGIN_GRAPH: "1",
+        },
         timeoutMs: 240_000,
       },
     );

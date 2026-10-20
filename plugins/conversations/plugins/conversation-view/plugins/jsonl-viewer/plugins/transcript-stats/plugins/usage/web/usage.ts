@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
 export interface UsageTotals {
   /** Every output token the agent has produced up to here. */

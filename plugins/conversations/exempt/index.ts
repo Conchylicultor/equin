@@ -3,10 +3,7 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "ids:pk-declared",
-    paths: [
-      "server/internal/tables-created-event.ts",
-      "server/internal/tables-turn-completed-event.ts",
-    ],
+    paths: ["server/internal/tables-turn-completed-event.ts"],
     kind: "debt",
     task: "task-1791405297096-jyzsmk",
     reason:

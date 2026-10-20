@@ -12,7 +12,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";

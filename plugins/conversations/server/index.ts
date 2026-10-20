@@ -46,9 +46,9 @@ import {
   conversationSpawnFailedKind,
 } from "./internal/spawn-report-kinds";
 import { autoStartModelUnavailableKind } from "./internal/auto-start-model-report";
-import { conversationCreated } from "./internal/tables-created-event";
 import { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 import {
+  conversationCreated,
   conversationStatusChanged,
   taskStatusChanged,
 } from "@plugins/tasks/plugins/tasks-core/server";
@@ -95,8 +95,6 @@ export type {
 export { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 export type { ConversationTurnCompletedPayload } from "./internal/tables-turn-completed-event";
 export { afterTurn } from "./internal/after-turn";
-export { conversationCreated } from "./internal/tables-created-event";
-export type { ConversationCreatedPayload } from "./internal/tables-created-event";
 
 export default {
   description:
@@ -158,7 +156,6 @@ export default {
     turnEmitterReconcileJob,
     spawnConversationJob,
     deliverHeldTurnsJob,
-    conversationCreated,
     conversationTurnCompleted,
     conversationsStatusSweepJob,
   ],

@@ -25,6 +25,7 @@ import {
   taskStatusChanged,
   taskTitleChanged,
   conversationStatusChanged,
+  conversationCreated,
 } from "./internal/tables-events";
 import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
 import { PushLedger } from "./internal/push-ledger/service";
@@ -208,6 +209,13 @@ export {
 } from "./internal/tables-events";
 export type { ConversationStatusChangedPayload } from "./internal/tables-events";
 
+// Emitted once when a conversation row is created. Filterable by conversationId.
+export {
+  conversationCreated,
+  _conversationCreatedTriggers,
+} from "./internal/tables-events";
+export type { ConversationCreatedPayload } from "./internal/tables-events";
+
 // Coalesce a multi-edge dependency mutation to one DB transaction and at most
 // one net tasks.statusChanged per affected task. Consumers thread the provided
 // `tx` (a DbExecutor) to the dependency mutations they call. (The same batch
@@ -259,6 +267,7 @@ export default {
     taskStatusChanged,
     taskTitleChanged,
     conversationStatusChanged,
+    conversationCreated,
   ],
   onReady: async () => {
     // The ledger's boot catch-up: whatever landed on `main` while this backend

@@ -263,6 +263,7 @@ test("the base-exclusions row keeps the browser-only host-service providers out 
     "infra.attachments.memory-blobs",
     "primitives.log-channels.memory-persistence",
     "tasks.tasks-core.seeded-push-ledger",
+    "conversations.transcript-source.memory",
   ]) {
     expect(base.entryPoints).toContain(`!${provider}.**`);
   }

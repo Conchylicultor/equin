@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-conversations-transcript-source",
+  "private": true,
+  "version": "0.0.1",
+  "description": "A conversation's transcript, host-independent: the Claude Code JSONL format (core: the event protocol and its helpers), the parser every host runs (server: mergeChainLines / buildJsonlEvents), and the TranscriptSource host service (its events, a signature that moves with them, a watch). The desktop's provider reads the session files (transcript-watcher#machine); a host without them provides its own (plugins/memory).",
+  "dependencies": {
+    "fast-xml-parser": "^4.5.0"
+  }
+}

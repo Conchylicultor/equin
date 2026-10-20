@@ -3,7 +3,7 @@ import type { ReportRow } from "@plugins/reports/server";
 import {
   ForeignSessionPayloadSchema,
   type ForeignSessionPayload,
-} from "../../core";
+} from "@plugins/conversations/plugins/transcript-source/core";
 
 // Re-alert the bell at most once per ~6h while a foreign entry stays in a chain.
 // It is a standing data-loss condition — a rewind or fork of the conversation

@@ -14,6 +14,7 @@ export type { SessionChainEntry, SharedSessionId } from "./internal/record";
 export { _conversationSessions } from "./internal/tables";
 
 export default {
+  portable: true,
   description:
     "Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.",
   contributions: [IdKinds.Kind({ kind: sessionLinkIdKind })],

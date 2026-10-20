@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
 /**
  * The api-request row is harness context, not conversation: it folds with the

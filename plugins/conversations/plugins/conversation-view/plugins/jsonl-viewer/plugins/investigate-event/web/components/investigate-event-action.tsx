@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { useDispatchOutcome } from "@plugins/primitives/plugins/slot-render/web";
 import { IMPROVEMENTS_CATEGORY_ID } from "@plugins/improve/core";

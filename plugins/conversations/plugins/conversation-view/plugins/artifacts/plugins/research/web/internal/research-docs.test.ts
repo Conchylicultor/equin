@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { extractResearch, researchTitle } from "./research-docs";
 
 // Arbitrary checkout root: what makes a doc a research doc is the `research/`

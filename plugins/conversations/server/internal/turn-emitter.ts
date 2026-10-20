@@ -11,7 +11,7 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { watchTranscript } from "@plugins/conversations/plugins/transcript-watcher/server";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import {
   _conversationTurnCompletedTriggers,
   conversationTurnCompleted,

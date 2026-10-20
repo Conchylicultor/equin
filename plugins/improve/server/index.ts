@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
-import { conversationCreated } from "@plugins/conversations/server";
+import { conversationCreated } from "@plugins/tasks/plugins/tasks-core/server";
 import { IMPROVEMENTS_CATEGORY_ID } from "../core/task-category";
 import { applyGroupJob } from "./internal/apply-group-job";
 

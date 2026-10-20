@@ -10,7 +10,7 @@ import type {
   WorkflowRunEntry,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/core";
 import type { SubagentEntry } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
-import type { TokenUsage } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { TokenUsage } from "@plugins/conversations/plugins/transcript-source/core";
 import type {
   BackgroundShell,
   BackgroundShellState,

@@ -134,7 +134,7 @@ back.
 
 ## Plugin reference
 
-- Description: Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
+- Description: Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Streams a conversation's transcript as structured events via the jsonl-events resource, read from the host's TranscriptSource (Claude's JSONL session log on the desktop).
 - Web:
   - Slots:
     - `JsonlViewer.EventRenderer`
@@ -214,17 +214,14 @@ back.
 - Server:
   - Contributes: `resource.declare` "jsonl-events"
   - Uses:
-    - `conversations/transcript-watcher.readJsonlEventsFromChain`
-    - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-    - `conversations/transcript-watcher.transcriptChainReads`
-    - `conversations/transcript-watcher.transcriptChainSignature`
-    - `conversations/transcript-watcher.watchTranscript`
+    - `conversations/transcript-source.transcriptChainReads`
+    - `conversations/transcript-source.TranscriptSource`
     - `infra/git/git-read-cache.createSignedMemo`
     - `network/live.serveValue`
   - Resources: `jsonl-events` (push, notified)
 - Core:
   - Uses:
-    - `conversations/transcript-watcher.JsonlEventSchema`
+    - `conversations/transcript-source.JsonlEventSchema`
     - `network/live.liveValue`
   - Exports (values):
     - `eventKey`
@@ -236,9 +233,8 @@ back.
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×41
-    - `apps/agent-manager/demo`
     - `tasks/outcome-report`
 - Exemptions:
   - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)

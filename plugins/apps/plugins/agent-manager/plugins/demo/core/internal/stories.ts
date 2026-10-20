@@ -8,8 +8,8 @@ import { ConversationModelSchema } from "@plugins/conversations/plugins/model-pr
 // mode resets on reload, fixed it, tested it, and is waiting for review. The
 // queue holds three other agents mid-task; the Done list two finished ones.
 // Every id carries `demo`, so a request that leaked to the real server is
-// findable in its logs. Read by the pack (`./pack`) and by the demo's browser
-// host seed (`bin/seed.ts`), so both describe the same tasks.
+// findable in its logs. Written into the demo's browser host by its seed
+// (`bin/seed.ts`), each story's transcript by `./transcripts`.
 
 export const MIN = 60_000;
 export const HOUR = 60 * MIN;
@@ -28,7 +28,7 @@ export interface Story {
   startedAgo: number;
   updatedAgo: number;
   endedAgo?: number;
-  /** The task's category (`tasks/task-category`), seeded into the browser host; none when absent. */
+  /** The task's category (`tasks/task-category`); none when absent. */
   category?: string;
 }
 

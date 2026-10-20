@@ -1,7 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
-import { conversationCreated } from "@plugins/conversations/server";
-import { taskStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  conversationCreated,
+  taskStatusChanged,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { handleReorder } from "./internal/handle-reorder";
 import { handlePromote } from "./internal/handle-promote";
 import { handleDemote } from "./internal/handle-demote";
@@ -40,6 +42,7 @@ export {
 } from "./internal/queue-ranks";
 
 export default {
+  portable: true,
   description:
     "Stable-rank global queue. Ranks seeded once on creation (newest first). A user-set pin lifts a conversation's task group into its own section at the top.",
   contributions: [

@@ -100,6 +100,7 @@ bun test plugins/conversations/plugins/session-chain/server/internal
 - Cross-plugin:
   - Imported by:
     - `conversations`
+    - `conversations/transcript-source`
     - `conversations/transcript-watcher`
     - `conversations/usage`
 

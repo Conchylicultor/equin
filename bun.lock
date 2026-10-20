@@ -2146,12 +2146,20 @@
       "name": "@singularity/plugin-conversations-transcript-retention",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/transcript-watcher": {
-      "name": "@singularity/plugin-conversations-transcript-watcher",
+    "plugins/conversations/plugins/transcript-source": {
+      "name": "@singularity/plugin-conversations-transcript-source",
       "version": "0.0.1",
       "dependencies": {
         "fast-xml-parser": "^4.5.0",
       },
+    },
+    "plugins/conversations/plugins/transcript-source/plugins/memory": {
+      "name": "@singularity/plugin-conversations-transcript-source-memory",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/transcript-watcher": {
+      "name": "@singularity/plugin-conversations-transcript-watcher",
+      "version": "0.0.1",
     },
     "plugins/conversations/plugins/turn-ledger": {
       "name": "@singularity/plugin-conversations-turn-ledger",
@@ -7927,6 +7935,10 @@
     "@singularity/plugin-conversations-transcript-api": ["@singularity/plugin-conversations-transcript-api@workspace:plugins/conversations/plugins/transcript-api"],
 
     "@singularity/plugin-conversations-transcript-retention": ["@singularity/plugin-conversations-transcript-retention@workspace:plugins/conversations/plugins/transcript-retention"],
+
+    "@singularity/plugin-conversations-transcript-source": ["@singularity/plugin-conversations-transcript-source@workspace:plugins/conversations/plugins/transcript-source"],
+
+    "@singularity/plugin-conversations-transcript-source-memory": ["@singularity/plugin-conversations-transcript-source-memory@workspace:plugins/conversations/plugins/transcript-source/plugins/memory"],
 
     "@singularity/plugin-conversations-transcript-watcher": ["@singularity/plugin-conversations-transcript-watcher@workspace:plugins/conversations/plugins/transcript-watcher"],
 

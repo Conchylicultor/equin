@@ -1,12 +1,4 @@
-import {
-  Suspense,
-  use,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   composeBrowserServers,
   createBrowserServer,
@@ -18,7 +10,6 @@ import {
 import { browserServerTransport } from "@plugins/framework/plugins/browser-server/web";
 import {
   DemoMissingError,
-  servePack,
   type DemoScenario,
 } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
 import type { RouteHandler } from "@plugins/framework/plugins/http-router/core";
@@ -32,25 +23,7 @@ import {
   Demo,
   type DemoBackend,
   type DemoRoute,
-  type DemoServe,
 } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
-
-// ── The pack, loaded once per scenario ─────────────────────────────────
-
-// `use()` needs the SAME promise on every render, so the load is cached by
-// the scenario object (a module constant). A failed import or a pack that does
-// not parse (`DemoPackError`) rejects it, and `use()` throws that into the
-// error boundary — never an empty app.
-const loadedPacks = new WeakMap<DemoScenario, Promise<DemoServe>>();
-
-function loadPack(scenario: DemoScenario): Promise<DemoServe> {
-  let pending = loadedPacks.get(scenario);
-  if (pending === undefined) {
-    pending = scenario.pack().then((m) => servePack(m.default));
-    loadedPacks.set(scenario, pending);
-  }
-  return pending;
-}
 
 // ── Contributed backends, each hook at a stable position ──────────────
 
@@ -201,7 +174,7 @@ function scopeRoutes(
   return out;
 }
 
-/** The page's server, and the keys the pack and the backends serve on it. */
+/** The page's server, and the keys the backends serve on it. */
 interface PageServer {
   server: BrowserServer;
   keys: ReadonlySet<string>;
@@ -209,7 +182,6 @@ interface PageServer {
 
 function buildServer(
   scenario: DemoScenario,
-  packServe: DemoServe,
   backends: readonly ContributedBackend[],
   routes: readonly DemoRoute[],
   lastToastAt: { current: number | null },
@@ -219,11 +191,8 @@ function buildServer(
   const server = createBrowserServer({
     serve: (s) => {
       const all: BrowserServed[] = [];
-      for (const { source, serve } of [
-        { source: `the pack of "${scenario.id}"`, serve: packServe },
-        ...backends.map((b) => ({ source: b.source, serve: b.backend.serve })),
-      ]) {
-        all.push(...serve(claiming(s, source, owners, scenario.id)));
+      for (const { source, backend } of backends) {
+        all.push(...backend.serve(claiming(s, source, owners, scenario.id)));
       }
       // Every key a serve minted (a collection's `:rows`, `:count`… too).
       for (const served of all) for (const key of served.keys) keys.add(key);
@@ -233,7 +202,7 @@ function buildServer(
     unserved: (key) =>
       new DemoMissingError(
         key,
-        "any params — neither the pack nor a Demo.Resource serves this key",
+        "any params — neither the scenario's host nor a Demo.Resource serves this key",
       ),
     onUnmatched: (req, pathname) => {
       if (pathname === "/api" || pathname.startsWith("/api/")) {
@@ -260,8 +229,8 @@ function buildServer(
 
 /**
  * The scope's server once the scenario's host (if any) has booted: the page
- * server alone, or — with a host — the page's served keys first, then every
- * key the worker serves, then the page again (its `unserved` errors). Calls
+ * server alone, or — with a host — the backends' keys first, then every key
+ * the worker serves, then the page again (its `unserved` errors). Calls
  * `onReady` with it, or `onFailed` with a host that could not boot; returns the
  * teardown (the server disposed, the worker ended).
  */
@@ -308,7 +277,6 @@ function ScopeServer({
   routes: readonly DemoRoute[];
   children: ReactNode;
 }): ReactNode {
-  const packServe = use(loadPack(scenario));
   const lastToastAt = useRef<number | null>(null);
   const [server, setServer] = useState<BrowserServer | null>(null);
   const [failure, setFailure] = useState<{ error: unknown } | null>(null);
@@ -319,13 +287,7 @@ function ScopeServer({
     // resource owned by this mount, so StrictMode's mount → unmount → mount
     // disposes the first and keeps the second (an initialiser would build one
     // a discarded render never disposes).
-    const page = buildServer(
-      scenario,
-      packServe,
-      backends,
-      routes,
-      lastToastAt,
-    );
+    const page = buildServer(scenario, backends, routes, lastToastAt);
     const stop = startScopeServer(scenario, page, setServer, (error) =>
       setFailure({ error }),
     );
@@ -334,7 +296,7 @@ function ScopeServer({
       // The next server (a host still booting) is not this one.
       setServer(null);
     };
-  }, [scenario, packServe, backends, routes]);
+  }, [scenario, backends, routes]);
   // A host that could not boot reaches the error boundary, never an empty app.
   if (failure !== null) throw failure.error;
   const transport = useMemo(
@@ -350,15 +312,14 @@ function ScopeServer({
 }
 
 /**
- * Renders `children` against a browser server of its own, built once the
- * scenario's pack has loaded: the pack's recorded answers, every
+ * Renders `children` against a browser server of its own: the scenario's host
+ * (real server code in a worker, on the scenario's seed), every
  * `Demo.Resource` contribution's backend (its serves and its routes) and every
- * `Demo.Route` handler. Any
- * other known live key fails `loader-failed` (`DemoMissingError`); any other
- * `/api` request is refused (`unsupportedEndpointResponse`) with one
- * "Not available in the demo" toast at a time. The pack loading renders
- * `<Loading/>`; a pack that fails to load or parse, or a key served (or a
- * route answered) twice, throws to the error boundary.
+ * `Demo.Route` handler. Any other known live key fails `loader-failed`
+ * (`DemoMissingError`); any other `/api` request is refused
+ * (`unsupportedEndpointResponse`) with one "Not available in the demo" toast at
+ * a time. The host booting renders `<Loading/>`; a host that fails to boot, or
+ * a key served (or a route answered) twice, throws to the error boundary.
  */
 export function DemoScope({
   scenario,
@@ -376,11 +337,9 @@ export function DemoScope({
   return (
     <CollectBackends resources={resources} index={0} acc={NO_BACKENDS}>
       {(backends) => (
-        <Suspense fallback={<Loading />}>
-          <ScopeServer scenario={scenario} backends={backends} routes={routes}>
-            {children}
-          </ScopeServer>
-        </Suspense>
+        <ScopeServer scenario={scenario} backends={backends} routes={routes}>
+          {children}
+        </ScopeServer>
       )}
     </CollectBackends>
   );

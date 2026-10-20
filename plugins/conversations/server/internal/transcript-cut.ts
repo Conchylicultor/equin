@@ -1,7 +1,7 @@
 import {
   activeLineUuids,
   userPromptText,
-} from "@plugins/conversations/plugins/transcript-watcher/core";
+} from "@plugins/conversations/plugins/transcript-source/core";
 import type { BackgroundWork, CutLosses, CutRefusal } from "../../core/rewind";
 
 // Cutting a Claude Code transcript just before one of the user's own messages.

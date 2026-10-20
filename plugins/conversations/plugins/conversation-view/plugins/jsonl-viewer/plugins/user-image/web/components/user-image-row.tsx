@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";

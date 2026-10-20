@@ -1,7 +1,7 @@
 import {
   activeLineUuids,
   unwrapPastedContent,
-} from "@plugins/conversations/plugins/transcript-watcher/core";
+} from "@plugins/conversations/plugins/transcript-source/core";
 import { readChainLines } from "@plugins/conversations/plugins/transcript-watcher/server";
 
 export type TurnRole = "user" | "assistant";

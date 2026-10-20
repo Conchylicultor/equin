@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { toolResultIsOutcome, type SubagentRequestShape } from "./protocol";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;

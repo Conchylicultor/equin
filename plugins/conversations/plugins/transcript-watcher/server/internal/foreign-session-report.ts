@@ -2,7 +2,7 @@ import {
   recordReportDebounced,
   DEFAULT_REPORT_DEBOUNCE_MS,
 } from "@plugins/reports/server";
-import type { ForeignSessionPayload } from "../../core";
+import type { ForeignSessionPayload } from "@plugins/conversations/plugins/transcript-source/core";
 
 /**
  * File a `conversation-foreign-session` report, debounced per

@@ -21,7 +21,6 @@ const parseJsonl = await import("./parse-jsonl");
 const realReadChain = parseJsonl.readJsonlEventsFromChain;
 let duringRead: (() => Promise<void>) | null = null;
 void mock.module("./parse-jsonl", () => ({
-  mergeChainLines: parseJsonl.mergeChainLines,
   readChainLines: parseJsonl.readChainLines,
   readJsonlEvents: parseJsonl.readJsonlEvents,
   readJsonlEventsFromChain: async (paths: string[]) => {

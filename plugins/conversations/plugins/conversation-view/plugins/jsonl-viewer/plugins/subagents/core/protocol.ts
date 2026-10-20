@@ -4,7 +4,7 @@ import {
   JsonlEventSchema,
   TokenUsageSchema,
   type JsonlEvent,
-} from "@plugins/conversations/plugins/transcript-watcher/core";
+} from "@plugins/conversations/plugins/transcript-source/core";
 
 /**
  * How the parent asked for this sub-agent — and therefore what its COMPLETION

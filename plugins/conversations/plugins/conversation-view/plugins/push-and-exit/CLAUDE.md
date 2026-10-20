@@ -20,7 +20,7 @@
     - `conversations/conversation-view/prompt-input.CONVERSATION_PROMPT_DRAFT_KEY`
     - `network/live.useLive`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.useCombinedResources`
+    - `primitives/live-state.combineResources`
     - `primitives/persistent-draft.useDraft`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `shell/notifications.toast`

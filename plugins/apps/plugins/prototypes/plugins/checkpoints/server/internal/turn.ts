@@ -1,7 +1,7 @@
 import {
   isInterruptContent,
   type JsonlEvent,
-} from "@plugins/conversations/plugins/transcript-watcher/core";
+} from "@plugins/conversations/plugins/transcript-source/core";
 import { prototypeIdsIn } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 // Pure: everything the end-of-turn job decides from a transcript, with no I/O,

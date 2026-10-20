@@ -6,7 +6,7 @@
 Design: `research/2026-10-14-global-demo-scope-and-pack.md` §2.
 
 ```tsx
-<DemoScope scenario={{ id: "agent-manager", pack: () => import("./pack") }}>
+<DemoScope scenario={{ id: "agent-manager", app, route, host: () => import("@browser-host/<plugin>") }}>
   …the unchanged app…
 </DemoScope>
 
@@ -17,9 +17,6 @@ Demo.Resource({ id: "config-v2", useBackend: useConfigDemoBackend })
 Demo.Route({ route: [markViewed.route, implement(markViewed, () => ({ kind: "not-hibernated" }))] })
 ```
 
-- **The pack** loads through `use()` under the scope's own `<Suspense>`
-  (`<Loading/>` meanwhile), cached per scenario object. A failed import or a
-  pack that does not parse (`DemoPackError`) throws to the error boundary.
 - **`Demo.Resource`** — `useBackend` is called once per scope mount, inside the
   scope's tree, one component per contribution (the `CollectFieldExtensions`
   fold, so every hook keeps a stable position). It returns the plugin's
@@ -32,18 +29,19 @@ Demo.Route({ route: [markViewed.route, implement(markViewed, () => ({ kind: "not
 - **`Demo.Route`** — a stateless `[ep.route, implement(ep, handler)]`. With
   every backend's routes, routed by the shared router; a route key answered
   twice throws naming both sources.
-- **One server per mount**, built in an effect once the pack has landed (so
-  StrictMode's remount disposes the first) and disposed on unmount; one
+- **One server per mount**, built in an effect (so StrictMode's remount
+  disposes the first) and disposed on unmount; one
   `browserServerTransport` per server; `<TransportProvider>` +
   `<NotificationsProvider>` around the children.
 - **A browser host** (`scenario.host`, a `@browser-host/…` import): the scope
   starts its worker once the page server is built, shows `<Loading/>` until it
   reports ready, then serves through `composeBrowserServers` — the keys the
-  pack and the backends serve first (the page), every other key the worker
-  serves, the page's `unserved` errors last. A host that fails to boot throws
+  backends serve first (the page), every other key the worker serves, the
+  page's `unserved` errors last. The story comes from the host; the page
+  server holds only the plugins' neutral `Demo.Resource` answers, until those
+  move into the host too (then the page server and the composition go). A host that fails to boot throws
   to the error boundary; unmount disposes the server and terminates the worker.
-- **A key served twice** (pack and a contribution, or two contributions)
-  throws naming both sources, before the runtime sees it.
+- **A key served twice** (by two contributions) throws naming both sources, before the runtime sees it.
 - **Unserved keys** fail `loader-failed` (`DemoMissingError`), never as skew.
 - **Unmatched `/api` requests** answer `unsupportedEndpointResponse`
   (`fetchEndpoint` throws `EndpointUnsupportedError`, reports nothing) and show
@@ -63,14 +61,13 @@ Tests (jsdom, the real `NotificationsClient`): `web/__tests__/demo-scope.test.ts
 
 ## Plugin reference
 
-- Description: <DemoScope scenario>: renders its subtree against a browser server of its own, built once the scenario's pack loads — the pack's recorded answers, every Demo.Resource contribution's serves (a plugin answering its own live keys, e.g. config from code defaults) and every Demo.Route handler. Any other live key fails loader-failed; any other /api request is refused as unsupported with one deduped 'Not available in the demo' toast; a pack that fails to parse, or a key served twice, throws to the error boundary.
+- Description: <DemoScope scenario>: renders its subtree against a browser server of its own: the scenario's browser host (real server code in a worker, on the scenario's seed), every Demo.Resource contribution's serves (a plugin answering its own live keys, e.g. config from code defaults) and every Demo.Route handler. Any other live key fails loader-failed; any other /api request is refused as unsupported with one deduped 'Not available in the demo' toast; a host that fails to boot, or a key served twice, throws to the error boundary.
 - Web:
   - Uses:
     - `framework/browser-server.browserServerTransport`
     - `framework/browser-server/demo.Demo`
     - `framework/browser-server/demo.DemoBackend`
     - `framework/browser-server/demo.DemoRoute`
-    - `framework/browser-server/demo.DemoServe`
     - `primitives/live-state.NotificationsProvider`
     - `primitives/loading.Loading`
     - `primitives/networking.TransportProvider`
@@ -80,6 +77,6 @@ Tests (jsdom, the real `NotificationsClient`): `web/__tests__/demo-scope.test.ts
   - Imported by: `apps/demo/shell`
 - Test helpers:
   - Web: `@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web/testing`
-    - `DemoScope` — Renders `children` against a browser server of its own, built once the scenario's pack has loaded: the pack's recorded answers, every `Demo.Resource` contribution's backend (its serves and its routes) and every `Demo.Route` handler.
+    - `DemoScope` — Renders `children` against a browser server of its own: the scenario's host (real server code in a worker, on the scenario's seed), every `Demo.Resource` contribution's backend (its serves and its routes) and every `Demo.Route` handler.
 
 <!-- AUTOGENERATED:END -->

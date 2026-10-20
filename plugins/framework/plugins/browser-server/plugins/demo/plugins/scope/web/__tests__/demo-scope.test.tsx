@@ -1,13 +1,14 @@
 /**
  * `<DemoScope>` against the real live-state client (`NotificationsClient`
- * under its own `<TransportProvider>`): a pack value and a pack collection
- * render through `useLive`, beside a `Demo.Resource` contribution's value and
- * its later `notify()`; a `Demo.Route` answers through `useFetchEndpoint()`;
- * an unrecorded known key fails `loader-failed` and never reaches the
+ * under its own `<TransportProvider>`): a contributed value and collection
+ * render through `useLive`, beside another `Demo.Resource` contribution's value
+ * and its later `notify()`; a `Demo.Route` answers through `useFetchEndpoint()`;
+ * a known key nothing serves fails `loader-failed` and never reaches the
  * contract-mismatch store; unsupported POSTs throw `EndpointUnsupportedError`
- * with ONE toast and nothing on the error sink; a key served twice, or a pack
- * that does not parse, reaches the error boundary; a page pipeline beside the
- * scope reading the same tuple sees its own backend only.
+ * with ONE toast and nothing on the error sink; a key served twice reaches the
+ * error boundary; a page pipeline beside the scope reading the same tuple sees
+ * its own backend only. (A scenario's browser host is a Web Worker — driven in
+ * a real browser, not jsdom.)
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -33,12 +34,6 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { DemoScenario } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
-import {
-  definePack,
-  packAll,
-  packValue,
-  type DemoPack,
-} from "@plugins/framework/plugins/browser-server/plugins/demo/core/testing";
 import {
   defineEndpoint,
   implement,
@@ -66,7 +61,6 @@ import {
   Demo,
   demoResource,
   type DemoBackend,
-  type DemoServe,
 } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
 import { DemoScope } from "../components/demo-scope";
 
@@ -96,19 +90,35 @@ const echo = defineEndpoint({
 });
 const notHere = defineEndpoint({ route: "POST /api/test-demo-scope/nope" });
 
-const pack = definePack(() => [
-  packValue(greeting, { who: "ada" }, { text: "hello ada (demo)" }),
-  packAll(tracks, [
-    { id: "t2", title: "Two", rank: 2 },
-    { id: "t1", title: "One", rank: 1 },
-  ]),
+// In the collection's order (`rank`): an external `all` loader answers the
+// whole ordered set.
+const TRACKS = [
+  { id: "t1", title: "One", rank: 1 },
+  { id: "t2", title: "Two", rank: 2 },
+];
+const FIXED = { fixed: { reason: "test fixture" } } as const;
+
+/** The story's own backend: a greeting per person and the tracks. */
+const story = demoResource("story", (s) => [
+  s.serveValue(greeting, {
+    source: "external",
+    changes: FIXED,
+    loader: ({ who }) => ({ text: `hello ${who} (demo)` }),
+  }),
+  s.serveCollection(tracks, {
+    source: "external",
+    changes: FIXED,
+    all: () => TRACKS,
+    rows: (ids) => TRACKS.filter((t) => ids.includes(t.id)),
+  }),
 ]);
 
-const scenarioOf = (p: DemoPack, id = "test"): DemoScenario => ({
+type DemoServe = DemoBackend["serve"];
+
+const scenarioOf = (id = "test"): DemoScenario => ({
   id,
   app: "test-app",
   route: "/",
-  pack: () => Promise.resolve({ default: p }),
 });
 
 /** The contributed `note` value, its text changeable and announced with `notify()`. */
@@ -186,10 +196,7 @@ afterEach(() => {
   console.error = consoleError;
 });
 
-/**
- * Render inside an awaited `act`: the scope suspends on its pack (`use()`),
- * and React only retries a suspended render from an act scope that is awaited.
- */
+/** Render inside an awaited `act`, so the scope's server effect has run. */
 async function renderAsync(ui: ReactElement) {
   let view: ReturnType<typeof render> | undefined;
   await act(async () => {
@@ -199,13 +206,14 @@ async function renderAsync(ui: ReactElement) {
 }
 
 describe("<DemoScope>", () => {
-  it("serves the pack and the contributions through the real client; a contribution notifies", async () => {
+  it("serves the contributions through the real client; a contribution notifies", async () => {
     const contributed = noteResource();
     const seen: Record<string, unknown> = {};
     let fetchIn: ReturnType<typeof useFetchEndpoint> | null = null;
     await renderAsync(
       <PluginProvider
         plugins={plugins([
+          story,
           demoResource("note", contributed.serve),
           Demo.Route({
             route: [
@@ -218,7 +226,7 @@ describe("<DemoScope>", () => {
           }),
         ])}
       >
-        <DemoScope scenario={scenarioOf(pack)}>
+        <DemoScope scenario={scenarioOf()}>
           <Probe
             read={() => useLive(greeting, { who: "ada" })}
             onRead={(r) => (seen.greeting = textOf(r))}
@@ -255,13 +263,13 @@ describe("<DemoScope>", () => {
   });
 
   it(
-    "an unrecorded known key fails loader-failed; the contract-mismatch store stays empty",
+    "a known key nothing serves fails loader-failed; the contract-mismatch store stays empty",
     { timeout: 15_000 },
     async () => {
       const seen: Record<string, unknown> = {};
       await renderAsync(
         <PluginProvider plugins={plugins([])}>
-          <DemoScope scenario={scenarioOf(pack)}>
+          <DemoScope scenario={scenarioOf()}>
             <Probe
               read={() => useLive(missing)}
               onRead={(r) =>
@@ -288,7 +296,7 @@ describe("<DemoScope>", () => {
     let fetchIn: ReturnType<typeof useFetchEndpoint> | null = null;
     await renderAsync(
       <PluginProvider plugins={plugins([])}>
-        <DemoScope scenario={scenarioOf(pack)}>
+        <DemoScope scenario={scenarioOf()}>
           <Probe
             read={() => useFetchEndpoint()}
             onRead={(f) => (fetchIn = f)}
@@ -311,11 +319,12 @@ describe("<DemoScope>", () => {
     expect(reported).toEqual([]);
   });
 
-  it("a key served by both the pack and a contribution throws, naming both", async () => {
+  it("a key served by two contributions throws, naming both", async () => {
     console.error = () => {};
     const view = await renderAsync(
       <PluginProvider
         plugins={plugins([
+          story,
           demoResource("greeter", (s) => [
             s.serveValue(greeting, {
               source: "external",
@@ -326,7 +335,7 @@ describe("<DemoScope>", () => {
         ])}
       >
         <Boundary>
-          <DemoScope scenario={scenarioOf(pack, "twice")}>
+          <DemoScope scenario={scenarioOf("twice")}>
             <p>never</p>
           </DemoScope>
         </Boundary>
@@ -334,7 +343,7 @@ describe("<DemoScope>", () => {
     );
     await waitFor(() =>
       expect(view.getByTestId("boundary").textContent).toBe(
-        `demo scope "twice": "${greeting.key}" is served by both the pack of "twice" and Demo.Resource "greeter".`,
+        `demo scope "twice": "${greeting.key}" is served by both Demo.Resource "story" and Demo.Resource "greeter".`,
       ),
     );
   });
@@ -359,7 +368,7 @@ describe("<DemoScope>", () => {
           Demo.Resource({ id: "echoer", useBackend: () => backend }),
         ])}
       >
-        <DemoScope scenario={scenarioOf(pack, "backend-route")}>
+        <DemoScope scenario={scenarioOf("backend-route")}>
           <Probe
             read={() => useFetchEndpoint()}
             onRead={(f) => (fetchIn = f)}
@@ -392,7 +401,7 @@ describe("<DemoScope>", () => {
         ])}
       >
         <Boundary>
-          <DemoScope scenario={scenarioOf(pack, "route-twice")}>
+          <DemoScope scenario={scenarioOf("route-twice")}>
             <p>never</p>
           </DemoScope>
         </Boundary>
@@ -405,32 +414,11 @@ describe("<DemoScope>", () => {
     );
   });
 
-  it("a pack that does not parse reaches the error boundary", async () => {
-    console.error = () => {};
-    const bad = definePack(() => [
-      packValue(greeting, { who: "bo" }, {
-        text: 42,
-      } as unknown as { text: string }),
-    ]);
-    const view = await renderAsync(
-      <PluginProvider plugins={plugins([])}>
-        <Boundary>
-          <DemoScope scenario={scenarioOf(bad)}>
-            <p>never</p>
-          </DemoScope>
-        </Boundary>
-      </PluginProvider>,
-    );
-    await waitFor(() =>
-      expect(view.getByTestId("boundary").textContent).toContain(greeting.key),
-    );
-  });
-
   it("a page pipeline beside the scope reading the same tuple sees only its own backend", async () => {
     const page = pageBackend();
     const seen: Record<string, unknown> = {};
     await renderAsync(
-      <PluginProvider plugins={plugins([])}>
+      <PluginProvider plugins={plugins([story])}>
         <TransportProvider transport={page}>
           <NotificationsProvider>
             <Probe
@@ -439,7 +427,7 @@ describe("<DemoScope>", () => {
             />
           </NotificationsProvider>
         </TransportProvider>
-        <DemoScope scenario={scenarioOf(pack)}>
+        <DemoScope scenario={scenarioOf()}>
           <Probe
             read={() => useLive(greeting, { who: "ada" })}
             onRead={(r) => (seen.demo = textOf(r))}

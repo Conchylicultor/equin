@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { Timestamp } from "./timestamp";
 
 export function TimestampAction({ event }: { event: JsonlEvent }) {

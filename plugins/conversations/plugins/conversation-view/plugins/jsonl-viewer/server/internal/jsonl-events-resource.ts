@@ -1,8 +1,8 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
+  TranscriptSource,
   transcriptChainReads,
-  watchTranscript,
-} from "@plugins/conversations/plugins/transcript-watcher/server";
+} from "@plugins/conversations/plugins/transcript-source/server";
 import { jsonlEvents } from "../../core";
 import {
   evictJsonlEvents,
@@ -19,20 +19,20 @@ import {
 export const jsonlEventsServed = serveValue(jsonlEvents, {
   source: "external",
   changes: "notified",
-  // The loader resolves the transcript chain from Postgres before reading files.
+  // On the desktop the loader resolves the transcript chain from Postgres before
+  // reading files.
   reads: transcriptChainReads,
   // The ETag and the value are produced by ONE authority: `jsonlEventsMemo` is a
-  // `createSignedMemo` binding `transcriptChainSignature` to `readJsonlEventsFromChain`
-  // at its single declaration site, both over the chain `resolveConversationTranscriptPaths`
-  // returns. `revalidate` and `loader` are therefore provably the same function of the
+  // `createSignedMemo` binding the host's `TranscriptSource.signature` to its
+  // `events` at its single declaration site. `revalidate` and `loader` are therefore provably the same function of the
   // same inputs, not two probes agreeing by convention — which is what they were.
   loader: ({ id }) => jsonlEventsMemo.get(id),
   revalidate: ({ id }) => jsonlEventsMemo.signature(id),
-  // Watch the conversation's transcript chain while it is on screen. The start is
-  // synchronous (`watchTranscript` hands back its unsubscribe at once), so the
-  // sub-ack is never held behind it.
+  // Watch the conversation's transcript while it is on screen. The start is
+  // synchronous (`watch` hands back its unsubscribe at once), so the sub-ack is
+  // never held behind it.
   whileSubscribed: ({ id }, notify) => {
-    const unsub = watchTranscript(id, ({ events, signature }) => {
+    const unsub = TranscriptSource.get().watch(id, ({ events, signature }) => {
       // Prime BEFORE notify: the watcher holds both halves of the pair, and the
       // recompute that `notify` schedules calls the loader — which is then a memo
       // hit instead of a second full read + parse of the chain the watcher just read.

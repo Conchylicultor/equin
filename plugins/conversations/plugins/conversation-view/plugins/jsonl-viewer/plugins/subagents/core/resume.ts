@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
 /**
  * The name Claude Code gives the tool that messages a sub-agent in a

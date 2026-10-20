@@ -1,7 +1,7 @@
 import {
   tokenUsageOf,
   type TokenUsage,
-} from "@plugins/conversations/plugins/transcript-watcher/core";
+} from "@plugins/conversations/plugins/transcript-source/core";
 
 /**
  * A running total of a sub-agent's token usage, folded line by line.

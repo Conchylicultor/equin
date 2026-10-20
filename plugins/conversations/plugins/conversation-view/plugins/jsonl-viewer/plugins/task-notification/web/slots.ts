@@ -1,6 +1,6 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 

@@ -1,20 +1,17 @@
 import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
-import {
-  readJsonlEventsFromChain,
-  resolveConversationTranscriptPaths,
-  transcriptChainSignature,
-} from "@plugins/conversations/plugins/transcript-watcher/server";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { TranscriptSource } from "@plugins/conversations/plugins/transcript-source/server";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
 // ONE module-level memo, shared between the served value (jsonl-events-resource.ts —
-// BOTH its `revalidate` and its `loader`) and the transcript watcher (the
-// authoritative READER of the session chain, which primes through `watchTranscript`).
+// BOTH its `revalidate` and its `loader`) and the transcript source's watch (the
+// authoritative READER of the transcript, which primes through `watch`).
 //
-// The signature is the CHAIN signature (transcript-watcher's
-// `transcriptChainSignature`): `chainLength` plus a per-file (path, lstat mtime+size)
-// triple. It is a faithful function of every input `readJsonlEventsFromChain` reads —
-// an append moves a file's (mtimeMs, size), a session switch grows `chainLength` and
-// adds a triple, a vanishing file drops a triple while `chainLength` stands.
+// The signature is the host's `TranscriptSource.signature` — on the desktop the CHAIN
+// signature (transcript-watcher's `transcriptChainSignature`): `chainLength` plus a
+// per-file (path, lstat mtime+size) triple. It is a faithful function of every input
+// the read parses — an append moves a file's (mtimeMs, size), a session switch grows
+// `chainLength` and adds a triple, a vanishing file drops a triple while `chainLength`
+// stands.
 //
 // Before this, `revalidate` `lstat`ed the chain itself (instantly fresh) while the
 // loader returned a module-level `cachedEvents` map written by the watcher's callback
@@ -31,9 +28,9 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 // there is nothing to pass. Push vs on-demand is now a delivery choice, irrelevant to
 // correctness.
 //
-// Both halves resolve the chain first. A session switch landing between the memo's
-// own signature probe and its own compute leaves the stored signature describing the
-// OLDER chain — the safe direction: the next `get` re-probes, misses, and recomputes,
+// On the desktop both halves resolve the chain first. A session switch landing between
+// the memo's own signature probe and its own compute leaves the stored signature
+// describing the OLDER chain — the safe direction: the next `get` re-probes, misses, and recomputes,
 // costing one needless read. The dangerous direction (a signature newer than the value
 // it labels, which every subsequent `get` would hit and serve forever) is unreachable,
 // because the probe always precedes the compute it labels.
@@ -42,10 +39,8 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 // research/2026-07-09-global-etag-value-coproduction.md.
 const memo = createSignedMemo<JsonlEvent[]>({
   name: "jsonl-events",
-  signature: async (id) =>
-    transcriptChainSignature(await resolveConversationTranscriptPaths(id)),
-  compute: async (id) =>
-    readJsonlEventsFromChain(await resolveConversationTranscriptPaths(id)),
+  signature: (id) => TranscriptSource.get().signature(id),
+  compute: (id) => TranscriptSource.get().events(id),
 });
 
 export const jsonlEventsMemo = memo;
@@ -63,8 +58,9 @@ export const jsonlEventsMemo = memo;
  * a matching signature.
  *
  * The prime only ever hits if the watcher's signature and the resource's probe produce
- * byte-identical strings — which is why both route through `transcriptChainSignature`
- * rather than agreeing by coincidence of two stat APIs' float precision.
+ * byte-identical strings — which is why both come from the one TranscriptSource (on the
+ * desktop, `transcriptChainSignature`) rather than agreeing by coincidence of two stat
+ * APIs' float precision.
  */
 export function primeJsonlEvents(
   id: string,

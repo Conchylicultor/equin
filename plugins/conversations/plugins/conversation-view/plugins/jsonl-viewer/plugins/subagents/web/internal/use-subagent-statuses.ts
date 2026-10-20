@@ -2,7 +2,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { combineResources } from "@plugins/primitives/plugins/live-state/web";
 import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import { useConversationById } from "@plugins/conversations/web";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import {
   agentCallForSubagent,

@@ -2,6 +2,7 @@ import { text } from "drizzle-orm/pg-core";
 import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
 import type { TaskStatus } from "./schema";
 import type { ConversationStatus } from "../../core/conversation-status";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
 export interface PushLandedPayload {
   pushId: string;
@@ -79,4 +80,28 @@ export const {
 } = defineTriggerEvent<ConversationStatusChangedPayload>({
   name: "conversation.statusChanged",
   filters: {},
+});
+
+// Emitted once per conversation, when its row is created (a launch, or the
+// status reconciler adopting one).
+export interface ConversationCreatedPayload {
+  conversationId: string;
+  taskId: string;
+  model: ConversationModel;
+  spawnedBy: string;
+  createdAt: string;
+  prompt?: string;
+  kind?: string;
+  prepromptId?: string;
+  [key: string]: unknown;
+}
+
+export const {
+  event: conversationCreated,
+  table: _conversationCreatedTriggers,
+} = defineTriggerEvent<ConversationCreatedPayload>({
+  name: "conversation.created",
+  filters: {
+    conversationId: text("conversation_id"),
+  },
 });

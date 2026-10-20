@@ -5,7 +5,7 @@ import {
   ResourceView,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import {
   JsonlViewer,

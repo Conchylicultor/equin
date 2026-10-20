@@ -29,6 +29,21 @@ function AttemptCommitsChip({ attemptId }: { attemptId: string }) {
   const { isOpen, toggle } = convCommitsGraphPane.useToggle({});
 
   if (workResult.status === "loading") return null;
+  // Measured from git: with no computer behind this app there is no branch to
+  // compare, nor a graph to open — a muted `—` saying why.
+  if (workResult.status === "unavailable")
+    return (
+      <Button
+        variant="ghost"
+        tooltip={workResult.message}
+        aria-label={workResult.message}
+        disabled
+        className="gap-xs px-sm text-control-compact tabular-nums"
+      >
+        <Icon icon={altRouteIcon} />
+        <span className="text-muted-foreground">—</span>
+      </Button>
+    );
   if (workResult.status === "error")
     return (
       <ResourceErrorInline

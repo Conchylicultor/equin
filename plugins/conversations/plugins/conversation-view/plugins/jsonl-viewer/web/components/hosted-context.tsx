@@ -6,7 +6,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
 /** One event of a folded context run, with its index in the visible events. */
 export interface ContextMember {

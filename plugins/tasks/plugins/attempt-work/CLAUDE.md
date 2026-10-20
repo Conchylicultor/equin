@@ -125,31 +125,24 @@ Everything that could make the standing merely *unknown* is kept out of that arm
 
 ## Plugin reference
 
-- Description: The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger, as one live resource plus a direct read for the server-side exit-drop guard.
+- Description: The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger — the direct read for the server-side exit-drop guard and the git measurements commits-graph shares. The live value is served by the machine half.
 - Server:
   - Contributes: `resource.declare` "attempt-work"
   - Uses:
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/git/git-watcher.lastKnownMainSha`
-    - `infra/git/git-watcher.refHeadServed`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/worktree.ensureMainWorktreeRoot`
-    - `network/live.serveValue`
     - `primitives/commit-list.GitError`
     - `primitives/commit-list.runGit`
     - `primitives/commit-list.tryRunGit`
     - `primitives/commit-list.WorktreeGoneError`
-    - `tasks/tasks-core._attemptDeliveries`
-    - `tasks/tasks-core._attempts`
-    - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.getAttemptRow`
     - `tasks/tasks-core.hasAttemptDelivery`
     - `tasks/tasks-core.listConversationIdsForAttempt`
     - `tasks/tasks-core.listPushesForAttempt`
-    - `tasks/tasks-core.pushes`
   - Exports (values):
     - `attemptWorkEtag`
-    - `attemptWorkServed`
     - `attemptWorkSignature`
     - `deltaEtag`
     - `evictAttemptWork`
@@ -165,6 +158,8 @@ Everything that could make the standing merely *unknown* is kept out of that arm
     - `readPendingInWorktree`
     - `refExists`
   - Resources: `attempt-work` (push)
+- Machine:
+  - Uses: `network/live.serveValue`
 - Core:
   - Uses:
     - `network/live.liveValue`
@@ -182,7 +177,6 @@ Everything that could make the standing merely *unknown* is kept out of that arm
     - `standingOf`
 - Cross-plugin:
   - Imported by:
-    - `apps/agent-manager/demo`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/drop-and-exit`
     - `tasks/outcome-report`

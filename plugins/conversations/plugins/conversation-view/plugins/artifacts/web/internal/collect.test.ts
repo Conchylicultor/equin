@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import type { ArtifactHit } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
 import { collectArtifacts, type KindExtractor } from "./collect";
 

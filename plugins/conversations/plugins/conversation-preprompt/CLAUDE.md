@@ -63,7 +63,6 @@ never the reverse) and the feature fully opt-in and removable.
     - `resource.declare` "conversation-preprompts:rows"
     - `trigger` "conversation-preprompt.record"
   - Uses:
-    - `conversations.conversationCreated`
     - `conversations/preprompts.resolvePrepromptItem`
     - `database.db`
     - `database/sql-projection.nullable`
@@ -74,6 +73,7 @@ never the reverse) and the feature fully opt-in and removable.
     - `network/live.serveCollection`
     - `tasks/task-preprompt.getTaskPreprompt`
     - `tasks/tasks-core._conversations`
+    - `tasks/tasks-core.conversationCreated`
     - `tasks/tasks-core.getConversation`
     - `ui/icons/sprites.defineSavedIconSource`
   - DB schema: `plugins/conversations/plugins/conversation-preprompt/server/internal/tables.ts`

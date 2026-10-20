@@ -126,7 +126,7 @@ function populateRoutes(
 function bindSocket(ordered: LoadedServerPlugin[]): void {
   const handleHttp = populateRoutes(ordered);
 
-  const socketPath = readServingSocket();
+  const socketPath = readServingSocket(process.argv);
 
   const endSocketBind = profilerStart(
     "socketBind",

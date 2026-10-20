@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
-import { conversationCreated } from "@plugins/conversations/server";
+import { conversationCreated } from "@plugins/tasks/plugins/tasks-core/server";
 import { conversationPrepromptRowsServed } from "./internal/resource";
 import { recordPrepromptJob } from "./internal/record-job";
 // Registers the launch snapshots' saved-icon source (module eval).

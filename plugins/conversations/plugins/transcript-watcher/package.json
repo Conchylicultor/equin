@@ -1,8 +1,5 @@
 {
   "name": "@singularity/plugin-conversations-transcript-watcher",
   "private": true,
-  "version": "0.0.1",
-  "dependencies": {
-    "fast-xml-parser": "^4.5.0"
-  }
+  "version": "0.0.1"
 }

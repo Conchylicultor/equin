@@ -1,7 +1,7 @@
 import type { Report } from "@plugins/reports/core";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { ForeignSessionPayloadSchema } from "../../core";
+import { ForeignSessionPayloadSchema } from "@plugins/conversations/plugins/transcript-source/core";
 
 // One-line summary for the Debug, Reports list, e.g.
 // "`conv-1786969506-7e03` holds 2bf76e71 — it lives in …-att-1787096858-0t1l,

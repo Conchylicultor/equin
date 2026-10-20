@@ -4,10 +4,14 @@ import {
   _conversations,
   pushes,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveValue } from "@plugins/network/plugins/live/machine";
 import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { attemptWork } from "../../core/resources";
-import { attemptWorkSignature, evictAttemptWork, getAttemptWork } from "./work";
+import {
+  attemptWorkSignature,
+  evictAttemptWork,
+  getAttemptWork,
+} from "../../server/internal/work";
 
 // A db-arm value: the loader's DB reads (the attempt row, its conversation set,
 // the push ledger) are declared in `reads`, and a git ref advance (local commit / rebase /

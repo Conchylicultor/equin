@@ -1,7 +1,7 @@
 import type {
   JsonlEvent,
   UserTextSegment,
-} from "@plugins/conversations/plugins/transcript-watcher/core";
+} from "@plugins/conversations/plugins/transcript-source/core";
 import {
   useRowMarkdown,
   useSectionExpand,

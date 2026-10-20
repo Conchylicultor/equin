@@ -18,7 +18,6 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { definePack } from "@plugins/framework/plugins/browser-server/plugins/demo/core/testing";
 import { Demo } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
 import { DemoScope } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web/testing";
 import { implement } from "@plugins/infra/plugins/endpoints/core";
@@ -28,8 +27,7 @@ import { useMarkConversationViewed } from "../internal/mark-viewed";
 afterEach(cleanup);
 
 /**
- * Render inside an awaited `act`: the scope suspends on its pack (`use()`),
- * and React only retries a suspended render from an act scope that is awaited.
+ * Render inside an awaited `act`, so the scope's server effect has run.
  */
 async function renderAsync(ui: ReactElement) {
   let view: ReturnType<typeof render> | undefined;
@@ -80,7 +78,6 @@ describe("hibernation in a demo scope", () => {
             id: "hibernation-test",
             app: "test-app",
             route: "/",
-            pack: () => Promise.resolve({ default: definePack(() => []) }),
           }}
         >
           <Probe />

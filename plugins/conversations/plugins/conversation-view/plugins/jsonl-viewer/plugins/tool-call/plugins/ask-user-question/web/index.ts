@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { JsonlRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { isInterruptContent } from "@plugins/conversations/plugins/transcript-source/core";
 import { AskUserQuestionToolView } from "./components/ask-user-question-tool-view";
 import { ChangeAnswersAction } from "./components/change-answers-action";
 import { ANSWER_MARKER } from "../shared";

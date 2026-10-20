@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { extractPageHits, PAGE_KIND } from "./extract";
 
 const PAGE = "block-7f1a2d3d-a3cd-4c21-9a7e-000000000001";

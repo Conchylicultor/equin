@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from "react";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { JsonlRowActions } from "../slots";
 

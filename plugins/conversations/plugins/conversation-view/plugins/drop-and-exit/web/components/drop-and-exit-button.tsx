@@ -10,12 +10,14 @@ import {
 import {
   foldResource,
   useCombinedResources,
+  type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
   attemptWork,
   standingOf,
+  type AttemptWorkPayload,
 } from "@plugins/tasks/plugins/attempt-work/core";
 import { dropAndExit, dropsTask } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -28,7 +30,6 @@ export function DropAndExitItem({
 }: {
   conversation: ConversationRecord;
 }) {
-  const live = useLiveConversation(conversation);
   // The attempt's standing relative to `main`, measured from git. NOT the
   // `pushes` ledger this used to read: that table is written by a background
   // ingest job, so an empty result meant either "nothing was pushed" or "nothing
@@ -37,6 +38,22 @@ export function DropAndExitItem({
   const workResult = useLive(attemptWork, {
     attemptId: conversation.attemptId,
   });
+  // No computer behind this app, so no git to measure: Drop vs Complete cannot
+  // be decided, and the plain "Close" entry already covers closing.
+  if (workResult.status === "unavailable") return null;
+  return (
+    <DropAndExitEntry conversation={conversation} workResult={workResult} />
+  );
+}
+
+function DropAndExitEntry({
+  conversation,
+  workResult,
+}: {
+  conversation: ConversationRecord;
+  workResult: ResourceResult<AttemptWorkPayload>;
+}) {
+  const live = useLiveConversation(conversation);
   const siblingsResult = useHasActiveSiblings(
     conversation.taskId,
     conversation.id,

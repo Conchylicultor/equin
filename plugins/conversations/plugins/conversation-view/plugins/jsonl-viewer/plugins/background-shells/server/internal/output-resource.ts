@@ -4,10 +4,10 @@ import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   readJsonlEventsFromChain,
   resolveConversationTranscriptPaths,
-  transcriptChainReads,
   transcriptChainSignature,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { transcriptChainReads } from "@plugins/conversations/plugins/transcript-source/server";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";

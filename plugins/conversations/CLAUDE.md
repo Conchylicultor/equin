@@ -18,8 +18,8 @@
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "held-turn-undelivered"
-  - Uses: 74 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×24
+  - Uses: 75 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×25
     - `conversations/turn-ledger` ×12
     - `conversations/transcript-watcher` ×7
     - `conversations/workspace` ×3
@@ -40,11 +40,8 @@
     - `shell/notifications.recordNotification`
     - `tasks/task-effort.getTaskEffort`
     - `tasks/task-preprompt.getTaskPreprompt`
-  - DB schema:
-    - `plugins/conversations/server/internal/tables-created-event.ts`
-    - `plugins/conversations/server/internal/tables-turn-completed-event.ts`
+  - DB schema: `plugins/conversations/server/internal/tables-turn-completed-event.ts`
   - Exports (types):
-    - `ConversationCreatedPayload`
     - `ConversationRuntime`
     - `ConversationTurnCompletedPayload`
     - `IfAlreadyStarted`
@@ -60,7 +57,6 @@
     - `TypedTurn`
   - Exports (values):
     - `afterTurn`
-    - `conversationCreated`
     - `conversationTurnCompleted`
     - `createConversation`
     - `deleteConversation`
@@ -86,7 +82,6 @@
     - `defineJob('conversations.turn-emitter.reconcile')`
     - `defineJob('conversations.spawn')`
     - `defineJob('conversations.deliver-held-turns')`
-    - `defineTriggerEvent('conversation.created')`
     - `defineTriggerEvent('conversation.turn-completed')`
     - `defineJob('conversations.status-sweep')`
   - Routes:
@@ -178,21 +173,20 @@
     - `stopConversation`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×47
-    - `tasks` ×4
+  - Imported by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×45
     - `apps` ×3
     - `review` ×3
+    - `tasks` ×3
     - `active-data` ×2
     - `debug/profiling/ops`
-    - `improve`
     - `page/annotations/agent-notes/agent-page`
   - Endpoint callers:
     - `compaction-context`
     - `transcript-api`
 - Exemptions:
   - Exempts itself from:
-    - `ids:pk-declared` — `server/internal/tables-created-event.ts`, `server/internal/tables-turn-completed-event.ts` (debt)
+    - `ids:pk-declared` — `server/internal/tables-turn-completed-event.ts` (debt)
     - `boundaries/no-platform-api` — `server/internal/lifecycle.ts`, `server/internal/locate-cut.ts`, `server/internal/status-reconciler.ts` (debt)
 - Sub-plugins:
   - **`agent-launch`** — What every app-launched agent starts with, whatever runtime hosts it: the tmux session's allowlisted environment (the env -i wrapper, the -e values it delivers, its PATH and login shell…
@@ -234,7 +228,7 @@
       - **`fork-conversation`** — Side chat: an icon split under the prompt that opens a new, blank conversation in the same worktree — the icon on the default model, the chevron to pick another.
       - **`header`** — HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips in the conversation pane header share.
       - **`hold-and-exit`** — Exit-menu entry that marks the task as held and closes the conversation.
-      - **`jsonl-viewer`** [exempt] — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL…
+      - **`jsonl-viewer`** [exempt] — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Streams a conversation's…
         - Plugins:
           - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that…
           - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
@@ -317,6 +311,9 @@
   - **`summary`** [exempt] — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags…
   - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the ordered on-disk JSONL paths of a conversation's Claude session chain.
   - **`transcript-retention`** [exempt] — Keeps retained conversations' Claude session JSONL alive by refreshing their mtime daily — active rows plus every conversation of a held task — so Claude Code's cleanupPeriodDays sweep never deletes…
+  - **`transcript-source`** — A conversation's transcript as a host service: TranscriptSource (its events, a signature that moves with them, and a watch), with the Claude Code JSONL parser every provider runs. The desktop's…
+    - Plugins:
+      - **`memory`** (excluded) — Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it. Never booted by the desktop.
   - **`transcript-watcher`** [exempt] — Foreign-session report renderer: a one-line Debug, Reports summary for the conversation-foreign-session kind — which conversation holds a session id that belongs to another, and how it was seen.…
   - **`turn-ledger`** [exempt] — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent…
   - **`usage`** [exempt] — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost…

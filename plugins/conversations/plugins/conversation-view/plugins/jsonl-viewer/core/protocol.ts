@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { JsonlEventSchema } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { JsonlEventSchema } from "@plugins/conversations/plugins/transcript-source/core";
 
 /**
  * One conversation's parsed transcript chain, pushed whole on every append.

@@ -5,7 +5,7 @@ import {
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { RowActionButton } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";

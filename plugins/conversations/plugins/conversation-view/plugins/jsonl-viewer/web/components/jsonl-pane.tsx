@@ -8,7 +8,7 @@ import {
 
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { jsonlEvents } from "../../core";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

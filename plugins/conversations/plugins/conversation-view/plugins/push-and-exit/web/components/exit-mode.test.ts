@@ -313,4 +313,16 @@ describe("deriveExitMode", () => {
       deriveExitMode({ ...input(settled()), exit: { workspace: "unknown" } }),
     ).toEqual({ mode: "exit", provisional: true });
   });
+
+  test("standing unmeasurable without the computer: a settled, safe Close", () => {
+    const exit = { workspace: "unavailable", message: "no computer" } as const;
+    expect(deriveExitMode({ ...input(settled()), exit })).toEqual({
+      mode: "exit-unavailable",
+      provisional: false,
+    });
+    // Send / Queue / Stop never needed the standing, so they still win.
+    expect(
+      deriveExitMode({ ...input(settled()), exit, draftEmpty: false }).mode,
+    ).toBe("send");
+  });
 });

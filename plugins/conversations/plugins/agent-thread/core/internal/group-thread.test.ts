@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { defineThreadResult } from "./result";
 import { groupThread } from "./group-thread";
 import { latestResultOf, threadProgressOf, threadStateOf } from "./progress";

@@ -11,7 +11,7 @@ import { resolveConversationTranscriptPaths } from "./resolve-chain";
 import { readJsonlEventsFromChain } from "./parse-jsonl";
 import { transcriptChainSignature } from "./chain-signature";
 import { notifySessionTranscriptWrites } from "./session-writes";
-import type { JsonlEvent } from "../../core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
 // ---------------------------------------------------------------------------
 // The generic half: a room over a set of files under CLAUDE_PROJECTS_DIR.

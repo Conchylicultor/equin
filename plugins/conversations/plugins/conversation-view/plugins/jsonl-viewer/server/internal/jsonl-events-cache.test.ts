@@ -7,7 +7,7 @@ import {
   transcriptChainSignature,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
 import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
 // The memo under test is `jsonlEventsMemo` (jsonl-events-cache.ts), whose two halves
 // are `transcriptChainSignature ∘ resolve` and `readJsonlEventsFromChain ∘ resolve`.

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
 /**
  * The body of the message Claude Code relays to the lead when a teammate ends

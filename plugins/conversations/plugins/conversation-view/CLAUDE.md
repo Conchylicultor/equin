@@ -95,7 +95,7 @@
   - **`fork-conversation`** — Side chat: an icon split under the prompt that opens a new, blank conversation in the same worktree — the icon on the default model, the chevron to pick another.
   - **`header`** — HeaderChip, the themable pill (header-chip pad tokens, the `tag` role) the model and status chips in the conversation pane header share.
   - **`hold-and-exit`** — Exit-menu entry that marks the task as held and closes the conversation.
-  - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL…
+  - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Streams a conversation's…
   - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree.
   - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.
   - **`model`** — Displays the conversation model as a colored chip in the toolbar.

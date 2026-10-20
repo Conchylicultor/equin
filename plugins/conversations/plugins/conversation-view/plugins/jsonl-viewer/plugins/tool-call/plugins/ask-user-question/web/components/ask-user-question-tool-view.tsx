@@ -6,7 +6,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
-import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { isInterruptContent } from "@plugins/conversations/plugins/transcript-source/core";
 import { useConversation } from "@plugins/conversations/web";
 import { MarkerAnswerForm } from "./marker-answer-form";
 import { OptionBody, OptionRow } from "./option-row";

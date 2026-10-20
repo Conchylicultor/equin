@@ -13,6 +13,7 @@ import {
   updateTask,
   setConversationHibernated,
   withTaskStatusBatch,
+  conversationCreated,
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
@@ -57,7 +58,6 @@ import {
 } from "@plugins/conversations/plugins/turn-ledger/server";
 import { spawnConversationJob } from "./spawn-job";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
-import { conversationCreated } from "./tables-created-event";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
 import { resolvePreprompt } from "@plugins/conversations/plugins/preprompts/server";
 import { getTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
@@ -65,7 +65,7 @@ import { getTaskEffort } from "@plugins/tasks/plugins/task-effort/server";
 import { getTaskWorkspace } from "@plugins/conversations/plugins/workspace/plugins/launch-option/server";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
-import { wrapPreprompt } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { wrapPreprompt } from "@plugins/conversations/plugins/transcript-source/core";
 import type {
   ResumeBlocked,
   ResumeBlockedReason,

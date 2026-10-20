@@ -212,7 +212,7 @@ httpRoutes.push(["GET /api/central-resources/:key", handleResourceHttp]);
 // The socket the gateway handed this backend, as `--socket <path>` (with a
 // transition fallback to the old environment variable — see
 // runtime-identity's serving-socket.ts).
-const socketPath = readServingSocket();
+const socketPath = readServingSocket(process.argv);
 
 // Central had no try/catch around handler dispatch — a throw surfaced as Bun's
 // default 500 with no log line. The shared router's 500 now carries every host;

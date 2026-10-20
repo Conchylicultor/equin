@@ -1,6 +1,6 @@
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { ComponentType } from "react";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
 export interface RowActionContribution {
   id: string;

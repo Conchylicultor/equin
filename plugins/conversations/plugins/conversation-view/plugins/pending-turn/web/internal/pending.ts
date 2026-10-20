@@ -12,7 +12,7 @@ import {
   type TurnKind,
   type TurnState,
 } from "@plugins/conversations/plugins/turn-ledger/core";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import type {
   ConversationStatus,
   ConversationWorkingOn,

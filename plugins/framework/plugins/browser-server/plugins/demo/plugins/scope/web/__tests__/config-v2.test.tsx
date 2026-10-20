@@ -21,7 +21,6 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { DemoScenario } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
-import { definePack } from "@plugins/framework/plugins/browser-server/plugins/demo/core/testing";
 import { Demo } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
@@ -66,7 +65,6 @@ const scenario: DemoScenario = {
   id: "config-test",
   app: "test-app",
   route: "/",
-  pack: () => Promise.resolve({ default: definePack(() => []) }),
 };
 
 function fixture(id: string, contributions: LoadedPlugin["contributions"]) {
@@ -119,8 +117,7 @@ function Probe<T>({ read, onRead }: { read: () => T; onRead: (v: T) => void }) {
 afterEach(cleanup);
 
 /**
- * Render inside an awaited `act`: the scope suspends on its pack (`use()`),
- * and React only retries a suspended render from an act scope that is awaited.
+ * Render inside an awaited `act`, so the scope's server effect has run.
  */
 async function renderAsync(ui: ReactElement) {
   let view: ReturnType<typeof render> | undefined;

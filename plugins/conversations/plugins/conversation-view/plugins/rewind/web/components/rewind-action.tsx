@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { setConversationPromptDraft } from "@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web";
 import { useGoBackToMessage, type RewindMode } from "../hooks/use-go-back";

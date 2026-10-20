@@ -22,6 +22,7 @@ export type Mode =
   | "push-and-exit"
   | "exit"
   | "exit-error"
+  | "exit-unavailable"
   | "drop-and-exit"
   | "go"
   | "restore"
@@ -77,10 +78,14 @@ export type NoGitExitDecision = CombinedResources<{
  * Which exit reads apply, by the conversation's workspace. Restore / Send /
  * Queue / Stop need none of them, so they are offered in every workspace; only
  * the exit decision differs: a git workspace weighs its edited files and branch,
- * one without git only its delivery.
+ * one without git only its delivery. `unavailable`: the attempt's standing is
+ * measured from git, which a host without the computer (the in-browser demo)
+ * cannot read — the decision cannot be made, so only the safe Close is offered,
+ * with `message` saying why.
  */
 export type ExitReads =
   | { workspace: "unknown" }
+  | { workspace: "unavailable"; message: string }
   | { workspace: "git"; decision: ExitDecision }
   | { workspace: "no-git"; decision: NoGitExitDecision };
 
@@ -101,7 +106,7 @@ export type ExitModeInput = {
  */
 export function exitWorkspace(
   workspace: WorkspaceKindState,
-): ExitReads["workspace"] {
+): "unknown" | "git" | "no-git" {
   if (!workspace.known) return "unknown";
   return satisfiesCapabilities(workspace.kind, ["git"]) ? "git" : "no-git";
 }
@@ -131,6 +136,8 @@ export function deriveExitMode({
   switch (exit.workspace) {
     case "unknown":
       return { mode: "exit", provisional: true };
+    case "unavailable":
+      return { mode: "exit-unavailable", provisional: false };
     case "git": {
       const d = exit.decision;
       if (d.status !== "ready") return unsettled(d.status);

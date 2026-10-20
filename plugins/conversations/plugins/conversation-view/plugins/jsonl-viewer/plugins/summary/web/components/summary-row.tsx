@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 type SummaryEvent = Extract<JsonlEvent, { kind: "summary" }>;

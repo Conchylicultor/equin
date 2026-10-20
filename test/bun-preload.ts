@@ -46,17 +46,25 @@ declareRuntimeNamespace(await checkoutNamespace(REPO_ROOT));
 // process, registering resources (and jobs, channels) no suite asked for — and
 // a suite booting a slice of the graph would then find them undeclared. A
 // provider this misses fails loudly at its first `get()` ("no provider").
-const { machineEntries } =
-  await import("../plugins/framework/plugins/server-core/core/machine.generated");
-const { provideHostServicesUnbooted } =
-  await import("@plugins/framework/plugins/server-core/core");
-const providers: ServerContribution[] = [];
-for (const entry of machineEntries) {
-  const barrel = join(PLUGINS_DIR, entry.pluginPath, "machine", "index.ts");
-  if (!/\.provide\(/.test(readFileSync(barrel, "utf8"))) continue;
-  const mod = (await entry.loader()) as {
-    default: { contributions?: readonly ServerContribution[] };
-  };
-  providers.push(...(mod.default.contributions ?? []));
+//
+// A process that boots a graph of its OWN (a portable boot test's child, which
+// sets `BOOTS_OWN_PLUGIN_GRAPH=1`) gets none of them: its graph collects its own
+// providers, and loading the desktop's would evaluate their server code — a
+// provider's whole import closure (the transcript reader reaches reports and
+// config) — into a process whose graph does not hold it.
+if (process.env.BOOTS_OWN_PLUGIN_GRAPH !== "1") {
+  const { machineEntries } =
+    await import("../plugins/framework/plugins/server-core/core/machine.generated");
+  const { provideHostServicesUnbooted } =
+    await import("@plugins/framework/plugins/server-core/core");
+  const providers: ServerContribution[] = [];
+  for (const entry of machineEntries) {
+    const barrel = join(PLUGINS_DIR, entry.pluginPath, "machine", "index.ts");
+    if (!/\.provide\(/.test(readFileSync(barrel, "utf8"))) continue;
+    const mod = (await entry.loader()) as {
+      default: { contributions?: readonly ServerContribution[] };
+    };
+    providers.push(...(mod.default.contributions ?? []));
+  }
+  provideHostServicesUnbooted(providers);
 }
-provideHostServicesUnbooted(providers);

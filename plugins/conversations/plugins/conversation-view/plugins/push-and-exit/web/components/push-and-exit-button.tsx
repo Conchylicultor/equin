@@ -31,7 +31,7 @@ import { dropAndExit } from "@plugins/conversations/plugins/conversation-view/pl
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { CONVERSATION_PROMPT_DRAFT_KEY } from "@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web";
-import { useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
+import { combineResources } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
@@ -106,6 +106,7 @@ const ICONS: Record<Mode, IconRef> = {
   "push-and-exit": rocketLaunchIcon,
   exit: logoutIcon,
   "exit-error": errorIcon,
+  "exit-unavailable": logoutIcon,
   "drop-and-exit": deleteForeverIcon,
 };
 
@@ -122,6 +123,7 @@ const BUTTON_CLASS: Record<Mode, string> = {
   // Degraded, never destructive: the exit decision is unknown, but closing is
   // always safe.
   "exit-error": PRIMARY,
+  "exit-unavailable": PRIMARY,
   "drop-and-exit": PRIMARY,
 };
 
@@ -134,6 +136,7 @@ const LABELS: Record<Mode, string> = {
   "push-and-exit": "Push & Close",
   exit: "Close",
   "exit-error": "Close (state unknown)",
+  "exit-unavailable": "Close",
   "drop-and-exit": "Drop & Close",
 };
 
@@ -192,27 +195,32 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // (the attempt standing + the conversations sibling slice + edited-files). Gate
   // on all together: while any is loading the button shows a neutral disabled
   // "Exit" instead of falling through to the destructive "Drop & Exit" default —
-  // or flashing it before edited-files settle into "Push & Exit".
-  const gitDecision = useCombinedResources({
-    work: workResult,
-    hasSibling: siblingResult,
-    files: filesResult,
-  });
-  // A workspace without git has no edited files: its standing (the recorded
-  // delivery) and the sibling check decide alone.
-  const noGitDecision = useCombinedResources({
-    work: workResult,
-    hasSibling: siblingResult,
-  });
-  const exit = useMemo(
-    (): ExitReads =>
-      workspace === "git"
-        ? { workspace, decision: gitDecision }
-        : workspace === "no-git"
-          ? { workspace, decision: noGitDecision }
-          : { workspace },
-    [workspace, gitDecision, noGitDecision],
-  );
+  // or flashing it before edited-files settle into "Push & Exit". A workspace
+  // without git has no edited files: its standing (the recorded delivery) and
+  // the sibling check decide alone. A standing nobody here can measure (no
+  // computer behind this app) leaves no decision to combine.
+  const exit = useMemo((): ExitReads => {
+    if (workResult.status === "unavailable")
+      return { workspace: "unavailable", message: workResult.message };
+    if (workspace === "git")
+      return {
+        workspace,
+        decision: combineResources({
+          work: workResult,
+          hasSibling: siblingResult,
+          files: filesResult,
+        }),
+      };
+    if (workspace === "no-git")
+      return {
+        workspace,
+        decision: combineResources({
+          work: workResult,
+          hasSibling: siblingResult,
+        }),
+      };
+    return { workspace };
+  }, [workspace, workResult, siblingResult, filesResult]);
 
   const { mode, provisional } = useMemo(
     () =>
@@ -300,6 +308,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       // so it is safe to offer even when the exit decision is undecidable.
       case "exit":
       case "exit-error":
+      case "exit-unavailable":
         return {
           verb: "Close",
           successToast: "Conversation closed",
@@ -345,11 +354,14 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
 
   const label = LABELS[mode];
   const icon = ICONS[mode];
+  // Close is still offered without the computer; the tooltip says why Push and
+  // Drop are not.
+  const tooltip = exit.workspace === "unavailable" ? exit.message : label;
 
   return (
     <Button
       variant="default"
-      tooltip={label}
+      tooltip={tooltip}
       aria-label={label}
       loading={busy}
       disabled={disabled}

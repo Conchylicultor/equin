@@ -3,7 +3,7 @@ import {
   type ArtifactHit,
   type ArtifactItem,
 } from "@plugins/conversations/plugins/conversation-view/plugins/artifacts/core";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
 /** The fields of a registered kind that the extraction pass needs. */
 export interface KindExtractor {

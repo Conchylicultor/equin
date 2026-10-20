@@ -1,5 +1,5 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { QueuedPromptCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queued-prompt-card/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";

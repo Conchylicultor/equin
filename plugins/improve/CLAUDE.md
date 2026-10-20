@@ -27,12 +27,12 @@
     - `trigger` "improve.apply-group"
     - `taskCategory` "improvements"
   - Uses:
-    - `conversations.conversationCreated`
     - `conversations/conversations-view/grouped.addMemberToGroup`
     - `database.db`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `tasks/task-category.TaskCategory`
+    - `tasks/tasks-core.conversationCreated`
   - DB schema: `plugins/improve/server/internal/tables.ts`
   - Exports (values): `_improvePendingGroups`
   - Register: `defineJob('improve.apply-group')`

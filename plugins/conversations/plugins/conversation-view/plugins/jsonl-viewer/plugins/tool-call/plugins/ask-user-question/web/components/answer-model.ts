@@ -1,4 +1,4 @@
-import type { QuestionAnswer } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { QuestionAnswer } from "@plugins/conversations/plugins/transcript-source/core";
 import { ANSWER_MARKER } from "../../shared";
 
 /**

@@ -13,7 +13,7 @@
  * `collapsible-card/web` → `row-actions/web`. A `const` arrow would TDZ-crash at
  * boot. Same shape as `pending-content-indicator.tsx`.
  */
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 

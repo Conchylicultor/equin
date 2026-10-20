@@ -1,9 +1,9 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   conversationChainTag,
-  transcriptChainReads,
   watchPaths,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
+import { transcriptChainReads } from "@plugins/conversations/plugins/transcript-source/server";
 import type { SubagentActivityRow } from "../../core";
 import { subagentActivity } from "../../core";
 import {

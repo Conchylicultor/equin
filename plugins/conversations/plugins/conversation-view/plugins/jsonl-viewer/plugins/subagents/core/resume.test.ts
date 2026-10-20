@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { agentResumeTimes } from "./resume";
 
 const sendMessage = (at: string, content: string | undefined): JsonlEvent => ({

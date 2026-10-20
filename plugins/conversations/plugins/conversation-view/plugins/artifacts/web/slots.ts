@@ -1,7 +1,7 @@
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { ComponentType } from "react";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import type {
   ArtifactHit,
   ArtifactItem,

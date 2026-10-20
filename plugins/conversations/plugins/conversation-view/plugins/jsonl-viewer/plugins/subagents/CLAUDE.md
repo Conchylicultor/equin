@@ -450,11 +450,11 @@ downstream can widen the set, because nothing downstream resolves one.
     - `resource.declare` "subagent-activity"
     - `resource.declare` "subagent-transcript"
   - Uses:
+    - `conversations/transcript-source.transcriptChainReads`
     - `conversations/transcript-watcher.conversationChainTag`
     - `conversations/transcript-watcher.readChainLines`
     - `conversations/transcript-watcher.readJsonlEventsFromChain`
     - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-    - `conversations/transcript-watcher.transcriptChainReads`
     - `conversations/transcript-watcher.transcriptChainSignature`
     - `conversations/transcript-watcher.watchPaths`
     - `infra/git/git-read-cache.createSignedMemo`
@@ -470,11 +470,11 @@ downstream can widen the set, because nothing downstream resolves one.
     - `conversations.hasLiveProcess`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.parseWorkflowResult`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.WORKFLOW_TOOL_NAME`
-    - `conversations/transcript-watcher.JsonlEvent`
-    - `conversations/transcript-watcher.JsonlEventSchema`
-    - `conversations/transcript-watcher.TokenUsage`
-    - `conversations/transcript-watcher.tokenUsageOf`
-    - `conversations/transcript-watcher.TokenUsageSchema`
+    - `conversations/transcript-source.JsonlEvent`
+    - `conversations/transcript-source.JsonlEventSchema`
+    - `conversations/transcript-source.TokenUsage`
+    - `conversations/transcript-source.tokenUsageOf`
+    - `conversations/transcript-source.TokenUsageSchema`
     - `network/live.liveValue`
   - Exports (types):
     - `DescribedSubagent`

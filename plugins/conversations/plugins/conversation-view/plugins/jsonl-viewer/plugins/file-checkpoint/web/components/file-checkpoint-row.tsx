@@ -1,6 +1,6 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";

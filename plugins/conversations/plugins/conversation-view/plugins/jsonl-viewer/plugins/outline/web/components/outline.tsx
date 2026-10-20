@@ -8,7 +8,7 @@ import {
   useVisibleEvents,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { eventKey } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const keyboardArrowDownIcon = symbol("keyboard-arrow-down");

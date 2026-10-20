@@ -1,7 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { attemptWorkServed } from "./internal/resource";
 
-export { attemptWorkServed } from "./internal/resource";
 export {
   getAttemptWork,
   readLandedShas,
@@ -26,6 +24,5 @@ export { deltaEtag, attemptWorkEtag } from "./internal/etag";
 
 export default {
   description:
-    "The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger, as one live resource plus a direct read for the server-side exit-drop guard.",
-  contributions: [...attemptWorkServed.declare],
+    "The attempt-work authority: where an attempt stands relative to `main`, measured from git (branch counts + Singularity-Conversation trailers on main) rather than from the lagging pushes ledger — the direct read for the server-side exit-drop guard and the git measurements commits-graph shares. The live value is served by the machine half.",
 } satisfies ServerPluginDefinition;

@@ -2,7 +2,7 @@ import {
   parsePageApplyReport,
   type PageApplyReport,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/web";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import type {
   ArtifactHit,
   Relation,

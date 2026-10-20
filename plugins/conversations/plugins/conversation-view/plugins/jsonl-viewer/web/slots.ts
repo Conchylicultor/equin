@@ -4,7 +4,7 @@ import {
 } from "@plugins/primitives/plugins/slot-render/web";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { UnknownEventRow } from "./components/unknown-event-row";
 import { PendingContentIndicator } from "./components/pending-content-indicator";
