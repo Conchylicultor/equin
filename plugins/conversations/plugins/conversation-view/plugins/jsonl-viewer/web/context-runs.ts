@@ -36,9 +36,9 @@ function isFoldable(role: ContextRole | undefined): boolean {
  *
  * A run is a maximal stretch of consecutive events whose role is `context` or
  * `ambient`. A run directly after a host event folds into that host's row,
- * whatever its length or roles. Any other run holding a `context` event and two or
- * more becomes its own fold. A single member, or a run of only `ambient`
- * events, stays as plain rows, because folding one row gains nothing.
+ * whatever its length or roles. Any other run holding a `context` event becomes
+ * its own fold, even a single one, so harness context always reads as one
+ * closed rule. A run of only `ambient` events stays as plain rows.
  *
  * A run never crosses a conversation event (a user prompt included), so the
  * per-prompt sections built on top of these items are unchanged.
@@ -77,7 +77,7 @@ export function groupContextRuns(
       isHost(events[prev.index]!)
     ) {
       items[items.length - 1] = { ...prev, hosted: members };
-    } else if (hasContext && members.length >= 2) {
+    } else if (hasContext) {
       const phase =
         !answeredBefore &&
         (firstAssistant === -1 || members[0]! < firstAssistant)

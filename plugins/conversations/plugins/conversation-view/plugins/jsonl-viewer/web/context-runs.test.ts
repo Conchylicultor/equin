@@ -65,11 +65,12 @@ describe("groupContextRuns", () => {
     ]);
   });
 
-  test("a single context row stays a row", () => {
-    expect(group([assistant, att("model"), assistant])).toEqual([
-      { kind: "event", index: 0 },
+  test("a single context row still folds", () => {
+    expect(group([att("model"), user("hi"), assistant, att("model")])).toEqual([
+      { kind: "fold", phase: "session", members: [0] },
       { kind: "event", index: 1 },
       { kind: "event", index: 2 },
+      { kind: "fold", phase: "update", members: [3] },
     ]);
   });
 
@@ -93,7 +94,7 @@ describe("groupContextRuns", () => {
     ).toEqual([
       { kind: "fold", phase: "session", members: [0, 1] },
       { kind: "event", index: 2 },
-      { kind: "event", index: 3 },
+      { kind: "fold", phase: "session", members: [3] },
       { kind: "event", index: 4 },
     ]);
   });
