@@ -149,7 +149,7 @@ export interface NoteVisual {
   isAccidental: boolean;
   /**
    * Note-name label parts, kept apart so the accidental glyph can be rendered
-   * compact + tucked against the letter. ALWAYS populated — whether labels are
+   * small + raised beside the letter. ALWAYS populated — whether labels are
    * shown (the `showNoteNames` toggle, fit thresholds) is the renderer's
    * concern, so toggling labels never rebuilds the visuals.
    */

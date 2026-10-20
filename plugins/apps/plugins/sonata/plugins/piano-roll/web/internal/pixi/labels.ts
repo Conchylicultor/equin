@@ -10,33 +10,39 @@
  *
  * Note labels are POOLED + WINDOWED: a score can carry thousands of notes but
  * only ~30–150 onsets are on screen at once. `createLabelWindow` binary-searches
- * the notes-sorted-by-onset array for the visible onset range; pooled
- * BitmapText instances are acquired/released as the window slides. A hard cap
- * (largest-fontPx-first, i.e. most-legible-first) bounds the worst case —
- * a simple priority that's deliberately v1 (no spatial de-clutter).
+ * the notes-sorted-by-onset array for the visible onset range; pooled sprites
+ * are acquired/released as the window slides. A hard cap (largest-fontPx-first,
+ * i.e. most-legible-first) bounds the worst case — a simple priority that's
+ * deliberately v1 (no spatial de-clutter).
  *
- * ACCIDENTAL APPROACH (documented decision): the accidental sits RAISED, like
- * a superscript, at 0.66× the letter — so a narrow black-key note still reads
- * C♯ and not "Cs". TWO BitmapTexts per pooled label (step + accidental) laid
- * out manually from measured widths, so the pair centres as one mark — chosen
- * over a single concatenated string, whose full-size ♯/♭ would sit on the
- * baseline and overflow the narrow black-key columns.
+ * DRAWING (documented decision): each label is painted the way the Sonata
+ * prototype paints it — Canvas 2D `strokeText` then `fillText`, bold Manrope,
+ * a 45%-black round-joined outline ~0.2em wide, the accidental RAISED like a
+ * superscript at 0.66× in the system face (so a narrow black-key note reads C♯,
+ * not "Cs") — into a canvas at the DEVICE resolution and the label's exact
+ * size, uploaded once as a texture shared by every label with the same
+ * (face, name, size). Not a BitmapFont: an atlas rasterized at one size and
+ * resampled 4–5× down to a 14px label softens and pales the thin outline, so
+ * it never matched the prototype; a texture drawn at the final size is the
+ * prototype's pixels by construction. The set of live textures is tiny (seven
+ * letters × three accidentals × the couple of sizes a lane width yields) and
+ * is pruned to the ones in use on every full re-pass (resize, zoom).
  *
- * Fonts are runtime-installed BitmapFonts (glyphs rasterized once, then every
- * label is a couple of quads), in the app's own face (bold Manrope) — so
- * `loadLabelFonts()` must settle before the first label layer, or the atlas
- * bakes the fallback face: TWO note-name faces — white-with-a-dark-halo for
- * the dark lane, graphite-with-a-paper-halo for the drawn one — plus one
- * shadowless face for bar numbers (tinted per look).
- *
- * The note-name face is a LOOK choice, not a tint: each face bakes its halo into
- * the glyph texture, and `tint` multiplies the whole texture, so tinting the
- * white face graphite yields a dark letter still wearing its black halo — a
- * smudge on cream. Hence a second installed face, and `setLook` re-pointing the
- * pool's `fontFamily` at it. The ink is STORED, so `refreshColors` (a theme
- * flip) cannot clobber an active look — a look is not a theme.
+ * `loadLabelFonts()` must settle before the first label is drawn, or the
+ * texture bakes the fallback face. The face is a LOOK choice
+ * (white-with-a-dark-halo for the dark lane, graphite-with-a-paper-halo for the
+ * drawn one): the ink is STORED, so `refreshColors` (a theme flip) cannot
+ * clobber an active look — a look is not a theme. Bar numbers stay a tinted
+ * BitmapFont: they carry no outline.
  */
-import { BitmapFont, BitmapText, Container } from "pixi.js";
+import {
+  BitmapFont,
+  BitmapText,
+  CanvasSource,
+  Container,
+  Sprite,
+  Texture,
+} from "pixi.js";
 import type { SonataLookStyle } from "@plugins/apps/plugins/sonata/plugins/look/core";
 import {
   SONATA_DEFAULT_LOOK,
@@ -75,11 +81,10 @@ export function noteLabelFontPx(
   );
 }
 
-/** The accidental's size relative to the letter, and how far (in letter-px)
- *  its baseline rises above the letter's. */
-const ACCIDENTAL_SCALE = 0.66;
-const ACCIDENTAL_MIN_PX = 8;
-const ACCIDENTAL_RISE = 0.38;
+/** Where a label's baseline sits above its bar's bottom edge, in px. */
+export function noteLabelBaselineInset(fontPx: number): number {
+  return Math.max(4, fontPx * 0.3);
+}
 
 /**
  * Windowing helper: given notes SORTED ASCENDING by onset (`y0Sec`), returns a
@@ -119,38 +124,32 @@ export function createLabelWindow(
   });
 }
 
-// --- bitmap fonts ---------------------------------------------------------------
+// --- label drawing ----------------------------------------------------------------
 
-/** Note-name faces, one per `SonataLookStyle["labels"].face` (see FACE_FONTS). */
-const LABEL_FONT_LIGHT = "piano-roll-note-label";
-const LABEL_FONT_INK = "piano-roll-note-label-ink";
-const BAR_FONT = "piano-roll-bar-number";
-
-/** The installed face each look's `labels.face` names. A `Record` over the
- *  union, so a third face is a tsc error here rather than a silent fallback. */
-const FACE_FONTS: Record<SonataLookStyle["labels"]["face"], string> = {
-  "light-on-dark": LABEL_FONT_LIGHT,
-  "ink-on-paper": LABEL_FONT_INK,
-};
-
-/** Hard cap on live note labels. Sliced largest-fontPx-first so when the
- *  window is overfull the most legible labels win (simple v1 priority). */
-const MAX_LIVE_LABELS = 300;
-
-/** Bar numbers: the DOM used `text-3xs` (0.625rem) `muted-foreground/70`. */
-const BAR_FONT_PX = 10;
-const BAR_NUMBER_ALPHA = 0.7;
-
-/** The glyph set every note-name face rasterizes: A–G note letters, digits (bar
- *  numbers share the glyph logic in tests; also future octave suffixes), the
- *  music accidentals — and ASCII #/b as a safety net should a speller ever emit
- *  them un-prettified. */
-const LABEL_CHARS: (string | string[])[] = [["A", "G"], ["0", "9"], "♭♯#b"];
-
-/** The note-name family: the Sonata theme's Manrope, falling back to the
- *  system face for the glyphs it lacks (the music accidentals). */
+/** The note-name family: the Sonata theme's Manrope. */
 const LABEL_FAMILY = "Manrope, ui-sans-serif, system-ui, sans-serif";
+/** The accidental's family: the system face, whose ♯/♭ Manrope lacks. */
+const ACCIDENTAL_FAMILY = "ui-sans-serif, system-ui, sans-serif";
 const LABEL_WEIGHT = "700";
+
+/** The accidental's size relative to the letter (with a floor), and how far
+ *  (in letter-px) its baseline rises above the letter's. */
+const ACCIDENTAL_SCALE = 0.66;
+const ACCIDENTAL_MIN_PX = 8;
+const ACCIDENTAL_RISE = 0.38;
+
+/** Font sizes are quantized so near-equal sizes share one texture. */
+const FONT_PX_STEP = 0.25;
+
+/** Each look face's ink: the letter's fill and its outline. Both are literals,
+ *  like the prototype's — the face is a rasterized asset, not a palette read. */
+const FACE_INKS: Record<
+  SonataLookStyle["labels"]["face"],
+  { fill: string; outline: string }
+> = {
+  "light-on-dark": { fill: "#ffffff", outline: "rgba(0, 0, 0, 0.45)" },
+  "ink-on-paper": { fill: "#2c2926", outline: "rgba(247, 242, 229, 0.85)" },
+};
 
 /**
  * Wait for the note-name face to be ready to rasterize. The theme loads
@@ -163,59 +162,108 @@ export async function loadLabelFonts(): Promise<void> {
   await document.fonts.load(`${LABEL_WEIGHT} 32px Manrope`, "ABCDEFG");
 }
 
-let fontsInstalled = false;
+/** A drawn label: its texture, and the anchor (fractions of the texture) that
+ *  falls on the label's centre at its baseline. */
+interface LabelArt {
+  texture: Texture;
+  anchorX: number;
+  anchorY: number;
+}
 
 /**
- * Install every bitmap face once per page (BitmapFont registries are global;
- * a second install with the same name would throw). Rasterized at 2× a 32px
- * base so the 8–17px labels stay crisp on hiDPI.
+ * Paint one label as the prototype does: letter stroke + fill, then the
+ * raised accidental's stroke + fill, the pair centred as one mark. Drawn in
+ * CSS px scaled by `resolution`, into a canvas just large enough to hold the
+ * glyphs' measured ink plus the outline.
  */
+function drawLabel(
+  step: string,
+  accidental: string,
+  fontPx: number,
+  face: SonataLookStyle["labels"]["face"],
+  resolution: number,
+): LabelArt {
+  const ink = FACE_INKS[face];
+  const accPx = Math.max(ACCIDENTAL_MIN_PX, fontPx * ACCIDENTAL_SCALE);
+  const letterFont = `${LABEL_WEIGHT} ${fontPx}px ${LABEL_FAMILY}`;
+  const accFont = `${LABEL_WEIGHT} ${accPx}px ${ACCIDENTAL_FAMILY}`;
+  const outline = Math.max(2.2, fontPx * 0.2);
+  const rise = fontPx * ACCIDENTAL_RISE;
+
+  const canvas = document.createElement("canvas");
+  const measure = canvas.getContext("2d");
+  if (!measure) throw new Error("piano-roll labels: no 2d canvas context");
+  measure.font = letterFont;
+  const letter = measure.measureText(step);
+  measure.font = accFont;
+  const acc = accidental === "" ? null : measure.measureText(accidental);
+  // The accidental is tucked half a pixel into the letter (the prototype's
+  // overlap), and the pair's advance is what centres on the column.
+  const accAdvance = acc ? acc.width - 0.5 : 0;
+  const advance = letter.width + accAdvance;
+
+  // Ink extents about the baseline, padded by the outline's outer half.
+  const pad = Math.ceil(outline / 2) + 1;
+  const ascent = Math.max(
+    letter.actualBoundingBoxAscent,
+    acc ? rise + acc.actualBoundingBoxAscent : 0,
+  );
+  const descent = Math.max(
+    letter.actualBoundingBoxDescent,
+    acc ? acc.actualBoundingBoxDescent - rise : 0,
+  );
+  const cssW = advance + 2 * pad;
+  const cssH = ascent + descent + 2 * pad;
+  const pxW = Math.max(1, Math.ceil(cssW * resolution));
+  const pxH = Math.max(1, Math.ceil(cssH * resolution));
+  canvas.width = pxW;
+  canvas.height = pxH;
+
+  const source = new CanvasSource({ resource: canvas, resolution });
+  const ctx = source.context2D;
+  ctx.scale(resolution, resolution);
+  ctx.lineJoin = "round";
+  ctx.lineWidth = outline;
+  ctx.strokeStyle = ink.outline;
+  ctx.fillStyle = ink.fill;
+  const baseline = pad + ascent;
+  ctx.font = letterFont;
+  ctx.strokeText(step, pad, baseline);
+  ctx.fillText(step, pad, baseline);
+  if (acc) {
+    const ax = pad + letter.width - 0.5;
+    ctx.font = accFont;
+    ctx.strokeText(accidental, ax, baseline - rise);
+    ctx.fillText(accidental, ax, baseline - rise);
+  }
+  source.update();
+
+  return {
+    texture: new Texture({ source }),
+    anchorX: ((pad + advance / 2) * resolution) / pxW,
+    anchorY: (baseline * resolution) / pxH,
+  };
+}
+
+// --- bar-number font ---------------------------------------------------------------
+
+const BAR_FONT = "piano-roll-bar-number";
+
+/** Hard cap on live note labels. Sliced largest-fontPx-first so when the
+ *  window is overfull the most legible labels win (simple v1 priority). */
+const MAX_LIVE_LABELS = 300;
+
+/** Bar numbers: the DOM used `text-3xs` (0.625rem) `muted-foreground/70`. */
+const BAR_FONT_PX = 10;
+const BAR_NUMBER_ALPHA = 0.7;
+
+let fontsInstalled = false;
+
+/** Install the bar-number face once per page (BitmapFont registries are
+ *  global; a second install with the same name would throw). */
 function ensureFonts(): void {
   if (fontsInstalled) return;
   fontsInstalled = true;
-  BitmapFont.install({
-    name: LABEL_FONT_LIGHT,
-    style: {
-      fontFamily: LABEL_FAMILY,
-      fontWeight: LABEL_WEIGHT,
-      fontSize: 32,
-      fill: 0xffffff,
-      // A soft-dark outline (no blur) around each bold white glyph, ~0.2em
-      // wide: it keeps the letter legible on every palette hue without
-      // per-note luminance math, and light enough not to read as a black ring.
-      stroke: {
-        color: 0x000000,
-        width: 6,
-        alpha: 0.45,
-        join: "round",
-      },
-    },
-    chars: LABEL_CHARS,
-    resolution: 2,
-  });
-  BitmapFont.install({
-    name: LABEL_FONT_INK,
-    style: {
-      fontFamily: LABEL_FAMILY,
-      fontWeight: LABEL_WEIGHT,
-      fontSize: 32,
-      // Graphite on paper: the letter is ink, and the halo is the PAPER colour,
-      // so the name stays legible where it crosses a note's own ink without the
-      // dark ring the light face bakes in. Both colours are literals here — like
-      // the light face's white/black above — because a face is a rasterized
-      // asset, not a palette read: the look picks WHICH face, and no tint can
-      // reach a halo already baked into the texture.
-      fill: 0x2c2926,
-      stroke: {
-        color: 0xf7f2e5,
-        width: 5,
-        alpha: 0.85,
-        join: "round",
-      },
-    },
-    chars: LABEL_CHARS,
-    resolution: 2,
-  });
   BitmapFont.install({
     name: BAR_FONT,
     style: {
@@ -231,12 +279,8 @@ function ensureFonts(): void {
 
 // --- pooled, windowed label layer -------------------------------------------------
 
-/** One pooled label: a step letter plus an optional raised accidental. */
-interface PooledLabel {
-  root: Container;
-  step: BitmapText;
-  accidental: BitmapText;
-}
+/** One pooled label: a sprite showing a drawn label's texture. */
+type PooledLabel = Sprite;
 
 interface LabelEntry {
   v: NoteVisual;
@@ -251,16 +295,17 @@ export interface LabelLayerHandle {
   barNumbers: Container;
   setNotes(visuals: readonly NoteVisual[]): void;
   setBars(bars: readonly BarMarker[]): void;
-  /** New lane size: re-derives every live label's font size and x position. */
-  setLaneSize(width: number, height: number): void;
+  /** New lane size (and device pixel ratio, which labels are drawn at):
+   *  re-derives every live label's font size and x position. */
+  setLaneSize(width: number, height: number, resolution: number): void;
   /** New vertical zoom (effective `PX_PER_SECOND * spread`): re-places every
    *  pixel-space label and bar number and re-derives the visible window. */
   setSpread(pxPerSec: number): void;
   setVisible(on: boolean): void;
   /** Per-frame: slide the label window to the current scroll position. */
   update(scrollSec: number): void;
-  /** New look: re-point every live and pooled label at the look's face and
-   *  re-tint the bar numbers. Never rebuilds the handle. */
+  /** New look: redraw every live label in the look's face and re-tint the
+   *  bar numbers. Never rebuilds the handle. */
   setLook(
     ink: SonataLookStyle["labels"],
     resolveColor: (expr: string) => number,
@@ -303,6 +348,26 @@ export function createLabelLayer(): LabelLayerHandle {
   let ink: SonataLookStyle["labels"] =
     SONATA_LOOK_STYLES[SONATA_DEFAULT_LOOK].labels;
 
+  let resolution = 1;
+
+  // Drawn labels, keyed by face + name + quantized size. Pruned to the ones in
+  // use on every full re-pass (`dirty`), so it holds what is on screen plus
+  // whatever scrolled in since the last resize or zoom.
+  const art = new Map<string, LabelArt>();
+  const artFor = (e: LabelEntry, fontPx: number): LabelArt => {
+    const key = `${ink.face}|${e.step}${e.accidental}|${fontPx}`;
+    let drawn = art.get(key);
+    if (!drawn) {
+      drawn = drawLabel(e.step, e.accidental, fontPx, ink.face, resolution);
+      art.set(key, drawn);
+    }
+    return drawn;
+  };
+  const clearArt = (): void => {
+    for (const drawn of art.values()) drawn.texture.destroy(true);
+    art.clear();
+  };
+
   // Pool: live labels keyed by entry index, plus a free list.
   const active = new Map<number, PooledLabel>();
   const free: PooledLabel[] = [];
@@ -310,71 +375,33 @@ export function createLabelLayer(): LabelLayerHandle {
   const acquire = (): PooledLabel => {
     const pooled = free.pop();
     if (pooled) {
-      pooled.root.visible = true;
+      pooled.visible = true;
       return pooled;
     }
-    const root = new Container();
-    const font = FACE_FONTS[ink.face];
-    const step = new BitmapText({
-      text: "",
-      style: { fontFamily: font, fontSize: 16 },
-      anchor: { x: 0, y: 1 },
-    });
-    const accidental = new BitmapText({
-      text: "",
-      style: { fontFamily: font, fontSize: 12 },
-      anchor: { x: 0, y: 1 },
-    });
-    root.addChild(step, accidental);
-    noteLabels.addChild(root);
-    return { root, step, accidental };
+    const sprite = new Sprite(Texture.EMPTY);
+    noteLabels.addChild(sprite);
+    return sprite;
   };
 
   const release = (pooled: PooledLabel): void => {
-    pooled.root.visible = false;
+    pooled.visible = false;
+    // Never left holding a texture a prune may destroy.
+    pooled.texture = Texture.EMPTY;
     free.push(pooled);
   };
 
   /**
-   * Place one label at the foot of its bar, centred on the key column: the
-   * letter's box bottom sits 3px above the bar's bottom edge (-y0·px - 1).
-   * The accidental, at 0.66× the letter, rides raised like a superscript —
-   * its baseline ACCIDENTAL_RISE letter-px above the letter's — and the
-   * letter + accidental pair centres as one mark.
+   * Place one label at the foot of its bar, centred on the key column, its
+   * baseline `noteLabelBaselineInset` above the bar's bottom edge (-y0·px - 1)
+   * — the prototype's `y1 - max(4, fs·0.3)`, measured to land on the same
+   * pixel row (letter to note edge) as the prototype's.
    */
   const place = (pooled: PooledLabel, e: LabelEntry, fontPx: number): void => {
-    const { root, step, accidental } = pooled;
-    step.style.fontSize = fontPx;
-    step.text = e.step;
-    const stepW = step.width;
-    let totalW = stepW;
-    if (e.accidental !== "") {
-      const accPx = Math.max(ACCIDENTAL_MIN_PX, fontPx * ACCIDENTAL_SCALE);
-      // Both texts hang from their box bottoms, which sit a descent below
-      // each baseline; the descent scales with the size, so lifting the
-      // accidental by the rise PLUS the difference of the two descents puts
-      // its baseline exactly ACCIDENTAL_RISE·fontPx above the letter's.
-      const descent = (px: number): number => px * 0.24;
-      const tuck = 0.5;
-      accidental.visible = true;
-      accidental.style.fontSize = accPx;
-      accidental.text = e.accidental;
-      const accW = accidental.width;
-      totalW = stepW + accW - tuck;
-      step.x = -totalW / 2;
-      accidental.x = step.x + stepW - tuck;
-      accidental.y = -(
-        fontPx * ACCIDENTAL_RISE +
-        descent(fontPx) -
-        descent(accPx)
-      );
-    } else {
-      accidental.visible = false;
-      step.x = -stepW / 2;
-    }
-    step.y = 0;
-    root.x = (e.v.xFrac + e.v.wFrac / 2) * laneWidth;
-    root.y = -e.v.y0Sec * pxPerSec - 3;
+    const drawn = artFor(e, fontPx);
+    pooled.texture = drawn.texture;
+    pooled.anchor.set(drawn.anchorX, drawn.anchorY);
+    pooled.x = (e.v.xFrac + e.v.wFrac / 2) * laneWidth;
+    pooled.y = -e.v.y0Sec * pxPerSec - 1 - noteLabelBaselineInset(fontPx);
   };
 
   let lastStart = 0;
@@ -393,6 +420,7 @@ export function createLabelLayer(): LabelLayerHandle {
     if (!dirty && start === lastStart && end === lastEnd) return;
     lastStart = start;
     lastEnd = end;
+    const fullPass = dirty;
     dirty = false;
 
     // Candidates: windowed entries whose label legibly fits, capped at
@@ -405,7 +433,12 @@ export function createLabelLayer(): LabelLayerHandle {
         (e.v.y1Sec - e.v.y0Sec) * pxPerSec,
         e.accidental !== "",
       );
-      if (fontPx !== null) candidates.push({ idx, fontPx });
+      if (fontPx !== null) {
+        candidates.push({
+          idx,
+          fontPx: Math.round(fontPx / FONT_PX_STEP) * FONT_PX_STEP,
+        });
+      }
     }
     if (candidates.length > MAX_LIVE_LABELS) {
       candidates = candidates
@@ -426,9 +459,21 @@ export function createLabelLayer(): LabelLayerHandle {
         pooled = acquire();
         active.set(idx, pooled);
       }
-      // Re-place unconditionally: cheap (couple of glyphs), and it keeps the
+      // Re-place unconditionally: cheap (a cached texture), and it keeps the
       // resize path trivially correct (laneWidth changed ⇒ dirty ⇒ full pass).
       place(pooled, entries[idx]!, fontPx);
+    }
+    if (fullPass) {
+      // Every live label now holds its current art: drop the rest.
+      const inUse = new Set<Texture>(
+        [...active.values()].map((pooled) => pooled.texture),
+      );
+      for (const [key, drawn] of art) {
+        if (!inUse.has(drawn.texture)) {
+          drawn.texture.destroy(true);
+          art.delete(key);
+        }
+      }
     }
   };
 
@@ -474,8 +519,20 @@ export function createLabelLayer(): LabelLayerHandle {
       }
     },
 
-    setLaneSize(width, height) {
-      if (width === laneWidth && height === laneHeight) return;
+    setLaneSize(width, height, nextResolution) {
+      if (
+        width === laneWidth &&
+        height === laneHeight &&
+        nextResolution === resolution
+      ) {
+        return;
+      }
+      if (nextResolution !== resolution) {
+        // Every drawn label is at the old density: redraw them all.
+        for (const pooled of active.values()) pooled.texture = Texture.EMPTY;
+        clearArt();
+        resolution = nextResolution;
+      }
       laneWidth = width;
       laneHeight = height;
       dirty = true;
@@ -508,22 +565,9 @@ export function createLabelLayer(): LabelLayerHandle {
     },
 
     setLook(nextInk, resolveColor) {
-      if (nextInk.face !== ink.face) {
-        // Re-point BOTH pools: a pooled label is reused as-is on acquire, so a
-        // free one left on the old face would come back wearing it.
-        const font = FACE_FONTS[nextInk.face];
-        for (const pooled of active.values()) {
-          pooled.step.style.fontFamily = font;
-          pooled.accidental.style.fontFamily = font;
-        }
-        for (const pooled of free) {
-          pooled.step.style.fontFamily = font;
-          pooled.accidental.style.fontFamily = font;
-        }
-        // Glyph advances differ between faces, so every live label has to be
-        // re-measured and re-centred — `place()` reads `step.width`.
-        dirty = true;
-      }
+      // The face is part of the art key, so a full re-pass redraws every live
+      // label in the new face and prunes the old face's art.
+      if (nextInk.face !== ink.face) dirty = true;
       ink = nextInk;
       const barColor = resolveColor(ink.barNumberExpr);
       for (const t of barTexts) t.tint = barColor;
@@ -531,8 +575,7 @@ export function createLabelLayer(): LabelLayerHandle {
     },
 
     refreshColors(resolveColor) {
-      // Note labels are a face plus a baked halo — theme-invariant by design
-      // (same as the DOM). Only the bar numbers carry a colour, and it is the
+      // Note labels are a face plus a baked halo — theme-invariant by design. Only the bar numbers carry a colour, and it is the
       // STORED look's, re-resolved: a theme flip cannot clobber a look.
       const barColor = resolveColor(ink.barNumberExpr);
       for (const t of barTexts) t.tint = barColor;
@@ -540,6 +583,7 @@ export function createLabelLayer(): LabelLayerHandle {
 
     destroy() {
       noteLabels.destroy({ children: true });
+      clearArt();
       barNumbers.destroy({ children: true });
       // Pooled-but-detached labels were children of noteLabels, so they are
       // covered by the recursive destroy above.

@@ -197,7 +197,7 @@ export function createPianoRollScene(app: Application): PianoRollScene {
       contentScaled.scale.set(keysWidth, pxPerSec());
       mesh.setUniforms(keysWidth, dpr, pxPerSec());
       grid.resize(width, keysWidth, height);
-      labels.setLaneSize(keysWidth, height);
+      labels.setLaneSize(keysWidth, height, dpr);
       applyScroll();
     },
 
