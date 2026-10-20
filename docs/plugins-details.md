@@ -17649,6 +17649,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `JsonlEventSchema`
           - `PREPROMPT_TAG`
           - `QuestionAnswerSchema`
+          - `replyOf`
           - `requestConfigChanges`
           - `RequestConfigSchema`
           - `requestShapeChange`
@@ -17658,6 +17659,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unwrapPastedContent`
           - `unwrapRelayEnvelopes`
           - `userPromptText`
+          - `withPicksInResponse`
           - `wrapPreprompt`
       - Plugins:
         - **`memory`** (excluded) — Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it. Never booted by the desktop.

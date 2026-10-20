@@ -14,6 +14,7 @@ export {
   extractPreprompt,
 } from "./protocol";
 export { tokenUsageOf } from "./token-usage";
+export { withPicksInResponse, replyOf } from "./question-response";
 export { isInterruptContent } from "./interrupt";
 export { unwrapPastedContent } from "./pasted-content";
 export { userPromptText } from "./user-prompt";

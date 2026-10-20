@@ -3,6 +3,7 @@ import type {
   CliAnswer,
   RelayQuestion,
 } from "../../core/schemas";
+import { withPicksInResponse } from "@plugins/conversations/plugins/transcript-source/core";
 
 // The web's structured answer → the AskUserQuestion tool's own answer shape,
 // checked against the questions the relay registered. Pure, so every rule is a
@@ -66,10 +67,12 @@ export function toCliAnswer(
 
   return {
     ok: true,
-    answer: {
+    // A reply replaces the answers in what the model reads: spell the picks
+    // into it, so the model sees both.
+    answer: withPicksInResponse({
       answers,
       ...(body.annotations ? { annotations: body.annotations } : {}),
       ...(body.response !== undefined ? { response: body.response } : {}),
-    },
+    }),
   };
 }

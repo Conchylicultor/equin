@@ -6,7 +6,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { jsonlEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
-import { isInterruptContent } from "@plugins/conversations/plugins/transcript-source/core";
+import {
+  isInterruptContent,
+  replyOf,
+} from "@plugins/conversations/plugins/transcript-source/core";
 import { useConversation } from "@plugins/conversations/web";
 import { MarkerAnswerForm } from "./marker-answer-form";
 import { OptionBody, OptionRow } from "./option-row";
@@ -96,6 +99,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   // - otherwise (result null pre-flush, or interrupted-but-not-last historical
   //   question with no answer turn): empty map → question rendered read-only.
   const answerRecord = event.result?.questionAnswer;
+  const reply = answerRecord ? replyOf(answerRecord) : undefined;
   let answerMap: Record<string, ParsedAnswer> | null = null;
   if (answerTurn != null) {
     answerMap = parseMarkerAnswer(answerTurn.text, questions);
@@ -129,9 +133,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   // A reply given in place of the answers stands in for them in the summary.
   const summary = summaryFor(
     questions,
-    firstAnswerParts.length === 0 && answerRecord?.response != null
-      ? [answerRecord.response]
-      : firstAnswerParts,
+    firstAnswerParts.length === 0 && reply != null ? [reply] : firstAnswerParts,
   );
 
   return (
@@ -209,7 +211,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
             </div>
           );
         })}
-        {answerRecord?.response != null && (
+        {reply != null && (
           <div className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 py-xs pl-sm">
             <p className="text-3xs font-medium tracking-wider text-muted-foreground">
               Reply
@@ -219,7 +221,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
               variant="caption"
               className="whitespace-pre-wrap break-words text-foreground"
             >
-              {answerRecord.response}
+              {reply}
             </Text>
           </div>
         )}

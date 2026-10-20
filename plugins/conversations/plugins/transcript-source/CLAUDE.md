@@ -69,6 +69,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `JsonlEventSchema`
     - `PREPROMPT_TAG`
     - `QuestionAnswerSchema`
+    - `replyOf`
     - `requestConfigChanges`
     - `RequestConfigSchema`
     - `requestShapeChange`
@@ -78,6 +79,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `unwrapPastedContent`
     - `unwrapRelayEnvelopes`
     - `userPromptText`
+    - `withPicksInResponse`
     - `wrapPreprompt`
 - Sub-plugins:
   - **`memory`** (excluded) — Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it. Never booted by the desktop.

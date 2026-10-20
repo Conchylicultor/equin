@@ -52,7 +52,8 @@ export type UserTextSegment = z.infer<typeof UserTextSegmentSchema>;
  * only the CLI's prose wording of it for the model, which changes across CLI
  * versions. `answers` is keyed by question text; a multi-select value is its
  * labels joined with ", ", and `(no option selected)` marks a question answered
- * with a note alone. `response` is free text given in place of the answers.
+ * with a note alone. `response` is free text given in place of, or beside, the
+ * answers (beside them it starts with the picks — see question-response.ts).
  */
 export const QuestionAnswerSchema = z.object({
   answers: z.record(z.string(), z.string()),

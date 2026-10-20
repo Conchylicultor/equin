@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { RelayQuestion } from "../../core/schemas";
+import { replyOf } from "@plugins/conversations/plugins/transcript-source/core";
 import { toCliAnswer } from "./answer";
 
 const COLOR: RelayQuestion = {
@@ -113,6 +114,21 @@ describe("toCliAnswer", () => {
     expect(
       toCliAnswer(QUESTIONS, { selections: {}, response: "Skip these" }),
     ).toEqual({ ok: true, answer: { answers: {}, response: "Skip these" } });
+  });
+
+  test("a reply beside picks carries the picks, which the CLI would drop", () => {
+    const r = toCliAnswer(QUESTIONS, {
+      selections: { "Which colour?": sel(["Blue"]) },
+      response: "Why ask?",
+    });
+    expect(r).toEqual({
+      ok: true,
+      answer: {
+        answers: { "Which colour?": "Blue" },
+        response: 'My answers: "Which colour?"="Blue"\n\nWhy ask?',
+      },
+    });
+    expect(r.ok && replyOf(r.answer)).toBe("Why ask?");
   });
 
   test("notes ride as annotations, on known questions only", () => {
