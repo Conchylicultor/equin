@@ -33,9 +33,9 @@ import type {
  *
  * FOUR skins, applied to EVERY keyboard render (full roll + readout chips),
  * and all four come from ONE switch — Sonata's look:
- *  - `immersive` — the night keybed: the flat skin's white and black fills on a
- *    near-black bed (a 1px seam between keys), and a lit key painted in the
- *    note's actual colour.
+ *  - `immersive` — the night keybed: warm ivory naturals on a near-black bed
+ *    (a 1px seam between keys), cool dark accidentals, and a lit key painted
+ *    in the note's actual colour.
  *  - `realistic` — skeuomorphic ivory/ebony: gradients + box-shadow bevels, a
  *    pressed-key depression, and a lit key tinted (translucent) over the ivory.
  *  - `flat` — Synthesia-style: solid fills, no gloss/gradients, strong dark
@@ -76,12 +76,14 @@ const KEY_BOTTOM_RADIUS = {
 } satisfies KeyChromeStyle;
 
 /* ---- Immersive variant -------------------------------------------------- *
- * The player's night keybed (proto-1792113547-2qr6g7): naturals separated by a
- * 1px seam of the near-black bed. The key fills are the flat skin's own
- * (`FLAT_WHITE_BG` / `FLAT_BLACK_BG`, below): the prototype's warm ivory over a
- * cool dark gradient left too little contrast between the two tiers. A lit key
- * is painted in the note's actual colour, as under `flat`. */
+ * The player's night keybed (proto-1792113547-2qr6g7): warm ivory naturals with
+ * a soft shade at the top edge, separated by a 1px seam of the near-black bed;
+ * accidentals a cool dark gradient. A lit key is painted in the note's actual
+ * colour, as under `flat`. */
 const IMMERSIVE_BED = "#08080c";
+const IMMERSIVE_WHITE_BG =
+  "linear-gradient(to bottom, #d9d4ca, #f2efe9 10%, #e4dfd6)";
+const IMMERSIVE_BLACK_BG = "linear-gradient(to bottom, #15151b, #30303a)";
 const IMMERSIVE_SEAM = `inset -1px 0 0 ${IMMERSIVE_BED}`;
 
 /**
@@ -190,7 +192,7 @@ function whiteKeyStyle(
   if (style === "drawn") return DRAWN_CHROME;
   if (style === "immersive") {
     return {
-      background: litColor ?? FLAT_WHITE_BG,
+      background: litColor ?? IMMERSIVE_WHITE_BG,
       boxShadow: IMMERSIVE_SEAM,
       transition: PRESS_TRANSITION,
     };
@@ -234,7 +236,7 @@ function blackKeyStyle(
     return { ...base, background: litColor ?? FLAT_BLACK_BG };
   }
   if (style === "immersive") {
-    return { ...base, background: litColor ?? FLAT_BLACK_BG };
+    return { ...base, background: litColor ?? IMMERSIVE_BLACK_BG };
   }
   if (litColor === undefined) {
     return {

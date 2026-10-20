@@ -197,20 +197,16 @@ const DIGITAL_ROLL: Omit<SonataLookStyle, "keys"> = {
 export const SONATA_LOOK_STYLES: Record<SonataLook, SonataLookStyle> = {
   // The immersive player's night (proto-1792113547-2qr6g7, `roll: immersive`):
   // the stage's blue-black, a rule at every bar and a fainter one at every
-  // beat, a column rule at every C (stronger) and F, roomy rounded bars in one
-  // colour per track whatever key they land on, the flat keys, and the sky accent
-  // as the landing line at half strength.
+  // beat, a column rule at every C (stronger) and F, roomy rounded bars in the
+  // Synthesia track colours — a note on a black key in its track's darker
+  // shade, so naturals and accidentals read apart as under `flat` — ivory keys,
+  // and the sky accent as the landing line at half strength.
   immersive: {
     laneBg: "#0d0d13",
     laneGrain: null,
     laneInk: "#f1efea",
-    notes: { insetPx: 2.5, radiusPx: 5, accidentalShade: false },
-    tracks: [
-      "#a6e36b", // 1 — green (right hand)
-      "#5f8ff0", // 2 — blue (left hand)
-      "#c39bff", // 3 — lilac
-      ...SYNTHESIA_TRACKS.slice(3),
-    ],
+    notes: { insetPx: 2.5, radiusPx: 5, accidentalShade: true },
+    tracks: SYNTHESIA_TRACKS,
     nowLine: { colorExpr: "var(--primary)", alpha: 0.55 },
     pen: DIGITAL_ROLL.pen,
     grid: {

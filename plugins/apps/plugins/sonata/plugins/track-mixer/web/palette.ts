@@ -8,7 +8,7 @@ import {
 /**
  * Track colours. Each track defaults to a colour by its index in
  * `score.tracks`, from the active LOOK's track palette (`SonataLookStyle.tracks`
- * — Synthesia's under the flat looks, the night stage's under `immersive`); the
+ * — Synthesia's under every digital look); the
  * user can override the base per track. Cycles if a score has more tracks than
  * colours.
  *
