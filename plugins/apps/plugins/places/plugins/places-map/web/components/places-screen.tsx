@@ -16,6 +16,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import type { LatLng, MapBounds, MapPin } from "@plugins/map/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
@@ -47,12 +48,17 @@ import {
 } from "../internal/google-result";
 import { useGoogleSearch } from "../internal/use-google-search";
 import { ASK_PICK_PIN_TYPE } from "../internal/ask-pick";
-import { useLatestAskPicks } from "../internal/ask-picks";
+import {
+  useAskMapPicks,
+  type AskPick,
+  type AskPickNote,
+} from "../internal/ask-picks";
 import { looksLikeQuestion } from "../internal/question";
 import { useAsk } from "../internal/use-ask";
 import { AskPill } from "./ask-pill";
-import { AskThreadPanel } from "./ask-thread";
+import { ASK_THREAD_WIDTH, AskThreadCard } from "./ask-thread";
 import type { GoogleHit } from "./google-result-card";
+import { GooglePlaceCard, type DetailedHit } from "./google-place-card";
 import { UniversalSearchPanel } from "./universal-search";
 import { PLACE_CARD_WIDTH, PlaceCard } from "./place-card";
 import { PlaceCover, PlaceGlyph } from "./place-glyph";
@@ -88,6 +94,30 @@ const CARD_REACH = `calc(${spaceLength("md")} + ${PLACE_CARD_WIDTH})`;
 
 /** Past the place card: its reach plus the gutter beside it. */
 const PAST_CARD = `calc(${CARD_REACH} + ${spaceLength("md")})`;
+
+/** The room the docked Sonnet thread covers on the right edge (gutter + its width). */
+const THREAD_REACH = `calc(${spaceLength("md")} + ${ASK_THREAD_WIDTH})`;
+
+/** Past the thread: where a card beside it stands off the right edge. */
+const PAST_THREAD = `calc(${THREAD_REACH} + ${spaceLength("md")})`;
+
+/** A card beside the thread: the thread's reach, a gutter, the card. */
+const CARD_BESIDE_THREAD_REACH = `calc(${PAST_THREAD} + ${PLACE_CARD_WIDTH})`;
+
+/** Past a card beside the thread. */
+const PAST_CARD_BESIDE_THREAD = `calc(${CARD_BESIDE_THREAD_REACH} + ${spaceLength("md")})`;
+
+const NO_EXPANDED: ReadonlySet<string> = new Set();
+
+/** A Google place shown in the detail card: the hit, and Sonnet's words when it is a pick. */
+interface GoogleDetail {
+  hit: DetailedHit;
+  pick: AskPickNote | null;
+}
+
+function detailedHit(hit: GoogleHit): DetailedHit | null {
+  return hit.result === undefined ? null : { ...hit, result: hit.result };
+}
 
 /**
  * The Places screen: one full-bleed DataView of every saved place — Map,
@@ -130,6 +160,9 @@ function PlacesSurface({
   tags: readonly PlaceTag[];
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // A Google place not saved yet, in the detail card (exclusive with the
+  // selection: opening one closes the other).
+  const [detail, setDetail] = useState<GoogleDetail | null>(null);
   const [manager, setManager] = useState<{ focusTagId: string | null } | null>(
     null,
   );
@@ -149,21 +182,31 @@ function PlacesSurface({
   // rung) and the save it ends in are billed together.
   const [session, setSession] = useState(() => crypto.randomUUID());
   const [hoveredGoogleId, setHoveredGoogleId] = useState<string | null>(null);
-  const [revealGoogle, setRevealGoogle] = useState<{ placeId: string } | null>(
-    null,
-  );
   const [saveNotConfigured, setSaveNotConfigured] = useState(false);
-  // Ask Sonnet: the question's background run, shown in the panel as a thread
-  // (in place of the search) and in the bar as a pill; its picks are the
-  // map's proposals while it is open.
+  // Ask Sonnet: the question's background run, docked on the right as a
+  // thread card the bar's pill shows and hides; its picks are on the map while
+  // it is in hand — the current result's, plus every earlier one unfolded in
+  // the thread (unfolded per run, so another run starts folded).
   const ask = useAsk(bounds);
-  const google = useGoogleSearch({
-    text: ask.conversationId === null ? query : "",
+  const google = useGoogleSearch({ text: query, bounds, session, tags });
+  const [expanded, setExpanded] = useState<{
+    conversationId: string | null;
+    ids: ReadonlySet<string>;
+  }>({ conversationId: null, ids: NO_EXPANDED });
+  const expandedIds =
+    expanded.conversationId === ask.conversationId ? expanded.ids : NO_EXPANDED;
+  const toggleExpanded = (toolUseId: string) => {
+    const next = new Set(expandedIds);
+    if (next.has(toolUseId)) next.delete(toolUseId);
+    else next.add(toolUseId);
+    setExpanded({ conversationId: ask.conversationId, ids: next });
+  };
+  const askPicks = useAskMapPicks(
+    ask.conversationId,
+    expandedIds,
     bounds,
-    session,
     tags,
-  });
-  const askPicks = useLatestAskPicks(ask.conversationId, bounds, tags);
+  );
   const savedByGoogleId = useMemo(
     () =>
       new Map(
@@ -173,46 +216,50 @@ function PlacesSurface({
       ),
     [places],
   );
-  // Each hit not saved yet is proposed on the map; a saved one is its own pin.
-  // While Sonnet's thread is open, its picks are the proposals instead.
-  const ghostPins = useMemo(
-    (): MapPin[] =>
-      ask.conversationId !== null
-        ? askPicks.flatMap((p) =>
-            savedByGoogleId.has(p.hit.placeId) || p.hit.result === undefined
-              ? []
-              : [
-                  {
-                    kind: "pin",
-                    id: googlePinId(p.hit.placeId),
-                    position: { lat: p.hit.result.lat, lng: p.hit.result.lng },
-                    pinType: ASK_PICK_PIN_TYPE,
-                    label: p.hit.name,
-                    data: { n: p.n },
-                    frame: false,
-                  },
-                ],
-          )
-        : google.kind !== "answer"
-          ? []
-          : google.hits.flatMap((hit) =>
-            hit.result === undefined || savedByGoogleId.has(hit.placeId)
-              ? []
-              : [
-                  {
-                    kind: "pin",
-                    id: googlePinId(hit.placeId),
-                    position: { lat: hit.result.lat, lng: hit.result.lng },
-                    pinType: GOOGLE_RESULT_PIN_TYPE,
-                    label: hit.name,
-                    data: hit.visual,
-                    // A proposal: the camera never moves to it.
-                    frame: false,
-                  },
-                ],
-          ),
-    [ask.conversationId, askPicks, google, savedByGoogleId],
+  const googleHits = useMemo(
+    () => (google.kind === "answer" ? google.hits : []),
+    [google],
   );
+  // Each hit not saved yet is proposed on the map; a saved one is its own pin.
+  // Sonnet's picks first: a place both picked and searched is drawn as the
+  // pick (one pin per place).
+  const ghostPins = useMemo((): MapPin[] => {
+    const pinned = new Set<string>();
+    const pins: MapPin[] = [];
+    for (const p of askPicks) {
+      const { result } = p.hit;
+      if (result === undefined || savedByGoogleId.has(p.hit.placeId)) continue;
+      pinned.add(p.hit.placeId);
+      pins.push({
+        kind: "pin",
+        id: googlePinId(p.hit.placeId),
+        position: { lat: result.lat, lng: result.lng },
+        pinType: ASK_PICK_PIN_TYPE,
+        label: p.hit.name,
+        data: { n: p.n },
+        frame: false,
+      });
+    }
+    for (const hit of googleHits) {
+      if (
+        hit.result === undefined ||
+        savedByGoogleId.has(hit.placeId) ||
+        pinned.has(hit.placeId)
+      )
+        continue;
+      pins.push({
+        kind: "pin",
+        id: googlePinId(hit.placeId),
+        position: { lat: hit.result.lat, lng: hit.result.lng },
+        pinType: GOOGLE_RESULT_PIN_TYPE,
+        label: hit.name,
+        data: hit.visual,
+        // A proposal: the camera never moves to it.
+        frame: false,
+      });
+    }
+    return pins;
+  }, [askPicks, googleHits, savedByGoogleId]);
 
   const extraFields = useMemo(() => placeExtraFields(tags), [tags]);
   const selected =
@@ -222,14 +269,42 @@ function PlacesSurface({
   // does pick mode — its click on the map is the answer, not a click away.
   const showCard =
     selected !== undefined && manager === null && pinPick === null;
+  const showDetail =
+    detail !== null && !showCard && manager === null && pinPick === null;
+  // The place card or the detail card: one at a time, in the same spot.
+  const cardOpen = showCard || showDetail;
+  const closeCards = useCallback(() => {
+    setSelectedId(null);
+    setDetail(null);
+  }, []);
+  // Where the right-hand chrome ends: the card beside the thread, the card,
+  // the thread, or nothing.
+  const rightReach = cardOpen
+    ? ask.shown
+      ? CARD_BESIDE_THREAD_REACH
+      : CARD_REACH
+    : ask.shown
+      ? THREAD_REACH
+      : null;
+  const pastRight = cardOpen
+    ? ask.shown
+      ? PAST_CARD_BESIDE_THREAD
+      : PAST_CARD
+    : ask.shown
+      ? PAST_THREAD
+      : 0;
 
   const { containerRef, probeRef, padding: fitPadding } = useCoveredEdges();
   const cardRef = useRef<HTMLElement>(null);
+  const threadRef = useRef<HTMLElement>(null);
+  // The thread is the card's companion: working in it (replying, unfolding
+  // an earlier answer) is no click away from the pick it shows.
+  const clickAwayPanels = useMemo(() => [cardRef, threadRef], []);
   const { claim } = useClickAway({
-    active: showCard,
+    active: cardOpen,
     region: containerRef,
-    panel: cardRef,
-    onDismiss: () => setSelectedId(null),
+    panels: clickAwayPanels,
+    onDismiss: closeCards,
   });
 
   // What a click on the map does in pick mode; undefined = not picking (or a
@@ -242,6 +317,7 @@ function PlacesSurface({
         // The click that answered is no click away from the card it reopens.
         claim();
         setPinPick(null);
+        setDetail(null);
         setSelectedId(place.id);
         void updatePlace({ params: { id: place.id }, body: { location: at } });
       };
@@ -253,6 +329,7 @@ function PlacesSurface({
       // Out of pick mode first: a second click must not drop a second pin.
       setPinPick(null);
       void createCustomPlace({ body: { name, ...at } }).then((place) => {
+        setDetail(null);
         setSelectedId(place.id);
       });
     };
@@ -269,8 +346,8 @@ function PlacesSurface({
           // nearer thing to close. A popover open in the card owns its Esc.
           priority: 1,
           // The open search panel owns its own Esc.
-          when: () => showCard && !searchOpen,
-          handler: () => setSelectedId(null),
+          when: () => cardOpen && !searchOpen,
+          handler: closeCards,
         },
         {
           id: "places.cancel-pin-pick",
@@ -281,9 +358,22 @@ function PlacesSurface({
           handler: () => setPinPick(null),
         },
       ],
-      [showCard, pinPick, searchOpen],
+      [cardOpen, pinPick, searchOpen, closeCards],
     ),
   );
+
+  // A pick's or a ghost's click opens its detail card.
+  const activateGhost = useEventCallback((id: string) => {
+    const placeId = googlePlaceIdOfPin(id);
+    if (placeId === null) return;
+    const pick = askPicks.find((p) => p.hit.placeId === placeId);
+    if (pick !== undefined) {
+      openPick(pick);
+      return;
+    }
+    const hit = googleHits.find((h) => h.placeId === placeId);
+    if (hit !== undefined) openHit(hit, null);
+  });
 
   const viewOptions = useMemo(
     () => ({
@@ -303,14 +393,7 @@ function PlacesSurface({
         ...(pick === undefined ? {} : { pick }),
         overlays: {
           items: ghostPins,
-          onActivate: (id) => {
-            const placeId = googlePlaceIdOfPin(id);
-            if (placeId === null) return;
-            // A ghost's click shows its card, in the panel.
-            setSearchOpen(true);
-            setHoveredGoogleId(placeId);
-            setRevealGoogle({ placeId });
-          },
+          onActivate: activateGhost,
         },
         hoveredId:
           hoveredGoogleId === null ? null : googlePinId(hoveredGoogleId),
@@ -333,16 +416,37 @@ function PlacesSurface({
         leading: (p: Place) => <PlaceGlyph visual={placeVisual(p, tags)} />,
       },
     }),
-    [tags, fitPadding, pick, ghostPins, hoveredGoogleId],
+    [tags, fitPadding, pick, ghostPins, hoveredGoogleId, activateGhost],
   );
 
-  const openPlace = (place: Place) => {
+  function openPlace(place: Place) {
     claim();
     setSearchOpen(false);
+    setDetail(null);
     setSelectedId(place.id);
-  };
+  }
 
-  const saveHit = async (hit: GoogleHit) => {
+  /** A Google place's card: the place card once it is saved, else the detail card. */
+  function openHit(hit: GoogleHit, note: AskPickNote | null) {
+    const saved = savedByGoogleId.get(hit.placeId);
+    if (saved !== undefined) {
+      openPlace(saved);
+      return;
+    }
+    const detailed = detailedHit(hit);
+    if (detailed === null) return;
+    claim();
+    setSearchOpen(false);
+    setSelectedId(null);
+    setDetail({ hit: detailed, pick: note });
+  }
+
+  function openPick(p: AskPick) {
+    openHit(p.hit, { n: p.n, why: p.why, about: p.about, sources: p.sources });
+  }
+
+  /** Save a Google hit; resolves the saved place (an earlier save too), or null when Maps is not set up. */
+  const saveHit = async (hit: GoogleHit): Promise<Place | null> => {
     const result = await savePlace({
       body: {
         googlePlaceId: hit.placeId,
@@ -352,10 +456,10 @@ function PlacesSurface({
     });
     if (result.kind === "maps-not-configured") {
       setSaveNotConfigured(true);
-      return;
+      return null;
     }
     if (hit.result === undefined) setSession(crypto.randomUUID());
-    if (result.kind === "already-saved") return;
+    if (result.kind === "already-saved") return result.place;
     const place = result.place;
     const tagged = [
       ...place.autoTags.flatMap((id) => tagPath(id, tags).slice(-1)),
@@ -371,6 +475,10 @@ function PlacesSurface({
         onClick: () => void deletePlace({ params: { id: place.id } }),
       },
     });
+    return place;
+  };
+  const saveCard = async (hit: GoogleHit): Promise<void> => {
+    await saveHit(hit);
   };
 
   const askQuestion = (q: string) => {
@@ -378,9 +486,10 @@ function PlacesSurface({
     if (question === "") return;
     void ask.start(question).then((started) => {
       if (!started) return;
-      // The question is the thread's first bubble now, not a filter.
+      // The question is the thread's first bubble now, not a filter; the
+      // thread card shows it.
       setQuery("");
-      setSearchOpen(true);
+      setSearchOpen(false);
     });
   };
 
@@ -401,7 +510,7 @@ function PlacesSurface({
         style={{
           top: BELOW_TOOLBAR,
           left: PAST_SIDEBAR,
-          right: showCard ? PAST_CARD : 0,
+          right: pastRight,
         }}
       />
       <DataView<Place>
@@ -415,43 +524,26 @@ function PlacesSurface({
         searchPlaceholder="Search or add places"
         search={{
           query,
-          onQueryChange: (next) => {
-            // Typing goes back to the search: the run goes on in the
-            // background (and in the Agent Manager).
-            if (ask.conversationId !== null) ask.close();
-            setQuery(next);
-          },
+          // Typing searches; the thread card is untouched by it.
+          onQueryChange: setQuery,
           onSubmit: (q, { mod }) => {
-            if (ask.conversationId === null && (mod || looksLikeQuestion(q)))
-              askQuestion(q);
+            if (mod || looksLikeQuestion(q)) askQuestion(q);
           },
-          ...(ask.conversationId === null || searchOpen
+          ...(ask.conversationId === null
             ? {}
             : {
                 trailing: (
                   <AskPill
                     conversationId={ask.conversationId}
-                    onOpen={() => setSearchOpen(true)}
+                    shown={ask.shown}
+                    onToggle={ask.toggle}
                   />
                 ),
               }),
           suggestions: {
             open: searchOpen && pinPick === null,
             onOpenChange: setSearchOpen,
-            content:
-              ask.conversationId !== null ? (
-                <AskThreadPanel
-                  conversationId={ask.conversationId}
-                  tags={tags}
-                  bounds={bounds}
-                  savedByGoogleId={savedByGoogleId}
-                  hoveredGoogleId={hoveredGoogleId}
-                  onHoverGoogle={setHoveredGoogleId}
-                  onSave={saveHit}
-                  onOpenPlace={openPlace}
-                  onClose={ask.close}
-                />
-              ) : (
+            content: (
               <UniversalSearchPanel
                 places={places}
                 tags={tags}
@@ -460,16 +552,20 @@ function PlacesSurface({
                 savedByGoogleId={savedByGoogleId}
                 hoveredGoogleId={hoveredGoogleId}
                 onHoverGoogle={setHoveredGoogleId}
-                revealGoogle={revealGoogle}
                 onOpenPlace={openPlace}
-                onSave={saveHit}
+                onOpenHit={(hit) => openHit(hit, null)}
+                onSave={saveCard}
                 saveNotConfigured={saveNotConfigured}
                 onDropCustom={(name) => {
                   setSearchOpen(false);
                   setPinPick({ kind: "drop", name });
                 }}
-                  onAsk={askQuestion}
-                  askBlocked={ask.blocked}
+                onAsk={askQuestion}
+                askBlocked={ask.blocked}
+                onOpenRun={(id) => {
+                  setSearchOpen(false);
+                  ask.open(id);
+                }}
               />
             ),
           },
@@ -477,7 +573,7 @@ function PlacesSurface({
         views={["map", "gallery", "list"]}
         toolbar={floatingToolbar}
         backdrop="map"
-        reserve={showCard ? { right: CARD_REACH } : undefined}
+        reserve={rightReach === null ? undefined : { right: rightReach }}
         aside={
           <TagSidebar
             places={places}
@@ -490,6 +586,7 @@ function PlacesSurface({
         onRowActivate={(p) => {
           // Selecting another place swaps the card; it is not a click away.
           claim();
+          setDetail(null);
           setSelectedId(p.id);
         }}
         selectedRowId={selected?.id}
@@ -506,7 +603,11 @@ function PlacesSurface({
           offset="md"
           spanOffset="md"
           layer="float"
-          style={{ top: BELOW_TOOLBAR, left: PAST_SIDEBAR }}
+          style={{
+            top: BELOW_TOOLBAR,
+            left: PAST_SIDEBAR,
+            ...(ask.shown ? { right: PAST_THREAD } : {}),
+          }}
         >
           <TagManagerPanel
             places={places}
@@ -524,7 +625,10 @@ function PlacesSurface({
           offset="md"
           spanOffset="md"
           layer="float"
-          style={{ top: BELOW_TOOLBAR }}
+          style={{
+            top: BELOW_TOOLBAR,
+            ...(ask.shown ? { right: PAST_THREAD } : {}),
+          }}
           // The card hugs its content inside this column: the room below it
           // is the map's, so clicks there pass through.
           className="pointer-events-none"
@@ -535,6 +639,65 @@ function PlacesSurface({
             tags={tags}
             onClose={() => setSelectedId(null)}
             onMovePin={() => setPinPick({ kind: "move", place: selected })}
+          />
+        </Pin>
+      ) : null}
+      {showDetail && detail !== null ? (
+        <Pin
+          ref={cardRef}
+          to="right"
+          stretch
+          offset="md"
+          spanOffset="md"
+          layer="float"
+          style={{
+            top: BELOW_TOOLBAR,
+            ...(ask.shown ? { right: PAST_THREAD } : {}),
+          }}
+          className="pointer-events-none"
+        >
+          <GooglePlaceCard
+            key={detail.hit.placeId}
+            hit={detail.hit}
+            pick={detail.pick}
+            onClose={() => setDetail(null)}
+            onSave={async () => {
+              const place = await saveHit(detail.hit);
+              // Saved: it is one of your places now — its own card.
+              if (place !== null) {
+                setDetail(null);
+                setSelectedId(place.id);
+              }
+            }}
+          />
+        </Pin>
+      ) : null}
+      {ask.conversationId !== null && ask.shown ? (
+        <Pin
+          ref={threadRef}
+          to="right"
+          stretch
+          offset="md"
+          spanOffset="md"
+          layer="float"
+          style={{ top: BELOW_TOOLBAR }}
+        >
+          <AskThreadCard
+            conversationId={ask.conversationId}
+            tags={tags}
+            bounds={bounds}
+            savedByGoogleId={savedByGoogleId}
+            hoveredGoogleId={hoveredGoogleId}
+            onHoverGoogle={setHoveredGoogleId}
+            onSave={saveCard}
+            onOpenPick={openPick}
+            expanded={expandedIds}
+            onToggleExpanded={toggleExpanded}
+            onHide={ask.hide}
+            onEnded={() => {
+              ask.release();
+              setDetail(null);
+            }}
           />
         </Pin>
       ) : null}

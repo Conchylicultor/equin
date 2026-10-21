@@ -50,6 +50,14 @@ newest turn's finished steps, its running step, its accepted results, and
   working (its rewound text goes back to the draft). A pending question mounts
   the `JsonlViewer.PendingPrompt` dispatch; sent turns show as
   `PendingTurnCard`s.
+- `<EndThreadButton conversationId onEnded? />` — **Done**, the UI's
+  `exit_clean`: a ghost button (tooltip "Close the conversation and drop its
+  task") that calls the conversation view's `dropAndExit` (drop-and-exit core —
+  drops the task unless work landed, which a scratch run never has, then closes
+  the conversation), then `onEnded`. Renders nothing until the row is in and
+  once it is `done` / `gone`. A failure is a toast. The host places it (the
+  thread's `headerAction`, typically) and clears its own selection in
+  `onEnded`.
 - `AgentThreadView` — the same look over given turns, every live part handed
   in. The exhibits render it.
 - `AgentThreadSlots.StepLabel` — dispatch on the tool's own name; the host
@@ -89,7 +97,7 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
 
 ## Plugin reference
 
-- Description: Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the AgentThreadSlots.StepLabel dispatch, its answer, the host's own result cards, a composer that resumes an ended conversation), the hooks a host's other surfaces read (useThreadTurns, useThreadProgress, useLatestResult), generic step labels for the common built-in tools, and useThreadRuns (a host's recent runs under its scratch profile). Serves `agent-thread.runs` — the recent conversations launched in a scratch workspace, newest first, filterable by profile — over `_conversations` with the attempt joined (routed: a conversation write refills its own row).
+- Description: Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the AgentThreadSlots.StepLabel dispatch, its answer, the host's own result cards, a composer that resumes an ended conversation), EndThreadButton (Done: close the conversation and drop its task), the hooks a host's other surfaces read (useThreadTurns, useThreadProgress, useLatestResult), generic step labels for the common built-in tools, and useThreadRuns (a host's recent runs under its scratch profile). Serves `agent-thread.runs` — the recent conversations launched in a scratch workspace, newest first, filterable by profile — over `_conversations` with the attempt joined (routed: a conversation write refills its own row).
 - Web:
   - Slots: `AgentThreadSlots.StepLabel`
   - Slot contributors:
@@ -149,6 +157,7 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
   - Exports (types):
     - `AgentThreadProps`
     - `AgentThreadViewProps`
+    - `EndThreadButtonProps`
     - `RenderThreadResult`
     - `ResultWords`
     - `StartThreadOptions`
@@ -161,6 +170,7 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `AgentThread`
     - `AgentThreadSlots`
     - `AgentThreadView`
+    - `EndThreadButton`
     - `StepLabel`
     - `useLatestResult`
     - `useStartThread`

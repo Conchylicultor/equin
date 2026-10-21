@@ -7,7 +7,7 @@ function queryOf(input: unknown): string | undefined {
   return typeof q === "string" ? q : undefined;
 }
 
-/** "Searched Google for “chinese restaurant” around this map → 12 places". */
+/** "Searched Maps for “chinese restaurant” around this map → 12 places". */
 export function SearchStepLabel({ event }: StepLabelProps) {
   const query = queryOf(event.input);
   const count =
@@ -16,7 +16,7 @@ export function SearchStepLabel({ event }: StepLabelProps) {
       : searchCountOf(event.result.content);
   return (
     <>
-      Searched Google
+      Searched Maps
       {query === undefined ? null : (
         <span className="text-muted-foreground"> for “{query}”</span>
       )}{" "}

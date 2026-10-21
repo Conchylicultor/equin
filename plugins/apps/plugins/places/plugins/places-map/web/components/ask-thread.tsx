@@ -1,15 +1,22 @@
 import type { ReactNode } from "react";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { MapBounds } from "@plugins/map/core";
-import { AgentThread } from "@plugins/conversations/plugins/agent-thread/web";
+import {
+  AgentThread,
+  EndThreadButton,
+} from "@plugins/conversations/plugins/agent-thread/web";
 import {
   placesPicks,
   type PlacesPicks,
@@ -18,18 +25,28 @@ import type {
   Place,
   PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
-import { picksOf, useAskCandidates } from "../internal/ask-picks";
+import {
+  picksOf,
+  useAskCandidates,
+  useAskResults,
+  type AskPick,
+} from "../internal/ask-picks";
 import { GoogleResultCard, type GoogleHit } from "./google-result-card";
 
 const sonnetIcon = symbol("auto-awesome");
-const closeIcon = symbol("close");
+const hideIcon = symbol("right-panel-close");
+const expandIcon = symbol("chevron-right");
+const collapseIcon = symbol("expand-more");
 
 const RESULTS = [placesPicks];
 
-/** The thread's height inside the search panel: room for a turn and its cards. */
-const THREAD_HEIGHT = "min(36rem, 70vh)";
+/** The docked card's width — the screen also reads it, to keep pins and cards out from under it. */
+export const ASK_THREAD_WIDTH = "380px";
 
-export interface AskThreadPanelProps {
+/** Names an earlier result's summary line lists before "…". */
+const SUMMARY_NAMES = 3;
+
+export interface AskThreadCardProps {
   conversationId: string;
   tags: readonly PlaceTag[];
   bounds: MapBounds | null;
@@ -37,21 +54,44 @@ export interface AskThreadPanelProps {
   hoveredGoogleId: string | null;
   onHoverGoogle: (placeId: string | null) => void;
   onSave: (hit: GoogleHit) => Promise<void>;
-  onOpenPlace: (place: Place) => void;
-  /** Back to the search (the run goes on in the Agent Manager). */
-  onClose: () => void;
+  /** Open a pick's detail card (a saved one: its place card). */
+  onOpenPick: (pick: AskPick) => void;
+  /** Earlier results unfolded to their cards (and their pins), by call id. */
+  expanded: ReadonlySet<string>;
+  onToggleExpanded: (toolUseId: string) => void;
+  /** Collapse the card to its pill; the run goes on. */
+  onHide: () => void;
+  /** The run was ended (Done). */
+  onEnded: () => void;
 }
 
 /**
- * Ask Sonnet's run, in the search panel: the conversation as a thread (your
- * question, Sonnet's steps, its answer), each turn's picks as Google cards
- * with why they fit — Save on each — and a reply box to refine. Older turns'
- * picks shrink to their names.
+ * Ask Sonnet's run, docked on the right of the map as a full-height card: the
+ * conversation as a thread (your question, Sonnet's steps, its answer), a
+ * reply box to refine, and in the header Done (closes the conversation and
+ * drops its task — it stays in the history, and can be reopened and replied
+ * to) and Hide (back to the pill). The CURRENT result — the newest picks,
+ * whichever turn gave them — shows as cards (photo, rank, why, about,
+ * sources, Save; a click opens the pick's detail card); each earlier one is a
+ * one-line summary that unfolds to its cards, and its pins join the map's
+ * while unfolded.
  */
-export function AskThreadPanel(props: AskThreadPanelProps) {
-  const { conversationId, onClose } = props;
+export function AskThreadCard(props: AskThreadCardProps) {
+  const { conversationId, onHide, onEnded } = props;
+  const results = useAskResults(conversationId);
+  const currentId =
+    results.status === "ready"
+      ? (results.data.at(-1)?.toolUseId ?? null)
+      : null;
   return (
-    <div style={{ height: THREAD_HEIGHT }}>
+    <Surface
+      level="overlay"
+      className={cn(
+        "pointer-events-auto h-full",
+        clipClasses({ axis: "both", fill: false }),
+      )}
+      style={{ width: ASK_THREAD_WIDTH }}
+    >
       <AgentThread
         conversationId={conversationId}
         results={RESULTS}
@@ -65,33 +105,45 @@ export function AskThreadPanel(props: AskThreadPanelProps) {
         }
         resultWords={(n) => `${n} pick${n === 1 ? "" : "s"}`}
         headerAction={
-          <IconButton
-            icon={closeIcon}
-            label="Back to search"
-            onClick={onClose}
-          />
+          <>
+            <EndThreadButton
+              conversationId={conversationId}
+              onEnded={onEnded}
+            />
+            <IconButton icon={hideIcon} label="Hide" onClick={onHide} />
+          </>
         }
         placeholder="Reply to Sonnet — e.g. cheaper, open late"
-        renderResult={(result, { latest }) => (
-          <Picks {...props} payload={result.payload} latest={latest} />
+        renderResult={(result) => (
+          <Picks
+            {...props}
+            toolUseId={result.toolUseId}
+            payload={result.payload}
+            current={result.toolUseId === currentId}
+          />
         )}
       />
-    </div>
+    </Surface>
   );
 }
 
-function Picks({
-  conversationId,
-  tags,
-  bounds,
-  savedByGoogleId,
-  hoveredGoogleId,
-  onHoverGoogle,
-  onSave,
-  onOpenPlace,
-  payload,
-  latest,
-}: AskThreadPanelProps & { payload: PlacesPicks; latest: boolean }): ReactNode {
+function Picks(
+  props: AskThreadCardProps & {
+    toolUseId: string;
+    payload: PlacesPicks;
+    current: boolean;
+  },
+): ReactNode {
+  const {
+    conversationId,
+    tags,
+    bounds,
+    toolUseId,
+    payload,
+    current,
+    expanded,
+    onToggleExpanded,
+  } = props;
   const candidates = useAskCandidates(conversationId);
   if (candidates.status === "loading")
     return <Loading variant="rows" count={2} />;
@@ -112,23 +164,44 @@ function Picks({
       </Text>
     );
   }
-  if (!latest) {
-    // An earlier answer: its picks by name, struck — the map shows the newest.
-    return (
-      <Cluster gap="sm">
-        {picks.map((p) => (
-          <Text
-            key={p.hit.placeId}
-            variant="caption"
-            tone="muted"
-            className="line-through"
-          >
-            {p.hit.name}
+  if (current) return <PickCards {...props} picks={picks} />;
+  // An earlier answer: one line, unfolding to its cards (and its pins).
+  const open = expanded.has(toolUseId);
+  const names = picks.slice(0, SUMMARY_NAMES).map((p) => p.hit.name);
+  return (
+    <Stack gap="2xs">
+      <Line
+        as="button"
+        type="button"
+        aria-expanded={open}
+        onClick={() => onToggleExpanded(toolUseId)}
+        className="w-full gap-xs rounded-md border px-sm py-xs text-left text-muted-foreground hover:bg-hover-fill"
+      >
+        <Icon icon={open ? collapseIcon : expandIcon} className="size-4" />
+        <Fill>
+          <Text variant="caption" tone="muted">
+            {`${picks.length} pick${picks.length === 1 ? "" : "s"} · ${names.join(", ")}${picks.length > SUMMARY_NAMES ? "…" : ""}`}
           </Text>
-        ))}
-      </Cluster>
-    );
-  }
+        </Fill>
+        <Text variant="caption" tone="muted">
+          {open ? "Hide" : "Show"}
+        </Text>
+      </Line>
+      <FoldMotion open={open}>
+        <PickCards {...props} picks={picks} />
+      </FoldMotion>
+    </Stack>
+  );
+}
+
+function PickCards({
+  picks,
+  savedByGoogleId,
+  hoveredGoogleId,
+  onHoverGoogle,
+  onSave,
+  onOpenPick,
+}: AskThreadCardProps & { picks: readonly AskPick[] }): ReactNode {
   return (
     <Stack gap="2xs">
       {picks.map((p) => {
@@ -137,14 +210,13 @@ function Picks({
           <GoogleResultCard
             key={p.hit.placeId}
             hit={p.hit}
-            pick={{ n: p.n, why: p.why }}
+            pick={p}
             highlighted={p.hit.placeId === hoveredGoogleId}
             onHover={onHoverGoogle}
             saved={saved !== undefined}
             onSave={() => onSave(p.hit)}
-            onOpenSaved={() => {
-              if (saved !== undefined) onOpenPlace(saved);
-            }}
+            onOpenSaved={() => onOpenPick(p)}
+            onOpen={() => onOpenPick(p)}
           />
         );
       })}

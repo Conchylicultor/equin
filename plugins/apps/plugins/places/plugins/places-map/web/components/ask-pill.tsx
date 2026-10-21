@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
@@ -16,14 +16,17 @@ const RESULTS = [placesPicks];
 /**
  * Ask Sonnet's run, in the search bar: while it works, a spinner and the step
  * it is on; once it answered, how many picks — with a dot until you have
- * looked. A click opens the thread in the panel.
+ * looked. A click shows the thread's side card, or hides it — the pill
+ * stays either way, filled while the card is shown.
  */
 export function AskPill({
   conversationId,
-  onOpen,
+  shown,
+  onToggle,
 }: {
   conversationId: string;
-  onOpen: () => void;
+  shown: boolean;
+  onToggle: () => void;
 }) {
   const progress = useThreadProgress(conversationId, RESULTS);
   const p = progress.status === "ready" ? progress.data : null;
@@ -31,9 +34,15 @@ export function AskPill({
     <Button
       variant="ghost"
       shape="pill"
-      className="max-w-64 bg-primary/10 text-primary-text"
-      onClick={onOpen}
-      aria-label="Open Sonnet's answer"
+      className={cn(
+        "max-w-64",
+        shown
+          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+          : "bg-primary/10 text-primary-text",
+      )}
+      onClick={onToggle}
+      aria-pressed={shown}
+      aria-label={shown ? "Hide Sonnet's thread" : "Show Sonnet's thread"}
     >
       {p === null || p.state === "working" ? (
         <Spinner />
@@ -62,7 +71,9 @@ export function AskPill({
           `${p.resultCount} pick${p.resultCount === 1 ? "" : "s"}`
         )}
       </Text>
-      {p !== null && p.unseen ? <StatusDot colorClass="bg-primary" /> : null}
+      {p !== null && p.unseen && !shown ? (
+        <StatusDot colorClass="bg-primary" />
+      ) : null}
     </Button>
   );
 }

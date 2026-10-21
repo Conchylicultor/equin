@@ -16,7 +16,7 @@ import {
 } from "../../core";
 import { candidateIds, recordCandidates } from "./candidates";
 import { searchAnswer } from "./format";
-import { unknownPicks } from "./picks";
+import { picksWithoutAbout, unknownPicks } from "./picks";
 
 /** The map's view the run was launched over (its scratch input). */
 async function boundsOf(conversationId: string): Promise<PlaceBounds> {
@@ -76,13 +76,19 @@ export const searchTextTool = Mcp.tool({
 export const showPicksTool = Mcp.tool({
   name: PICKS_TOOL,
   profiles: [PLACES_ASK_PROFILE],
-  description: `Show your picks to the user: cards in the search panel and numbered pins on their map, in this order (best first). Replaces your previous picks. Only placeIds your ${SEARCH_TOOL} returned are accepted. Call it once per turn, then end your turn with one or two sentences.`,
+  description: `Show your picks to the user: cards in the search panel and numbered pins on their map, in this order (best first). Each pick needs \`why\` (one line of checked facts) AND \`about\` (1–3 sentences: what makes it special and why it fits, from your sources), plus \`sources\` when you read about it on the web. The newest call is the map's current set; earlier sets stay in the thread, collapsed — so when you narrow or re-rank, re-include the earlier picks that still fit (with their about). Only placeIds your ${SEARCH_TOOL} returned are accepted. Call it at most once per turn, then end your turn with one or two sentences.`,
   inputSchema: PlacesPicksSchema.shape,
   async handler({ picks }, { conversationId }) {
     const unknown = unknownPicks(picks, await candidateIds(conversationId));
     if (unknown.length > 0) {
       throw new Error(
         `Not from your searches: ${unknown.join(", ")}. Pick only placeIds ${SEARCH_TOOL} returned (search again if you need another place).`,
+      );
+    }
+    const bare = picksWithoutAbout(picks);
+    if (bare.length > 0) {
+      throw new Error(
+        `Missing \`about\` on: ${bare.join(", ")}. Give every pick 1–3 sentences on what makes it special and why it fits.`,
       );
     }
     return {

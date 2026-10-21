@@ -27,6 +27,8 @@ export type { StepLabelContribution, StepLabelProps } from "./slots";
 export { AgentThread } from "./components/agent-thread";
 export type { AgentThreadProps } from "./components/agent-thread";
 export { AgentThreadView } from "./components/agent-thread-view";
+export { EndThreadButton } from "./components/end-thread-button";
+export type { EndThreadButtonProps } from "./components/end-thread-button";
 export type {
   AgentThreadViewProps,
   RenderThreadResult,
@@ -43,7 +45,7 @@ export type { ThreadSnapshot } from "./internal/use-thread";
 
 export default {
   description:
-    "Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the AgentThreadSlots.StepLabel dispatch, its answer, the host's own result cards, a composer that resumes an ended conversation), the hooks a host's other surfaces read (useThreadTurns, useThreadProgress, useLatestResult), generic step labels for the common built-in tools, and useThreadRuns (a host's recent runs under its scratch profile).",
+    "Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the AgentThreadSlots.StepLabel dispatch, its answer, the host's own result cards, a composer that resumes an ended conversation), EndThreadButton (Done: close the conversation and drop its task), the hooks a host's other surfaces read (useThreadTurns, useThreadProgress, useLatestResult), generic step labels for the common built-in tools, and useThreadRuns (a host's recent runs under its scratch profile).",
   slots: AgentThreadSlotGroup,
   contributions: [
     AgentThreadSlotGroup.StepLabel({ match: "Read", component: ReadStepLabel }),

@@ -25,6 +25,9 @@ const photosIcon = symbol("photo-library");
 /** Photos are fetched at twice the card's width, for a sharp hi-dpi strip. */
 const PHOTO_FETCH_PX = 720;
 
+/** What the wash is painted from: a saved place's visual, or a Google hit's. */
+type HeroVisual = Pick<PlaceVisual, "colors" | "mainColor" | "icon">;
+
 /**
  * What tops the card: Google's photos when it has some, else the colour wash
  * (`photos: []` — a custom place, one Google no longer knows, or one without
@@ -38,7 +41,7 @@ export function PlaceHero({
   children,
 }: {
   photos: readonly PlacePhoto[] | "loading";
-  visual: PlaceVisual;
+  visual: HeroVisual;
   children: ReactNode;
 }): ReactNode {
   return (
@@ -62,7 +65,7 @@ export function PlaceHero({
  * watermark — the hero of a place without photos. User colours: painted
  * through `style`.
  */
-function Wash({ visual }: { visual: PlaceVisual }): ReactNode {
+function Wash({ visual }: { visual: HeroVisual }): ReactNode {
   const tint = (c: string, pct: number) =>
     `color-mix(in srgb, ${c} ${pct}%, white)`;
   const background =

@@ -5,7 +5,9 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { placeThumbnailUrl } from "@plugins/apps/plugins/places/plugins/place-details/core";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { PlaceVisual } from "../internal/place-visual";
 import { paleTint, washInk } from "../internal/pin-paint";
 
@@ -35,21 +37,25 @@ export function PlaceGlyph({ visual }: { visual: PlaceVisual }) {
 }
 
 /**
- * A place's gallery cover: Google's first photo of it (a thumbnail the server
- * fetches once and keeps), over its colours as a pale wash (a diagonal blend
- * for several) with its icon large in the darkened main colour — the wash
- * shows while the photo loads, and stays for a custom place or one Google has
- * no photo of. A pill in the corner for each of Want to go and Been it
- * carries (both, one or none).
+ * Google's first photo of a place (a thumbnail the server fetches once and
+ * keeps), over its colours as a pale wash (a diagonal blend for several) with
+ * its icon in the darkened main colour — the wash shows while the photo
+ * loads, and stays for a custom place (`googlePlaceId: null`) or one Google
+ * has no photo of. Fills its box; `children` overlay it.
  */
-export function PlaceCover({
+export function PlacePhotoWash({
   visual,
   googlePlaceId,
+  iconClassName,
+  children,
 }: {
-  visual: PlaceVisual;
+  visual: Pick<PlaceVisual, "colors" | "mainColor" | "icon">;
   googlePlaceId: string | null;
+  /** The watermark icon's size (a cover's, a thumbnail's). */
+  iconClassName: ClassName;
+  children?: ReactNode;
 }) {
-  // 404 (no photo) or 503 (Maps not set up): the wash is the cover.
+  // 404 (no photo) or 503 (Maps not set up): the wash is the picture.
   const [noPhoto, setNoPhoto] = useState(false);
   const background =
     visual.colors.length > 1
@@ -60,7 +66,7 @@ export function PlaceCover({
       <Icon
         icon={visual.icon}
         active
-        className="size-10"
+        className={iconClassName}
         style={{ color: washInk(visual.mainColor) }}
       />
       {googlePlaceId !== null && !noPhoto ? (
@@ -75,6 +81,29 @@ export function PlaceCover({
           />
         </Layer>
       ) : null}
+      {children}
+    </Center>
+  );
+}
+
+/**
+ * A place's gallery cover: its {@link PlacePhotoWash} with the icon large,
+ * and a pill in the corner for each of Want to go and Been it carries (both,
+ * one or none).
+ */
+export function PlaceCover({
+  visual,
+  googlePlaceId,
+}: {
+  visual: PlaceVisual;
+  googlePlaceId: string | null;
+}) {
+  return (
+    <PlacePhotoWash
+      visual={visual}
+      googlePlaceId={googlePlaceId}
+      iconClassName={cn("size-10")}
+    >
       {visual.want || visual.been ? (
         <Pin to="top-right" offset="sm">
           <Cluster gap="2xs">
@@ -91,6 +120,6 @@ export function PlaceCover({
           </Cluster>
         </Pin>
       ) : null}
-    </Center>
+    </PlacePhotoWash>
   );
 }

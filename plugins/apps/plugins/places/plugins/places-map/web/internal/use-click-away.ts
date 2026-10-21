@@ -7,7 +7,8 @@ const CLICK_SLOP_PX = 5;
 /**
  * Click-away dismissal for a non-modal panel floating over a surface (the
  * place card over the map): while `active`, a click anywhere in `region`
- * outside `panel` calls `onDismiss` — except
+ * outside every one of `panels` (the card, and any companion it lives beside
+ * — the docked thread whose picks it shows) calls `onDismiss` — except
  *
  * - a drag: the press travelled further than {@link CLICK_SLOP_PX} (panning
  *   the map, selecting text);
@@ -24,12 +25,13 @@ const CLICK_SLOP_PX = 5;
 export function useClickAway({
   active,
   region,
-  panel,
+  panels,
   onDismiss,
 }: {
   active: boolean;
   region: RefObject<HTMLElement | null>;
-  panel: RefObject<HTMLElement | null>;
+  /** Stable (memoized): a new list re-arms the listeners. */
+  panels: readonly RefObject<HTMLElement | null>[];
   onDismiss: () => void;
 }): { claim: () => void } {
   const claimed = useRef(false);
@@ -55,7 +57,7 @@ export function useClickAway({
       const target = e.target;
       if (!(target instanceof Node)) return;
       if (region.current?.contains(target) !== true) return;
-      if (panel.current?.contains(target) === true) return;
+      if (panels.some((p) => p.current?.contains(target) === true)) return;
       dismiss();
     };
     document.addEventListener("pointerdown", onPointerDown, true);
@@ -64,7 +66,7 @@ export function useClickAway({
       document.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("click", onClick);
     };
-  }, [active, region, panel, dismiss]);
+  }, [active, region, panels, dismiss]);
 
   // Stable, so a caller may close over it in a memo.
   const claim = useCallback(() => {

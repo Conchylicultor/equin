@@ -9,9 +9,14 @@ import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { PlaceCandidate } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
+import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import type { GoogleResultVisual } from "../internal/google-result";
+import type { AskPickNote } from "../internal/ask-picks";
 import { paleTint, washInk } from "../internal/pin-paint";
 import { OpenNowLine, RatingLine } from "./place-facts";
+import { PlacePhotoWash } from "./place-glyph";
+import { PickSources } from "./pick-sources";
 
 const saveIcon = symbol("add");
 const savedIcon = symbol("check");
@@ -36,7 +41,9 @@ export interface GoogleHit {
  * the name, Google's rating · count · price, its type and address, whether it
  * is open now — and Save, which adds it auto-tagged; a place already saved
  * says so and opens it instead. Hovering it lifts its ghost pin on the map,
- * and its pin hovered highlights it (`highlighted`).
+ * and its pin hovered highlights it (`highlighted`). With `onOpen`, a click
+ * anywhere else on it opens its detail card (a full-bleed hit button behind
+ * the content).
  */
 export function GoogleResultCard({
   hit,
@@ -46,6 +53,7 @@ export function GoogleResultCard({
   onSave,
   onOpenSaved,
   pick,
+  onOpen,
 }: {
   hit: GoogleHit;
   highlighted: boolean;
@@ -54,11 +62,14 @@ export function GoogleResultCard({
   onSave: () => Promise<void>;
   onOpenSaved: () => void;
   /**
-   * One of Sonnet's picks: its rank on the icon (the number its pin carries)
-   * and why it fits, in place of the open-now line — the reason names the
-   * hours it checked.
+   * One of Sonnet's picks: Google's photo of it with its rank on the corner
+   * (the number its pin carries), why it fits in place of the open-now line —
+   * the reason names the hours it checked — then what makes it special and
+   * where Sonnet read about it.
    */
-  pick?: { n: number; why: string };
+  pick?: AskPickNote;
+  /** Open the place's detail card. */
+  onOpen?: () => void;
 }): ReactNode {
   const { result, visual } = hit;
   return (
@@ -67,24 +78,62 @@ export function GoogleResultCard({
       onMouseEnter={() => onHover(hit.placeId)}
       onMouseLeave={() => onHover(null)}
       className={cn(
-        "rounded-panel-row p-sm transition-colors",
+        "relative rounded-panel-row p-sm transition-colors",
         highlighted && "bg-hover-fill",
       )}
     >
-      <Stack direction="row" gap="sm" align="start">
+      {onOpen === undefined ? null : (
+        <button
+          type="button"
+          aria-label={`Show ${hit.name}`}
+          onClick={onOpen}
+          className={cn(layerClasses(), "rounded-panel-row")}
+        />
+      )}
+      <Stack
+        direction="row"
+        gap="sm"
+        align="start"
+        // Over the hit button: clicks pass through but to its controls.
+        className={cn(
+          "relative",
+          onOpen !== undefined &&
+            "pointer-events-none [&_a]:pointer-events-auto [&_button]:pointer-events-auto",
+        )}
+      >
         <div className="relative">
-          <Center
-            aria-hidden
-            className="size-14 rounded-md"
-            style={{ backgroundColor: paleTint(visual.mainColor) }}
-          >
-            <Icon
-              icon={visual.icon}
-              active
-              className="size-7"
-              style={{ color: washInk(visual.mainColor) }}
-            />
-          </Center>
+          {pick === undefined ? (
+            <Center
+              aria-hidden
+              className="size-14 rounded-md"
+              style={{ backgroundColor: paleTint(visual.mainColor) }}
+            >
+              <Icon
+                icon={visual.icon}
+                active
+                className="size-7"
+                style={{ color: washInk(visual.mainColor) }}
+              />
+            </Center>
+          ) : (
+            <div
+              aria-hidden
+              className={cn(
+                "size-16 rounded-md",
+                clipClasses({ axis: "both", fill: false }),
+              )}
+            >
+              <PlacePhotoWash
+                visual={{
+                  colors: [visual.mainColor],
+                  mainColor: visual.mainColor,
+                  icon: visual.icon,
+                }}
+                googlePlaceId={hit.placeId}
+                iconClassName={cn("size-7")}
+              />
+            </div>
+          )}
           {pick === undefined ? null : (
             <Pin to="top-right" offset="xs" outset decorative>
               <Center className="size-5 rounded-full bg-primary text-primary-foreground ring-2 ring-background">
@@ -138,6 +187,12 @@ export function GoogleResultCard({
                 <Icon icon={whyIcon} className="size-3.5" />
                 <Text variant="caption">{pick.why}</Text>
               </Stack>
+            )}
+            {pick?.about === undefined ? null : (
+              <Text variant="caption">{pick.about}</Text>
+            )}
+            {pick === undefined || pick.sources.length === 0 ? null : (
+              <PickSources sources={pick.sources} />
             )}
             {pick !== undefined ||
             (result === undefined && !hit.offMap) ? null : (

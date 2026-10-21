@@ -6,7 +6,11 @@ export {
 } from "./internal/ids";
 export { PlacesAskInputSchema, type PlacesAskInput } from "./internal/input";
 export {
+  MAX_ABOUT_CHARS,
+  MAX_PICK_SOURCES,
   MAX_PICKS,
+  PickSourceSchema,
+  type PickSource,
   PlacesPicksSchema,
   type PlacesPicks,
   placesPicks,

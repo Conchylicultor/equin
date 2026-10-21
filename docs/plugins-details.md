@@ -5203,7 +5203,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --line-height-caption`
     - **`places`** — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
       - Plugins:
-        - **`ask`** — Ask Sonnet in the Places search bar, server half: the Places task category, the places.ask scratch profile (CLAUDE.md = the map's area and the user's clock; no shell, no exit_clean, so the run stays repliable), its places_search_text tool (Google Text Search biased to the launch's map area, on the search bar's downgrade ladder read server-side) and places_show_picks (the thread's result, refusing any id the run's searches never returned), and the conversations_ext_places_ask side-table of the Google candidates each run has seen, served lookup-only as places.ask.candidates (what a pick's card is drawn from).
+        - **`ask`** — Ask Sonnet in the Places search bar, server half: the Places task category, the places.ask scratch profile (CLAUDE.md = the map's area, its span and the user's clock, and the method: web research first — WebSearch / WebFetch over blogs, guides, Reddit — then each candidate looked up on Maps; no shell, no exit_clean, so the run stays repliable), its places_search_text tool (Google Text Search biased to the launch's map area, on the search bar's downgrade ladder read server-side) and places_show_picks (the thread's result — each pick a why, an about and its sources — refusing any id the run's searches never returned and any pick without an about), and the conversations_ext_places_ask side-table of the Google candidates each run has seen, served lookup-only as places.ask.candidates (what a pick's card is drawn from).
           - Server:
             - Contributes:
               - `taskCategory` "places"
@@ -5235,14 +5235,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/google-maps/places-api.PlaceCandidateSchema`
               - `network/live.liveCollection`
             - Exports (types):
+              - `PickSource`
               - `PlacesAskInput`
               - `PlacesPicks`
             - Exports (values):
               - `askCandidates`
               - `AskCandidatesSchema`
               - `askCandidatesShape`
+              - `MAX_ABOUT_CHARS`
+              - `MAX_PICK_SOURCES`
               - `MAX_PICKS`
               - `PICKS_TOOL`
+              - `PickSourceSchema`
               - `PLACES_ASK_PROFILE`
               - `PLACES_CATEGORY_ID`
               - `PlacesAskInputSchema`
@@ -5470,7 +5474,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/places/place-details`
               - `apps/places/places-map`
               - `apps/places/tag-manager`
-        - **`places-map`** — The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown in the panel as a thread, its picks as Google cards with why they fit and as numbered pins, its progress as a pill in the bar), the selected place's card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked).
+        - **`places-map`** — The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked).
           - Web:
             - Slots: `places-map.actions`
             - Slot contributors: `places-map.actions` ← `primitives.pane`
@@ -5483,24 +5487,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 109 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 114 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×9
+              - `conversations/agent-thread` ×8
               - `map` ×8
-              - `conversations/agent-thread` ×7
               - `primitives/data-view` ×7
+              - `primitives/collapsible` ×6
               - `network/live` ×5
-              - `primitives/collapsible` ×5
+              - `primitives/live-state` ×5
               - `primitives/css/ui-kit` ×4
-              - `primitives/live-state` ×4
               - `primitives/persistent-draft` ×3
               - `ui/icons` ×3
               - `apps/places/tag-manager` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
               - `integrations/google-maps` ×2
               - `primitives/css/control-panel` ×2
+              - `primitives/css/layer` ×2
               - `primitives/css/text` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/pane` ×2
+              - `primitives/relative-time` ×2
               - `apps/places/place-details.usePlaceDetails`
               - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
               - `integrations/google-maps/usage.useMapsBudget`
@@ -5514,7 +5520,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/coords.Placed`
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
-              - `primitives/css/layer.Layer`
               - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
@@ -5537,7 +5542,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/overlay/tooltip.Kbd`
-              - `primitives/relative-time.useNow`
               - `primitives/search.SearchInput`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `shell/toast.showToast`
@@ -12834,7 +12838,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `mergeLaunchSettings`
       - Cross-plugin:
         - Imported by: `conversations/runtime-sdk`
-    - **`agent-thread`** — Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the AgentThreadSlots.StepLabel dispatch, its answer, the host's own result cards, a composer that resumes an ended conversation), the hooks a host's other surfaces read (useThreadTurns, useThreadProgress, useLatestResult), generic step labels for the common built-in tools, and useThreadRuns (a host's recent runs under its scratch profile). Serves `agent-thread.runs` — the recent conversations launched in a scratch workspace, newest first, filterable by profile — over `_conversations` with the attempt joined (routed: a conversation write refills its own row).
+    - **`agent-thread`** — Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the AgentThreadSlots.StepLabel dispatch, its answer, the host's own result cards, a composer that resumes an ended conversation), EndThreadButton (Done: close the conversation and drop its task), the hooks a host's other surfaces read (useThreadTurns, useThreadProgress, useLatestResult), generic step labels for the common built-in tools, and useThreadRuns (a host's recent runs under its scratch profile). Serves `agent-thread.runs` — the recent conversations launched in a scratch workspace, newest first, filterable by profile — over `_conversations` with the attempt joined (routed: a conversation write refills its own row).
       - Web:
         - Slots: `AgentThreadSlots.StepLabel`
         - Slot contributors:
@@ -12894,6 +12898,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `AgentThreadProps`
           - `AgentThreadViewProps`
+          - `EndThreadButtonProps`
           - `RenderThreadResult`
           - `ResultWords`
           - `StartThreadOptions`
@@ -12906,6 +12911,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentThread`
           - `AgentThreadSlots`
           - `AgentThreadView`
+          - `EndThreadButton`
           - `StepLabel`
           - `useLatestResult`
           - `useStartThread`

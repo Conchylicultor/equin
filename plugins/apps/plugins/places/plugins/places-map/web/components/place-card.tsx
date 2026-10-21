@@ -16,18 +16,11 @@ import {
   cn,
   Textarea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
-import {
-  MAPS_BLOCKER_BODY,
-  MapsAccessAction,
-} from "@plugins/integrations/plugins/google-maps/web";
 import type { PlaceRichDetails } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import {
   isCustomPlace,
@@ -51,12 +44,13 @@ import { washInk } from "../internal/pin-paint";
 import { TagMark } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
 import { DROP_HEAD_PX, PlaceDropHead } from "./place-drop";
 import {
-  HoursRow,
+  DetailsNotice,
+  GoogleCredit,
+  GoogleFactRows,
   InfoRow,
+  MapsActions,
   OpenNowLine,
-  PhoneRow,
   RatingLine,
-  WebsiteRow,
 } from "./place-facts";
 import { PlaceHero } from "./place-hero";
 import { TagChip } from "./tag-chip";
@@ -66,11 +60,8 @@ const closeIcon = symbol("close");
 const deleteIcon = symbol("delete");
 const regenerateIcon = symbol("auto-awesome");
 const moveIcon = symbol("open-with");
-const addressIcon = symbol("location-on");
 const savedIcon = symbol("event");
-const directionsIcon = symbol("directions");
 const quoteIcon = symbol("format-quote");
-const infoIcon = symbol("info");
 
 /** The card's two independent toggles, in order: Want to go, then Been. */
 const ROLE_TOGGLES: readonly TagRole[] = ["want", "been"];
@@ -206,22 +197,7 @@ export function PlaceCard({
             </Fill>
           </Stack>
           <Stack gap="lg" className="p-md">
-            {details.status === "error" ? (
-              <ResourceErrorInline
-                variant="block"
-                subject="Google's details of this place"
-                error={details.error}
-                refetch={details.refetch}
-              />
-            ) : details.status === "ready" &&
-              details.data.kind === "maps-not-configured" ? (
-              <Stack gap="sm">
-                <Text variant="caption" tone="muted">
-                  {MAPS_BLOCKER_BODY["not-configured"]}
-                </Text>
-                <MapsAccessAction />
-              </Stack>
-            ) : null}
+            <DetailsNotice details={details} />
             {rich?.summary !== undefined ? (
               <Text variant="body" tone="muted">
                 {rich.summary}
@@ -286,23 +262,11 @@ export function PlaceCard({
               }
             />
             <Stack gap="none">
-              {rich !== null && !closed ? <HoursRow details={rich} /> : null}
-              {place.address !== "" ? (
-                <InfoRow
-                  icon={addressIcon}
-                  action={
-                    <CopyButton text={place.address} tooltip="Copy address" />
-                  }
-                >
-                  <Text variant="body">{place.address}</Text>
-                </InfoRow>
-              ) : null}
-              {rich?.phone !== undefined ? (
-                <PhoneRow phone={rich.phone} />
-              ) : null}
-              {rich?.website !== undefined ? (
-                <WebsiteRow website={rich.website} />
-              ) : null}
+              <GoogleFactRows
+                rich={rich}
+                address={place.address}
+                closed={closed}
+              />
               <InfoRow icon={savedIcon}>
                 <Stack gap="none">
                   <Text variant="body">
@@ -321,43 +285,12 @@ export function PlaceCard({
               </InfoRow>
               <IconRow place={place} ownIcon={visual.ownIcon} />
             </Stack>
-            {rich !== null ? (
-              <Line className="gap-2xs">
-                <Icon
-                  icon={infoIcon}
-                  className="size-3.5 text-muted-foreground"
-                />
-                <Text variant="caption" tone="faint">
-                  Photos, hours and rating from Google
-                </Text>
-              </Line>
-            ) : null}
+            {rich !== null ? <GoogleCredit /> : null}
           </Stack>
         </>
       }
       footer={
-        <Line className="gap-xs border-t p-md">
-          <Fill>
-            <NewTabButton
-              href={mapsHref(place)}
-              className="w-full text-white hover:opacity-90"
-              style={{ background: washInk(visual.mainColor) }}
-            >
-              Open in Google Maps
-            </NewTabButton>
-          </Fill>
-          <IconButton
-            icon={directionsIcon}
-            label="Directions"
-            variant="outline"
-            render={
-              <a
-                href={directionsHref(place)}
-                target="_blank"
-                rel="noreferrer"
-              />
-            }
-          />
+        <MapsActions place={place} ink={washInk(visual.mainColor)}>
           <IconButton
             icon={deleteIcon}
             label="Delete place"
@@ -374,7 +307,7 @@ export function PlaceCard({
               })
             }
           />
-        </Line>
+        </MapsActions>
       }
     />
   );
@@ -497,38 +430,6 @@ function NoteSlip({
       </Fill>
     </Stack>
   );
-}
-
-/**
- * Where "Open in Google Maps" goes: Google's own link for a Google place
- * (else a search pinned to its id), the pin's coordinates for a custom place —
- * Google knows no place by its name.
- */
-function mapsHref(place: Place): string {
-  const search = "https://www.google.com/maps/search/?api=1";
-  const { googlePlaceId } = place;
-  if (googlePlaceId === null) {
-    const { lat, lng } = place.location;
-    return `${search}&query=${lat},${lng}`;
-  }
-  return (
-    place.mapsUrl ??
-    `${search}&query=${encodeURIComponent(
-      `${place.name} ${place.address}`,
-    )}&query_place_id=${encodeURIComponent(googlePlaceId)}`
-  );
-}
-
-/**
- * Where Directions goes: Google Maps' route to the place, from wherever the
- * person is — pinned to its Google id when it has one.
- */
-function directionsHref(place: Place): string {
-  const { lat, lng } = place.location;
-  const dir = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-  return place.googlePlaceId === null
-    ? dir
-    : `${dir}&destination_place_id=${encodeURIComponent(place.googlePlaceId)}`;
 }
 
 /**

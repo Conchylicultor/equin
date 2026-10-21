@@ -287,6 +287,7 @@ export const LUCIDE_MAP = {
   "restart-alt": "rotate-ccw",
   restaurant: "utensils",
   "restore-from-trash": "archive-restore",
+  "right-panel-close": "panel-right-close",
   "right-panel-open": "panel-right-open",
   "rocket-launch": "rocket",
   rule: "list-checks",

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   useDataViewControls,
   useFlatRows,
@@ -12,7 +12,6 @@ import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
@@ -34,6 +33,7 @@ import { placeVisual } from "../internal/place-visual";
 import type { GoogleSearchState } from "../internal/use-google-search";
 import { GoogleResultCard, type GoogleHit } from "./google-result-card";
 import { PlaceGlyph } from "./place-glyph";
+import { AskHistory } from "./ask-history";
 
 const customPinIcon = symbol("push-pin");
 const sonnetIcon = symbol("auto-awesome");
@@ -60,9 +60,9 @@ export interface UniversalSearchPanelProps {
   /** The Google hit hovered here or on the map (linked both ways). */
   hoveredGoogleId: string | null;
   onHoverGoogle: (placeId: string | null) => void;
-  /** A Google hit to scroll into view (its pin was clicked); changes re-scroll. */
-  revealGoogle: { placeId: string } | null;
   onOpenPlace: (place: Place) => void;
+  /** Open a hit's detail card (one with a position). */
+  onOpenHit: (hit: GoogleHit) => void;
   onSave: (hit: GoogleHit) => Promise<void>;
   /** A save said Google Maps is not set up. */
   saveNotConfigured: boolean;
@@ -71,6 +71,8 @@ export interface UniversalSearchPanelProps {
   onAsk: (question: string) => void;
   /** Why Sonnet cannot be asked now (no computer, the map not placed yet); null when it can. */
   askBlocked: string | null;
+  /** Reopen an earlier question's run in the side card. */
+  onOpenRun: (conversationId: string) => void;
 }
 
 /**
@@ -80,7 +82,7 @@ export interface UniversalSearchPanelProps {
  * ghost pin. Its last row drops a custom pin, for a place Google does not know.
  */
 export function UniversalSearchPanel(props: UniversalSearchPanelProps) {
-  const { query, onDropCustom, onAsk, askBlocked } = props;
+  const { query, onDropCustom, onAsk, askBlocked, onOpenRun } = props;
   const typed = query.trim();
   const question = looksLikeQuestion(typed);
   return (
@@ -114,6 +116,7 @@ export function UniversalSearchPanel(props: UniversalSearchPanelProps) {
               </ControlPanel.Row>
             ))}
           </ControlPanel.Section>
+          <AskHistory onOpenRun={onOpenRun} />
         </>
       ) : (
         <>
@@ -264,29 +267,13 @@ function GoogleSection({
   savedByGoogleId,
   hoveredGoogleId,
   onHoverGoogle,
-  revealGoogle,
   onOpenPlace,
   onSave,
   saveNotConfigured,
+  onOpenHit,
 }: UniversalSearchPanelProps): ReactNode {
   const [showAll, setShowAll] = useState(false);
-  const listRef = useRef<HTMLDivElement>(null);
   const hits = google.kind === "answer" ? google.hits : [];
-  // A revealed hit past the fold unfolds the rest first.
-  const revealIndex =
-    revealGoogle === null
-      ? -1
-      : hits.findIndex((h) => h.placeId === revealGoogle.placeId);
-  if (revealIndex >= GOOGLE_SHOWN && !showAll) setShowAll(true);
-  useEffect(() => {
-    if (revealGoogle === null) return;
-    revealElement(
-      listRef.current?.querySelector(
-        `[data-google-place-id="${CSS.escape(revealGoogle.placeId)}"]`,
-      ),
-      { block: "nearest", scope: "nearest" },
-    );
-  }, [revealGoogle, showAll]);
 
   const label = (
     <Line className="gap-xs">
@@ -343,7 +330,7 @@ function GoogleSection({
           No Google results here — pan the map to search elsewhere.
         </ControlPanel.Empty>
       ) : (
-        <div ref={listRef}>
+        <div>
           <Stack gap="2xs">
             {(showAll ? hits : hits.slice(0, GOOGLE_SHOWN)).map((hit) => {
               const saved = savedByGoogleId.get(hit.placeId);
@@ -358,6 +345,9 @@ function GoogleSection({
                   onOpenSaved={() => {
                     if (saved !== undefined) onOpenPlace(saved);
                   }}
+                  {...(hit.result === undefined
+                    ? {}
+                    : { onOpen: () => onOpenHit(hit) })}
                 />
               );
             })}

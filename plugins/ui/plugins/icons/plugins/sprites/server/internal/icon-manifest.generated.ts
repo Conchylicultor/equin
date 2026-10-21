@@ -266,6 +266,7 @@ export const ICON_MANIFEST: {
     "restart-alt",
     "restaurant",
     "restore-from-trash",
+    "right-panel-close",
     "right-panel-open",
     "rocket-launch",
     "rule",
