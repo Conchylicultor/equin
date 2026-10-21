@@ -16,7 +16,11 @@ export function CanvasStage({ exit }: { exit: ReactElement }): ReactElement {
   return (
     <>
       <PrototypeCanvas />
-      <Movable at={{ pin: "bottom-left", offset: "md" }} bounds={root} {...chrome}>
+      <Movable
+        at={{ pin: "bottom-left", offset: "md" }}
+        bounds={root}
+        {...chrome}
+      >
         {exit}
       </Movable>
     </>

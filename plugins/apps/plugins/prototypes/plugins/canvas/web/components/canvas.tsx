@@ -155,7 +155,7 @@ export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
       </Scroll>
       <Movable at={{ pin: "bottom-right", offset: "md" }} bounds={root}>
           <SizeChip layout={layout} noWholePage={noWholePage} />
-        </Movable>
+      </Movable>
     </div>
   );
 }
@@ -262,9 +262,16 @@ function FrameCard({
                 // screen's box, so it adds nothing to the frame's height.
                 <Sticky edge="bottom" offset="md" className="h-0">
                   <div className="relative">
-                    <Movable at={{ pin: screenWidth < 480 ? "bottom-left" : "bottom", offset: "md" }} bounds={bounds} className={hoverRevealTarget}>
-                        <OptionsPill frame={frame} meta={meta} />
-                      </Movable>
+                    <Movable
+                      at={{
+                        pin: screenWidth < 480 ? "bottom-left" : "bottom",
+                        offset: "md",
+                      }}
+                      bounds={bounds}
+                      className={hoverRevealTarget}
+                    >
+                      <OptionsPill frame={frame} meta={meta} />
+                    </Movable>
                   </div>
                 </Sticky>
               ) : null}
@@ -475,8 +482,8 @@ function SwipeFrames({
                       bounds={bounds}
                       className={hoverRevealTarget}
                     >
-                        <OptionsPill frame={f} meta={meta} />
-                      </Movable>
+                      <OptionsPill frame={f} meta={meta} />
+                    </Movable>
                   ) : null,
                 )}
               </div>

@@ -38,11 +38,10 @@ export type MovableAt =
  * positioned wrapper to stay behind at home and swallow the clicks of whatever
  * is under the place the piece left.
  */
-export interface MovableProps
-  extends Omit<
-    React.HTMLAttributes<HTMLElement>,
-    "onPointerDown" | "onDoubleClick" | "onTransitionEnd"
-  > {
+export interface MovableProps extends Omit<
+  React.HTMLAttributes<HTMLElement>,
+  "onPointerDown" | "onDoubleClick" | "onTransitionEnd"
+> {
   at: MovableAt;
   /**
    * The element the piece must stay inside — usually the box it is placed in.

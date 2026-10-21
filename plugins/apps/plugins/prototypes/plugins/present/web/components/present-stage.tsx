@@ -192,39 +192,55 @@ function PresentedFrame({
               </Stack>
             ) : null}
           </Scroll>
-          <Movable at={{ pin: "top-left", offset: "md" }} bounds={root} {...chrome}>
-              <FrameTag
-                  frame={frame}
-                  index={index}
-                  count={canvas.frames.length}
-                  meta={meta}
-                  resolution={resolution}
-                onFlip={onFlip}
-                  leading={
-                  onExit === undefined ? (
-                      <LeaveToCanvasButton name={meta.name} />
-                    ) : undefined
-                  }
-              />
-            </Movable>
+          <Movable
+            at={{ pin: "top-left", offset: "md" }}
+            bounds={root}
+            {...chrome}
+          >
+            <FrameTag
+              frame={frame}
+              index={index}
+              count={canvas.frames.length}
+              meta={meta}
+              resolution={resolution}
+              onFlip={onFlip}
+              leading={
+                onExit === undefined ? (
+                  <LeaveToCanvasButton name={meta.name} />
+                ) : undefined
+              }
+            />
+          </Movable>
           {frame.kind === "prototype" ? (
             <Pin to="right" offset="md" {...chrome}>
               <ExtendActions meta={meta} onExtend={onExtend} />
             </Pin>
           ) : null}
           {onExit !== undefined ? (
-            <Movable at={{ pin: "top-right", offset: "md" }} bounds={root} {...chrome}>
-                <ExitButton onExit={onExit} />
-              </Movable>
+            <Movable
+              at={{ pin: "top-right", offset: "md" }}
+              bounds={root}
+              {...chrome}
+            >
+              <ExitButton onExit={onExit} />
+            </Movable>
           ) : null}
           {frame.kind === "prototype" ? (
-            <Movable at={{ pin: "bottom", offset: "lg" }} bounds={root} {...chrome}>
-                <OptionsPill frame={frame} meta={meta} />
-              </Movable>
-          ) : null}
-          <Movable at={{ pin: "bottom-right", offset: "md" }} bounds={root} {...chrome}>
-              <SizeChip layout={layout} noWholePage={noWholePage} />
+            <Movable
+              at={{ pin: "bottom", offset: "lg" }}
+              bounds={root}
+              {...chrome}
+            >
+              <OptionsPill frame={frame} meta={meta} />
             </Movable>
+          ) : null}
+          <Movable
+            at={{ pin: "bottom-right", offset: "md" }}
+            bounds={root}
+            {...chrome}
+          >
+            <SizeChip layout={layout} noWholePage={noWholePage} />
+          </Movable>
         </>
       )}
     </CanvasFrameView>
