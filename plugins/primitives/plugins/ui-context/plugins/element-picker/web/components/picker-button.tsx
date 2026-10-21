@@ -19,7 +19,7 @@ const adsClickIcon = symbol("ads-click");
 export function PickerButton({
   onPick,
   label = "Pick UI element",
-  description = `Click an element to attach it. ${formatShortcutLabel("mod")}-click to use the app, Esc to stop.`,
+  description = `Click an element to attach it as context. ${formatShortcutLabel("mod")}-click to use the app, Esc to stop.`,
   variant,
 }: {
   onPick: (meta: UiContextMeta) => void;
