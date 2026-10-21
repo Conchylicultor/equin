@@ -560,7 +560,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots: `welcomePane.Actions`
             - Slot contributors: `welcomePane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "welcome"
-            - Uses: 23 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/welcome/REFERENCE.md)
               - `primitives/pane` ×3
               - `primitives/persistent-draft` ×3
               - `primitives/live-state` ×2
@@ -578,6 +578,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/launch.useTaskLaunch`
               - `primitives/text-editor/composer.ComposerField`
+              - `ui/ambient-field.AmbientField`
             - Exports (values): `welcomePane`
           - Cross-plugin:
             - Uses tokens:
@@ -36209,6 +36210,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/read-only-view`
               - `primitives/data-view`
               - `primitives/data-view/floating-toolbar`
+              - `ui/ambient-field`
         - **`pin`** — Point-anchored absolute positioning primitive: <Pin to offset> places a child at a corner/edge-center/center of a relative parent. Sibling of Overlay.
           - Web:
             - Uses:
@@ -37004,13 +37006,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 417 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 418 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×108
               - `apps` ×93
               - `conversations` ×52
               - `page` ×25
               - `debug` ×23
-              - `ui` ×20
+              - `ui` ×21
               - `tasks` ×15
               - `fields` ×11
               - `plugin-meta` ×10
@@ -38324,7 +38326,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useElementSize`
               - `useResizeObserver`
           - Cross-plugin:
-            - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×19
               - `apps` ×8
               - `shell` ×2
@@ -38332,6 +38334,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer/assistant-text`
               - `reorder`
               - `screenshot`
+              - `ui/ambient-field`
           - Exemptions:
             - Exempts itself from: `resize-observer-safety/no-raw-resize-observer` — `web/internal/element-size.ts` (sanctioned)
         - **`in-view`** — The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element).
@@ -38354,6 +38357,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/auto-scroll`
               - `primitives/outline/scroll-spy`
               - `primitives/pane`
+              - `ui/ambient-field`
           - Exemptions:
             - Exempts itself from: `intersection-observer-safety/no-raw-intersection-observer` — `web/internal/in-view.ts` (sanctioned)
         - **`layout-host`** — Which box lays a node out, and along which axis: layoutHost(node) is the nearest ancestor that draws a box (skipping display: contents wrappers, whose width is 0 and which never resize), flowAxis(host) is row only for a row flex container (computed flex-direction alone says row for every element). Shared by the slot renderer and the reorder middleware so neither misreads a wrapped host.
@@ -46959,6 +46963,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:
+    - **`ambient-field`** — <AmbientField>: a living, barely-there background behind its children — hairline strands (iron filings) following a slowly turning flow, drawn on a canvas. Each pointer stroke is a magnet of its own random kind (a pole or a vortex, either sign, its own strength and reach) that turns the strands near it, then fades.
+      - Web:
+        - Uses:
+          - `primitives/css/overlay.Overlay`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/dom/element-size.useResizeObserver`
+          - `primitives/dom/in-view.useInView`
+        - Exports (types): `AmbientFieldProps`
+        - Exports (values): `AmbientField`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --primary-text`
+        - Imported by: `apps/agent-manager/welcome`
     - **`breadcrumb-separator`** — Breadcrumb-separator region (chevron / slash). Contributes its variant-region host into BreadcrumbSlots.Separator.
       - Web:
         - Slots: `BreadcrumbSeparator.Variant`
@@ -48138,14 +48154,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 495 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 496 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×109
               - `conversations` ×88
               - `primitives` ×76
               - `debug` ×35
               - `page` ×32
               - `plugin-meta` ×26
-              - `ui` ×23
+              - `ui` ×24
               - `tasks` ×14
               - `fields` ×12
               - `reports` ×12

@@ -6018,6 +6018,10 @@
       "name": "@singularity/plugin-ui",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/ambient-field": {
+      "name": "@singularity/plugin-ui-ambient-field",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/breadcrumb-separator": {
       "name": "@singularity/plugin-ui-breadcrumb-separator",
       "version": "0.0.1",
@@ -9763,6 +9767,8 @@
     "@singularity/plugin-toolchain": ["@singularity/plugin-toolchain@workspace:plugins/toolchain"],
 
     "@singularity/plugin-ui": ["@singularity/plugin-ui@workspace:plugins/ui"],
+
+    "@singularity/plugin-ui-ambient-field": ["@singularity/plugin-ui-ambient-field@workspace:plugins/ui/plugins/ambient-field"],
 
     "@singularity/plugin-ui-breadcrumb-separator": ["@singularity/plugin-ui-breadcrumb-separator@workspace:plugins/ui/plugins/breadcrumb-separator"],
 

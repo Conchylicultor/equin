@@ -316,6 +316,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:
+    - **`ambient-field`** — <AmbientField>: a living, barely-there background behind its children — hairline strands (iron filings) following a slowly turning flow, drawn on a canvas. Each pointer stroke is a magnet of its own…
     - **`breadcrumb-separator`** — Breadcrumb-separator region (chevron / slash). Contributes its variant-region host into BreadcrumbSlots.Separator.
       - Plugins:
         - **`chevron`** — Chevron breadcrumb separator — a dimmed caret pointing along the path (the default).

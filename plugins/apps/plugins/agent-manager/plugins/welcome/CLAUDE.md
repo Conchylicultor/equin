@@ -9,7 +9,7 @@
   - Slots: `welcomePane.Actions`
   - Slot contributors: `welcomePane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "welcome"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×3
     - `primitives/persistent-draft` ×3
     - `primitives/live-state` ×2
@@ -27,6 +27,7 @@
     - `primitives/icon-button.IconButton`
     - `primitives/launch.useTaskLaunch`
     - `primitives/text-editor/composer.ComposerField`
+    - `ui/ambient-field.AmbientField`
   - Exports (values): `welcomePane`
 - Cross-plugin:
   - Uses tokens:

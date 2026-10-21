@@ -6,6 +6,7 @@
 
 - Description: Umbrella for pluggable UI components with switchable visual variants.
 - Sub-plugins:
+  - **`ambient-field`** — <AmbientField>: a living, barely-there background behind its children — hairline strands (iron filings) following a slowly turning flow, drawn on a canvas. Each pointer stroke is a magnet of its own…
   - **`breadcrumb-separator`** — Breadcrumb-separator region (chevron / slash). Contributes its variant-region host into BreadcrumbSlots.Separator.
   - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token…
   - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
