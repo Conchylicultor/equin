@@ -72,6 +72,9 @@ v1/package-lock.json
 # Claude Code
 skills-lock.json
 .claude/worktrees/
+# Removed checkouts awaiting deletion (worktreeTrashDir, infra/worktree): an
+# untracked entry appearing mid-build fails main's main-tree guard.
+.claude/worktree-trash/
 .claude/scheduled_tasks.lock
 # Guard bypass files (BYPASS_TOKENS in tooling/guards): per-checkout overrides, never committed.
 .allow-*
