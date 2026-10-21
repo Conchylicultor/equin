@@ -28,8 +28,8 @@ import {
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
+  AddFrameRail,
   CanvasFrameView,
-  FrameSource,
   OptionsPill,
   SizeChip,
   VersionStepper,
@@ -69,6 +69,7 @@ export function PresentStage({
   frameId,
   onExit,
   onExtend,
+  onFlip,
 }: {
   name: string;
   /** The frame on show — frame A when absent or gone. */
@@ -84,6 +85,11 @@ export function PresentStage({
    * applies the action to the live canvas and shows the whole of it instead.
    */
   onExtend?: (action: CanvasAddAction) => void;
+  /**
+   * Show the previous (-1) or next (1) frame — what the tag's ‹ › and the
+   * arrow keys do. Absent on the new-tab page, which has one frame.
+   */
+  onFlip?: (delta: -1 | 1) => void;
 }): ReactNode {
   return matchResource(useLive(prototypesList), {
     loading: () => <Loading variant="block" />,
@@ -102,6 +108,7 @@ export function PresentStage({
           frameId={frameId}
           onExit={onExit}
           onExtend={onExtend}
+          onFlip={onFlip}
         />
       );
     },
@@ -113,11 +120,13 @@ function PresentedFrame({
   frameId,
   onExit,
   onExtend,
+  onFlip,
 }: {
   meta: PrototypeMeta;
   frameId: FrameId | undefined;
   onExit: (() => void) | undefined;
   onExtend: ((action: CanvasAddAction) => void) | undefined;
+  onFlip: ((delta: -1 | 1) => void) | undefined;
 }): ReactElement {
   const { canvas } = usePrototypeDetail();
   const chrome = usePresentChrome();
@@ -191,6 +200,7 @@ function PresentedFrame({
                   count={canvas.frames.length}
                   meta={meta}
                   resolution={resolution}
+                  onFlip={onFlip}
                   leading={
                   onExit === undefined ? (
                       <LeaveToCanvasButton name={meta.name} />
@@ -243,6 +253,7 @@ function FrameTag({
   count,
   meta,
   resolution,
+  onFlip,
   leading,
 }: {
   frame: CanvasFrame;
@@ -250,6 +261,8 @@ function FrameTag({
   count: number;
   meta: PrototypeMeta;
   resolution: FrameResolution | null;
+  /** Flip to the previous / next frame (the ‹ › beside "i of n"). */
+  onFlip: ((delta: -1 | 1) => void) | undefined;
   /** A control at the pill's start (the present page's Exit). */
   leading?: ReactNode;
 }): ReactElement {
@@ -279,13 +292,31 @@ function FrameTag({
           <Badge variant="success">{resolution.tag}</Badge>
         ) : null}
         {count > 1 ? (
-          <Text
-            variant="caption"
-            tone="faint"
-            className="whitespace-nowrap pr-xs"
-          >
-            {index + 1} of {count} · ← →
-          </Text>
+          <Stack direction="row" gap="none" align="center">
+            <Text
+              variant="caption"
+              tone="faint"
+              className={cn("whitespace-nowrap", onFlip ? "pr-2xs" : "pr-xs")}
+            >
+              {index + 1} of {count}
+            </Text>
+            {onFlip ? (
+              <>
+                <IconButton
+                  icon={previousIcon}
+                  label="Previous frame"
+                  shortcut="ArrowLeft"
+                  onClick={() => onFlip(-1)}
+                />
+                <IconButton
+                  icon={nextIcon}
+                  label="Next frame"
+                  shortcut="ArrowRight"
+                  onClick={() => onFlip(1)}
+                />
+              </>
+            ) : null}
+          </Stack>
         ) : null}
       </Stack>
     </ControlSizeProvider>
@@ -307,8 +338,8 @@ export function ExitButton({ onExit }: { onExit: () => void }): ReactElement {
 }
 
 const exitIcon = symbol("fullscreen-exit");
-const addIcon = symbol("add");
-const compareIcon = symbol("compare");
+const previousIcon = symbol("chevron-left");
+const nextIcon = symbol("chevron-right");
 
 /**
  * The new-tab page's Exit: back to the prototype's canvas in the full app — a
@@ -338,16 +369,12 @@ export function LeaveToCanvasButton({
 }
 
 /**
- * The right-edge actions: `+` (another frame beside this one) and one Compare
- * per contributed frame source this prototype resolves (the real app, swiped
- * over it) — the presentation becomes a full-screen comparison. Names no
- * source.
- *
- * With `onExtend` (an overlay) each hands the action over. Without it (the
- * new-tab page) each opens the canvas page on the frame plus the new one, in
- * this tab — and only a page reading the shared picks record (frame A's link)
- * can: one carrying a variant of its own would, as frame A of a canvas, have to
- * write that variant to the record.
+ * The canvas's add rail, as a presentation hands it its actions: an overlay
+ * (`onExtend`) applies each to the live canvas. The new-tab page opens the
+ * canvas page on the frame plus the new one, in this tab — and only a page
+ * reading the shared picks record (frame A's link) can: one carrying a variant
+ * of its own would, as frame A of a canvas, have to write that variant to the
+ * record.
  */
 function ExtendActions({
   meta,
@@ -356,54 +383,30 @@ function ExtendActions({
   meta: PrototypeMeta;
   onExtend: ((action: CanvasAddAction) => void) | undefined;
 }): ReactElement {
-  const { canvas, shared, sources } = usePrototypeDetail();
+  const { canvas, shared } = usePrototypeDetail();
   const ownPicks =
     onExtend === undefined && frameA(canvas.frames)?.picks !== "shared";
-  const reason = ownPicks
-    ? "This page shows a variant of its own — open frame A to compare"
-    : undefined;
-  const extend = (action: CanvasAddAction) =>
-    onExtend !== undefined
-      ? { onClick: () => onExtend(action) }
-      : appLinkProps(
-          embedUrl(
-            presentCanvasPath(
-              meta.name,
-              encodeCanvas(canvasWith(canvas, action, shared)),
-            ),
-            "chromeless",
-          ),
-        );
   return (
-    <ControlSizeProvider size="sm">
-      <Stack direction="col" gap="xs" align="center">
-        <IconButton
-          variant="floating"
-          icon={addIcon}
-          label="Add a frame to compare"
-          tooltip={reason}
-          disabled={ownPicks}
-          {...(ownPicks ? {} : extend({ type: "addPrototype" }))}
-        />
-        {sources.map((source) => (
-          <FrameSource.Dispatch key={source.id} source={source.id} meta={meta}>
-            {(resolution: FrameResolution) =>
-              resolution.status === "found" ? (
-                <IconButton
-                  variant="floating"
-                  icon={compareIcon}
-                  label={`Compare with ${source.addLabel}`}
-                  tooltip={reason}
-                  disabled={ownPicks}
-                  {...(ownPicks
-                    ? {}
-                    : extend({ type: "addSource", source: source.id }))}
-                />
-              ) : null
-            }
-          </FrameSource.Dispatch>
-        ))}
-      </Stack>
-    </ControlSizeProvider>
+    <AddFrameRail
+      meta={meta}
+      disabled={
+        ownPicks
+          ? "This page shows a variant of its own — open frame A to compare"
+          : undefined
+      }
+      extend={(action) =>
+        onExtend !== undefined
+          ? { onClick: () => onExtend(action) }
+          : appLinkProps(
+              embedUrl(
+                presentCanvasPath(
+                  meta.name,
+                  encodeCanvas(canvasWith(canvas, action, shared)),
+                ),
+                "chromeless",
+              ),
+            )
+      }
+    />
   );
 }

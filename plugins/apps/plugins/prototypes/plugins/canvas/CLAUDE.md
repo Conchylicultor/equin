@@ -97,14 +97,19 @@ not declare is dropped from its URL.
 
 ## Frames: add, copy, link, spread, keep only, close
 
-- **`+ Frame`** (header) adds a copy of the LAST prototype frame — same version,
-  same picks — ready to change its variant or version. (There is no per-frame
-  Duplicate: `+ Frame` already is one, and Compare in a new frame copies a
-  frame at another version.)
-- **`+ <addLabel>`** — one button per frame source ("+ Real app"), disabled
-  while that source is already on the canvas. The canvas names no source.
-  Adding one switches the canvas to Swipe (when that makes two frames) at
-  Responsive size — a source frame is there to be compared against.
+- **The add rail** (`AddFrameRail` — the very same rail every presentation
+  shows) sits on the last frame's right border line (the swipe box's, swiped),
+  revealed by hovering that frame, so it takes no room of its own (the board's
+  side padding holds the half that overhangs):
+  - **`+`** adds a copy of the LAST prototype frame — same version, same
+    picks — ready to change its variant or version. (There is no per-frame
+    Duplicate: `+` already is one, and Compare in a new frame copies a frame
+    at another version.)
+  - **Compare with <addLabel>** — one per frame source this prototype
+    resolves ("Compare with Real app"), disabled while that source is already
+    on the canvas. The canvas names no source. Adding one switches the canvas
+    to Swipe (when that makes two frames) at Responsive size — a source frame
+    is there to be compared against.
 - **The options pill** ("Mist · Home +3") opens on click into "Options":
   one row per declared option — value chips for a choice; for a color, one
   swatch per suggestion and a trailing custom swatch (the color on screen,
@@ -124,7 +129,9 @@ not declare is dropped from its URL.
     that frame. A pick of the spread option breaks the spread. A color with
     nothing to spread over offers no spread.
   The pill is app DOM over the frame, never inside the prototype's page — that
-  is what keeps switchers out of the designs.
+  is what keeps switchers out of the designs. Like the size & zoom chip, it can
+  be dragged off what it covers (`Movable`, bounded by the canvas; a
+  double-click on its surface sends it home) — the same as in a presentation.
 - **Keep only** closes every other frame, with an Undo toast.
 - **Close** removes one frame. The canvas never goes empty: with one frame
   left, Keep only and Close are not offered.
@@ -242,14 +249,22 @@ only for this dynamic scaling geometry.
 
 ## Swipe, selection, keyboard
 
-With exactly two frames the header offers **Side by side | Swipe**; adding
-or closing a frame while swiping goes back to side by side. Swipe
-paints the two frames in one box, B under A, A clipped at a divider you drag.
+With exactly two frames, a floating pill sits in the gap between them —
+**Swipe** (`LayoutToggle`, a canvas control like the add rail's `+`, so every
+canvas has it: the pane, and a presentation of the whole canvas, which has no
+header). Swipe paints the two frames in one box, B under A, A clipped at a
+divider you drag; the divider carries the way back, a **Side by side** pill
+at its top. Each prototype frame keeps its options pill while swiped,
+bottom-centre of its own half — A's on the left, the side A shows on. Adding or closing a frame
+while swiping goes back to side by side.
 
 Clicking a frame selects it (an accent ring; a new or changed frame becomes
 selected). The selection is what the keys act on, registered once for the
 canvas as surface-scoped plain keys (silent while a text field has focus):
 
+- `←` / `→` select the previous / next frame (wrapping around) — a
+  presentation's own `←` / `→` (flip the frame on show) outrank them while it
+  is open;
 - `[` / `]` step the selected frame's version;
 - `0` toggles the zoom between 100% and Fit.
 
@@ -273,8 +288,9 @@ other.
 ## Extension points
 
 - **`prototypeDetailPane.Actions`** — the pane header IS the action bar. The
-  canvas contributes the layout switch and the add buttons; `copy-id` the copy
-  button; `gallery` the Done toggle. Order: `config/apps/prototypes/canvas/`.
+  canvas contributes nothing there (its controls are drawn on the canvas, so
+  every canvas has them); `copy-id` the copy button; `gallery` the Done
+  toggle. Order: `config/apps/prototypes/canvas/`.
 - **`PrototypeFrameActions`** — a frame's header actions, handed
   `{ frame, meta }`. The canvas ships Keep only and Close; `present`
   adds Open in a new tab and Full screen.
@@ -295,6 +311,7 @@ the barrel exports `PrototypeDetailProvider` (standalone for one frame, with
 whole canvas), `encodeCanvas` / `decodeCanvas` (the canvas as one url segment,
 validated like a saved one), `usePrototypeDetail`, `CanvasFrameView`
 (the very same frame screen), `OptionsPill`, `VersionStepper`, `SizeChip`,
+`AddFrameRail` (its buttons' actions handed over by `extend`),
 `layoutFrames` and `useFrameNames`.
 
 ## Driving it from outside: the DOM contract and e2e
@@ -305,19 +322,21 @@ publishes the id it was given) and `data-canvas-frame-status` (`loading` /
 `unresolved` / `found`). Side by side, each frame's card (header, screen,
 options pill) carries `data-canvas-card="<letter>"`; the canvas root carries
 `data-canvas-layout` (`side` / `swipe`, as drawn). Swiped (what adding a
-source frame does) there are no cards, so a flow needing a pill or one screen
-alone calls the driver's `setLayout(page, "side")` first. The
+source frame does) there are no cards, so a flow needing a card or one screen
+alone calls the driver's `setLayout(page, "side")` first (it presses the
+layout toggle, named by `layoutToggleLabel`). The
 names and selectors live in `core/`, the one spelling the canvas and an `e2e/`
 script both read.
 
-`e2e/index.ts` holds the shared flows (open a canvas, add a source frame by
-its add label, find a frame, read back
+`e2e/index.ts` holds the shared flows (open a canvas, add a frame, add a
+source frame by its add label (the rail's labels are `ADD_FRAME_LABEL` /
+`compareWithLabel` in `core/`), find a frame, read back
 the size, version and picks its document was opened with — off the iframe's
 `src` and box, so assertions are about what is on screen). The scripts, all
 manual, default to the first prototype declaring an option with 3+ values and a
 `mocks` counterpart (`--name` to choose):
 
-- `canvas-frames.ts` — + Frame copies the last frame, B's picks are its own,
+- `canvas-frames.ts` — `+` copies the last frame, B's picks are its own,
   link, spread and gather, Keep only + Undo, Close;
 - `canvas-size.ts` — presets, Fit vs 100% and the slider, Whole page, Width
   slider snap;
@@ -346,7 +365,6 @@ navigation, so it starts from nothing remembered.
     - `PrototypeDetailWrap`
     - `PrototypeVersionActions`
   - Slot contributors:
-    - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`
     - `prototypeDetailPane.Actions` ← `apps.prototypes.copy-id`
     - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`
     - `prototypeDetailPane.Actions` ← `primitives.pane`
@@ -357,13 +375,11 @@ navigation, so it starts from nothing remembered.
     - `PrototypeVersionActions` ← `apps.prototypes.canvas`
   - Contributes:
     - `Pane.Register` "prototypes-detail"
-    - `prototypeDetailPane.Actions` "layout" → `LayoutAction`
-    - `prototypeDetailPane.Actions` "add" → `AddFrameActions`
     - `PrototypeFrameActions` "keep-only" → `KeepOnlyFrameAction`
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `primitives/data-view` ×6
     - `primitives/collapsible` ×5
@@ -373,9 +389,9 @@ navigation, so it starts from nothing remembered.
     - `primitives/css/control-panel` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
-    - `primitives/css/toggle-chip` ×2
     - `primitives/dom/auto-scroll` ×2
     - `primitives/dom/element-size` ×2
+    - `primitives/icon-button` ×2
     - `primitives/latest-ref` ×2
     - `primitives/live-state` ×2
     - `primitives/optimistic-mutation` ×2
@@ -400,10 +416,11 @@ navigation, so it starts from nothing remembered.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/slider.Slider`
     - `primitives/css/sticky.Sticky`
+    - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/dom/movable.Movable`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/embed.isEmbeddedDocument`
     - `primitives/error-boundary.PluginErrorBoundary`
-    - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/overlay/popover.InlinePopover`
@@ -413,6 +430,7 @@ navigation, so it starts from nothing remembered.
     - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (types):
+    - `AddFrameHandlers`
     - `CanvasAction`
     - `CanvasAddAction`
     - `CanvasFrame`
@@ -436,6 +454,7 @@ navigation, so it starts from nothing remembered.
     - `SourceFrame`
     - `VersionStepperProps`
   - Exports (values):
+    - `AddFrameRail`
     - `CanvasFrameView`
     - `canvasWith`
     - `decodeCanvas`
@@ -492,6 +511,7 @@ navigation, so it starts from nothing remembered.
     - `CanvasFrameStatus`
     - `CanvasLayout`
   - Exports (values):
+    - `ADD_FRAME_LABEL`
     - `CANVAS_CARD_ATTR`
     - `CANVAS_FRAME_ATTR`
     - `CANVAS_FRAME_KIND_ATTR`
@@ -500,6 +520,8 @@ navigation, so it starts from nothing remembered.
     - `canvasCardSelector`
     - `canvasFrameSelector`
     - `canvasLayoutSelector`
+    - `compareWithLabel`
+    - `layoutToggleLabel`
     - `PROTOTYPE_FRAME_KIND`
 
 <!-- AUTOGENERATED:END -->

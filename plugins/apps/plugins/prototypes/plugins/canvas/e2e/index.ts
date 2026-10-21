@@ -8,6 +8,7 @@ export {
   pickPrototype,
   spreadableOption,
   openCanvas,
+  addFrame,
   addSource,
   listFrames,
   letters,

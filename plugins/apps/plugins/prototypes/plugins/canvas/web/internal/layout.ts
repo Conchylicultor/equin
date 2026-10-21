@@ -19,8 +19,12 @@ import type { CanvasSize, CanvasZoom } from "./canvas-model";
  * turns them into numbers.
  */
 
-/** The board's padding and the gaps between frames, in px (inline geometry). */
-export const BOARD_PAD = { top: 16, x: 12, bottom: 16 } as const;
+/**
+ * The board's padding and the gaps between frames, in px (inline geometry).
+ * `x` leaves room for the half of the add rail that overhangs the last frame's
+ * right edge, so revealing it never makes the board scroll.
+ */
+export const BOARD_PAD = { top: 16, x: 20, bottom: 16 } as const;
 export const FRAME_GAP = 12;
 /** A frame's header row, plus the gap under it. */
 export const FRAME_HEAD = 34;

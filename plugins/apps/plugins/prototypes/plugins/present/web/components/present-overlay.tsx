@@ -78,6 +78,9 @@ export function PresentOverlay({
               label: "Present the previous frame",
               group: "Prototypes",
               handler: () => flip(-1),
+              // Over the canvas's own ← / → (select a frame), still mounted
+              // under the presentation.
+              priority: 1,
             },
             {
               id: "prototypes.present-next",
@@ -85,6 +88,7 @@ export function PresentOverlay({
               label: "Present the next frame",
               group: "Prototypes",
               handler: () => flip(1),
+              priority: 1,
             },
           ],
     [flip, wholeCanvas],
@@ -140,6 +144,7 @@ export function PresentOverlay({
             frameId={shown}
             onExit={exit}
             onExtend={extend}
+            onFlip={flip}
           />
         )}
       </PresentBox>

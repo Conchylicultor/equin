@@ -19,7 +19,14 @@ import {
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { card, frameDoc, letters, openCanvas, pickPrototype } from "./driver";
+import {
+  card,
+  frameDoc,
+  letters,
+  openCanvas,
+  pickPrototype,
+  addFrame,
+} from "./driver";
 
 const out = arg("out", "/tmp/canvas-version");
 const meta = await pickPrototype();
@@ -54,7 +61,7 @@ await withBrowser(async (h) => {
     viewport: { width: 1600, height: 1000 },
   });
   await openCanvas(page, meta.name);
-  await page.getByRole("button", { name: "Frame", exact: true }).click();
+  await addFrame(page);
   await waitFor(
     () => letters(page),
     (v) => v === "AB",

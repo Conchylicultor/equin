@@ -17,7 +17,14 @@ import {
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { card, hoverCard, letters, openCanvas, pickPrototype } from "./driver";
+import {
+  card,
+  hoverCard,
+  letters,
+  openCanvas,
+  pickPrototype,
+  addFrame,
+} from "./driver";
 
 const out = arg("out", "/tmp/canvas-narrow-header");
 const meta = await pickPrototype();
@@ -44,8 +51,7 @@ await withBrowser(async (h) => {
   );
 
   // Four frames: each header is a quarter of the canvas.
-  const addFrame = page.getByRole("button", { name: "Frame", exact: true });
-  for (let i = 0; i < 3; i++) await addFrame.click();
+  for (let i = 0; i < 3; i++) await addFrame(page);
   const four = await waitLetters("ABCD");
   r.ok("four frames on the canvas", four.ok, four.value);
   await page.waitForTimeout(500);

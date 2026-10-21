@@ -27,6 +27,7 @@ import {
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { canvasFrameSelector } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
+import { addFrame } from "@plugins/apps/plugins/prototypes/plugins/canvas/e2e";
 
 const out = arg("out", "/tmp/present-verify");
 
@@ -125,7 +126,7 @@ await withBrowser(async (h) => {
   }
 
   // --- Full screen, with two frames: ← / → flip ---------------------------
-  await page.getByRole("button", { name: "Frame", exact: true }).click();
+  await addFrame(page);
   await page
     .locator(canvasFrameSelector({ letter: "B", status: "found" }))
     .waitFor({ state: "visible", timeout: 10_000 });

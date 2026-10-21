@@ -17,6 +17,7 @@ import {
  * The canvas's keys, scoped to its surface (plain keys, so they stay silent
  * while a text field has focus):
  *
+ * - `←` / `→` select the previous / next frame (wrapping around);
  * - `[` / `]` step the SELECTED frame's version;
  * - `0` toggles the zoom between 100% and Fit.
  *
@@ -25,6 +26,7 @@ import {
  */
 export function CanvasShortcuts(): ReactElement | null {
   const { name } = usePrototypeDetail();
+  useSelectionKeys();
   const history = useLive(prototypeHistory, { name });
   // Until the history is known the keys are not registered — there is nowhere
   // to step yet. A failed read keeps stepping through the last history the
@@ -95,4 +97,39 @@ function KnownShortcuts({
   );
   useSurfaceShortcuts(shortcuts);
   return null;
+}
+
+/** `←` / `→`: select the previous / next frame — needs no history. */
+function useSelectionKeys(): void {
+  const { canvas, dispatch } = usePrototypeDetail();
+  const move = useEventCallback((delta: -1 | 1) => {
+    const n = canvas.frames.length;
+    if (n < 2) return;
+    const i = Math.max(
+      0,
+      canvas.frames.findIndex((f) => f.id === canvas.selected),
+    );
+    const next = canvas.frames[(i + delta + n) % n];
+    if (next) dispatch({ type: "select", id: next.id });
+  });
+  const shortcuts = useMemo(
+    () => [
+      {
+        id: "prototypes.select-previous",
+        keys: "arrowleft",
+        label: "Select the previous frame",
+        group: "Prototypes",
+        handler: () => move(-1),
+      },
+      {
+        id: "prototypes.select-next",
+        keys: "arrowright",
+        label: "Select the next frame",
+        group: "Prototypes",
+        handler: () => move(1),
+      },
+    ],
+    [move],
+  );
+  useSurfaceShortcuts(shortcuts);
 }

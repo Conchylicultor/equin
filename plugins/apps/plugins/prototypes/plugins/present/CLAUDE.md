@@ -33,8 +33,8 @@ page laid out at the screen's own width. When the frame is bigger than the room
 Hovering shows the chrome (`PresentStage`):
 
 - top-left, the frame's **tag**: its letter, its name, its version stepper (or a
-  source frame's tag), and "2 of 3 · ← →" when the canvas has more than one
-  frame;
+  source frame's tag), and "2 of 3 ‹ ›" when the canvas has more than one
+  frame — ‹ › flip to the previous / next frame, like the arrow keys;
 - **Exit `Esc`** — top-right;
 - the frame's **options pill**, bottom centre;
 - the canvas's **size & zoom chip**, bottom right. Changing it changes the
@@ -56,13 +56,15 @@ rests on the chrome itself, while a chrome control holds keyboard focus, and
 while a popup opened from it (the version list, the size menu) is showing.
 
 **← / → flip through the canvas's frames in place** (surface-scoped
-shortcuts). Leaving selects the frame last on show, so the canvas comes back on
+shortcuts, at a priority over the canvas's own ← / →, which select a frame on
+the canvas still mounted underneath). Leaving selects the frame last on show, so the canvas comes back on
 it.
 
-**On the right edge, `+` and Compare** (`ExtendActions`): `+` adds a frame
-beside this one, and there is one **Compare with <addLabel>** per frame source
-this prototype resolves (the real app, swiped over it — `addSource` switches to
-Swipe). An overlay dispatches the action to the live canvas — the pane's own,
+**On the right edge, `+` and Compare** — the canvas's own add rail
+(`AddFrameRail`, the one the canvas pane shows; `ExtendActions` hands it what
+each button does): `+` adds a frame beside this one, and there is one
+**Compare with <addLabel>** per frame source this prototype resolves (the real
+app, swiped over it — `addSource` switches to Swipe). An overlay dispatches the action to the live canvas — the pane's own,
 so the frame is still there on leaving — and then presents the whole canvas
 (`CanvasStage`: `PrototypeCanvas` with Exit pinned bottom-left) in the same
 box, so full screen stays full screen. The new-tab page navigates instead
@@ -155,8 +157,8 @@ embedded document): a reload reopens the canvas the link carries.
     - `PrototypeDetailWrap` → `PresentationHost`
     - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
     - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
-  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/prototypes/canvas` ×27
+  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/prototypes/canvas` ×28
     - `primitives/css/ui-kit` ×3
     - `apps-core/tabs` ×2
     - `primitives/hover-reveal` ×2

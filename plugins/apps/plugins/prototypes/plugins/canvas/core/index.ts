@@ -1,4 +1,5 @@
 export {
+  ADD_FRAME_LABEL,
   CANVAS_CARD_ATTR,
   CANVAS_FRAME_ATTR,
   CANVAS_FRAME_KIND_ATTR,
@@ -8,5 +9,7 @@ export {
   canvasCardSelector,
   canvasFrameSelector,
   canvasLayoutSelector,
+  compareWithLabel,
+  layoutToggleLabel,
 } from "./frame-attrs";
 export type { CanvasFrameStatus, CanvasLayout } from "./frame-attrs";

@@ -30,6 +30,9 @@ import {
   canvasFrameSelector,
   canvasLayoutSelector,
   type CanvasLayout,
+  ADD_FRAME_LABEL,
+  compareWithLabel,
+  layoutToggleLabel,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 
 /**
@@ -97,13 +100,35 @@ async function describeCanvas(page: Page): Promise<string> {
 }
 
 /**
- * Put a frame source's frame on the canvas through its header button
- * (`+ <addLabel>`). Its plugin loads in a later tier than the canvas, so the
- * button is waited for.
+ * Add a copy of the last prototype frame through the canvas's add rail (`+`).
+ */
+export async function addFrame(page: Page): Promise<void> {
+  await revealAddRail(page);
+  await page
+    .getByRole("button", { name: ADD_FRAME_LABEL, exact: true })
+    .click();
+}
+
+/**
+ * Reveal the canvas's add rail: it sits on the last frame's right edge and
+ * shows only while that frame is hovered.
+ */
+async function revealAddRail(page: Page): Promise<void> {
+  await page.locator(canvasFrameSelector()).last().hover();
+}
+
+/**
+ * Put a frame source's frame on the canvas through its add-rail button
+ * (Compare with <addLabel>). Its plugin loads in a later tier than the canvas,
+ * and the button shows once the source resolves, so it is waited for.
  */
 export async function addSource(page: Page, addLabel: string): Promise<void> {
-  const button = page.getByRole("button", { name: addLabel, exact: true });
-  await button.waitFor({ state: "visible", timeout: 20_000 });
+  const button = page.getByRole("button", {
+    name: compareWithLabel(addLabel),
+    exact: true,
+  });
+  await button.waitFor({ state: "attached", timeout: 20_000 });
+  await revealAddRail(page);
   await button.click();
 }
 
@@ -161,8 +186,9 @@ export async function canvasLayout(page: Page): Promise<CanvasLayout> {
 }
 
 /**
- * Draw the canvas `side` by side or as a `swipe`, through the header's layout
- * control (shown only with exactly two frames). Adding a source frame swipes
+ * Draw the canvas `side` by side or as a `swipe`, through the canvas's layout
+ * toggle (between the two frames, or on the swipe divider — only with exactly
+ * two frames). Adding a source frame swipes
  * it over frame A, so a flow that needs each frame on its own — its card, its
  * options pill, a screenshot of one screen — goes side by side first.
  */
@@ -171,8 +197,9 @@ export async function setLayout(
   layout: CanvasLayout,
 ): Promise<void> {
   if ((await canvasLayout(page)) === layout) return;
-  const label = layout === "side" ? "Side by side" : "Swipe";
-  await page.getByRole("radio", { name: label, exact: true }).click();
+  await page
+    .getByRole("button", { name: layoutToggleLabel(layout), exact: true })
+    .click();
   await page
     .locator(canvasLayoutSelector(layout))
     .waitFor({ state: "attached", timeout: 5000 });

@@ -32,6 +32,7 @@ import {
   optionRow,
   pickPrototype,
   spreadableOption,
+  addFrame,
 } from "./driver";
 
 const out = arg("out", "/tmp/canvas-frames");
@@ -66,7 +67,7 @@ await withBrowser(async (h) => {
   const aValue = a0.values[option.name]!;
 
   // + Frame: a copy of the last prototype frame (here, A).
-  await page.getByRole("button", { name: "Frame", exact: true }).click();
+  await addFrame(page);
   const two = await waitLetters("AB");
   r.ok("+ Frame adds frame B", two.ok, two.value);
   const b0 = await waitFor(
@@ -127,7 +128,7 @@ await withBrowser(async (h) => {
   await dismiss(page);
 
   // + Frame copies the LAST frame (B), not A.
-  await page.getByRole("button", { name: "Frame", exact: true }).click();
+  await addFrame(page);
   const three = await waitLetters("ABC");
   r.ok("+ Frame adds frame C", three.ok, three.value);
   const cCopy = await waitValue("C", bValue);
@@ -183,8 +184,8 @@ await withBrowser(async (h) => {
   r.ok("gathering back leaves one frame", gathered.ok, gathered.value);
 
   // Close: add two, close the middle one, then close down to one.
-  await page.getByRole("button", { name: "Frame", exact: true }).click();
-  await page.getByRole("button", { name: "Frame", exact: true }).click();
+  await addFrame(page);
+  await addFrame(page);
   await waitLetters("ABC");
   await frameAction(page, "B", "Remove from canvas");
   const closedB = await waitLetters("AB");

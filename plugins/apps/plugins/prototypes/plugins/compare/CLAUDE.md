@@ -4,7 +4,7 @@ The prototype canvas's **Real app** frame: the real thing a prototype says it
 mocks, live and interactive, beside the mock at the canvas's size. It is a
 `FrameSource` contribution to the `canvas` plugin (id `REAL_APP_SOURCE`,
 `"real-app"`, in `core/`; add label "Real app"), so it arrives through the
-canvas's `+ Real app` button (and stays across a reload, since the canvas is remembered for the tab's session). The size, zoom,
+canvas's add rail (Compare with Real app) (and stays across a reload, since the canvas is remembered for the tab's session). The size, zoom,
 side-by-side and swipe are the canvas's — this plugin paints no layout.
 
 It owns two things and names no kind of counterpart:
@@ -81,7 +81,7 @@ the other:
 ```
 
 It opens the prototype's canvas on the deploy this checkout built, adds the
-Real app frame (`+ Real app`), waits for it to resolve, sets the canvas to 100% through the size & zoom chip
+Real app frame (Compare with Real app), waits for it to resolve, sets the canvas to 100% through the size & zoom chip
 (so a pixel of the mock is a pixel of the app), and photographs both frames at
 the one canvas size. `--width` must be a size preset's width (the run refuses
 and lists the presets otherwise); without it the canvas stays at the size the

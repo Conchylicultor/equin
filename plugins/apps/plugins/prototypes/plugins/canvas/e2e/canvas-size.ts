@@ -33,6 +33,7 @@ import {
   pickSize,
   screen,
   sizeChip,
+  addFrame,
 } from "./driver";
 
 const out = arg("out", "/tmp/canvas-size");
@@ -234,7 +235,7 @@ await withBrowser(async (h) => {
   await dismiss(page);
 
   // The Width slider: every frame follows, snapping onto a preset near it.
-  await page.getByRole("button", { name: "Frame", exact: true }).click();
+  await addFrame(page);
   await waitFor(
     () => letters(page),
     (v) => v === "AB",

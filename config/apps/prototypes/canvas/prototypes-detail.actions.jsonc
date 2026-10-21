@@ -15,18 +15,14 @@
 // the last two the same shared flags as the gallery card's. All keep one size
 // in every state, so a click never moves the header.
 //
-// After the spacer, the canvas's own actions, which take no vertical room from
-// the canvas by living here: `layout` (`Side by side | Swipe`, shown only with
-// exactly two frames) and `add` (`+ Frame`, then one `+ <source>` per frame
-// source — `+ Real app`).
+// The canvas's own controls are not here: adding a frame (the rail on the last
+// frame's right edge) and the Side by side / Swipe switch (between two frames)
+// are drawn on the canvas itself, the same in every presentation.
 {
   "items": [
     "primitives.pane:title",
     "apps.prototypes.copy-id:copy-id",
     "apps.prototypes.gallery:pin",
-    "apps.prototypes.gallery:done",
-    { "type": "spacer", "id": "spacer-1" },
-    "apps.prototypes.canvas:layout",
-    "apps.prototypes.canvas:add"
+    "apps.prototypes.gallery:done"
   ]
 }

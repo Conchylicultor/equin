@@ -57,3 +57,18 @@ export function canvasCardSelector(letter: string): string {
 export function canvasLayoutSelector(layout?: CanvasLayout): string {
   return `[${CANVAS_LAYOUT_ATTR}${layout === undefined ? "" : `="${layout}"`}]`;
 }
+
+/** The add rail's `+`: its accessible name, which an e2e script clicks by. */
+export const ADD_FRAME_LABEL = "Add a frame to compare";
+
+/** The add rail's button for one frame source, by the source's add label. */
+export function compareWithLabel(addLabel: string): string {
+  return `Compare with ${addLabel}`;
+}
+
+/** The canvas's layout toggle, by the layout it switches TO: its accessible name. */
+export function layoutToggleLabel(layout: CanvasLayout): string {
+  return layout === "swipe"
+    ? "Swipe one frame over the other"
+    : "Back to side by side";
+}

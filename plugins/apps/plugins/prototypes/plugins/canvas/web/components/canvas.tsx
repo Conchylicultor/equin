@@ -12,6 +12,7 @@ import {
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Movable } from "@plugins/primitives/plugins/dom/plugins/movable/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   CANVAS_CARD_ATTR,
@@ -47,15 +48,21 @@ import { FrameHeader, FRAME_HEADER_GAP } from "./frame-header";
 import { OptionsPill } from "./options-pill";
 import { SizeChip } from "./size-chip";
 import { CanvasShortcuts } from "./canvas-shortcuts";
+import { AddFrameRail } from "./add-frame-rail";
+import { LayoutToggle } from "./layout-toggle";
 
 /**
  * The canvas: every frame, side by side and centred (scrolling when they are
  * bigger than the pane), all at one size and zoom — or, with exactly two frames
  * and the Swipe layout, one swiped over the other. The size & zoom chip sits in
- * its bottom-right corner.
+ * its bottom-right corner, and the add rail (`+`, Compare) on the last frame's
+ * right edge, revealed by hovering it — the same chrome a presentation shows. The chip and every
+ * options pill can be dragged off what they cover, anywhere in the canvas.
  */
 export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
   const { canvas } = usePrototypeDetail();
+  // The box the chrome is dragged around inside (`null` until it mounts).
+  const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const [roomRef, room] = useElementSize<HTMLDivElement>();
   const browserWindow = useWindowSize();
   // Each prototype frame's extent, for Whole page: the frames are fitted to
@@ -101,6 +108,7 @@ export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
 
   return (
     <div
+      ref={setRoot}
       className="relative h-full bg-muted/40"
       {...{ [CANVAS_LAYOUT_ATTR]: drawn }}
     >
@@ -119,7 +127,12 @@ export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
             }}
           >
             {swipe ? (
-              <SwipeFrames meta={meta} layout={layout} names={names} />
+              <SwipeFrames
+                meta={meta}
+                layout={layout}
+                names={names}
+                bounds={root}
+              />
             ) : (
               canvas.frames.map((frame, index) => (
                 <FrameCard
@@ -128,11 +141,13 @@ export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
                   index={index}
                   first={index === 0}
                   last={index === canvas.frames.length - 1}
+                  swipeToggle={index === 1 && canvas.frames.length === 2}
                   meta={meta}
                   layout={layout}
                   name={names(frame)}
                   pageHeight={pageHeightOf(extents.get(frame.id))}
                   onPageExtent={reportExtent(frame.id)}
+                  bounds={root}
                 />
               ))
             )}
@@ -140,7 +155,9 @@ export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
         ) : null}
       </Scroll>
       <Pin to="bottom-right" offset="md">
-        <SizeChip layout={layout} noWholePage={noWholePage} />
+        <Movable bounds={root}>
+          <SizeChip layout={layout} noWholePage={noWholePage} />
+        </Movable>
       </Pin>
     </div>
   );
@@ -188,16 +205,22 @@ function FrameCard({
   name,
   pageHeight,
   onPageExtent,
+  bounds,
+  swipeToggle,
 }: {
   frame: CanvasFrame;
   index: number;
   first: boolean;
   last: boolean;
+  /** The second of exactly two frames: the Swipe toggle sits in the gap before it. */
+  swipeToggle: boolean;
   meta: PrototypeMeta;
   layout: FrameLayout;
   name: string;
   pageHeight: number | null;
   onPageExtent: (extent: PageExtent) => void;
+  /** The canvas: what the options pill can be dragged around inside. */
+  bounds: HTMLElement | null;
 }): ReactElement {
   const { canvas, dispatch } = usePrototypeDetail();
   const selected = canvas.selected === frame.id;
@@ -247,7 +270,9 @@ function FrameCard({
                       offset="md"
                       className={hoverRevealTarget}
                     >
-                      <OptionsPill frame={frame} meta={meta} />
+                      <Movable bounds={bounds}>
+                        <OptionsPill frame={frame} meta={meta} />
+                      </Movable>
                     </Pin>
                   </div>
                 </Sticky>
@@ -256,6 +281,18 @@ function FrameCard({
           </Stack>
         )}
       </CanvasFrameView>
+      {last ? <EdgeRail meta={meta} /> : null}
+      {swipeToggle ? (
+        // Centred on the gap between the two frames, outside either screen so
+        // pressing it never selects one.
+        <Placed
+          x={{ start: -FRAME_GAP / 2, shift: "-50%" }}
+          y={{ center: "50%" }}
+          layer="raised"
+        >
+          <LayoutToggle to="swipe" />
+        </Placed>
+      ) : null}
     </div>
   );
 }
@@ -289,17 +326,45 @@ function SelectableScreen({
 }
 
 /**
+ * The add rail on a frame's right edge, centred on its border line and
+ * revealed by hovering the frame (the nearest hover-reveal group).
+ */
+function EdgeRail({ meta }: { meta: PrototypeMeta }): ReactElement {
+  return (
+    <Placed
+      x={{ end: 0, shift: "50%" }}
+      y={{ center: "50%" }}
+      layer="raised"
+      className={hoverRevealTarget}
+    >
+      <AddFrameRail meta={meta} />
+    </Placed>
+  );
+}
+
+/**
+ * How far a swiped frame's options pill sits above the box's bottom edge, and
+ * the divider's Side by side pill below its top edge, px.
+ */
+const SWIPE_PILL_INSET = 12;
+
+/**
  * Swipe: the two frames in ONE box, B under A, A clipped at the divider — drag
- * the divider to wipe one design over the other.
+ * the divider to wipe one design over the other. The divider carries the way
+ * back to side by side at its top, and each prototype frame keeps its options pill,
+ * bottom-centre of its own half.
  */
 function SwipeFrames({
   meta,
   layout,
   names,
+  bounds,
 }: {
   meta: PrototypeMeta;
   layout: FrameLayout;
   names: (frame: CanvasFrame) => string;
+  /** The canvas: what the options pills can be dragged around inside. */
+  bounds: HTMLElement | null;
 }): ReactElement | null {
   const { canvas, dispatch } = usePrototypeDetail();
   const [dragging, setDragging] = useState(false);
@@ -360,7 +425,10 @@ function SwipeFrames({
                   />
                 </Fill>
               </Stack>
-              <div className="relative" style={{ width, height }}>
+              <div
+                className={cn("relative", hoverRevealGroup)}
+                style={{ width, height }}
+              >
                 {screenB}
                 <Placed
                   x="fill"
@@ -394,6 +462,31 @@ function SwipeFrames({
                   onPointerUp={() => setDragging(false)}
                   onPointerCancel={() => setDragging(false)}
                 />
+                <Placed
+                  x={{ start: `${String(at * 100)}%`, shift: "-50%" }}
+                  y={{ start: SWIPE_PILL_INSET }}
+                  layer="raised"
+                >
+                  <LayoutToggle to="side" />
+                </Placed>
+                <EdgeRail meta={meta} />
+                {[a, b].map((f, i) =>
+                  f.kind === "prototype" ? (
+                    // Bottom-centre of its own half: A's on the left, the
+                    // side A shows on — clear of the size chip's corner.
+                    <Placed
+                      key={f.id}
+                      x={{ center: i === 0 ? "25%" : "75%" }}
+                      y={{ end: SWIPE_PILL_INSET }}
+                      layer="raised"
+                      className={hoverRevealTarget}
+                    >
+                      <Movable bounds={bounds}>
+                        <OptionsPill frame={f} meta={meta} />
+                      </Movable>
+                    </Placed>
+                  ) : null,
+                )}
               </div>
             </Stack>
           )}

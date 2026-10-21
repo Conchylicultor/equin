@@ -34,6 +34,8 @@ import {
   pickPrototype,
   pickSize,
   sizeChip,
+  addFrame,
+  setLayout,
 } from "./driver";
 
 const out = arg("out", "/tmp/canvas-remember");
@@ -68,7 +70,7 @@ await withBrowser(async (h) => {
 
   // Work the canvas: the real app, a copy of A, a preset, a fixed zoom.
   await addSource(page, "Real app");
-  await page.getByRole("button", { name: "Frame", exact: true }).click();
+  await addFrame(page);
   await pickSize(page, "Phone");
   await openSizeMenu(page);
   await page.getByRole("button", { name: "Actual size" }).click();
@@ -96,8 +98,8 @@ await withBrowser(async (h) => {
 
   // Swiping, then adding a frame: the canvas goes side by side, and a reload
   // still brings every frame back.
-  await page.getByText("Swipe", { exact: true }).click();
-  await page.getByRole("button", { name: "Frame", exact: true }).click();
+  await setLayout(page, "swipe");
+  await addFrame(page);
   const swiped = await kinds();
   r.eq(
     "a frame added while swiping",
