@@ -70,16 +70,3 @@ export function agentSocketPath(conversationId: string): string {
   }
   return path;
 }
-
-/**
- * Before agent paths were per namespace (until 2026-10-20): a socket directly
- * in `agents/` and a directory directly in `state/sdk-agents/`. Only the
- * one-time handover (`legacy-handover.ts`) reads these.
- */
-export function legacyAgentSocketsDir(): string {
-  return socketsDir.file("agents");
-}
-
-export function legacyAgentDir(conversationId: string): string {
-  return sdkAgentsDir.file(conversationId);
-}

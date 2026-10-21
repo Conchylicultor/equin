@@ -45,7 +45,6 @@ import {
   type StartedAgent,
 } from "./agent-process";
 import { recountAgentProcesses } from "./agent-processes";
-import { handOverLegacyAgents } from "./legacy-handover";
 import {
   AgentNotRunningError,
   commandAgent,
@@ -248,7 +247,6 @@ export const sdkRuntime: ConversationRuntime = {
   inspect: inspectAgents,
 
   async subscribe(onSignal: (signal: RuntimeSignal) => void) {
-    await handOverLegacyAgents();
     attachRunningAgents();
     const stop = await startConsumer(onSignal);
     return () => void stop();

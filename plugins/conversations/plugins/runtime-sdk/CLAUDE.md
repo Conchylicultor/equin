@@ -18,8 +18,7 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   `subscribe` connection per watched conversation, reconnected when the
   consumer sees the agent's `ready`). `agent-processes.ts` serves
   `runtime-sdk.agent-processes`, the agents running here and in every other
-  namespace (one watch of the pid files). `legacy-handover.ts` is one-time:
-  main shuts down agents still on the pre-namespace paths.
+  namespace (one watch of the pid files).
 - **Every agent path is under the launching backend's namespace**
   (`machine/internal/paths.ts`, which reads `runtimeNamespace()` itself): a
   worktree's DB is a fork of main's, and with paths keyed by conversation id

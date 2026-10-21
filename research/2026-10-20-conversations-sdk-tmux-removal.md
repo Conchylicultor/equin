@@ -206,4 +206,29 @@ Verified live in this worktree (`att-1792522568-jqdk8q`):
   detail drew the attempt as its task chip and main as "main".
 - **Close:** `shutdown` → the agent exited, and its pid file and socket were removed.
 
-Not verified live: the handover on main. It runs on main's first boot after the push.
+## The handover on main (checked 2026-10-21)
+
+Main ran the handover on its first boot with this code, at 21:55:00 UTC on 2026-10-20. It shut
+down the 10 agents its live conversations had on the old paths:
+
+- **Nine exited** (`exited: shutdown command`) and their conversations resumed on the per-namespace
+  paths on the next Send (`conv-1792413968-a8uyez` and the others are now under
+  `sockets/agents/singularity/`). `conv-1792526163-ps3nml` had an open AskUserQuestion; it was
+  aborted, as designed.
+- **One logged `● exiting: shutdown command` and kept running:** `conv-1792512233-nhpy7b`, the
+  agent that pushed this change, whose CLI was still running that push as a background Bash task.
+  Its socket and directory were already removed, so no backend commanded it, and the conversation
+  was hibernated. It then finished its turn, whose 8 events never reached the DB (the transcript
+  has them). SIGTERM did nothing either: `shutdown()` sets `closed` before it stalls, and the
+  SIGTERM handler returns when `closed` is set. It was killed by hand with SIGKILL. The current
+  `agent.ts` has the same `shutdown()` order, so the bug is still there. A stop from the backend is
+  covered by the 15 s SIGKILL fallback; the agent's own exit path is filed as a task.
+- **Worktree agents on the old paths:** two remained, both Haiku latency-test agents from
+  `att-1792445997-p8yemr` (its task done), idle since 2026-10-20 09:36. They exited on `shutdown`
+  (sent by hand). Their tmux sessions were the last ones; the tmux server is gone.
+- **Leftovers removed:** the ~90 dead `state/sdk-agents/conv-*` directories on the old layout
+  (nine of them recreated after the handover's delete by the agent's own `exited` line) and
+  `_spike`.
+
+The handover code (`legacy-handover.ts`, `shutdownAgentAt`, `legacyAgentSocketsDir` /
+`legacyAgentDir`) is deleted: nothing runs on the old paths any more.
