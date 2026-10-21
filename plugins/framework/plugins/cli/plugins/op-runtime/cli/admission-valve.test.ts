@@ -1,53 +1,139 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
+  admitThroughGate,
   checkValveGuard,
-  holdThroughValve,
-  MAX_VALVE_HOLD_MS,
-  shouldRequeue,
+  createGateLocks,
+  EXCLUSIVE_RUNNING_REASON,
+  mustRequeue,
   valveGates,
-  type HoldOutcome,
+  type GateHold,
+  type GateLocks,
+  type GateMode,
+  type HoldResult,
   type ValveDeps,
 } from "./admission-valve";
 
-// Pure-logic tests of the valve decision loop: no real latch, no flock, no
-// timers — every seam injected per the plan doc's test contract.
+// The admission loop runs on injected seams: an in-memory readers/writer gate
+// and a latch the test flips. The real flocks are covered at the end, on a
+// throwaway directory — never the host's own gate, which live builds use.
 
-interface Script {
-  /** isUnderDuress() answers, consumed in order; the last one repeats. */
-  duress: boolean[];
-  /** Advance the fake clock by this much on each waitForWake call. */
-  wakeAdvanceMs?: number;
+const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+
+/** An in-memory readers/writer lock with the GateLocks contract. */
+function fakeGate() {
+  let shared = 0;
+  let exclusive = false;
+  const pending: {
+    mode: GateMode;
+    resolve: (hold: GateHold) => void;
+  }[] = [];
+  const fits = (mode: GateMode): boolean =>
+    mode === "shared" ? !exclusive : !exclusive && shared === 0;
+  const take = (mode: GateMode): GateHold => {
+    if (mode === "shared") shared++;
+    else exclusive = true;
+    let released = false;
+    return {
+      mode,
+      release: () => {
+        if (!released) {
+          released = true;
+          if (mode === "shared") shared--;
+          else exclusive = false;
+          for (const p of [...pending]) {
+            if (!fits(p.mode)) continue;
+            pending.splice(pending.indexOf(p), 1);
+            p.resolve(take(p.mode));
+          }
+        }
+        return Promise.resolve();
+      },
+    };
+  };
+  const locks: GateLocks = {
+    tryLock: (mode) => (fits(mode) ? take(mode) : null),
+    waitLock: (mode, signal) =>
+      new Promise((resolve, reject) => {
+        if (signal?.aborted) {
+          reject(signal.reason as Error);
+          return;
+        }
+        const p = { mode, resolve };
+        pending.push(p);
+        signal?.addEventListener(
+          "abort",
+          () => {
+            const i = pending.indexOf(p);
+            if (i < 0) return;
+            pending.splice(i, 1);
+            reject(signal.reason as Error);
+          },
+          { once: true },
+        );
+      }),
+    joinLine: (signal) => {
+      signal.throwIfAborted();
+      return Promise.resolve({ leave: () => undefined });
+    },
+  };
+  return { locks, take, state: () => ({ shared, exclusive }) };
 }
 
-function makeHarness(script: Script) {
-  let nowMs = 1_000_000;
-  const duress = [...script.duress];
-  let lastDuress = false;
-  const calls = {
-    duressChecks: 0,
-    wakes: 0,
-    holdStarts: [] as (string | null)[],
-    holdEnds: [] as HoldOutcome[],
+function harness(opts: { duress?: boolean } = {}) {
+  let duress = opts.duress ?? false;
+  let duressChecks = 0;
+  const wakers = new Set<() => void>();
+  const gate = fakeGate();
+  const holds: { start: (string | null)[]; end: HoldResult[] } = {
+    start: [],
+    end: [],
   };
   const deps: ValveDeps = {
-    duressGuard: () => ({ kind: "on" }),
     isUnderDuress: () => {
-      calls.duressChecks++;
-      const next = duress.shift();
-      if (next !== undefined) lastDuress = next;
-      return lastDuress; // the script's last answer repeats
+      duressChecks++;
+      return duress;
     },
+    duressGuard: () => ({ kind: "on" }),
     duressReason: () => "cluster-onset: decompressionsPerSec",
-    waitForWake: (maxWaitMs) => {
-      calls.wakes++;
-      nowMs += Math.min(script.wakeAdvanceMs ?? 1_000, maxWaitMs);
-      return Promise.resolve();
-    },
-    now: () => nowMs,
-    onHoldStart: (reason) => calls.holdStarts.push(reason),
-    onHoldEnd: (outcome) => calls.holdEnds.push(outcome),
+    waitForWake: (signal) =>
+      new Promise((resolve) => {
+        const done = (): void => {
+          wakers.delete(done);
+          resolve();
+        };
+        if (signal.aborted) {
+          resolve();
+          return;
+        }
+        wakers.add(done);
+        signal.addEventListener("abort", done, { once: true });
+      }),
+    gate: gate.locks,
+    onHoldStart: (reason) => holds.start.push(reason),
+    onHoldEnd: (result) => holds.end.push(result),
   };
-  return { deps, calls };
+  return {
+    deps,
+    gate,
+    holds,
+    duressChecks: () => duressChecks,
+    setDuress(next: boolean) {
+      duress = next;
+      for (const wake of [...wakers]) wake();
+    },
+  };
+}
+
+/** Tracks whether a pending admission has resolved yet. */
+function track(p: Promise<GateHold | null>) {
+  let hold: GateHold | null | undefined;
+  void p.then((h) => {
+    hold = h;
+  });
+  return { done: () => hold !== undefined, hold: () => hold, promise: p };
 }
 
 describe("valveGates", () => {
@@ -94,75 +180,185 @@ describe("checkValveGuard", () => {
   });
 });
 
-describe("holdThroughValve", () => {
-  test("ungated never consults the valve", async () => {
-    const h = makeHarness({ duress: [true] }); // would hold forever if consulted
-    expect(await holdThroughValve({ gated: false }, h.deps)).toBe("cleared");
-    expect(h.calls.duressChecks).toBe(0);
-    expect(h.calls.holdStarts).toEqual([]);
+describe("admitThroughGate", () => {
+  test("ungated: no gate, the latch is never consulted", async () => {
+    const h = harness({ duress: true }); // would hold if consulted
+    expect(await admitThroughGate({ gated: false }, h.deps)).toBeNull();
+    expect(h.duressChecks()).toBe(0);
   });
 
-  test("no duress: returns immediately, no hold", async () => {
-    const h = makeHarness({ duress: [false] });
-    expect(await holdThroughValve({ gated: true }, h.deps)).toBe("cleared");
-    expect(h.calls.wakes).toBe(0);
-    expect(h.calls.holdStarts).toEqual([]);
-    expect(h.calls.holdEnds).toEqual([]);
+  test("calm: admitted shared at once, beside other calm builds, no hold", async () => {
+    const h = harness();
+    const other = h.gate.take("shared");
+    const hold = await admitThroughGate({ gated: true }, h.deps);
+    expect(hold?.mode).toBe("shared");
+    expect(h.holds).toEqual({ start: [], end: [] });
+    await hold?.release();
+    await other.release();
   });
 
-  test("held then released: waits through the episode, then proceeds", async () => {
-    // entry check: true → hold loop sees true, then false (clear) → done.
-    const h = makeHarness({ duress: [true, true, true, false] });
-    expect(await holdThroughValve({ gated: true }, h.deps)).toBe("cleared");
-    expect(h.calls.wakes).toBe(2);
-    expect(h.calls.holdStarts).toEqual(["cluster-onset: decompressionsPerSec"]);
-    expect(h.calls.holdEnds).toEqual(["cleared"]);
-  });
-
-  test("max-hold bound: fails open, proceeds despite persisting duress", async () => {
-    // Duress never clears; each wake advances the clock so the bound trips.
-    const h = makeHarness({
-      duress: [true],
-      wakeAdvanceMs: MAX_VALVE_HOLD_MS / 4,
+  test("under duress, alone: admitted exclusive", async () => {
+    const h = harness({ duress: true });
+    const hold = await admitThroughGate({ gated: true }, h.deps);
+    expect(hold?.mode).toBe("exclusive");
+    expect(h.holds).toEqual({
+      start: ["cluster-onset: decompressionsPerSec"],
+      end: ["acquired"],
     });
-    expect(await holdThroughValve({ gated: true }, h.deps)).toBe("fail-open");
-    expect(h.calls.wakes).toBe(4); // 4 × (bound/4) exhausts the bound exactly
-    expect(h.calls.holdEnds).toEqual(["fail-open"]);
+    await hold?.release();
   });
 
-  test("waitForWake is never asked to sleep past the fail-open bound", async () => {
-    const seen: number[] = [];
-    const h = makeHarness({ duress: [true], wakeAdvanceMs: MAX_VALVE_HOLD_MS });
-    const deps: ValveDeps = {
-      ...h.deps,
-      waitForWake: (maxWaitMs) => {
-        seen.push(maxWaitMs);
-        return h.deps.waitForWake(maxWaitMs);
-      },
-    };
-    await holdThroughValve({ gated: true }, deps);
-    expect(seen).toEqual([MAX_VALVE_HOLD_MS]); // remaining budget, not unbounded
+  test("under duress, waits for the running build to finish — no timeout", async () => {
+    const h = harness({ duress: true });
+    const running = h.gate.take("shared");
+    const admit = track(admitThroughGate({ gated: true }, h.deps));
+    for (let i = 0; i < 20; i++) await tick();
+    expect(admit.done()).toBe(false);
+
+    await running.release();
+    const hold = await admit.promise;
+    expect(hold?.mode).toBe("exclusive");
+    expect(h.holds.end).toEqual(["acquired"]);
+    await hold?.release();
+  });
+
+  test("duress clears while waiting: admitted shared beside the running build", async () => {
+    const h = harness({ duress: true });
+    const running = h.gate.take("shared");
+    const admit = track(admitThroughGate({ gated: true }, h.deps));
+    await tick();
+    expect(admit.done()).toBe(false);
+
+    h.setDuress(false);
+    const hold = await admit.promise;
+    expect(hold?.mode).toBe("shared");
+    expect(h.holds.end).toEqual(["cleared"]);
+    await hold?.release();
+    await running.release();
+  });
+
+  test("calm, but a build admitted under duress runs: wait for it, then go shared", async () => {
+    const h = harness();
+    const alone = h.gate.take("exclusive");
+    const admit = track(admitThroughGate({ gated: true }, h.deps));
+    await tick();
+    expect(admit.done()).toBe(false);
+    expect(h.holds.start).toEqual([EXCLUSIVE_RUNNING_REASON]);
+
+    await alone.release();
+    const hold = await admit.promise;
+    expect(hold?.mode).toBe("shared");
+    expect(h.holds.end).toEqual(["cleared"]);
+    await hold?.release();
+  });
+
+  test("duress trips while waiting for the shared lock: runs alone instead", async () => {
+    const h = harness();
+    const alone = h.gate.take("exclusive");
+    const admit = track(admitThroughGate({ gated: true }, h.deps));
+    await tick();
+
+    h.setDuress(true);
+    await alone.release();
+    const hold = await admit.promise;
+    // Got the shared lock, saw duress, released it, came back exclusive.
+    expect(hold?.mode).toBe("exclusive");
+    expect(h.holds.start).toEqual([EXCLUSIVE_RUNNING_REASON]);
+    expect(h.holds.end).toEqual(["acquired"]);
+    expect(h.gate.state()).toEqual({ shared: 0, exclusive: true });
+    await hold?.release();
   });
 });
 
-// The post-acquire re-check (gap (a)): the build holds the host grant, then asks
-// whether duress tripped while it was parked in the flock queue.
-describe("shouldRequeue", () => {
-  test("duress tripped while parked in the grant queue ⇒ release and re-hold", () => {
-    expect(shouldRequeue(true, "cleared", true)).toBe(true);
+// The post-grant re-check: a build holds its CPU grant, then asks whether duress
+// tripped while it was queued for it.
+describe("mustRequeue", () => {
+  const shared: GateHold = { mode: "shared", release: () => Promise.resolve() };
+  const exclusive: GateHold = {
+    mode: "exclusive",
+    release: () => Promise.resolve(),
+  };
+
+  test("admitted shared, duress tripped meanwhile ⇒ release and run alone", () => {
+    expect(mustRequeue(shared, true)).toBe(true);
   });
 
-  test("host calm at the re-check ⇒ run the heavy section", () => {
-    expect(shouldRequeue(true, "cleared", false)).toBe(false);
+  test("admitted shared, still calm ⇒ run", () => {
+    expect(mustRequeue(shared, false)).toBe(false);
   });
 
-  test("after a fail-open hold, duress never requeues — the loop must terminate", () => {
-    // The failure mode this guards: a fail-open valve returns immediately while
-    // duress is still fresh, so re-checking would spin hold → requeue → hold …
-    expect(shouldRequeue(true, "fail-open", true)).toBe(false);
+  test("admitted alone ⇒ never requeued, so the loop terminates", () => {
+    expect(mustRequeue(exclusive, true)).toBe(false);
   });
 
-  test("an ungated build (main / detached) is never requeued", () => {
-    expect(shouldRequeue(false, "cleared", true)).toBe(false);
+  test("ungated (main / detached) ⇒ never requeued", () => {
+    expect(mustRequeue(null, true)).toBe(false);
+  });
+});
+
+describe("createGateLocks (real flocks)", () => {
+  let root: string | undefined;
+  afterEach(() => {
+    if (root) rmSync(root, { recursive: true, force: true });
+    root = undefined;
+  });
+  const gateIn = (): GateLocks => {
+    const dir = mkdtempSync(join(tmpdir(), "agent-build-gate-"));
+    root = dir;
+    return createGateLocks({
+      file: (...segments) => join(dir, ...segments),
+      ensure: () => {
+        mkdirSync(dir, { recursive: true });
+        return dir;
+      },
+    });
+  };
+
+  test("calm builds share; an exclusive one waits for them all", async () => {
+    const gate = gateIn();
+    const a = gate.tryLock("shared");
+    const b = gate.tryLock("shared");
+    expect(a?.mode).toBe("shared");
+    expect(b?.mode).toBe("shared");
+    expect(gate.tryLock("exclusive")).toBeNull();
+
+    let granted = false;
+    const alone = gate.waitLock("exclusive").then((h) => {
+      granted = true;
+      return h;
+    });
+    await a?.release();
+    await new Promise((r) => setTimeout(r, 300));
+    expect(granted).toBe(false); // b still runs
+
+    await b?.release();
+    const hold = await alone;
+    expect(hold.mode).toBe("exclusive");
+    expect(gate.tryLock("shared")).toBeNull(); // it keeps everyone out
+    await hold.release();
+    await hold.release(); // idempotent
+    const after = gate.tryLock("shared");
+    expect(after).not.toBeNull();
+    await after?.release();
+  });
+
+  test("an aborted exclusive wait throws its reason and takes nothing", async () => {
+    const gate = gateIn();
+    const running = gate.tryLock("shared");
+    const ac = new AbortController();
+    const waiting = gate.waitLock("exclusive", ac.signal);
+    ac.abort(new Error("duress cleared"));
+    let reason: unknown;
+    try {
+      await waiting;
+    } catch (err) {
+      reason = err;
+    }
+    expect(reason).toBeInstanceOf(Error);
+    expect((reason as Error).message).toBe("duress cleared");
+    const more = gate.tryLock("shared");
+    expect(more).not.toBeNull();
+    await more?.release();
+    await running?.release();
   });
 });

@@ -27,7 +27,7 @@ import {
 import {
   OP_LOG_FILE,
   readOpRecords,
-  readOpenWait,
+  readOpenWaitInLine,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { watchForCommand } from "@plugins/infra/plugins/file-watcher/cli";
 import {
@@ -38,6 +38,7 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   WAIT_KINDS,
+  linePositionText,
   type OpRecord,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 
@@ -135,10 +136,11 @@ function describe(state: OpState, slug: Namespace): string {
 function progressReporter(): (a: AwaitedOp) => void {
   const last = new Map<string, string>();
   return (a) => {
-    const wait = readOpenWait(a.opId);
-    const line = wait
-      ? `  ${a.op}: ${WAIT_KINDS[wait.kind].sentence(wait.reason)}` +
-        `${wait.cycle > 0 ? ` · requeue #${wait.cycle}` : ""} since ${wait.startedAt}`
+    const parked = readOpenWaitInLine(a.opId);
+    const line = parked
+      ? `  ${a.op}: ${WAIT_KINDS[parked.wait.kind].sentence(parked.wait.reason)}` +
+        `${parked.wait.cycle > 0 ? ` · requeue #${parked.wait.cycle}` : ""}` +
+        `${linePositionText(parked.ahead)} since ${parked.wait.startedAt}`
       : `  ${a.op}: working`;
     if (last.get(a.opId) === line) return;
     last.set(a.opId, line);

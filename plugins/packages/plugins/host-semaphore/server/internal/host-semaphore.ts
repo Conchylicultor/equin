@@ -14,6 +14,11 @@ import {
   waitForFlock,
   type HeldFlock,
 } from "@plugins/packages/plugins/flock/server";
+import {
+  createTicketLine,
+  type Ticket,
+  type TicketLine,
+} from "@plugins/packages/plugins/ticket-line/core";
 import type { DataDir } from "@plugins/infra/plugins/paths/core";
 
 // Cross-process twin of `createSemaphore` (the in-process counter+queue gate in
@@ -35,17 +40,24 @@ import type { DataDir } from "@plugins/infra/plugins/paths/core";
 //    idle (the stranding defect). Instead the head waiter *fans out*: it spawns one
 //    `flock-wait` child per slot and takes the FIRST to grant, so ANY freed slot
 //    wakes it — including one freed by a SIGKILLed holder, which flock releases too.
-//    A per-pool **turnstile** (itself a single flock file) ensures only the *head*
-//    waiter fans out host-wide, so the extra process cost is a fixed `size - 1` per
-//    contended pool, not `size × waiters`.
+//    Waiters queue in a **first-come-first-served line** (`packages/ticket-line`,
+//    one per class — see below) and only the line's *head* fans out, so the extra
+//    process cost is `size` fan-out children per class with waiters plus one
+//    ticket-wait child per other waiter, not `size × waiters`.
 //
-// Deadlock-free: the turnstile is only ever held by *waiters*; a slot-holder never
-// needs it, and a turnstile-holder waits only for a slot, which holders always
-// release. The wait-for graph is acyclic.
+// FIFO within a class: a class is (lane, priority), and each has its own line
+// (`line-<lane>-<priority>/`). An acquire takes the fast path only while its own
+// line is empty, so it never barges past an earlier acquire of its class, and the
+// line hands the head position on in arrival order. ACROSS classes the existing
+// rules decide: lanes partition slot capacity (below), `low` yields to waiting
+// `normal` acquires (`Priority`), and the heads of two classes that share slots
+// race for a freed one, as every waiter used to. One shared line would break
+// both rules — a main build parked behind an agent build waiting for a slot the
+// main build does not even need.
 //
-// Barging is unchanged: the fast-path sweep does not consult the turnstile, so a
-// fresh caller can still take a slot a queued waiter was about to win. The turnstile
-// buys serialized *wakeup*, not FIFO *fairness*.
+// Deadlock-free: a ticket is only ever held by a *waiter*; a slot-holder never
+// needs one, and the head waits only for a slot, which holders always release.
+// The wait-for graph is acyclic.
 //
 // Cancellable: every wait above accepts an optional `AbortSignal` (see
 // `AcquireHooks.signal`). Both waits are waits on a CHILD's stdout, so cancellation
@@ -59,12 +71,9 @@ import type { DataDir } from "@plugins/infra/plugins/paths/core";
 // lane. `background` may only sweep/fan-out over `slot-0 … slot-(backgroundLimit-1)`;
 // `interactive` may use every slot but sweeps them HIGH-index-first, so the reserved
 // high slots fill before the shared low slots and a saturated background lane can
-// never starve interactive work. The turnstile stays PER-POOL (shared across lanes) —
-// only slot capacity is partitioned, not the wakeup serialization — so an interactive
-// waiter may briefly queue behind a background waiter's fan-out for the wakeup (a few
-// ms), never for a slot.
+// never starve interactive work.
 
-// Every wait below — the turnstile, the size guard, each fan-out slot — is ONE
+// Every wait below — the ticket ahead, the size guard, each fan-out slot — is ONE
 // `waitForFlock` (`packages/flock`): a `flock-wait` child that blocks off our event
 // loop on one lock file and then HOLDS it until released, or until we die. The
 // child script used to live here; it moved to `packages/flock` so other waiters
@@ -170,7 +179,7 @@ export interface AcquireHooks {
    * Two effects, and they are different questions:
    *
    * 1. **A pending acquire stops waiting.** If the signal fires while we are
-   *    queued — for the turnstile, or fanned out over the lane's slots — the wait
+   *    queued — in the class line, or fanned out over the lane's slots — the wait
    *    unwinds and the call THROWS `signal.reason`. Every child we spawned is
    *    killed and reaped and every fd we opened is closed on the way out; leaking
    *    a `flock-wait` child or an fd here would be worse than the wedge, since
@@ -257,9 +266,10 @@ export interface HostSemaphore {
    * caller that fans out N units of work acquires its whole share once, up front,
    * instead of spawning N waiters (one per unit) precisely when the box is already
    * busy. The idle-pool case is the fast path — pure in-process `flock(LOCK_NB)`
-   * sweep, no subprocess. Only when every slot is busy do we take the turnstile and
-   * fan out one blocking child per slot to wait for the FIRST free slot; a second
-   * non-blocking sweep then picks up whatever else freed while we waited.
+   * sweep, no subprocess. Only when every slot is busy (or our class line is not
+   * empty) do we queue in the line and, at its head, fan out one blocking child
+   * per slot to wait for the FIRST free slot; a second non-blocking sweep then
+   * picks up whatever else freed while we waited.
    *
    * `max` is clamped to the acquiring lane's window size (`backgroundLimit` for the
    * `background` lane, `size` for `interactive`) — asking for more slots than the
@@ -404,7 +414,6 @@ export function createHostSemaphore(opts: {
 
   // Resolved per call, never captured — see the docblock on `slots`.
   const slotFile = (i: number) => slots.file(`slot-${i}.lock`);
-  const turnstileFile = () => slots.file("turnstile.lock");
   const demandFile = () => slots.file("demand.lock");
   const sizeFile = () => slots.file("size");
   const guardFile = () => slots.file(".size.lock");
@@ -531,8 +540,7 @@ export function createHostSemaphore(opts: {
 
     // Take the size guard. Non-blocking in-process first; if it's contended, another
     // process is mid-initialization — that is a benign flock race, NOT a broken
-    // invariant, so we WAIT for the guard via one `flock-wait` child (the turnstile
-    // pattern) rather than crash. A blocking in-process flock is banned (freezes the
+    // invariant, so we WAIT for the guard via one `flock-wait` child rather than crash. A blocking in-process flock is banned (freezes the
     // loop) and polling is banned; the child does the blocking wait off our loop.
     const guard = guardFile();
     const guardFd = openSync(guard, "w");
@@ -773,85 +781,66 @@ export function createHostSemaphore(opts: {
     if (taken.winner) await taken.winner.release();
   }
 
-  // One acquisition of `1 … effectiveMax` slots over the lane's `order` window:
-  // the fast-path sweep, else the turnstile + fan-out. A `normal` caller holds
-  // the demand lock shared across its slow path, so a `low` caller yields to it.
-  async function takeSlots(
+  // The class line an acquire waits in: one per (lane, priority), so arrival
+  // order is strict among acquires of the same kind while the lanes' reserved
+  // floor and `low`'s yield to `normal` keep working across kinds — one shared
+  // line would park a main build behind an agent build that waits for a slot
+  // the main build does not even need.
+  const lineFor = (lane: Lane, priority: Priority): TicketLine =>
+    createTicketLine(slots.file(`line-${lane}-${priority}`));
+
+  // The slow path: wait in the class line, then — at its head — take slots the
+  // way the head always has: re-sweep, else fan out over the lane window for the
+  // first freed slot. The line is left BEFORE sweeping for extras, so the next
+  // waiter starts its own wait while this one tops up its share. A `normal`
+  // acquire holds the demand lock shared across the whole wait, so `low`
+  // acquires yield to it; a `low` acquire keeps its ticket across every yield,
+  // so yielding never costs it its place among `low` acquires.
+  async function waitInLine(
     effectiveMax: number,
     order: number[],
+    line: TicketLine,
     priority: Priority,
     signal: AbortSignal | undefined,
     onWaitStart: () => void,
   ): Promise<Taken> {
-    // Fast path: non-blocking sweep over the lane window for up to `effectiveMax`
-    // slots. On a window with any free slot this is the whole story — no turnstile,
-    // no subprocess.
-    let fds = sweepKeep(effectiveMax, order);
-    let winner: HeldFlock | undefined;
-    if (fds.length > 0) return { fds, winner };
-
-    // Slow path: every slot is busy (sweepKeep closed all fds it opened).
     onWaitStart();
     waiting++;
-    // (a) Turnstile — only the head waiter fans out host-wide. Declared BEFORE
-    // it is taken, with its release closure alongside, so that a cancellation
-    // landing anywhere from the `openSync` onward unwinds through one `finally`
-    // that closes the fd and reaps the child. (It used to be declared between
-    // the acquire and the use, which left the child unreachable from a `finally`
-    // for exactly the window an abort could land in.)
-    const turnstile = turnstileFile();
-    let turnstileFd: number | undefined;
-    let turnstileHeld: HeldFlock | undefined;
-    let turnstileReleased = false;
-    const releaseTurnstile = async (): Promise<void> => {
-      if (turnstileReleased) return;
-      turnstileReleased = true;
-      if (turnstileFd !== undefined) closeSync(turnstileFd);
-      // Idempotent and reaps the holding child; a cancelled wait never
-      // produced one (`waitForFlock` reaped it before throwing).
-      if (turnstileHeld) await turnstileHeld.release();
-    };
+    let ticket: Ticket | undefined;
     let releaseDemand: (() => Promise<void>) | undefined;
-
     try {
       // A `normal` waiter announces itself before queueing, so every `low`
       // acquire from here on yields to it.
       if (priority === "normal") releaseDemand = await holdDemand(signal);
-      // Take it non-blocking in-process; if contended, wait for it via a single
-      // child (a turnstile is one file, so an ordinary flock queue on it can't
-      // strand).
-      turnstileFd = openSync(turnstile, "w");
-      if (!flockTry(turnstileFd)) {
-        closeSync(turnstileFd);
-        turnstileFd = undefined;
-        turnstileHeld = await waitForFlock(turnstile, { signal });
-      }
-
-      // (b) Re-sweep the lane window: a slot may have freed while we queued for
-      // the turnstile.
-      fds = sweepKeep(effectiveMax, order);
-      if (fds.length === 0) {
-        // (c) Fan out over the lane's window and take the first grant; (d) reap
-        // the losers so their slots are back.
-        winner = await fanOut(order, signal);
-        // (d') Release the turnstile so the next waiter can fan out, BEFORE we
-        // (e) re-sweep for up to `effectiveMax - 1` EXTRA slots. The winner's own
-        // slot is held by the winner child, so it fails to lock here and is never
-        // double-counted.
-        await releaseTurnstile();
-        fds = sweepKeep(effectiveMax - 1, order);
+      ticket = await line.join({ signal });
+      for (;;) {
+        if (priority === "low" && demandPresent()) await awaitNoDemand(signal);
+        const fds = sweepKeep(effectiveMax, order);
+        const taken: Taken =
+          fds.length > 0
+            ? { fds, winner: undefined }
+            : { fds: [], winner: await fanOut(order, signal) };
+        // A `normal` acquire started waiting meanwhile — most often while we
+        // were fanned out for this very slot. Hand it straight back: the
+        // `normal` waiter's fan-out takes it.
+        if (priority === "low" && demandPresent()) {
+          await releaseTaken(taken);
+          signal?.throwIfAborted();
+          continue;
+        }
+        ticket.leave();
+        if (taken.winner) taken.fds = sweepKeep(effectiveMax - 1, order);
+        return taken;
       }
     } finally {
-      // Decremented FIRST, synchronously: a throwing `releaseTurnstile` must
-      // never leave the queue-depth gauge permanently inflated.
+      // Decremented FIRST, synchronously: a throwing release below must never
+      // leave the queue-depth gauge permanently inflated.
       waiting--;
-      // Covers the (b)-success path, any throw from fanOut, and a cancellation
-      // anywhere in between — never strand the turnstile.
-      await releaseTurnstile();
+      // Covers a cancellation anywhere in the wait — never strand the line.
+      ticket?.leave();
       // No longer waiting: stop holding `low` acquires back.
       if (releaseDemand) await releaseDemand();
     }
-    return { fds, winner };
   }
 
   async function acquireShare(
@@ -894,44 +883,29 @@ export function createHostSemaphore(opts: {
       hooks?.onWaitStart?.();
     };
 
-    let taken: Taken;
-    if (priority === "normal") {
-      taken = await takeSlots(
-        effectiveMax,
-        order,
-        priority,
-        signal,
-        onWaitStart,
-      );
-    } else {
-      for (;;) {
-        // (1) Never start while a `normal` acquire is waiting.
-        if (demandPresent()) {
-          onWaitStart();
-          waiting++;
-          try {
-            await awaitNoDemand(signal);
-          } finally {
-            waiting--;
-          }
-        }
-        // (2) Take slots like anyone else (barging and all) …
-        taken = await takeSlots(
-          effectiveMax,
-          order,
-          priority,
-          signal,
-          onWaitStart,
-        );
-        // (3) … unless a `normal` acquire started waiting meanwhile — most often
-        // while we were fanned out for this very slot. Hand it straight back and
-        // go back to (1): the `normal` waiter's fan-out takes it.
-        if (!demandPresent()) break;
-        onWaitStart();
+    // Fast path: free slots, and nobody of this class queued for them — a fresh
+    // acquire never barges past its own line. A `low` acquire also never starts
+    // while a `normal` one waits, and hands back what it took if one appeared
+    // meanwhile.
+    const line = lineFor(lane, priority);
+    let taken: Taken | undefined;
+    if (line.isEmpty() && (priority === "normal" || !demandPresent())) {
+      const fds = sweepKeep(effectiveMax, order);
+      if (fds.length > 0) taken = { fds, winner: undefined };
+      if (taken && priority === "low" && demandPresent()) {
         await releaseTaken(taken);
-        signal?.throwIfAborted();
+        taken = undefined;
       }
     }
+    taken ??= await waitInLine(
+      effectiveMax,
+      order,
+      line,
+      priority,
+      signal,
+      onWaitStart,
+    );
+    const held = taken;
 
     let released = false;
     // The synchronous half: once this returns, every slot is back host-wide.
@@ -945,14 +919,14 @@ export function createHostSemaphore(opts: {
       // where it already released. Guard so the second call is a no-op.
       if (released) return;
       released = true;
-      releaseTakenSync(taken);
+      releaseTakenSync(held);
     };
     const release = async (): Promise<void> => {
       releaseSlots();
       // Reap the killed child. Awaiting a settled `exited` is a no-op, so calling
       // `release()` again — or calling it after an abort listener already ran
       // `releaseSlots()` — stays idempotent.
-      if (taken.winner) await taken.winner.release();
+      if (held.winner) await held.winner.release();
     };
 
     if (signal?.aborted) {
@@ -975,7 +949,7 @@ export function createHostSemaphore(opts: {
     // hold directly. Always >= 1: on the fast path fds.length >= 1 (we only fall to
     // the slow path when it's 0); on the slow path the winner contributes the 1.
     return {
-      slots: (taken.winner ? 1 : 0) + taken.fds.length,
+      slots: (held.winner ? 1 : 0) + held.fds.length,
       release,
       releaseSlots,
     };

@@ -853,7 +853,7 @@ describe("cancellation (AcquireHooks.signal)", () => {
       slots: uniqueSlots("abort-pending"),
       size: 2,
     });
-    // Fill the pool so the next acquire is forced onto the slow path (turnstile +
+    // Fill the pool so the next acquire is forced onto the slow path (class line +
     // fan-out children) — the only place there is anything to cancel.
     const holder = await sem.acquireShare(2);
     expect(holder.slots).toBe(2);
@@ -904,25 +904,25 @@ describe("cancellation (AcquireHooks.signal)", () => {
     await after.release();
   });
 
-  test("cancelling the head waiter releases the turnstile, so another waiter still wakes", async () => {
+  test("cancelling the head waiter leaves the line, so the waiter behind it still wakes", async () => {
     const sem = createHostSemaphore({
-      slots: uniqueSlots("abort-turnstile"),
+      slots: uniqueSlots("abort-head"),
       size: 1,
     });
     const holder = await sem.acquireShare(1);
 
     const ac = new AbortController();
     const first = sem.acquireShare(1, { signal: ac.signal });
-    await sleep(150); // head waiter: holds the turnstile, has fanned out
+    await sleep(150); // head waiter: at the head of the line, has fanned out
     const second = sem.acquireShare(1);
-    await sleep(150); // queued behind the turnstile
+    await sleep(150); // queued in the line behind it
     expect(sem.depth()).toBe(2);
 
     const reason = new Error("head gave up");
     ac.abort(reason);
     expect(await rejection(first)).toBe(reason);
 
-    // The cancelled head must not take the turnstile to the grave with it —
+    // The cancelled head must not take its place in line to the grave with it —
     // otherwise one aborted waiter would strand every waiter behind it, which is
     // the wedge this whole change exists to remove rather than relocate.
     await holder.release();
@@ -934,18 +934,18 @@ describe("cancellation (AcquireHooks.signal)", () => {
     await (outcome as HostShare).release();
   });
 
-  test("a waiter queued on the TURNSTILE child aborts cleanly and reaps it", async () => {
+  test("a waiter queued in the LINE aborts cleanly and reaps its ticket-wait child", async () => {
     // The other slow-path wait: not the fan-out, but the single `flock-wait` child
-    // a non-head waiter uses to queue for the turnstile. It unwinds through a
-    // different branch, so it gets its own test — the head-waiter test above never
-    // reaches it (the head takes the turnstile in-process, with no child at all).
+    // a non-head waiter uses to wait on the ticket ahead of it. It unwinds through
+    // a different branch, so it gets its own test — the head-waiter test above
+    // never reaches it (the head of an empty line spawns no ticket-wait child).
     const sem = createHostSemaphore({
-      slots: uniqueSlots("abort-turnstile-child"),
+      slots: uniqueSlots("abort-line-child"),
       size: 1,
     });
     const holder = await sem.acquireShare(1);
 
-    const head = sem.acquireShare(1); // takes the turnstile, fans out
+    const head = sem.acquireShare(1); // heads the line, fans out
     await sleep(150);
 
     const spawned: { exited: Promise<number> }[] = [];
@@ -964,8 +964,8 @@ describe("cancellation (AcquireHooks.signal)", () => {
     const reason = new Error("queued waiter gave up");
     try {
       const queued = sem.acquireShare(1, { signal: ac.signal });
-      await sleep(200); // parked on the turnstile child, behind the head
-      expect(spawned.length).toBe(1); // exactly one child: the turnstile waiter
+      await sleep(200); // parked on the ticket ahead (the head's)
+      expect(spawned.length).toBe(1); // exactly one child: the ticket wait
 
       ac.abort(reason);
       expect(await rejection(queued)).toBe(reason);
@@ -1038,6 +1038,81 @@ describe("cancellation (AcquireHooks.signal)", () => {
     const again = await sem.acquireShare(1);
     expect(again.slots).toBe(1);
     await again.release();
+  });
+});
+
+describe("first come, first served (class lines)", () => {
+  test("waiters of one class are granted in arrival order", async () => {
+    const sem = createHostSemaphore({ slots: uniqueSlots("fifo"), size: 1 });
+    const holder = await sem.acquireShare(1);
+
+    const order: string[] = [];
+    const queued = ["a", "b", "c"].map(async (name, i) => {
+      await sleep(150 * i); // arrive one after the other
+      const share = await sem.acquireShare(1);
+      order.push(name);
+      await sleep(50);
+      await share.release();
+    });
+    await sleep(600);
+    expect(order).toEqual([]);
+
+    await holder.release();
+    await Promise.all(queued);
+    expect(order).toEqual(["a", "b", "c"]);
+  });
+
+  test("a fresh acquire does not barge past a queued one of its class", async () => {
+    const sem = createHostSemaphore({
+      slots: uniqueSlots("no-barge"),
+      size: 1,
+    });
+    const holder = await sem.acquireShare(1);
+
+    const order: string[] = [];
+    const waiter = sem.acquireShare(1).then((s) => {
+      order.push("waiter");
+      return s;
+    });
+    await sleep(300); // queued in the line, fanned out on the slot
+
+    // Released and immediately re-asked: the slot is free for an instant, but
+    // the line is not empty, so the newcomer queues behind the waiter.
+    await holder.release();
+    const fresh = sem.acquireShare(1).then((s) => {
+      order.push("fresh");
+      return s;
+    });
+    const w = await waiter;
+    await sleep(150);
+    expect(order).toEqual(["waiter"]);
+    await w.release();
+    await (await fresh).release();
+    expect(order).toEqual(["waiter", "fresh"]);
+  });
+
+  test("another class's queue does not hold an interactive acquire back", async () => {
+    const sem = createHostSemaphore({
+      slots: uniqueSlots("class-lines"),
+      size: 2,
+      backgroundLimit: 1,
+    });
+    const bg = await sem.acquireShare(1); // fills the background window
+    const bgWaiter = sem.acquireShare(1);
+    await sleep(300); // a background acquire is queued
+
+    // The reserved slot is free and the INTERACTIVE line is empty: fast path.
+    let waited = false;
+    const interactive = await sem.acquireShare(1, {
+      lane: "interactive",
+      onWaitStart: () => {
+        waited = true;
+      },
+    });
+    expect(waited).toBe(false);
+    await interactive.release();
+    await bg.release();
+    await (await bgWaiter).release();
   });
 });
 

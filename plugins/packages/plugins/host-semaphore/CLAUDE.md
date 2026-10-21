@@ -56,29 +56,38 @@ freezes the loop until the lock frees). So acquire is hybrid:
   caller re-sweeps for extras. If every child closes stdout without granting, acquire
   throws loudly rather than silently dropping the bound.
 
-### The turnstile — only the head waiter fans out
+### First come, first served — one line per class
 
-Fanning out `size` children *per waiter* would be `size × waiters` processes exactly
-when the box is already saturated. A per-pool **turnstile** (`turnstile.lock`, a
-single flock file) fixes that: a waiter first takes the turnstile (non-blocking
-in-process; if contended, it waits for it via one `flock-wait` child — a single file
-is an ordinary flock queue that cannot strand), re-sweeps once (a slot may have freed
-while queued), and only *then* fans out. So exactly one head waiter fans out at a
-time host-wide. Process cost per contended pool is `size + (W − 1)` (the head's
-`size` fan-out children plus one turnstile child per other waiter), versus a naive
-`size × W`. A size-1 pool degenerates to today's single child.
+Waiters queue in a **FIFO line** (`packages/ticket-line`) and only the line's
+**head** fans out. A ticket is a flocked file named by the machine-wide
+monotonic clock; each waiter blocks on the ticket just ahead of it (one
+`flock-wait` child), so a leave — or the death of the process ahead, which
+drops its flock — wakes exactly the next waiter. Process cost per contended
+class is `size + (W − 1)` (the head's fan-out plus one ticket-wait child per
+other waiter), versus a naive `size × W`.
 
-**Deadlock-free.** The turnstile is only ever held by *waiters*; a slot-holder never
-needs it, and a turnstile-holder waits only for a slot, which holders always release.
-The wait-for graph is acyclic.
+**One line per class, not per pool.** A class is (lane, priority), each with its
+own line `line-<lane>-<priority>/` in the slot directory:
 
-**Barging is unchanged (no FIFO).** The fast-path sweep does not consult the
-turnstile, so a fresh caller can still take a slot a queued waiter was about to win.
-The turnstile buys serialized *wakeup*, not FIFO *fairness* — do not assume ordering.
+- **Within a class, strict arrival order.** An acquire takes the fast path only
+  while its own line is empty, so a fresh caller never barges past an earlier
+  one of its class.
+- **Across classes, the existing rules.** Lanes partition slot capacity (below),
+  `low` yields to waiting `normal` acquires (*Priority*), and the heads of two
+  classes that share slots race for a freed one. One shared line would break
+  both: a main build (interactive) parked behind an agent build waiting for a
+  background slot the main build does not even need.
+
+A `low` acquire keeps its ticket across every yield to `normal` demand, so
+yielding never costs it its place among `low` acquires.
+
+**Deadlock-free.** A ticket is only ever held by *waiters*; a slot-holder never
+needs one, and the head waits only for a slot, which holders always release. The
+wait-for graph is acyclic.
 
 ### Every wait is one `waitForFlock`
 
-The turnstile wait, the size-guard wait and each fan-out slot are each one
+The ticket wait, the size-guard wait and each fan-out slot are each one
 `waitForFlock(path, { signal })` from `packages/flock`: a `flock-wait` child
 (`packages/flock/scripts/flock-wait.ts`) that parks the blocking flock on a
 worker thread, relays `granted`, and holds the lock until the returned
@@ -90,7 +99,7 @@ children.
 
 ### Reserved floor — the `background` / `interactive` lanes
 
-`backgroundLimit < size` partitions slot *capacity* (not the turnstile) so that
+`backgroundLimit < size` partitions slot *capacity* so that
 saturating background work can never starve interactive work of the whole pool. Each
 `acquireShare(max, hooks?)` / `run(fn, hooks?)` draws from a lane via `hooks.lane`
 (default `"background"` — the safe choice, since it can never reach the floor):
@@ -111,12 +120,6 @@ When `backgroundLimit === size` (the default — the un-partitioned pools) the t
 windows cover the same slot set — `interactive` reversed, `background` forward — and
 lane windowing is behaviourally inert; the four historical non-laned pools are
 byte-for-byte unchanged.
-
-The **turnstile stays per-pool** (shared across lanes): only slot capacity is
-partitioned, not the wakeup serialization. An interactive waiter can briefly queue
-behind a background waiter's fan-out for the *wakeup* (a few ms), never for a *slot*.
-The deadlock argument is unchanged — the turnstile is held only by waiters, a
-turnstile-holder waits only for a slot, and slot-holders always release. Acyclic.
 
 ### Size and split are the pool's identity — and the live pool wins
 
@@ -167,7 +170,7 @@ The mechanism is one more flock file, `demand.lock`, per pool:
 
 - A `normal` acquire on the **slow path** holds it **shared** for as long as it
   waits (`flockTryShared`, else a shared `waitForFlock`), released in the same
-  `finally` as the turnstile. Fast-path acquires never touch it.
+  `finally` as its ticket. Fast-path acquires never touch it.
 - A `low` acquire (1) takes it **exclusive** non-blocking to ask "is anyone
   waiting?" — if not, releases it at once; if so, waits for the exclusive lock in
   one `flock-wait` child, granted by the kernel the instant the last `normal`
@@ -200,8 +203,8 @@ additional free slots up to `max` with a single non-blocking sweep, returning a
 - **Idle pool = pure fast path.** The up-front `flock(LOCK_NB)` sweep grabs up to
   `max` free slots in-process — no subprocess. This is the whole story when slots
   are free.
-- **All slots busy = turnstile + fan-out.** Only when the sweep finds nothing does
-  the head waiter take the turnstile and fan out one child per slot (see above),
+- **All slots busy (or a waiter of the class queued) = line + fan-out.** The
+  acquire queues in its class line and, at the head, fans out one child per slot (see above),
   taking the first grant; a second non-blocking sweep then picks up any extra slots
   that freed while we waited.
 - `max` is clamped to the acquiring lane's window size (`backgroundLimit` for
@@ -233,7 +236,7 @@ handler's slot was bookkeeping; with one, the host resource actually comes back.
 
 Two effects, which answer different questions:
 
-1. **A pending acquire stops waiting.** An abort while queued — for the turnstile,
+1. **A pending acquire stops waiting.** An abort while queued — in the class line,
    or fanned out over the lane's slots — unwinds the wait and **throws
    `signal.reason`** (unwrapped, the standard `AbortSignal` contract, the same
    shape `SpawnBound.signal` uses). Every `flock-wait` child spawned and every fd

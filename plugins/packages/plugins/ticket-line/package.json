@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-packages-ticket-line",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Crash-safe cross-process FIFO line: createTicketLine(dir).join() resolves once every caller that joined earlier has left, in arrival order — each ticket a flocked file named by the machine-wide monotonic clock, each waiter blocked (push-based, one flock-wait child) on the ticket just ahead of it, so a dead waiter's place frees itself."
+}

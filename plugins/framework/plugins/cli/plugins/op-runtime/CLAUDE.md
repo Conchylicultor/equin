@@ -5,7 +5,7 @@ The machinery an **op command** runs on — the shared half of `build`, `check`,
 
 Broadcasts, the deploy receipt, fatal-signal exits, signal-origin attribution,
 lane classification, the op profiler and its durable progress log, the duress
-admission valve, the nested-check subprocess, build-output rendering, crash
+gate (`admission-valve.ts`), the nested-check subprocess, build-output rendering, crash
 recording — and the whole lifecycle of a **direct op**.
 
 ## `withDirectOp` — one lifecycle for the ops whose only ticket is the host grant
@@ -58,10 +58,35 @@ started on the tree the joiner saw) — and `withDirectOp` wraps the grant step 
 - `--no-cache` / `SINGULARITY_CHECK_NO_CACHE=1` and a fail-open (null) tree
   hash mean no flight. `e2e` is not opted in (live browser, arbitrary args).
 
-`build` and `push` are **not** direct ops (build lock + duress valve + host grant;
+`build` and `push` are **not** direct ops (build lock + duress gate + host grant;
 the push mutex) and keep their own lifecycles. Every seam is injectable
 (`DirectOpDeps`), which is how `direct-op.test.ts` asserts the order and the
 nested gating without a flock or a marker file.
+
+## The duress gate (`admission-valve.ts`)
+
+How an agent (background-lane) build is admitted to its heavy section. While the
+host duress latch is fresh, agent builds run **one at a time, in arrival order**;
+while calm, any number run together. There is no timeout: some build always
+holds the gate and finishes, so the line always moves.
+
+- One host-wide readers/writer flock, `locks/agent-build-gate/gate.lock`
+  (`data-dirs/`): calm admission takes it **shared**, duress admission
+  **exclusive** (granted once every running agent build has released it).
+  Duress waiters queue for it in a `packages/ticket-line` FIFO.
+- Taken **before** the host CPU grant and released after the heavy section, per
+  target. The build re-checks duress once its grant is held: a build admitted
+  shared that now sees duress releases grant and gate and is admitted again,
+  exclusively (`mustRequeue`) — an exclusive admission is never re-checked, so the
+  loop terminates.
+- Main (interactive lane), the detached auto-build and push are not gated
+  (`valveGates`). When the machine watcher is down the latch cannot go up, and
+  the build says so (`checkValveGuard`).
+
+It replaced the duress *valve* (2026-10-21), which held every agent build while
+duress lasted and bounded that with a 30-min fail-open a requeue reset — a
+flapping latch starved a build for over an hour.
+[`research/2026-10-21-cli-duress-admission-one-at-a-time-v2.md`](../../../../../../research/2026-10-21-cli-duress-admission-one-at-a-time-v2.md).
 
 ## Admission priority (`priority.ts`)
 
@@ -170,7 +195,9 @@ the shared Playwright harness.
     - `DirectOpOptions`
     - `FatalSignal`
     - `FatalSignalExitOptions`
-    - `HoldOutcome`
+    - `GateHold`
+    - `GateMode`
+    - `HoldResult`
     - `JoinedRun`
     - `ResolvedReceipt`
     - `SignalOriginTapOptions`
@@ -178,6 +205,7 @@ the shared Playwright harness.
     - `ValveDeps`
     - `Verdict`
   - Exports (values):
+    - `admitThroughGate`
     - `buildProfilerStart`
     - `checkBroadcasts`
     - `checkValveGuard`
@@ -185,12 +213,11 @@ the shared Playwright harness.
     - `emitVerdict`
     - `FATAL_SIGNAL_EXITS`
     - `finishBuildProgress`
-    - `holdThroughValve`
     - `installFatalSignalExit`
     - `installVerdictGuard`
     - `LANE_ENV`
     - `laneFor`
-    - `MAX_VALVE_HOLD_MS`
+    - `mustRequeue`
     - `openBuildProgress`
     - `opPriority`
     - `printStepBlocks`
@@ -206,7 +233,6 @@ the shared Playwright harness.
     - `reportInterruptedPredecessor`
     - `resolveBuildReceipt`
     - `runCheckSubprocess`
-    - `shouldRequeue`
     - `signalOriginTap`
     - `valveGates`
     - `withDirectOp`

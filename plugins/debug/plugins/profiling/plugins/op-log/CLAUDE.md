@@ -19,7 +19,7 @@ record type. The abstraction was missing.
 ## `waits` is a list, and that is the whole point
 
 An op genuinely blocks on several distinct resources **in sequence** — a build
-waits on the build lock, then the duress valve, then the host CPU grant, and can
+waits on the build lock, then the duress gate, then the host CPU grant, and can
 re-do the last two N times across requeue cycles. A scalar `waitMs` is what made
 a build stall unattributable: a build that queued 5 min and worked 1 min rendered
 identically to one that worked 6.
@@ -42,8 +42,8 @@ change — see
 |---|---|---|
 | `requested` | once, before the first wait | full identity + `pid` |
 | `wait-start` | a wait opens | `wait`, `reason` (e.g. the duress trip cause), `cycle` |
-| `wait-end` | a wait closes | `startMs`, `durationMs`, `result` (`acquired` / `cleared` / `fail-open` / `aborted`), and `reason` + `cycle` again so it is self-contained (a fast-path grant emits one with no `wait-start`) |
-| `requeue` | a build released its grant to re-hold at the duress valve | the new `cycle` |
+| `wait-end` | a wait closes | `startMs`, `durationMs`, `result` (`acquired` / `cleared` / `aborted`; `fail-open` only in ops recorded before the duress gate), and `reason` + `cycle` again so it is self-contained (a fast-path grant emits one with no `wait-start`) |
+| `requeue` | a build admitted beside others released its grant (and the duress gate) because duress tripped while it queued, to run alone | the new `cycle` |
 | `granted` | the op stops queuing for its ENTRY ticket | — |
 | `completed` | terminal, `by: "self"` or `"reconciler"` | a **self-contained summary**: identity, times, every wait, outcome, steps |
 
@@ -176,6 +176,7 @@ a `SyntaxError` is skipped, anything else rethrows.
     - `infra/worktree.OpKind`
   - Exports (types):
     - `LegacyOpenWait`
+    - `LineOp`
     - `OpClosedBy`
     - `OpenWait`
     - `OpEvent`
@@ -206,6 +207,7 @@ a `SyntaxError` is skipped, anything else rethrows.
     - `foldOpLines`
     - `isOpEvent`
     - `isTerminalState`
+    - `linePositionText`
     - `liveTimes`
     - `orphanedOps`
     - `reconcilerCompletedEvent`
@@ -213,6 +215,8 @@ a `SyntaxError` is skipped, anything else rethrows.
     - `toOpRecord`
     - `toOpRecords`
     - `WAIT_KINDS`
+    - `waitersAhead`
+    - `waitLineOf`
 - Cross-plugin:
   - Imported by: `debug/profiling/op-log/op-store`
 - Server:
@@ -224,6 +228,7 @@ a `SyntaxError` is skipped, anything else rethrows.
     - `createOpProfiler`
     - `OP_LOG_FILE`
     - `readOpenWait`
+    - `readOpenWaitInLine`
     - `readOpRecords`
     - `readOpStates`
     - `readSleepNow`

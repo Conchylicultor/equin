@@ -28,6 +28,12 @@ export type {
 } from "./internal/types";
 export { WAIT_KINDS } from "./internal/types";
 export {
+  linePositionText,
+  waitLineOf,
+  waitersAhead,
+} from "./internal/wait-line";
+export type { LineOp } from "./internal/wait-line";
+export {
   advanceSleeps,
   applyOpEvent,
   emptyOpState,

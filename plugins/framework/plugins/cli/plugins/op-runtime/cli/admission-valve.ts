@@ -1,4 +1,4 @@
-import { statSync, watch } from "node:fs";
+import { closeSync, openSync, statSync, watch } from "node:fs";
 import { join } from "node:path";
 import {
   duressLatchDir,
@@ -16,59 +16,65 @@ import {
   readSentinelWatch,
   sentinelStatusDir,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
+import {
+  flockTry,
+  flockTryShared,
+  waitForFlock,
+} from "@plugins/packages/plugins/flock/core";
+import {
+  createTicketLine,
+  type Ticket,
+} from "@plugins/packages/plugins/ticket-line/core";
 import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { agentBuildGateDir } from "../data-dirs";
 import { buildProfilerStart } from "./profiler";
 
-// Duress-aware admission valve (Piece 2 of
-// research/2026-07-11-global-fleet-memory-admission-duress-valve.md): while
-// the host duress latch is fresh — the cluster sentinel declared "the box is
-// in trouble" (compressor thrash, pg pressure, load) — background-lane builds
-// are held before they queue for their host grant. Already-running builds
-// finish untouched. The hold sits BEFORE `withHostGrant`'s queue.
+// The duress gate — how an agent build is admitted to its heavy section
+// (research/2026-10-21-cli-duress-admission-one-at-a-time-v2.md).
 //
-// A build can also enter that queue while the host is CALM and sit parked in
-// it while duress trips. The closure-based grant API has no release-and-requeue
-// seam, so the caller closes that window itself: it re-checks duress ONCE the
-// grant is held and, if it is fresh, returns a sentinel from the closure (which
-// releases the share via withHostGrant's finally) and re-holds here. That
-// decision is `shouldRequeue` below — the caller supplies the hold's outcome so
-// a fail-open hold never requeues (see gap (a) in
-// research/2026-07-12-global-host-admission-memory-dimension.md).
+// While the host duress latch is fresh (the cluster sentinel declared "the box
+// is in trouble": compressor thrash, pg pressure, load), agent builds run ONE AT
+// A TIME: a build is admitted only once no other agent build is running, in
+// arrival order. While calm, any number run together. No timeout anywhere: some
+// build always holds the gate and finishes, so the line always moves.
 //
-// Waiting is event-driven, never a poll loop: one fs.watch on the latch's own
-// directory scoped to the latch filename (catches clearDuress's unlink AND refresh's
-// mtime bump) plus a single computed deadline timer at latch mtime +
-// FRESHNESS_LEASE_MS (the lease guarantees a stale latch self-clears, so the
-// deadline is a real wake condition). Every wake re-checks; a refresh
-// advances the next deadline.
+// The mechanism is one host-wide readers/writer flock, `gate.lock`:
+//  - calm admission takes it SHARED — calm builds never exclude each other;
+//  - duress admission takes it EXCLUSIVE — granted only once every running agent
+//    build has released it, and it keeps every other agent build out until it
+//    finishes;
+//  - duress waiters queue for the exclusive lock in a first-come-first-served
+//    `ticket-line`, so they are admitted in arrival order (a bare flock wakes an
+//    arbitrary waiter).
+// The kernel releases a flock with its holder's process, so a killed build never
+// strands the gate.
+//
+// The caller takes the gate BEFORE its host CPU grant, so a build waiting here
+// never sits on CPU slots it cannot use, and a gate holder's only wait is for a
+// grant, whose holders always finish — deadlock-free. One race remains: a build
+// admitted shared while calm can wait for its grant while duress trips. It must
+// not then start beside the others, so once the grant is held the caller
+// re-checks (`mustRequeue`) and, if duress is fresh, releases grant and gate and
+// is admitted again — this time exclusively, which is never re-checked, so the
+// loop terminates.
+//
+// Waiting on the latch is event-driven, never a poll loop: one fs.watch on the
+// latch's own directory scoped to the latch filename (catches clearDuress's
+// unlink AND refresh's mtime bump) plus a single computed deadline timer at
+// latch mtime + FRESHNESS_LEASE_MS (the lease guarantees a stale latch
+// self-clears, so the deadline is a real wake condition).
 //
 // The latch can only go up while the machine-trouble watcher is running. When
-// it is not, the valve never holds, so a gated build first says so
+// it is not, the gate never goes exclusive, so a gated build first says so
 // (`checkValveGuard`), read from the watcher's host-global status file. It
 // never holds on that: a dead watcher must not stop every deploy. See
 // research/2026-09-17-global-admission-valve-says-when-unguarded.md.
 
 /**
- * Max time the valve may hold one build before proceeding anyway (fail-open).
- * A stuck latch must not stop deploys forever; the lease already self-clears
- * a dead sentinel in 60 s, so reaching this bound means the sentinel has been
- * live-refreshing duress for 30 straight minutes — proceed loudly and let a
- * human see the line. Default per the plan doc
- * (research/2026-07-11-global-fleet-memory-admission-duress-valve.md, D7).
- */
-export const MAX_VALVE_HOLD_MS = 30 * 60_000;
-
-/**
- * Grace added to the lease deadline so the timer fires just after the lease
- * lapses, not racing it.
- */
-const LEASE_EPSILON_MS = 500;
-
-/**
- * Does the valve gate this build? Only background-lane (agent) builds. The
+ * Does the gate apply to this build? Only background-lane (agent) builds. The
  * interactive lane (main — a human is blocked) is never held, and per the
  * adopted v1 decision main's detached auto-build (SINGULARITY_BUILD_DETACHED,
- * spawned by build/run-build.ts) also passes. Push never reaches the valve —
+ * spawned by build/run-build.ts) also passes. Push never reaches the gate —
  * it holds the reserved push slot, not a build grant.
  */
 export function valveGates(
@@ -81,11 +87,35 @@ export function valveGates(
   return lane === "background" && !env.SINGULARITY_BUILD_DETACHED;
 }
 
-/** Why a hold ended: the latch cleared/lapsed, or the fail-open bound tripped. */
-export type HoldOutcome = "cleared" | "fail-open";
+/** How a build holds the gate: beside other calm builds, or alone. */
+export type GateMode = "shared" | "exclusive";
+
+/** The gate, held across the heavy section. */
+export interface GateHold {
+  readonly mode: GateMode;
+  /** Idempotent. */
+  release(): Promise<void>;
+}
 
 /**
- * Injected seams so the decision loop is pure logic under test (no real
+ * Why a hold ended: `cleared` — admitted beside other calm builds (duress
+ * cleared, or the exclusive build it waited for finished); `acquired` —
+ * admitted alone under duress. Both are op-log `WaitResult`s.
+ */
+export type HoldResult = "cleared" | "acquired";
+
+/** The gate's lock and line — real flocks in production, fakes under test. */
+export interface GateLocks {
+  /** Take the gate now, or `null` when a holder of the other mode excludes it. */
+  tryLock(mode: GateMode): GateHold | null;
+  /** Wait for the gate (push-based); throws `signal.reason` on abort. */
+  waitLock(mode: GateMode, signal?: AbortSignal): Promise<GateHold>;
+  /** Join the line of exclusive waiters; resolves at its head. */
+  joinLine(signal: AbortSignal): Promise<Ticket>;
+}
+
+/**
+ * Injected seams so the admission loop is pure logic under test (no real
  * latch, no flock, no timers). Production uses `createValveDeps()`.
  */
 export interface ValveDeps {
@@ -95,47 +125,126 @@ export interface ValveDeps {
   /** Latch trip cause for the hold line, null when unreadable/absent. */
   duressReason(): string | null;
   /**
-   * Sleep until the next re-check is worthwhile (latch event or lease
-   * deadline), at most `maxWaitMs`. Event-driven — see module comment.
+   * Sleep until the latch plausibly changed (latch event or lease deadline).
+   * Resolves early, never throws, when `signal` aborts. Event-driven — see the
+   * module comment.
    */
-  waitForWake(maxWaitMs: number): Promise<void>;
-  now(): number;
+  waitForWake(signal: AbortSignal): Promise<void>;
+  gate: GateLocks;
+  /** The build blocked at the gate; `reason` says on what. */
   onHoldStart(reason: string | null): void;
-  onHoldEnd(outcome: HoldOutcome): void;
+  onHoldEnd(result: HoldResult): void;
+}
+
+/** The hold reason while a calm build waits for an exclusive build to finish. */
+export const EXCLUSIVE_RUNNING_REASON =
+  "an agent build admitted under duress is running";
+
+class DuressCleared extends Error {
+  constructor() {
+    super("duress cleared");
+  }
 }
 
 /**
- * Hold until the host is out of duress (or the fail-open bound trips), then
- * return how the hold ended — the caller proceeds to queue for its host grant.
- * Not gated (or not under duress) ⇒ returns `"cleared"` immediately: there was
- * nothing to wait out, which is the same admission decision as a hold whose
- * latch cleared.
+ * Admit a gated build to its heavy section: returns the gate, held, or `null`
+ * when the build is not gated (nothing to hold). Blocks while duress keeps
+ * another agent build running, in arrival order. Never times out.
  */
-export async function holdThroughValve(
+export async function admitThroughGate(
   opts: { gated: boolean },
   deps: ValveDeps = createValveDeps(),
-): Promise<HoldOutcome> {
-  if (!opts.gated || !deps.isUnderDuress()) return "cleared";
+): Promise<GateHold | null> {
+  if (!opts.gated) return null;
 
-  // Wall-clock start of the hold; the fail-open bound is measured from here.
-  const firstHoldAt = deps.now();
-  deps.onHoldStart(deps.duressReason());
-  let outcome: HoldOutcome = "cleared";
-  while (deps.isUnderDuress()) {
-    const remainingMs = firstHoldAt + MAX_VALVE_HOLD_MS - deps.now();
-    if (remainingMs <= 0) {
-      outcome = "fail-open";
-      break;
+  let holding = false;
+  const holdStart = (reason: string | null): void => {
+    if (holding) return;
+    holding = true;
+    deps.onHoldStart(reason);
+  };
+  const admitted = (hold: GateHold, result: HoldResult): GateHold => {
+    if (holding) deps.onHoldEnd(result);
+    return hold;
+  };
+
+  for (;;) {
+    if (deps.isUnderDuress()) {
+      holdStart(deps.duressReason());
+      const alone = await exclusiveUnlessCleared(deps);
+      if (alone) return admitted(alone, "acquired");
+      continue;
     }
-    await deps.waitForWake(remainingMs);
+    let shared = deps.gate.tryLock("shared");
+    if (!shared) {
+      // A build admitted under duress is running: wait for it to finish.
+      holdStart(EXCLUSIVE_RUNNING_REASON);
+      shared = await deps.gate.waitLock("shared");
+    }
+    // Duress may have tripped while we waited: then this build runs alone,
+    // after the ones already running — go round as a duress admission.
+    if (deps.isUnderDuress()) {
+      await shared.release();
+      continue;
+    }
+    return admitted(shared, "cleared");
   }
-  deps.onHoldEnd(outcome);
-  return outcome;
+}
+
+/**
+ * Under duress: wait in line, then for the exclusive lock — unless the latch
+ * clears first (`null`: the caller goes round and is admitted shared).
+ */
+async function exclusiveUnlessCleared(
+  deps: ValveDeps,
+): Promise<GateHold | null> {
+  const clear = new AbortController();
+  const stopWatching = new AbortController();
+  const watching = (async () => {
+    while (!stopWatching.signal.aborted) {
+      if (!deps.isUnderDuress()) {
+        clear.abort(new DuressCleared());
+        return;
+      }
+      await deps.waitForWake(stopWatching.signal);
+    }
+  })();
+  try {
+    const ticket = await deps.gate.joinLine(clear.signal);
+    try {
+      return (
+        deps.gate.tryLock("exclusive") ??
+        (await deps.gate.waitLock("exclusive", clear.signal))
+      );
+    } finally {
+      ticket.leave();
+    }
+  } catch (err) {
+    if (err instanceof DuressCleared) return null;
+    throw err;
+  } finally {
+    stopWatching.abort();
+    await watching;
+  }
+}
+
+/**
+ * The post-grant re-check: a build admitted SHARED while calm that now holds
+ * its CPU grant under duress must not start beside the others — release grant
+ * and gate and be admitted again (exclusively). An exclusive admission is never
+ * re-checked: it is the one build allowed to run, which is what makes the
+ * caller's retry loop terminate.
+ */
+export function mustRequeue(
+  hold: GateHold | null,
+  underDuress: boolean,
+): boolean {
+  return hold?.mode === "shared" && underDuress;
 }
 
 /**
  * Say when a gated build is unprotected: the machine watcher is not running, so
- * the latch cannot go up and the valve will never hold this build. Prints one
+ * the latch cannot go up and the gate will never hold this build. Prints one
  * line and returns a short note for the build's verdict; `null` when the build
  * is not gated or the guard is on. Never holds.
  *
@@ -156,27 +265,7 @@ export function checkValveGuard(
   return `duress guard off: ${guard.why}`;
 }
 
-/**
- * The post-acquire re-check decision (gap (a)): having acquired the host grant,
- * should the holder release it and re-hold at the valve rather than start its
- * heavy section?
- *
- * TERMINATION is the property this predicate exists to protect. After a
- * `fail-open` hold the valve returns IMMEDIATELY while duress is still fresh —
- * so re-checking duress on that path would spin the caller's retry loop forever
- * (hold returns → duress fresh → requeue → hold returns → …). A fail-open hold
- * has already decided "proceed anyway; a stuck latch must not stop deploys
- * forever", and that decision must survive the re-check.
- */
-export function shouldRequeue(
-  gated: boolean,
-  outcome: HoldOutcome,
-  underDuress: boolean,
-): boolean {
-  return gated && outcome !== "fail-open" && underDuress;
-}
-
-/** Production deps: the real latch, fs.watch wake, profiler span, console. */
+/** Production deps: the real latch, the gate's flocks, fs.watch wake, span, console. */
 export function createValveDeps(): ValveDeps {
   // One hold is always closed before the next opens (holds never nest), so a
   // single slot for the open span suffices.
@@ -186,10 +275,12 @@ export function createValveDeps(): ValveDeps {
     duressGuard: () => duressGuard(readSentinelWatch(sentinelStatusDir.path)),
     duressReason: () => readDuress()?.reason ?? null,
     waitForWake: waitForLatchWake,
-    now: Date.now,
+    gate: createGateLocks(agentBuildGateDir),
     onHoldStart: (reason) => {
       console.log(
-        `build admission held: host under duress${reason ? ` (${reason})` : ""} — waiting for clear...`,
+        reason === EXCLUSIVE_RUNNING_REASON
+          ? `build admission held: ${reason} — waiting for it to finish...`
+          : `build admission held: host under duress${reason ? ` (${reason})` : ""} — waiting to run alone (agent builds run one at a time, in arrival order)...`,
       );
       endHoldSpan = buildProfilerStart(
         "duressHold",
@@ -197,30 +288,70 @@ export function createValveDeps(): ValveDeps {
         "held: host under duress",
       );
     },
-    onHoldEnd: (outcome) => {
+    onHoldEnd: (result) => {
       endHoldSpan?.();
       endHoldSpan = undefined;
-      if (outcome === "fail-open") {
-        console.log(
-          `build admission valve: held ${Math.round(MAX_VALVE_HOLD_MS / 60_000)} min — proceeding anyway (fail-open: a stuck latch must not stop deploys forever)`,
-        );
-      } else {
-        console.log("build admission released: duress cleared");
-      }
+      console.log(
+        result === "acquired"
+          ? "build admission released: running alone while the host is under duress"
+          : "build admission released: duress cleared",
+      );
     },
   };
 }
 
+/** Where a gate keeps its lock and line — `agentBuildGateDir` in production. */
+export interface GateDir {
+  file(...segments: string[]): string;
+  ensure(): string;
+}
+
+/** The gate's real flocks and ticket line, in `dir`. */
+export function createGateLocks(dir: GateDir): GateLocks {
+  const lockFile = (): string => dir.file("gate.lock");
+  const hold = (mode: GateMode, release: () => Promise<void>): GateHold => {
+    let released: Promise<void> | undefined;
+    return { mode, release: () => (released ??= release()) };
+  };
+  return {
+    tryLock(mode) {
+      dir.ensure();
+      const fd = openSync(lockFile(), "w");
+      if (mode === "shared" ? flockTryShared(fd) : flockTry(fd)) {
+        return hold(mode, () => {
+          closeSync(fd);
+          return Promise.resolve();
+        });
+      }
+      closeSync(fd);
+      return null;
+    },
+    async waitLock(mode, signal) {
+      dir.ensure();
+      const held = await waitForFlock(lockFile(), {
+        shared: mode === "shared",
+        signal,
+      });
+      return hold(mode, () => held.release());
+    },
+    joinLine: (signal) => createTicketLine(dir.file("line")).join({ signal }),
+  };
+}
+
 /**
- * Sleep until the latch plausibly changed state, at most `maxWaitMs`:
- * fs.watch on the latch's own directory scoped to the latch filename, plus one deadline
- * timer at latch mtime + lease (+ε). When the latch is already gone or its
- * lease already lapsed, the latch's in-process stat memo may still report
- * duress for up to MEMO_TTL_MS — wait that long instead of spinning; the memo
- * converges within it. Spurious wakes are harmless (the caller re-checks).
+ * Sleep until the latch plausibly changed state: fs.watch on the latch's own
+ * directory scoped to the latch filename, plus one deadline timer at latch
+ * mtime + lease (+ε). When the latch is already gone or its lease already
+ * lapsed, the latch's in-process stat memo may still report duress for up to
+ * MEMO_TTL_MS — wait that long instead of spinning; the memo converges within
+ * it. Spurious wakes are harmless (the caller re-checks); an abort resolves.
  */
-function waitForLatchWake(maxWaitMs: number): Promise<void> {
+function waitForLatchWake(signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
     // `fs.watch` throws ENOENT on a missing directory. The latch dir normally
     // exists by now (a live episode's `setDuress` created it), but a clear
     // between the duress check and this call could have left the CLI watching
@@ -240,20 +371,25 @@ function waitForLatchWake(maxWaitMs: number): Promise<void> {
         throw err;
       leaseLapsesInMs = 0; // latch vanished between check and stat
     }
-    const waitMs = Math.min(
-      leaseLapsesInMs > 0 ? leaseLapsesInMs : MEMO_TTL_MS,
-      maxWaitMs,
-    );
+    const waitMs = leaseLapsesInMs > 0 ? leaseLapsesInMs : MEMO_TTL_MS;
 
     const watcher = watch(dir, (_event, filename) => {
       // A null filename is a platform edge; wake and let the caller re-check.
       if (filename === null || filename === LATCH_FILENAME) done();
     });
     const timer = setTimeout(done, waitMs);
+    signal.addEventListener("abort", done, { once: true });
     function done(): void {
       clearTimeout(timer);
       watcher.close();
+      signal.removeEventListener("abort", done);
       resolve();
     }
   });
 }
+
+/**
+ * Grace added to the lease deadline so the timer fires just after the lease
+ * lapses, not racing it.
+ */
+const LEASE_EPSILON_MS = 500;

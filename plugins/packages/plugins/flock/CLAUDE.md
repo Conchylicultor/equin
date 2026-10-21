@@ -74,6 +74,7 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
     - `infra/worktree`
     - `packages/host-semaphore`
     - `packages/single-flight`
+    - `packages/ticket-line`
 - Exemptions:
   - Exempts itself from:
     - `spawn-safety/no-raw-bun-spawn` — `core/internal/wait.ts` (sanctioned)

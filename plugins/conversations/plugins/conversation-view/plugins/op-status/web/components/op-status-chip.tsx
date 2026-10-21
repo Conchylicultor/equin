@@ -8,7 +8,8 @@ import { useSleepNowForFold } from "@plugins/infra/plugins/host/plugins/machine-
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import type { OpKind } from "@plugins/infra/plugins/worktree/core";
 import type { OpRow } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
-import { useWorktreeOp } from "../internal/use-worktree-op";
+import { waitersAhead } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import { useOpsInFlight, useWorktreeOp } from "../internal/use-worktree-op";
 import { stateLine } from "../internal/op-lines";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 
@@ -36,7 +37,11 @@ const OP_ICON: Record<OpKind, IconRef> = {
 function StateLineTooltip({ op }: { op: OpRow }) {
   const now = useNow(1000);
   const sleepNow = useSleepNowForFold();
-  return <>{stateLine(op, now, sleepNow)}</>;
+  // The same shared in-flight subscription the chip's op came from; its place
+  // in line is left out (not guessed) while that read is not ready.
+  const ops = useOpsInFlight();
+  const ahead = ops.status === "ready" ? waitersAhead(op, ops.data) : null;
+  return <>{stateLine(op, ahead, now, sleepNow)}</>;
 }
 
 // Sidebar row indicator surfacing a worktree's in-flight op as a single muted

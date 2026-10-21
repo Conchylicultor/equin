@@ -87,14 +87,18 @@ export {
 export type { BuildProgressRecord, BuildRunProgress } from "./build-progress";
 
 export {
-  MAX_VALVE_HOLD_MS,
+  admitThroughGate,
   checkValveGuard,
   createValveDeps,
-  holdThroughValve,
-  shouldRequeue,
+  mustRequeue,
   valveGates,
 } from "./admission-valve";
-export type { HoldOutcome, ValveDeps } from "./admission-valve";
+export type {
+  GateHold,
+  GateMode,
+  HoldResult,
+  ValveDeps,
+} from "./admission-valve";
 
 export { runCheckSubprocess } from "./check-subprocess";
 export type {

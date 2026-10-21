@@ -34,7 +34,10 @@ import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/
 import { useConversationTitleBySlug } from "@plugins/conversations/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { opDetailPane } from "@plugins/debug/plugins/profiling/plugins/ops/web";
-import { WAIT_KINDS } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import {
+  WAIT_KINDS,
+  waitersAhead,
+} from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import type { OpRow } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
 import { OP_KINDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
 import { useSleepNowForFold } from "@plugins/infra/plugins/host/plugins/machine-sleep/web";
@@ -218,6 +221,8 @@ export function OpenConversationAction({
  */
 interface BannerChrome {
   op: OpRow;
+  /** The op's place in its wait's line (`waitersAhead`). */
+  ahead: number | null;
   clocks: Clocks;
   others: number;
   expanded: boolean;
@@ -240,7 +245,7 @@ function useBannerChrome(): BannerChrome {
  * come back as `body`, drawn only while expanded.
  */
 function OpStatusCard({ options, body }: HostedToolbarParts) {
-  const { op, clocks, others, expanded, toggle } = useBannerChrome();
+  const { op, ahead, clocks, others, expanded, toggle } = useBannerChrome();
   const waiting = op.openWait !== null;
   const times = timesOf(op, clocks.now, clocks.sleepNow);
   return (
@@ -266,7 +271,7 @@ function OpStatusCard({ options, body }: HostedToolbarParts) {
           >
             <StateIcon waiting={waiting} />
             <Fill as="span" className="truncate">
-              {stateLine(op, clocks.now, clocks.sleepNow)}
+              {stateLine(op, ahead, clocks.now, clocks.sleepNow)}
             </Fill>
             {others > 0 && (
               <span className={cn("text-muted-foreground", rigidClass())}>
@@ -440,6 +445,7 @@ export function OpStatusBanner({
       op && data
         ? {
             op,
+            ahead: waitersAhead(op, data),
             clocks,
             others: data.length - 1,
             expanded,
@@ -463,7 +469,12 @@ export function OpStatusBanner({
             ...r,
             section: s.kind,
             opId: r.row.opId,
-            state: stateLine(r.row, clocks.now, clocks.sleepNow),
+            state: stateLine(
+              r.row,
+              waitersAhead(r.row, data ?? []),
+              clocks.now,
+              clocks.sleepNow,
+            ),
             phase,
             pos: r.queuePos,
             title: titleBySlug[r.slug] ?? r.slug,

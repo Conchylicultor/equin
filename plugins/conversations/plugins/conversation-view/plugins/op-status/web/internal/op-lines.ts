@@ -1,5 +1,6 @@
 import {
   WAIT_KINDS,
+  linePositionText,
   liveTimes,
   type OpLiveTimes,
   type WaitKind,
@@ -73,17 +74,24 @@ export function timesOf(
 }
 
 /**
- * The one state line: `Build — held: host under duress (loadRatio) · requeue #6
- * · 12:03` while parked in a wait (the clock is that wait's own, a nap inside
- * it excluded), `Build — Building` while working.
+ * The one state line: `Build — waiting for a host CPU grant · 3rd in line ·
+ * 12:03` while parked in a wait (`ahead`: the op's place in that wait's line,
+ * `waitersAhead` over every in-flight op — `null` when the wait is no line or
+ * the ops are not known yet; the clock is the wait's own, a nap inside it
+ * excluded), `Build — Building` while working.
  */
-export function stateLine(row: OpRow, now: number, sleepNow: SleepNow): string {
+export function stateLine(
+  row: OpRow,
+  ahead: number | null,
+  now: number,
+  sleepNow: SleepNow,
+): string {
   const { label, progressive } = OP_KINDS[row.kind];
   const wait = row.openWait;
   if (!wait) return `${label} — ${progressive}`;
   const requeue = wait.cycle > 0 ? ` · requeue #${wait.cycle}` : "";
   const clock = formatElapsed(timesOf(row, now, sleepNow).openWaitMs);
-  return `${label} — ${WAIT_KINDS[wait.kind].sentence(wait.reason)}${requeue} · ${clock}`;
+  return `${label} — ${WAIT_KINDS[wait.kind].sentence(wait.reason)}${requeue}${linePositionText(ahead)} · ${clock}`;
 }
 
 /**

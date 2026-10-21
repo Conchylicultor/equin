@@ -261,6 +261,7 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
     - `packages/single-flight` (1 debt)
     - `packages/sleep-clock` (1 debt)
     - `packages/spawn-priority` (3 debt)
+    - `packages/ticket-line` (1 debt)
     - `page/annotations/instructions` (1 debt)
     - `plugin-meta/barrel-import` (1 debt)
     - `plugin-meta/parse-utils` (1 debt)

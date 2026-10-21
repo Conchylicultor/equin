@@ -27,8 +27,11 @@ A web-only plugin: it reads the op-store's `opsInFlight` live collection
 - **The state line** (`stateLine`, `web/internal/op-lines.ts`) is the one
   wording every surface renders:
   - parked in a wait (`openWait != null`): `{Kind} — {WAIT_KINDS[kind].sentence(reason)}`,
-    `· requeue #N` when the wait's cycle is past 0, then the wait's own clock —
-    e.g. `Build — held: host under duress (loadRatio) · requeue #6 · 12:03`;
+    `· requeue #N` when the wait's cycle is past 0, `· 3rd in line` when the
+    wait is a first-come line (`waitersAhead` over every in-flight op — the
+    in-flight ops of the same line that started waiting earlier; op-log core),
+    then the wait's own clock — e.g. `Build — waiting for a host CPU grant ·
+    3rd in line · 12:03`;
   - working: `{Kind} — {progressive}` (`Build — Building`).
 
   The right side is the op's total elapsed. The banner's **warning tone means
@@ -70,7 +73,7 @@ A web-only plugin: it reads the op-store's `opsInFlight` live collection
   state line, ticking only while the tooltip is open.
 - **Clocks** are a presentational 1 s `useNow` ticker; the op state itself is
   pushed by the change feed on `op_log_ops`. Every clock goes through
-  `timesOf(row, now, sleepNow)` / `stateLine(row, now, sleepNow)`, where
+  `timesOf(row, now, sleepNow)` / `stateLine(row, ahead, now, sleepNow)`, where
   `sleepNow` is the machine's sleep clock (`useSleepNowForFold()`,
   `infra/host/plugins/machine-sleep/web`; `null` = unknown while it loads): a
   nap — recorded, or since the op's last event — is **asleep, never worked**,

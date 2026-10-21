@@ -33,6 +33,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "debug/plugins/profiling/plugins/op-log", id: "debug.profiling.op-log", loader: () => import("@plugins/debug/plugins/profiling/plugins/op-log/data-dirs"), dependsOn: [] },
   { pluginPath: "debug/plugins/sentinel/plugins/status-file", id: "debug.sentinel.status-file", loader: () => import("@plugins/debug/plugins/sentinel/plugins/status-file/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli", id: "framework.cli", loader: () => import("@plugins/framework/plugins/cli/data-dirs"), dependsOn: [] },
+  { pluginPath: "framework/plugins/cli/plugins/op-runtime", id: "framework.cli.op-runtime", loader: () => import("@plugins/framework/plugins/cli/plugins/op-runtime/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks", id: "framework.tooling.checks", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/type-check", id: "framework.tooling.checks.type-check", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/web-artifacts", id: "framework.tooling.web-artifacts", loader: () => import("@plugins/framework/plugins/tooling/plugins/web-artifacts/data-dirs"), dependsOn: [] },

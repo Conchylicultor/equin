@@ -1346,24 +1346,24 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       })
     : [fullChecksJob];
 
-  // Duress admission valve: a background-lane build is held BEFORE it
-  // queues for the host grant while the host duress latch is fresh, so no
-  // new heavy work starts into a memory/congestion storm. Interactive
-  // (main), push, and the detached auto-build are never held. The hold /
+  // Duress gate: a background-lane build takes the host-wide agent-build gate
+  // BEFORE it queues for the host grant — while the host duress latch is
+  // fresh, agent builds run one at a time, in arrival order. Interactive
+  // (main), push, and the detached auto-build are not gated. The admission /
   // post-acquire requeue loop itself lives in stage 3 — see
-  // ./internal/app-artifacts.ts, ../admission-valve.ts and
-  // research/2026-07-11-global-fleet-memory-admission-duress-valve.md.
+  // ./internal/app-artifacts.ts, op-runtime's admission-valve.ts and
+  // research/2026-10-21-cli-duress-admission-one-at-a-time-v2.md.
   const gated = valveGates(lane, process.env);
 
-  // Drive the `duress-valve` wait off the valve's OWN hold bracket — the
+  // Drive the `duress-valve` wait off the gate's OWN hold bracket — the
   // same seam the `duressHold` span already hangs on, so the record and the
   // span can never disagree about how long the hold was. Deps are built once
-  // rather than per `holdThroughValve` call (holds never nest, which is the
+  // rather than per `admitThroughGate` call (holds never nest, which is the
   // invariant `createValveDeps`'s single span slot already relies on).
   const baseValveDeps = createValveDeps();
   const valveDeps: ValveDeps = {
     ...baseValveDeps,
-    // The latch's trip reason and how the hold ended (cleared / fail-open)
+    // What the build is held on and how the hold ended (cleared / acquired)
     // ride on the wait itself, so a surface can say WHY a build is held.
     onHoldStart: (reason) => {
       baseValveDeps.onHoldStart(reason);

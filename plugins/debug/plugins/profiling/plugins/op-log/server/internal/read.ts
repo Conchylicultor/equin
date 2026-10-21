@@ -1,6 +1,8 @@
 import {
   foldOpLines,
   toOpRecords,
+  waitersAhead,
+  type LineOp,
   type OpFoldState,
   type OpLine,
   type OpenWait,
@@ -55,4 +57,25 @@ export function readOpenWait(opId: string): OpenWait | null {
   const state = readOpStates().get(opId);
   if (!state || state.closedBy !== null) return null;
   return state.openWait;
+}
+
+/**
+ * `readOpenWait` plus the op's place in that wait's line (`waitersAhead` over
+ * every in-flight op in the log; `null` when the wait is no first-come line or
+ * the op's identity is not in the live log yet).
+ */
+export function readOpenWaitInLine(
+  opId: string,
+): { wait: OpenWait; ahead: number | null } | null {
+  const states = readOpStates();
+  const state = states.get(opId);
+  if (!state || state.closedBy !== null || !state.openWait) return null;
+  const lineOp = (s: typeof state): LineOp | null =>
+    s.identity && s.closedBy === null
+      ? { kind: s.identity.kind, lane: s.identity.lane, openWait: s.openWait }
+      : null;
+  const self = lineOp(state);
+  if (!self) return { wait: state.openWait, ahead: null };
+  const inFlight = [...states.values()].flatMap((s) => lineOp(s) ?? []);
+  return { wait: state.openWait, ahead: waitersAhead(self, inFlight) };
 }

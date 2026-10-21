@@ -61,9 +61,11 @@ export type WaitKind = keyof typeof WAIT_KINDS;
 
 /**
  * How a wait ended. `acquired` — the resource was granted (lock, mutex, host
- * grant); `cleared` — the duress latch cleared; `fail-open` — the valve gave up
- * holding (a stuck latch must not stop deploys forever); `aborted` — the wait
- * was closed without its resource (the op ended, or a new wait opened over it).
+ * grant, the duress gate held alone); `cleared` — the duress gate admitted the
+ * build beside others (the latch cleared); `fail-open` — the old 30-min duress
+ * valve gave up holding (kept to read ops recorded before the gate; nothing
+ * writes it now); `aborted` — the wait was closed without its resource (the op
+ * ended, or a new wait opened over it).
  */
 export type WaitResult = "acquired" | "cleared" | "fail-open" | "aborted";
 

@@ -20281,6 +20281,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/worktree.OpKind`
             - Exports (types):
               - `LegacyOpenWait`
+              - `LineOp`
               - `OpClosedBy`
               - `OpenWait`
               - `OpEvent`
@@ -20311,6 +20312,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `foldOpLines`
               - `isOpEvent`
               - `isTerminalState`
+              - `linePositionText`
               - `liveTimes`
               - `orphanedOps`
               - `reconcilerCompletedEvent`
@@ -20318,6 +20320,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `toOpRecord`
               - `toOpRecords`
               - `WAIT_KINDS`
+              - `waitersAhead`
+              - `waitLineOf`
           - Cross-plugin:
             - Imported by: `debug/profiling/op-log/op-store`
           - Server:
@@ -20329,6 +20333,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `createOpProfiler`
               - `OP_LOG_FILE`
               - `readOpenWait`
+              - `readOpenWaitInLine`
               - `readOpRecords`
               - `readOpStates`
               - `readSleepNow`
@@ -23965,7 +23970,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DirectOpOptions`
               - `FatalSignal`
               - `FatalSignalExitOptions`
-              - `HoldOutcome`
+              - `GateHold`
+              - `GateMode`
+              - `HoldResult`
               - `JoinedRun`
               - `ResolvedReceipt`
               - `SignalOriginTapOptions`
@@ -23973,6 +23980,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ValveDeps`
               - `Verdict`
             - Exports (values):
+              - `admitThroughGate`
               - `buildProfilerStart`
               - `checkBroadcasts`
               - `checkValveGuard`
@@ -23980,12 +23988,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `emitVerdict`
               - `FATAL_SIGNAL_EXITS`
               - `finishBuildProgress`
-              - `holdThroughValve`
               - `installFatalSignalExit`
               - `installVerdictGuard`
               - `LANE_ENV`
               - `laneFor`
-              - `MAX_VALVE_HOLD_MS`
+              - `mustRequeue`
               - `openBuildProgress`
               - `opPriority`
               - `printStepBlocks`
@@ -24001,7 +24008,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reportInterruptedPredecessor`
               - `resolveBuildReceipt`
               - `runCheckSubprocess`
-              - `shouldRequeue`
               - `signalOriginTap`
               - `valveGates`
               - `withDirectOp`
@@ -24638,6 +24644,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/single-flight` (1 debt)
               - `packages/sleep-clock` (1 debt)
               - `packages/spawn-priority` (3 debt)
+              - `packages/ticket-line` (1 debt)
               - `page/annotations/instructions` (1 debt)
               - `plugin-meta/barrel-import` (1 debt)
               - `plugin-meta/parse-utils` (1 debt)
@@ -30644,6 +30651,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/worktree`
           - `packages/host-semaphore`
           - `packages/single-flight`
+          - `packages/ticket-line`
       - Exemptions:
         - Exempts itself from:
           - `spawn-safety/no-raw-bun-spawn` — `core/internal/wait.ts` (sanctioned)
@@ -30898,6 +30906,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hash64`
           - `hashHex`
           - `sha256Hex`
+    - **`ticket-line`** — Crash-safe cross-process FIFO line: createTicketLine(dir).join() resolves once every caller that joined earlier has left, in arrival order — each ticket a flocked file named by the machine-wide monotonic clock, each waiter blocked (push-based, one flock-wait child) on the ticket just ahead of it, so a dead waiter's place frees itself.
+      - Core:
+        - Uses:
+          - `packages/flock.flockTry`
+          - `packages/flock.waitForFlock`
+        - Exports (types):
+          - `Ticket`
+          - `TicketLine`
+        - Exports (values): `createTicketLine`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`wall-clock`** — Wall clock ↔ UTC instant for an IANA zone, without a timezone database: a wall time's candidate instants are enumerated from the offsets either side of it and each verified against Intl, so a clock change resolves the same way in every zone rather than by the sign of its offset. Also reads a clock face back out of an instant, and answers when the local day began.
       - Cross-plugin:
         - Imported by:

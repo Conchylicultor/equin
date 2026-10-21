@@ -16,11 +16,11 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { spawnTypeCheckWorker } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/server";
 import {
-  holdThroughValve,
+  admitThroughGate,
+  mustRequeue,
   PROGRESS_FILE,
   readBuildProgress,
   runCheckSubprocess,
-  shouldRequeue,
   type ValveDeps,
 } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import {
@@ -230,8 +230,8 @@ export interface StepResult {
 /**
  * Returned from inside the host grant when the post-acquire duress re-check
  * fires: the heavy section did NOT run, and `withHostGrant`'s `finally` releases
- * the share on the way out — so the caller can re-hold at the valve and try
- * again. A `unique symbol` so it can never collide with a real `StepResult[]`.
+ * the share on the way out — so the caller can release the gate and be admitted
+ * again, alone. A `unique symbol` so it can never collide with a real `StepResult[]`.
  */
 const REQUEUE = Symbol("requeue");
 
@@ -815,15 +815,16 @@ export function webDistPath(target: WebDistTarget): string {
     : worktreeArtifacts.webDist(target.name);
 }
 
-/** How the heavy section is admitted: the duress valve, then the host grant. */
+/** How the heavy section is admitted: the duress gate, then the host grant. */
 export interface HeavyAdmission {
   gated: boolean;
   deps: ValveDeps;
   grantHooks?: GrantHooks;
   /**
-   * Fires each time duress tripped while queued and the grant was released to
-   * re-hold at the valve; `cycle` is the 1-based requeue count. The op log
-   * records it so every later wait carries its cycle.
+   * Fires each time duress tripped while a calm-admitted build queued for its
+   * grant, and grant and gate were released to be admitted again (alone);
+   * `cycle` is the 1-based requeue count. The op log records it so every later
+   * wait carries its cycle.
    */
   onRequeue?: (cycle: number) => void;
 }
@@ -1033,60 +1034,64 @@ export async function buildAndPublishWebDist(
   // build fans out into (type-check workers, tsc, vite) — nothing re-acquires
   // host-wide. See @plugins/infra/plugins/host-admission.
   //
-  // Duress admission valve: a background-lane build is held BEFORE it
-  // queues for the host grant while the host duress latch is fresh, so no
-  // new heavy work starts into a memory/congestion storm (event-driven
-  // wait, 30-min sticky fail-open). Interactive (main), push, and the
-  // detached auto-build are never held. See ../../admission-valve.ts and
-  // research/2026-07-11-global-fleet-memory-admission-duress-valve.md.
+  // Duress gate: a background-lane (agent) build takes the host-wide agent-build
+  // gate BEFORE it queues for the grant — shared while the host is calm, alone
+  // (exclusive, in arrival order) while the duress latch is fresh, so a box in
+  // trouble runs one agent build at a time and the line always moves. No
+  // timeout. Interactive (main), push, and the detached auto-build are not
+  // gated. See op-runtime's admission-valve.ts and
+  // research/2026-10-21-cli-duress-admission-one-at-a-time-v2.md.
   //
-  // That hold covers only the PRE-QUEUE window. A build that entered the
-  // grant's flock queue while the host was CALM can sit parked in it while
-  // duress trips, and would otherwise walk straight into the storm — so the
-  // acquire is a retry loop whose re-check happens INSIDE the grant, the
-  // moment the slots are actually held. On a hit the closure returns
-  // REQUEUE, `withHostGrant`'s `finally` releases the share, and we re-hold
-  // at the valve. Barging is documented behaviour of the pool, so there is
-  // no FIFO position to lose. `shouldRequeue` skips the re-check after a
-  // fail-open hold — without that the loop would spin forever, since a
-  // failed-open valve returns immediately while duress is still fresh. See
-  // gap (a) in research/2026-07-12-global-host-admission-memory-dimension.md.
+  // Gate first, grant second: a build waiting at the gate holds no CPU slots,
+  // and a gate holder's only wait is for a grant, whose holders always finish.
+  // A build admitted SHARED can still sit in the grant queue while duress
+  // trips, and must not then start beside the others — so the re-check runs
+  // INSIDE the grant, the moment the slots are held. On a hit the closure
+  // returns REQUEUE, `withHostGrant`'s `finally` releases the share, the gate is
+  // released, and the build is admitted again — exclusively this time, which
+  // `mustRequeue` never re-checks, so the loop terminates. The gate is taken
+  // per heavy section (per target), never across targets: holding it while
+  // queuing for a second grant could deadlock against builds waiting for it.
   const acquireAndRunHeavySection = async (): Promise<StepResult[]> => {
-    // Profile the full admission wait (valve holds + grant queueing, across
+    // Profile the full admission wait (gate holds + grant queueing, across
     // requeues) — without a span this wait is an unexplained hole in the
     // build Gantt (a contended build once sat here ~5 min, unattributed).
     // The op record splits what this single span necessarily merges: one
-    // `host-grant` wait per requeue cycle, each distinct from the valve's.
+    // `host-grant` wait per requeue cycle, each distinct from the gate's.
     const endGrantWait = hooks.span(
       "acquireHostGrant",
       "build:setup",
       "wait for host CPU grant",
     );
     for (let cycle = 0; ;) {
-      const outcome = await holdThroughValve(
+      const gate = await admitThroughGate(
         { gated: opts.admission.gated },
         opts.admission.deps,
       );
-      const result = await withHostGrant<StepResult[] | typeof REQUEUE>(
-        {
-          lane: opts.lane,
-          priority: opts.priority,
-          max: cpuBudget().B,
-          hooks: opts.admission.grantHooks,
-        },
-        async (grant) => {
-          if (shouldRequeue(opts.admission.gated, outcome, isUnderDuress()))
-            return REQUEUE;
-          endGrantWait();
-          return await runHeavySection(grant);
-        },
-      );
+      let result: StepResult[] | typeof REQUEUE;
+      try {
+        result = await withHostGrant<StepResult[] | typeof REQUEUE>(
+          {
+            lane: opts.lane,
+            priority: opts.priority,
+            max: cpuBudget().B,
+            hooks: opts.admission.grantHooks,
+          },
+          async (grant) => {
+            if (mustRequeue(gate, isUnderDuress())) return REQUEUE;
+            endGrantWait();
+            return await runHeavySection(grant);
+          },
+        );
+      } finally {
+        await gate?.release();
+      }
       if (result !== REQUEUE) return result;
       cycle++;
       opts.admission.onRequeue?.(cycle);
       hooks.log(
         `build admission: duress tripped while queued for the host grant — ` +
-          `released the grant, re-holding at the valve (requeue #${cycle})...`,
+          `released the grant, waiting to run alone (requeue #${cycle})...`,
       );
     }
   };
