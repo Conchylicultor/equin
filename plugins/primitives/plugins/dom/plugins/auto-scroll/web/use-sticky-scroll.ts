@@ -16,6 +16,7 @@ import { BottomSentinel } from "./internal/bottom-sentinel";
 import { scrollChildIntoView } from "./scroll-child-into-view";
 import { FOLLOW_MOTION_ATTR } from "./follow-motion";
 import { findViewAnchor } from "./internal/view-anchor";
+import { claimBottomPin, releaseBottomPin } from "./internal/bottom-pin";
 import {
   followAction,
   isAtBottom,
@@ -211,11 +212,20 @@ export function useStickyScroll(
    *
    * The previous design had this toggle and was right to; its bug was that
    * "pinned" was a stale guess, so it disabled anchoring for readers too.
+   *
+   * The same toggle claims the bottom pin, which stands this plugin's own
+   * anchoring (`KeepAnchorAcross`) down the same way — see `bottom-pin.ts`.
    */
-  const applyAnchoring = useCallback((following: boolean) => {
-    const el = scrollRef.current;
-    if (el) el.style.overflowAnchor = following ? "none" : "auto";
-  }, []);
+  const applyAnchoring = useCallback(
+    (following: boolean) => {
+      const el = scrollRef.current;
+      if (!el) return;
+      el.style.overflowAnchor = following ? "none" : "auto";
+      if (following) claimBottomPin(el, () => writeToBottom(el));
+      else releaseBottomPin(el);
+    },
+    [writeToBottom],
+  );
 
   const applyMode = useCallback(
     (next: ScrollMode) => {

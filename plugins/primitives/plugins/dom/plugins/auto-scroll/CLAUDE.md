@@ -48,6 +48,14 @@ sets it: without it nothing held a parked reader still while images and code
 highlighting settled above them, and a restored reading position drifted by
 hundreds of px. A windowed list must keep the default.
 
+**A following scroller is anchored to its bottom, not a row.** While a
+`useStickyScroll` follows, it claims the scroller's bottom pin
+(`internal/bottom-pin.ts`, toggled with its `overflow-anchor`), and
+`KeepAnchorAcross` on that scroller re-pins the bottom through the owner's own
+write instead of keeping a row. Keeping a row there scrolled the follower up by
+whatever a commit released above it — a paged transcript's window sliding as a
+new event lands — which the follower read as the reader leaving, and parked.
+
 ## `useStickyScroll` — following is an intent, never an inference
 
 You follow until a scroll **the hook did not author** lands you elsewhere; you

@@ -1,6 +1,7 @@
 import { Component, type ReactNode } from "react";
 import { findScrollParent } from "./internal/find-scroll-parent";
 import { findViewAnchor } from "./internal/view-anchor";
+import { bottomPinOf } from "./internal/bottom-pin";
 
 export interface KeepAnchorAcrossProps {
   /**
@@ -49,11 +50,13 @@ export interface KeepAnchorAcrossProps {
   children: ReactNode;
 }
 
-interface Anchor {
-  scroller: HTMLElement;
-  name: string;
-  top: number;
-}
+type Anchor =
+  | { kind: "row"; scroller: HTMLElement; name: string; top: number }
+  /**
+   * The scroller follows its bottom (a following `useStickyScroll`): the
+   * bottom is what the reader is anchored to, so the commit re-pins it.
+   */
+  | { kind: "bottom"; repin: () => void };
 
 /**
  * Keeps what the reader is looking at where it is on screen across a commit
@@ -61,6 +64,11 @@ interface Anchor {
  * first marked one visible in the scroller, and after the commit the scroller
  * is scrolled by however far that element moved. Applied only when
  * `changeKey` says the content may have moved.
+ *
+ * On a scroller a following `useStickyScroll` owns, the reader is anchored to
+ * the bottom, not to a row: the commit re-pins the bottom through the owner's
+ * own write instead. Keeping a row there would scroll the follower up by
+ * whatever was released above it — read as the reader leaving, so it parks.
  *
  * It is the ONLY anchoring inside its region: the region's box opts out of
  * browser scroll anchoring (`overflow-anchor: none`). Two anchorings acting on
@@ -96,12 +104,16 @@ export class KeepAnchorAcross extends Component<
     const container = this.host;
     if (container === null || !container.isConnected) return null;
     const scroller = findScrollParent(container);
+    const repin = bottomPinOf(scroller);
+    if (repin !== undefined) return { kind: "bottom", repin };
     const viewTop =
       scroller === document.scrollingElement
         ? 0
         : scroller.getBoundingClientRect().top;
     const anchor = findViewAnchor(container, viewTop, anchorAttr, weakAttr);
-    return anchor && { scroller, name: anchor.name, top: anchor.top };
+    return (
+      anchor && { kind: "row", scroller, name: anchor.name, top: anchor.top }
+    );
   }
 
   override componentDidUpdate(
@@ -110,6 +122,10 @@ export class KeepAnchorAcross extends Component<
     snapshot: Anchor | null,
   ): void {
     if (snapshot === null) return;
+    if (snapshot.kind === "bottom") {
+      snapshot.repin();
+      return;
+    }
     const container = this.host;
     if (container === null) return;
     const { anchorAttr } = this.props;
