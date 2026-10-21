@@ -1629,6 +1629,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/browser-server/demo/scope.DemoScope`
               - `layouts/miller.PaneOverlayHost`
               - `primitives/bar.Bar`
+              - `primitives/css/center.Center`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
           - Core:
@@ -35739,8 +35740,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 115 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×32
+            - Imported by: 116 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×33
               - `primitives` ×25
               - `page` ×17
               - `conversations` ×7
