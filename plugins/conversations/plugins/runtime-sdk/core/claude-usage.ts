@@ -6,11 +6,16 @@ import { liveValue } from "@plugins/network/plugins/live/core";
 // Every turn of an SDK agent gets a `rate_limit_event` whose `rate_limit_info`
 // carries `unifiedWindows` — each limit window's utilization and reset time.
 // The Agent SDK's types do not declare that field yet, so it is parsed here,
-// never cast. The limits are the account's, not one agent's or one
-// namespace's: whichever agent reported last speaks for the machine.
+// never cast. The limits are the Claude account's, not one agent's or one
+// namespace's: whichever agent on an account reported last speaks for it.
 
-/** The one file in `claudeUsageDir` (data-dirs) every agent overwrites. */
-export const CLAUDE_USAGE_FILE = "latest.json";
+/**
+ * The file in `claudeUsageDir` (data-dirs) every agent on `accountId`
+ * overwrites (`infra/claude-cli/accounts` names the accounts).
+ */
+export function claudeUsageFileName(accountId: string): string {
+  return `${accountId}.json`;
+}
 
 const WindowSchema = z.object({
   /** Fraction of the window used, 0..1 (1 = the limit is reached). */
@@ -30,11 +35,13 @@ export const ClaudeUsageSchema = z.object({
 });
 export type ClaudeUsage = z.infer<typeof ClaudeUsageSchema>;
 
-/** What the backend serves: the last report, or none yet on this machine. */
-export const ClaudeUsageReadSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("none") }),
-  z.object({ kind: z.literal("reported"), usage: ClaudeUsageSchema }),
-]);
+/**
+ * What the backend serves: each Claude account's last report, by account id.
+ * An account no agent has reported for yet has no entry.
+ */
+export const ClaudeUsageReadSchema = z.object({
+  byAccount: z.record(z.string(), ClaudeUsageSchema),
+});
 export type ClaudeUsageRead = z.infer<typeof ClaudeUsageReadSchema>;
 
 // The SDK's wire shape: seconds, and only the fields read here.
@@ -80,8 +87,8 @@ export function claudeUsageOf(
 }
 
 /**
- * The subscription's usage limits as the machine's agents last reported them
- * (one file every agent overwrites). Read off the computer, so only the
+ * Each Claude account's usage limits as the machine's agents last reported
+ * them (one file per account, every agent on it overwrites). Read off the computer, so only the
  * desktop app answers it (`needsMachine`).
  */
 export const claudeUsage = liveValue("runtime-sdk.claude-usage", {

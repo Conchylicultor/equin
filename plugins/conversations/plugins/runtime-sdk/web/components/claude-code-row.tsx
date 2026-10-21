@@ -14,6 +14,8 @@ import {
   type ClaudeCodeRowInputs,
 } from "../internal/claude-code-row";
 import { useClaudeCodeRowInputs } from "../internal/use-claude-code-row";
+import { ClaudeAccountsSection } from "./claude-accounts";
+import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 
 // The Claude Code row's expanded detail: the versions and the agents, one line
 // each, then Claude Code's own note and where the other agents run. Collapsed,
@@ -95,13 +97,23 @@ function AgentsElsewhere({ agents }: { agents: AgentProcesses }) {
 }
 
 /**
- * The expanded row: the versions and the agents, Claude Code's own detail, then
- * where the other agents run.
+ * The expanded row: the Claude accounts, the versions and the agents, Claude
+ * Code's own detail, then where the other agents run.
  */
 export function ClaudeCodeRowDetail() {
   const result = useClaudeCodeRowInputs();
+  // A minute's tick: a reached limit's reset counts down, and passes.
+  const now = useNow(60_000);
   return (
     <Stack gap="sm">
+      {result.status === "ready" ? (
+        <ClaudeAccountsSection
+          accounts={result.data.accounts}
+          usage={result.data.usage}
+          claude={result.data.claude}
+          now={now}
+        />
+      ) : null}
       {/* Not loaded (or not readable here): the summary already says so. */}
       {result.status === "ready" ? <VersionLines {...result.data} /> : null}
       <ClaudeCodeDetail />

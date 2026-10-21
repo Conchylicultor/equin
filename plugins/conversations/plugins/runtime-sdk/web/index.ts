@@ -7,7 +7,7 @@ import { useClaudeCodeRowHealth } from "./internal/use-claude-code-row";
 
 export default {
   description:
-    "The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — and the subscription's usage limits as meters (the week collapsed, the session too expanded; attention while a limit is reached).",
+    "The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, Continue on another account when the active one is limited).",
   contributions: [
     HealthReport.Row({
       kind: "status",

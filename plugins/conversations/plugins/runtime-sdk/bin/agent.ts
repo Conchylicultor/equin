@@ -7,7 +7,8 @@
 //   events    ← <dir>/events.jsonl  (every SDK message, numbered, unchanged)
 //   partial   ← --socket, `subscribe` (the message being streamed, never on disk)
 //   pid       → --pid-file          (written at start, removed on exit)
-//   usage     → --usage-file        (the subscription's limits, last reported)
+//   account   ← --account           (the Claude account it signs in as)
+//   usage     → --usage-file        (that account's limits, last reported)
 //   stdout    → a human-readable log (the backend points it at `agent.log`)
 //
 // A dumb relay: it never interprets Claude's messages beyond what it needs for
@@ -34,6 +35,7 @@ import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
 import { basename, dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { ZodError } from "zod";
+import { claudeAccountToken } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
 import {
   AGENT_EVENTS_FILE,
   AGENT_OPTIONS_FILE,
@@ -58,12 +60,19 @@ const { values: args } = parseArgs({
     dir: { type: "string" },
     socket: { type: "string" },
     "pid-file": { type: "string" },
+    account: { type: "string" },
     "usage-file": { type: "string" },
   },
 });
-if (!args.dir || !args.socket || !args["pid-file"] || !args["usage-file"])
+if (
+  !args.dir ||
+  !args.socket ||
+  !args["pid-file"] ||
+  !args.account ||
+  !args["usage-file"]
+)
   throw new Error(
-    "agent: --dir, --socket, --pid-file and --usage-file are required",
+    "agent: --dir, --socket, --pid-file, --account and --usage-file are required",
   );
 const dir = args.dir;
 mkdirSync(dir, { recursive: true });
@@ -75,6 +84,11 @@ const usagePath = args["usage-file"];
 const options = AgentLaunchOptionsSchema.parse(
   JSON.parse(readFileSync(join(dir, AGENT_OPTIONS_FILE), "utf8")),
 );
+// The account's token, fetched by the agent itself from the secrets store, so
+// it never sits in an argv, the options file or the login shell's
+// environment. Only Claude Code's own process gets it (`env` below); the
+// system account (null) is Claude Code's own login.
+const oauthToken = await claudeAccountToken(args.account);
 
 // ── events.jsonl ──────────────────────────────────────────────────────────
 // Resumes numbering from the file (or, right after a rotation, its newest
@@ -358,6 +372,9 @@ const session = query({
     // `resume`).
     ...(options.resume === null || options.fork
       ? { sessionId: options.sessionId }
+      : {}),
+    ...(oauthToken
+      ? { env: { ...process.env, CLAUDE_CODE_OAUTH_TOKEN: oauthToken } }
       : {}),
     stderr: (data: string) => process.stderr.write(data),
   },

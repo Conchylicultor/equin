@@ -36,17 +36,18 @@ export const sdkAgentPidsDir = defineDataDir({
 });
 
 /**
- * The claude.ai subscription's usage limits as an agent last reported them:
- * `CLAUDE_USAGE_FILE`, overwritten (atomically) by every SDK agent of every
- * namespace on each `rate_limit_event`, watched by the health report's Claude
- * Code row. The limits are the account's, so one file speaks for the machine.
+ * Each Claude account's usage limits as an agent last reported them:
+ * `<accountId>.json`, overwritten (atomically) by every SDK agent on that
+ * account, of every namespace, on each `rate_limit_event`; watched by the
+ * health report's Claude Code row. The limits are the account's, so one file
+ * per account speaks for the machine.
  */
 export const claudeUsageDir = defineDataDir({
   kind: "state",
   name: "claude-usage",
   owner: "conversations/runtime-sdk",
   description:
-    "The subscription's usage limits (session, week) as the machine's agents last reported them",
+    "Each Claude account's usage limits (session, week) as the machine's agents last reported them",
   // The next agent turn writes it again.
   reclaim: { kind: "safe" },
 });

@@ -6,16 +6,18 @@ import {
   useClaudeCodeStatus,
 } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
+import { claudeAccounts } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import { claudeUsage, sdkAgentProcesses, sdkBundledCli } from "../../core";
 import { claudeCodeRowVerdict } from "./claude-code-row";
 
-/** The row's inputs: four pushed values, already resident. */
+/** The row's inputs: five pushed values, already resident. */
 export function useClaudeCodeRowInputs() {
   return combineResources({
     claude: useClaudeCodeStatus(),
     sdk: useLive(sdkBundledCli),
     agents: useLive(sdkAgentProcesses),
     usage: useLive(claudeUsage),
+    accounts: useLive(claudeAccounts),
   });
 }
 

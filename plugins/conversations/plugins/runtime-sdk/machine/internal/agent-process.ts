@@ -19,9 +19,15 @@ import {
   type DaemonInstance,
 } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { claudeAccountIds } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import {
+  readClaudeAccounts,
+  selectClaudeAccountById,
+} from "@plugins/infra/plugins/claude-cli/plugins/accounts/machine";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
-import type { AgentLaunchOptions } from "../../core";
+import { launchAccount, type AgentLaunchOptions } from "../../core";
 import { liveAgentIds } from "./agent-processes";
+import { readClaudeUsage } from "./claude-usage";
 import {
   AGENT_SCRIPT,
   agentDir,
@@ -76,6 +82,25 @@ export interface StartedAgent {
 const MAX_OUTPUT_CHARS = 4_000;
 
 /**
+ * The Claude account this launch runs on: the active one — or, when
+ * auto-switch is on and the active one's limit is reached, the roomiest other
+ * account, which then becomes the active one (the next launches follow it).
+ * Read at every process start, so a switch reaches an agent at its next start.
+ */
+function chooseLaunchAccount(): string {
+  const state = readClaudeAccounts();
+  const chosen = launchAccount({
+    ids: claudeAccountIds(state),
+    active: state.active,
+    autoSwitch: state.autoSwitch,
+    byAccount: readClaudeUsage().byAccount,
+    now: Date.now(),
+  });
+  if (chosen !== state.active) selectClaudeAccountById(chosen);
+  return chosen;
+}
+
+/**
  * Start the agent process for `id`, from the options file already written in
  * its directory. Its stdout and stderr (the human log, the SDK's and the CLI's
  * warnings, a crash before the first event) append to `agent.log`.
@@ -90,6 +115,7 @@ export async function startAgentProcess(
   // A pid file a killed agent left behind would read as this launch's pid.
   rmSync(agentPidPath(id), { force: true });
   mkdirSync(agentDir(id), { recursive: true });
+  const account = chooseLaunchAccount();
   const command =
     backgroundPrefix() +
     // This backend's own bun, by path: the login shell's PATH is the account's.
@@ -102,8 +128,10 @@ export async function startAgentProcess(
       agentSocketPath(id),
       "--pid-file",
       agentPidPath(id),
+      "--account",
+      account,
       "--usage-file",
-      claudeUsagePath(),
+      claudeUsagePath(account),
     ]
       .map(shellWord)
       .join(" ");

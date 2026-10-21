@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import type { ClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
+import { NO_CLAUDE_ACCOUNTS } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import type { ClaudeUsage } from "../../core";
 import {
   agentsPhrase,
   claudeCodeRowVerdict,
@@ -12,7 +14,7 @@ const refetch = () => Promise.resolve();
 const sdk = { sdkVersion: "0.3.303", cliVersion: "2.1.303" };
 const none = { here: 0, elsewhere: [] };
 const NOW = 1_800_000_000_000;
-const noUsage: ClaudeCodeRowInputs["usage"] = { kind: "none" };
+const noUsage: ClaudeCodeRowInputs["usage"] = { byAccount: {} };
 const OK: HealthStatus = { state: "ok", summary: "Signed in · v2.1.303" };
 const loaded = (
   claude: ClaudeCodeStatus,
@@ -20,7 +22,7 @@ const loaded = (
   usage: ClaudeCodeRowInputs["usage"] = noUsage,
 ): ResourceResult<ClaudeCodeRowInputs> => ({
   status: "ready",
-  data: { claude, sdk, agents, usage },
+  data: { claude, sdk, agents, usage, accounts: NO_CLAUDE_ACCOUNTS },
   refetch,
 });
 const ready = (
@@ -79,16 +81,16 @@ describe("claudeCodeRowVerdict", () => {
 });
 
 describe("usage limits", () => {
+  const reading = (session: number, week: number): ClaudeUsage => ({
+    observedAt: NOW - 60_000,
+    session: { utilization: session, resetsAt: NOW + 90 * 60_000 },
+    week: { utilization: week, resetsAt: NOW + 3 * 86_400_000 },
+  });
   const usage = (
     session: number,
     week: number,
   ): ClaudeCodeRowInputs["usage"] => ({
-    kind: "reported",
-    usage: {
-      observedAt: NOW - 60_000,
-      session: { utilization: session, resetsAt: NOW + 90 * 60_000 },
-      week: { utilization: week, resetsAt: NOW + 3 * 86_400_000 },
-    },
+    byAccount: { system: reading(session, week) },
   });
 
   test("under the limits is ok", () => {
@@ -105,6 +107,16 @@ describe("usage limits", () => {
       state: "attention",
       summary: "Session usage limit reached · resets in 1 h 30 m",
     });
+  });
+
+  test("another account's reached limit is not the active one's", () => {
+    expect(
+      claudeCodeRowVerdict(
+        OK,
+        ready("2.1.1", none, { byAccount: { work: reading(1, 1) } }),
+        NOW,
+      ).state,
+    ).toBe("ok");
   });
 
   test("a limit that has since reset is not reached", () => {

@@ -4,12 +4,14 @@ import type {
 } from "@plugins/primitives/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import type { ClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
+import type { ClaudeAccounts } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import {
+  limitReached,
   sameMajorMinor,
   type AgentProcesses,
   type ClaudeUsageRead,
 } from "../../core";
-import { formatResets, limitReached, USAGE_WINDOWS } from "./claude-usage";
+import { formatResets, USAGE_WINDOWS } from "./claude-usage";
 
 export interface ClaudeCodeRowInputs {
   /** The system `claude` the sdk runtime runs. */
@@ -18,8 +20,10 @@ export interface ClaudeCodeRowInputs {
   sdk: { sdkVersion: string; cliVersion: string };
   /** The agent processes running here and in every other namespace. */
   agents: AgentProcesses;
-  /** The subscription's usage limits, as the agents last reported them. */
+  /** Each Claude account's usage limits, as the agents last reported them. */
   usage: ClaudeUsageRead;
+  /** The Claude accounts and the one new agents launch on. */
+  accounts: ClaudeAccounts;
 }
 
 const plural = (n: number, one: string, many = `${one}s`) =>
@@ -49,7 +53,8 @@ export function agentsPhrase(agents: AgentProcesses): string {
  * - The system `claude` in another major.minor than the CLI the installed Agent
  *   SDK was built for → `attention`: the SDK's control protocol may have moved
  *   under it.
- * - A usage limit reached → `attention`: agents wait until it resets.
+ * - The active account's usage limit reached → `attention`: its agents wait
+ *   until it resets (or run on another account).
  * - Otherwise `ok`, with the version and the agents running.
  *
  * The versions and the count not known yet → `unknown`, never `ok`; under a
@@ -70,10 +75,10 @@ export function claudeCodeRowVerdict(
     return {
       state: "unknown",
       summary:
-        "Couldn't load the Agent SDK version, the running agents or the usage limits",
+        "Couldn't load the Agent SDK version, the running agents, the Claude accounts or their usage limits",
     };
   }
-  const { claude, sdk, agents, usage } = result.data;
+  const { claude, sdk, agents, usage, accounts } = result.data;
   if (claude.kind !== "ready") return cli;
   if (!sameMajorMinor(claude.version, sdk.cliVersion)) {
     return {
@@ -81,7 +86,7 @@ export function claudeCodeRowVerdict(
       summary: `v${claude.version} · the Agent SDK expects v${sdk.cliVersion}`,
     };
   }
-  const reached = limitReached(usage, now);
+  const reached = limitReached(usage.byAccount[accounts.active], now);
   if (reached) {
     const { label } = USAGE_WINDOWS[reached.id];
     return {

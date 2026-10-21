@@ -17729,26 +17729,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CONVERSATION_RUNTIMES`
           - `ConversationRuntimeIdSchema`
           - `DEFAULT_CONVERSATION_RUNTIME`
-    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — and the subscription's usage limits as meters (the week collapsed, the session too expanded; attention while a limit is reached). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file.
+    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file.
       - Web:
         - Contributes: `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
-        - Uses:
-          - `infra/claude-cli/availability.ClaudeCodeActions`
-          - `infra/claude-cli/availability.ClaudeCodeDetail`
-          - `infra/claude-cli/availability.useClaudeCodeHealth`
-          - `infra/claude-cli/availability.useClaudeCodeStatus`
+        - Uses: 32 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
+          - `infra/claude-cli/availability` ×4
+          - `infra/endpoints` ×4
+          - `primitives/css/ui-kit` ×4
+          - `primitives/setup-steps` ×4
           - `network/live.useLive`
+          - `primitives/avatar.Avatar`
           - `primitives/css/clip.Clip`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
           - `primitives/css/rigid.Rigid`
+          - `primitives/css/row.Row`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/switch.Switch`
           - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.cn`
+          - `primitives/icon-button.IconButton`
           - `primitives/live-state.combineResources`
           - `primitives/relative-time.useNow`
           - `primitives/text-editor/inline-chip.renderInlineChip`
           - `shell/health-report.HealthReport`
+          - `ui/icons.Icon`
       - Server:
         - Contributes:
           - `resource.declare` "runtime-sdk.agent-processes"
@@ -17767,7 +17771,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtime-sdk.bundled-cli` (push, fixed)
           - `runtime-sdk.claude-usage` (push, notified)
       - Machine:
-        - Uses: `network/live.serveValue`
+        - Uses:
+          - `infra/claude-cli/accounts.readClaudeAccounts`
+          - `infra/claude-cli/accounts.selectClaudeAccountById`
+          - `network/live.serveValue`
         - Register:
           - `defineFileWatcher('runtime-sdk.events')`
           - `defineDaemon('runtime-sdk.agent')`
@@ -17788,6 +17795,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OpenRequest`
           - `PartialFrame`
           - `PartialMessage`
+          - `UsageLevel`
+          - `UsageWindowId`
+          - `UsageWindowView`
+          - `WeekRoom`
         - Exports (values):
           - `AGENT_EVENTS_FILE`
           - `AGENT_OPTIONS_FILE`
@@ -17798,24 +17809,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentLifecycleSchema`
           - `AgentProcessesSchema`
           - `applyPartialFrame`
-          - `CLAUDE_USAGE_FILE`
           - `claudeUsage`
+          - `claudeUsageFileName`
           - `claudeUsageOf`
           - `ClaudeUsageReadSchema`
           - `ClaudeUsageSchema`
           - `CommandReplySchema`
           - `DismissReplySchema`
           - `HelloReplySchema`
+          - `launchAccount`
+          - `limitReached`
           - `OpenRequestSchema`
           - `partialFrameOf`
           - `PartialFrameSchema`
           - `PartialStreamLineSchema`
           - `PROTOCOL_VERSION`
+          - `roomiestAccount`
           - `sameMajorMinor`
           - `sdkAgentProcesses`
           - `sdkBundledCli`
           - `SubscribeReplySchema`
           - `TurnReplySchema`
+          - `usageLevel`
+          - `viewUsageWindow`
+          - `weekRoom`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -17824,6 +17841,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --primary`
           - `ui/tokens/color-palette --warning`
           - `ui/tokens/density --space-sm`
+          - `ui/tokens/density --space-xs`
+          - `ui/tokens/font-family --font-mono`
+          - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
         - Imported by: `apps/agent-manager/demo`
     - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
@@ -26479,6 +26499,51 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `investigate:failures-registered` — `core/resources.ts` (sanctioned)
       - Plugins:
+        - **`accounts`** — The Claude accounts' tokens, every host's half: each token account's token in the secrets store — saved, deleted, and read by the agent at its start (claudeAccountToken: null for the computer's own Claude Code login, a loud error when a token account's secret is gone).
+          - Server:
+            - Contributes: `resource.declare` "claude-accounts"
+            - Uses:
+              - `infra/secrets.deleteSecret`
+              - `infra/secrets.getSecret`
+              - `infra/secrets.setSecret`
+            - Exports (values):
+              - `claudeAccountToken`
+              - `deleteClaudeAccountToken`
+              - `saveClaudeAccountToken`
+            - Resources: `claude-accounts` (push, notified)
+          - Machine:
+            - Uses:
+              - `infra/endpoints.implementMachine`
+              - `network/live.serveValue`
+            - Exports (values):
+              - `readClaudeAccounts`
+              - `selectClaudeAccountById`
+            - Routes:
+              - `POST /api/claude-accounts/add`
+              - `POST /api/claude-accounts/remove`
+              - `POST /api/claude-accounts/select`
+              - `POST /api/claude-accounts/auto-switch`
+          - Core:
+            - Uses:
+              - `infra/endpoints.defineEndpoint`
+              - `network/live.liveValue`
+            - Exports (types):
+              - `ClaudeAccount`
+              - `ClaudeAccounts`
+            - Exports (values):
+              - `addClaudeAccount`
+              - `claudeAccountIds`
+              - `claudeAccounts`
+              - `ClaudeAccountSchema`
+              - `ClaudeAccountsSchema`
+              - `ClaudeTokenSchema`
+              - `NO_CLAUDE_ACCOUNTS`
+              - `removeClaudeAccount`
+              - `selectClaudeAccount`
+              - `setClaudeAccountAutoSwitch`
+              - `SYSTEM_ACCOUNT_ID`
+          - Cross-plugin:
+            - Imported by: `conversations/runtime-sdk`
         - **`availability`** — Claude Code availability, shown: the pieces of the health report's Claude Code row (useClaudeCodeHealth — critical while the CLI is missing or signed out — ClaudeCodeDetail with the install / sign-in commands, ClaudeCodeActions' Check again; the row itself is the sdk runtime's, which adds the Agent SDK and the running agents), useClaudeCodeLaunchBlock() for launch controls to disable themselves with the fix, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the user's Claude Code CLI is installed and signed in (`claude --version` + `claude auth status --json`, under the agent panes' host env; the machine half serves the answer as the claude-code-status push value and POST /api/claude-code/recheck) and gives every launch path assertClaudeCodeReady() and requireClaudeBin() — so an agent that cannot run is refused up front with the fix, never started as `command not found`. onClaudeCodeProbed hands every fresh answer to work keyed off the installed CLI's version.
           - Web:
             - Contributes: `Core.Root` → `RecheckOnReturn`
@@ -26938,11 +27003,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 197 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 199 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×54
-          - `conversations` ×29
+          - `conversations` ×30
           - `debug` ×17
-          - `infra` ×16
+          - `infra` ×17
           - `page` ×14
           - `tasks` ×13
           - `primitives` ×10
@@ -29156,6 +29221,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth`
           - `auth/apple-signing`
           - `fields/secret/config`
+          - `infra/claude-cli/accounts`
       - Exemptions:
         - Exempts itself from: `paths:no-hardcoded-paths` — `central/index.ts` (sanctioned)
       - Server:
@@ -30630,12 +30696,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 263 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 264 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×49
           - `debug` ×27
           - `tasks` ×27
-          - `infra` ×15
+          - `infra` ×16
           - `active-data` ×12
           - `page` ×10
           - `primitives` ×10
@@ -35463,6 +35529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-category`
           - `conversations/conversation-ui/item`
           - `conversations/conversation-view/jsonl-viewer/teammate-message`
+          - `conversations/runtime-sdk`
           - `fields/avatar/config`
           - `fields/avatar/table`
           - `page/place`
@@ -36567,12 +36634,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×8
               - `ui/tokens/density` ×4
               - `ui/tokens/shape` ×3
-            - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+            - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
               - `apps` ×16
               - `ui` ×13
               - `page` ×10
               - `primitives` ×9
-              - `conversations` ×5
+              - `conversations` ×6
               - `plugin-meta` ×3
               - `tasks` ×3
               - `code-explorer/file-resolve`
@@ -36897,6 +36964,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/rich/swing`
               - `apps/website/improve`
               - `config_v2/fields`
+              - `conversations/runtime-sdk`
               - `debug/queue`
               - `primitives/css/control-panel`
               - `primitives/launch`
@@ -39248,10 +39316,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 117 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 118 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×39
+          - `conversations` ×21
           - `primitives` ×21
-          - `conversations` ×20
           - `page` ×7
           - `tasks` ×7
           - `debug` ×5
@@ -41741,6 +41809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth/apple-signing/setup-wizard`
           - `auth/google-maps/setup-wizard`
           - `auth/google/setup-wizard`
+          - `conversations/runtime-sdk`
           - `infra/claude-cli/availability`
           - `integrations/google-maps`
     - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
@@ -47273,9 +47342,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 310 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 311 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×71
-          - `conversations` ×58
+          - `conversations` ×59
           - `primitives` ×42
           - `page` ×40
           - `fields` ×34
@@ -48485,8 +48554,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 147 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
-              - `conversations` ×35
+            - Tokens used by: 148 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+              - `conversations` ×36
               - `apps` ×21
               - `plugin-meta` ×21
               - `debug` ×20

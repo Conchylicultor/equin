@@ -45,15 +45,28 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   [`research/2026-10-21-conversations-stream-every-block.md`](../../../../research/2026-10-21-conversations-stream-every-block.md).
 - `web/` — the health report's Claude Code row: Claude Code (its own verdict),
   the Agent SDK's version drift, and the agents running here and elsewhere
-  (each other worktree as its task's chip, in the expanded detail), and the
-  subscription's usage limits as meters (glance: the week collapsed, the
-  session too expanded; the row is `attention` while a limit is reached).
+  (each other worktree as its task's chip, in the expanded detail), the
+  active Claude account's usage limits as meters (glance: the week collapsed,
+  the session too expanded; the row is `attention` while its limit is
+  reached), and the account picker (`components/claude-accounts.tsx`: every
+  account with its weekly room, add / remove / switch, auto-switch, a
+  "Continue on …" banner when the active account is limited).
+- Claude accounts (`infra/claude-cli/accounts` owns the list and the tokens):
+  `machine/internal/agent-process.ts` picks the launch account at every agent
+  process start (`launchAccount`: the active one, or with auto-switch on and
+  its limit reached, the roomiest other — which becomes active) and passes
+  `--account <id>`; `bin/agent.ts` fetches that account's token from the
+  secrets store itself and gives it to Claude Code only, as
+  `CLAUDE_CODE_OAUTH_TOKEN` in the SDK's `env`. A running agent keeps its
+  account until its process restarts.
 - Usage limits: every agent turn's `rate_limit_event` carries
   `rate_limit_info.unifiedWindows` (`five_hour`, `seven_day`: utilization and
   reset) — not in the SDK's types, so `core/claude-usage.ts` parses it. The
-  agent overwrites one machine-wide file (`state/claude-usage/latest.json`,
-  `--usage-file`; the limits are the account's), which `machine/` watches and
-  serves as `runtime-sdk.claude-usage`. Current only while agents run: a
+  agent overwrites its account's machine-wide file
+  (`state/claude-usage/<accountId>.json`, `--usage-file`; the limits are the
+  account's), which `machine/` watches and serves, every account's at once, as
+  `runtime-sdk.claude-usage`. `core/usage-limits.ts` reads a report against
+  now (limit reached, weekly room, the roomiest account). Current only while agents run: a
   window reset since the last report shows as such, never as empty.
 
 Gotchas the spike hit:
@@ -70,26 +83,30 @@ Gotchas the spike hit:
 
 ## Plugin reference
 
-- Description: The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — and the subscription's usage limits as meters (the week collapsed, the session too expanded; attention while a limit is reached). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file.
+- Description: The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file.
 - Web:
   - Contributes: `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
-  - Uses:
-    - `infra/claude-cli/availability.ClaudeCodeActions`
-    - `infra/claude-cli/availability.ClaudeCodeDetail`
-    - `infra/claude-cli/availability.useClaudeCodeHealth`
-    - `infra/claude-cli/availability.useClaudeCodeStatus`
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/claude-cli/availability` ×4
+    - `infra/endpoints` ×4
+    - `primitives/css/ui-kit` ×4
+    - `primitives/setup-steps` ×4
     - `network/live.useLive`
+    - `primitives/avatar.Avatar`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.Rigid`
+    - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/switch.Switch`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
+    - `primitives/icon-button.IconButton`
     - `primitives/live-state.combineResources`
     - `primitives/relative-time.useNow`
     - `primitives/text-editor/inline-chip.renderInlineChip`
     - `shell/health-report.HealthReport`
+    - `ui/icons.Icon`
 - Server:
   - Contributes:
     - `resource.declare` "runtime-sdk.agent-processes"
@@ -108,7 +125,10 @@ Gotchas the spike hit:
     - `runtime-sdk.bundled-cli` (push, fixed)
     - `runtime-sdk.claude-usage` (push, notified)
 - Machine:
-  - Uses: `network/live.serveValue`
+  - Uses:
+    - `infra/claude-cli/accounts.readClaudeAccounts`
+    - `infra/claude-cli/accounts.selectClaudeAccountById`
+    - `network/live.serveValue`
   - Register:
     - `defineFileWatcher('runtime-sdk.events')`
     - `defineDaemon('runtime-sdk.agent')`
@@ -129,6 +149,10 @@ Gotchas the spike hit:
     - `OpenRequest`
     - `PartialFrame`
     - `PartialMessage`
+    - `UsageLevel`
+    - `UsageWindowId`
+    - `UsageWindowView`
+    - `WeekRoom`
   - Exports (values):
     - `AGENT_EVENTS_FILE`
     - `AGENT_OPTIONS_FILE`
@@ -139,24 +163,30 @@ Gotchas the spike hit:
     - `AgentLifecycleSchema`
     - `AgentProcessesSchema`
     - `applyPartialFrame`
-    - `CLAUDE_USAGE_FILE`
     - `claudeUsage`
+    - `claudeUsageFileName`
     - `claudeUsageOf`
     - `ClaudeUsageReadSchema`
     - `ClaudeUsageSchema`
     - `CommandReplySchema`
     - `DismissReplySchema`
     - `HelloReplySchema`
+    - `launchAccount`
+    - `limitReached`
     - `OpenRequestSchema`
     - `partialFrameOf`
     - `PartialFrameSchema`
     - `PartialStreamLineSchema`
     - `PROTOCOL_VERSION`
+    - `roomiestAccount`
     - `sameMajorMinor`
     - `sdkAgentProcesses`
     - `sdkBundledCli`
     - `SubscribeReplySchema`
     - `TurnReplySchema`
+    - `usageLevel`
+    - `viewUsageWindow`
+    - `weekRoom`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
@@ -165,6 +195,9 @@ Gotchas the spike hit:
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/font-family --font-mono`
+    - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
   - Imported by: `apps/agent-manager/demo`
 

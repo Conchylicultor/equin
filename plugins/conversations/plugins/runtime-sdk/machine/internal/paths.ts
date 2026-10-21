@@ -4,7 +4,7 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   AGENT_EVENTS_FILE,
   AGENT_OPTIONS_FILE,
-  CLAUDE_USAGE_FILE,
+  claudeUsageFileName,
 } from "../../core";
 import { claudeUsageDir, sdkAgentPidsDir, sdkAgentsDir } from "../../data-dirs";
 
@@ -62,11 +62,11 @@ export function agentPidPath(conversationId: string): string {
 }
 
 /**
- * The subscription usage every agent of every namespace overwrites — the
- * limits are the account's, so the one path is machine-wide on purpose.
+ * The usage every agent on `accountId`, of every namespace, overwrites — the
+ * limits are the Claude account's, so the path is machine-wide on purpose.
  */
-export function claudeUsagePath(): string {
-  return claudeUsageDir.file(CLAUDE_USAGE_FILE);
+export function claudeUsagePath(accountId: string): string {
+  return claudeUsageDir.file(claudeUsageFileName(accountId));
 }
 
 export function agentSocketPath(conversationId: string): string {

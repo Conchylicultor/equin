@@ -52,6 +52,7 @@
     - `auth/apple-signing/setup-wizard`
     - `auth/google-maps/setup-wizard`
     - `auth/google/setup-wizard`
+    - `conversations/runtime-sdk`
     - `infra/claude-cli/availability`
     - `integrations/google-maps`
 

@@ -73,6 +73,7 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.si
     - `auth`
     - `auth/apple-signing`
     - `fields/secret/config`
+    - `infra/claude-cli/accounts`
 - Exemptions:
   - Exempts itself from: `paths:no-hardcoded-paths` — `central/index.ts` (sanctioned)
 - Server:
