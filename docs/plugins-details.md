@@ -5559,7 +5559,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeDetailWrap`
               - `PrototypeVersionActions`
             - Slot contributors:
-              - `prototypeDetailPane.Actions` ← `apps.prototypes.canvas`
               - `prototypeDetailPane.Actions` ← `apps.prototypes.copy-id`
               - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`
               - `prototypeDetailPane.Actions` ← `primitives.pane`
@@ -5570,13 +5569,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeVersionActions` ← `apps.prototypes.canvas`
             - Contributes:
               - `Pane.Register` "prototypes-detail"
-              - `prototypeDetailPane.Actions` "layout" → `LayoutAction`
-              - `prototypeDetailPane.Actions` "add" → `AddFrameActions`
               - `PrototypeFrameActions` "keep-only" → `KeepOnlyFrameAction`
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 80 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 81 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
@@ -5586,9 +5583,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/control-panel` ×2
               - `primitives/css/spacing` ×2
               - `primitives/css/text` ×2
-              - `primitives/css/toggle-chip` ×2
               - `primitives/dom/auto-scroll` ×2
               - `primitives/dom/element-size` ×2
+              - `primitives/icon-button` ×2
               - `primitives/latest-ref` ×2
               - `primitives/live-state` ×2
               - `primitives/optimistic-mutation` ×2
@@ -5613,10 +5610,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/scroll.Scroll`
               - `primitives/css/slider.Slider`
               - `primitives/css/sticky.Sticky`
+              - `primitives/css/toggle-chip.ToggleChip`
+              - `primitives/dom/movable.Movable`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/embed.isEmbeddedDocument`
               - `primitives/error-boundary.PluginErrorBoundary`
-              - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/overlay/popover.InlinePopover`
@@ -5626,6 +5624,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell/toast.showToast`
               - `ui/icons.Icon`
             - Exports (types):
+              - `AddFrameHandlers`
               - `CanvasAction`
               - `CanvasAddAction`
               - `CanvasFrame`
@@ -5649,6 +5648,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SourceFrame`
               - `VersionStepperProps`
             - Exports (values):
+              - `AddFrameRail`
               - `CanvasFrameView`
               - `canvasWith`
               - `decodeCanvas`
@@ -5705,6 +5705,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CanvasFrameStatus`
               - `CanvasLayout`
             - Exports (values):
+              - `ADD_FRAME_LABEL`
               - `CANVAS_CARD_ATTR`
               - `CANVAS_FRAME_ATTR`
               - `CANVAS_FRAME_KIND_ATTR`
@@ -5713,6 +5714,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `canvasCardSelector`
               - `canvasFrameSelector`
               - `canvasLayoutSelector`
+              - `compareWithLabel`
+              - `layoutToggleLabel`
               - `PROTOTYPE_FRAME_KIND`
         - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt), and checkpoints each through the files plugin's version store with the turn's request and summary.
           - Server:
@@ -5988,8 +5991,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeDetailWrap` → `PresentationHost`
               - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
               - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
-            - Uses: 56 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
-              - `apps/prototypes/canvas` ×27
+            - Uses: 57 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
+              - `apps/prototypes/canvas` ×28
               - `primitives/css/ui-kit` ×3
               - `apps-core/tabs` ×2
               - `primitives/hover-reveal` ×2
@@ -38438,7 +38441,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `MovableProps`
             - Exports (values): `Movable`
           - Cross-plugin:
-            - Imported by: `apps/prototypes/present`
+            - Imported by:
+              - `apps/prototypes/canvas`
+              - `apps/prototypes/present`
         - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
           - Web:
             - Contributes: `Core.Root` → `OverscrollHintController`

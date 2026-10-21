@@ -200,7 +200,7 @@ function PresentedFrame({
                   count={canvas.frames.length}
                   meta={meta}
                   resolution={resolution}
-                  onFlip={onFlip}
+                onFlip={onFlip}
                   leading={
                   onExit === undefined ? (
                       <LeaveToCanvasButton name={meta.name} />
