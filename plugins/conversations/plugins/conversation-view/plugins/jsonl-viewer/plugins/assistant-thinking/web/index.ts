@@ -5,6 +5,11 @@ import { AssistantThinkingRow } from "./components/assistant-thinking-row";
 export default {
   description: "Renders assistant thinking blocks in the JSONL viewer as collapsible sections.",
   contributions: [
-    JsonlViewer.EventRenderer({ match: "assistant-thinking", component: AssistantThinkingRow }),
+    JsonlViewer.EventRenderer({
+      match: "assistant-thinking",
+      component: AssistantThinkingRow,
+      // A thinking block streams in as its stand-in while the model thinks.
+      landsShown: true,
+    }),
   ],
 } satisfies PluginDefinition;

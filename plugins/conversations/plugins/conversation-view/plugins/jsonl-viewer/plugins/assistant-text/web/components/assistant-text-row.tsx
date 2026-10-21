@@ -1,20 +1,29 @@
+import { useRef } from "react";
 import {
   ActiveDataIdentityProvider,
   useActiveDataSegments,
 } from "@plugins/active-data/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { useRowMarkdown } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import {
+  useRowMarkdown,
+  useStreamingRow,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { useSteadyReveal } from "../internal/use-steady-reveal";
+import "./stream-tail.css";
 
 type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
 
 export function AssistantTextRow({ event }: { event: JsonlEvent }) {
   const e = event as AssistantTextEvent;
   const { markdownMode } = useRowMarkdown();
+  const streaming = useStreamingRow();
+  if (streaming)
+    return <StreamingTextBody text={e.text} messageId={e.messageId ?? null} />;
   return (
     <AssistantTextBody
       text={e.text}
@@ -26,9 +35,9 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
 }
 
 /**
- * How the agent's words look: a finished message's row, and the message it is
- * still writing (`StreamingText`) — one body, so the two cannot differ when
- * the finished row replaces the streaming one.
+ * How the agent's words look: a finished message's row, and the text it is
+ * still writing (`StreamingTextBody`) — one body, so the two cannot differ
+ * when the finished row replaces the streaming one.
  */
 export function AssistantTextBody({
   text,
@@ -94,5 +103,30 @@ export function AssistantTextBody({
         )}
       </div>
     </ContentScope>
+  );
+}
+
+/**
+ * A text block the agent is still writing, revealed at a steady pace
+ * (`useSteadyReveal`) rather than in the bursts it arrives in. Always markdown:
+ * the finished row it gives way to opens in markdown.
+ */
+function StreamingTextBody({
+  text,
+  messageId,
+}: {
+  text: string;
+  messageId: string | null;
+}) {
+  const body = useRef<HTMLDivElement>(null);
+  const shown = useSteadyReveal(text, body);
+  return (
+    <div ref={body}>
+      <AssistantTextBody
+        text={text.slice(0, shown)}
+        messageId={messageId}
+        markdown
+      />
+    </div>
   );
 }

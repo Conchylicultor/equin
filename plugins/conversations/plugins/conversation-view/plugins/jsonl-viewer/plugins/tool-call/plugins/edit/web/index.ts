@@ -6,7 +6,12 @@ import { MultiEditView } from "./components/multi-edit-view";
 export default {
   description: "Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.",
   contributions: [
-    JsonlViewerTool.Renderer({ match: "Edit", component: EditView }),
+    // Defaults every field, so the diff fills in as the model writes it.
+    JsonlViewerTool.Renderer({
+      match: "Edit",
+      component: EditView,
+      partialInput: true,
+    }),
     JsonlViewerTool.Renderer({ match: "MultiEdit", component: MultiEditView }),
   ],
 } satisfies PluginDefinition;

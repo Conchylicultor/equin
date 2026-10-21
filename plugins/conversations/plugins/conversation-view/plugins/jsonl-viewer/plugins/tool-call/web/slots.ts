@@ -7,10 +7,21 @@ import {
 import type { ToolCallEvent, ToolRendererProps } from "../core";
 import { GenericToolView } from "./components/generic-tool-view";
 
+/**
+ * `partialInput`: the renderer draws a call whose input is still being written
+ * — any field may be missing, a string may stop mid-way — so the call's card
+ * fills in as the model writes it. A renderer without it is only handed a
+ * finished input; until then the call shows as its header alone.
+ */
+export interface ToolRendererMeta {
+  partialInput?: true;
+}
+
 export type ToolRendererContribution = DispatchContribution<
   ToolRendererProps,
   string
->;
+> &
+  ToolRendererMeta;
 
 export interface ToolFooterProps {
   event: ToolCallEvent;
@@ -28,7 +39,7 @@ export interface ToolFooterContribution {
 }
 
 export const JsonlViewerTool = {
-  Renderer: defineDispatchSlot<ToolRendererProps, string>({
+  Renderer: defineDispatchSlot<ToolRendererProps, string, ToolRendererMeta>({
     key: (p) => p.event.name,
     fallback: GenericToolView,
     docLabel: (c) =>

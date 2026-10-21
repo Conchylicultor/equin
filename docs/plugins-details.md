@@ -14272,17 +14272,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `JsonlViewer.ContextRole`
               - `JsonlViewer.Overlay`
               - `JsonlViewer.TranscriptEnd`
-            - Slot contributors: 58 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Slot contributors: 57 contributors — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `JsonlViewer.ContextRole` ×31
               - `JsonlViewer.EventRenderer` ×18
               - `JsonlViewer.Overlay` ×4
               - `JsonlViewer.EventFilter` ×2
-              - `JsonlViewer.TranscriptEnd` ×2
               - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
+              - `JsonlViewer.TranscriptEnd` ← `tasks.outcome-report`
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 52 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 53 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `primitives/live-state` ×7
               - `primitives/dom/auto-scroll` ×5
               - `conversations/conversation-view/pending-turn` ×4
@@ -14303,6 +14303,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Stack`
               - `primitives/css/sticky.Sticky`
               - `primitives/css/text.Text`
+              - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/in-view.useInView`
               - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/icon-button.IconButton`
@@ -14340,6 +14341,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useJsonlConversationId`
               - `useRowMarkdown`
               - `useSectionExpand`
+              - `useStreamingRow`
               - `useTranscriptDrawn`
               - `useTranscriptEvents`
               - `useTranscriptSubject`
@@ -14431,11 +14433,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/icons.Icon`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/shape --spacing`
-            - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering, and the message the agent is still writing (the conversations.partial-message value) as a block at the end of the transcript until its finished row lands — revealed at a steady pace with a soft fading edge rather than in the bursts it arrives in.
+            - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering; a text block the agent is still writing (a jsonl-viewer streaming stand-in) is revealed at a steady pace with a soft fading edge rather than in the bursts it arrives in.
               - Web:
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "assistant-text" → `AssistantTextRow`
-                  - `JsonlViewer.TranscriptEnd` "streaming-text" → `StreamingText`
                   - `JsonlRowActions.Item` "markdown-toggle" → `MarkdownToggleAction`
                   - `JsonlRowActions.Item` "copy-assistant-text" → `CopyAssistantTextAction`
                 - Uses:
@@ -14444,16 +14445,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view.conversationPane`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
-                  - `conversations/conversation-view/jsonl-viewer.useTranscriptEvents`
+                  - `conversations/conversation-view/jsonl-viewer.useStreamingRow`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
-                  - `network/live.useLive`
                   - `primitives/css/text.Text`
-                  - `primitives/dom/auto-scroll.FOLLOW_MOTION_ATTR`
-                  - `primitives/dom/element-size.useResizeObserver`
                   - `primitives/icon-button.IconButton`
-                  - `primitives/live-state.ResourceErrorInline`
                   - `primitives/markdown.Markdown`
                   - `primitives/select-scope.ContentScope`
               - Cross-plugin:
@@ -15575,13 +15572,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                   - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
-                - Uses: 21 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
                   - `primitives/collapsible` ×4
                   - `primitives/slot-render` ×3
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
                   - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
+                  - `conversations/conversation-view/jsonl-viewer` ×2
                   - `primitives/css/ui-kit` ×2
-                  - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/bouncing-dots.BouncingDots`
                   - `primitives/css/rigid.rigidClass`
@@ -30598,9 +30595,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 262 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 261 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×71
-          - `conversations` ×49
+          - `conversations` ×48
           - `debug` ×27
           - `tasks` ×27
           - `infra` ×15
@@ -30853,6 +30850,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createTimeSlicer`
           - `createTurnQueue`
           - `yieldMacrotask`
+    - **`partial-json`** — parsePartialJson: the value a prefix of a JSON document already holds — every container closed, an in-progress string value finished, an in-progress key, number or literal cut — for drawing a document while it is still being written (a streamed tool call's input).
+      - Core:
+        - Exports (values): `parsePartialJson`
     - **`refcount-hub`** — Keyed refcounted subscription hub: createRefcountHub(open) shares ONE underlying subscription per key among every holder — the first acquire opens it (sync or async), each event fans out to every holder, the last release stops it — so N readers of one source cost one watch.
       - Core:
         - Exports (types):
@@ -38454,7 +38454,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/foundations`
               - `conversations/agent-thread`
               - `conversations/conversation-view/jsonl-viewer`
-              - `conversations/conversation-view/jsonl-viewer/assistant-text`
               - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/outline`
               - `layouts/miller`
@@ -38516,7 +38515,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps` ×8
               - `shell` ×2
               - `active-data/go`
-              - `conversations/conversation-view/jsonl-viewer/assistant-text`
+              - `conversations/conversation-view/jsonl-viewer`
               - `reorder`
               - `screenshot`
               - `ui/ambient-field`
@@ -39626,9 +39625,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 257 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 256 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×69
-          - `conversations` ×49
+          - `conversations` ×48
           - `debug` ×24
           - `ui` ×23
           - `tasks` ×22

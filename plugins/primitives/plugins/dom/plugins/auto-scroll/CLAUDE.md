@@ -220,7 +220,6 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `apps/website/pages/foundations`
     - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer`
-    - `conversations/conversation-view/jsonl-viewer/assistant-text`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/outline`
     - `layouts/miller`

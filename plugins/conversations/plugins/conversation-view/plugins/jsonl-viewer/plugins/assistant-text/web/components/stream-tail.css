@@ -1,0 +1,13 @@
+/* The text being written: its newest words fade in through three highlight
+   tiers painted by internal/reveal-tail.ts. Plugin-local per the theme rule. */
+::highlight(stream-tail-1) {
+  color: color-mix(in oklch, var(--foreground) 20%, transparent);
+}
+
+::highlight(stream-tail-2) {
+  color: color-mix(in oklch, var(--foreground) 50%, transparent);
+}
+
+::highlight(stream-tail-3) {
+  color: color-mix(in oklch, var(--foreground) 80%, transparent);
+}

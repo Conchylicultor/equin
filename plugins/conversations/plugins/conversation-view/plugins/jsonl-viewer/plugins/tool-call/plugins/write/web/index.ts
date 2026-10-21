@@ -6,6 +6,11 @@ export default {
   description:
     "Renders Write tool calls with syntax-highlighted file content and clickable path affordances.",
   contributions: [
-    JsonlViewerTool.Renderer({ match: "Write", component: WriteToolView }),
+    // Defaults every field, so the file fills in as the model writes it.
+    JsonlViewerTool.Renderer({
+      match: "Write",
+      component: WriteToolView,
+      partialInput: true,
+    }),
   ],
 } satisfies PluginDefinition;

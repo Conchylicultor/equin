@@ -36,6 +36,8 @@ import {
   type RenderEcho,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { EchoRow } from "./echo-row";
+import { StreamingMessage } from "./streaming-message";
+import { standInsOf } from "../streaming-blocks";
 import { JsonlViewer } from "../slots";
 import type { TranscriptSubject } from "./transcript-subject-context";
 
@@ -69,10 +71,16 @@ function TranscriptActivity({
   events: readonly JsonlEvent[];
 }) {
   const partial = useLive(conversationPartialMessage, { id: conversationId });
-  // Not known yet, unavailable or failed: read as not streaming — the label then
-  // falls back to what the transcript itself says the agent is doing.
-  const streaming = partial.status === "ready" && partial.data !== null;
-  const working = workingActivityOf(events, streaming);
+  // Not known yet, unavailable or failed: nothing is being written — the label
+  // then reads what the transcript itself says the agent is doing. Otherwise
+  // the blocks still being written are the transcript's tail (their stamp is
+  // never read here).
+  const standIns =
+    partial.status === "ready" && partial.data
+      ? standInsOf(partial.data, events, "").map((s) => s.event)
+      : [];
+  const writing = standIns.at(-1)?.kind === "assistant-text";
+  const working = workingActivityOf([...events, ...standIns], writing);
   return (
     // px-md: the same inset as the transcript's text rows, so the dots start
     // on the column the agent's words and the tool cards' contents start on.
@@ -241,6 +249,7 @@ function JsonlPaneInner({
       // view draws via `useTranscriptEvents()`.
       overlay={<JsonlViewer.Overlay.Render />}
     >
+      <StreamingMessage conversationId={conversation.id} />
       <JsonlViewer.TranscriptEnd.Render>
         {(item) => <item.component conversation={conversation} />}
       </JsonlViewer.TranscriptEnd.Render>

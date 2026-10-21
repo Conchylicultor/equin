@@ -46,17 +46,19 @@ function toolLabel(name: string, input: unknown): string {
 }
 
 /**
- * Reads the transcript's tail: writing while a reply streams in, the tool by
- * name while the newest call has no result, else thinking (a thinking block, or
- * the model deciding what to do with what it just got back, or with a message
- * handed to it). Bookkeeping events (attachments, api requests, checkpoints…)
- * are skipped. Every kind is listed, so a new one has to pick a side.
+ * Reads the transcript's tail — with the blocks still being written appended
+ * as their stand-ins: writing while reply text streams in (`writing`), the
+ * tool by name while the newest call has no result (being written, or
+ * running), else thinking (a thinking block, or the model deciding what to do
+ * with what it just got back, or with a message handed to it). Bookkeeping
+ * events (attachments, api requests, checkpoints…) are skipped. Every kind is
+ * listed, so a new one has to pick a side.
  */
 export function workingActivityOf(
   events: readonly JsonlEvent[],
-  streaming: boolean,
+  writing: boolean,
 ): WorkingActivity {
-  if (streaming) return { mood: "writing", label: "Writing" };
+  if (writing) return { mood: "writing", label: "Writing" };
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i]!;
     switch (e.kind) {

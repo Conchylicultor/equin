@@ -40,7 +40,9 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   `stream_event`s (`includePartialMessages`) into frames — never written to
   `events.jsonl` — and streams them on `subscribe` connections; the backend
   folds the same frames into the `conversations.partial-message` value.
-  Design: [`research/2026-10-20-conversations-token-streaming.md`](../../../../research/2026-10-20-conversations-token-streaming.md).
+  Design: [`research/2026-10-20-conversations-token-streaming.md`](../../../../research/2026-10-20-conversations-token-streaming.md);
+  every block (thinking, text, tool input) since
+  [`research/2026-10-21-conversations-stream-every-block.md`](../../../../research/2026-10-21-conversations-stream-every-block.md).
 - `web/` — the health report's Claude Code row: Claude Code (its own verdict),
   the Agent SDK's version drift, and the agents running here and elsewhere
   (each other worktree as its task's chip, in the expanded detail), and the

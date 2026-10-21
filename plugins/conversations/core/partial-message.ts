@@ -1,17 +1,35 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 
-// Partial text: what the model has written so far of the message it is
-// streaming, before the CLI writes the finished message to the transcript.
-// The page draws it as a temporary block and drops it once the transcript's
-// line for the same message id holds its text. Held in memory only: a backend
-// restart mid-message loses it, the finished message still arrives.
+// The partial message: what the model has written so far of the message it
+// is streaming — its thinking, text and tool calls — before the CLI writes
+// each finished block to the transcript. The page draws each block as a
+// stand-in for its row and drops it once the transcript holds that block.
+// Held in memory only: a backend restart mid-message loses it, the finished
+// message still arrives.
 
-/** One text block of the streaming message, by its content-block index. */
-export const PartialBlockSchema = z.object({
-  index: z.number().int(),
-  text: z.string(),
-});
+/** One block of the streaming message, by its content-block index. */
+export const PartialBlockSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("text"),
+    index: z.number().int(),
+    text: z.string(),
+  }),
+  z.object({
+    kind: z.literal("thinking"),
+    index: z.number().int(),
+    text: z.string(),
+  }),
+  z.object({
+    kind: z.literal("tool_use"),
+    index: z.number().int(),
+    /** The call's id (`toolu_…`) — the transcript event's `toolUseId`. */
+    toolUseId: z.string(),
+    name: z.string(),
+    /** The input's JSON as written so far: a prefix, not a document. */
+    inputJson: z.string(),
+  }),
+]);
 export type PartialBlock = z.infer<typeof PartialBlockSchema>;
 
 /** The main agent's message being streamed (a sub-agent's is not). */

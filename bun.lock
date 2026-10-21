@@ -4070,6 +4070,10 @@
       "name": "@singularity/plugin-packages-macrotask-yield",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/partial-json": {
+      "name": "@singularity/plugin-packages-partial-json",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/refcount-hub": {
       "name": "@singularity/plugin-packages-refcount-hub",
       "version": "0.0.1",
@@ -8889,6 +8893,8 @@
     "@singularity/plugin-packages-keyed-mutex": ["@singularity/plugin-packages-keyed-mutex@workspace:plugins/packages/plugins/keyed-mutex"],
 
     "@singularity/plugin-packages-macrotask-yield": ["@singularity/plugin-packages-macrotask-yield@workspace:plugins/packages/plugins/macrotask-yield"],
+
+    "@singularity/plugin-packages-partial-json": ["@singularity/plugin-packages-partial-json@workspace:plugins/packages/plugins/partial-json"],
 
     "@singularity/plugin-packages-refcount-hub": ["@singularity/plugin-packages-refcount-hub@workspace:plugins/packages/plugins/refcount-hub"],
 

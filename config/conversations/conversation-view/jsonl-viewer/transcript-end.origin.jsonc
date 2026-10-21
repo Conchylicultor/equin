@@ -1,4 +1,4 @@
-// @hash 2f64c3deb8dc
+// @hash f3ae0b465181
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,7 +7,6 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "conversations.conversation-view.jsonl-viewer.assistant-text:streaming-text",
     "tasks.outcome-report:outcome-report"
   ]
 }

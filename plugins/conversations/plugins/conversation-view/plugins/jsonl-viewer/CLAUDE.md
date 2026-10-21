@@ -160,17 +160,17 @@ back.
     - `JsonlViewer.ContextRole`
     - `JsonlViewer.Overlay`
     - `JsonlViewer.TranscriptEnd`
-  - Slot contributors: 58 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 57 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `JsonlViewer.ContextRole` ×31
     - `JsonlViewer.EventRenderer` ×18
     - `JsonlViewer.Overlay` ×4
     - `JsonlViewer.EventFilter` ×2
-    - `JsonlViewer.TranscriptEnd` ×2
     - `JsonlViewer.PendingPrompt` ← `conversations.question-relay`
+    - `JsonlViewer.TranscriptEnd` ← `tasks.outcome-report`
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×7
     - `primitives/dom/auto-scroll` ×5
     - `conversations/conversation-view/pending-turn` ×4
@@ -191,6 +191,7 @@ back.
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/in-view.useInView`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/icon-button.IconButton`
@@ -228,6 +229,7 @@ back.
     - `useJsonlConversationId`
     - `useRowMarkdown`
     - `useSectionExpand`
+    - `useStreamingRow`
     - `useTranscriptDrawn`
     - `useTranscriptEvents`
     - `useTranscriptSubject`
@@ -296,7 +298,7 @@ back.
 - Sub-plugins:
   - **`api-error`** — Renders the CLI's own notice of a failed model request in the JSONL viewer — a usage limit with its reset time, a server error, an expired login — as a warning line, not as the agent's words.
   - **`api-request`** — Renders the model API call settings Claude Code logs (model, effort, thinking, max tokens, permission mode, betas, tool set) as a change log: the first call's settings, then one row per call that…
-  - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering, and the message the agent is still writing (the conversations.partial-message value) as a block at the end of the…
+  - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering; a text block the agent is still writing (a jsonl-viewer streaming stand-in) is revealed at a steady pace with a…
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
   - **`attachment`** — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
   - **`background-shells`** — The background-shell surfaces: every background Bash shell of a conversation and its state (useConversationShells, folded from the transcript the view already holds), its live output tail…

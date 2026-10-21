@@ -1,0 +1,13 @@
+/* The message being written. Its frame eases to each new height (a line
+   wrapping, a block starting) instead of stepping. Plugin-local per the theme
+   rule. */
+.streaming-message-frame {
+  overflow: clip;
+  transition: height 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streaming-message-frame {
+    transition: none;
+  }
+}

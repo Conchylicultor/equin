@@ -9,7 +9,7 @@
 /** How long a revealed character takes to reach full colour. */
 export const FADE_MS = 360;
 
-/** Faintest first — the `::highlight(stream-tail-N)` rules in streaming-text.css. */
+/** Faintest first — the `::highlight(stream-tail-N)` rules in stream-tail.css. */
 const TIER_NAMES = ["stream-tail-1", "stream-tail-2", "stream-tail-3"] as const;
 
 /**

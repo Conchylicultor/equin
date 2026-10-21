@@ -59,7 +59,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `apps` ×8
     - `shell` ×2
     - `active-data/go`
-    - `conversations/conversation-view/jsonl-viewer/assistant-text`
+    - `conversations/conversation-view/jsonl-viewer`
     - `reorder`
     - `screenshot`
     - `ui/ambient-field`

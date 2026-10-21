@@ -5,7 +5,7 @@
 //   options   → <dir>/launch.json   (AgentLaunchOptions, written by the backend)
 //   commands  → --socket            (newline-delimited JSON, core/protocol.ts)
 //   events    ← <dir>/events.jsonl  (every SDK message, numbered, unchanged)
-//   partial   ← --socket, `subscribe` (the text being streamed, never on disk)
+//   partial   ← --socket, `subscribe` (the message being streamed, never on disk)
 //   pid       → --pid-file          (written at start, removed on exit)
 //   usage     → --usage-file        (the subscription's limits, last reported)
 //   stdout    → a human-readable log (the backend points it at `agent.log`)
@@ -185,7 +185,7 @@ function logMessage(msg: SDKMessage): void {
   }
 }
 
-// ── partial message: the text being streamed, to `subscribe` connections ──
+// ── partial message: the message being streamed (thinking, text, tool calls), to `subscribe` connections ──
 // Never written to events.jsonl: it is useless on replay, and the finished
 // message lands in the transcript anyway. Kept in memory so a subscriber
 // joining mid-message starts from what is already written.
@@ -196,7 +196,7 @@ function pushFrame(frame: PartialFrame): void {
   const line = JSON.stringify({ frame }) + "\n";
   for (const conn of subscribers) conn.write(line);
 }
-/** The message will never land (interrupted, failed): drop its text. */
+/** The message will never land (interrupted, failed): drop its blocks. */
 function clearPartial(): void {
   if (partial !== null) pushFrame({ type: "clear" });
 }

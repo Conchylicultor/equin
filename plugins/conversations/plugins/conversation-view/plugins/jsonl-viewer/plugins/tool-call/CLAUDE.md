@@ -31,13 +31,13 @@
   - Contributes:
     - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
     - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
     - `primitives/slot-render` ×3
     - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
+    - `conversations/conversation-view/jsonl-viewer` ×2
     - `primitives/css/ui-kit` ×2
-    - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
     - `primitives/css/rigid.rigidClass`

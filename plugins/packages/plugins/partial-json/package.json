@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-packages-partial-json",
+  "private": true,
+  "version": "0.0.1",
+  "description": "parsePartialJson: the value a prefix of a JSON document already holds — every container closed, an in-progress string value finished, an in-progress key, number or literal cut — for drawing a document while it is still being written (a streamed tool call's input)."
+}

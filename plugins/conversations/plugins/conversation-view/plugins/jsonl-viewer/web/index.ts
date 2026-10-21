@@ -27,6 +27,7 @@ export type { TranscriptWindow } from "./use-transcript-window";
 export { useVisibleEvents } from "./use-visible-events";
 export { EventLine } from "./components/event-line";
 export { useRowMarkdown } from "./components/row-markdown-context";
+export { useStreamingRow } from "./components/streaming-row-context";
 export {
   useTranscriptEvents,
   useTranscriptDrawn,

@@ -3,6 +3,7 @@ import type { SDKPartialAssistantMessage } from "@anthropic-ai/claude-agent-sdk"
 import {
   applyPartialFrame,
   partialFrameOf,
+  SubscribeReplySchema,
   type PartialMessage,
 } from "./partial";
 
@@ -40,19 +41,24 @@ function fold(events: SDKPartialAssistantMessage[]): PartialMessage | null {
 }
 
 describe("the partial message", () => {
-  test("text deltas accumulate per block; tool input and thinking are not text", () => {
+  test("every block streams with its kind: thinking, text and tool input", () => {
     expect(
       fold([
         ev({ type: "message_start", message: { id: "msg_1" } }),
         ev({
           type: "content_block_start",
           index: 0,
-          content_block: { type: "thinking" },
+          content_block: { type: "thinking", thinking: "", signature: "" },
         }),
         ev({
           type: "content_block_delta",
           index: 0,
-          delta: { type: "thinking_delta" },
+          delta: { type: "thinking_delta", thinking: "Hmm" },
+        }),
+        ev({
+          type: "content_block_delta",
+          index: 0,
+          delta: { type: "signature_delta", signature: "sig" },
         }),
         ev({
           type: "content_block_start",
@@ -64,16 +70,93 @@ describe("the partial message", () => {
         ev({
           type: "content_block_start",
           index: 2,
-          content_block: { type: "tool_use" },
+          content_block: {
+            type: "tool_use",
+            id: "toolu_1",
+            name: "Write",
+            input: {},
+          },
         }),
         ev({
           type: "content_block_delta",
           index: 2,
-          delta: { type: "input_json_delta" },
+          delta: { type: "input_json_delta", partial_json: '{"file_pa' },
         }),
+        ev({
+          type: "content_block_delta",
+          index: 2,
+          delta: { type: "input_json_delta", partial_json: 'th":"a"}' },
+        }),
+        ev({ type: "content_block_stop", index: 2 }),
         ev({ type: "message_stop" }),
       ]),
-    ).toEqual({ messageId: "msg_1", blocks: [{ index: 1, text: "Hello" }] });
+    ).toEqual({
+      messageId: "msg_1",
+      blocks: [
+        { kind: "thinking", index: 0, text: "Hmm" },
+        { kind: "text", index: 1, text: "Hello" },
+        {
+          kind: "tool_use",
+          index: 2,
+          toolUseId: "toolu_1",
+          name: "Write",
+          inputJson: '{"file_path":"a"}',
+        },
+      ],
+    });
+  });
+
+  test("redacted thinking and server tools draw nothing", () => {
+    expect(
+      fold([
+        ev({ type: "message_start", message: { id: "msg_1" } }),
+        ev({
+          type: "content_block_start",
+          index: 0,
+          content_block: { type: "redacted_thinking", data: "x" },
+        }),
+        ev({
+          type: "content_block_start",
+          index: 1,
+          content_block: {
+            type: "server_tool_use",
+            id: "srvtoolu_1",
+            name: "web_search",
+            input: {},
+          },
+        }),
+      ]),
+    ).toEqual({ messageId: "msg_1", blocks: [] });
+  });
+
+  test("an agent from before kinds: deltas with no open are text, its snapshot reads as text", () => {
+    const state = applyPartialFrame(
+      applyPartialFrame(null, { type: "start", messageId: "m" }),
+      { type: "delta", index: 0, text: "x" },
+    );
+    expect(state).toEqual({
+      messageId: "m",
+      blocks: [{ kind: "text", index: 0, text: "x" }],
+    });
+    expect(
+      SubscribeReplySchema.parse({
+        messageId: "m",
+        blocks: [{ index: 0, text: "x" }],
+      }),
+    ).toEqual(state);
+  });
+
+  test("a block opened twice is a broken stream", () => {
+    const open = {
+      type: "open",
+      index: 0,
+      block: { kind: "thinking" },
+    } as const;
+    const state = applyPartialFrame(
+      applyPartialFrame(null, { type: "start", messageId: "m" }),
+      open,
+    );
+    expect(() => applyPartialFrame(state, open)).toThrow();
   });
 
   test("a new message replaces the previous one", () => {
@@ -84,7 +167,10 @@ describe("the partial message", () => {
         ev({ type: "message_start", message: { id: "msg_2" } }),
         text(0, "b"),
       ]),
-    ).toEqual({ messageId: "msg_2", blocks: [{ index: 0, text: "b" }] });
+    ).toEqual({
+      messageId: "msg_2",
+      blocks: [{ kind: "text", index: 0, text: "b" }],
+    });
   });
 
   test("a sub-agent's stream is not the conversation's message", () => {
