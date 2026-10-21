@@ -8,13 +8,15 @@ const WORKER_ENTRY =
 /**
  * Subtrees the sentinel worker's static closure may never reach. Each one runs
  * work at module load that needs a plugin runtime the worker thread does not
- * have: config_v2's server side reads the process namespace to find its config
- * dir, the jobs and database server barrels build the pool and job queue, and
+ * have: config_v2's server half registers its live values and host services
+ * and its machine half reads the process namespace to find its config dir, the
+ * jobs and database server barrels build the pool and job queue, and
  * server-core is the plugin runtime itself.
  */
 // eslint-disable-next-line exempt/no-path-allowlist -- a deny-list of import-closure targets, not an allowlist of violators
 const FORBIDDEN_PREFIXES = [
   "plugins/config_v2/server/",
+  "plugins/config_v2/machine/",
   "plugins/infra/plugins/jobs/server/",
   "plugins/database/server/",
   "plugins/framework/plugins/server-core/",
@@ -40,7 +42,7 @@ const FORBIDDEN_PREFIXES = [
 const workerClosureLeanCheck: Check = {
   id: "sentinel:worker-closure-lean",
   description:
-    "the sentinel worker's static import closure reaches no config_v2/server, jobs/server, database/server or server-core module — the worker thread has no plugin runtime to evaluate them in",
+    "the sentinel worker's static import closure reaches no config_v2/server or config_v2/machine, jobs/server, database/server or server-core module — the worker thread has no plugin runtime to evaluate them in",
   async run() {
     const found = await findForbiddenModules(WORKER_ENTRY, FORBIDDEN_PREFIXES);
     if (found === null) return { ok: true };

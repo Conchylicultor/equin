@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { auditUserConfigOrphans } from "@plugins/config_v2/server";
 import { recordReport, ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
+import { auditUserConfigOrphans } from "./orphan-audit";
 
 export const STRANDED_CONFIG_KIND = "config-orphans-stranded";
 

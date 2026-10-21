@@ -12050,7 +12050,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Shared:
         - Exports (values): `resolveFile`
 
-- **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
+- **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
     - Slot contributors: 87 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
@@ -12080,46 +12080,44 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "config-v2.scopes"
       - `resource.declare` "config-v2.tiers"
       - `resource.declare` "config-v2.values"
-    - Uses:
-      - `infra/file-watcher.acquireDirWatch`
-      - `infra/file-watcher.defineFileWatcher`
-      - `infra/file-watcher.FileWatcher`
-      - `infra/paths.REPO_ROOT`
-      - `infra/paths.repoConfigDir`
-      - `infra/request-origin/agent-write-ledger.AgentWriteLedgerEntry`
-      - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
-      - `infra/request-origin/agent-write-ledger.FileSnapshot`
-      - `network/live.serveValue`
+      - `host-service:config-v2.store` "config-v2.store"
+      - `host-service:config-v2.git-layer` "config-v2.git-layer"
+    - Uses: `network/live.serveValue`
     - Exports (types):
+      - `ConfigDocumentTuple`
       - `ConfigWriteOpts`
       - `FieldStorageProvider`
     - Exports (values):
       - `acknowledgeConflictByPath`
-      - `auditUserConfigOrphans`
+      - `ConfigGitLayer`
       - `configRegistryReady`
+      - `ConfigStore`
       - `ConfigV2`
       - `configValuesServed`
       - `configWatcherArmed`
       - `deleteOverrideByPath`
       - `deleteScope`
-      - `forkConfig`
       - `forkDescriptorScope`
       - `forkScope`
       - `getAllDescriptors`
       - `getConfig`
       - `getConfigScopeIds`
+      - `getDescriptorByStorePath`
       - `getFieldStorageProvider`
       - `getScopedDescriptors`
+      - `hasConfigDocument`
       - `hasFieldStorageProvider`
       - `mergeConflictByPath`
+      - `notifyConfigDirChange`
       - `onConfigDirChange`
+      - `onDocumentChange`
       - `registerFieldStorageProvider`
+      - `reloadConfigDocument`
       - `removeDescriptorScope`
       - `resetConfigByPath`
       - `setConfig`
       - `setConfigByPath`
       - `watchConfig`
-    - Register: `defineFileWatcher('config_v2.config-files')`
     - Resources:
       - `config-v2.conflict-locations` (push, notified)
       - `config-v2.conflicts` (push, notified)
@@ -12128,6 +12126,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `config-v2.scopes` (push, notified)
       - `config-v2.tiers` (push, notified)
       - `config-v2.values` (push, notified)
+  - Machine:
+    - Uses: `network/live.serveValue`
+    - Exports (values): `CONFIG_DIR`
+    - Register: `defineFileWatcher('config_v2.config-files')`
   - Core:
     - Uses:
       - `fields.fieldsToZodObject`
@@ -12139,11 +12141,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/rank.Rank`
     - Exports (types):
       - `ConfigDescriptor`
+      - `ConfigDocRef`
+      - `ConfigDocumentFile`
+      - `ConfigFileRef`
+      - `ConfigGitLayerImpl`
       - `ConfigListVisitor`
       - `ConfigMigration`
       - `ConfigProxy`
       - `ConfigSource`
-      - `ConfigStore`
+      - `ConfigStoreImpl`
       - `ConfigV2ConflictEntry`
       - `ConfigV2ConflictLocations`
       - `ConfigV2ConflictMap`
@@ -12175,6 +12181,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `configConflict`
       - `configConflictLocations`
       - `configFileOwner`
+      - `configFileRelPath`
       - `configModifiedCounts`
       - `configRawFile`
       - `configScopes`
@@ -12215,21 +12222,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resolveGitLayer`
       - `REVIEW_MARKER`
       - `scopeAppId`
+      - `scopeSegment`
       - `setConfigField`
+      - `storePathParts`
       - `stringifyConfigValue`
       - `threeWayMerge`
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 112 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 113 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×32
       - `backup` ×13
       - `conversations` ×13
       - `debug` ×12
       - `ui` ×11
       - `auth` ×6
+      - `config_v2` ×4
       - `tasks` ×4
-      - `config_v2` ×3
       - `primitives` ×3
       - `infra` ×2
       - `integrations` ×2
@@ -12243,8 +12252,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reports`
       - `review/code-review`
       - `shell/global-action-bar`
-  - Exemptions:
-    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/config-watcher.ts`, `server/internal/fork.ts`, `server/internal/jsonc-proxy.ts`, `server/internal/orphan-audit.ts`, `server/internal/registry.ts`, `server/internal/resource.ts`, `server/internal/scope-fork.ts`, `server/internal/scope-paths.ts`, `server/internal/scope-snapshot.ts` (debt)
   - Test helpers:
     - Web: `@plugins/config_v2/web/testing`
       - `useConfigDemoBackend` — Config inside a demo scope (`Demo.Resource`): the server's tier cascade over two browser layers, so a demo surface reads exactly what a fresh user of the committed repo would — and can change it.
@@ -12252,6 +12259,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Core: `@plugins/config_v2/core/testing`
       - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
   - Plugins:
+    - **`browser-store`** (excluded) — The config host services of a host without the computer (a browser worker host): the user layer held in memory (ConfigStore) and a committed layer not yet delivered to this host (ConfigGitLayer, which throws naming the missing step). Never booted by the desktop, whose providers are config_v2#machine.
+      - Server:
+        - Contributes:
+          - `host-service:config-v2.store` "config-v2.store"
+          - `host-service:config-v2.git-layer` "config-v2.git-layer"
+        - Uses:
+          - `config_v2.ConfigGitLayer`
+          - `config_v2.ConfigStore`
     - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
       - Web:
         - Uses:
@@ -18233,7 +18248,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`worktree`** — The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out in the spawn job, resumable while the checkout exists.
           - Server:
             - Uses:
-              - `config_v2.forkConfig`
               - `config_v2.getConfig`
               - `conversations/workspace.Workspace`
               - `database/fork.databaseForkJob`
@@ -19445,7 +19459,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/color-palette --success`
           - `ui/tokens/color-palette --warning`
-    - **`config-orphans`** — Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live, plus a notice pinned above Settings → Config when any of the user's own saved settings no longer apply. Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live. Files one rolling `config-orphans-stranded` report at boot when any real user override is stranded.
+    - **`config-orphans`** — Read-only audit of orphaned user-layer config files whose defineConfig descriptor is no longer live, plus a notice pinned above Settings → Config when any of the user's own saved settings no longer apply.
       - Web:
         - Slots: `configOrphansPane.Actions`
         - Slot contributors: `configOrphansPane.Actions` ← `primitives.pane`
@@ -19479,15 +19493,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `report-kind` "config-orphans-stranded"
           - `resource.declare` "config-orphans.report"
-        - Uses:
-          - `config_v2.auditUserConfigOrphans`
-          - `config_v2.configRegistryReady`
-          - `config_v2.configWatcherArmed`
-          - `config_v2.onConfigDirChange`
-          - `network/live.serveValue`
-          - `reports.recordReport`
-          - `reports.ReportKind`
         - Resources: `config-orphans.report` (push, notified)
+      - Machine:
+        - Uses:
+          - `config_v2.CONFIG_DIR`
+          - `network/live.serveValue`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
@@ -24383,6 +24393,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `removeReadSetTable` — Remove `table` from the read-set of every key EXCEPT those in `keepKeys` — the one eviction path of an append-only index (a suite isolating its own keys from another's captures).
           - `serverEntries`
           - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states.
+          - `withHostServices` — Run `fn` with `providers` (each a `Svc.provide(impl)`) answering their services — over the unbooted host's providers and over a collected graph's — and put the previous answers back once it settles, so a suite swapping a service cannot leak it into the suites after it in the same bun process.
     - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
       - Cross-plugin:
         - Imported by:
@@ -24524,7 +24535,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/server-build-id` (2 debt)
               - `code-explorer` (8 debt)
               - `code-explorer/file-resolve` (1 debt)
-              - `config_v2` (9 debt)
               - `config_v2/ledger` (1 debt)
               - `conversations` (3 debt)
               - `conversations/compaction-context` (1 debt)
@@ -24838,12 +24848,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 92 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 97 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `config_v2` ×14
-              - `framework/plugin-id` ×13
-              - `plugin-meta/parse-utils` ×12
+              - `framework/plugin-id` ×14
+              - `plugin-meta/parse-utils` ×13
+              - `plugin-meta/closure` ×7
               - `plugin-meta/barrel-import` ×6
-              - `plugin-meta/closure` ×5
               - `plugin-meta/composition` ×5
               - `plugin-meta/facets` ×5
               - `framework/tooling/resource-vocabulary` ×4
@@ -24853,11 +24863,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/ledger` ×2
               - `framework/tooling/format` ×2
               - `framework/tooling` ×2
+              - `infra/namespace` ×2
               - `packages/macrotask-yield` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/import-closure.importClosure`
               - `framework/tooling/lint.loadLintContributions`
-              - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/semaphore.createSemaphore`
               - `plugin-meta/facets/contributions.contributionsFacetDef`
               - `plugin-meta/facets/exemptions.exemptionsFacetDef`
@@ -24870,9 +24880,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CodegenStep`
               - `CollectedRawEntry`
               - `DeclaredApp`
+              - `DerivedBrowserHostGraph`
               - `DiscoveredCollectedDir`
               - `EagerTierResult`
               - `GenerateDocsOptions`
+              - `HostServiceDecl`
               - `MainComposition`
               - `OriginAnnotationsPreparer`
               - `OriginAnnotationsProvider`
@@ -24890,6 +24902,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `assertSlotsDeclared`
               - `barrelStubsPath`
+              - `baseExclusionServerBarrels`
               - `buildBarrelFreeTree`
               - `buildEnrichedTree`
               - `buildRegistryGenContext`
@@ -24915,6 +24928,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `customUtilitiesManifestPath`
               - `dataViewsManifestPath`
               - `declareSlotsFromBarrels`
+              - `deriveBrowserHostGraph`
               - `discoverBrowserHosts`
               - `discoverCollectedDirs`
               - `discoverCollectedDirsIn`
@@ -24940,6 +24954,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `generateReorderableSlots`
               - `generateSpaceRamp`
               - `generateTokenGroupVars`
+              - `hostServicesByName`
               - `iconManifestPath`
               - `isAppContent`
               - `listNamedCompositionRegistries`
@@ -24948,6 +24963,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mainBundle`
               - `mainComposition`
               - `parseCustomUtilities`
+              - `parseHostServiceDeclarations`
               - `parseNamedCompositionRegistryFileName`
               - `parseSpaceRamp`
               - `pluginClaudeMdPath`
@@ -24957,6 +24973,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `postWebManifests`
               - `preBarrelManifests`
               - `propagateConfigToUser`
+              - `providedServiceNames`
               - `readCompositionManifestsFromDisk`
               - `readDeclaredApps`
               - `readDefineApp`
@@ -27192,13 +27209,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `statHistory`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 24 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `debug` ×7
           - `infra` ×7
           - `apps` ×2
           - `conversations` ×2
           - `build`
-          - `config_v2`
           - `framework/cli/await`
           - `integrations/google-maps`
           - `plugin-meta/plugin-tree`
@@ -28506,7 +28522,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 52 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 51 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×9
           - `infra` ×8
           - `build` ×7
@@ -28519,7 +28535,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×2
           - `stats` ×2
           - `apps/deploy/deployments`
-          - `config_v2`
           - `reports/outbox`
           - `review/plugin-changes`
           - `tasks`
@@ -28759,9 +28774,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `inAgentWritesScope`
               - `revertAgentWrites`
           - Cross-plugin:
-            - Imported by:
-              - `apps/prototypes/files`
-              - `config_v2`
+            - Imported by: `apps/prototypes/files`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ledger.ts` (debt)
     - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
@@ -34516,6 +34529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defaultExportObjectBody`
           - `findImports`
           - `findMarkerCalls`
+          - `isPortableServerBarrel`
           - `lineAt`
           - `markerCallSpans`
           - `maskSource`
@@ -43290,9 +43304,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
   - Cross-plugin:
-    - Imported by: 53 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 52 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×22
-      - `debug` ×15
+      - `debug` ×14
       - `conversations` ×3
       - `database` ×3
       - `framework` ×2

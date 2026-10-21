@@ -1,4 +1,4 @@
-// @hash 47d904a7a02c
+// @hash b539cafe2ec9
 {
   "manifests": [
     {
@@ -28,7 +28,8 @@
         "!database.migrations.bundled-source.**",
         "!conversations.transcript-source.memory.**",
         "!conversations.model-provider.catalog.baseline.**",
-        "!tasks.task-title.filed-titles.**"
+        "!tasks.task-title.filed-titles.**",
+        "!config_v2.browser-store.**"
       ],
       "selectedContributors": [],
       "extends": [],

@@ -30,9 +30,11 @@
  *   consumer*. That keeps `assertKnownComposition`, the hostname/port
  *   validation and the unique-constraint → 409 mapping as the single writer of
  *   that table. (It is also the only option: the deployments *server* barrel
- *   eagerly imports `config_v2/server`, which resolves its config dir at module
- *   eval from this process's runtime namespace — which a CLI process does not
- *   have, so it cannot import that table.)
+ *   eagerly imports the backend's server graph — `config_v2/server` registers
+ *   its live values and reads its user layer through host services only a
+ *   booted backend provides (the desktop's `config_v2#machine` resolves the
+ *   config dir from the process's runtime namespace, which a CLI process does
+ *   not have) — so a CLI cannot import that table.)
  * - The **server row + its health row** are read straight from the DB, because
  *   they have no core-level wire contract: `servers`/`health` keep theirs in
  *   plugin-private `shared/`, and the TOFU-pinned `hostKeyLine` is

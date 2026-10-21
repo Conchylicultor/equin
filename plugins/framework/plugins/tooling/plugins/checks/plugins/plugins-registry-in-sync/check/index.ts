@@ -10,6 +10,7 @@ import {
   committedRegistryBundle,
   collectEntriesWithDeps,
   buildRegistryGenContext,
+  deriveBrowserHostGraph,
   discoverBrowserHosts,
   formatGenerated,
   renderBrowserHost,
@@ -126,21 +127,41 @@ const check: Check = {
       };
     }
 
-    // A browser host's graph (`bin/browser-host.generated.ts`): the server
-    // barrels its declared plugins load, rendered from the same source.
+    // A browser host's graph (`bin/browser-host.generated.ts`): inferred from
+    // its composition by the same derivation the generator renders.
     for (const host of discoverBrowserHosts(repo)) {
       const actual = await repo.read(host.generated);
+      const graph = await deriveBrowserHostGraph(ctx, host);
       const expected = await formatGenerated({
         file: join(root, host.generated),
-        content: await renderBrowserHost(ctx, host),
+        content: await renderBrowserHost(ctx, graph),
       });
       if (actual === expected) continue;
+      if (actual === null) {
+        return {
+          ok: false,
+          message: `${host.generated} is missing`,
+          hint: "Run `./singularity build` and commit the regenerated file.",
+        };
+      }
+      // Name the plugins that moved, as for the registries above.
+      const derived = new Set(
+        graph.members.map((p) => p.split("/plugins/").join(".")),
+      );
+      const carried = registryIds(actual);
+      const stale = [...carried].filter((id) => !derived.has(id)).sort();
+      const missing = [...derived].filter((id) => !carried.has(id)).sort();
+      const moved = [
+        ...(stale.length > 0
+          ? [`carried but no longer derived: ${stale.join(", ")}`]
+          : []),
+        ...(missing.length > 0
+          ? [`derived but not carried: ${missing.join(", ")}`]
+          : []),
+      ];
       return {
         ok: false,
-        message:
-          actual === null
-            ? `${host.generated} is missing`
-            : `${host.generated} is out of sync with the server barrels ${host.declaration}'s plugins load`,
+        message: `${host.generated} is out of sync with the graph inferred from the "${graph.composition}" composition (${host.declaration})${moved.length > 0 ? `:\n    ${moved.join("\n    ")}` : " — the same plugins on both sides, so what differs is their `dependsOn` edges, the providers, or the formatting."}`,
         hint: "Run `./singularity build` and commit the regenerated file.",
       };
     }

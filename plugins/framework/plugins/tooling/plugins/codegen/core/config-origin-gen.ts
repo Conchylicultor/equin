@@ -84,8 +84,9 @@ async function discoverConfigs(root: string): Promise<DiscoveredConfig[]> {
   for (const node of tree.byDir.values()) {
     if (!bundle.has(node.id)) continue;
     // Both server halves: a portable plugin registers its config from its
-    // `machine/` barrel (config reads need the computer until the config_v2
-    // split), exactly where `config-v2:registrations-paired` looks.
+    // `machine/` barrel (until the registering plugins are split over the
+    // portable config_v2 server half), exactly where
+    // `config-v2:registrations-paired` looks.
     for (const runtime of SERVER_HALF_RUNTIMES) {
       const barrelPath = join(node.dir, runtime, "index.ts");
       if (!existsSync(barrelPath)) continue;

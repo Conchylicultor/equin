@@ -161,6 +161,7 @@ caller**. Omitting `path` keeps the `ts` loader — correct only for `.ts`-only 
     - `defaultExportObjectBody`
     - `findImports`
     - `findMarkerCalls`
+    - `isPortableServerBarrel`
     - `lineAt`
     - `markerCallSpans`
     - `maskSource`

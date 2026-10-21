@@ -185,13 +185,15 @@ const configV2RawFileSchema = z.object({
 });
 
 // Keyed `{ path, scopeId? }` exactly like `configValues`, so the registry's one
-// document fan-out (`notifyDocument`) moves it with the document, its conflicts
-// and its tiers — the user-layer half. The git-layer half (repo files only a
-// build propagates) is watched while subscribed. A path no descriptor is
+// document fan-out (`onDocumentChange`) moves it with the document, its
+// conflicts and its tiers — the user-layer half. The git-layer half (repo files
+// only a build propagates) is watched while subscribed. A path no descriptor is
 // registered for — or a scope with no document of its own loaded — is refused
-// `missing`.
+// `missing`. The files are the desktop's (served by `machine/`): a reader under
+// an in-browser server gets `unavailable`.
 export const configRawFile = liveValue("config-v2.raw-file", {
   schema: configV2RawFileSchema,
   params: ["path", "scopeId?"],
   refusals: ["missing"],
+  needsMachine: { feature: "Reading config files" },
 });

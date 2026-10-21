@@ -34,6 +34,9 @@ export function InvalidDiff({
       />
     );
   }
+  // The files are the desktop's: a host without the computer says so.
+  if (raw.status === "unavailable")
+    return <Placeholder tone="muted">{raw.message}</Placeholder>;
   const data = raw.data;
 
   const stored = data.override ?? data.gitOverride ?? data.origin ?? "";

@@ -32,7 +32,7 @@ function subject(conflict: ConfigConflictContext): string {
 
 /**
  * The store path with the scope's own `@app/<id>/` segment spliced in ahead of the
- * filename — the same encoding `userScopedDir` writes on disk, so a scoped
+ * filename — the same encoding the user-layer store writes on disk (`configFileRelPath`), so a scoped
  * conflict names the file it is actually about rather than the base one.
  */
 function scopedStorePath(conflict: ConfigConflictContext): string {

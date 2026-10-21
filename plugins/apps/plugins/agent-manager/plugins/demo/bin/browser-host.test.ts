@@ -39,6 +39,15 @@ import {
   migrationsFrom,
   MigrationSource,
 } from "@plugins/database/plugins/migrations/server";
+import {
+  configConflict,
+  configConflictLocations,
+  configModifiedCounts,
+  configRawFile,
+  configScopes,
+  configTiers,
+  configValues,
+} from "@plugins/config_v2/core";
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
@@ -51,14 +60,14 @@ import {
 import { DEMO_READS } from "../core/internal/demo-reads";
 import { conversationTurns } from "@plugins/conversations/plugins/turn-ledger/core";
 import { DEMO_CONVERSATION_ID } from "../core/internal/scenario";
-import { hostEntries } from "./browser-host.generated";
+import { hostEntries, hostProviders } from "./browser-host.generated";
 import { seed } from "./seed";
 
 setDefaultTimeout(300_000);
 
 type Entry = (typeof hostEntries)[number];
 
-const BUNDLED_SOURCE = "database/plugins/migrations/plugins/bundled-source";
+const BUNDLED_SOURCE = hostProviders[MigrationSource.id];
 const MIGRATIONS_DATA = join(PLUGINS_DIR, "database/plugins/migrations/data");
 const diskMigrations: Entry = {
   pluginPath: "apps/plugins/agent-manager/plugins/demo/boot-test-migrations",
@@ -194,6 +203,27 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
         `${read.key} is neither served by the demo host nor needsMachine`,
     );
     expect(uncovered).toEqual([]);
+  });
+
+  test("the host serves config's portable values, and not the machine-bound raw file", () => {
+    // config_v2's server is portable (its documents in browser-store's memory
+    // store); the raw-file view of a document's files is config_v2#machine's.
+    const served = Resource.Declare.getContributions()
+      .map((c) => c.key)
+      .filter((key) => key.startsWith("config-v2."));
+    expect(served.sort()).toEqual(
+      [
+        configValues,
+        configScopes,
+        configConflict,
+        configTiers,
+        configConflictLocations,
+        configModifiedCounts,
+      ]
+        .map((d) => d.key)
+        .sort(),
+    );
+    expect(served).not.toContain(configRawFile.key);
   });
 
   test("the stories carry their short titles, tracks, progress and notes", async () => {

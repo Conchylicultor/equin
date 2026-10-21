@@ -1,5 +1,3 @@
-import { statSync } from "node:fs";
-import { join } from "node:path";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   configValues,
@@ -25,8 +23,8 @@ import type {
 } from "../../core";
 import type { ConfigDescriptor, ConfigValues, JsonValue } from "../../core";
 import type { FieldsRecord } from "@plugins/fields/core";
-import { userScopedDir, discoverScopeIds } from "./scope-paths";
-import { jsoncConfigProxy } from "./jsonc-proxy";
+import { documentFiles } from "./scope-paths";
+import { ConfigStore } from "./host-services";
 import { hasFieldStorageProvider } from "./field-storage-providers";
 import { computeFieldTiers } from "./field-tiers";
 
@@ -78,6 +76,18 @@ export function markRegistryReady(): void {
  */
 export function configRegistryReady(): Promise<void> {
   return registryReady;
+}
+
+/**
+ * Resolves once the user-layer store's watch is live — from then on every
+ * out-of-band change produces an event (and, on the desktop, an
+ * `onConfigDirChange` batch). Rejects when watching failed to start. A live
+ * value's `whileSubscribed` awaits it and then calls `notify()` once: the
+ * registry answers reads from `onReadyBlocking`, while the desktop's watcher
+ * arms later, in `onReady`, so a write made in between is still read.
+ */
+export function configWatcherArmed(): Promise<void> {
+  return ConfigStore.get().armed();
 }
 
 // Wraps a loader so it resolves only after initRegistry has populated the
@@ -148,24 +158,12 @@ export const configValuesServed = serveValue(configValues, {
 });
 
 // The three user-layer files a descriptor's conflict state is a function of, for
-// one scope. `scopeId` undefined → base config (paths land exactly where they do
-// today); a scoped call rebuilds the trio under the scope's @app/<id> segment via
-// userScopedDir, so a stale scoped override surfaces the same way base conflicts
-// do. Shared by the conflict computation and its fingerprint, so the memo can
-// never key off a different set of files than the value it caches.
-function conflictFilePaths(
-  storePath: string,
-  scopeId?: string,
-): { origin: string; override: string; ancestor: string } {
-  const parts = storePath.replace(/\.jsonc$/, "").split("/");
-  const dir = parts.slice(0, -1).join("/");
-  const name = parts[parts.length - 1]!;
-  const scopedDir = userScopedDir(dir, scopeId);
-  return {
-    origin: join(scopedDir, `${name}.origin.jsonc`),
-    override: join(scopedDir, `${name}.jsonc`),
-    ancestor: join(scopedDir, `${name}.ancestor.jsonc`),
-  };
+// one scope. `scopeId` undefined → the base document; a scoped call names the
+// scope's own trio, so a stale scoped override surfaces the same way base
+// conflicts do. Shared by the conflict computation and its fingerprint, so the
+// memo can never key off a different set of files than the value it caches.
+function conflictFiles(storePath: string, scopeId?: string) {
+  return documentFiles({ storePath, scopeId });
 }
 
 // Compute a SINGLE descriptor's conflict state for the given scope, or null when
@@ -183,10 +181,11 @@ function computeDescriptorConflict(
       `[config-v2] no descriptor registered for conflicts path "${storePath}"`,
     );
   }
-  const files = conflictFilePaths(storePath, scopeId);
+  const files = conflictFiles(storePath, scopeId);
+  const store = ConfigStore.get();
 
-  const origin = jsoncConfigProxy(files.origin);
-  const overwrites = jsoncConfigProxy(files.override);
+  const origin = store.proxy(files.origin);
+  const overwrites = store.proxy(files.override);
 
   if (hasConflict(origin, overwrites)) {
     const originData = origin.read();
@@ -204,7 +203,7 @@ function computeDescriptorConflict(
     // fields. A corrupt ancestor fails loud here exactly like a corrupt
     // origin/override above — consistent with how this treats its inputs.
     let trueConflictKeys: string[] | undefined;
-    const ancestor = jsoncConfigProxy(files.ancestor);
+    const ancestor = store.proxy(files.ancestor);
     if (ancestor.exists()) {
       const base = ancestor.read()!.content as Record<string, JsonValue>;
       trueConflictKeys = threeWayMerge(
@@ -248,21 +247,6 @@ function computeDescriptorConflict(
   return null;
 }
 
-// Identity stamp for one file: "-" when absent, else (inode, mtime-ns, size).
-//
-// `ino` is what makes this airtight rather than merely likely. Every writer in
-// this plugin goes through jsoncConfigProxy.write, which writes a temp file and
-// renames it into place — so the inode changes on EVERY write, including an
-// acknowledge-conflict restamp that only swaps the 12 hex chars in the `// @hash`
-// header and is therefore byte-length-identical (and can land in the same
-// millisecond) as the file it replaced. mtime-ns + size then cover in-place
-// writes from an external editor.
-function fileStamp(path: string): string {
-  const st = statSync(path, { bigint: true, throwIfNoEntry: false });
-  if (!st) return "-";
-  return `${st.ino}:${st.mtimeNs}:${st.size}`;
-}
-
 // Fingerprint-keyed memo of everything a descriptor's file trio determines,
 // keyed by (storePath, scopeId). Unbounded only in the number of (descriptor ×
 // scope) pairs the process ever observes; a vanished scope leaves one small
@@ -295,8 +279,8 @@ const conflictMemo = new Map<string, DerivedTrioState>();
 // writer parcel doesn't observe.) With a disk-derived key the worst case of a
 // missed event is a recompute, never a wrong answer.
 //
-// Cost: statSync is roughly two orders of magnitude cheaper than
-// read + JSONC-parse + hash — a measured ~10ms to sweep every descriptor
+// Cost: on the desktop a stamp is a statSync, roughly two orders of magnitude
+// cheaper than read + JSONC-parse + hash — a measured ~10ms to sweep every descriptor
 // (~250 of them, ~800 stats) against ~1.2s just to re-read the same file trios.
 // Deliberately NOT infra/corpus-index:
 // that primitive walks directories, persists its index to disk and gates on the
@@ -307,8 +291,11 @@ function derivedTrioState(
   storePath: string,
   scopeId?: string,
 ): DerivedTrioState {
-  const files = conflictFilePaths(storePath, scopeId);
-  const fingerprint = `${fileStamp(files.origin)}|${fileStamp(files.override)}|${fileStamp(files.ancestor)}`;
+  const files = conflictFiles(storePath, scopeId);
+  // The store's stamp moves on every write to a file (on the desktop: its
+  // inode, mtime-ns and size), so an unchanged stamp trio is an unchanged trio.
+  const store = ConfigStore.get();
+  const fingerprint = `${store.stamp(files.origin)}|${store.stamp(files.override)}|${store.stamp(files.ancestor)}`;
   const memoKey = `${storePath}|${scopeId ?? ""}`;
 
   const memo = conflictMemo.get(memoKey);
@@ -361,19 +348,16 @@ export const configScopesServed = serveValue(configScopes, {
   ),
 });
 
-// Recompute one descriptor's scope membership from the AUTHORITATIVE disk
+// Recompute one descriptor's scope membership from the AUTHORITATIVE store
 // predicate (scopeHasOwnConfig) and update the in-memory map. Notifies the global
 // scopes resource iff membership changed. Called at boot and at every point a
 // scoped origin/override file appears or disappears — never on a plain read.
 export function refreshScopeMembers(storePath: string): void {
   const descriptor = descriptorByPath.get(storePath);
   if (!descriptor) return;
-  const hierarchyPath = hierarchyByDescriptor.get(descriptor);
-  const ids = hierarchyPath
-    ? discoverScopeIds(hierarchyPath).filter((sid) =>
-        scopeHasOwnConfig(descriptor, sid),
-      )
-    : [];
+  const ids = ConfigStore.get()
+    .scopes(storePath)
+    .filter((sid) => scopeHasOwnConfig(descriptor, sid));
   const prev = scopeMembers.get(storePath) ?? [];
   const changed =
     ids.length !== prev.length || ids.some((id, i) => id !== prev[i]);
@@ -391,11 +375,11 @@ export function refreshScopeMembers(storePath: string): void {
 // paints the warning has to be able to say what it is about: a badge that only
 // knows "somewhere" sends the user to a detail pane opening on a clean Base.
 //
-// Scopes are enumerated straight from the filesystem (discoverScopeIds), NOT from
-// the event-fed scopeMembers map: a derivation founded on the disk must not
-// inherit another cache's staleness, or a scope that appeared without a watcher
-// event would be invisible to the badge again. discoverScopeIds is one stat for
-// the (usually absent) @app dir, and an absent file trio computes to null — so
+// Scopes are enumerated straight from the store (`scopes`), NOT from the
+// event-fed scopeMembers map: a derivation founded on the disk must not inherit
+// another cache's staleness, or a scope that appeared without a watcher event
+// would be invisible to the badge again. On the desktop that is one stat for the
+// (usually absent) @app dir, and an absent file trio computes to null — so
 // listing a scope that has no files for THIS descriptor costs three stats and
 // answers "no conflict".
 function descriptorConflictLocations(
@@ -403,10 +387,8 @@ function descriptorConflictLocations(
 ): ConfigV2ConflictLocations | null {
   const base = derivedDescriptorConflict(storePath) !== null;
   const scopeIds: string[] = [];
-  const descriptor = descriptorByPath.get(storePath);
-  const hierarchyPath = descriptor && hierarchyByDescriptor.get(descriptor);
-  if (hierarchyPath) {
-    for (const sid of discoverScopeIds(hierarchyPath)) {
+  if (descriptorByPath.has(storePath)) {
+    for (const sid of ConfigStore.get().scopes(storePath)) {
       if (derivedDescriptorConflict(storePath, sid) !== null)
         scopeIds.push(sid);
     }
@@ -566,17 +548,18 @@ export function scopeHasOwnConfig(
   if (!scopeId) return false;
   const hierarchyPath = hierarchyByDescriptor.get(descriptor);
   if (!hierarchyPath) return false;
-  const scopedDir = userScopedDir(hierarchyPath, scopeId);
+  const files = documentFiles({
+    storePath: `${hierarchyPath}/${descriptor.name}.jsonc`,
+    scopeId,
+  });
+  const store = ConfigStore.get();
   return (
-    jsoncConfigProxy(join(scopedDir, `${descriptor.name}.jsonc`)).exists() ||
-    jsoncConfigProxy(
-      join(scopedDir, `${descriptor.name}.origin.jsonc`),
-    ).exists()
+    store.proxy(files.override).exists() || store.proxy(files.origin).exists()
   );
 }
 
 // Every scope with its OWN document for `descriptor` (a committed git scope, a
-// runtime fork, or a plain scoped write) — read from disk through the same
+// runtime fork, or a plain scoped write) — read from the store through the same
 // `scopeHasOwnConfig` predicate as the scopes resource, not from its event-fed
 // map, so a server consumer asking "which scopes chose X?" can't see a stale
 // answer. The base scope is not listed; read it with `getConfig(descriptor)`.
@@ -587,9 +570,9 @@ export function getConfigScopeIds(descriptor: ConfigDescriptor): string[] {
       `[config-v2] getConfigScopeIds: descriptor "${descriptor.name}" is not registered.`,
     );
   }
-  return discoverScopeIds(hierarchyPath).filter((sid) =>
-    scopeHasOwnConfig(descriptor, sid),
-  );
+  return ConfigStore.get()
+    .scopes(`${hierarchyPath}/${descriptor.name}.jsonc`)
+    .filter((sid) => scopeHasOwnConfig(descriptor, sid));
 }
 
 // All registered descriptors tagged with the given scope kind, plus their
@@ -636,11 +619,12 @@ function computeTiers(path: string, scopeId?: string): ConfigV2Tiers {
 
   const state = derivedTrioState(path, scopeId);
   if (!state.tiers) {
-    const files = conflictFilePaths(path, scopeId);
+    const files = conflictFiles(path, scopeId);
+    const store = ConfigStore.get();
     const resolved = readTypedConfigWithLayer(
       descriptor,
-      jsoncConfigProxy(files.origin),
-      jsoncConfigProxy(files.override),
+      store.proxy(files.origin),
+      store.proxy(files.override),
     );
     state.tiers = computeFieldTiers({
       fields: descriptor.fields,

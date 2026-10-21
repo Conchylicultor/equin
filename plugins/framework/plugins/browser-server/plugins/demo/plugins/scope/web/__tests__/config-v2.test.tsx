@@ -20,6 +20,7 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { createBrowserServer } from "@plugins/framework/plugins/browser-server/core";
 import type { DemoScenario } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
 import { Demo } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -27,7 +28,12 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import {
+  configConflict,
+  configConflictLocations,
+  configModifiedCounts,
   configScopes,
+  configTiers,
+  configValues,
   defineConfig,
   setConfigField,
 } from "@plugins/config_v2/core";
@@ -37,6 +43,7 @@ import {
   type GitLayer,
 } from "@plugins/config_v2/web/testing";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { DemoBackend } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
 import { DemoScope } from "../components/demo-scope";
 
 const toolbar = defineConfig({
@@ -128,6 +135,40 @@ async function renderAsync(ui: ReactElement) {
 }
 
 describe("config_v2 in a demo scope", () => {
+  it("the page claims every portable config value, so the scenario's worker (an empty registry) never answers one", async () => {
+    // DemoScope composes [page, worker] and routes a key to the first part
+    // serving it; the worker's config_v2 serves these six over a registry with
+    // no descriptor, whose answers would be stand-ins ("no conflicts").
+    let backend: DemoBackend | null = null;
+    await renderAsync(
+      <PluginProvider plugins={base}>
+        <Probe read={useFixtureConfigBackend} onRead={(b) => (backend = b)} />
+      </PluginProvider>,
+    );
+    const claimed: string[] = [];
+    const server = createBrowserServer({
+      serve: (s) => {
+        const served = backend!.serve(s);
+        for (const { keys } of served) claimed.push(...keys);
+        return served;
+      },
+      unserved: (key) => new Error(`unserved: ${key}`),
+    });
+    server.dispose();
+    expect(claimed.sort()).toEqual(
+      [
+        configValues,
+        configScopes,
+        configConflict,
+        configTiers,
+        configConflictLocations,
+        configModifiedCounts,
+      ]
+        .map((d) => d.key)
+        .sort(),
+    );
+  });
+
   it("useConfig reads the git layer; a later registration is notified to the open scope", async () => {
     const seen: Record<string, unknown> = {};
     const tree = (plugins: LoadedPlugin[]) => (

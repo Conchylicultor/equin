@@ -212,10 +212,19 @@ await withBrowser(async (h) => {
     .getByPlaceholder(/^Search/)
     .first()
     .fill("theme");
-  await a.page.waitForTimeout(1500);
-  // The nav row is the store plugin's leaf name.
-  const row = a.page.locator('text="theme-engine"').first();
-  const rowFound = (await row.count()) > 0;
+  // The nav is a tree (ui › theme-engine › theme): the descriptor's own row is
+  // the leaf, named after the descriptor. The filtered tree can take seconds
+  // to settle, so wait for the row rather than a fixed delay.
+  const row = a.page.locator('text="theme"').first();
+  const rowFound = await row
+    .waitFor({ state: "visible", timeout: 15_000 })
+    .then(
+      () => true,
+      (err: unknown) => {
+        if (err instanceof Error && err.name === "TimeoutError") return false;
+        throw err;
+      },
+    );
   if (rowFound) {
     await row.click();
     await a.page.waitForTimeout(3000);

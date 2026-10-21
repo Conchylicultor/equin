@@ -1,7 +1,10 @@
 import { existsSync } from "node:fs";
+import { cp, stat } from "node:fs/promises";
 import type { WorkspaceImpl } from "@plugins/conversations/plugins/workspace/server";
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
-import { forkConfig, getConfig } from "@plugins/config_v2/server";
+import { getConfig } from "@plugins/config_v2/server";
+import { configDir } from "@plugins/config_v2/data-dirs";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { attemptBranchName } from "@plugins/infra/plugins/worktree/core";
 import {
   ensureMainWorktreeRoot,
@@ -69,7 +72,7 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
   // Copy main's config dir for the new worktree — only after commit, so a
   // rolled-back launch leaves no config dir behind.
   async onFinish({ attemptId }) {
-    await forkConfig(attemptId);
+    await forkConfigDir(attemptId);
   },
 
   // The checkout carries the repo's own `.claude/settings.json` and
@@ -96,3 +99,20 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
     };
   },
 };
+
+/**
+ * Seed a new worktree's user config layer with main's: copy main's subtree of
+ * the config dir (`config_v2/data-dirs`) to the worktree's. Main with no config
+ * dir yet has nothing to copy.
+ */
+async function forkConfigDir(targetWorktree: string): Promise<void> {
+  const sourceDir = configDir.file(MAIN_WORKTREE_NAME);
+  const targetDir = configDir.file(targetWorktree);
+  try {
+    await stat(sourceDir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return;
+  }
+  await cp(sourceDir, targetDir, { recursive: true });
+}

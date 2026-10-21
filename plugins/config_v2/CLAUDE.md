@@ -161,7 +161,7 @@ shared with plugin moves.
 
 A config's user-layer path is its plugin's id, so moving a plugin moves where its saved settings must live. `./singularity plugin move` records every move in a committed ledger, and each build replays it onto its own namespace's user dir before propagation — folder moved, saved reorder keys re-rooted, `// @hash` chain kept so overrides stay in force. See `plugins/plugin-meta/plugins/relocate/CLAUDE.md` ("Saved settings follow the move").
 
-An override that still ends up where no live config reads it (plugin removed, or a move onto a destination that already had settings) is found by `auditUserConfigOrphans` — never deleted, since the user layer is not versioned. `debug/config-orphans` shows it: a notice pinned above Settings → Config, the Debug → Config Orphans panel, and one rolling `config-orphans-stranded` report filed at boot.
+An override that still ends up where no live config reads it (plugin removed, or a move onto a destination that already had settings) is found by the orphan audit (`debug/config-orphans`' machine half, over the desktop's config dir) — never deleted, since the user layer is not versioned. `debug/config-orphans` shows it: a notice pinned above Settings → Config, the Debug → Config Orphans panel, and one rolling `config-orphans-stranded` report filed at boot.
 
 ### Schema evolution
 
@@ -251,13 +251,29 @@ or touches the body. Consumer: reorder's `reorderDirectiveDescriptor`
 
 ### Internal architecture
 
+**The server half is a registry over two host services; the machine half provides them.**
+`config_v2/server` holds the registry, its live values and the scope routes, and reads no
+file: every document goes through `ConfigStore` (`config-v2.store`, the user layer — `proxy`,
+`remove`, `stamp`, `scopes`, `dropScope`, `watch`, `armed`, and `edit`, which every write path
+runs its mutation through) and the one committed-layer read, `ConfigGitLayer.hasScope`
+(`config-v2.git-layer`). Both are declared in `server/internal/host-services.ts` over the
+`ConfigStoreImpl` / `ConfigGitLayerImpl` interfaces in `core/internal/store.ts`, which also holds
+the one file layout (`configFileRelPath`) and `createMemoryConfigStore` (a demo scope's user
+layer). `config_v2/machine` is the desktop: `fileConfigStore` (`machine/internal/file-store.ts` —
+JSONC files under the namespace's config dir, the config-files watcher, the agent-write ledger),
+`repoConfigLayer` (the checkout's `config/`), the watcher lifecycle (feeding
+`notifyConfigDirChange`) and the raw-file view (`config-v2.raw-file`, `needsMachine`), which moves
+with the document through the registry's `onDocumentChange`. The machine half imports through
+`@plugins/config_v2/server`, never `../server/internal`, which is what gives its
+`config_v2#machine` node its `dependsOn` edge on `config_v2`.
+
 - **`mapConfigLists` (`core/internal/collections.ts`) — THE walk over every `listField` instance in a document**, at any depth (through `itemFields` and `subFields`). A config document is recursive; every consumer that walked it one level deep drifted. Used by `normalizeCollectionItems` (id seeding), the `config-stable-list-ids` check, and `diffNormalForm` (the layer-comparison normal form behind the tiers/modified attribution). It visits a list **before** recursing into its rows, because a row's `auto-` id hashes that row's content — seeding nested ids first would re-mint every enclosing id.
-- **`jsoncConfigProxy`** — synchronous read/write with `// @hash` header tracking. Used for propagation, `setConfig`, and `reloadValues`.
-- **`ConfigWatcher`** (`config-watcher.ts`) — `@parcel/watcher` file-change detection on `~/.singularity/state/config/`. Debounce (100ms) + ceiling (1s); the blanket 30s reconcile is deliberately **disabled** (`reconcileMs: null`) — it re-fired every watched path (2 per descriptor) into a full conflicts recompute, an O(N²) idle re-read storm with nothing changed. Callbacks are `() => void`; the registry re-reads via `jsoncConfigProxy` on notification.
+- **`jsoncConfigProxy`** (`machine/internal/jsonc-proxy.ts`) — synchronous read/write with `// @hash` header tracking: the file store's `proxy`.
+- **`ConfigWatcher`** (`machine/internal/config-watcher.ts`) — `@parcel/watcher` file-change detection on `~/.singularity/state/config/`, behind the file store's `watch`. Debounce (100ms) + ceiling (1s); the blanket 30s reconcile is deliberately **disabled** (`reconcileMs: null`) — it re-fired every watched path (2 per descriptor) into a full conflicts recompute, an O(N²) idle re-read storm with nothing changed. Callbacks are `() => void`; the registry re-reads through the store on notification.
 
   These events are a **push-latency** mechanism, not a correctness one — an event can be missed (an out-of-band writer parcel doesn't observe, a dropped fsevent, a path no `CacheEntry` registered). **Never treat "no event" as "no change"**: derived state must be founded on the disk, per the fingerprint memo below.
 
-- **`refreshEntry` (`registry.ts`) — the single "this entry's files changed" path** (re-read from disk → replace `CacheEntry.values` → notify subscribers + `notifyDocument`). Called from **both** the watcher (out-of-band writes) **and every in-process writer right after its own write** (`setConfig`, `acknowledgeConflictByPath`, `mergeConflictByPath`, `deleteOverrideByPath`). The second is NOT redundant: on a missed watcher event a writer that waited for its own event would leave `entry.values` stale indefinitely, so `getConfig` — and with it the `config-v2.values` push and the boot snapshot's preload of it — would keep serving the pre-write document while the correct value sits on disk. Any new file-mutating path must call it (scoped fork/unfork instead rebuilds via `ensureScopeEntry`/`disposeScopeEntry`). It carries provider-backed (secret) field values forward — they live outside the JSONC document.
+- **`refreshEntry` (`registry.ts`) — the single "this entry's files changed" path** (re-read from the store → replace `CacheEntry.values` → notify subscribers + `notifyDocument`). Called from **both** the watcher (out-of-band writes) **and every in-process writer right after its own write** (`setConfig`, `acknowledgeConflictByPath`, `mergeConflictByPath`, `deleteOverrideByPath`). The second is NOT redundant: on a missed watcher event a writer that waited for its own event would leave `entry.values` stale indefinitely, so `getConfig` — and with it the `config-v2.values` push and the boot snapshot's preload of it — would keep serving the pre-write document while the correct value sits on disk. Any new file-mutating path must call it (scoped fork/unfork instead rebuilds via `ensureScopeEntry`/`disposeScopeEntry`). It carries provider-backed (secret) field values forward — they live outside the JSONC document.
 
 ### Agent-write ledger (config an automated session overwrote)
 
@@ -276,15 +292,16 @@ primitive — which owns capture, persistence, the divergence check and the
 override, because `forkDescriptorScope` writes the scoped origin too and the
 conflict resolvers touch the ancestor.
 
-config_v2 keeps two things. **The handle**, `configWriteLedger` in
-`registry.ts`, which every write path (and `scope-fork.ts`) records through. Its
-key is `<storePath>` or `<storePath> @<scopeId>` (`config-ledger-key.ts`), read
-back out by the restore. **The restore**, `applyRestore`, beside the private
-cache helpers it needs: it puts the bytes back and then re-syncs through
-`refreshEntry` / `ensureScopeEntry`. That re-sync is why the revert goes through
-the server rather than the harness rewriting files: a filesystem restore would
-depend on the `CONFIG_DIR` watcher, which is push-latency, not correctness (see
-above).
+config_v2 keeps two things, both in the desktop's file store
+(`machine/internal/file-store.ts`). **The handle**, `configWriteLedger`, which
+the store's `edit` records through — and every registry write path (and
+`scope-fork.ts`) runs its mutation through `edit`. Its key is `<storePath>` or
+`<storePath> @<scopeId>` (`machine/internal/config-ledger-key.ts`), read back out
+by the restore. **The restore**, `applyRestore`: it puts the bytes back and then
+has the registry re-sync through `reloadConfigDocument` (`refreshEntry` /
+`ensureScopeEntry`). That re-sync is why the revert goes through the server
+rather than the harness rewriting files: a filesystem restore would depend on the
+`CONFIG_DIR` watcher, which is push-latency, not correctness (see above).
 
 **Not covered:** provider-backed (secret) fields, which return before touching
 the JSONC layer at all — an agent write there is not revertible by a bytes
@@ -353,8 +370,15 @@ built on the `ConfigProxy` seam:
   origin) and notifies `config-v2.scopes`. A remount or reload is the committed
   state again. A persistent store (IndexedDB / OPFS) is the same interface.
 
-The settings app's keys (`conflicts`, `tiers`, `raw-file`, …) and its other
-write endpoints stay unserved in a demo and fail loudly. Design:
+The scenario's worker boots `config_v2/server` too (portable; its host services
+from `config_v2/plugins/browser-store`: a memory store, and a committed layer
+not delivered to the worker yet, which throws if asked), over a registry with
+no descriptor. Until the next step delivers the committed layer there, the page
+stays authoritative: DemoScope routes a key to the first part serving it, so
+the page also claims `conflicts`, `tiers`, `conflict-locations` and
+`modified-counts`, answering them `DemoMissingError` rather than letting the
+worker's empty registry answer stand-ins. `raw-file` needs the computer, and
+the settings app's other write endpoints stay unserved and fail loudly. Design:
 [`research/2026-10-16-global-config-git-layer-in-browser-server.md`](../../research/2026-10-16-global-config-git-layer-in-browser-server.md),
 per-composition scoping:
 [`research/2026-10-16-global-config-git-layer-per-composition.md`](../../research/2026-10-16-global-config-git-layer-per-composition.md).
@@ -363,7 +387,7 @@ per-composition scoping:
 
 ## Plugin reference
 
-- Description: Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
+- Description: Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
 - Web:
   - Slots: `ConfigV2.WebRegister`
   - Slot contributors: 87 contributors — full list in [REFERENCE.md](./REFERENCE.md)
@@ -393,46 +417,44 @@ per-composition scoping:
     - `resource.declare` "config-v2.scopes"
     - `resource.declare` "config-v2.tiers"
     - `resource.declare` "config-v2.values"
-  - Uses:
-    - `infra/file-watcher.acquireDirWatch`
-    - `infra/file-watcher.defineFileWatcher`
-    - `infra/file-watcher.FileWatcher`
-    - `infra/paths.REPO_ROOT`
-    - `infra/paths.repoConfigDir`
-    - `infra/request-origin/agent-write-ledger.AgentWriteLedgerEntry`
-    - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
-    - `infra/request-origin/agent-write-ledger.FileSnapshot`
-    - `network/live.serveValue`
+    - `host-service:config-v2.store` "config-v2.store"
+    - `host-service:config-v2.git-layer` "config-v2.git-layer"
+  - Uses: `network/live.serveValue`
   - Exports (types):
+    - `ConfigDocumentTuple`
     - `ConfigWriteOpts`
     - `FieldStorageProvider`
   - Exports (values):
     - `acknowledgeConflictByPath`
-    - `auditUserConfigOrphans`
+    - `ConfigGitLayer`
     - `configRegistryReady`
+    - `ConfigStore`
     - `ConfigV2`
     - `configValuesServed`
     - `configWatcherArmed`
     - `deleteOverrideByPath`
     - `deleteScope`
-    - `forkConfig`
     - `forkDescriptorScope`
     - `forkScope`
     - `getAllDescriptors`
     - `getConfig`
     - `getConfigScopeIds`
+    - `getDescriptorByStorePath`
     - `getFieldStorageProvider`
     - `getScopedDescriptors`
+    - `hasConfigDocument`
     - `hasFieldStorageProvider`
     - `mergeConflictByPath`
+    - `notifyConfigDirChange`
     - `onConfigDirChange`
+    - `onDocumentChange`
     - `registerFieldStorageProvider`
+    - `reloadConfigDocument`
     - `removeDescriptorScope`
     - `resetConfigByPath`
     - `setConfig`
     - `setConfigByPath`
     - `watchConfig`
-  - Register: `defineFileWatcher('config_v2.config-files')`
   - Resources:
     - `config-v2.conflict-locations` (push, notified)
     - `config-v2.conflicts` (push, notified)
@@ -441,6 +463,10 @@ per-composition scoping:
     - `config-v2.scopes` (push, notified)
     - `config-v2.tiers` (push, notified)
     - `config-v2.values` (push, notified)
+- Machine:
+  - Uses: `network/live.serveValue`
+  - Exports (values): `CONFIG_DIR`
+  - Register: `defineFileWatcher('config_v2.config-files')`
 - Core:
   - Uses:
     - `fields.fieldsToZodObject`
@@ -452,11 +478,15 @@ per-composition scoping:
     - `primitives/rank.Rank`
   - Exports (types):
     - `ConfigDescriptor`
+    - `ConfigDocRef`
+    - `ConfigDocumentFile`
+    - `ConfigFileRef`
+    - `ConfigGitLayerImpl`
     - `ConfigListVisitor`
     - `ConfigMigration`
     - `ConfigProxy`
     - `ConfigSource`
-    - `ConfigStore`
+    - `ConfigStoreImpl`
     - `ConfigV2ConflictEntry`
     - `ConfigV2ConflictLocations`
     - `ConfigV2ConflictMap`
@@ -488,6 +518,7 @@ per-composition scoping:
     - `configConflict`
     - `configConflictLocations`
     - `configFileOwner`
+    - `configFileRelPath`
     - `configModifiedCounts`
     - `configRawFile`
     - `configScopes`
@@ -528,21 +559,23 @@ per-composition scoping:
     - `resolveGitLayer`
     - `REVIEW_MARKER`
     - `scopeAppId`
+    - `scopeSegment`
     - `setConfigField`
+    - `storePathParts`
     - `stringifyConfigValue`
     - `threeWayMerge`
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 112 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 113 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×32
     - `backup` ×13
     - `conversations` ×13
     - `debug` ×12
     - `ui` ×11
     - `auth` ×6
+    - `config_v2` ×4
     - `tasks` ×4
-    - `config_v2` ×3
     - `primitives` ×3
     - `infra` ×2
     - `integrations` ×2
@@ -556,8 +589,6 @@ per-composition scoping:
     - `reports`
     - `review/code-review`
     - `shell/global-action-bar`
-- Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/config-watcher.ts`, `server/internal/fork.ts`, `server/internal/jsonc-proxy.ts`, `server/internal/orphan-audit.ts`, `server/internal/registry.ts`, `server/internal/resource.ts`, `server/internal/scope-fork.ts`, `server/internal/scope-paths.ts`, `server/internal/scope-snapshot.ts` (debt)
 - Test helpers:
   - Web: `@plugins/config_v2/web/testing`
     - `useConfigDemoBackend` — Config inside a demo scope (`Demo.Resource`): the server's tier cascade over two browser layers, so a demo surface reads exactly what a fresh user of the committed repo would — and can change it.
@@ -565,6 +596,7 @@ per-composition scoping:
   - Core: `@plugins/config_v2/core/testing`
     - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
 - Sub-plugins:
+  - **`browser-store`** (excluded) — The config host services of a host without the computer (a browser worker host): the user layer held in memory (ConfigStore) and a committed layer not yet delivered to this host (ConfigGitLayer…
   - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear…
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
   - **`ledger`** [exempt] — The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the…

@@ -4,10 +4,9 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import { importClosure } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import {
-  defaultExportObjectBody,
   findImports,
+  isPortableServerBarrel,
   maskSource,
-  parseBoolField,
   type ImportRef,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
@@ -106,11 +105,7 @@ export const portableClosureCheck: Check = {
 
     const portable: string[] = [];
     for (const path of repo.all().filter((p) => SERVER_BARREL_RE.test(p))) {
-      const body = defaultExportObjectBody((await repo.read(path)) ?? "");
-      if (
-        body.kind === "object" &&
-        parseBoolField(body.body, "portable", { depth0: true })
-      )
+      if (isPortableServerBarrel((await repo.read(path)) ?? ""))
         portable.push(path);
     }
 

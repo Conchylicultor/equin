@@ -3,8 +3,8 @@ import {
   defineFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
+import { notifyConfigDirChange } from "@plugins/config_v2/server";
 import { CONFIG_DIR } from "./config-dir";
-import { notifyConfigDirChange } from "./config-dir-change";
 import type { Disposable } from "../../core";
 
 // No reconcile (no `reconcileMs`, so no timer). One re-fired EVERY watched
@@ -18,7 +18,8 @@ import type { Disposable } from "../../core";
 // regardless of writer, but an event can still be missed (an out-of-band
 // writer parcel doesn't see, a dropped fsevent). Nothing downstream may treat
 // "no event" as "no change" — derived state must be founded on the disk (see
-// the fingerprint-memoized conflict derivation in resource.ts), so a missed
+// the fingerprint-memoized conflict derivation in the server half's
+// resource.ts), so a missed
 // event can only delay a push, never leave a wrong value behind.
 export const configFilesWatcher = defineFileWatcher({
   name: "config_v2.config-files",
@@ -67,11 +68,10 @@ function settleArmed(
 /**
  * Resolves once the config-files watcher is live — from then on every
  * user-layer change produces a `watchFileChange` / `onConfigDirChange` event.
- * Rejects when the watcher failed to start. A live value's `whileSubscribed`
- * awaits it and then calls `notify()` once, so a write made after its first
- * answer but before the watcher armed is still read.
+ * Rejects when the watcher failed to start. The file store's `armed` (read
+ * through the server half's `configWatcherArmed`).
  */
-export function configWatcherArmed(): Promise<void> {
+export function configFilesWatcherArmed(): Promise<void> {
   const state = armedState;
   if (state.kind === "armed") return Promise.resolve();
   if (state.kind === "failed") return Promise.reject(state.error);

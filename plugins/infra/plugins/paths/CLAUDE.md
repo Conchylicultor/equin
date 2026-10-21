@@ -311,7 +311,7 @@ run everywhere.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×9
     - `infra` ×8
     - `build` ×7
@@ -324,7 +324,6 @@ run everywhere.
     - `primitives` ×2
     - `stats` ×2
     - `apps/deploy/deployments`
-    - `config_v2`
     - `reports/outbox`
     - `review/plugin-changes`
     - `tasks`

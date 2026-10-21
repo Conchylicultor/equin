@@ -169,12 +169,13 @@ export const compositionsConfig = defineConfig({
         // computer — the PGlite database driver, the in-process job queue, the
         // memory stores for attachment bytes, logs, the push ledger and
         // transcripts, the migration history bundled as text, the baseline
-        // model catalog and the task titles kept as filed. A desktop backend
-        // provides each of those services from a machine half
-        // (`database#machine`, `jobs#machine`, …), and a host booting two
-        // providers of one service fails boot (`assertHostServices`), so no app
-        // that runs on the desktop may ship them. A composition that runs without
-        // the computer takes them back by naming them.
+        // model catalog, the task titles kept as filed and the in-memory config
+        // store. A desktop backend provides each of those services from a
+        // machine half (`database#machine`, `jobs#machine`, `config_v2#machine`,
+        // …), and a host booting two providers of one service fails boot
+        // (`assertHostServices`), so no app that runs on the desktop may ship
+        // them. A composition that runs without the computer takes them back by
+        // naming them.
         {
           id: BASE_EXCLUSIONS_ID,
           name: BASE_EXCLUSIONS_ID,
@@ -190,6 +191,7 @@ export const compositionsConfig = defineConfig({
             "!conversations.transcript-source.memory.**",
             "!conversations.model-provider.catalog.baseline.**",
             "!tasks.task-title.filed-titles.**",
+            "!config_v2.browser-store.**",
           ],
           selectedContributors: [] as string[],
           extends: [] as string[],

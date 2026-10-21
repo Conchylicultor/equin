@@ -1,10 +1,5 @@
-import { existsSync, unlinkSync, rmdirSync } from "node:fs";
-import { join } from "node:path";
-import { APP_SCOPE_DIR, scopeAppId } from "../../core";
+import { scopeAppId } from "../../core";
 import type { ConfigDescriptor, JsonValue } from "../../core";
-import { repoConfigDir } from "@plugins/infra/plugins/paths/server";
-import { jsoncConfigProxy } from "./jsonc-proxy";
-import { userScopedDir } from "./scope-paths";
 import {
   getScopedDescriptors,
   getDescriptorByStorePath,
@@ -14,48 +9,18 @@ import {
   ensureScopeEntry,
   disposeScopeEntry,
   notifyDescriptorScopeChange,
-  configWriteLedger,
 } from "./registry";
 import { buildScopeSnapshot } from "./scope-snapshot";
+import { ConfigGitLayer, ConfigStore } from "./host-services";
+import { documentFiles } from "./scope-paths";
 import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
-import { configLedgerKey, type ConfigDocumentFile } from "./config-ledger-key";
 
-// The trio of files a scoped document is made of. Computed from the scope dir
-// rather than read off a CacheEntry, because a fork writes files BEFORE the
-// entry exists — which is exactly the state the ledger has to capture.
-function scopedTrioPaths(
-  hierarchyPath: string,
-  scopeId: string,
-  name: string,
-): Record<ConfigDocumentFile, string> {
-  const dir = userScopedDir(hierarchyPath, scopeId);
-  return {
-    origin: join(dir, `${name}.origin.jsonc`),
-    override: join(dir, `${name}.jsonc`),
-    ancestor: join(dir, `${name}.ancestor.jsonc`),
-  };
-}
-
-// Snapshot one scoped document before a fork/unfork touches it. A fork writes
-// the scoped ORIGIN as well as the override, and an unfork deletes both and
-// rmdirs the scope — none of which the override alone would capture, which is
-// why the ledger always records the whole trio.
-function recordScopeWrite(
-  writer: WriteOrigin,
-  hierarchyPath: string,
-  name: string,
-  scopeId: string,
-  operation: string,
-): { done: () => void } {
-  const key = configLedgerKey(`${hierarchyPath}/${name}.jsonc`, scopeId);
-  configWriteLedger.record(
-    writer,
-    key,
-    scopedTrioPaths(hierarchyPath, scopeId, name),
-    operation,
-  );
-  return { done: () => configWriteLedger.noteComplete(writer, key) };
-}
+// A scoped document is addressed by (storePath, scopeId) rather than read off a
+// CacheEntry, because a fork writes files BEFORE the entry exists — which is
+// exactly the state the store's agent-write ledger has to capture. A fork
+// writes the scoped ORIGIN as well as the override, and an unfork deletes both
+// and drops the scope — none of which the override alone would capture, which
+// is why the ledger always records the whole trio.
 
 // Fork ONE descriptor into a scope: snapshot its scope-effective value set into
 // the scope's @app/<id> origin + override files (same content + hash → zero
@@ -69,45 +34,29 @@ async function forkDescriptor(
   scopeId: string,
   writer: WriteOrigin,
 ): Promise<void> {
-  const write = recordScopeWrite(
-    writer,
-    hierarchyPath,
-    descriptor.name,
+  const doc = {
+    storePath: `${hierarchyPath}/${descriptor.name}.jsonc`,
     scopeId,
-    "fork-descriptor-scope",
-  );
-  const { snapshot, hash, dir } = buildScopeSnapshot(
-    descriptor,
-    hierarchyPath,
-    scopeId,
-  );
-  jsoncConfigProxy(join(dir, `${descriptor.name}.origin.jsonc`)).write(
-    snapshot as JsonValue,
-    hash,
-  );
-  jsoncConfigProxy(join(dir, `${descriptor.name}.jsonc`)).write(
-    snapshot as JsonValue,
-    hash,
-  );
+  };
+  const files = documentFiles(doc);
+  const store = ConfigStore.get();
+  store.edit(doc, writer, "fork-descriptor-scope", () => {
+    const { snapshot, hash } = buildScopeSnapshot(descriptor, scopeId);
+    store.proxy(files.origin).write(snapshot as JsonValue, hash);
+    store.proxy(files.override).write(snapshot as JsonValue, hash);
+  });
 
   await ensureScopeEntry(descriptor, scopeId);
-  write.done();
 }
 
 // Whether a scope's config is backed by a committed git override
 // (config/<hier>/@app/<id>/<name>.jsonc in the repo). Such a scope must survive
 // un-forking — removal drops only the user's runtime override and falls back
 // to the committed scope, not to base.
-function gitBacksScope(
-  hierarchyPath: string,
-  scopeId: string,
-  name: string,
-): boolean {
+function gitBacksScope(storePath: string, scopeId: string): boolean {
   const appId = scopeAppId(scopeId);
   if (!appId) return false;
-  return existsSync(
-    join(repoConfigDir(), hierarchyPath, APP_SCOPE_DIR, appId, `${name}.jsonc`),
-  );
+  return ConfigGitLayer.get().hasScope(storePath, appId);
 }
 
 // Un-fork ONE descriptor: drop the user's runtime scoped override. For a scope
@@ -122,39 +71,27 @@ async function removeDescriptor(
   scopeId: string,
   writer: WriteOrigin,
 ): Promise<void> {
-  const write = recordScopeWrite(
-    writer,
-    hierarchyPath,
-    descriptor.name,
+  const doc = {
+    storePath: `${hierarchyPath}/${descriptor.name}.jsonc`,
     scopeId,
-    "remove-descriptor-scope",
-  );
-  const dir = userScopedDir(hierarchyPath, scopeId);
-  const overridePath = join(dir, `${descriptor.name}.jsonc`);
-  if (existsSync(overridePath)) unlinkSync(overridePath);
+  };
+  const files = documentFiles(doc);
+  const store = ConfigStore.get();
+  const gitBacked = gitBacksScope(doc.storePath, scopeId);
+  store.edit(doc, writer, "remove-descriptor-scope", () => {
+    store.remove(files.override);
+    if (gitBacked) return;
+    store.remove(files.origin);
+    // Another descriptor may still have files in the scope: dropScope leaves
+    // a scope that is not empty.
+    store.dropScope(doc.storePath, scopeId);
+  });
 
-  if (gitBacksScope(hierarchyPath, scopeId, descriptor.name)) {
-    // Rebuild from origin-only (override now gone) so getConfig resolves to the
-    // committed scope rather than the stale cached override values.
-    disposeScopeEntry(descriptor, scopeId);
-    await ensureScopeEntry(descriptor, scopeId);
-    write.done();
-    return;
-  }
-
-  const originPath = join(dir, `${descriptor.name}.origin.jsonc`);
-  if (existsSync(originPath)) unlinkSync(originPath);
+  // A git-backed scope rebuilds from origin-only (override now gone) so
+  // getConfig resolves to the committed scope rather than the stale cached
+  // override values; any other scope is gone.
   disposeScopeEntry(descriptor, scopeId);
-  if (existsSync(dir)) {
-    try {
-      rmdirSync(dir);
-    } catch (err) {
-      // Dir not empty (another descriptor still has files there, or it's being
-      // cleaned by a concurrent op) — leave it. Anything else is unexpected.
-      if ((err as NodeJS.ErrnoException).code !== "ENOTEMPTY") throw err;
-    }
-  }
-  write.done();
+  if (gitBacked) await ensureScopeEntry(descriptor, scopeId);
 }
 
 // Look up a descriptor + its hierarchyPath from a storePath, failing loudly when

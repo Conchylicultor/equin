@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import type { MachinePluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { configOrphansReportServed } from "./internal/report-resource";
 import {
   reportStrandedConfig,
@@ -13,4 +13,4 @@ export default {
   async onAllReady() {
     await reportStrandedConfig();
   },
-} satisfies ServerPluginDefinition;
+} satisfies MachinePluginDefinition;

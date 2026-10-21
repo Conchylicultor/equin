@@ -8,8 +8,8 @@ import type {
   OrphanFileRole,
   OrphanReport,
 } from "@plugins/config_v2/core";
-import { CONFIG_DIR } from "./config-dir";
-import { getAllDescriptors } from "./resource";
+import { CONFIG_DIR } from "@plugins/config_v2/machine";
+import { getAllDescriptors } from "@plugins/config_v2/server";
 
 // A file is scoped when it sits under an `@app/<id>/` segment:
 // `<hier>/@app/<id>/<name>.<ext>`.

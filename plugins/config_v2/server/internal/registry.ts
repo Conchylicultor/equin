@@ -1,30 +1,25 @@
-import { existsSync, readFileSync, unlinkSync } from "node:fs";
-import { join, relative } from "node:path";
-import type { ConfigDescriptor, ConfigValues } from "../../core";
-import { configRawFile } from "../../core";
-import { serveValue } from "@plugins/network/plugins/live/server";
-import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
+import type {
+  ConfigDescriptor,
+  ConfigDocRef,
+  ConfigDocumentFile,
+  ConfigFileRef,
+  ConfigValues,
+} from "../../core";
 import type { FieldsRecord, InferFieldValue } from "@plugins/fields/core";
 import {
   computeHash,
+  configFileRelPath,
   hasConflict,
   normalizeCollectionItems,
   readTypedConfig,
   threeWayMerge,
 } from "../../core";
-import { jsoncConfigProxy, writeRawAtomic } from "./jsonc-proxy";
 import type { Disposable, JsonValue } from "../../core";
-import {
-  userScopedDir,
-  discoverScopeIds,
-  scopeSegment,
-  BASE_SCOPE,
-} from "./scope-paths";
-import { configWatcherArmed, watchFileChange } from "./config-watcher";
+import { BASE_SCOPE, documentFiles } from "./scope-paths";
+import { ConfigStore } from "./host-services";
 import { ConfigV2 } from "./contribution";
 import {
   configConflictServed,
-  configRegistryReady,
   configTiersServed,
   configValuesServed,
   getDescriptorByStorePath,
@@ -41,27 +36,14 @@ import { getFieldStorageProvider } from "./field-storage-providers";
 import { configDocumentsAgree } from "./field-tiers";
 import { writeScopedOriginSnapshot } from "./scope-snapshot";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { REPO_ROOT, repoConfigDir } from "@plugins/infra/plugins/paths/server";
 import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
-import { CONFIG_DIR } from "./config-dir";
-import {
-  defineAgentWriteLedger,
-  type AgentWriteLedgerEntry,
-  type FileSnapshot,
-} from "@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/server";
-import {
-  configLedgerDocument,
-  configLedgerKey,
-  type ConfigDocumentFile,
-} from "./config-ledger-key";
 
 interface CacheEntry {
   scopeId: string;
   values: ConfigValues<FieldsRecord>;
   storePath: string;
-  userOriginPath: string;
-  userOverwritesPath: string;
-  userAncestorPath: string;
+  /** The document's files in the user-layer store (`ConfigStore`). */
+  files: Record<ConfigDocumentFile, ConfigFileRef>;
   disposables: Disposable[];
 }
 
@@ -85,55 +67,26 @@ export interface ConfigWriteOpts {
   scopeId?: string;
 }
 
-/**
- * The config documents an agent-origin request overwrote, held so the e2e
- * harness can put them back — config's ledger in the shared agent-write ledger
- * primitive. Design:
- * `research/2026-08-30-global-agent-config-write-revert-ledger.md`.
- *
- * Defined HERE, beside the write paths, because its `restore` is
- * `applyRestore` below, which needs `refreshEntry` / `getEntry` /
- * `ensureScopeEntry` / `disposeScopeEntry` — all module-private to this file.
- * `scope-fork.ts` records through the same handle.
- */
-export const configWriteLedger = defineAgentWriteLedger<ConfigDocumentFile>({
-  id: "config",
-  label: "Config documents",
-  restore: applyRestore,
-});
-
-/** The trio of files a document is made of, for the agent-write ledger. */
-function trioPathsOf(entry: CacheEntry): Record<ConfigDocumentFile, string> {
-  return {
-    origin: entry.userOriginPath,
-    override: entry.userOverwritesPath,
-    ancestor: entry.userAncestorPath,
-  };
+/** The document a cache entry holds, as the store addresses it. */
+function docOf(entry: CacheEntry): ConfigDocRef {
+  return { storePath: entry.storePath, scopeId: entry.scopeId };
 }
 
 /**
- * Snapshot this document before an agent-origin write touches it. A no-op for
- * every other writer. Call immediately BEFORE the file mutation.
+ * Run one write to an entry's files through the store's `edit` — the one
+ * spelling of a registry write, so a store that ledgers agent-origin writes
+ * (the desktop's: the agent-write ledger, so the e2e harness can put them back;
+ * `research/2026-08-30-global-agent-config-write-revert-ledger.md`) captures
+ * the document's whole trio before the mutation and what it left after.
+ * `mutate` writes the files and refreshes the entry.
  */
-function recordWrite(
+function editEntry(
   opts: ConfigWriteOpts,
   entry: CacheEntry,
   operation: string,
+  mutate: () => void,
 ): void {
-  configWriteLedger.record(
-    opts.writer,
-    configLedgerKey(entry.storePath, entry.scopeId),
-    trioPathsOf(entry),
-    operation,
-  );
-}
-
-/** Refresh the ledger's "what the agent left" snapshot, after the write lands. */
-function noteWrite(opts: ConfigWriteOpts, entry: CacheEntry): void {
-  configWriteLedger.noteComplete(
-    opts.writer,
-    configLedgerKey(entry.storePath, entry.scopeId),
-  );
+  ConfigStore.get().edit(docOf(entry), opts.writer, operation, mutate);
 }
 
 // 2D cache keyed by (descriptor × scopeId). Inner key "" (BASE_SCOPE) is the base
@@ -152,18 +105,18 @@ const subscribersByDescriptor = new WeakMap<
 // every currently-un-forked scope (apps tracking base must re-render).
 const knownScopeIds = new Set<string>();
 
-// Resolve one entry's values straight off disk (origin ⊕ override, schema-typed,
-// collections normalized). Provider-backed fields are layered on by the caller —
-// they live outside the JSONC document.
+// Resolve one entry's values straight off the store (origin ⊕ override,
+// schema-typed, collections normalized). Provider-backed fields are layered on by
+// the caller — they live outside the JSONC document.
 function readEntryValues(
   descriptor: ConfigDescriptor,
-  userOriginPath: string,
-  userOverwritesPath: string,
+  files: Record<ConfigDocumentFile, ConfigFileRef>,
 ): ConfigValues<FieldsRecord> {
+  const store = ConfigStore.get();
   const raw = readTypedConfig(
     descriptor,
-    jsoncConfigProxy(userOriginPath),
-    jsoncConfigProxy(userOverwritesPath),
+    store.proxy(files.origin),
+    store.proxy(files.override),
   );
   return normalizeCollectionItems(
     raw as Record<string, unknown>,
@@ -172,7 +125,7 @@ function readEntryValues(
 }
 
 /**
- * THE single "this entry's files changed" path: re-read from disk, replace the
+ * THE single "this entry's files changed" path: re-read from the store, replace the
  * cached values, and fan out every derived notification.
  *
  * Called from BOTH ends, and that pairing is the invariant:
@@ -180,9 +133,10 @@ function readEntryValues(
  *   - every in-process writer, immediately after its own write.
  *
  * The second is not redundant. The watcher is a **push-latency** mechanism, not a
- * correctness one — its own contract (config-watcher.ts) says an event can be
- * missed (a dropped fsevent, an unobserved writer, a coalesced rename) and that
- * nothing downstream may treat "no event" as "no change". A writer that relied on
+ * correctness one — the store's `watch` contract (on the desktop, the machine
+ * half's config-watcher.ts) says an event can be missed (a dropped fsevent, an
+ * unobserved writer, a coalesced rename) and that nothing downstream may treat
+ * "no event" as "no change". A writer that relied on
  * its own event coming back would, on a missed event, leave `entry.values` stale
  * forever: the write is correctly on disk, but `getConfig` — and with it the
  * config-v2.values push AND the boot snapshot every page load hydrates from —
@@ -191,11 +145,7 @@ function readEntryValues(
  * watcher event afterwards is a cheap idempotent re-read.
  */
 function refreshEntry(descriptor: ConfigDescriptor, entry: CacheEntry): void {
-  const freshValues = readEntryValues(
-    descriptor,
-    entry.userOriginPath,
-    entry.userOverwritesPath,
-  );
+  const freshValues = readEntryValues(descriptor, entry.files);
 
   // Provider-backed (e.g. secret) fields are stored outside the JSONC document,
   // so a disk re-read has nothing to say about them — carry the loaded value
@@ -222,26 +172,17 @@ function refreshEntry(descriptor: ConfigDescriptor, entry: CacheEntry): void {
   notifyDocument(entry.storePath, entry.scopeId);
 }
 
-// Build a fully-wired cache entry for (descriptor, scopeId): scoped paths,
-// initial values, field-storage-provider load loop, and file watchers. Mirrors the
-// base-entry construction in initRegistry — the only difference is the scope path
-// segment threaded through userScopedDir. Returns the entry (also stored in cache).
+// Build a fully-wired cache entry for (descriptor, scopeId): the document's
+// files, initial values, field-storage-provider load loop, and the store watch.
+// The base entry and every scoped entry are built here alike — the only
+// difference is the scope. Returns the entry (also stored in cache).
 async function buildEntry(
   descriptor: ConfigDescriptor,
-  hierarchyPath: string,
   storePath: string,
   scopeId: string,
 ): Promise<CacheEntry> {
-  const scopedDir = userScopedDir(hierarchyPath, scopeId || undefined);
-  const userOriginPath = join(scopedDir, `${descriptor.name}.origin.jsonc`);
-  const userOverwritesPath = join(scopedDir, `${descriptor.name}.jsonc`);
-  const userAncestorPath = join(scopedDir, `${descriptor.name}.ancestor.jsonc`);
-
-  const values = readEntryValues(
-    descriptor,
-    userOriginPath,
-    userOverwritesPath,
-  );
+  const files = documentFiles({ storePath, scopeId });
+  const values = readEntryValues(descriptor, files);
 
   for (const [key, field] of Object.entries(descriptor.fields)) {
     const provider = getFieldStorageProvider(field.type.id);
@@ -265,17 +206,17 @@ async function buildEntry(
     scopeId,
     values,
     storePath,
-    userOriginPath,
-    userOverwritesPath,
-    userAncestorPath,
+    files,
     disposables,
   };
 
-  // Watch both files for OUT-OF-BAND writes. In-process writers refresh this same
-  // entry themselves (see refreshEntry) rather than waiting on these events.
-  const onFileChange = () => refreshEntry(descriptor, entry);
-  disposables.push(watchFileChange(userOverwritesPath, onFileChange));
-  disposables.push(watchFileChange(userOriginPath, onFileChange));
+  // Watch the document for OUT-OF-BAND writes. In-process writers refresh this
+  // same entry themselves (see refreshEntry) rather than waiting on these events.
+  disposables.push(
+    ConfigStore.get().watch({ storePath, scopeId }, () =>
+      refreshEntry(descriptor, entry),
+    ),
+  );
 
   let scopeMap = cacheByDescriptor.get(descriptor);
   if (!scopeMap) {
@@ -289,129 +230,38 @@ async function buildEntry(
   return entry;
 }
 
-// The git-layer files of one document. Git-layer files live in the repo, not
-// the per-worktree user dir. A scoped override is expressed in git at
-// config/<dir>/@app/<id>/<name>.jsonc, but its origin anchor is always the BASE
-// origin (config/<dir>/<name>.origin.jsonc) — no scoped origin is ever
-// committed. So the override path takes the scope segment while the origin path
-// stays base.
-function gitLayerPaths(
-  storePath: string,
-  scopeId: string | undefined,
-): { gitOverridePath: string; gitOriginPath: string } {
-  const parts = storePath.replace(/\.jsonc$/, "").split("/");
-  const dir = parts.slice(0, -1).join("/");
-  const name = parts[parts.length - 1]!;
-  return {
-    gitOverridePath: join(
-      repoConfigDir(),
-      dir,
-      scopeSegment(scopeId),
-      `${name}.jsonc`,
-    ),
-    gitOriginPath: join(repoConfigDir(), dir, `${name}.origin.jsonc`),
-  };
-}
-
-function readRaw(path: string): string | null {
-  try {
-    return readFileSync(path, "utf-8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return null;
-  }
-}
-
-/**
- * Watch the git layer of one document for as long as its raw text is read: the
- * repo's config tree, filtered to the document's two git files. Nothing else
- * signals them — a build propagates them into the user layer (which
- * `notifyDocument` covers), but the raw view shows them before that build.
- */
-async function watchGitLayer(
-  storePath: string,
-  scopeId: string | undefined,
-  notify: () => void,
-): Promise<() => void> {
-  const { gitOverridePath, gitOriginPath } = gitLayerPaths(storePath, scopeId);
-  const release = await acquireDirWatch({
-    dir: repoConfigDir(),
-    scope: "subtree",
-    onChange: (events) => {
-      if (
-        events.some(
-          (e) => e.path === gitOverridePath || e.path === gitOriginPath,
-        )
-      )
-        notify();
-    },
-  });
-  // A write between the first load and either watch opening (this git-layer
-  // one, or the user-layer config-files watcher armed in `onReady`) produced
-  // no event; one re-read once both are live closes that gap.
-  try {
-    await configWatcherArmed();
-  } catch (err) {
-    release();
-    throw err;
-  }
-  notify();
-  return release;
-}
-
-/**
- * The raw text of one document's four layered files (`config-v2.raw-file`).
- *
- * `notified`, from both halves of its truth: the user-layer override and origin
- * are the cache entry's own files, so the registry's one document fan-out
- * (`notifyDocument`, run by `refreshEntry` on every watcher event and every
- * in-process write) moves this value with the document, its conflicts and its
- * tiers; the git layer is watched while subscribed (`watchGitLayer`).
- *
- * Paths are returned relative to their layer root (user config dir / repo root)
- * so the UI can label each section with a compact, non-wrapping location rather
- * than a noisy absolute path. The label already names the layer.
- */
-export const configRawFileServed = serveValue(configRawFile, {
-  source: "external",
-  changes: "notified",
-  loader: async ({ path, scopeId }) => {
-    await configRegistryReady();
-    const descriptor = getDescriptorByStorePath(path);
-    if (!descriptor) {
-      throw configRawFile.refuse("missing", `No descriptor for "${path}"`);
-    }
-    const entry = getEntry(descriptor, scopeId ?? BASE_SCOPE);
-    if (!entry) {
-      throw configRawFile.refuse(
-        "missing",
-        `No config document for "${path}"${scopeId ? ` in scope "${scopeId}"` : ""}`,
-      );
-    }
-    const { gitOverridePath, gitOriginPath } = gitLayerPaths(path, scopeId);
-    return {
-      override: readRaw(entry.userOverwritesPath),
-      overridePath: relative(CONFIG_DIR, entry.userOverwritesPath),
-      origin: readRaw(entry.userOriginPath),
-      originPath: relative(CONFIG_DIR, entry.userOriginPath),
-      gitOverride: readRaw(gitOverridePath),
-      gitOverridePath: relative(REPO_ROOT, gitOverridePath),
-      gitOrigin: readRaw(gitOriginPath),
-      gitOriginPath: relative(REPO_ROOT, gitOriginPath),
-    };
-  },
-  whileSubscribed: ({ path, scopeId }, notify) =>
-    watchGitLayer(path, scopeId, notify),
-});
-
 // The per-document live values: each keyed `{ path, scopeId? }`, each a
 // function of the same file trio, so each moves whenever the document does.
 const perDocument = [
   configValuesServed,
   configConflictServed,
   configTiersServed,
-  configRawFileServed,
 ];
+
+/** One document a change moved, as the per-document live values key it. */
+export interface ConfigDocumentTuple {
+  path: string;
+  scopeId?: string;
+}
+
+const documentListeners = new Set<(doc: ConfigDocumentTuple) => void>();
+
+/**
+ * Hear every document tuple the registry's one fan-out moves — the same tuples
+ * the per-document live values are notified for (a base change also moves each
+ * known scope with no config of its own). For a value served outside this
+ * plugin's server half that is a function of the same document (the desktop's
+ * raw-file view), so it moves with the document, its conflicts and its tiers.
+ * Returns the unsubscribe.
+ */
+export function onDocumentChange(
+  listener: (doc: ConfigDocumentTuple) => void,
+): () => void {
+  documentListeners.add(listener);
+  return () => {
+    documentListeners.delete(listener);
+  };
+}
 
 // THE document fan-out for a (storePath, scopeId) change — the one call every
 // writer makes after its write (the three per-document values used to be
@@ -425,7 +275,7 @@ function notifyDocument(storePath: string, scopeId: string): void {
   // Modified-count is computed off effective BASE values for this descriptor, so
   // recompute just this path (scope-independent).
   refreshModifiedCount(storePath);
-  const tuples: { path: string; scopeId?: string }[] = [];
+  const tuples: ConfigDocumentTuple[] = [];
   if (scopeId) {
     tuples.push({ path: storePath, scopeId });
   } else {
@@ -438,6 +288,9 @@ function notifyDocument(storePath: string, scopeId: string): void {
   }
   for (const served of perDocument) {
     for (const tuple of tuples) served.notify(tuple);
+  }
+  for (const listener of [...documentListeners]) {
+    for (const tuple of tuples) listener(tuple);
   }
   // A latency optimization only: conflict-locations re-derives from disk on
   // every load.
@@ -464,6 +317,20 @@ function getEntry(
   return cacheByDescriptor.get(descriptor)?.get(scopeId);
 }
 
+/**
+ * Whether the registry holds the document (`storePath`, `scopeId`) — a
+ * registered descriptor's base, or a scope with a document of its own loaded.
+ */
+export function hasConfigDocument(
+  storePath: string,
+  scopeId: string = BASE_SCOPE,
+): boolean {
+  const descriptor = getDescriptorByStorePath(storePath);
+  return (
+    descriptor !== undefined && getEntry(descriptor, scopeId) !== undefined
+  );
+}
+
 // Lazily build (and cache) a scoped entry for (descriptor, scopeId). The base
 // entry is created in initRegistry; scoped entries don't exist until a fork writes
 // files, so callers that need to write a scoped override go through here first.
@@ -481,7 +348,7 @@ export async function ensureScopeEntry(
     );
   }
   const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
-  return buildEntry(descriptor, hierarchyPath, storePath, scopeId);
+  return buildEntry(descriptor, storePath, scopeId);
 }
 
 export async function initRegistry(): Promise<void> {
@@ -500,7 +367,7 @@ export async function initRegistry(): Promise<void> {
       // Both are the canonical DOT-form PluginId. The on-disk store layout is slash
       // (`config/<slash>/`), so convert dot→slash here at the single boundary — the
       // resulting `hierarchyPath` value flows unchanged through every downstream
-      // reader (registerDescriptorPath, getHierarchyPath, userScopedDir, scope-fork).
+      // reader (registerDescriptorPath, getHierarchyPath, the store, scope-fork).
       const pluginId = contribution.pluginId ?? contribution._pluginId;
       if (!pluginId) {
         console.warn(
@@ -515,11 +382,11 @@ export async function initRegistry(): Promise<void> {
 
       // Register only the BASE entry per descriptor (as today). Scoped entries are
       // created on demand by ensureScopeEntry once a fork writes their files.
-      await buildEntry(descriptor, hierarchyPath, storePath, BASE_SCOPE);
+      await buildEntry(descriptor, storePath, BASE_SCOPE);
       registered.push({ descriptor, hierarchyPath });
     }
 
-    // Rehydrate scoped entries from disk. Scoped (per-app) entries are otherwise
+    // Rehydrate scoped entries from the store. Scoped (per-app) entries are otherwise
     // only ever created lazily on fork/setConfig, so after a server restart none
     // exist — yet their files persist on disk (a propagated git scope's origin, or
     // a runtime fork's override). Without this the in-memory cache silently
@@ -529,7 +396,8 @@ export async function initRegistry(): Promise<void> {
     // Any registered descriptor can be git-scoped (a committed config/<hier>/@app/
     // file), not just `scope: "app"` ones — so iterate the full registered set.
     for (const { descriptor, hierarchyPath } of registered) {
-      for (const scopeId of discoverScopeIds(hierarchyPath)) {
+      const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
+      for (const scopeId of ConfigStore.get().scopes(storePath)) {
         if (scopeHasOwnConfig(descriptor, scopeId)) {
           await ensureScopeEntry(descriptor, scopeId);
         }
@@ -646,13 +514,14 @@ export async function setConfig<
     return;
   }
 
-  const userOverwrites = jsoncConfigProxy(entry.userOverwritesPath);
-  const userOrigin = jsoncConfigProxy(entry.userOriginPath);
+  const store = ConfigStore.get();
+  const userOverwrites = store.proxy(entry.files.override);
+  const userOrigin = store.proxy(entry.files.origin);
 
   // For a scoped write, fork-on-write keys off the BASE origin (the only thing we
-  // can snapshot from). Read it off the base CacheEntry's userOriginPath — the
+  // can snapshot from). Read it off the base CacheEntry's origin — the
   // authoritative base-origin location for this descriptor.
-  const baseOriginPath = getEntry(descriptor, BASE_SCOPE)?.userOriginPath;
+  const baseOrigin = getEntry(descriptor, BASE_SCOPE)?.files.origin;
 
   let base: Record<string, unknown>;
   let hash: string | null;
@@ -665,11 +534,7 @@ export async function setConfig<
     const orig = userOrigin.read()!;
     base = { ...(orig.content as Record<string, unknown>) };
     hash = computeHash(orig.content);
-  } else if (
-    scopeId &&
-    baseOriginPath &&
-    jsoncConfigProxy(baseOriginPath).exists()
-  ) {
+  } else if (scopeId && baseOrigin && store.proxy(baseOrigin).exists()) {
     // FORK-ON-WRITE. The scope has no own config (neither scoped override nor
     // scoped origin), but the BASE origin exists — so this is a first scoped
     // write to an app that tracks base. Rather than throwing, auto-create the
@@ -679,13 +544,7 @@ export async function setConfig<
     // exists, so the override is anchored against the freshly-written scoped
     // origin's hash. This makes a scoped write make the scope exist *and*
     // readable — fully symmetric with the read path, no fork ceremony.
-    const hierarchyPath = getHierarchyPath(descriptor);
-    if (!hierarchyPath) {
-      throw new Error(
-        `[config-v2] setConfig: descriptor "${descriptor.name}" has no registered hierarchy path.`,
-      );
-    }
-    writeScopedOriginSnapshot(descriptor, hierarchyPath, scopeId);
+    writeScopedOriginSnapshot(descriptor, entry.storePath, scopeId);
     // Surface the scope-membership flip promptly (the config-v2.scopes resource)
     // rather than waiting on the ~100ms watcher debounce — mirrors
     // forkDescriptorScope. The override write below is picked up by the entry's
@@ -703,17 +562,17 @@ export async function setConfig<
     // override to paper over it would produce a corrupt file that conflict
     // detection can't anchor — fail loudly.
     throw new Error(
-      `[config-v2] setConfig: no origin file for "${entry.storePath}" at ${entry.userOriginPath}. ` +
+      `[config-v2] setConfig: no origin file for "${entry.storePath}" at ${configFileRelPath(entry.files.origin)}. ` +
         `Run ./singularity build to propagate the config origin before setting overrides.`,
     );
   }
 
-  recordWrite(opts, entry, `set-field:${key}`);
   base[key] = value;
   const normalized = normalizeCollectionItems(base, descriptor.fields);
-  userOverwrites.write(normalized as JsonValue, hash);
-  refreshEntry(descriptor, entry);
-  noteWrite(opts, entry);
+  editEntry(opts, entry, `set-field:${key}`, () => {
+    userOverwrites.write(normalized as JsonValue, hash);
+    refreshEntry(descriptor, entry);
+  });
 }
 
 export async function setConfigByPath(
@@ -777,7 +636,8 @@ export async function resetConfigByPath(
   const entry = getEntry(descriptor, scopeId ?? BASE_SCOPE);
   if (!entry) throw new Error(`No cache entry for "${storePath}"`);
 
-  const originProxy = jsoncConfigProxy(entry.userOriginPath);
+  const store = ConfigStore.get();
+  const originProxy = store.proxy(entry.files.origin);
   const originData = originProxy.read();
   if (!originData) {
     // Symmetric with setConfig: every registered descriptor gets a propagated
@@ -785,7 +645,7 @@ export async function resetConfigByPath(
     // to restore, and inventing one from the code defaults is what this fix
     // removed.
     throw new Error(
-      `[config-v2] resetConfigField: no origin file for "${storePath}" at ${entry.userOriginPath}. ` +
+      `[config-v2] resetConfigField: no origin file for "${storePath}" at ${configFileRelPath(entry.files.origin)}. ` +
         `Run ./singularity build to propagate the config origin before resetting fields.`,
     );
   }
@@ -809,7 +669,7 @@ export async function resetConfigByPath(
   // defaults", a terminal resolution the banner owns, and it takes the ancestor
   // (the three-way merge base) with it. A per-field Reset must not do that
   // behind the user's back.
-  const overwrites = jsoncConfigProxy(entry.userOverwritesPath);
+  const overwrites = store.proxy(entry.files.override);
   if (overwrites.exists() && !hasConflict(originProxy, overwrites)) {
     const current = asDocument(overwrites.read()?.content ?? null);
     const next = normalizeCollectionItems(
@@ -817,12 +677,11 @@ export async function resetConfigByPath(
       descriptor.fields,
     );
     if (configDocumentsAgree(next, originDoc, descriptor.fields)) {
-      recordWrite(opts, entry, `reset-field:${key}`);
-      unlinkSync(entry.userOverwritesPath);
-      if (existsSync(entry.userAncestorPath))
-        unlinkSync(entry.userAncestorPath);
-      refreshEntry(descriptor, entry);
-      noteWrite(opts, entry);
+      editEntry(opts, entry, `reset-field:${key}`, () => {
+        store.remove(entry.files.override);
+        store.remove(entry.files.ancestor);
+        refreshEntry(descriptor, entry);
+      });
       return;
     }
   }
@@ -887,8 +746,9 @@ export function acknowledgeConflictByPath(
   const entry = getEntry(descriptor, opts.scopeId ?? BASE_SCOPE);
   if (!entry) throw new Error(`No cache entry for "${storePath}"`);
 
-  const userOverwrites = jsoncConfigProxy(entry.userOverwritesPath);
-  const userOrigin = jsoncConfigProxy(entry.userOriginPath);
+  const store = ConfigStore.get();
+  const userOverwrites = store.proxy(entry.files.override);
+  const userOrigin = store.proxy(entry.files.origin);
 
   if (!userOverwrites.exists())
     throw new Error(`No override file for "${storePath}"`);
@@ -899,16 +759,16 @@ export function acknowledgeConflictByPath(
   if (!originData) throw new Error(`Cannot read origin for "${storePath}"`);
 
   const newHash = computeHash(originData.content);
-  recordWrite(opts, entry, "acknowledge-conflict");
-  userOverwrites.write(ow.content, newHash);
-  // Terminal resolution — the override now wins against the current origin, so
-  // the merge base is no longer needed. A stale ancestor would seed a wrong
-  // three-way merge on the next conflict.
-  if (existsSync(entry.userAncestorPath)) unlinkSync(entry.userAncestorPath);
-  // The override just flipped from ignored (stale) to winning — the resolved
-  // value changed even though no file content did.
-  refreshEntry(descriptor, entry);
-  noteWrite(opts, entry);
+  editEntry(opts, entry, "acknowledge-conflict", () => {
+    userOverwrites.write(ow.content, newHash);
+    // Terminal resolution — the override now wins against the current origin,
+    // so the merge base is no longer needed. A stale ancestor would seed a wrong
+    // three-way merge on the next conflict.
+    store.remove(entry.files.ancestor);
+    // The override just flipped from ignored (stale) to winning — the resolved
+    // value changed even though no file content did.
+    refreshEntry(descriptor, entry);
+  });
 }
 
 // Three-way merge resolution: reconcile a stale override against its origin
@@ -929,9 +789,10 @@ export function mergeConflictByPath(
   const entry = getEntry(descriptor, opts.scopeId ?? BASE_SCOPE);
   if (!entry) throw new Error(`No cache entry for "${storePath}"`);
 
-  const userOverwrites = jsoncConfigProxy(entry.userOverwritesPath);
-  const userOrigin = jsoncConfigProxy(entry.userOriginPath);
-  const userAncestor = jsoncConfigProxy(entry.userAncestorPath);
+  const store = ConfigStore.get();
+  const userOverwrites = store.proxy(entry.files.override);
+  const userOrigin = store.proxy(entry.files.origin);
+  const userAncestor = store.proxy(entry.files.ancestor);
 
   if (!userAncestor.exists()) {
     throw new Error(
@@ -954,12 +815,11 @@ export function mergeConflictByPath(
 
   const resolved = conflicts.length === 0;
   const hash = resolved ? computeHash(originData.content) : ow.hash;
-  recordWrite(opts, entry, "merge-conflict");
-  userOverwrites.write(normalized as JsonValue, hash);
-  if (resolved && existsSync(entry.userAncestorPath))
-    unlinkSync(entry.userAncestorPath);
-  refreshEntry(descriptor, entry);
-  noteWrite(opts, entry);
+  editEntry(opts, entry, "merge-conflict", () => {
+    userOverwrites.write(normalized as JsonValue, hash);
+    if (resolved) store.remove(entry.files.ancestor);
+    refreshEntry(descriptor, entry);
+  });
 
   return { resolved, conflictKeys: conflicts };
 }
@@ -974,52 +834,37 @@ export function deleteOverrideByPath(
   const entry = getEntry(descriptor, opts.scopeId ?? BASE_SCOPE);
   if (!entry) throw new Error(`No cache entry for "${storePath}"`);
 
-  recordWrite(opts, entry, "delete-override");
-  // Idempotent: an "invalid" conflict can surface with no override on disk
-  // (the origin itself fails the current schema). Deleting a non-existent
-  // override is a no-op — defaults are already in effect.
-  if (existsSync(entry.userOverwritesPath))
-    unlinkSync(entry.userOverwritesPath);
-  // The override is gone, so any captured merge base is moot — drop it.
-  if (existsSync(entry.userAncestorPath)) unlinkSync(entry.userAncestorPath);
-  refreshEntry(descriptor, entry);
-  noteWrite(opts, entry);
-}
-
-/** Put one captured file back: exact bytes, or gone if it did not exist. */
-function restoreFile(path: string, snapshot: FileSnapshot): void {
-  if (snapshot.present) {
-    writeRawAtomic(path, snapshot.bytes);
-    return;
-  }
-  if (existsSync(path)) unlinkSync(path);
+  const store = ConfigStore.get();
+  editEntry(opts, entry, "delete-override", () => {
+    // Idempotent: an "invalid" conflict can surface with no override on disk
+    // (the origin itself fails the current schema). Deleting a non-existent
+    // override is a no-op — defaults are already in effect.
+    store.remove(entry.files.override);
+    // The override is gone, so any captured merge base is moot — drop it.
+    store.remove(entry.files.ancestor);
+    refreshEntry(descriptor, entry);
+  });
 }
 
 /**
- * Restore one ledgered document's files and re-sync the cache.
+ * Re-sync the cache with a document whose files were rewritten behind the
+ * registry — the store's agent-write ledger restoring what an agent-origin
+ * request overwrote.
  *
- * The cache half is why the revert goes through the server at all rather than
- * the harness rewriting files itself: `CONFIG_DIR`'s watcher is a push-latency
- * mechanism, not a correctness one (an event can be missed), so a filesystem
- * restore behind the server's back could leave `getConfig`, the
- * `config-v2.values` push and every subscribed browser serving the agent's
- * value indefinitely. Going through `refreshEntry` / `ensureScopeEntry` makes
- * the update deterministic.
- *
- * The ledger's `restore` for {@link configWriteLedger}; it has already checked
- * that no file moved since the agent's last write.
+ * The re-sync is why such a revert goes through the server at all rather than
+ * rewriting files alone: the store's watch is a push-latency mechanism, not a
+ * correctness one (an event can be missed), so a restore behind the server's
+ * back could leave `getConfig`, the `config-v2.values` push and every
+ * subscribed browser serving the agent's value indefinitely. Going through
+ * `refreshEntry` / `ensureScopeEntry` makes the update deterministic.
  */
-async function applyRestore(
-  entry: AgentWriteLedgerEntry<ConfigDocumentFile>,
+export async function reloadConfigDocument(
+  storePath: string,
+  scopeId: string,
 ): Promise<void> {
-  restoreFile(entry.paths.origin, entry.before.origin);
-  restoreFile(entry.paths.override, entry.before.override);
-  restoreFile(entry.paths.ancestor, entry.before.ancestor);
-
-  const { storePath, scopeId } = configLedgerDocument(entry.key);
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) {
-    // Renamed or removed between the run and the revert. The bytes are back,
+    // Renamed or removed between the write and the reload. The bytes are back,
     // which is the user-visible fact; there is no cache entry left to re-sync.
     // Not an error — throwing here would strand a correctly-restored document
     // in the ledger forever.
@@ -1038,8 +883,10 @@ async function applyRestore(
   // and removeDescriptor use, so a reverted fork lands in the cache state those
   // functions would have produced.
   disposeScopeEntry(descriptor, scopeId);
+  const files = documentFiles({ storePath, scopeId });
+  const store = ConfigStore.get();
   const stillExists =
-    existsSync(entry.paths.origin) || existsSync(entry.paths.override);
+    store.proxy(files.origin).exists() || store.proxy(files.override).exists();
   if (stillExists) await ensureScopeEntry(descriptor, scopeId);
   notifyDescriptorScopeChange(storePath, scopeId);
 }

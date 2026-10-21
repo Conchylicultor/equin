@@ -47,6 +47,12 @@ const declared = new Map<string, ServerContributionToken<{ impl: unknown }>>();
 // once a graph boots, its own collected providers answer, exactly as at runtime.
 let unbooted: readonly ServerContribution[] | null = null;
 
+// Test support: the implementations a suite swapped in for the length of one
+// call (`withHostServices`, `core/testing`), by service id. They answer before
+// anything else — a suite faking a collect to drive booted code still reads its
+// own — and are gone once the call settles.
+let scoped: ReadonlyMap<string, unknown> | null = null;
+
 export function defineHostService<T>(id: string): HostService<T> {
   if (declared.has(id)) {
     throw new Error(
@@ -62,6 +68,7 @@ export function defineHostService<T>(id: string): HostService<T> {
     id,
     provide: (impl) => token({ impl }),
     get: () => {
+      if (scoped?.has(id)) return scoped.get(id) as T;
       // Collected (a booted graph) answers; else the unbooted host's
       // providers, when it names one for this service; else nothing has
       // collected and nobody provided — read too early.
@@ -115,6 +122,40 @@ export function provideHostServicesUnbooted(
   providers: readonly ServerContribution[],
 ): void {
   unbooted = providers;
+}
+
+/**
+ * Run `fn` with `providers` (each a `Svc.provide(impl)`) answering their
+ * services — over the unbooted host's providers and over a collected graph's —
+ * and put the previous answers back once it settles, so a suite swapping a
+ * service cannot leak it into the suites after it in the same bun process.
+ * Test support (`core/testing`): unlike `provideHostServicesUnbooted`, which
+ * replaces the whole process-wide set, it overrides only the services named,
+ * only for the call. A contribution that provides no declared service throws.
+ */
+export async function withHostServices<T>(
+  providers: readonly ServerContribution[],
+  fn: () => T | Promise<T>,
+): Promise<T> {
+  const next = new Map(scoped ?? []);
+  for (const provider of providers) {
+    const match = [...declared].find(
+      ([, token]) => token.from([{ contributions: [provider] }]).length === 1,
+    );
+    if (match === undefined) {
+      throw new Error(
+        `[host-service] withHostServices: a contribution (${String(provider._kind.description)}) provides no declared host service.`,
+      );
+    }
+    next.set(match[0], match[1].from([{ contributions: [provider] }])[0]!.impl);
+  }
+  const previous = scoped;
+  scoped = next;
+  try {
+    return await fn();
+  } finally {
+    scoped = previous;
+  }
 }
 
 /** Forget every declared service — test support (`core/testing`), so a suite's

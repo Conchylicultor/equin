@@ -197,9 +197,9 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
 - Cross-plugin:
-  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×22
-    - `debug` ×15
+    - `debug` ×14
     - `conversations` ×3
     - `database` ×3
     - `framework` ×2

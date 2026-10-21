@@ -8,7 +8,8 @@ import {
  * namespace, holding the propagated `<name>.origin.jsonc` files and the user's
  * own `<name>.jsonc` overrides (plus `.ancestor.jsonc` conflict snapshots).
  *
- * A worktree's subtree is forked from main's on create (`forkConfig`) and reaped
+ * A worktree's subtree is forked from main's on create (the worktree
+ * workspace's `forkConfigDir`) and reaped
  * with the worktree (`debug/worktree-cleanup`), so consumers name a namespace
  * through `.file(name)` rather than re-deriving the layout.
  */

@@ -36,11 +36,12 @@ const NO_ORPHANS: OrphanEntry[] = [];
 
 export function ConfigOrphansPanel() {
   const audit = useLive(configOrphansReport);
-  // The DataView renders the loading and failed states (`readiness`); only a
-  // ready audit's rows reach the view.
+  // The DataView renders the loading, failed and unavailable (a host without
+  // the computer) states (`readiness`); only a ready audit's rows reach the view.
   const orphans = foldResource(audit, {
     loading: () => NO_ORPHANS,
     error: () => NO_ORPHANS,
+    unavailable: () => NO_ORPHANS,
     ready: (d) => d.orphans,
   });
 

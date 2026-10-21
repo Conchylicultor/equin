@@ -85,11 +85,11 @@ import { bootPluginGraph, runShutdownHooks } from "../core/boot-stages";
  * pick a database, and picking the wrong one silently is worse than refusing.
  *
  * It is declared FIRST, before a single plugin is imported, because the failure
- * otherwise arrives 83 plugins deep and describes the wrong thing entirely:
- * `config_v2/server` resolves its config dir at module eval, and every plugin
- * that imports `ConfigV2` from that half-evaluated barrel then fails with
- * `ReferenceError: Cannot access 'ConfigV2' before initialization` — 82 lines of
- * TDZ burying the one line that said what was actually missing.
+ * otherwise arrives deep in the graph and describes the wrong thing entirely:
+ * modules resolve namespace-scoped paths at module eval (`config_v2#machine`
+ * its config dir, the per-worktree log dir), and a throw from one of them
+ * surfaces as a TDZ error in whichever importer evaluated it first, burying the
+ * one line that said what was actually missing.
  *
  * The whole boot is inside this call, so there is no way to obtain a
  * half-booted runtime: `body` runs only after the graph is loaded, registered,

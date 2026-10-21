@@ -266,6 +266,7 @@ test("the base-exclusions row keeps the browser-only host-service providers out 
     "conversations.transcript-source.memory",
     "conversations.model-provider.catalog.baseline",
     "tasks.task-title.filed-titles",
+    "config_v2.browser-store",
   ]) {
     expect(base.entryPoints).toContain(`!${provider}.**`);
   }

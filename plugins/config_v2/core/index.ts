@@ -59,8 +59,19 @@ export {
 export type { ResolvedLayer, ResolvedConfig } from "./internal/tier-logic";
 export { resolveGitLayer } from "./internal/git-layer";
 export type { GitLayerDocument } from "./internal/git-layer";
-export { createMemoryConfigStore } from "./internal/memory-config-store";
-export type { ConfigStore } from "./internal/memory-config-store";
+export {
+  createMemoryConfigStore,
+  configFileRelPath,
+  scopeSegment,
+  storePathParts,
+} from "./internal/store";
+export type {
+  ConfigDocRef,
+  ConfigDocumentFile,
+  ConfigFileRef,
+  ConfigGitLayerImpl,
+  ConfigStoreImpl,
+} from "./internal/store";
 export {
   setConfigField,
   forkScope,

@@ -1,16 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { computeHash, readonlyProxy, type ConfigProxy } from "./config-proxy";
 import { resolveGitLayer } from "./git-layer";
-import { createMemoryConfigStore } from "./memory-config-store";
+import { createMemoryConfigStore } from "./store";
 import type { JsonValue } from "./types";
 
 function file(content: JsonValue, hash: string | null): ConfigProxy {
   const store = createMemoryConfigStore();
-  const p = store.proxy("x");
+  const p = store.proxy({ storePath: "x", file: "override" });
   p.write(content, hash);
   return p;
 }
-const absent: ConfigProxy = createMemoryConfigStore().proxy("absent");
+const absent: ConfigProxy = createMemoryConfigStore().proxy({
+  storePath: "absent",
+  file: "override",
+});
 
 const ORIGIN = { a: 1, b: "x" };
 const origin = file(ORIGIN, computeHash(ORIGIN));
@@ -50,15 +53,5 @@ describe("resolveGitLayer", () => {
     expect(
       resolveGitLayer(absent, readonlyProxy({ a: 3 }), new Map())?.base,
     ).toEqual({ a: 3 });
-  });
-});
-
-describe("createMemoryConfigStore", () => {
-  test("one document per { path, scopeId }", () => {
-    const store = createMemoryConfigStore();
-    store.proxy("p").write({ v: 1 }, "h");
-    expect(store.proxy("p").read()).toEqual({ content: { v: 1 }, hash: "h" });
-    expect(store.proxy("p", "app:x").exists()).toBe(false);
-    expect(store.proxy("q").read()).toBeNull();
   });
 });

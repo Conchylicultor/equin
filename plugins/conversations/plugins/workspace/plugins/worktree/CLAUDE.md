@@ -1,7 +1,7 @@
 # workspace/worktree
 
 The `worktree` workspace (`<repo>/.claude/worktrees/<attemptId>`): DB fork on
-commit, `setupWorktree` + spare refill in the spawn job, `forkConfig` after
+commit, `setupWorktree` + spare refill in the spawn job, `forkConfigDir` after
 commit, an empty launch fragment, resumable while the checkout exists. Its
 reaper is `debug/worktree-cleanup`.
 
@@ -12,7 +12,6 @@ reaper is `debug/worktree-cleanup`.
 - Description: The worktree workspace: a conversation runs in its attempt's git checkout of this repo (`.claude/worktrees/<id>`), with a forked DB and config dir — checked out in the spawn job, resumable while the checkout exists.
 - Server:
   - Uses:
-    - `config_v2.forkConfig`
     - `config_v2.getConfig`
     - `conversations/workspace.Workspace`
     - `database/fork.databaseForkJob`

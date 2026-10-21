@@ -1,15 +1,14 @@
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
-  auditUserConfigOrphans,
   configRegistryReady,
   configWatcherArmed,
   onConfigDirChange,
 } from "@plugins/config_v2/server";
 import { configOrphansReport } from "../../shared/report";
+import { auditUserConfigOrphans } from "./orphan-audit";
 
 /**
- * The orphan audit as a live value. Pure presentation seam: config_v2 owns the
- * config-dir layout and the audit logic; this surfaces its report.
+ * The orphan audit as a live value.
  *
  * Its answer is a function of two inputs, each with its signal:
  * - the `.jsonc` files under the user-layer config dir — config_v2's

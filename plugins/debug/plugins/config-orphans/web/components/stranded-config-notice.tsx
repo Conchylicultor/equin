@@ -22,11 +22,12 @@ const warningIcon = symbol("warning");
  * Renders nothing until the audit answers, and nothing when it finds none: a
  * warning that is not known yet has nothing to claim, and an absent warning is
  * what "no problem" looks like. A failed audit is not "no problem" either: it
- * says so inline.
+ * says so inline. A host without the computer keeps no saved settings on a
+ * machine to strand, so it has nothing to pin either.
  */
 export function StrandedConfigNotice() {
   const audit = useLive(configOrphansReport);
-  if (audit.status === "loading") return null;
+  if (audit.status === "loading" || audit.status === "unavailable") return null;
   if (audit.status === "error") {
     return (
       <ResourceErrorInline

@@ -26,6 +26,11 @@ export { clearHostServices } from "../host-service";
 // services (`db`, the job queue): the `bun test` preload names the desktop
 // host's providers through this.
 
+// A suite that swaps some host services for one call — its own fixtures over
+// the preload's desktop providers (or a faked collect's) — without leaking them
+// into the next suite.
+export { withHostServices } from "../host-service";
+
 // The one boot sequence, for a suite that boots a plugin graph of its own (the
 // portable boot test boots task-category's closure on PGlite).
 export { bootPluginGraph } from "../boot-stages";

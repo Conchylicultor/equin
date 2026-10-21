@@ -249,8 +249,21 @@ export {
   renderExemptRuleIds,
 } from "./exempt-rule-ids-gen";
 export {
+  deriveBrowserHostGraph,
   discoverBrowserHosts,
   generateBrowserHosts,
   renderBrowserHost,
 } from "./browser-host-gen";
-export type { BrowserHostDecl } from "./browser-host-gen";
+export type {
+  BrowserHostDecl,
+  DerivedBrowserHostGraph,
+} from "./browser-host-gen";
+// Host services read statically — the browser-host derivation's reading,
+// shared with `host-services:provider-placement`.
+export {
+  baseExclusionServerBarrels,
+  hostServicesByName,
+  parseHostServiceDeclarations,
+  providedServiceNames,
+} from "./host-services";
+export type { HostServiceDecl } from "./host-services";

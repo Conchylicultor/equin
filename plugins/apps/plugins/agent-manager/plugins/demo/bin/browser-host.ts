@@ -1,6 +1,6 @@
 // The Agent Manager demo's browser host: a Web Worker booting the portable
-// server graph of `./browser-host.plugins.ts` on PGlite, seeded with the
-// demo's stories, served to the page over the worker's port. Built by
+// server graph inferred from `./browser-host.composition.ts` on PGlite, seeded
+// with the demo's stories, served to the page over the worker's port. Built by
 // web-artifacts into the import map as `@browser-host/<this plugin>`.
 import {
   runtimeBrowserServer,

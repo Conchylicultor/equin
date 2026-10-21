@@ -162,7 +162,6 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
     - `build/server-build-id` (2 debt)
     - `code-explorer` (8 debt)
     - `code-explorer/file-resolve` (1 debt)
-    - `config_v2` (9 debt)
     - `config_v2/ledger` (1 debt)
     - `conversations` (3 debt)
     - `conversations/compaction-context` (1 debt)

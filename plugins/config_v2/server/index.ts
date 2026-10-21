@@ -5,16 +5,7 @@ import {
   forkDescriptorScope as forkDescriptorScopeEndpoint,
   removeDescriptorScope as removeDescriptorScopeEndpoint,
 } from "../core";
-import {
-  configFilesWatcher,
-  initConfigWatcher,
-  shutdownConfigWatcher,
-} from "./internal/config-watcher";
-import {
-  configRawFileServed,
-  initRegistry,
-  shutdownRegistry,
-} from "./internal/registry";
+import { initRegistry, shutdownRegistry } from "./internal/registry";
 import {
   configValuesServed,
   configConflictServed,
@@ -31,7 +22,7 @@ import {
 } from "./internal/scope-handlers";
 
 export { ConfigV2 } from "./internal/contribution";
-export { forkConfig } from "./internal/fork";
+export { ConfigGitLayer, ConfigStore } from "./internal/host-services";
 export {
   getConfig,
   setConfig,
@@ -41,18 +32,24 @@ export {
   acknowledgeConflictByPath,
   deleteOverrideByPath,
   mergeConflictByPath,
+  hasConfigDocument,
+  onDocumentChange,
+  reloadConfigDocument,
 } from "./internal/registry";
-export type { ConfigWriteOpts } from "./internal/registry";
+export type { ConfigDocumentTuple, ConfigWriteOpts } from "./internal/registry";
 export {
   configValuesServed,
   configRegistryReady,
+  configWatcherArmed,
   getAllDescriptors,
   getConfigScopeIds,
+  getDescriptorByStorePath,
   getScopedDescriptors,
 } from "./internal/resource";
-export { auditUserConfigOrphans } from "./internal/orphan-audit";
-export { onConfigDirChange } from "./internal/config-dir-change";
-export { configWatcherArmed } from "./internal/config-watcher";
+export {
+  notifyConfigDirChange,
+  onConfigDirChange,
+} from "./internal/config-dir-change";
 export {
   forkScope,
   deleteScope,
@@ -67,7 +64,9 @@ export {
 export type { FieldStorageProvider } from "./internal/field-storage-providers";
 
 export default {
-  description: "Typed JSONC config handles for server plugins.",
+  description:
+    "Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.",
+  portable: true,
   contributions: [
     ...configValuesServed.declare,
     ...configConflictServed.declare,
@@ -75,9 +74,7 @@ export default {
     ...configConflictLocationsServed.declare,
     ...configModifiedCountsServed.declare,
     ...configTiersServed.declare,
-    ...configRawFileServed.declare,
   ],
-  register: [configFilesWatcher],
   httpRoutes: {
     [forkScopeEndpoint.route]: handleForkScope,
     [deleteScopeEndpoint.route]: handleDeleteScope,
@@ -91,12 +88,7 @@ export default {
   async onReadyBlocking() {
     await initRegistry();
   },
-  // Background: the file watcher only needs to catch later edits.
-  async onReady() {
-    await initConfigWatcher();
-  },
-  async onShutdown() {
+  onShutdown() {
     shutdownRegistry();
-    await shutdownConfigWatcher();
   },
 } satisfies ServerPluginDefinition;

@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRawContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { BrowserServe } from "@plugins/framework/plugins/browser-server/core";
+import { DemoMissingError } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
 import type { DemoBackend } from "@plugins/framework/plugins/browser-server/plugins/demo/web";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/core";
 import {
   appScopeId,
   computeHash,
+  configConflict,
+  configConflictLocations,
+  configModifiedCounts,
   configScopes,
+  configTiers,
   configValues,
   createMemoryConfigStore,
   normalizeCollectionItems,
@@ -71,8 +76,9 @@ function createConfigDemoState(
 ): ConfigDemoState {
   let descriptors = initial;
   let served: ServedConfig | null = null;
+  // The user layer: each document's override, and the origin of a scope a
+  // write forked (the base it was forked from).
   const user = createMemoryConfigStore();
-  const forkOrigins = createMemoryConfigStore();
   const forkedScopes = new Map<string, Set<string>>();
 
   const descriptorOf = (path: string): ConfigDescriptor => {
@@ -100,7 +106,7 @@ function createConfigDemoState(
     const appId = scopeAppId(scopeId);
     const scoped = appId === undefined ? undefined : committed?.scopes[appId];
     if (scoped !== undefined) return readonlyProxy(scoped);
-    const fork = forkOrigins.proxy(path, scopeId);
+    const fork = user.proxy({ storePath: path, scopeId, file: "origin" });
     return fork.exists() ? fork : null;
   };
   const resolve = (
@@ -120,7 +126,7 @@ function createConfigDemoState(
     const values = readTypedConfig(
       descriptor,
       origin,
-      user.proxy(path, scopeId),
+      user.proxy({ storePath: path, scopeId, file: "override" }),
     );
     return {
       values: normalizeCollectionItems(
@@ -154,7 +160,32 @@ function createConfigDemoState(
         resolve(await gitLayer, path, scopeOf(scopeId)).values,
     });
     served = { scopes, values };
-    return [scopes, values];
+    // The other portable config values: the worker's config_v2 serves them
+    // too, over a registry that holds no descriptor yet — an answer that would
+    // read as "no conflicts, nothing modified". Claimed here, so the page (the
+    // first part DemoScope composes) answers them, as the unserved read it is.
+    const missing = (key: string) => (params: unknown) =>
+      Promise.reject(new DemoMissingError(key, params));
+    const external = { source: "external", changes: "notified" } as const;
+    const unanswered = [
+      s.serveValue(configConflict, {
+        ...external,
+        loader: missing(configConflict.key),
+      }),
+      s.serveValue(configTiers, {
+        ...external,
+        loader: missing(configTiers.key),
+      }),
+      s.serveValue(configConflictLocations, {
+        ...external,
+        loader: missing(configConflictLocations.key),
+      }),
+      s.serveValue(configModifiedCounts, {
+        ...external,
+        loader: missing(configModifiedCounts.key),
+      }),
+    ];
+    return [scopes, values, ...unanswered];
   };
 
   // The demo's `setConfig`: a FULL document `{ ...current, [key]: value }`,
@@ -178,7 +209,9 @@ function createConfigDemoState(
     }
     if (scopeId !== undefined && originOf(layer, path, scopeId) === null) {
       const base = resolve(layer, path, undefined).values;
-      forkOrigins.proxy(path, scopeId).write(base as JsonValue, null);
+      user
+        .proxy({ storePath: path, scopeId, file: "origin" })
+        .write(base as JsonValue, null);
       const ids = forkedScopes.get(path) ?? new Set<string>();
       ids.add(scopeId);
       forkedScopes.set(path, ids);
@@ -201,7 +234,7 @@ function createConfigDemoState(
     }
     const originDoc = origin.read();
     user
-      .proxy(path, scopeId)
+      .proxy({ storePath: path, scopeId, file: "override" })
       .write(
         next as JsonValue,
         originDoc === null ? null : computeHash(originDoc.content),
@@ -239,8 +272,11 @@ function createConfigDemoState(
  * forked). `config-v2.values` resolves `readTypedConfig(descriptor, git, user)`
  * for a `{ path }` or a member `{ path, scopeId }`; an unregistered path or a
  * non-member scope throws (the reader sees `loader-failed`). `conflicts`,
- * `tiers`, `raw-file` and the other settings-app keys stay unserved, and so do
- * the settings app's other write endpoints (refused like any unserved `/api`).
+ * `tiers`, `conflict-locations` and `modified-counts` are claimed and answer
+ * `DemoMissingError` (the scenario's worker serves them over an empty
+ * registry, whose answers would be stand-ins); `raw-file` needs the computer,
+ * and the settings app's other write endpoints stay unserved (refused like any
+ * unserved `/api`).
  *
  * Both values are `"notified"`: a lazy plugin's registration arriving later
  * re-renders this hook and the effect below notifies; a write notifies its own

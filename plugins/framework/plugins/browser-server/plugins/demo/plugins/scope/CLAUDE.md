@@ -38,8 +38,9 @@ Demo.Resource({ id: "config-v2", useBackend: useConfigDemoBackend })
   page's `unserved` errors last. The story — and every other key a demo
   reads — comes from the host (real portable server code, or a `needsMachine`
   read answered unavailable). The page server now carries only config_v2's
-  `Demo.Resource` backend, until the config_v2 split moves config into the
-  host too; then the page server and the composition go. A host that fails to boot throws
+  `Demo.Resource` backend, which claims every portable `config-v2.*` key ahead
+  of the host's own (empty) config registry until the committed layer reaches
+  the host; then the page server and the composition go. A host that fails to boot throws
   to the error boundary; unmount disposes the server and terminates the worker.
 - **Boot time** — every host boot writes one line to the `demo-host-boot` client log
   (`~/.singularity/worktrees/<wt>/logs/demo-host-boot.jsonl`, also the page console): the wait

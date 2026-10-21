@@ -8,7 +8,7 @@ import {
 // Imported as the literal first statement of `bin/index.ts`, before the
 // `server-core/core` barrel — so it runs before `./active-runtime` reaches
 // `plugins-active.ts` (whose top level selects the registry) and before
-// `config_v2/server/internal/config-dir.ts`, which resolves its directory at
+// `config_v2/machine/internal/config-dir.ts`, which resolves its directory at
 // module eval and throws without an identity.
 //
 // The value arrives on ARGV, from the one process that knows it: the gateway

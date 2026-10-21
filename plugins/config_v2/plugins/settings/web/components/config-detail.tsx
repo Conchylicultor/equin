@@ -715,6 +715,9 @@ function RawFileView({
       />
     );
   }
+  // The files are the desktop's: a host without the computer says so.
+  if (raw.status === "unavailable")
+    return <Placeholder tone="muted">{raw.message}</Placeholder>;
   const data = raw.data;
 
   // The running app resolves to the user-layer origin (the propagated git config).

@@ -10,7 +10,7 @@ Design: [`research/2026-08-06-global-usage-rank-most-used-ordering.md`](../../..
 
 ## Why a DB table and not config
 
-Usage counts cannot live in config: `forkConfig` copies the config dir into each
+Usage counts cannot live in config: the worktree workspace's `forkConfigDir` copies the config dir into each
 new worktree and never syncs back, so counts would fragment across worktrees;
 and `listField` treats array position as canonical, so "reordering" in config
 means rewriting the authored array. Config stays the AUTHORED order; usage order

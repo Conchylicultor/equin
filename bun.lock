@@ -1497,6 +1497,10 @@
     "plugins/config_v2": {
       "name": "@singularity/plugin-config_v2",
     },
+    "plugins/config_v2/plugins/browser-store": {
+      "name": "@singularity/plugin-config_v2-browser-store",
+      "version": "0.0.1",
+    },
     "plugins/config_v2/plugins/config-link": {
       "name": "@singularity/plugin-config_v2-config-link",
     },
@@ -7635,6 +7639,8 @@
     "@singularity/plugin-code-explorer-file-resolve": ["@singularity/plugin-code-explorer-file-resolve@workspace:plugins/code-explorer/plugins/file-resolve"],
 
     "@singularity/plugin-config_v2": ["@singularity/plugin-config_v2@workspace:plugins/config_v2"],
+
+    "@singularity/plugin-config_v2-browser-store": ["@singularity/plugin-config_v2-browser-store@workspace:plugins/config_v2/plugins/browser-store"],
 
     "@singularity/plugin-config_v2-config-link": ["@singularity/plugin-config_v2-config-link@workspace:plugins/config_v2/plugins/config-link"],
 

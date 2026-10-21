@@ -1,8 +1,6 @@
-import { join } from "node:path";
 import { computeHash } from "../../core";
 import type { ConfigDescriptor, JsonValue } from "../../core";
-import { jsoncConfigProxy } from "./jsonc-proxy";
-import { userScopedDir } from "./scope-paths";
+import { ConfigStore } from "./host-services";
 import { getConfig } from "./registry";
 import { hasFieldStorageProvider } from "./field-storage-providers";
 
@@ -22,14 +20,13 @@ import { hasFieldStorageProvider } from "./field-storage-providers";
 // exists here. scope-fork.ts (which already imports from ./registry) likewise
 // imports from here.
 //
-// Returns the redacted snapshot, its content hash, and the scoped dir so callers
-// can write origin only (setConfig) or origin + override (forkDescriptor) from
-// the exact same bytes + hash.
+// Returns the redacted snapshot and its content hash so callers can write origin
+// only (setConfig) or origin + override (forkDescriptor) from the exact same
+// bytes + hash.
 export function buildScopeSnapshot(
   descriptor: ConfigDescriptor,
-  hierarchyPath: string,
   scopeId: string,
-): { snapshot: Record<string, unknown>; hash: string; dir: string } {
+): { snapshot: Record<string, unknown>; hash: string } {
   const resolved = getConfig(descriptor, scopeId) as Record<string, unknown>;
   const snapshot: Record<string, unknown> = {};
   for (const [key, field] of Object.entries(descriptor.fields)) {
@@ -37,9 +34,8 @@ export function buildScopeSnapshot(
     snapshot[key] = resolved[key];
   }
 
-  const dir = userScopedDir(hierarchyPath, scopeId);
   const hash = computeHash(snapshot as JsonValue);
-  return { snapshot, hash, dir };
+  return { snapshot, hash };
 }
 
 // Write ONLY the scoped origin (`<name>.origin.jsonc`) from the shared snapshot.
@@ -48,9 +44,11 @@ export function buildScopeSnapshot(
 // both origin AND override and so calls buildScopeSnapshot directly.
 export function writeScopedOriginSnapshot(
   descriptor: ConfigDescriptor,
-  hierarchyPath: string,
+  storePath: string,
   scopeId: string,
 ): void {
-  const { snapshot, hash, dir } = buildScopeSnapshot(descriptor, hierarchyPath, scopeId);
-  jsoncConfigProxy(join(dir, `${descriptor.name}.origin.jsonc`)).write(snapshot as JsonValue, hash);
+  const { snapshot, hash } = buildScopeSnapshot(descriptor, scopeId);
+  ConfigStore.get()
+    .proxy({ storePath, scopeId, file: "origin" })
+    .write(snapshot as JsonValue, hash);
 }

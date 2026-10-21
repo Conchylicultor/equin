@@ -7,8 +7,9 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
  * (§ 4) and, for where it came from,
  * `research/2026-08-30-global-agent-config-write-revert-ledger.md`.
  *
- * **Deliberately NOT inside any domain's own data.** config_v2's `forkConfig`
- * recursively copies main's config tree into every new worktree, so a ledger
+ * **Deliberately NOT inside any domain's own data.** A new worktree's workspace
+ * recursively copies main's config tree into its own (`forkConfigDir`,
+ * conversations/workspace/worktree), so a ledger
  * living there would be inherited by a fresh worktree — whose first
  * start-repair would then "revert" files that are legitimately in place,
  * silently reverting the user's config to an unrelated worktree's pre-agent
