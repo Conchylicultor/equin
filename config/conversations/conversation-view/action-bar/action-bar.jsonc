@@ -24,10 +24,10 @@
     "conversations.conversation-view.explorer:explorer",
     "apps.agent-manager.pages-nav:pages",
     "conversations.conversation-view.artifacts:artifacts",
-    "conversations.conversation-view.push-profiling:push-profiling",
     "conversations.conversation-view.commits-graph:commits-graph",
     "review:review",
     { "item": "conversations.conversation-view.jsonl-viewer.event-counter:event-counter", "hidden": true },
-    { "item": "conversations.conversation-view.vscode:vscode", "hidden": true }
+    { "item": "conversations.conversation-view.vscode:vscode", "hidden": true },
+    { "item": "conversations.conversation-view.push-profiling:push-profiling", "hidden": true }
   ]
 }
