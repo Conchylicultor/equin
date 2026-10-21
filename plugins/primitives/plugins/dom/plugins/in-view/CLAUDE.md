@@ -70,6 +70,7 @@ allowlisting a copy.
   - Imported by:
     - `apps/website/pages/foundations`
     - `conversations/conversation-view/jsonl-viewer`
+    - `primitives/css/working-dots`
     - `primitives/cursor-pagination`
     - `primitives/data-view`
     - `primitives/dom/auto-scroll`

@@ -4974,6 +4974,10 @@
       "name": "@singularity/plugin-primitives-css-viewport-overlay",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/working-dots": {
+      "name": "@singularity/plugin-primitives-css-working-dots",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/yield": {
       "name": "@singularity/plugin-primitives-css-yield",
       "version": "0.0.1",
@@ -9283,6 +9287,8 @@
     "@singularity/plugin-primitives-css-ui-kit": ["@singularity/plugin-primitives-css-ui-kit@workspace:plugins/primitives/plugins/css/plugins/ui-kit"],
 
     "@singularity/plugin-primitives-css-viewport-overlay": ["@singularity/plugin-primitives-css-viewport-overlay@workspace:plugins/primitives/plugins/css/plugins/viewport-overlay"],
+
+    "@singularity/plugin-primitives-css-working-dots": ["@singularity/plugin-primitives-css-working-dots@workspace:plugins/primitives/plugins/css/plugins/working-dots"],
 
     "@singularity/plugin-primitives-css-yield": ["@singularity/plugin-primitives-css-yield@workspace:plugins/primitives/plugins/css/plugins/yield"],
 

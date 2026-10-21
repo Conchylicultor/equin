@@ -73,6 +73,7 @@ const THIS_CHECK = "plugins/primitives/plugins/css/check/index.ts";
 const NOT_A_LAYOUT_MECHANIC: Record<string, string> = {
   badge: "identity chip (a rigid leaf), not a way to arrange boxes",
   "bouncing-dots": "activity indicator — a leaf",
+  "working-dots": "activity indicator — a leaf",
   card: "chrome (border + bg + pad); structure is chosen before chrome",
   "color-picker": "a control, not a layout mechanic",
   "control-panel":

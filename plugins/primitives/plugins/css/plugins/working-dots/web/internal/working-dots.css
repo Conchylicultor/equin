@@ -1,0 +1,73 @@
+/*
+ * Geometry for <WorkingDots>: three dots of --wd-dot, centres 5/3 of a dot apart (shapes.ts PITCH), in a
+ * box tall enough for the shapes' rise. The engine writes each dot's transform
+ * and each halo's opacity/scale per frame; everything here is the rest pose.
+ */
+.working-dots {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: calc(var(--wd-dot, 6px) * 13 / 3);
+  height: calc(var(--wd-dot, 6px) * 7 / 3);
+}
+
+.working-dots-dot {
+  position: absolute;
+  top: calc(var(--wd-dot, 6px) * 2 / 3);
+  width: var(--wd-dot, 6px);
+  height: var(--wd-dot, 6px);
+  border-radius: 9999px;
+  background: currentColor;
+  will-change: transform;
+}
+
+.working-dots-dot:nth-of-type(1) { left: 0; }
+.working-dots-dot:nth-of-type(2) { left: calc(var(--wd-dot, 6px) * 5 / 3); }
+.working-dots-dot:nth-of-type(3) { left: calc(var(--wd-dot, 6px) * 10 / 3); }
+
+.working-dots-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0;
+}
+
+/*
+ * <WorkingText>: a highlight sweeps across the label (the text is the gradient,
+ * clipped to the glyphs), and a new label slides up out of a soft blur.
+ */
+.working-text {
+  background: linear-gradient(
+    90deg,
+    var(--muted-foreground) 0%,
+    var(--muted-foreground) 35%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 65%,
+    var(--muted-foreground) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation:
+    working-text-shimmer 2.2s linear infinite,
+    working-text-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes working-text-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -150% 0; }
+}
+
+@keyframes working-text-in {
+  from { opacity: 0; transform: translateY(5px); filter: blur(2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .working-text {
+    animation: none;
+    color: var(--muted-foreground);
+    background: none;
+  }
+}

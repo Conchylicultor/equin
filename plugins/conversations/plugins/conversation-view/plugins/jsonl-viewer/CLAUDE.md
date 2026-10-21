@@ -170,21 +170,22 @@ back.
   - Contributes:
     - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
     - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×7
     - `primitives/dom/auto-scroll` ×5
     - `primitives/collapsible` ×4
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
     - `conversations/conversation-view/pending-turn` ×3
     - `primitives/css/ui-kit` ×3
+    - `primitives/css/working-dots` ×2
     - `primitives/relative-time` ×2
     - `primitives/slot-render` ×2
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `network/live.useLive`
-    - `primitives/css/bouncing-dots.BouncingDots`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/grow.growClass`
+    - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

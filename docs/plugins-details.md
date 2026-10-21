@@ -14190,21 +14190,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 50 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 52 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `primitives/live-state` ×7
               - `primitives/dom/auto-scroll` ×5
               - `primitives/collapsible` ×4
               - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
               - `conversations/conversation-view/pending-turn` ×3
               - `primitives/css/ui-kit` ×3
+              - `primitives/css/working-dots` ×2
               - `primitives/relative-time` ×2
               - `primitives/slot-render` ×2
               - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
               - `network/live.useLive`
-              - `primitives/css/bouncing-dots.BouncingDots`
               - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
               - `primitives/css/grow.growClass`
+              - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -35685,7 +35686,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/deployments`
               - `apps/deploy/remote-deploy`
               - `conversations/agent-thread`
-              - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
         - **`card`** — Card chrome primitive (rounded + border + bg + padding) with the Ctrl+A select-scope baked into its root, so cards are a sanctioned home for ad-hoc card markup.
           - Web:
@@ -36146,10 +36146,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 113 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 114 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×32
+              - `conversations` ×17
               - `primitives` ×17
-              - `conversations` ×16
               - `debug` ×8
               - `page` ×6
               - `ui` ×6
@@ -37021,8 +37021,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 418 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×108
+            - Imported by: 419 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×109
               - `apps` ×93
               - `conversations` ×52
               - `page` ×25
@@ -37101,6 +37101,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `screenshot/draw-on-app`
           - Exemptions:
             - Exempted by: `primitives/css/ui-kit` (0 debt)
+        - **`working-dots`** — Three-dot working indicator with organic motion: <WorkingDots mood> varies each pass (duration, amplitude, lag) through smooth noise, carries the dots on springs with a faint overshoot and stretch, holds between passes with a breath, and draws its style mix (gooey, wave, leap, orbit, glow) and energy from the mood (working / thinking / writing / tool). Sized from the ambient ControlSize; pauses off screen; still under reduced motion. <WorkingText> is the label beside it: a highlight sweeping across the words, each new label sliding in.
+          - Web:
+            - Uses:
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSize`
+              - `primitives/css/ui-kit.DensityControlled`
+              - `primitives/css/ui-kit.useControlSize`
+              - `primitives/dom/in-view.useInView`
+            - Exports (types):
+              - `WorkingDotsProps`
+              - `WorkingMood`
+              - `WorkingTextProps`
+            - Exports (values):
+              - `WorkingDots`
+              - `WorkingText`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --primary-text`
+            - Imported by: `conversations/conversation-view/jsonl-viewer`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
             - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
@@ -38367,6 +38388,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/website/pages/foundations`
               - `conversations/conversation-view/jsonl-viewer`
+              - `primitives/css/working-dots`
               - `primitives/cursor-pagination`
               - `primitives/data-view`
               - `primitives/dom/auto-scroll`
@@ -48169,10 +48191,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 496 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 497 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×109
               - `conversations` ×88
-              - `primitives` ×76
+              - `primitives` ×77
               - `debug` ×35
               - `page` ×32
               - `plugin-meta` ×26

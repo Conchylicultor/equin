@@ -12,7 +12,15 @@ import {
   type TranscriptWindow,
 } from "../use-transcript-window";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
+import {
+  WorkingDots,
+  WorkingText,
+} from "@plugins/primitives/plugins/css/plugins/working-dots/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { conversationPartialMessage } from "@plugins/conversations/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { workingActivityOf } from "../working-activity";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
@@ -33,27 +41,45 @@ const CONVERSATION_SUBJECT: TranscriptSubject = { kind: "conversation" };
 
 /**
  * The transcript's one activity line, at its foot under the queued messages:
- * what the agent is doing — starting, or working on a turn — with how long it
- * has been at it; bare dots while a message is on its way to an idle agent.
+ * what the agent is doing — starting, or working on a turn (read from the
+ * transcript's tail: writing, the tool it is running, thinking) — with how long
+ * it has been at it; bare dots while a message is on its way to an idle agent.
  * The message cards above draw none of their own.
  */
 function TranscriptActivity({
   phase,
   startAt,
+  conversationId,
+  events,
 }: {
   phase: "starting" | "working" | "sending";
   startAt: number | null;
+  conversationId: string;
+  events: readonly JsonlEvent[];
 }) {
+  const partial = useLive(conversationPartialMessage, { id: conversationId });
+  // Not known yet, unavailable or failed: read as not streaming — the label then
+  // falls back to what the transcript itself says the agent is doing.
+  const streaming = partial.status === "ready" && partial.data !== null;
+  const working = workingActivityOf(events, streaming);
   return (
     <Stack direction="row" align="center" gap="sm" className="px-xs py-xs">
-      <BouncingDots />
+      <WorkingDots mood={phase === "working" ? working.mood : "working"} />
+      {phase !== "sending" && (
+        <Line>
+          <Text as="span" variant="caption">
+            <WorkingText>
+              {phase === "starting" ? "Starting the agent" : working.label}
+            </WorkingText>
+          </Text>
+        </Line>
+      )}
       {phase !== "sending" && startAt != null && (
         <Text
           as="span"
           variant="caption"
           className="tabular-nums text-muted-foreground/60"
         >
-          {phase === "starting" ? "Starting the agent · " : "Working for "}
           <ElapsedTime since={new Date(startAt)} />
         </Text>
       )}
@@ -92,7 +118,7 @@ function StartingTranscript({ startAt }: { startAt: number | null }) {
   return (
     <Center className={`${growClass()} pb-2xl`}>
       <Stack gap="sm" align="center">
-        <BouncingDots />
+        <WorkingDots />
         <Text as="div" variant="label" tone="muted">
           Starting the agent
         </Text>
@@ -224,7 +250,12 @@ function JsonlPaneInner({
         />
       ))}
       {activity !== null && !isStarting && (
-        <TranscriptActivity phase={activity} startAt={workingStartAt} />
+        <TranscriptActivity
+          phase={activity}
+          startAt={workingStartAt}
+          conversationId={conversation.id}
+          events={events}
+        />
       )}
       {pending.status === "error" && (
         <ResourceErrorInline
