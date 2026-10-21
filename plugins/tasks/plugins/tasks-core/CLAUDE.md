@@ -69,7 +69,7 @@ is split: the pure policy stays in `server/internal/push-ledger/`, the git walk 
 the desktop's `machine/internal/push-ledger/`, and the portable code reaches it
 through the **`PushLedger` host service** (`server/internal/push-ledger/service.ts`,
 `{ ensureFresh() }`): the reads that must see a complete ledger
-(`listPushesForAttempt`, `listPushesByPushId`) and this plugin's `onReady`
+(`listPushesForAttempt`) and this plugin's `onReady`
 catch-up call `PushLedger.get().ensureFresh()`. The desktop provider is
 `tasks-core#machine` (the memo below, plus the ref reaction in its `register`);
 a host without git provides `plugins/seeded-push-ledger` — nothing to do, the
@@ -396,7 +396,6 @@ serves them.
     - `listConversationsForInfra`
     - `listDependentIds`
     - `listHibernationCandidates`
-    - `listPushesByPushId`
     - `listPushesForAttempt`
     - `listRetainedConversations`
     - `listTasks`
@@ -524,7 +523,7 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 72 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×30
     - `tasks` ×17
     - `active-data` ×5
@@ -538,7 +537,6 @@ serves them.
     - `database/query`
     - `improve`
     - `plugin-meta/plugin-health`
-    - `review/plugin-changes`
   - Extended by:
     - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
     - `apps/places/ask` (table `conversations_ext_places_ask`)

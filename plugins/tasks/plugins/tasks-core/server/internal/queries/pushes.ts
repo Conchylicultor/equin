@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { pushes } from "../tables";
 import { PushLedger } from "../push-ledger/service";
@@ -28,13 +28,4 @@ export async function listPushesForAttempt(attemptId: string): Promise<Push[]> {
     .from(pushes)
     .where(eq(pushes.attemptId, attemptId))
     .orderBy(desc(pushes.createdAt));
-}
-
-export async function listPushesByPushId(pushId: string): Promise<Push[]> {
-  await PushLedger.get().ensureFresh();
-  return db
-    .select()
-    .from(pushes)
-    .where(eq(pushes.pushId, pushId))
-    .orderBy(asc(pushes.createdAt));
 }

@@ -6,7 +6,7 @@ import {
   decodeTextBytes,
   readHostPathText,
 } from "@plugins/infra/plugins/host-fs/server";
-import { resolveInsideRoot } from "./contained-path";
+import { resolveInsideRoot } from "../../server/internal/contained-path";
 
 // Every git read in this file serves an open HTTP request from the code
 // explorer: a local, metadata-or-blob read that finishes in milliseconds. The

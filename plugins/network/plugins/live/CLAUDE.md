@@ -2177,7 +2177,7 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 260 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 262 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×71
     - `conversations` ×49
     - `debug` ×27
@@ -2185,11 +2185,11 @@ never add one.
     - `infra` ×15
     - `active-data` ×12
     - `page` ×10
-    - `primitives` ×9
+    - `primitives` ×10
     - `build` ×6
+    - `code-explorer` ×4
     - `plugin-meta` ×4
     - `auth` ×3
-    - `code-explorer` ×3
     - `review` ×3
     - `apps-core` ×2
     - `config_v2` ×2
@@ -2222,7 +2222,6 @@ never add one.
     - `build/build-logs` (1 debt)
     - `build/build-profiling` (1 debt)
     - `build/serve-composition` (1 debt)
-    - `code-explorer/file-resolve` (1 debt)
     - `debug/profiling/build` (1 debt)
     - `debug/slow-ops/cluster` (1 debt)
     - `debug/timeline` (1 debt)
@@ -2238,13 +2237,8 @@ never add one.
     - `page/place` (2 debt)
     - `plugin-meta/plugin-health` (1 debt)
     - `primitives/data-view` (0 debt)
-    - `primitives/diff-view` (3 debt)
-    - `primitives/file-viewer` (1 debt)
-    - `primitives/file-viewer/image` (1 debt)
     - `primitives/live-state` (0 debt)
     - `primitives/optimistic-mutation` (0 debt)
-    - `review/code-review` (1 debt)
-    - `review/plugin-changes` (1 debt)
     - `screenshot` (1 debt)
     - `stats/commits` (4 debt)
     - `stats/cost` (8 debt)

@@ -57,11 +57,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`build`** [exempt] [12 sub-plugins] — Trigger `./singularity build` from the toolbar.
 
-- **`code-explorer`** [exempt] — Worktree-scoped file reads: raw/diff/image content and directory listings by attempt id or the reserved `main` sentinel.
+- **`code-explorer`** [exempt] — Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: the raw image route, the sha-addressed commit-info / commit-files live values, and push-files — one push's files, its…
   - Plugins:
-    - **`code-api`** — Typed contracts for the /api/code/* endpoints (tree, file, diff, image, push, commit). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation…
+    - **`code-api`** — Typed contracts for the worktree code reads: the /api/code/:worktree/image route and the code.* live values (file, file-diff, dir, commit-info, commit-files, push-files). A leaf library so both…
     - **`commit-detail`** — The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also…
-    - **`file-resolve`** [exempt] — Fuzzy file path resolution via segment-subsequence matching against git ls-files.
+    - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files.
 
 - **`config_v2`** [test helpers] [exempt] [6 sub-plugins] — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the…
 
@@ -247,8 +247,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Plugins:
-    - **`code-review`** [exempt] — File-by-file code review section for the review pane.
-    - **`plugin-changes`** [exempt] (excluded) — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
+    - **`code-review`** — File-by-file code review section for the review pane.
+    - **`plugin-changes`** [exempt] (excluded) — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main, and serves one push's (review.push-plugin-changes).
       - Plugins:
         - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
         - **`file-changes`** (excluded) — File-level diff section for per-plugin review cards.

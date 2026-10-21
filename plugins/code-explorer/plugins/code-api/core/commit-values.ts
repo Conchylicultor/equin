@@ -53,3 +53,24 @@ export const commitFiles = liveValue("code.commit-files", {
   params: ["worktree", "sha"],
   refusals: COMMIT_REFUSALS,
 });
+
+/**
+ * The files a push changed, by `(worktree, pushId)`: the push's range — its
+ * `pushes` rows ordered by git ancestry, the tip the one commit no other of
+ * them has as a parent, the base the first parent of the earliest commit on
+ * the tip's first-parent chain — diffed as `baseSha..headSha`. `worktree`
+ * names the object store, as for {@link commitInfo}; the rows are the serving
+ * database's. Pushed, and recomputed when a row of the push lands (its
+ * `pushes` rows are the value's declared reads); the diff of a known range
+ * never moves.
+ *
+ * Refused: `missing` (no push `pushId`, or one of its commits is not in the
+ * store), `no-checkout` (an absolute-path `worktree` that is not a checkout's
+ * toplevel), `no-base` (the push's earliest commit is a root commit: there is
+ * no parent to diff from).
+ */
+export const pushFiles = liveValue("code.push-files", {
+  schema: CommitFilesSchema,
+  params: ["worktree", "pushId"],
+  refusals: [...COMMIT_REFUSALS, "no-base"],
+});

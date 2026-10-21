@@ -11,11 +11,10 @@
     - `ConfigV2.WebRegister` "config"
   - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×7
+    - `primitives/live-state` ×3
     - `config_v2` ×2
     - `conversations/conversation-view/code` ×2
-    - `primitives/live-state` ×2
     - `conversations.useConversationById`
-    - `infra/endpoints.useEndpoint`
     - `network/live.useLive`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
@@ -57,8 +56,6 @@
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
     - `ui/tokens/type-scale --line-height-caption`
-- Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/use-push-files.ts` (debt)
 - Shared:
   - Exports (values): `reviewConfig`
 

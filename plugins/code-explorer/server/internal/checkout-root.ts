@@ -4,7 +4,7 @@ import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 // A local metadata read serving an open HTTP request; only a wedged child
-// reaches this, and it then fails as a named error (see get-file-content.ts).
+// reaches this, and it then fails as a named error (see machine/internal/get-file-content.ts).
 const GIT_TIMEOUT_MS = 30_000;
 
 // Positive answers only: a checkout root stays one, while a folder that is not

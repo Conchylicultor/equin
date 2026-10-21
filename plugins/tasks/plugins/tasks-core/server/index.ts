@@ -126,10 +126,7 @@ export {
 // Only the accessors that guarantee a ledger covering `main` before they read.
 // The projection's own ungated reads stay internal by construction — see
 // ./internal/push-ledger/raw-reads.ts.
-export {
-  listPushesForAttempt,
-  listPushesByPushId,
-} from "./internal/queries/pushes";
+export { listPushesForAttempt } from "./internal/queries/pushes";
 export { PushLedger } from "./internal/push-ledger/service";
 export type { PushLedgerImpl } from "./internal/push-ledger/service";
 

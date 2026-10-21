@@ -1,17 +1,20 @@
 # code-api
 
-Typed `defineEndpoint` contracts for the worktree code endpoints (`/api/code/*`:
-file, diff, image, push), and the live values the code reads have moved onto
-(`commit-values.ts`: `code.commit-info` / `code.commit-files`, served by
-`code-explorer`).
+The typed `defineEndpoint` contract of the one worktree code route left
+(`GET /api/code/:worktree/image`, an `<img>` address), and the live values the
+code reads have moved onto,
+served by `code-explorer` (see its *Live reads*): `commit-values.ts`
+(`code.commit-info` / `code.commit-files` / `code.push-files`, sha-addressed,
+immutable), `code-values.ts` (`code.file`, `code.file-diff`, the paged
+`code.dir`; `needsMachine: CODE_MACHINE`).
 
 These contracts live in their own leaf library plugin (no contributions) so both
 sides of the code-viewing relationship can depend on them **downward**, without a
 cycle:
 
-- `code-explorer` owns the HTTP routes and server handlers.
-- The conversation `file-pane` / `commits-graph` consumers, and the
-  `file-viewer` primitive's git reads, fetch these endpoints (`→ code-api`).
+- `code-explorer` owns the image route and serves the values.
+- The conversation `file-pane` / `commits-graph` consumers, diff-view, review
+  and the `file-viewer` primitive read them (`→ code-api`).
 
 The contracts never sit in `code-explorer/core`: a consumer would then depend on
 the plugin that owns the handlers, and any back-edge from it (as its old explorer
@@ -23,30 +26,31 @@ on the endpoints primitive and `EditedFileSchema` (a pure schema sink in the
 
 ## Plugin reference
 
-- Description: Typed contracts for the /api/code/* endpoints (tree, file, diff, image, push, commit). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle.
+- Description: Typed contracts for the worktree code reads: the /api/code/:worktree/image route and the code.* live values (file, file-diff, dir, commit-info, commit-files, push-files). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle.
 - Core:
   - Uses:
     - `conversations/conversation-view/code.EditedFileSchema`
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `infra/endpoints.interpolatePath`
-    - `infra/host-fs.FileVersionSchema`
     - `network/live.liveValue`
     - `primitives/commit-list.CommitRowSchema`
   - Exports (types):
     - `CodeDirEntry`
+    - `CodeFile`
+    - `CodeFileDiff`
     - `CommitFiles`
   - Exports (values):
-    - `codeFileVersion`
+    - `CODE_MACHINE`
+    - `codeDir`
+    - `codeFile`
+    - `codeFileDiff`
     - `codeImageUrl`
     - `commitFiles`
     - `CommitFilesSchema`
     - `commitInfo`
-    - `getFileContent`
-    - `getFileDiff`
     - `getImageContent`
-    - `getPushFiles`
-    - `listCodeDir`
+    - `pushFiles`
 - Cross-plugin:
   - Imported by: `primitives/file-viewer`
 

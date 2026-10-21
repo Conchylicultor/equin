@@ -1,30 +1,32 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { commitFilesServed, commitInfoServed } from "./internal/commit-values";
-import { handleFileContent } from "./internal/file-content-handler";
-import { handleFileDiff } from "./internal/file-diff-handler";
-import { handleImageContent } from "./internal/image-handler";
-import { handleListDir } from "./internal/list-dir-handler";
-import { handlePushFiles } from "./internal/push-handler";
 import {
-  getFileContent,
-  getFileDiff,
-  getImageContent,
-  getPushFiles,
-  listCodeDir,
-} from "@plugins/code-explorer/plugins/code-api/core";
+  commitFilesServed,
+  commitInfoServed,
+  pushFilesServed,
+} from "./internal/commit-values";
+import { handleImageContent } from "./internal/image-handler";
+import { getImageContent } from "@plugins/code-explorer/plugins/code-api/core";
 
-export { resolveWorktreePath } from "./internal/resolve-worktree-path";
-export { resolveParentSha, getRangeFiles } from "./internal/get-push-files";
+export {
+  resolveWorkspaceRoot,
+  resolveWorktreePath,
+} from "./internal/resolve-worktree-path";
+export { getRangeFiles } from "./internal/get-push-files";
+export {
+  pushRangeReads,
+  resolvePushRange,
+  type PushRange,
+} from "./internal/push-range";
 
 export default {
   description:
-    "Worktree-scoped file reads: raw/diff/image content and directory listings by attempt id or the reserved `main` sentinel.",
-  contributions: [...commitInfoServed.declare, ...commitFilesServed.declare],
+    "Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: the raw image route, the sha-addressed commit-info / commit-files live values, and push-files — one push's files, its range read from its ledger rows by ancestry.",
+  contributions: [
+    ...commitInfoServed.declare,
+    ...commitFilesServed.declare,
+    ...pushFilesServed.declare,
+  ],
   httpRoutes: {
-    [getFileContent.route]: handleFileContent,
-    [getFileDiff.route]: handleFileDiff,
     [getImageContent.route]: handleImageContent,
-    [getPushFiles.route]: handlePushFiles,
-    [listCodeDir.route]: handleListDir,
   },
 } satisfies ServerPluginDefinition;

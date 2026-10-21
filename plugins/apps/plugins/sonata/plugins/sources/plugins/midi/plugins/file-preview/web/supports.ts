@@ -7,11 +7,10 @@ import {
 const MIDI_EXTENSIONS = new Set(["mid", "midi"]);
 
 /**
- * The MIDI renderer is the native view of a `.mid` / `.midi` HOST file. A
- * checkout file is not offered: code-api's raw route serves image formats only.
+ * The MIDI renderer is the native view of a `.mid` / `.midi` file, whichever
+ * source holds it: its bytes are file-viewer's `file-viewer.bytes`, which reads
+ * a host file and a workspace file (on disk or as of a ref) alike.
  */
 export function supportsMidi(file: FileRef): RendererMatch {
-  return file.source === "host" && MIDI_EXTENSIONS.has(fileExtension(file.path))
-    ? "native"
-    : false;
+  return MIDI_EXTENSIONS.has(fileExtension(file.path)) ? "native" : false;
 }

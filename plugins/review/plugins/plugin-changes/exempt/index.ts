@@ -2,17 +2,9 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
-    rule: "live/no-endpoint-read",
-    paths: ["web/use-plugin-changes.ts"],
-    kind: "debt",
-    task: "task-1791560308-woqgfi",
-    reason:
-      "A request/response server read (useEndpoint / useEndpointResource / TanStack useQuery family / fetchEndpoint in a queryFn) not yet moved onto a liveValue or liveCollection read with useLive.",
-  },
-  {
     rule: "boundaries/no-platform-api",
     paths: [
-      "server/internal/handle-plugin-changes.ts",
+      "server/internal/push-plugin-changes.ts",
       "server/internal/main-plugins-dir.ts",
     ],
     kind: "debt",

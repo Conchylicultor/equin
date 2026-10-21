@@ -9,7 +9,11 @@ import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/she
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
   useResolvedFile,
   FileDisambiguation,
@@ -100,9 +104,12 @@ function FilePeekPaneBody() {
   });
 
   // The header's title and renderer tabs read this (see file-peek-header): the
-  // requested path and no tabs until the path resolves to one file.
+  // requested path and no tabs until the path resolves to one file (or to
+  // none, whose miss the file content reports).
   const settled =
-    resolved.status !== "loading" && resolved.status !== "ambiguous";
+    resolved.status === "exact" ||
+    resolved.status === "resolved" ||
+    resolved.status === "not-found";
   const header = useMemo(
     () =>
       settled
@@ -127,6 +134,27 @@ function FilePeekPaneBody() {
     );
   }
 
+  // The resolution itself could not be answered (a refused workspace, a failed
+  // read, a host without the computer): said as such, never read as a miss.
+  if (resolved.status === "error" || resolved.status === "unavailable") {
+    return (
+      <FilePeekHeaderProvider value={header}>
+        <PaneChrome pane={filePeekPane}>
+          {resolved.status === "error" ? (
+            <ResourceErrorInline
+              variant="block"
+              subject={`where ${filePath} is`}
+              error={resolved.read.error}
+              refetch={resolved.read.refetch}
+            />
+          ) : (
+            <Placeholder>{resolved.message}</Placeholder>
+          )}
+        </PaneChrome>
+      </FilePeekHeaderProvider>
+    );
+  }
+
   if (resolved.status === "ambiguous") {
     return (
       <FilePeekHeaderProvider value={header}>
@@ -134,6 +162,7 @@ function FilePeekPaneBody() {
           <FileDisambiguation
             query={filePath}
             matches={resolved.matches}
+            total={resolved.total}
             activationFor={(fp) =>
               openPane.to(
                 filePeekPane,

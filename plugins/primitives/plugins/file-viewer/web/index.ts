@@ -36,7 +36,7 @@ export {
 
 export default {
   description:
-    "Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, useFileText reading a FileRef's text from the host (infra/host-fs) or a git checkout (code-api), and useFileBytes its raw bytes — host files only for now (a workspace file is refused unsupported until code-api's byte read has a live form).",
+    "Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, useFileText reading a FileRef's text from the host (infra/host-fs) or a git checkout (code-api), and useFileBytes its raw bytes (a host file through host-fs, a workspace file through code-explorer).",
   contributions: [],
   slots: { ...FileViewerSlots },
 } satisfies PluginDefinition;

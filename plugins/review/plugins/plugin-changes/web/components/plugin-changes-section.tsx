@@ -7,7 +7,13 @@ function WorktreePluginChanges({ conversationId }: { conversationId: string }) {
   return <PluginChangesList conversationId={conversationId} {...result} />;
 }
 
-function PushPluginChanges({ conversationId, pushId }: { conversationId: string; pushId: string }) {
+function PushPluginChanges({
+  conversationId,
+  pushId,
+}: {
+  conversationId: string;
+  pushId: string;
+}) {
   const result = usePushPluginChanges(pushId);
   return <PluginChangesList conversationId={conversationId} {...result} />;
 }
@@ -20,7 +26,12 @@ export function PluginChangesSection({
   source: Source;
 }) {
   if (source.kind === "push") {
-    return <PushPluginChanges conversationId={conversationId} pushId={source.pushId} />;
+    return (
+      <PushPluginChanges
+        conversationId={conversationId}
+        pushId={source.pushId}
+      />
+    );
   }
   return <WorktreePluginChanges conversationId={conversationId} />;
 }

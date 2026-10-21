@@ -6,7 +6,7 @@ import type {
   MouseEvent,
   ReactNode,
 } from "react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import {
   Decoration,
   Diff,
@@ -22,10 +22,17 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { selectionRange } from "@plugins/primitives/plugins/dom/plugins/dom-selection/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
-import { useFileDiff } from "../use-file-diff";
-import { useDiffTokens } from "../use-diff-tokens";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  ResourceErrorInline,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
+import {
+  codeFile,
+  codeFileDiff,
+} from "@plugins/code-explorer/plugins/code-api/core";
+import { diffLang, useDiffTokens } from "../use-diff-tokens";
 import type { DiffTokens } from "../use-diff-tokens";
 import "./diff-view.css";
 
@@ -320,25 +327,39 @@ export function DiffView({
   head?: string;
   from?: string;
 }) {
-  const state = useFileDiff(worktree, path, base, head, from);
+  const read = useLive(codeFileDiff, { worktree, path, base, head, from });
 
-  if (state.kind === "loading") {
-    return <Loading />;
-  }
-  if (state.kind === "error") {
-    const message =
-      state.status === 404
-        ? "File not found."
-        : state.status === 413
-          ? "Diff is too large to preview."
-          : state.message || "Failed to load diff.";
-    return <Placeholder tone="error">{message}</Placeholder>;
+  switch (read.status) {
+    case "unavailable":
+      return <Placeholder>{read.message}</Placeholder>;
+    case "loading":
+      return <Loading />;
+    case "error": {
+      const { error } = read;
+      if (error.kind === "refused" && error.code === "missing") {
+        return <Placeholder tone="error">File not found.</Placeholder>;
+      }
+      if (error.kind === "refused" && error.code === "too-large") {
+        return (
+          <Placeholder tone="error">Diff is too large to preview.</Placeholder>
+        );
+      }
+      return (
+        <ResourceErrorInline
+          variant="block"
+          error={error}
+          refetch={read.refetch}
+          subject="the diff"
+        />
+      );
+    }
+    case "ready":
+      break;
   }
 
-  // Self-keyed inner body: remounting on file identity re-initializes
-  // expandedHunks / totalLines / fileContentRef to null, replacing the prior
-  // reset effect. The remount stays owned by the primitive so no consumer can
-  // forget the key.
+  // Self-keyed inner body: remounting on file identity re-initializes the
+  // expansion state. The remount stays owned by the primitive so no consumer
+  // can forget the key.
   const instanceKey = [worktree, path, base ?? "", head ?? "", from ?? ""].join(
     ":",
   );
@@ -350,9 +371,36 @@ export function DiffView({
       base={base}
       head={head}
       from={from}
-      diff={state.diff}
+      diff={read.data.diff}
     />
   );
+}
+
+/**
+ * One side's whole-file text as the diff body uses it: not known yet, known
+ * (`null` — the server refused to read it as text: not there, binary, too
+ * large — is a side with no text, an answer about the file), or a failed read.
+ */
+type SideText =
+  | { state: "loading" }
+  | { state: "text"; content: string | null }
+  | { state: "failed"; error: Error; refetch: () => Promise<void> };
+
+function sideText(
+  read: ResourceResult<{ content: string }> | undefined,
+): SideText {
+  // No read: the side is not needed (no highlighting for this language).
+  if (read === undefined) return { state: "text", content: null };
+  switch (read.status) {
+    case "loading":
+      return { state: "loading" };
+    case "ready":
+      return { state: "text", content: read.data.content };
+    case "error":
+      return read.error.kind === "refused"
+        ? { state: "text", content: null }
+        : { state: "failed", error: read.error, refetch: read.refetch };
+  }
 }
 
 function DiffBody({
@@ -372,6 +420,7 @@ function DiffBody({
 }) {
   const dark = useDarkMode();
   const basePath = from ?? path;
+  const lang = diffLang(path);
 
   const files = useMemo<FileData[]>(() => {
     if (diff.length === 0) return [];
@@ -383,77 +432,101 @@ function DiffBody({
     }
   }, [diff]);
 
+  // Both sides' whole text, read live beside the diff: the old side (the base
+  // ref) gives the expandable context lines and both give the syntax tokens.
+  // The new side is read only when there is a language to highlight it in.
+  const reads = useLive(
+    codeFile,
+    files.length === 0
+      ? []
+      : [
+          { worktree, path: basePath, ref: base ?? "HEAD" },
+          lang === null ? null : { worktree, path, ref: head },
+        ],
+  );
+  // Unavailable cannot be reached in practice — the diff itself needs the same
+  // computer — and reads no text: no tokens, no expansion.
+  const sides = "status" in reads ? null : reads;
+  const oldSide = sideText(sides?.[0]);
+  const newSide = sideText(sides?.[1]);
+  const oldText = oldSide.state === "text" ? oldSide.content : null;
+
   const baseHunks = files[0]?.hunks ?? null;
-  const [expandedHunks, setExpandedHunks] = useState<HunkData[] | null>(null);
-  const [totalLines, setTotalLines] = useState<number | null>(null);
-  const fileContentRef = useRef<string | null>(null);
+  // An expansion belongs to the hunks and the text it was made from: a live
+  // change to either drops it rather than showing lines of another revision.
+  const [expansion, setExpansion] = useState<{
+    from: HunkData[] | null;
+    text: string;
+    hunks: HunkData[];
+  } | null>(null);
+  const effectiveHunks =
+    expansion !== null &&
+    expansion.from === baseHunks &&
+    expansion.text === oldText
+      ? expansion.hunks
+      : baseHunks;
 
-  useEffect(() => {
-    if (!baseHunks) return;
-    const ref = base ?? "HEAD";
-    /* eslint-disable promise-safety/no-bare-catch -- background preload; 404/413 are expected for deleted/large files. Block form, not `disable-next-line`: prettier splits this call across lines, which would slide a positional directive off its target. */
-    void fetchEndpoint(
-      getFileContent,
-      { worktree },
-      { query: { path: basePath, ref } },
-    )
-      .then((body) => {
-        fileContentRef.current = body.content;
-        setTotalLines(body.content.split("\n").length);
-      })
-      .catch(() => {});
-    /* eslint-enable promise-safety/no-bare-catch */
-  }, [baseHunks, worktree, basePath, base]);
-
-  const effectiveHunks = expandedHunks ?? baseHunks;
   const tokens = useDiffTokens(
     effectiveHunks,
-    path,
+    lang,
     dark,
-    worktree,
-    base,
-    head,
-    from,
+    oldSide.state === "text" && newSide.state === "text"
+      ? { old: oldSide.content, new: newSide.content }
+      : null,
   );
 
   const expandLines = useCallback(
-    async (start: number, end: number) => {
-      if (!fileContentRef.current) {
-        const ref = base ?? "HEAD";
-        try {
-          const body = await fetchEndpoint(
-            getFileContent,
-            { worktree },
-            { query: { path: basePath, ref } },
-          );
-          fileContentRef.current = body.content;
-          setTotalLines(fileContentRef.current.split("\n").length);
-        } catch (err) {
-          // Expand is best-effort: network errors and 404/413 (deleted or large file) are expected
-          if (!(err instanceof Error)) throw err;
-          return;
-        }
-      }
-      const content = fileContentRef.current;
-      setExpandedHunks((prev) => {
-        const current = prev ?? baseHunks ?? [];
-        return expandFromRawCode(current, content, start, end);
+    (start: number, end: number) => {
+      if (oldText === null) return;
+      setExpansion((prev) => {
+        const current =
+          prev !== null && prev.from === baseHunks && prev.text === oldText
+            ? prev.hunks
+            : (baseHunks ?? []);
+        return {
+          from: baseHunks,
+          text: oldText,
+          hunks: expandFromRawCode(current, oldText, start, end),
+        };
       });
     },
-    [worktree, basePath, base, baseHunks],
+    [oldText, baseHunks],
   );
 
   if (diff.length === 0 || files.length === 0) {
     return <Placeholder>No changes vs {base ?? "HEAD"}.</Placeholder>;
   }
 
-  return (
+  const renderer = (
     <DiffRenderer
       files={files}
       hunks={effectiveHunks}
       tokens={tokens}
-      totalLines={totalLines}
-      onExpandLines={expandLines}
+      totalLines={oldText === null ? null : oldText.split("\n").length}
+      // Context lines expand from the old side's text, so only once it is known.
+      onExpandLines={oldText === null ? undefined : expandLines}
+    />
+  );
+  const failed =
+    oldSide.state === "failed"
+      ? oldSide
+      : newSide.state === "failed"
+        ? newSide
+        : null;
+  if (failed === null) return renderer;
+  // The diff still shows, plain; the failed text read says so above it.
+  return (
+    <Column
+      fill
+      header={
+        <ResourceErrorInline
+          variant="inline"
+          error={failed.error}
+          refetch={failed.refetch}
+          subject="the file's text"
+        />
+      }
+      body={renderer}
     />
   );
 }

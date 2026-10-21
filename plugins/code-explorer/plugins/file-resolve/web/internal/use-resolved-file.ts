@@ -1,36 +1,53 @@
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type { FileRef } from "@plugins/primitives/plugins/file-viewer/core";
-import { resolveFile } from "../../shared/endpoints";
+import { resolvedFile, type ResolvedFile } from "../../shared/resolved-file";
+
+/** A failed or refused `code.resolve-file` read, as `useLive` answered it (its `refetch` included). */
+export type ResolvedFileFailure = Extract<
+  ResourceResult<ResolvedFile, "no-workspace">,
+  { status: "error" }
+>;
 
 /**
  * Where a requested path resolved to. `exact` and `resolved` carry the
- * FileRef to read it through: a file inside the worktree is a `git` ref with a
- * checkout-relative path (even when it was asked for by absolute or `~` path),
- * any other existing file a `host` ref.
+ * FileRef to read it through: a file inside the worktree is a `workspace` ref
+ * with a checkout-relative path (even when it was asked for by absolute or `~`
+ * path), any other existing file a `host` ref. `ambiguous` holds the best
+ * candidates (at most `RESOLVE_MAX_MATCHES`) and how many matched in all.
+ * `error` is a failed or refused resolution (`no-workspace`) — the read
+ * itself, so its `refetch` offers a Retry —, `unavailable` a host without the
+ * computer to resolve on.
  */
 export type ResolvedFileState =
   | { status: "loading" }
   | { status: "exact"; file: FileRef }
   | { status: "resolved"; file: FileRef }
-  | { status: "ambiguous"; matches: string[] }
-  | { status: "not-found" };
+  | { status: "ambiguous"; matches: string[]; total: number }
+  | { status: "not-found" }
+  | { status: "unavailable"; message: string }
+  | { status: "error"; read: ResolvedFileFailure };
 
+/**
+ * `code.resolve-file` read live (it re-resolves as files appear or go), mapped
+ * onto the FileRef the file-viewer reads.
+ */
 export function useResolvedFile(
   worktree: string,
   path: string,
 ): ResolvedFileState {
-  const { data, isLoading, error } = useEndpoint(
-    resolveFile,
-    { worktree },
-    { query: { path } },
-  );
-
-  // No data for the current (worktree, path) key yet → still resolving. A
-  // failed resolve is treated as "not found" (the prior cancel-flag effect did
-  // the same), so any error collapses to the not-found branch.
-  if (isLoading || (!data && !error)) return { status: "loading" };
-  if (!data) return { status: "not-found" };
-
+  const result = useLive(resolvedFile, { worktree, path });
+  switch (result.status) {
+    case "loading":
+      return { status: "loading" };
+    case "unavailable":
+      return { status: "unavailable", message: result.message };
+    case "error":
+      return { status: "error", read: result };
+    case "ready":
+      break;
+  }
+  const data = result.data;
   if (data.kind === "exact") {
     return {
       status: "exact",
@@ -50,7 +67,7 @@ export function useResolvedFile(
             path: data.matches[0]!,
           },
         }
-      : { status: "ambiguous", matches: data.matches };
+      : { status: "ambiguous", matches: data.matches, total: data.total };
   }
   return { status: "not-found" };
 }

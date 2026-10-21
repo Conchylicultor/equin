@@ -298,7 +298,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
 - Cross-plugin:
   - Imported by:
     - `code-explorer`
-    - `code-explorer/code-api`
+    - `code-explorer/file-resolve`
     - `infra/host-fs/image`
     - `infra/host-fs/zip`
     - `primitives/file-viewer`

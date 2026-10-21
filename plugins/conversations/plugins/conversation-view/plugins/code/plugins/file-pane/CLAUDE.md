@@ -18,6 +18,7 @@
     - `code-explorer/file-resolve.useResolvedFile`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/code.useEditedFiles`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/text.Text`
     - `primitives/file-viewer.FileContent`
     - `primitives/file-viewer.FileRenderersHandle`
@@ -26,6 +27,7 @@
     - `primitives/file-viewer.useFileRenderers`
     - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
     - `primitives/live-state.foldResource`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

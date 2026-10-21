@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   compareHostFsNames,
   HOST_FS_PEEK_MAX_NAMES,
@@ -13,7 +12,10 @@ import {
   isResizableName,
 } from "@plugins/infra/plugins/host-fs/plugins/image/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { listCodeDir } from "@plugins/code-explorer/plugins/code-api/core";
+import {
+  codeDir,
+  type CodeDirEntry,
+} from "@plugins/code-explorer/plugins/code-api/core";
 import {
   fileRefName,
   fileUrl,
@@ -65,12 +67,16 @@ const byName = compareHostFsNames;
 // steps through every image of the folder. Bounded by the values' `maxLimit`
 // (the same cap past which host-fs's `peek` stops naming children).
 const HOST_READ = { limit: HOST_FS_PEEK_MAX_NAMES };
+// A workspace folder's listing likewise, bounded by `code.dir`'s `maxLimit`
+// (the same 10 000 entries).
+const WORKSPACE_READ = { limit: 10_000 };
 
 /**
  * Every image in `file`'s folder, by name — what the viewer steps through
  * with ← / →. Until the folder is listed (or when it cannot be: missing,
  * denied, no computer behind the app), the set is the file alone (`pending`
- * says which); a failed read throws.
+ * says which); a failed read throws. A workspace folder is code-api's live
+ * `code.dir` (on disk now, or as of the file's ref), pushed while read.
  *
  * A host folder (host-fs's live `host-fs.list` and `host-fs.image-sizes`,
  * pushed while read) gives its raster images resized copies (thumbnails, and
@@ -86,16 +92,16 @@ export function useFolderImages(file: FileRef): {
   const hostQuery = file.source === "host" ? { path: dir } : null;
   const host = useLive(hostFsListing, hostQuery, HOST_READ);
   const sizes = useLive(hostFsFolderImageSizes, hostQuery, HOST_READ);
-  const inWorkspace = useEndpoint(
-    listCodeDir,
-    { worktree: file.source === "workspace" ? file.workspace : "" },
-    {
-      query:
-        file.source === "workspace" && file.ref !== undefined
-          ? { dir, ref: file.ref }
-          : { dir },
-      enabled: file.source === "workspace",
-    },
+  const inWorkspace = useLive(
+    codeDir,
+    file.source === "workspace"
+      ? {
+          worktree: file.workspace,
+          dir,
+          ...(file.ref !== undefined ? { ref: file.ref } : {}),
+        }
+      : null,
+    WORKSPACE_READ,
   );
 
   // A host folder's entries, once listed; `null` while they are not known
@@ -112,20 +118,26 @@ export function useFolderImages(file: FileRef): {
       hostEntries = null;
       break;
   }
-  const workspaceData = inWorkspace.data;
+  // A workspace folder's entries, likewise.
+  let workspaceEntries: readonly CodeDirEntry[] | null;
+  switch (inWorkspace.status) {
+    case "ready":
+      workspaceEntries = inWorkspace.data;
+      break;
+    case "loading":
+    case "error":
+    case "unavailable":
+      workspaceEntries = null;
+      break;
+  }
   const names = useMemo((): readonly string[] | null => {
-    const entries =
-      file.source === "host"
-        ? hostEntries
-        : workspaceData?.kind === "ok"
-          ? workspaceData.entries
-          : null;
+    const entries = file.source === "host" ? hostEntries : workspaceEntries;
     if (entries === null) return null;
     return entries
       .filter((e) => e.kind === "file" && supportsImage(e.name) !== false)
       .map((e) => e.name)
       .sort(byName);
-  }, [file.source, hostEntries, workspaceData]);
+  }, [file.source, hostEntries, workspaceEntries]);
 
   // The sizes measured so far; none while they are on their way (`pending`),
   // refused or unreadable here — the images then carry no size.
@@ -170,7 +182,8 @@ export function useFolderImages(file: FileRef): {
     throw host.error;
   if (sizes.status === "error" && sizes.error.kind !== "refused")
     throw sizes.error;
-  if (inWorkspace.isError) throw inWorkspace.error;
+  if (inWorkspace.status === "error" && inWorkspace.error.kind !== "refused")
+    throw inWorkspace.error;
   return {
     images,
     pending:

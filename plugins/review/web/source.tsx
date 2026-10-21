@@ -4,6 +4,11 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
 
+/**
+ * What the review shows: the working tree, or one push — by its id; a section
+ * reads the push's contents by it (the server resolves the push's range from
+ * all of its rows, by git ancestry).
+ */
 export type Source = { kind: "working" } | { kind: "push"; pushId: string };
 
 export interface ReviewProps extends Record<string, unknown> {
@@ -15,6 +20,7 @@ export interface PushGroup {
   pushId: string;
   message: string;
   count: number;
+  /** The latest commit's time. */
   createdAt: Date;
 }
 

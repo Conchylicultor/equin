@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { HunkData } from "react-diff-view";
 import type { BundledLanguage, ThemedToken } from "shiki";
 import {
@@ -7,8 +7,6 @@ import {
   SHIKI_LANGS,
   themeForMode,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
-import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
-import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
 
 export type ShikiTokenNode = {
   type: "shiki";
@@ -31,22 +29,6 @@ function themedToTokens(lines: ThemedToken[][]): ShikiTokenNode[][] {
       fontStyle: tok.fontStyle,
     })),
   );
-}
-
-async function fetchFileContent(
-  worktree: string,
-  path: string,
-  ref?: string,
-): Promise<string | null> {
-  try {
-    const { content } = await fetchEndpoint(getFileContent, { worktree }, { query: { path, ref } });
-    return content ?? null;
-  } catch (err) {
-    if (err instanceof EndpointError) return null;
-    // Network errors are expected (offline, deleted file, server restarting)
-    if (!(err instanceof TypeError)) throw err;
-    return null;
-  }
 }
 
 export function buildSideTokenMap(
@@ -96,62 +78,98 @@ export function buildSideTokenMap(
   return result;
 }
 
+/**
+ * The shiki language a diff of `path` is highlighted in, or `null` when shiki
+ * has none for it (the diff then renders as plain text and needs no file text
+ * for its tokens).
+ */
+export function diffLang(path: string): BundledLanguage | null {
+  const lang = languageForPath(path);
+  return SHIKI_LANGS.includes(lang) ? (lang as BundledLanguage) : null;
+}
+
+/**
+ * Both sides of a diff as whole-file text: the old side (the base ref) and the
+ * new side (the head ref, or the working tree). `null` is a side with no text
+ * — the file is not there (an added or deleted file) or the server will not
+ * read it as text (binary, too large) — so it gets no tokens.
+ */
+export interface DiffTexts {
+  old: string | null;
+  new: string | null;
+}
+
+interface HighlightInput {
+  lang: BundledLanguage;
+  theme: ReturnType<typeof themeForMode>;
+  old: string | null;
+  new: string | null;
+}
+
+/**
+ * Syntax tokens for a diff's hunks, derived from both sides' text: each side is
+ * tokenized whole (so a multi-line construct highlights right), once per text,
+ * and the hunks pick their lines out of it — an expansion re-picks without
+ * re-tokenizing. `null` while there is nothing to highlight yet: no hunks, no
+ * language, `texts` not known yet (`null`), or the async highlighter not done
+ * for these texts — tokens of other texts would paint their own words, so
+ * none are reused.
+ */
 export function useDiffTokens(
   hunks: HunkData[] | null,
-  path: string,
+  lang: BundledLanguage | null,
   dark: boolean,
-  worktree: string,
-  base?: string,
-  head?: string,
-  from?: string,
+  texts: DiffTexts | null,
 ): DiffTokens | null {
-  const [tokens, setTokens] = useState<DiffTokens | null>(null);
+  const theme = themeForMode(dark);
+  const oldText = texts === null ? undefined : texts.old;
+  const newText = texts === null ? undefined : texts.new;
+  const input = useMemo<HighlightInput | null>(
+    () =>
+      lang === null || oldText === undefined || newText === undefined
+        ? null
+        : { lang, theme, old: oldText, new: newText },
+    [lang, theme, oldText, newText],
+  );
+
+  const [highlighted, setHighlighted] = useState<{
+    input: HighlightInput;
+    old: ShikiTokenNode[][];
+    new: ShikiTokenNode[][];
+  } | null>(null);
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- Promise.all of two fetchEndpoint(getFileContent) calls + async getHighlighter, joined then tokenized, with a cancel guard: this combined fetch+highlight+tokenize pipeline produces shiki token arrays (not a plain response body) and does not map to a single useEndpoint/useResource invocation; the async result cannot be derived synchronously in render */
-    if (!hunks || hunks.length === 0) {
-      setTokens(null);
-      return;
-    }
-    const rawLang = languageForPath(path);
-    if (!SHIKI_LANGS.includes(rawLang)) {
-      setTokens(null);
-      return;
-    }
-    const lang = rawLang as BundledLanguage;
+    if (input === null) return;
     let cancelled = false;
-    const theme = themeForMode(dark);
-    const oldRef = base ?? "HEAD";
-    const oldPath = from ?? path;
-
-    Promise.all([
-      fetchFileContent(worktree, oldPath, oldRef),
-      fetchFileContent(worktree, path, head),
-      getHighlighter(lang),
-    ]).then(([oldContent, newContent, hl]) => {
+    // A highlighter that fails to load rejects unhandled: reported, not hidden.
+    void getHighlighter(input.lang).then((hl) => {
       if (cancelled) return;
-
-      const highlight = (content: string | null) => {
-        if (!content) return [];
-        return themedToTokens(hl.codeToTokensBase(content, { lang, theme }));
-      };
-
-      const oldAllLines = highlight(oldContent);
-      const newAllLines = highlight(newContent);
-
-      setTokens({
-        old: buildSideTokenMap(hunks, "old", oldAllLines),
-        new: buildSideTokenMap(hunks, "new", newAllLines),
+      const tokenize = (content: string | null) =>
+        content
+          ? themedToTokens(
+              hl.codeToTokensBase(content, {
+                lang: input.lang,
+                theme: input.theme,
+              }),
+            )
+          : [];
+      setHighlighted({
+        input,
+        old: tokenize(input.old),
+        new: tokenize(input.new),
       });
-    }).catch(() => {
-      if (!cancelled) setTokens(null);
     });
-
     return () => {
       cancelled = true;
     };
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [hunks, path, dark, worktree, base, head, from]);
+  }, [input]);
 
-  return tokens;
+  return useMemo(() => {
+    if (!hunks || hunks.length === 0) return null;
+    if (highlighted === null || highlighted.input !== input) return null;
+    return {
+      old: buildSideTokenMap(hunks, "old", highlighted.old),
+      new: buildSideTokenMap(hunks, "new", highlighted.new),
+    };
+  }, [hunks, highlighted, input]);
 }

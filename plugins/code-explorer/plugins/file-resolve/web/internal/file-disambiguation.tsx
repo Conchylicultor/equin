@@ -8,10 +8,14 @@ import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 export function FileDisambiguation({
   query,
   matches,
+  total,
   activationFor,
 }: {
   query: string;
+  /** The best candidates, in order — possibly a capped prefix of them all. */
   matches: string[];
+  /** How many files matched in all; more than `matches` holds when capped. */
+  total: number;
   /**
    * What picking a candidate does — a `LinkTarget` when it opens the file, so
    * ⌘/middle-click opens it in a new browser tab.
@@ -24,6 +28,8 @@ export function FileDisambiguation({
       <Text as="div" variant="caption" className="mb-1 text-muted-foreground">
         Multiple files match{" "}
         <span className="font-mono font-medium text-foreground">{query}</span>
+        {total > matches.length &&
+          ` — the best ${matches.length} of ${total} shown`}
       </Text>
       <Scroll axis="both" fill>
         {/* eslint-disable-next-line data-view/no-adhoc-row-list -- ambiguous-path candidate picker (transient chrome) */}

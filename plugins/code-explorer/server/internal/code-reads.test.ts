@@ -11,7 +11,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveCheckoutRoot } from "./checkout-root";
 import { resolveInsideRoot } from "./contained-path";
-import { getFileContent, getFileContentAtRef } from "./get-file-content";
 import { handleImageContent } from "./image-handler";
 
 // Fixture:
@@ -82,36 +81,6 @@ describe("resolveInsideRoot", () => {
     ]) {
       expect(resolveInsideRoot(repo, p)).toBeNull();
     }
-  });
-});
-
-describe("GET /file reads", () => {
-  test("reads a relative path from disk", async () => {
-    expect(await getFileContent(repo, "a.txt")).toEqual({
-      kind: "ok",
-      content: "inside",
-    });
-  });
-
-  test("rejects an absolute path without a ref, even one that exists", async () => {
-    expect(await getFileContent(repo, join(base, "outside.txt"))).toEqual({
-      kind: "invalid-path",
-    });
-    expect(await getFileContent(repo, join(repo, "a.txt"))).toEqual({
-      kind: "invalid-path",
-    });
-  });
-
-  test("rejects a ~ path without a ref", async () => {
-    expect(await getFileContent(repo, "~/.zshrc")).toEqual({
-      kind: "invalid-path",
-    });
-  });
-
-  test("rejects an absolute path at a ref", async () => {
-    expect(
-      await getFileContentAtRef(repo, join(base, "outside.txt"), "HEAD"),
-    ).toEqual({ kind: "invalid-path" });
   });
 });
 

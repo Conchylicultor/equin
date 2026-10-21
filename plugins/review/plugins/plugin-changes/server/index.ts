@@ -1,11 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { handlePluginChanges } from "./internal/handle-plugin-changes";
-import { getPluginChanges } from "../core/endpoints";
+import { pushPluginChangesServed } from "./internal/push-plugin-changes";
 
 export default {
   description:
-    "Computes structured diffs of plugin public APIs between the worktree and main.",
-  httpRoutes: {
-    [getPluginChanges.route]: handlePluginChanges,
-  },
+    "Computes structured diffs of plugin public APIs between the worktree and main, and serves one push's (review.push-plugin-changes).",
+  contributions: [...pushPluginChangesServed.declare],
 } satisfies ServerPluginDefinition;

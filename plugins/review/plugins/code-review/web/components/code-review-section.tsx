@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  matchResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Collapsible,
@@ -21,9 +24,10 @@ import type { Source } from "@plugins/review/web";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConversationById } from "@plugins/conversations/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { pushFiles } from "@plugins/code-explorer/plugins/code-api/core";
 import { reviewConfig } from "../../shared/config";
 import { groupBySection, type FileSection } from "../core-files";
-import { usePushFiles } from "../use-push-files";
 import { ReviewFileRow } from "./review-file-row";
 
 export function CodeReviewSection({
@@ -97,33 +101,38 @@ function WorkingTreeBody({
   });
 }
 
+// A push's files: its range resolved on the server from ALL of the push's
+// ledger rows, ordered by git ancestry (never from the client's window of them).
 function PushBody({ pushId }: { pushId: string }) {
-  const state = usePushFiles(pushId);
-  if (state.kind === "loading") {
-    return (
+  const filesResult = useLive(pushFiles, { worktree: "main", pushId });
+  return matchResource(filesResult, {
+    loading: () => (
       <Body>
         <Loading />
       </Body>
-    );
-  }
-  if (state.kind === "error") {
-    return (
+    ),
+    error: (error) => (
       <Body>
-        <Placeholder tone="error">
-          {state.message || "Failed to load push."}
-        </Placeholder>
+        <ResourceErrorInline
+          variant="block"
+          subject="this push's files"
+          error={error}
+          refetch={
+            filesResult.status === "error" ? filesResult.refetch : undefined
+          }
+        />
       </Body>
-    );
-  }
-  return (
-    <FileList
-      files={state.data.files}
-      worktree="main"
-      base={state.data.baseSha}
-      head={state.data.headSha}
-      emptyLabel="No files in this push."
-    />
-  );
+    ),
+    ready: (data) => (
+      <FileList
+        files={data.files}
+        worktree="main"
+        base={data.baseSha}
+        head={data.headSha}
+        emptyLabel="No files in this push."
+      />
+    ),
+  });
 }
 
 function sumStats(files: EditedFile[]) {

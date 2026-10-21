@@ -687,3 +687,101 @@ Nineteen review findings, all judged applicable; every one applied, two of them 
   - The health dot shows attention while slow-op reports accumulate on the loaded host.
   - Settings shows "5 saved settings no longer apply".
 - `./singularity exempt list --rule live/no-endpoint-read --debt`: **49** exemptions remain (60 before B5), all debt. The two B5-adjacent ones left (`file-viewer/use-file-text.ts`, `file-viewer/image/use-folder-images.ts`) are their B6 workspace halves.
+
+## Result (B6)
+
+Batch B6 covers checkout reads (code-api). Every B6 reader now reads through `useLive`. All five checkout GET endpoints are deleted: file, diff, list, push, and resolve. The review's plugin-changes endpoint is deleted too. `code.file-version` is also gone: it had no reader left once the file viewer moved to `code.file`. Verdicts:
+
+- **Check:** after `regen-generated` and `format`, `./singularity check` failed one check, `web-artifacts:map-in-sync`. The deployed dist predated the tree (the demo browser host artifact was missing), and a build fixes that, so this was not a code failure. Every other check passed, including type-check and the repo lint rules over the B6 files.
+- **Test:** `./singularity test` over code-explorer (code-api and file-resolve included), diff-view, file-viewer, review, the sonata MIDI file-preview, conversation-view/code/file-pane and network/live: 669 bun:test and 107 vitest passes, 0 fail.
+- **Build:** `./singularity build` is green, checks included (build-1792542048-dcg4j1).
+
+### Per site
+
+| Site | Value key | Source / changes | Endpoint | Debt entry |
+|---|---|---|---|---|
+| diff-view `use-file-diff.ts` (deleted; `DiffView` reads directly) | `code.file-diff` | external, notified (checkout watch: git dir, plus the file and `from` on the working tree; 500 ms throttle; a sha pair holds no watch) | **`getFileDiff` deleted** | removed |
+| diff-view `use-diff-tokens.ts` (hidden `fetchEndpoint(getFileContent)` pair) | `code.file` ×2 (list form) | external, notified; a refused side counts as no text | **`getFileContent` deleted** | removed |
+| diff-view `diff-view.tsx` expand-lines (hidden `fetchEndpoint` ×2) | `code.file` (the old side, the same tuple as the tokens) | same | (as above) | removed (manifest deleted) |
+| file-viewer `use-file-text.ts` (workspace half) | `code.file` | external, notified (a watch of the file on disk; the git dir for a named ref; nothing for a sha) | (as above) | removed (manifest deleted); `use-file-revision.ts` deleted |
+| file-viewer image `use-folder-images.ts` (workspace half) | `code.dir` (paged, one 10 000 window) | external, notified (a watch of the folder's entries; git dir for a named ref; 1 s throttle) | **`listCodeDir` deleted** | removed (manifest deleted) |
+| sonata MIDI `file-preview/supports.ts` | `file-viewer.bytes` (workspace arm new) | notified (`watchWorkspaceFile`); `reads: workspaceRootReads` | — | — |
+| review/code-review `use-push-files.ts` (deleted; `PushBody` reads directly) | `code.push-files` `{worktree, first, last}` | external, immutable (sha range) | **`getPushFiles` deleted** | removed (manifest deleted) |
+| review/plugin-changes `use-plugin-changes.ts` | `review.push-plugin-changes` `{first, last}` | external, immutable | **`getPluginChanges` deleted** | removed |
+| file-resolve `use-resolved-file.ts` | `code.resolve-file` (top 200 matches + `total`) | external, notified (checkout watch + a watch of the named file; 1 s throttle) | **`resolveFile` deleted**, with file-resolve's whole `server/` (logic moved to `machine/`) | removed (manifest deleted) |
+
+### Live evidence
+
+Everything below ran on `http://att-1791598784-yegtlr.localhost:9000`, in conversation `conv-1791598784-2rzmxq` (this attempt, 6 pushes in its forked DB), driving the `browser_*` session. Shots are in `/tmp/live-migration-shots/B6-*`. The host was loaded the whole time: the build waited about 15 min for a CPU grant and was held for "host under duress" three times, and one pane sat on "Resolving…" behind a "Live updates stalled" toast for about 15 s before it rendered.
+
+- **Review pane, Working tree** (`B6-fresh-diff-before.png`): Code Review lists 105 files, with the scratch file `b6-scratch.txt` as "new +2 −0". Its diff shows the two added lines.
+- **Diff highlighting** (`B6-diff-highlighted.png`): `plugins/code-explorer/machine/index.ts` shows as a split diff with shiki tokens on both sides (keywords and strings coloured). The tokens come from the `code.file` pair.
+- **Push files** (`B6-push-files.png`): the B3 push tab shows 207 files (+3388 −2094). The `code.push-files` tuple is `{first = last = d9a446a1…}`, a single-commit push.
+- **Sha-pinned diff and expand** (`B6-push-diff-sha.png` → `B6-push-diff-expanded.png`): `plugins/config_v2/core/index.ts` in that push first shows its hunk between "↓10 ↓5 25 lines 5↑ 10↑" controls. Clicking "25 lines" shows lines 1–25, highlighted.
+- **Commit detail** (`/commit/main/8ed1f4fd28`; `B6-commit-files.png`, `B6-commit-diff.png`): 114 files (+3834 −1406). The expanded `file-explorer/CLAUDE.md` diff renders with its expand controls.
+- **File peek, exact path** (`B6-fresh-text-before.png`): `b6-scratch.txt` shows in the Code tab.
+- **File peek, Code and Diff tabs** (`B6-file-code.png`, `B6-file-diff-tab.png`): `plugins/code-explorer/machine/index.ts` shows its listing, and the Diff tab (file-viewer's diff renderer → `DiffView`) shows the working-tree diff.
+- **Resolved-file link** (`B6-resolved-file.png`): `file/<wt>/file-values.ts` resolves to `machine/internal/file-values.ts`; the breadcrumb is folded and the right content is shown.
+- **Ambiguous link** (`B6-resolve-ambiguous.png`): `index.ts` reads "Multiple files match index.ts — the best 200 of 2941 shown", followed by the list.
+- **Workspace image and its folder** (`B6-image.png`, `B6-image-folder-before.png`): `b6-imgs/a.png` renders through the workspace image route. Clicking it opens the full-screen viewer reading "1 / 2", which comes from `code.dir`.
+- **Plugin changes: not verified live.** `review.plugin-changes.**` is excluded from this composition (`config/plugin-meta/composition/compositions.origin.jsonc`, unchanged here), so neither the section nor `review.push-plugin-changes` is served. Only its tests ran.
+- **Freshness (verified, no reload).** For each check, a `window` sentinel was set before the disk change and was still there after it. The scratch files were created under the worktree and deleted afterwards; no tracked file was touched.
+  - **Working-tree diff** (`B6-fresh-diff-before.png` → `B6-fresh-diff-after.png`): with the scratch file's diff open, the file was rewritten to three lines ("line two EDITED", "line three"). Within 4 s the diff shows the three added lines. `_debug` shows that `code.file-diff` tuple at version 2. The row header later reads +3 −0.
+  - **Code view** (`B6-fresh-text-before.png` → `B6-fresh-text-after.png`): with the file open in the Code tab, it was rewritten to "line one / FRESH VIEW EDIT". Within 3 s the view shows the two new lines and "line three" is gone.
+  - **Image folder:** with the viewer open, adding `c.png` made the counter read "1 / 3" within 4 s. Deleting it made it read "1 / 2" again (`B6-image-folder-after-delete.png`; the sentinel set before the delete was kept).
+  - **Sha-pinned views do not refetch.** After a later scratch edit and 20 s, the open push diff's tuples were unchanged: `code.file-diff {base 164ecb11…, head d9a446a1…}` and both `code.file` sha tuples stayed at version 1, and the loader counts did not move (file 5, diff 4).
+  - **Not driven:** "commit in the checkout" (a named-ref git-dir notify). The integrator may not change the index.
+- **`/api/resources/_debug`:** every new key is `external`, with its declared freshness:
+  - `notified`: `code.file`, `code.file-diff`, `code.dir`, `code.dir:meta`, `code.resolve-file` and `file-viewer.bytes`. Both `file-viewer.bytes` and `code.resolve-file` carry the `attempts` route (`workspaceRootReads`).
+  - `immutable`, with its reason: `code.push-files`.
+  - `review.push-plugin-changes` is absent because its plugin is excluded (above).
+- **Console:** the only error was one 422, when the scratch file's diff opened. That is the typed `missing` refusal of `code.file` at `ref: main` for a file that is new. It is not a failure, as with B5's 422s.
+
+### Deviations (from the implementers, accepted)
+- **One value per read, not a separate value for sha refs.** `code.file`, `code.file-diff` and `code.dir` are `notified`; a tuple pinned to shas just opens no watch, which the run above confirms. (`code.push-files` and `review.push-plugin-changes` were `immutable` until the review fixes; they are now notified through their `pushes` reads.)
+- **`code.dir` resolves the workspace in `whileSubscribed`**, because a paged value cannot declare `reads`. The root is held per subscription, and a page read with no holder throws.
+- **`code.push-files` and `review.push-plugin-changes` take the push id** (they took `first` / `last` from the client's push window until the review fixes below). A root commit is the `no-base` refusal, where the endpoints returned a 500 / 400.
+- **`code.resolve-file` caps matches at 200 and adds `total`;** `FileDisambiguation` says so.
+- **Highlighter load failures now surface** (an unhandled rejection) instead of silently leaving the diff unhighlighted. Expansions are tied to the hunks and old-side text they came from, so a live change drops them.
+- **A workspace image folder that is missing** shows the file alone; the old 404 threw.
+- `supportsMidi` now offers the MIDI tab for workspace `.mid` files (`file-viewer.bytes` reads them).
+- **Listing code split** into its own file (`list-dir.ts`), to get past a `no-db-backed-notify` false positive. The scanner matched a parameter `wtPath` to a same-named local in the handler (filed as task-1792544776-e7m6ec). The file first sat in `server/internal/` under the `boundaries/no-platform-api` debt entry; the review moved it to `machine/internal/` (below), so it adds no debt.
+
+### Review fixes (B6)
+
+Thirteen review findings, all applied:
+
+- **Scratch workspaces resolve again** (high). `code.resolve-file` resolves any workspace kind: a non-checkout root answers `exact` for an existing file, otherwise `not-found`, and skips `ls-files`. `not-a-checkout` is gone from its refusals. Its watch is the entry alone when the root is not a checkout. A scratch conversation's file links open the file again, where they used to show an error block.
+- **The push range is resolved on the server, from all of a push's rows, by ancestry** (high). `code.push-files` is now `{ worktree, pushId }` and `review.push-plugin-changes` is `{ pushId }`. Both go through code-explorer's `resolvePushRange` (server barrel): every `pushes` row of the push is read straight from the table (no window, no `ensureFresh`, see below), the tip is `git merge-base --independent`, which must be one commit, the earliest is `merge-base --octopus`, and the base is the earliest commit's first parent. A push with more than 100 commits and commits sharing a committer second both get the right range. A commit with no ledger row in the middle of the push still forms one chain. Both values are pushed, `notified` through their declared reads (`pushRangeReads`: the `pushes` table). They are no longer `immutable`, because a row of the push landing moves the range. The review's `Source` and `groupPushes` drop `first` / `last`. The read skips `ensureFresh` because the memo-miss reconcile reads `conversations` (among others), and declaring those would recompute every open push diff on every conversation write. The push id comes from the same table's live collection, so the rows behind it are already there.
+- **Reads as of a ref no longer hear the index** (medium). `refChange` (machine `workspace.ts`) keeps HEAD and refs and drops `index` / `index.lock`. It now backs `code.file` and `file-viewer.bytes` at a named ref (through `watchWorkspaceFile`) and `code.dir` at a ref. `code.file-diff` and `code.resolve-file` keep the index. `code.file` gets `throttleMs: 500`.
+- **An attempts-table write costs a 304** (low). `code.file` and `file-viewer.bytes` declare `revalidate`. The workspace arm uses `workspaceFileSignature` (machine barrel): the root plus host-fs's `hostPathVersion` stamp on disk, or the blob sha `rev-parse <ref>:<path>` at a ref. The host arm uses `hostPathVersion`. The HTTP path probes the signature before the loader, so the tag is never newer than the bytes.
+- **The watch follows the loader's root** (low). All four values' watches open through `watchWorkspaceRoot`. A workspace with no row yet parks its watch until a load (`loadWorkspaceRoot`, which every loader now uses) sees the row, then opens it and notifies once. `workspaceRootReads.reason` now says what moves: the row appearing or going.
+- **`.gitignore` edits re-resolve** (medium). `code.resolve-file`'s checkout watch keeps `update`s to `.gitignore`.
+- **Platform code out of `server/` debt** (medium). `list-dir.ts`, `get-file-content.ts` and `get-file-diff.ts` moved to `code-explorer/machine/internal/`, and the `/file` tests moved with them (`get-file-content.test.ts`). Their three paths are gone from the `no-platform-api` debt entry.
+- **`listPushesByPushId` deleted** (low), with its barrel export.
+- **`code.resolve-file` is `load: "on-demand"`** (low), as the B6 decision said.
+- **Docs** (low): file-resolve's CLAUDE.md no longer names the deleted `/file` route. `code-values.ts` no longer describes the deleted `file` / `list` routes. code-explorer's CLAUDE.md says `code.resolve-file` is declared in `file-resolve/shared`, and its table states the new push-files addressing, the ref watches and the ETag.
+- **Retry on a failed resolve** (low). `ResolvedFileState`'s `error` arm carries the `useLive` read itself, so `file-peek-pane` passes its `refetch`.
+- **Scanner false positive filed** (low) as task-1792544776-e7m6ec. It bit again during this review: `watchCheckout`'s `root` parameter matched a `root` local holding a DB read in `loadWorkspaceRoot`, so those locals are now named otherwise, with a comment pointing at the task.
+- **Unused barrel exports dropped** (low): `DiffTexts` (diff-view web), `WorkspaceRoot` (code-explorer server), `WorkspaceBytesResult` (code-explorer machine). `resolveParentSha` left the server barrel too, because its only cross-plugin caller now uses `resolvePushRange`.
+
+Verified after the fixes. The check (all checks, after `format`), the tests (code-explorer, file-viewer, diff-view, review, file-pane, tasks-core: 188 pass, 0 fail; code-explorer alone, new files included: 32 pass) and the build (build-1792546196-wldt1g, checks included) are green. Live, in the review pane of `conv-1791598784-2rzmxq`, the B1 push tab lists its files by `pushId`. The two-commit P0 push (`00700d8b…`: rows `9113b3ba` and `fede4366`) lists **270 files +9978 −1856**. That matches `git diff 9113b3ba^ fede4366` (270 files): the range starts at the push's earliest commit, as ancestry orders it.
+
+Tests: `push-range.test.ts` is new. Its commits all share one committer second, its rows come in any order, and it covers a single-commit push, a root push, a missing commit and a gap. The push-files case left `code-values.test.ts`: it now needs the DB, and `pushRangeOf` covers the git half.
+
+**Freshness re-checked after the fixes** on build-1792546196-wldt1g (`build-status.json` ok, no source change since its start). A temporary e2e script under `code-explorer/e2e/` (since deleted) drove `conv-1791598784-2rzmxq` in one headless session. Each step had its own page, booted once, with a `window` marker set after boot; every marker was still there at the end of its step, so nothing reloaded. Scratch files sat under the worktree and were deleted at the end. Shots: `/tmp/live-migration-shots/B6-recheck-*.png`.
+
+1. **Working-tree diff, PASS** (`1-diff-before` → `1-diff-after`). In the review pane, `b6r-scratch.txt` was expanded ("line one / line two"). The file was rewritten to three lines and the diff showed "line two EDITED / line three" **2.6 s** later. One 422 was logged: the typed `missing` refusal of the old side (`code.file` at `HEAD`) for a new file.
+2. **Code view, PASS** (`2-code-before` → `2-code-after`). The rewrite showed "FRESH RECHECK EDIT" in **1.7 s**, with "line three" gone. The page made two requests after the change: `code.file` and `code.resolve-file` for that path.
+3. **Image folder, PASS** (`3-images-before` / `-added` / `-deleted`). The full-window viewer on `b6r-imgs/a.png` read "1 / 2". Adding `c.png` changed it to "1 / 3" in 1.6 s. Deleting it changed it back to "1 / 2" in 1.3 s.
+4. **Resolved file, PASS** (`4-resolved-before` → `4-resolved-after-delete`). The fuzzy name `b6r-fuzzy.txt` resolved to `b6r-dir/deep/b6r-fuzzy.txt`: the breadcrumb read `b6r-dir › deep › b6r-fuzzy.txt` and the text showed. After the folder was deleted, the peek read "File not found." 1.2 s later.
+5. **Index writes, PASS: 0 `code.file` requests.** The file was `plugins/code-explorer/machine/index.ts` in its Diff tab, which reads `code.file` at `ref=HEAD` plus the working tree and `code.file-diff`. A plain `git status` on this tree does **not** rewrite the index, because there is nothing to refresh; its mtime did not move. So before each of 4 rounds of `git status` + `git diff --stat`, a clean tracked file's mtime was bumped, without changing its content (`research/2026-07-02-…adr….md`). Each `git status` then rewrote `.git/worktrees/…/index`: **4 index writes**. Over the 11.7 s window, `/api/resources/code.file` got **0** requests. As a positive control, the index-sensitive values did refetch: `code.file-diff` ×4 and `code.resolve-file` ×4, one per write, as designed.
+6. **Sha-pinned push diff, PASS: 0 refetches in 20 s** (`6-push-before` → `6-push-after`). The B5 push tab was open on `…/agent-manager/plugins/demo/bin/browser-host.generated.ts`, with tuples `code.file-diff {worktree main, base 1e34f231…, head 8ed1f4fd…}` and the two `code.file` sha tuples. After a scratch edit and 20 s, there were 0 `code.*` requests. Caveat: those tuples name `worktree=main`, while the scratch edit was in this worktree. This shows only that nothing refetched; it does not show that a sha tuple ignores changes in its own checkout.
+
+### Open (B6)
+- **`code.push-files` returns the whole file list unpaged** (one fixed answer per push). A very large push makes it big.
+- **`needs-machine` wording** for workspace text reuses host-fs's "Browsing this computer's files".
+- **Plugin changes** cannot be verified live while `review.plugin-changes.**` is excluded from the composition.
+- **No tests cover the watches** behind `code.file` / `code.dir` / `code.resolve-file`, `code.dir`'s held root, or `watchWorkspaceRoot`'s parked watch. Freshness was verified live only.
+- **`resolvePushRange`'s DB read has no test** (only `pushRangeOf`, its git half).
+- `./singularity exempt list --rule live/no-endpoint-read --debt`: **41** exemptions remain (49 before B6), all debt.

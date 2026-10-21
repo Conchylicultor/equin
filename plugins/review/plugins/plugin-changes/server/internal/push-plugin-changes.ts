@@ -1,19 +1,22 @@
 import { join } from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { listPushesByPushId } from "@plugins/tasks/plugins/tasks-core/server";
-import { resolveParentSha, getRangeFiles } from "@plugins/code-explorer/server";
+import {
+  getRangeFiles,
+  pushRangeReads,
+  resolvePushRange,
+} from "@plugins/code-explorer/server";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { serveValue } from "@plugins/network/plugins/live/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { getPluginChanges } from "../../core/endpoints";
+import { pushPluginChanges } from "../../shared/resources";
 import { computePluginChanges } from "./compute-plugin-diff";
 import { getMainRoot } from "./main-plugins-dir";
 import type { PluginChangesResponse } from "../../core/protocol";
 
-// Each step serves an open HTTP request and reads only the local repo; a minute
+// Each step serves a waiting review pane and reads only the local repo; a minute
 // is far past any useful answer, so only a wedged child reaches it.
 const EXTRACT_TIMEOUT_MS = 60_000;
 
@@ -55,24 +58,33 @@ async function extractPluginsAtSha(sha: string): Promise<string> {
   return dir;
 }
 
-async function handlePush(pushId: string): Promise<PluginChangesResponse> {
+/** The push `pushId` as its range (`resolvePushRange`), `baseSha..headSha`. */
+async function loadPushPluginChanges(
+  pushId: string,
+): Promise<PluginChangesResponse> {
   const mainRoot = await getMainRoot();
-  const commits = await listPushesByPushId(pushId);
-  if (commits.length === 0) {
-    throw new HttpError(404, "push not found");
+  const range = await resolvePushRange(mainRoot, pushId);
+  switch (range.kind) {
+    case "no-push":
+      throw pushPluginChanges.refuse("missing", `no push ${pushId}`);
+    case "missing":
+      throw pushPluginChanges.refuse(
+        "missing",
+        `a commit of push ${pushId} is not in the repository`,
+      );
+    case "no-base":
+      throw pushPluginChanges.refuse(
+        "no-base",
+        `${range.first} is a root commit: push ${pushId} has no base to diff from`,
+      );
+    case "ok":
+      break;
   }
-
-  const earliest = commits[0]!;
-  const latest = commits[commits.length - 1]!;
-  const baseSha = await resolveParentSha(mainRoot, earliest.sha);
-  if (!baseSha) {
-    throw new HttpError(400, "could not resolve base SHA");
-  }
-  const headSha = latest.sha;
+  const { baseSha, headSha } = range;
 
   const editedFiles = await getRangeFiles(mainRoot, baseSha, headSha);
   if (!editedFiles) {
-    throw new HttpError(500, "failed to compute diff for push range");
+    throw new Error(`git diff ${baseSha} ${headSha} failed`);
   }
 
   return withHeavyReadSlot(async () => {
@@ -83,8 +95,9 @@ async function handlePush(pushId: string): Promise<PluginChangesResponse> {
 
     try {
       // base/head are immutable historical shas, but distinct per push range —
-      // not worth a memo (unbounded growth). This path is already deduped +
-      // concurrency-capped, so just build both trees inside the one slot.
+      // not worth a memo (unbounded growth). The runtime already shares one
+      // load per tuple among its readers, and the heavy-read slot caps how many
+      // run at once, so just build both trees inside the one slot.
       const [headTree, baseTree] = await Promise.all([
         buildPluginTree(join(headDir, "plugins"), {
           skipBarrelImport: true,
@@ -106,9 +119,13 @@ async function handlePush(pushId: string): Promise<PluginChangesResponse> {
   });
 }
 
-export const handlePluginChanges = implement(
-  getPluginChanges,
-  async ({ query }) => {
-    return handlePush(query.pushId);
-  },
-);
+// External: the truth is two commits' plugin trees in git, read through `git
+// archive`, which never move once the range is known — the range itself is the
+// push's ledger rows, declared as the value's reads, so a row of the push
+// landing recomputes it.
+export const pushPluginChangesServed = serveValue(pushPluginChanges, {
+  source: "external",
+  changes: "notified",
+  reads: pushRangeReads,
+  loader: ({ pushId }) => loadPushPluginChanges(pushId),
+});

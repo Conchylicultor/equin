@@ -3,6 +3,7 @@ import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   commitFiles,
   commitInfo,
+  pushFiles,
   type CommitFiles,
 } from "@plugins/code-explorer/plugins/code-api/core";
 import type { CommitRow } from "@plugins/primitives/plugins/commit-list/core";
@@ -14,6 +15,7 @@ import {
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { resolveCheckoutRoot } from "./checkout-root";
 import { getRangeFiles, resolveParentSha } from "./get-push-files";
+import { pushRangeReads, resolvePushRange } from "./push-range";
 
 /**
  * A sha and only a sha: named refs (`HEAD`, `main`) move, so they are not
@@ -96,6 +98,38 @@ async function loadCommitFiles(
   return { files, baseSha, headSha };
 }
 
+/**
+ * The files of the push `pushId`: its range (`resolvePushRange` — the push's
+ * rows ordered by ancestry) diffed as `baseSha..headSha`.
+ */
+export async function loadPushFiles(
+  worktree: string,
+  pushId: string,
+): Promise<CommitFiles> {
+  const root = await objectStoreRoot(worktree, pushFiles.refuse);
+  const range = await resolvePushRange(root, pushId);
+  switch (range.kind) {
+    case "no-push":
+      throw pushFiles.refuse("missing", `no push ${pushId}`);
+    case "missing":
+      throw pushFiles.refuse(
+        "missing",
+        `a commit of push ${pushId} is not in the repository`,
+      );
+    case "no-base":
+      throw pushFiles.refuse(
+        "no-base",
+        `${range.first} is a root commit: push ${pushId} has no base to diff from`,
+      );
+    case "ok":
+      break;
+  }
+  const { baseSha, headSha } = range;
+  const files = await getRangeFiles(root, baseSha, headSha);
+  if (!files) throw new Error(`git diff ${baseSha} ${headSha} failed`);
+  return { files, baseSha, headSha };
+}
+
 export const commitInfoServed = serveValue(commitInfo, {
   source: "external",
   changes: {
@@ -120,4 +154,14 @@ export const commitFilesServed = serveValue(commitFiles, {
     },
   },
   loader: ({ worktree, sha }) => loadCommitFiles(worktree, sha),
+});
+
+// External: the truth is a diff of two commits in git, which never moves once
+// the range is known — the range itself is the push's ledger rows, declared as
+// the value's reads, so a row of the push landing recomputes it.
+export const pushFilesServed = serveValue(pushFiles, {
+  source: "external",
+  changes: "notified",
+  reads: pushRangeReads,
+  loader: ({ worktree, pushId }) => loadPushFiles(worktree, pushId),
 });

@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-code-explorer-code-api",
   "version": "0.0.1",
   "private": true,
-  "description": "Typed contracts for the /api/code/* endpoints (tree, file, diff, image, push, commit). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle."
+  "description": "Typed contracts for the worktree code reads: the /api/code/:worktree/image route and the code.* live values (file, file-diff, dir, commit-info, commit-files, push-files). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle."
 }

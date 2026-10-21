@@ -1,12 +1,26 @@
 import { resolve, sep } from "node:path";
-import { isAllowedRef } from "./resolve-ref";
+import { isAllowedRef } from "../../server/internal/resolve-ref";
 import { tryRunGit } from "@plugins/primitives/plugins/commit-list/server";
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
+/**
+ * Why a diff has no answer: a malformed path or ref, a file that is not there,
+ * a diff past {@link MAX_BYTES} — each a determinate answer about the question
+ * (the HTTP route's 400 / 404 / 413, the live value's refusal) — or `failed`,
+ * a git failure (500, a loader error).
+ */
+export type FileDiffFailure =
+  "invalid-path" | "invalid-ref" | "missing" | "too-large" | "failed";
+
 export type FileDiffResult =
   | { kind: "ok"; diff: string }
-  | { kind: "error"; status: number; message: string };
+  | {
+      kind: "error";
+      reason: FileDiffFailure;
+      status: number;
+      message: string;
+    };
 
 function isPathInside(root: string, target: string): boolean {
   const rootNorm = root.endsWith(sep) ? root : root + sep;
@@ -21,27 +35,57 @@ export async function getFileDiff(
   fromPath?: string,
 ): Promise<FileDiffResult> {
   if (!relPath || relPath.includes("\0")) {
-    return { kind: "error", status: 400, message: "Invalid path" };
+    return {
+      kind: "error",
+      reason: "invalid-path",
+      status: 400,
+      message: "Invalid path",
+    };
   }
   if (fromPath !== undefined && (fromPath === "" || fromPath.includes("\0"))) {
-    return { kind: "error", status: 400, message: "Invalid from" };
+    return {
+      kind: "error",
+      reason: "invalid-path",
+      status: 400,
+      message: "Invalid from",
+    };
   }
   if (!isAllowedRef(base)) {
-    return { kind: "error", status: 400, message: "Invalid base" };
+    return {
+      kind: "error",
+      reason: "invalid-ref",
+      status: 400,
+      message: "Invalid base",
+    };
   }
   if (head !== undefined && !isAllowedRef(head)) {
-    return { kind: "error", status: 400, message: "Invalid head" };
+    return {
+      kind: "error",
+      reason: "invalid-ref",
+      status: 400,
+      message: "Invalid head",
+    };
   }
 
   const absRoot = resolve(worktreePath);
   const absTarget = resolve(absRoot, relPath);
   if (!isPathInside(absRoot, absTarget)) {
-    return { kind: "error", status: 400, message: "Invalid path" };
+    return {
+      kind: "error",
+      reason: "invalid-path",
+      status: 400,
+      message: "Invalid path",
+    };
   }
   if (fromPath !== undefined) {
     const absFrom = resolve(absRoot, fromPath);
     if (!isPathInside(absRoot, absFrom)) {
-      return { kind: "error", status: 400, message: "Invalid from" };
+      return {
+        kind: "error",
+        reason: "invalid-path",
+        status: 400,
+        message: "Invalid from",
+      };
     }
   }
 
@@ -55,7 +99,12 @@ export async function getFileDiff(
     if (mb.ok) {
       resolvedBase = mb.stdout.trim() || base;
     } else if (mb.exitCode !== 1) {
-      return { kind: "error", status: 500, message: "git merge-base failed" };
+      return {
+        kind: "error",
+        reason: "failed",
+        status: 500,
+        message: "git merge-base failed",
+      };
     }
   }
 
@@ -70,10 +119,20 @@ export async function getFileDiff(
       absRoot,
     );
     if (!res.ok) {
-      return { kind: "error", status: 500, message: "git diff failed" };
+      return {
+        kind: "error",
+        reason: "failed",
+        status: 500,
+        message: "git diff failed",
+      };
     }
     if (res.stdout.length > MAX_BYTES) {
-      return { kind: "error", status: 413, message: "Diff too large" };
+      return {
+        kind: "error",
+        reason: "too-large",
+        status: 413,
+        message: "Diff too large",
+      };
     }
     return { kind: "ok", diff: res.stdout };
   }
@@ -83,7 +142,12 @@ export async function getFileDiff(
     absRoot,
   );
   if (!status.ok) {
-    return { kind: "error", status: 500, message: "git status failed" };
+    return {
+      kind: "error",
+      reason: "failed",
+      status: 500,
+      message: "git status failed",
+    };
   }
 
   const statusLine = status.stdout.split("\n").find((l) => l.length > 0);
@@ -92,7 +156,12 @@ export async function getFileDiff(
   if (!statusLine && resolvedBase === "HEAD") {
     const file = Bun.file(absTarget);
     if (!(await file.exists())) {
-      return { kind: "error", status: 404, message: "File not found" };
+      return {
+        kind: "error",
+        reason: "missing",
+        status: 404,
+        message: "File not found",
+      };
     }
     return { kind: "ok", diff: "" };
   }
@@ -107,7 +176,12 @@ export async function getFileDiff(
       absRoot,
     );
     if (!res.ok && res.exitCode !== 1) {
-      return { kind: "error", status: 500, message: "git diff failed" };
+      return {
+        kind: "error",
+        reason: "failed",
+        status: 500,
+        message: "git diff failed",
+      };
     }
     diff = res.stdout;
   } else {
@@ -124,13 +198,23 @@ export async function getFileDiff(
       absRoot,
     );
     if (!res.ok) {
-      return { kind: "error", status: 500, message: "git diff failed" };
+      return {
+        kind: "error",
+        reason: "failed",
+        status: 500,
+        message: "git diff failed",
+      };
     }
     diff = res.stdout;
   }
 
   if (diff.length > MAX_BYTES) {
-    return { kind: "error", status: 413, message: "Diff too large" };
+    return {
+      kind: "error",
+      reason: "too-large",
+      status: 413,
+      message: "Diff too large",
+    };
   }
   return { kind: "ok", diff };
 }

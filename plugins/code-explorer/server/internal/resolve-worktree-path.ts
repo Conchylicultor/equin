@@ -12,15 +12,18 @@ export const MAIN_WORKTREE = "main";
 export const SELF_WORKTREE = "self";
 
 /** A workspace's root on disk, and whether it is a git checkout. */
-type WorkspaceRoot = { path: string; git: boolean };
+export type WorkspaceRoot = { path: string; git: boolean };
 
 // Resolve a workspace identifier (from the URL) to its root on disk.
 // `"main"`/`"self"` are reserved sentinels; an absolute path (URL-encoded in
 // `:worktree`) is accepted only when it is exactly a git checkout's toplevel —
 // so any checkout on the host (`~/code/foo`) is addressable, and every read
 // under it stays a relative path inside that root. Any other value is looked
-// up as an attempt id, whatever its workspace kind.
-async function resolveWorkspaceRoot(id: string): Promise<WorkspaceRoot | null> {
+// up as an attempt id, whatever its workspace kind — a read of the attempt row
+// (`_attempts`), which a live value serving through it declares.
+export async function resolveWorkspaceRoot(
+  id: string,
+): Promise<WorkspaceRoot | null> {
   if (id === MAIN_WORKTREE) {
     return { path: await ensureMainWorktreeRoot(), git: true };
   }

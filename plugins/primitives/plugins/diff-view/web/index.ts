@@ -4,8 +4,6 @@ export { DiffView, DiffRenderer } from "./components/diff-view";
 export { TextDiff } from "./components/text-diff";
 export { ImageDiffView } from "./components/image-diff-view";
 export { DiffOrImageView } from "./internal/diff-or-image-view";
-export { useFileDiff } from "./use-file-diff";
-export type { FileDiffState } from "./use-file-diff";
 export { buildSideTokenMap, useDiffTokens } from "./use-diff-tokens";
 export type { DiffTokens, ShikiTokenNode } from "./use-diff-tokens";
 

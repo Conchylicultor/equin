@@ -1,19 +1,14 @@
-import {
-  useEndpoint,
-  EndpointError,
-} from "@plugins/infra/plugins/endpoints/web";
 import { unavailableMessage } from "@plugins/infra/plugins/endpoints/core";
-import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
+import { codeFile } from "@plugins/code-explorer/plugins/code-api/core";
 import { hostFsFileText } from "@plugins/infra/plugins/host-fs/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { FileRef } from "../../core";
-import { useRefetchOnFileChange } from "./use-file-revision";
 
 /**
  * Why a file has no text to show — a determinate answer about the file, not a
  * failed read: the renderer says so in words ("Binary file", "too large")
- * rather than as an error. `needs-machine` is a host file read where no
- * computer is behind the app (the in-browser demo): nothing is read.
+ * rather than as an error. `needs-machine` is a read where no computer is
+ * behind the app (the in-browser demo): nothing is read.
  */
 export type FileTextUnavailable =
   "too-large" | "binary" | "missing" | "denied" | "needs-machine";
@@ -24,64 +19,70 @@ export type FileTextState =
   | { kind: "unavailable"; reason: FileTextUnavailable }
   | { kind: "error"; message: string };
 
-// code-api's `file` route answers a file it will not read with a status code —
-// 413 too large, 415 binary, 404 gone, 403 not readable.
-const UNAVAILABLE_BY_STATUS: Record<number, FileTextUnavailable> = {
-  403: "denied",
-  404: "missing",
-  413: "too-large",
-  415: "binary",
-};
-
-function failureState(error: Error): FileTextState {
-  if (error instanceof EndpointError) {
-    const reason = UNAVAILABLE_BY_STATUS[error.status];
-    if (reason) return { kind: "unavailable", reason };
-    return {
-      kind: "error",
-      message:
-        typeof error.body === "string" && error.body
-          ? error.body
-          : `HTTP ${error.status}`,
-    };
-  }
-  return { kind: "error", message: String(error) };
-}
-
 /**
- * A file's text, whichever source holds it: a workspace file through code-api's
- * `file` route (as of the ref's revision when it names one) — re-read in place
- * whenever the file changes on disk (`useFileRevision`), the text on screen
- * staying until the new one lands — and a host file through host-fs's
- * `host-fs.text` live value, which the server invalidates from a watch of the
- * file's folder while it is read. Both reads are declared every render (hooks
- * cannot be conditional) and the one for the other source reads nothing.
+ * A file's text, whichever source holds it — one live read each: a workspace
+ * file through code-api's `code.file` (as it is on disk now, or as of the
+ * ref's revision when it names one), a host file through host-fs's
+ * `host-fs.text`. The server invalidates both while they are read (a watch of
+ * the file, or the checkout's git dir for a named ref; a sha never moves), and
+ * the text on screen stays until the new one lands. Both reads are declared
+ * every render (hooks cannot be conditional) and the one for the other source
+ * reads nothing.
  */
 export function useFileText(file: FileRef): FileTextState {
   const ws = file.source === "workspace" ? file : null;
   const host = file.source === "host" ? file : null;
 
-  const wsRead = useEndpoint(
-    getFileContent,
-    { worktree: ws?.workspace ?? "" },
-    {
-      query: {
-        path: ws?.path ?? "",
-        ...(ws?.ref !== undefined ? { ref: ws.ref } : {}),
-      },
-      enabled: ws !== null,
-    },
+  const wsRead = useLive(
+    codeFile,
+    ws === null
+      ? null
+      : {
+          worktree: ws.workspace,
+          path: ws.path,
+          ...(ws.ref !== undefined ? { ref: ws.ref } : {}),
+        },
   );
-  useRefetchOnFileChange(ws, wsRead.refetch);
   const hostRead = useLive(
     hostFsFileText,
     host === null ? null : { path: host.path },
   );
 
   if (ws !== null) {
-    if (wsRead.error) return failureState(wsRead.error);
-    if (!wsRead.data) return { kind: "loading" };
-    return { kind: "ok", content: wsRead.data.content };
+    // code-api refuses the cases it will not read: the ones that are an
+    // answer about the file are `unavailable` (a workspace that is not there
+    // reads as the file not being there, as the route's 404 did), the rest (a
+    // malformed path or ref, a git read of a non-checkout, an unreadable
+    // archive) an error carrying the server's own words.
+    switch (wsRead.status) {
+      case "unavailable":
+        return { kind: "unavailable", reason: "needs-machine" };
+      case "loading":
+        return { kind: "loading" };
+      case "ready":
+        return { kind: "ok", content: wsRead.data.content };
+      case "error": {
+        const { error } = wsRead;
+        if (error.kind === "refused") {
+          switch (error.code) {
+            case "too-large":
+            case "binary":
+            case "missing":
+            case "denied":
+              return { kind: "unavailable", reason: error.code };
+            case "no-workspace":
+              return { kind: "unavailable", reason: "missing" };
+            case "not-a-checkout":
+            case "invalid-ref":
+            case "invalid-path":
+            case "unreadable-archive":
+            case undefined:
+              return { kind: "error", message: error.message };
+          }
+        }
+        return { kind: "error", message: error.message };
+      }
+    }
   }
   // host-fs refuses the cases it will not read: the ones that are an answer
   // about the file are `unavailable`, the rest (a malformed path, a folder, an

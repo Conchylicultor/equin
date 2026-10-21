@@ -5,7 +5,7 @@ import { fileBytes, type FileRef } from "../../core";
 /**
  * Why a file has no bytes to hand over — a determinate answer about the file,
  * not a failed read. `unsupported` is the source declining to serve them (a
- * folder, an unreadable archive member, a workspace file today);
+ * folder, an unreadable archive member, a revision of a non-checkout);
  * `needs-machine` a read where no computer is behind the app (the in-browser
  * demo): nothing is read.
  */
@@ -22,8 +22,8 @@ export type FileBytesState =
  * A file's raw bytes, whichever source holds it — the binary twin of
  * `useFileText`, for a renderer that decodes the format itself (a MIDI file, an
  * archive listing). One read of file-viewer's `file-viewer.bytes` live value,
- * which the server invalidates when a host file changes on disk (from a watch
- * of its folder while it is read). A refusal that is an answer about the file
+ * which the server invalidates when the file changes (from a watch while it
+ * is read). A refusal that is an answer about the file
  * is `unavailable`, never retried; anything else is an `error`.
  */
 export function useFileBytes(file: FileRef): FileBytesState {

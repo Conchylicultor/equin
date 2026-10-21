@@ -8272,7 +8272,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import.ts` (debt)
               - Plugins:
-                - **`file-preview`** — Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi host files) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
+                - **`file-preview`** — Sonata's MIDI file preview: a FileViewer renderer (native for .mid/.midi files, host or workspace) showing the file's facts (duration, tempo, meter, bars, tracks and notes, range, size), Sonata's falling-notes piano roll in its own player with a play bar, and Open in Sonata — imported into the library idempotently by content — at the playhead's bar.
                   - Web:
                     - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
                     - Uses: 33 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/REFERENCE.md)
@@ -11950,18 +11950,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/get-server-commit.ts`, `server/internal/get-server-graph-hash.ts` (debt)
 
-- **`code-explorer`** — Worktree-scoped file reads: raw/diff/image content and directory listings by attempt id or the reserved `main` sentinel.
+- **`code-explorer`** — Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: the raw image route, the sha-addressed commit-info / commit-files live values, and push-files — one push's files, its range read from its ledger rows by ancestry.
   - Server:
     - Contributes:
       - `resource.declare` "code.commit-files"
       - `resource.declare` "code.commit-info"
-      - `resource.declare` "code.file-version"
+      - `resource.declare` "code.dir"
+      - `resource.declare` "code.dir:meta"
+      - `resource.declare` "code.file"
+      - `resource.declare` "code.file-diff"
+      - `resource.declare` "code.push-files"
     - Uses:
+      - `database.db`
       - `infra/endpoints.HttpError`
-      - `infra/endpoints.implement`
-      - `infra/host-fs.decodeTextBytes`
       - `infra/host-fs.inertHeaders`
-      - `infra/host-fs.readHostPathText`
       - `infra/host-fs.serveHostPath`
       - `infra/host/host-read-pool.withHeavyReadSlot`
       - `infra/paths.GIT`
@@ -11974,51 +11976,70 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/commit-list.parseGitLog`
       - `primitives/commit-list.tryRunGit`
       - `tasks/tasks-core.getAttemptRow`
-      - `tasks/tasks-core.listPushesByPushId`
+      - `tasks/tasks-core.pushes`
+    - Exports (types): `PushRange`
     - Exports (values):
       - `getRangeFiles`
-      - `resolveParentSha`
+      - `pushRangeReads`
+      - `resolvePushRange`
+      - `resolveWorkspaceRoot`
       - `resolveWorktreePath`
     - Resources:
       - `code.commit-files` (push, immutable)
       - `code.commit-info` (push, immutable)
-      - `code.file-version` (push, notified)
+      - `code.dir` (keyed, window, notified)
+      - `code.dir:meta` (push, notified)
+      - `code.file` (invalidate, notified)
+      - `code.file-diff` (invalidate, notified)
+      - `code.push-files` (push, notified)
   - Machine:
     - Uses:
       - `infra/host-fs.hostPathVersion`
+      - `infra/host-fs.watchHostDir`
       - `infra/host-fs.watchHostPath`
       - `network/live.serveValue`
+    - Exports (types): `WorkspaceFile`
+    - Exports (values):
+      - `loadWorkspaceRoot`
+      - `readWorkspaceBytes`
+      - `watchCheckout`
+      - `watchWorkspaceFile`
+      - `watchWorkspaceRoot`
+      - `workspaceFileSignature`
+      - `workspaceRootReads`
   - Cross-plugin:
     - Imported by:
       - `code-explorer/file-resolve`
+      - `primitives/file-viewer`
       - `review/plugin-changes`
   - Exemptions:
-    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/checkout-root.ts`, `server/internal/commit-values.ts`, `server/internal/contained-path.ts`, `server/internal/get-file-content.ts`, `server/internal/get-file-diff.ts`, `server/internal/image-handler.ts`, `server/internal/list-dir-handler.ts`, `server/internal/resolve-worktree-path.ts` (debt)
+    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/checkout-root.ts`, `server/internal/commit-values.ts`, `server/internal/contained-path.ts`, `server/internal/image-handler.ts`, `server/internal/resolve-worktree-path.ts` (debt)
   - Plugins:
-    - **`code-api`** — Typed contracts for the /api/code/* endpoints (tree, file, diff, image, push, commit). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle.
+    - **`code-api`** — Typed contracts for the worktree code reads: the /api/code/:worktree/image route and the code.* live values (file, file-diff, dir, commit-info, commit-files, push-files). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle.
       - Core:
         - Uses:
           - `conversations/conversation-view/code.EditedFileSchema`
           - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
           - `infra/endpoints.interpolatePath`
-          - `infra/host-fs.FileVersionSchema`
           - `network/live.liveValue`
           - `primitives/commit-list.CommitRowSchema`
         - Exports (types):
           - `CodeDirEntry`
+          - `CodeFile`
+          - `CodeFileDiff`
           - `CommitFiles`
         - Exports (values):
-          - `codeFileVersion`
+          - `CODE_MACHINE`
+          - `codeDir`
+          - `codeFile`
+          - `codeFileDiff`
           - `codeImageUrl`
           - `commitFiles`
           - `CommitFilesSchema`
           - `commitInfo`
-          - `getFileContent`
-          - `getFileDiff`
           - `getImageContent`
-          - `getPushFiles`
-          - `listCodeDir`
+          - `pushFiles`
       - Cross-plugin:
         - Imported by: `primitives/file-viewer`
     - **`commit-detail`** — The one commit-diff pane, parameterized by worktree (commit/:worktree/:sha) rather than derived from an ancestor conversation, so any surface that can name a (worktree, sha) pair opens it. Also exposes useCommitInfo, the four-armed loading / found / not-found / error commit-metadata lookup.
@@ -12072,9 +12093,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/commit-link`
           - `conversations/conversation-view/commits-graph`
     - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files.
+      - Server:
+        - Contributes: `resource.declare` "code.resolve-file"
+        - Resources: `code.resolve-file` (invalidate, notified)
       - Web:
         - Uses:
-          - `infra/endpoints.useEndpoint`
+          - `network/live.useLive`
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
@@ -12084,14 +12108,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `FileDisambiguation`
           - `useResolvedFile`
-      - Server:
+      - Machine:
         - Uses:
-          - `code-explorer.resolveWorktreePath`
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
-          - `infra/paths.GIT`
-          - `infra/paths.HOME_DIR`
-        - Routes: `GET /api/code/:worktree/resolve`
+          - `code-explorer.loadWorkspaceRoot`
+          - `code-explorer.watchCheckout`
+          - `code-explorer.watchWorkspaceRoot`
+          - `code-explorer.workspaceRootReads`
+          - `infra/host-fs.watchHostPath`
+          - `network/live.serveValue`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --foreground`
@@ -12101,12 +12125,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-medium`
         - Imported by: `conversations/conversation-view/code/file-pane`
-      - Exemptions:
-        - Exempts itself from:
-          - `live/no-endpoint-read` — `web/internal/use-resolved-file.ts` (debt)
-          - `boundaries/no-platform-api` — `server/internal/resolve-handler.ts` (debt)
       - Shared:
-        - Exports (values): `resolveFile`
+        - Exports (types): `ResolvedFile`
+        - Exports (values):
+          - `RESOLVE_MAX_MATCHES`
+          - `resolvedFile`
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
@@ -13940,6 +13963,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `code-explorer/file-resolve.useResolvedFile`
                   - `conversations/conversation-view.conversationPane`
                   - `conversations/conversation-view/code.useEditedFiles`
+                  - `primitives/css/placeholder.Placeholder`
                   - `primitives/css/text.Text`
                   - `primitives/file-viewer.FileContent`
                   - `primitives/file-viewer.FileRenderersHandle`
@@ -13948,6 +13972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/file-viewer.useFileRenderers`
                   - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
                   - `primitives/live-state.foldResource`
+                  - `primitives/live-state.ResourceErrorInline`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.PaneChrome`
@@ -18356,7 +18381,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
   - Cross-plugin:
-    - Imported by: 121 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 122 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×33
       - `page` ×15
       - `conversations` ×14
@@ -18370,6 +18395,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `stats` ×2
       - `apps-core/app-usage`
       - `backup`
+      - `code-explorer`
       - `history/engine`
       - `improve`
       - `integrations/google-maps/usage`
@@ -24609,8 +24635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/run-ledger` (1 debt)
               - `build/serve-composition` (1 debt)
               - `build/server-build-id` (2 debt)
-              - `code-explorer` (8 debt)
-              - `code-explorer/file-resolve` (1 debt)
+              - `code-explorer` (5 debt)
               - `config_v2/ledger` (1 debt)
               - `conversations` (3 debt)
               - `conversations/compaction-context` (1 debt)
@@ -26863,25 +26888,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 203 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 198 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×54
           - `conversations` ×29
           - `debug` ×17
           - `infra` ×16
           - `page` ×14
           - `tasks` ×13
-          - `primitives` ×12
+          - `primitives` ×10
           - `build` ×8
           - `ui` ×6
           - `auth` ×5
           - `stats` ×4
-          - `code-explorer` ×3
           - `reports` ×3
           - `active-data` ×2
+          - `code-explorer` ×2
           - `config_v2` ×2
           - `history` ×2
           - `integrations` ×2
-          - `review` ×2
           - `apps-core/app-usage`
           - `backup`
           - `database/fork`
@@ -27855,7 +27879,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `code-explorer`
-          - `code-explorer/code-api`
+          - `code-explorer/file-resolve`
           - `infra/host-fs/image`
           - `infra/host-fs/zip`
           - `primitives/file-viewer`
@@ -28619,7 +28643,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 51 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 50 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×9
           - `infra` ×8
           - `build` ×7
@@ -28627,11 +28651,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework` ×4
           - `conversations` ×3
           - `release` ×3
-          - `code-explorer` ×2
           - `plugin-meta` ×2
           - `primitives` ×2
           - `stats` ×2
           - `apps/deploy/deployments`
+          - `code-explorer`
           - `reports/outbox`
           - `review/plugin-changes`
           - `tasks`
@@ -30553,7 +30577,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 260 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 262 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×49
           - `debug` ×27
@@ -30561,11 +30585,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra` ×15
           - `active-data` ×12
           - `page` ×10
-          - `primitives` ×9
+          - `primitives` ×10
           - `build` ×6
+          - `code-explorer` ×4
           - `plugin-meta` ×4
           - `auth` ×3
-          - `code-explorer` ×3
           - `review` ×3
           - `apps-core` ×2
           - `config_v2` ×2
@@ -30598,7 +30622,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/build-logs` (1 debt)
           - `build/build-profiling` (1 debt)
           - `build/serve-composition` (1 debt)
-          - `code-explorer/file-resolve` (1 debt)
           - `debug/profiling/build` (1 debt)
           - `debug/slow-ops/cluster` (1 debt)
           - `debug/timeline` (1 debt)
@@ -30614,13 +30637,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/place` (2 debt)
           - `plugin-meta/plugin-health` (1 debt)
           - `primitives/data-view` (0 debt)
-          - `primitives/diff-view` (3 debt)
-          - `primitives/file-viewer` (1 debt)
-          - `primitives/file-viewer/image` (1 debt)
           - `primitives/live-state` (0 debt)
           - `primitives/optimistic-mutation` (0 debt)
-          - `review/code-review` (1 debt)
-          - `review/plugin-changes` (1 debt)
           - `screenshot` (1 debt)
           - `stats/commits` (4 debt)
           - `stats/cost` (8 debt)
@@ -36379,12 +36397,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+            - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
               - `apps` ×29
               - `debug` ×19
               - `primitives` ×13
               - `page` ×7
-              - `conversations` ×4
+              - `conversations` ×5
               - `build` ×2
               - `config_v2` ×2
               - `plugin-meta` ×2
@@ -38309,7 +38327,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: 23 symbols — full list in [`plugins/primitives/plugins/diff-view/REFERENCE.md`](../plugins/primitives/plugins/diff-view/REFERENCE.md)
           - `primitives/overlay/image-viewer` ×5
           - `primitives/syntax-highlight` ×5
-          - `infra/endpoints` ×3
+          - `primitives/live-state` ×2
+          - `network/live.useLive`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
           - `primitives/css/column.Column`
@@ -38322,7 +38341,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/loading.Loading`
         - Exports (types):
           - `DiffTokens`
-          - `FileDiffState`
           - `ShikiTokenNode`
         - Exports (values):
           - `buildSideTokenMap`
@@ -38332,7 +38350,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ImageDiffView`
           - `TextDiff`
           - `useDiffTokens`
-          - `useFileDiff`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --accent`
@@ -38363,10 +38380,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/file-viewer/diff`
           - `review/code-review`
           - `review/plugin-changes/file-changes`
-      - Exemptions:
-        - Exempts itself from:
-          - `live/no-endpoint-read` — `web/use-file-diff.ts` (debt)
-          - `live/no-endpoint-read` — `web/components/diff-view.tsx`, `web/use-diff-tokens.ts` (debt)
     - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
       - Plugins:
         - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
@@ -38819,7 +38832,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/file-viewer`
           - `primitives/file-viewer/media`
           - `primitives/text-editor/paste-images`
-    - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, useFileText reading a FileRef's text from the host (infra/host-fs) or a git checkout (code-api), and useFileBytes its raw bytes — host files only for now (a workspace file is refused unsupported until code-api's byte read has a live form).
+    - **`file-viewer`** — Domain-neutral file viewer: the tiered FileViewer.Renderer registry (native / contextual / fallback / last-resort, offered as tabs), the FileView / FileContent / FileTabs hosts, useFileText reading a FileRef's text from the host (infra/host-fs) or a git checkout (code-api), and useFileBytes its raw bytes (a host file through host-fs, a workspace file through code-explorer).
       - Web:
         - Slots: `FileViewer.Renderer`
         - Slot contributors:
@@ -38833,8 +38846,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileViewer.Renderer` ← `primitives.file-viewer.media`
           - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
         - Uses:
-          - `infra/endpoints.EndpointError`
-          - `infra/endpoints.useEndpoint`
           - `infra/endpoints.useEndpointMutation`
           - `network/live.useLive`
           - `primitives/css/center.Center`
@@ -38883,6 +38894,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources: `file-viewer.bytes` (invalidate, notified)
       - Machine:
         - Uses:
+          - `code-explorer.readWorkspaceBytes`
+          - `code-explorer.watchWorkspaceFile`
+          - `code-explorer.WorkspaceFile`
+          - `code-explorer.workspaceFileSignature`
+          - `code-explorer.workspaceRootReads`
+          - `infra/host-fs.hostPathVersion`
           - `infra/host-fs.resolvedOrNull`
           - `infra/host-fs.resolveOrRefuse`
           - `infra/host-fs.watchHostPath`
@@ -38926,8 +38943,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/file-viewer/markdown`
           - `primitives/file-viewer/media`
           - `primitives/file-viewer/pdf`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-file-text.ts` (debt)
       - Plugins:
         - **`code`** — Code renderer: the file's text as a syntax-highlighted, line-numbered listing. The fallback tab for any file not known to be binary.
           - Web:
@@ -38968,7 +38983,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `FileViewer.Renderer` "Image" → `ImageView`
             - Uses:
-              - `infra/endpoints.useEndpoint`
               - `network/live.useLive`
               - `primitives/css/center.Center`
               - `primitives/file-viewer.FileViewer`
@@ -38979,8 +38993,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/overlay/image-viewer.ViewerImage`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-lg`
-          - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-folder-images.ts` (debt)
         - **`markdown`** — Rendered markdown preview for .md and .mdx files.
           - Web:
             - Contributes: `FileViewer.Renderer` "Markdown" → `MarkdownView`
@@ -39593,14 +39605,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 256 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 257 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×69
           - `conversations` ×49
           - `debug` ×24
           - `ui` ×23
           - `tasks` ×22
           - `page` ×12
-          - `primitives` ×11
+          - `primitives` ×12
           - `active-data` ×7
           - `infra` ×7
           - `plugin-meta` ×5
@@ -43926,11 +43938,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "config"
         - Uses: 31 symbols — full list in [`plugins/review/plugins/code-review/REFERENCE.md`](../plugins/review/plugins/code-review/REFERENCE.md)
           - `primitives/collapsible` ×7
+          - `primitives/live-state` ×3
           - `config_v2` ×2
           - `conversations/conversation-view/code` ×2
-          - `primitives/live-state` ×2
           - `conversations.useConversationById`
-          - `infra/endpoints.useEndpoint`
           - `network/live.useLive`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/badge.Badge`
@@ -43972,11 +43983,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
           - `ui/tokens/type-scale --line-height-caption`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/use-push-files.ts` (debt)
       - Shared:
         - Exports (values): `reviewConfig`
-    - **`plugin-changes`** (excluded) — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
+    - **`plugin-changes`** (excluded) — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main, and serves one push's (review.push-plugin-changes).
       - Web:
         - Slots:
           - `PluginChangesSlots.Section`
@@ -43995,11 +44004,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.slots.render-diff`
           - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.structure.render-diff`
         - Contributes: `ReviewSlots.Section` "Plugin Changes" → `PluginChangesSection`
-        - Uses: 22 symbols — full list in [`plugins/review/plugins/plugin-changes/REFERENCE.md`](../plugins/review/plugins/plugin-changes/REFERENCE.md)
+        - Uses: 21 symbols — full list in [`plugins/review/plugins/plugin-changes/REFERENCE.md`](../plugins/review/plugins/plugin-changes/REFERENCE.md)
           - `primitives/collapsible` ×4
           - `primitives/css/badge` ×2
           - `primitives/live-state` ×2
-          - `infra/endpoints.useEndpoint`
           - `network/live.useLive`
           - `primitives/css/card.Card`
           - `primitives/css/clip.Clip`
@@ -44018,36 +44026,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginChangesSlots`
           - `usePluginFacetDiffs`
       - Server:
-        - Contributes: `resource.declare` "review.plugin-changes"
+        - Contributes:
+          - `resource.declare` "review.plugin-changes"
+          - `resource.declare` "review.push-plugin-changes"
         - Uses:
           - `code-explorer.getRangeFiles`
-          - `code-explorer.resolveParentSha`
+          - `code-explorer.pushRangeReads`
+          - `code-explorer.resolvePushRange`
           - `conversations/conversation-view/code.editedFilesSignature`
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
           - `infra/git/git-read-cache.createGitStateMemo`
           - `infra/git/git-watcher.lastKnownMainSha`
           - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/paths.GIT`
           - `infra/paths.REPO_ROOT`
+          - `network/live.serveValue`
           - `primitives/commit-list.runGit`
-          - `tasks/tasks-core.listPushesByPushId`
-        - Resources: `review.plugin-changes` (push, notified)
-        - Routes: `GET /api/review/plugin-changes`
+        - Resources:
+          - `review.plugin-changes` (push, notified)
+          - `review.push-plugin-changes` (push, notified)
       - Machine:
         - Uses: `conversations/conversation-view/code.editedFilesServed`
-      - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
-        - Exports (types):
-          - `DiffList`
-          - `DiffRenderer`
-          - `PluginChangedFile`
-          - `PluginChangeDiff`
-          - `PluginChangesResponse`
-          - `PluginReviewProps`
-        - Exports (values):
-          - `getPluginChanges`
-          - `PluginChangesSchema`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --border`
@@ -44076,9 +44074,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes/api-changes`
           - `review/plugin-changes/file-changes`
       - Exemptions:
-        - Exempts itself from:
-          - `live/no-endpoint-read` — `web/use-plugin-changes.ts` (debt)
-          - `boundaries/no-platform-api` — `server/internal/handle-plugin-changes.ts`, `server/internal/main-plugins-dir.ts` (debt)
+        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/push-plugin-changes.ts`, `server/internal/main-plugins-dir.ts` (debt)
+      - Core:
+        - Exports (types):
+          - `DiffList`
+          - `DiffRenderer`
+          - `PluginChangedFile`
+          - `PluginChangeDiff`
+          - `PluginChangesResponse`
+          - `PluginReviewProps`
+        - Exports (values): `PluginChangesSchema`
       - Plugins:
         - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
           - Web:
@@ -46871,7 +46876,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listConversationsForInfra`
           - `listDependentIds`
           - `listHibernationCandidates`
-          - `listPushesByPushId`
           - `listPushesForAttempt`
           - `listRetainedConversations`
           - `listTasks`
@@ -46999,7 +47003,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 72 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 71 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×30
           - `tasks` ×17
           - `active-data` ×5
@@ -47013,7 +47017,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/query`
           - `improve`
           - `plugin-meta/plugin-health`
-          - `review/plugin-changes`
         - Extended by:
           - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
           - `apps/places/ask` (table `conversations_ext_places_ask`)
