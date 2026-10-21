@@ -41,6 +41,10 @@ export interface AttemptFacts {
   hasOpenConv: SqlOperand;
   maxEndedAt: SqlOperand;
   hasPush: SqlOperand;
+  /** Some landing is a recorded delivery (scratch), not a push. */
+  hasDelivery: SqlOperand;
+  /** An agent is computing on the attempt (`starting` / `working`). */
+  hasWorkingConv: SqlOperand;
   minPushAt: SqlOperand;
 }
 
@@ -65,6 +69,8 @@ export function attemptDerived(f: AttemptFacts): {
         CASE
           WHEN ${f.hasConv} IS NULL                              THEN 'pending'
           WHEN ${f.hasLiveConv} AND ${f.hasPush} IS NULL                THEN 'in_progress'
+          WHEN ${f.hasDelivery}
+            AND NOT COALESCE(${f.hasWorkingConv}, false)                 THEN 'completed'
           WHEN ${f.hasLiveConv} AND ${f.hasPush}                       THEN 'pushed'
           WHEN ${f.hasPush}                                            THEN 'completed'
           WHEN ${f.hasOpenConv}                                        THEN 'dormant'
@@ -79,7 +85,9 @@ export function attemptDerived(f: AttemptFacts): {
     finishedAt: sql`
         CASE
           WHEN ${f.hasConv} AND ${f.hasPush}
-            AND NOT COALESCE(${f.hasLiveConv}, false)                    THEN ${f.minPushAt}
+            AND (NOT COALESCE(${f.hasLiveConv}, false)
+                 OR (${f.hasDelivery}
+                     AND NOT COALESCE(${f.hasWorkingConv}, false)))      THEN ${f.minPushAt}
           WHEN ${f.hasConv} AND NOT COALESCE(${f.hasOpenConv}, false)
             AND ${f.hasPush} IS NULL                                     THEN ${f.maxEndedAt}
           ELSE                                                           NULL

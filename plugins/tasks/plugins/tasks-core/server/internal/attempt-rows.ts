@@ -77,15 +77,17 @@ const joins = [conv, push, convs] as const;
 const factsOf = (j: {
   conv: Pick<
     AttemptFacts,
-    "hasConv" | "hasLiveConv" | "hasOpenConv" | "maxEndedAt"
+    "hasConv" | "hasLiveConv" | "hasOpenConv" | "maxEndedAt" | "hasWorkingConv"
   >;
-  push: Pick<AttemptFacts, "hasPush" | "minPushAt">;
+  push: Pick<AttemptFacts, "hasPush" | "hasDelivery" | "minPushAt">;
 }): AttemptFacts => ({
   hasConv: j.conv.hasConv,
   hasLiveConv: j.conv.hasLiveConv,
   hasOpenConv: j.conv.hasOpenConv,
   maxEndedAt: j.conv.maxEndedAt,
   hasPush: j.push.hasPush,
+  hasDelivery: j.push.hasDelivery,
+  hasWorkingConv: j.conv.hasWorkingConv,
   minPushAt: j.push.minPushAt,
 });
 

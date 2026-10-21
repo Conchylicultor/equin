@@ -77,7 +77,9 @@ describe("transcriptionInstructions", () => {
     );
     expect(md).toContain("./bin/st frames input/video.mp4 --out frames");
     expect(md).toContain("sonata_submit_transcription");
-    expect(md).toContain("then call `exit_clean`");
+    expect(md).toContain("then end your turn");
+    expect(md).toContain("Never\n   call `exit_clean`");
+    expect(md).toContain("## When the user replies");
   });
 
   test("an upload source lists the copied files, rendering PDFs to pages", () => {

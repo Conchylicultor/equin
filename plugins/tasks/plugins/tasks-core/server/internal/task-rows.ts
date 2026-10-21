@@ -72,6 +72,8 @@ const attemptFacts = (c: AttemptRefs): AttemptFacts => ({
   hasOpenConv: c.conv.hasOpenConv,
   maxEndedAt: c.conv.maxEndedAt,
   hasPush: c.push.hasPush,
+  hasDelivery: c.push.hasDelivery,
+  hasWorkingConv: c.conv.hasWorkingConv,
   minPushAt: c.push.minPushAt,
 });
 

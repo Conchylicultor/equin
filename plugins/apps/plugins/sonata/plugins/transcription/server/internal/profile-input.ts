@@ -4,9 +4,6 @@ import { z } from "zod";
 /** The `sonata.transcription` scratch profile's id. */
 export const TRANSCRIPTION_PROFILE_ID = "sonata.transcription";
 
-/** The MCP tool the transcribing agent submits its score with. */
-export const SUBMIT_TOOL = "sonata_submit_transcription";
-
 /**
  * What the profile is launched with (the workspace spec's `input`): the song
  * the score goes to, and the source as the agent's directory holds it — the

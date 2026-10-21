@@ -128,6 +128,19 @@ describe("submitTranscription", () => {
     expect(calls.delivered).toEqual(["conv-1"]);
   });
 
+  test("a correction resubmits: the score is imported and marked ready again", async () => {
+    const { deps, calls } = fakes();
+    for (let i = 0; i < 2; i++) {
+      await submitTranscription(
+        { conversationId: "conv-1", path: "score.musicxml" },
+        deps,
+      );
+    }
+    expect(calls.imported).toHaveLength(2);
+    expect(calls.ready).toEqual(["song-abc", "song-abc"]);
+    expect(calls.delivered).toEqual(["conv-1", "conv-1"]);
+  });
+
   test("a parse error comes back as feedback, and nothing is marked", async () => {
     const { deps, calls } = fakes({
       importThrows: new FakeParseError("[musicxml] <kind> in measure 3: bad"),

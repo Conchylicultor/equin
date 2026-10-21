@@ -1,4 +1,5 @@
-import { inputFilePath, SUBMIT_TOOL, type ProfileInput } from "./profile-input";
+import { SUBMIT_TOOL } from "../../core";
+import { inputFilePath, type ProfileInput } from "./profile-input";
 
 /**
  * The transcribing agent's CLAUDE.md — its whole project context. Code, not
@@ -115,11 +116,21 @@ const STEPS = `## Steps
 5. **Submit**: call \`${SUBMIT_TOOL}\` with \`path: "score.musicxml"\`. A parse
    error names the element and measure: fix it, render again, resubmit.
 6. **Finish**: once the submit succeeds, write two lines — what you
-   transcribed, and any bar you were unsure of — then call \`exit_clean\`.
+   transcribed, and any bar you were unsure of — then end your turn. Never
+   call \`exit_clean\`: the user reads your run in Sonata and may reply.
 
 Only when you are truly blocked — the source cannot be fetched even with
 cookies, or holds no readable sheet music — call \`flag_raise\` with the reason
-and stop. Never submit a guess.`;
+and stop. Never submit a guess.
+
+## When the user replies
+
+A reply points at a mistake in the submitted score ("bar 12 is wrong", "the
+left hand is an octave low"). Re-read that part of the source, fix
+\`score.musicxml\`, render it and compare it side by side with the source
+again (step 4, for the bars concerned and their neighbours), then submit again
+— it replaces the song's score — and end your turn with one line on what you
+changed. If the reply is a question, answer it and end your turn.`;
 
 const CONVENTIONS = `## MusicXML conventions
 

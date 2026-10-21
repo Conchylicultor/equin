@@ -38,6 +38,8 @@ import { _attemptDeliveries, _conversations, pushes } from "./tables";
 //     The RETENTION notion, and the one any DESTRUCTIVE consumer must read.
 //     `done` is the ONLY terminal status — it is written exclusively by an
 //     explicit close (`exit_clean` / the UI Exit actions → markConversationClosed).
+//     (A DELIVERED attempt does not need it to read `completed`: a scratch
+//     thread agent ends its turn instead, and stays repliable — derived.ts.)
 //     `gone` is NOT terminal: it is precisely the state `resumeConversation`
 //     REQUIRES to allow a resume, so a `gone` conversation is a conversation the
 //     user can still come back to. Matches `isActiveStatus()`
@@ -54,6 +56,10 @@ import { _attemptDeliveries, _conversations, pushes } from "./tables";
 //     Feeds the task's `need_action` status (P8 v3 step 19): `tasks_v` and the
 //     `tasks` collection read it here instead of grouping `conversations`.
 //
+//   has_working_conv  ⇔  status IN ('starting','working')   "an agent computes"
+//     Keeps a delivered attempt `pushed` (not `completed`) while a follow-up
+//     turn runs; once the agent ends its turn the delivery completes it.
+//
 // The reads are exactly the columns the aggregate reads, so a write to any
 // other conversation column (`waiting_for`, `last_viewed_at`, …) re-aggregates
 // nothing.
@@ -66,7 +72,8 @@ export const attemptConvAgg = defineRollup({
            bool_or(c.status NOT IN ('gone', 'done')) AS has_live_conv,
            bool_or(c.status <> 'done') AS has_open_conv,
            max(c.ended_at) AS max_ended_at,
-           bool_or(c.status = 'waiting') AS has_waiting_conv
+           bool_or(c.status = 'waiting') AS has_waiting_conv,
+           bool_or(c.status IN ('starting', 'working')) AS has_working_conv
       FROM conversations c
      WHERE ${scope("c.attempt_id")}
      GROUP BY c.attempt_id`,
@@ -87,17 +94,21 @@ export const attemptConvAgg = defineRollup({
 // never pushes, and without its delivery it could never be `completed`, nor its
 // task `done`. `has_push` is a constant `true` marker — a missing row reads as
 // NULL = "nothing landed"; `min_push_at` is the earliest landing of either
-// kind. (The names predate deliveries; the fact is "landed".)
+// kind. (The names predate deliveries; the fact is "landed".) `has_delivery`
+// tells the kinds apart: a delivery completes its attempt as soon as no agent
+// is working on it, while a push waits for the conversation to end
+// (derived.ts).
 export const attemptPushAgg = defineRollup({
   table: _attemptPushAgg,
   key: _attemptPushAgg.attemptId,
   select: (scope) => `
     SELECT l.attempt_id,
            true AS has_push,
+           bool_or(l.delivery) AS has_delivery,
            min(l.landed_at) AS min_push_at
-      FROM (SELECT p.attempt_id, p.created_at AS landed_at FROM pushes p
+      FROM (SELECT p.attempt_id, p.created_at AS landed_at, false AS delivery FROM pushes p
             UNION ALL
-            SELECT d.attempt_id, d.delivered_at FROM attempt_deliveries d) l
+            SELECT d.attempt_id, d.delivered_at, true FROM attempt_deliveries d) l
      WHERE ${scope("l.attempt_id")}
      GROUP BY l.attempt_id`,
   sources: [

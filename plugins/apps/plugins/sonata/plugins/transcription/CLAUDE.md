@@ -22,26 +22,38 @@ Sonata transcription (design: `research/2026-10-13-global-agent-workspaces-and-s
    render → side-by-side → fix loop and the MusicXML conventions), waits for `transcriptionDep`
    (`dep-ready.ts`: `requestDep` + `onDepInstallSettled`, since the spawn job has no `ExecContext`),
    writes `./bin/st` (the checkout's `bin/st` with `ST_PYTHON` set) and copies uploads to
-   `input/NN-<name>`. The agent sees only `sonata_submit_transcription`, `exit_clean` and
-   `flag_raise`.
+   `input/NN-<name>`. The agent sees only `sonata_submit_transcription` and `flag_raise` — no
+   `exit_clean`: it ends its turn, so the conversation stays open for the user's corrections.
 4. `sonata_submit_transcription({ path })` (`mcp-tool.ts` / `submit.ts`): the song comes from the
    conversation's workspace spec, never from the agent; `path` must resolve inside the workspace
    (symlinks included, `workspace-file.ts`); `importMusicXmlForSong` — a `MusicXmlParseError` goes
    back to the agent as the tool's error — then status `ready` and `recordScratchDelivery` (tasks-core's
-   `attempt_deliveries` fact, which counts like a push). The agent then calls `exit_clean`.
-5. A conversation closed (`done`) while still transcribing marks the song `failed`
-   (`conversation-status.ts`, on `conversation.statusChanged`); **Retry** relaunches on the same
-   task and song (`launchTranscription`, the stored input's prompt and the default model). `url` /
-   `files` inputs are the earlier dialog's rows, still decoded and retried.
+   `attempt_deliveries` fact). The agent writes a two-line summary and ends its turn. The tool's
+   schema is `transcriptionScore` (`core/result.ts`, a `defineThreadResult`), so the thread parses
+   exactly what the tool accepted.
+5. **The thread** (`web/components/transcription-thread.tsx`, an `<AgentThread>` from
+   `conversations/agent-thread`): the player's pending body while transcribing / failed, and the
+   player's **Transcription** section (`Sonata.Section`, editor area) once the score is in. A reply
+   ("bar 12 is wrong") resumes the same conversation; the agent fixes, resubmits, and the score is
+   replaced in place (`markReady` again stamps the song, which re-hydrates the player).
+6. A conversation closed (`done`) while still transcribing marks the song `failed`
+   (`conversation-status.ts`, on `conversation.statusChanged`); an agent that merely ended its turn
+   without a score is not a failure — the thread shows it and the user replies. A failed song's
+   conversation working again (a reply from the thread resumes even a closed one) marks it
+   transcribing. **Retry** (the thread header, or the bare state line when no conversation ever
+   started) relaunches on the same task and song (`launchTranscription`, the stored input's prompt
+   and the default model). `url` / `files` inputs are the earlier dialog's rows, still decoded and
+   retried.
 
 Every status write stamps the song row (`updateSongMeta`), which is what re-hydrates an open player.
 The extension EXPOSES the run state (`status`, `conversationId`, `error`) on the songs entity
 (`shared/shape.ts`, served by `LiveColumns.Expose`), so every list of songs carries it: the card badge
 (the status options, `web/internal/presentation.tsx`) and the player's pending body (`Library.Source` `hydrate` →
-`pending` with `TranscriptionBody`, which reads the song row live) — Open conversation, error, Retry.
+`pending` with `TranscriptionBody`, which reads the song row live) — the thread, or the error and Retry.
 
-The task derives `done` from the delivery fact once the conversation closes (`exit_clean`): a
-scratch attempt never pushes, so the delivery is its "completed" evidence.
+The task derives `done` from the delivery fact alone: tasks-core completes a delivered attempt as
+soon as no agent is working on it, so the task reads done once the agent ends its turn, in progress
+while a correction runs, and done again after — the conversation itself stays open.
 
 ## The `st` toolkit
 
@@ -65,19 +77,23 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
 
 ## Plugin reference
 
-- Description: Sonata transcription in the library: a 'Transcribe…' entry in the + menu (a video/post link, or page images and PDFs) that creates the song and starts the transcribing agent; a transcribed song shows its live run state in the player until the score is in (Open conversation, and the error + Retry when it failed); and a Transcribing / Failed badge on its card. Owns the sonata_songs_ext_transcription side-table: a transcribed song's run state (status, input, task, latest conversation, error). POST transcribe creates the song (MusicXML source), a Sonata task and a transcribing agent in a `sonata.transcription` scratch workspace (CLAUDE.md = the instructions, ./bin/st = the toolkit); its sonata_submit_transcription MCP tool imports the agent's MusicXML into the song. Exposes its status, latest conversation and error to every list of songs (LiveColumns.Expose); a conversation closed before submitting marks the song failed (retry relaunches).
+- Description: Sonata transcription in the library: a 'Transcribe…' entry in the + menu (a video/post link, or page images and PDFs) that creates the song and starts the transcribing agent; a transcribed song shows its agent run as an embedded agent thread — the steps, the agent's summary and a reply box — in the player until the score is in (Retry when it failed), then in the player's Transcription section, where a reply asks for a correction and the resubmitted score replaces the song's; and a Transcribing / Failed badge on its card. Owns the sonata_songs_ext_transcription side-table: a transcribed song's run state (status, input, task, latest conversation, error). POST transcribe creates the song (MusicXML source), a Sonata task and a transcribing agent in a `sonata.transcription` scratch workspace (CLAUDE.md = the instructions, ./bin/st = the toolkit); its sonata_submit_transcription MCP tool imports the agent's MusicXML into the song. Exposes its status, latest conversation and error to every list of songs (LiveColumns.Expose); a conversation closed before submitting marks the song failed (retry relaunches).
 - Web:
   - Contributes:
     - `Library.Source` "transcription"
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_transcription"
+    - `Sonata.Section` "Transcription" → `TranscriptionSection`
   - Uses:
-    - `apps-core/tabs.appLinkProps`
     - `apps/sonata/library.Library`
     - `apps/sonata/library.openSongImperative`
+    - `apps/sonata/library.useCurrentSong`
+    - `apps/sonata/shell.Sonata`
+    - `conversations/agent-thread.AgentThread`
     - `infra/endpoints.fetchEndpoint`
     - `network/live.FieldPresentation`
     - `network/live.useLiveRow`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
@@ -120,17 +136,26 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `POST /api/sonata/transcription/prepare`
     - `POST /api/sonata/songs/:id/transcription/retry`
     - `GET /api/sonata/songs/:id/transcription`
+- Core:
+  - Uses: `conversations/agent-thread.defineThreadResult`
+  - Exports (types):
+    - `SubmitTranscription`
+    - `TranscriptionStatus`
+  - Exports (values):
+    - `SUBMIT_TOOL`
+    - `SubmitTranscriptionSchema`
+    - `TRANSCRIPTION_STATUSES`
+    - `transcriptionScore`
 - Deps:
   - Uses:
     - `infra/deps.defineDep`
     - `infra/deps/python.pythonEnv`
   - Exports (values): `transcriptionDep`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/shape --spacing`
+  - Uses tokens:
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/shape --spacing`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/launch.ts`, `server/internal/profile-input.ts`, `server/internal/profile.ts`, `server/internal/submit.ts`, `server/internal/workspace-file.ts` (debt)
-- Core:
-  - Exports (types): `TranscriptionStatus`
-  - Exports (values): `TRANSCRIPTION_STATUSES`
 
 <!-- AUTOGENERATED:END -->

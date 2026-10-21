@@ -8085,8 +8085,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Sonata.ViewOption`
               - `Sonata.ViewSection`
               - `Sonata.Section`
-            - Slot contributors: 37 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
-              - `Sonata.Section` ×11
+            - Slot contributors: 38 contributors — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+              - `Sonata.Section` ×12
               - `Sonata.ViewOption` ×8
               - `Sonata.Effect` ×6
               - `Sonata.Hud` ×5
@@ -8131,8 +8131,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --popover`
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shadow --shadow-popover`
-            - Imported by: 29 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
-              - `apps` ×29
+            - Imported by: 30 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+              - `apps` ×30
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
           - Web:
             - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
@@ -8788,19 +8788,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/piano-roll`
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/rhythm-controls`
-        - **`transcription`** — Sonata transcription in the library: a 'Transcribe…' entry in the + menu (a video/post link, or page images and PDFs) that creates the song and starts the transcribing agent; a transcribed song shows its live run state in the player until the score is in (Open conversation, and the error + Retry when it failed); and a Transcribing / Failed badge on its card. Owns the sonata_songs_ext_transcription side-table: a transcribed song's run state (status, input, task, latest conversation, error). POST transcribe creates the song (MusicXML source), a Sonata task and a transcribing agent in a `sonata.transcription` scratch workspace (CLAUDE.md = the instructions, ./bin/st = the toolkit); its sonata_submit_transcription MCP tool imports the agent's MusicXML into the song. Exposes its status, latest conversation and error to every list of songs (LiveColumns.Expose); a conversation closed before submitting marks the song failed (retry relaunches).
+        - **`transcription`** — Sonata transcription in the library: a 'Transcribe…' entry in the + menu (a video/post link, or page images and PDFs) that creates the song and starts the transcribing agent; a transcribed song shows its agent run as an embedded agent thread — the steps, the agent's summary and a reply box — in the player until the score is in (Retry when it failed), then in the player's Transcription section, where a reply asks for a correction and the resubmitted score replaces the song's; and a Transcribing / Failed badge on its card. Owns the sonata_songs_ext_transcription side-table: a transcribed song's run state (status, input, task, latest conversation, error). POST transcribe creates the song (MusicXML source), a Sonata task and a transcribing agent in a `sonata.transcription` scratch workspace (CLAUDE.md = the instructions, ./bin/st = the toolkit); its sonata_submit_transcription MCP tool imports the agent's MusicXML into the song. Exposes its status, latest conversation and error to every list of songs (LiveColumns.Expose); a conversation closed before submitting marks the song failed (retry relaunches).
           - Web:
             - Contributes:
               - `Library.Source` "transcription"
               - `FieldPresentation.Register` "exposure:sonata_songs_ext_transcription"
+              - `Sonata.Section` "Transcription" → `TranscriptionSection`
             - Uses:
-              - `apps-core/tabs.appLinkProps`
               - `apps/sonata/library.Library`
               - `apps/sonata/library.openSongImperative`
+              - `apps/sonata/library.useCurrentSong`
+              - `apps/sonata/shell.Sonata`
+              - `conversations/agent-thread.AgentThread`
               - `infra/endpoints.fetchEndpoint`
               - `network/live.FieldPresentation`
               - `network/live.useLiveRow`
               - `primitives/css/inline.Inline`
+              - `primitives/css/line.Line`
               - `primitives/css/spacing.Stack`
               - `primitives/css/spinner.Spinner`
               - `primitives/css/text.Text`
@@ -8843,18 +8847,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/sonata/transcription/prepare`
               - `POST /api/sonata/songs/:id/transcription/retry`
               - `GET /api/sonata/songs/:id/transcription`
+          - Core:
+            - Uses: `conversations/agent-thread.defineThreadResult`
+            - Exports (types):
+              - `SubmitTranscription`
+              - `TranscriptionStatus`
+            - Exports (values):
+              - `SUBMIT_TOOL`
+              - `SubmitTranscriptionSchema`
+              - `TRANSCRIPTION_STATUSES`
+              - `transcriptionScore`
           - Deps:
             - Uses:
               - `infra/deps.defineDep`
               - `infra/deps/python.pythonEnv`
             - Exports (values): `transcriptionDep`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
+            - Uses tokens:
+              - `ui/tokens/density --space-2xs`
+              - `ui/tokens/shape --spacing`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/launch.ts`, `server/internal/profile-input.ts`, `server/internal/profile.ts`, `server/internal/submit.ts`, `server/internal/workspace-file.ts` (debt)
-          - Core:
-            - Exports (types): `TranscriptionStatus`
-            - Exports (values): `TRANSCRIPTION_STATUSES`
         - **`transport-bar`** — Sonata transport controls: the play/pause button at the head of the player's transport strip (togglePlay, count-in aware) and the playback-speed jog wheel in the player header, folded to its readout at rest.
           - Web:
             - Contributes:
@@ -10605,8 +10618,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps` ×12
+        - Imported by: 36 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps` ×11
           - `apps-core` ×9
           - `debug` ×7
           - `primitives` ×2
@@ -12981,6 +12994,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/places/ask`
           - `apps/places/places-map`
+          - `apps/sonata/transcription`
     - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations: the agents roster and launches (tables, live collections, CRUD and move routes), portable; the launch route itself is the desktop-only machine half.
       - Web:
         - Slots:
@@ -36403,8 +36417,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 118 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
-              - `apps` ×33
+            - Imported by: 119 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+              - `apps` ×34
               - `primitives` ×19
               - `conversations` ×18
               - `debug` ×8
@@ -48495,9 +48509,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 321 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 322 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `apps` ×67
               - `primitives` ×67
-              - `apps` ×66
               - `conversations` ×49
               - `debug` ×28
               - `page` ×20

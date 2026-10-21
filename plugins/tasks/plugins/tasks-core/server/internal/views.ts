@@ -49,6 +49,8 @@ const rollupFacts = {
   hasOpenConv: _attemptConvAgg.hasOpenConv,
   maxEndedAt: _attemptConvAgg.maxEndedAt,
   hasPush: _attemptPushAgg.hasPush,
+  hasDelivery: _attemptPushAgg.hasDelivery,
+  hasWorkingConv: _attemptConvAgg.hasWorkingConv,
   minPushAt: _attemptPushAgg.minPushAt,
 };
 
@@ -75,6 +77,12 @@ export const attempts = pgView("attempts_v").as((qb) => {
   // (and is exactly the status `resumeConversation` requires), so a live,
   // resumable attempt that had not pushed yet fell through to `abandoned`.
   // `has_open_conv` is what tells the two apart (`dormant`).
+  //
+  // A DELIVERY (a scratch workspace's landed fact) completes its attempt as
+  // soon as no agent is working on it — the conversation may stay open and
+  // repliable (a thread agent ends its turn instead of calling exit_clean), and
+  // a follow-up turn reads `pushed` only while it runs. A push keeps waiting
+  // for the conversation to end: a worktree agent that pushed may push again.
   //
   // Ordering: `dormant` sits BELOW the landed arms on purpose. It exists to
   // stop ABSENCE reading as abandonment, not to outrank a true claim — when

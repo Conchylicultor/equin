@@ -6,8 +6,10 @@ import { withTaskStatusChange } from "../status-scope";
 /**
  * Record that a scratch conversation delivered its work — a scratch workspace
  * has no git, so this row is its "landed" fact where a worktree's is a push:
- * once the attempt's conversations close it reads `completed`, and its task
- * `done` (rollup-spec.ts, `attempt_push_agg`). A fact, never a status (I6).
+ * once no agent is working on the attempt (its turn ended, or its conversation
+ * hibernated or closed) it reads `completed`, and its task `done` — the
+ * conversation may stay open for a follow-up (derived.ts, rollup-spec.ts
+ * `attempt_push_agg`). A fact, never a status (I6).
  *
  * Idempotent per attempt: a second delivery replaces the summary and keeps the
  * first instant. Throws for an unknown conversation, and for one whose

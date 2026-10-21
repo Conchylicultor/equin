@@ -34,10 +34,18 @@ export const _attemptConvAgg = pgTable(ATTEMPT_CONV_AGG_TABLE, {
   // read it here, so neither reads `conversations` directly). NULL for an
   // attempt with no conversation, like the two flags above.
   hasWaitingConv: boolean("has_waiting_conv"),
+  // `status IN ('starting','working')`: an agent is computing on the attempt
+  // right now. Narrower than hasLiveConv (which includes `waiting`): it is what
+  // keeps a delivered attempt from reading `completed` while a follow-up runs.
+  hasWorkingConv: boolean("has_working_conv"),
 });
 
 export const _attemptPushAgg = pgTable(ATTEMPT_PUSH_AGG_TABLE, {
   attemptId: text("attempt_id").primaryKey(),
   hasPush: boolean("has_push").notNull(),
+  // Some landing is a recorded DELIVERY (a scratch workspace's), not a push.
+  // A delivery completes the attempt once no agent is working on it, open
+  // conversation or not (derived.ts).
+  hasDelivery: boolean("has_delivery").notNull(),
   minPushAt: timestamp("min_push_at", { withTimezone: true }),
 });

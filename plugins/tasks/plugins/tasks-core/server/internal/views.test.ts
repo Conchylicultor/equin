@@ -680,6 +680,46 @@ describe("attempt_deliveries — a delivery lands like a push", () => {
     expect(task.finishedAt).not.toBeNull();
   });
 
+  // A thread agent ends its turn instead of closing (no exit_clean): its
+  // delivery completes the attempt while the conversation stays open and
+  // repliable, and a follow-up turn reads in progress only while it runs.
+  test("delivered, then the agent ends its turn: `completed` and the task `done`, still open", async () => {
+    const taskId = await seedTask();
+    const attemptId = await seedAttempt(taskId);
+    const conv = await seedConversation(attemptId, "working");
+    await seedDelivery(attemptId, conv);
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'waiting' WHERE id = ${conv}
+    `);
+    const attempt = await attemptRow(attemptId);
+    expect(attempt.status).toBe("completed");
+    expect(attempt.finishedAt).not.toBeNull();
+    expect(attempt.retained).toBe(true);
+    expect((await taskStatus(taskId)).status).toBe("done");
+
+    // The user replies: the agent works again, so the task is in progress…
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'working' WHERE id = ${conv}
+    `);
+    expect((await attemptRow(attemptId)).status).toBe("pushed");
+    expect((await taskStatus(taskId)).status).toBe("in_progress");
+
+    // …and done again once it hibernates (or ends its turn).
+    await t.db.execute(sql`
+      UPDATE conversations SET status = 'gone' WHERE id = ${conv}
+    `);
+    expect((await attemptRow(attemptId)).status).toBe("completed");
+    expect((await taskStatus(taskId)).status).toBe("done");
+  });
+
+  test("a push does not complete a waiting attempt: only a delivery does", async () => {
+    const taskId = await seedTask();
+    const attemptId = await seedAttempt(taskId);
+    await seedConversation(attemptId, "waiting");
+    await seedPush(attemptId);
+    expect((await attemptRow(attemptId)).status).toBe("pushed");
+  });
+
   test("a held task stays held over a delivered attempt", async () => {
     const taskId = await seedTask({ held: true });
     const attemptId = await seedAttempt(taskId);

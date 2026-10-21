@@ -9,9 +9,9 @@ import { transcriptionInstructions } from "./instructions";
 import {
   inputFilePath,
   ProfileInputSchema,
-  SUBMIT_TOOL,
   TRANSCRIPTION_PROFILE_ID,
 } from "./profile-input";
+import { SUBMIT_TOOL } from "../../core";
 
 /** The `st` executable in this checkout (the wrapper's target). */
 const ST_BIN = join(
@@ -55,8 +55,9 @@ async function copyInputs(
  * The transcribing agent's workspace: a scratch directory whose CLAUDE.md is
  * the transcription instructions, `bin/st` (the toolkit, on its installed
  * env) and, for uploads, the files under `input/`. It sees only the submit
- * tool, `exit_clean` (closing the conversation once delivered, so the task
- * derives done) and `flag_raise`.
+ * tool and `flag_raise` — no `exit_clean`: the agent ends its turn once it
+ * submitted, so the conversation stays open for the user's corrections (Sonata
+ * hosts it as an agent thread), and its task derives done from the delivery.
  */
 export const transcriptionProfile = defineScratchProfile({
   id: TRANSCRIPTION_PROFILE_ID,
@@ -65,7 +66,7 @@ export const transcriptionProfile = defineScratchProfile({
     "Sonata transcription: sheet music in a video, images or a PDF → MusicXML, by a render-and-compare loop with the `st` toolkit.",
   inputSchema: ProfileInputSchema,
   instructions: transcriptionInstructions,
-  mcpTools: [SUBMIT_TOOL, "exit_clean", "flag_raise"],
+  mcpTools: [SUBMIT_TOOL, "flag_raise"],
   permissions: { allow: ["Bash", "Read", "Write", "Edit"] },
   prepare: async ({ dir, input, signal }) => {
     const ready = await awaitDepReady(transcriptionDep, signal);
