@@ -17,6 +17,10 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { collectLineage } from "@plugins/primitives/plugins/ui-context/web";
+import {
+  formatShortcutLabel,
+  isModHeld,
+} from "@plugins/primitives/plugins/shortcuts/web";
 import { resolveTarget } from "../internal/resolve-target";
 
 interface Highlight {
@@ -38,8 +42,15 @@ export function PickerOverlay({
   const [highlight, setHighlight] = useState<Highlight | null>(null);
 
   useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      const el = resolveTarget(e.clientX, e.clientY);
+    // Holding `mod` (⌘ / Ctrl) hands the pointer back to the app: a mod-click
+    // is a real click, so the user can open the menu, sub-menu or popover that
+    // holds what they mean, then pick inside it. The highlight drops while it is
+    // held, so the screen says which of the two a click will do.
+    let pointer: { x: number; y: number } | null = null;
+    let passThrough = false;
+    const refresh = () => {
+      const el =
+        pointer && !passThrough ? resolveTarget(pointer.x, pointer.y) : null;
       if (!el) {
         setHighlight(null);
         return;
@@ -50,6 +61,12 @@ export function PickerOverlay({
         pluginId: nodes[nodes.length - 1]?.pluginId,
         tag: el.tagName.toLowerCase(),
       });
+    };
+
+    const onMove = (e: MouseEvent) => {
+      pointer = { x: e.clientX, y: e.clientY };
+      passThrough = isModHeld(e);
+      refresh();
     };
 
     // Swallow the press itself (capture phase, before it reaches the document).
@@ -64,6 +81,7 @@ export function PickerOverlay({
     // `click` still reaches the button, because `resolveTarget` answers null over
     // the chrome and `onClick` below lets a null through.
     const onDown = (e: MouseEvent) => {
+      if (isModHeld(e)) return;
       const el = resolveTarget(e.clientX, e.clientY);
       if (!el && !isPickerChrome(e.target)) return;
       e.preventDefault();
@@ -71,6 +89,7 @@ export function PickerOverlay({
     };
 
     const onClick = (e: MouseEvent) => {
+      if (isModHeld(e)) return;
       const el = resolveTarget(e.clientX, e.clientY);
       if (!el) return;
       e.preventDefault();
@@ -83,6 +102,13 @@ export function PickerOverlay({
         e.preventDefault();
         e.stopPropagation();
         onCancel();
+        return;
+      }
+      // Pressing or releasing `mod` without moving the pointer flips the mode
+      // too; the event's own modifier state already reflects the change.
+      if (isModHeld(e) !== passThrough) {
+        passThrough = isModHeld(e);
+        refresh();
       }
     };
 
@@ -91,11 +117,14 @@ export function PickerOverlay({
     window.addEventListener("click", onClick, true);
     // eslint-disable-next-line shortcuts/no-window-key-listener -- pick mode is page-wide by design (it overlays every surface) and listens only while picking; Escape cancels it.
     window.addEventListener("keydown", onKey, true);
+    // eslint-disable-next-line shortcuts/no-window-key-listener -- same page-wide pick mode: releasing mod (⌘ / Ctrl) hands clicks back to the picker.
+    window.addEventListener("keyup", onKey, true);
     return () => {
       window.removeEventListener("mousemove", onMove, true);
       window.removeEventListener("pointerdown", onDown, true);
       window.removeEventListener("click", onClick, true);
       window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("keyup", onKey, true);
     };
   }, [onPick, onCancel]);
 
@@ -149,6 +178,8 @@ export function PickerOverlay({
             <ControlSizeProvider size="sm">
               <Stack direction="row" gap="sm" align="center">
                 <span>{hint}</span>
+                <Kbd>{formatShortcutLabel("mod")} click</Kbd>
+                <span className="text-muted-foreground">to use the app</span>
                 <Kbd>Esc</Kbd>
                 <Button variant="ghost" onClick={onCancel}>
                   Cancel

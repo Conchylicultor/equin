@@ -94,6 +94,7 @@ export {
   Popover,
   PopoverTrigger,
   PopoverContent,
+  useHoldPopoverOpen,
 } from "./components/ui/popover";
 export {
   ResizableHandle,

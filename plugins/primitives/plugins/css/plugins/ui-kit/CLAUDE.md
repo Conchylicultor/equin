@@ -570,6 +570,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `TooltipProvider`
     - `TooltipTrigger`
     - `useControlSize`
+    - `useHoldPopoverOpen`
     - `useMenuSurface`
     - `usePinOnClick`
     - `usePortalForwardedAttrs`

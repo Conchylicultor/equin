@@ -41,6 +41,7 @@ exemption, e.g. Sonata's hold-to-scrub seek) must apply the same three rules.
     - `defineShortcut`
     - `formatShortcutLabel`
     - `getFocusedSurfaceId`
+    - `isModHeld`
     - `setFocusedSurfaceId`
     - `Shortcuts`
     - `subscribeFocusedSurface`
@@ -48,9 +49,9 @@ exemption, e.g. Sonata's hold-to-scrub seek) must apply the same three rules.
     - `useFocusedSurfaceId`
     - `useSurfaceShortcuts`
 - Cross-plugin:
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×12
-    - `primitives` ×11
+    - `primitives` ×12
     - `apps-core` ×2
     - `reorder/edit-mode`
     - `tasks/task-draft-form`

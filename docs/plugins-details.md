@@ -36982,6 +36982,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TooltipProvider`
               - `TooltipTrigger`
               - `useControlSize`
+              - `useHoldPopoverOpen`
               - `useMenuSurface`
               - `usePinOnClick`
               - `usePortalForwardedAttrs`
@@ -41533,6 +41534,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineShortcut`
           - `formatShortcutLabel`
           - `getFocusedSurfaceId`
+          - `isModHeld`
           - `setFocusedSurfaceId`
           - `Shortcuts`
           - `subscribeFocusedSurface`
@@ -41540,9 +41542,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFocusedSurfaceId`
           - `useSurfaceShortcuts`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
           - `apps` ×12
-          - `primitives` ×11
+          - `primitives` ×12
           - `apps-core` ×2
           - `reorder/edit-mode`
           - `tasks/task-draft-form`
@@ -42436,14 +42438,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `InlineChip.Tag` "ui-context" → `UiContextTag`
               - `SlotRender.ItemAttrs`
               - `SlotRender.ItemMiddleware`
-            - Uses: 32 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
-              - `primitives/css/ui-kit` ×5
+            - Uses: 35 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
+              - `primitives/css/ui-kit` ×6
               - `primitives/ui-context` ×5
               - `primitives/css/coords` ×3
               - `primitives/css/fill` ×2
               - `primitives/css/spacing` ×2
               - `primitives/icon-button` ×2
               - `primitives/overlay/tooltip` ×2
+              - `primitives/shortcuts` ×2
               - `primitives/text-editor/inline-chip` ×2
               - `primitives/css/link-chip.LinkChip`
               - `primitives/css/pin.Pin`

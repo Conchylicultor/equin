@@ -19,6 +19,28 @@ import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/
  */
 const PopoverEverOpenedContext = React.createContext(false);
 
+/**
+ * Registers a hold on the enclosing popover, returning its release: while any
+ * hold is registered, a request to close (an outside press, a focus moving out)
+ * is refused. `null` outside a popover.
+ */
+const PopoverHoldContext = React.createContext<(() => () => void) | null>(null);
+
+/**
+ * Keep the enclosing popover open while `active` — for content that hands the
+ * pointer to the rest of the page for a while (an element picker inside the
+ * popover, whose pass-through clicks land outside it) and must still be there
+ * afterwards. A no-op outside a popover. The popover still closes when its
+ * owner closes it (a controlled `open` set to false).
+ */
+function useHoldPopoverOpen(active: boolean): void {
+  const hold = React.useContext(PopoverHoldContext);
+  React.useEffect(() => {
+    if (!active || !hold) return;
+    return hold();
+  }, [active, hold]);
+}
+
 function Popover({
   open,
   defaultOpen,
@@ -40,16 +62,36 @@ function Popover({
   // content — so whatever the user typed in it survives closing it.
   const [everOpened, setEverOpened] = React.useState(isOpen);
   if (isOpen && !everOpened) setEverOpened(true);
+  // See `useHoldPopoverOpen`: a refused close is cancelled before the mirror or
+  // the caller hears of it, so neither ever sees the popover as closed.
+  const holds = React.useRef(0);
+  const hold = React.useCallback(() => {
+    holds.current += 1;
+    return () => {
+      holds.current -= 1;
+    };
+  }, []);
+  const guardedOpenChange: NonNullable<
+    PopoverPrimitive.Root.Props["onOpenChange"]
+  > = (next, details) => {
+    if (!next && holds.current > 0) {
+      details.cancel();
+      return;
+    }
+    handleOpenChange(next, details);
+  };
   // Outside the Root: its children may be a payload render function.
   return (
     <PopoverEverOpenedContext.Provider value={everOpened}>
-      <PopoverPrimitive.Root
-        open={open}
-        defaultOpen={defaultOpen}
-        onOpenChange={handleOpenChange}
-        actionsRef={actionsRef}
-        {...props}
-      />
+      <PopoverHoldContext.Provider value={hold}>
+        <PopoverPrimitive.Root
+          open={open}
+          defaultOpen={defaultOpen}
+          onOpenChange={guardedOpenChange}
+          actionsRef={actionsRef}
+          {...props}
+        />
+      </PopoverHoldContext.Provider>
     </PopoverEverOpenedContext.Provider>
   );
 }
@@ -169,4 +211,4 @@ function PopoverContent({
   );
 }
 
-export { Popover, PopoverTrigger, PopoverContent };
+export { Popover, PopoverTrigger, PopoverContent, useHoldPopoverOpen };

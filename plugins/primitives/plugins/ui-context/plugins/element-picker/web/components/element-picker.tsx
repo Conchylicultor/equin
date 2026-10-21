@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import type { UiContextMeta } from "@plugins/primitives/plugins/ui-context/core";
 import { collectMeta } from "@plugins/primitives/plugins/ui-context/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import { useHoldPopoverOpen } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { PickerOverlay } from "./picker-overlay";
 
 export interface ElementPickerProps {
@@ -52,6 +53,11 @@ export function ElementPicker({
     reportArmed(true);
     return () => reportArmed(false);
   }, [armed, reportArmed]);
+
+  // A ⌘-click passes through to the app (see PickerOverlay) and so lands
+  // outside a popover the picker was armed from — the task-draft form's own
+  // picker — which would close it, and the picker along with its content.
+  useHoldPopoverOpen(armed);
 
   return (
     <>

@@ -62,6 +62,15 @@ function keyMatches(parsed: ParsedCombo, e: KeyboardEvent): boolean {
   return e.altKey && codeChar(e.code) === parsed.key;
 }
 
+/**
+ * Whether the platform's `mod` key (⌘ on macOS, Ctrl elsewhere) is held during
+ * the event — the same mapping `matchesEvent` applies to a `mod+…` combo, for a
+ * pointer gesture (`mod`-click) that is not a keyboard shortcut.
+ */
+export function isModHeld(e: { metaKey: boolean; ctrlKey: boolean }): boolean {
+  return isMac ? e.metaKey : e.ctrlKey;
+}
+
 export function matchesEvent(parsed: ParsedCombo, e: KeyboardEvent): boolean {
   if (!keyMatches(parsed, e)) return false;
 

@@ -36,6 +36,16 @@ mid-pick — a host that hid itself for the pick is never left hidden.
   `keydown` track the hovered element, select on click, and cancel on Esc.
   `pointerdown` is swallowed (`preventDefault` + `stopPropagation`) so a pick
   launched from inside an open popover is not read as an outside press.
+- **⌘-click (Ctrl elsewhere) is a real click.** With `mod` held
+  (`isModHeld`, from `shortcuts`) every handler stands aside: the press and the
+  click reach the app untouched, and the highlight drops (re-evaluated on the
+  modifier's keydown/keyup too) so the screen says what a click will do. That is
+  how a pick reaches what only exists once opened — a menu, a sub-menu, a
+  popover: ⌘-click to open it, then a plain click picks inside it (a plain press
+  is still swallowed, so the opened menu does not read it as an outside press).
+  A picker armed from inside a popover holds it open meanwhile
+  (`useHoldPopoverOpen(armed)` from `ui-kit`) — the pass-through click lands
+  outside it, and closing it would take the picker with it.
 - **The hint pill** is the overlay's one hit-testable part (`pointer-events-auto`)
   and sits inside `[data-element-picker]`, so the pointer over it resolves no
   target: no highlight, and its Cancel's `click` passes through untouched. Its
@@ -101,14 +111,15 @@ every build — including a composition this plugin is not in.
     - `InlineChip.Tag` "ui-context" → `UiContextTag`
     - `SlotRender.ItemAttrs`
     - `SlotRender.ItemMiddleware`
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×5
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×6
     - `primitives/ui-context` ×5
     - `primitives/css/coords` ×3
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
     - `primitives/icon-button` ×2
     - `primitives/overlay/tooltip` ×2
+    - `primitives/shortcuts` ×2
     - `primitives/text-editor/inline-chip` ×2
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/pin.Pin`
