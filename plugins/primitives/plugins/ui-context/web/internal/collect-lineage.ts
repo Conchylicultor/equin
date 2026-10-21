@@ -37,3 +37,31 @@ export function collectLineage(el: Element): LineageNode[] {
   }
   return nodes;
 }
+
+/** The most slots {@link collectInnerSlots} names — a pick on a whole pane
+ *  holds dozens, and past a handful the list stops placing anything. */
+const MAX_INNER_SLOTS = 8;
+
+/**
+ * The slots whose contributions sit inside `el` — the downward twin of
+ * {@link collectLineage}. Only the outermost layer counts (a contribution
+ * nested in another contribution inside `el` belongs to that one's slot, not to
+ * `el`), distinct, in document order.
+ *
+ * It is what places a pick on a container: a bar or wrapper that lays slots out
+ * but lies in none of them has a lineage ending at its pane and a label of
+ * `div`, so without this nothing in the token says WHICH part of the pane it is.
+ */
+export function collectInnerSlots(el: Element): string[] {
+  const slots: string[] = [];
+  const contributionSelector = `[${NODE_ATTR}="contribution"]`;
+  for (const marker of el.querySelectorAll<HTMLElement>(contributionSelector)) {
+    const enclosing = marker.parentElement?.closest(contributionSelector);
+    if (enclosing && enclosing !== el && el.contains(enclosing)) continue;
+    const slotId = marker.dataset.slotId;
+    if (!slotId || slots.includes(slotId)) continue;
+    slots.push(slotId);
+    if (slots.length === MAX_INNER_SLOTS) break;
+  }
+  return slots;
+}

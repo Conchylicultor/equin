@@ -3,7 +3,7 @@ import {
   formatLineagePath,
   type UiContextMeta,
 } from "../../core";
-import { collectLineage } from "./collect-lineage";
+import { collectInnerSlots, collectLineage } from "./collect-lineage";
 import { isBoxlessMarker, nearestOwner, nearestSource } from "./marker-walk";
 
 const MAX_LABEL = 60;
@@ -85,6 +85,7 @@ export function collectMeta(el: Element): UiContextMeta {
     // pane / tab / window the element sits in), so gating it on "adds more than
     // the innermost node" would drop that whenever the chain is one node long.
     path: formatLineagePath(nodes) || undefined,
+    innerSlots: collectInnerSlots(el).join(", ") || undefined,
     element: describeElement(el),
     selector: preciseSelector(el),
     source: nearestSource(el),

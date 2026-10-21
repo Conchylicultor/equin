@@ -141,7 +141,7 @@ surface, not an absence to absorb.
 model-facing prose in the body as two sibling tags:
 
 ```
-<ui-context url="…" plugin="…" slot="…" contribution="…" path="…" selector="…" source="…" owner="…"><hint>…</hint><picked-content><element label></picked-content></ui-context>
+<ui-context url="…" plugin="…" slot="…" contribution="…" path="…" inner-slots="…" selector="…" source="…" owner="…"><hint>…</hint><picked-content><element label></picked-content></ui-context>
 ```
 
 `UI_CONTEXT_FIELDS` is the **single source of truth** for the attribute set:
@@ -155,6 +155,13 @@ simply ignored, which is why dropping `pane=` needed no legacy branch.
 kind — never a plugin from one node paired with a slot from another. `path` is
 the full chain and the **sole** carrier of region info, so it is emitted
 unconditionally.
+
+`inner-slots` is the downward twin of `path` (`collectInnerSlots`): the slots
+whose contributions sit inside the picked element — outermost layer, distinct,
+document order, capped. A pick on a bare container (a bar, a wrapper, the slack
+between widgets) lies in no slot, so its lineage stops at the pane and its label
+is `div`; the inner slots are what say which part of the pane it is. Omitted on
+a leaf.
 
 The tag flows verbatim into the agent prompt, hence the constant `<hint>`
 explaining what it is and how it was produced, kept apart from the label body so

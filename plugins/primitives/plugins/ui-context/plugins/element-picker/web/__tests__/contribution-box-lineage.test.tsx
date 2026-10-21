@@ -77,3 +77,40 @@ describe("a contribution's own box resolves to the contribution", () => {
     expect(collectMeta(widget).pluginId).toBe("ui.segmented-progress-bar");
   });
 });
+
+describe("a container's inner slots", () => {
+  it("names the slots laid out inside a pick that lies in none of them", () => {
+    render(
+      <PluginProvider
+        plugins={[
+          pickerPlugin,
+          {
+            id: "conversations.conversation-view",
+            description: "lineage fixture",
+            contributions: [
+              rowSlot({ id: "input", component: TinyWidget }),
+              listSlot({ id: "pill", component: TinyWidget }),
+              listSlot({ id: "pill-2", component: TinyWidget }),
+            ],
+            slots: { "prompt-input": rowSlot, "prompt-bar": listSlot },
+          } as unknown as LoadedPlugin,
+        ]}
+      >
+        <div data-testid="bottom-bar">
+          <rowSlot.Render />
+          <listSlot.Render />
+        </div>
+      </PluginProvider>,
+    );
+    const bar = document.querySelector('[data-testid="bottom-bar"]')!;
+    const meta = collectMeta(bar);
+    expect(meta.slotId).toBeUndefined();
+    // Distinct, in document order.
+    expect(meta.innerSlots).toBe(
+      "conversations.conversation-view.prompt-input, conversations.conversation-view.prompt-bar",
+    );
+    // A leaf holds no slots, so the field is omitted rather than empty.
+    const widget = document.querySelector('[data-testid="widget"]')!;
+    expect(collectMeta(widget).innerSlots).toBeUndefined();
+  });
+});

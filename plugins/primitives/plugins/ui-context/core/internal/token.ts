@@ -14,6 +14,12 @@ export interface UiContextMeta {
   // carrier of region information (which pane / tab / window) — there is
   // deliberately no separate `region`/`pane` field to drift from it.
   path?: string;
+  // The slots whose contributions sit INSIDE the picked element — its
+  // outermost layer only, distinct, in document order, joined by ", ". `path`
+  // looks up from the pick; this looks down. It is what places a pick on a
+  // bare container (a bar, a wrapper, the slack between widgets) that lies in
+  // no slot itself: "the div holding the prompt bar" instead of just "div".
+  innerSlots?: string;
   element: string; // e.g. "button — Improve this app"
   selector?: string; // short CSS path for precision, e.g. "header>div>button"
   // Repo-relative source `file:line` of the picked element, stamped by the
@@ -72,6 +78,7 @@ export const UI_CONTEXT_FIELDS = [
   field("slotId", "slot", "Slot"),
   field("contributionId", "contribution", "Contribution"),
   field("path", "path", "Path"),
+  field("innerSlots", "inner-slots", "Inner slots"),
   field("selector", "selector", "Selector"),
   field("source", "source", "Source"),
   field("owner", "owner", "Owner"),
@@ -97,6 +104,7 @@ export const UiContextMetaSchema = z.object({
   slotId: z.string().optional(),
   contributionId: z.string().optional(),
   path: z.string().optional(),
+  innerSlots: z.string().optional(),
   element: z.string(),
   selector: z.string().optional(),
   source: z.string().optional(),

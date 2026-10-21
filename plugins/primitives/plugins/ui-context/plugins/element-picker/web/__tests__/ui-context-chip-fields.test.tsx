@@ -16,6 +16,7 @@ const meta: UiContextMeta = {
   slotId: "sonata.toolbar.end",
   contributionId: "apps.sonata.piano-roll:spread",
   path: "apps.sonata.shell@apps.app > apps.sonata.piano-roll#pane:sonata-player[column 2 of 2] > apps.sonata.piano-roll@sonata.toolbar.end",
+  innerSlots: "sonata.toolbar.start, sonata.toolbar.end",
   element: "div — 1×",
   selector: "header>div>div",
   source: "plugins/foo/web/bar.tsx:42",
