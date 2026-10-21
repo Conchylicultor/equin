@@ -39,6 +39,7 @@ import {
   type ResourceParams,
   type ResourceRuntimeOptions,
 } from "./runtime";
+import type { ValuePatchWireOp } from "@plugins/packages/plugins/value-patch/core";
 
 // Next-macrotask yield: flushes all pending microtasks (the queued flush) AND any
 // loader promises so the WS sends have landed in the log before we assert.
@@ -62,6 +63,9 @@ export interface RecordedFrame {
   upserts?: [string, unknown][];
   deletes?: string[];
   order?: string[];
+  /** A `patch` frame: the version its ops apply to, and the ops. */
+  base?: number;
+  ops?: ValuePatchWireOp[];
   etag?: string;
   /** Flight-co-produced commit watermark (Rule B′): full frames only. */
   watermark?: string;

@@ -4145,6 +4145,10 @@
       "name": "@singularity/plugin-packages-ticket-line",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/value-patch": {
+      "name": "@singularity/plugin-packages-value-patch",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/wall-clock": {
       "name": "@singularity/plugin-packages-wall-clock",
       "version": "0.0.1",
@@ -8953,6 +8957,8 @@
     "@singularity/plugin-packages-string-hash": ["@singularity/plugin-packages-string-hash@workspace:plugins/packages/plugins/string-hash"],
 
     "@singularity/plugin-packages-ticket-line": ["@singularity/plugin-packages-ticket-line@workspace:plugins/packages/plugins/ticket-line"],
+
+    "@singularity/plugin-packages-value-patch": ["@singularity/plugin-packages-value-patch@workspace:plugins/packages/plugins/value-patch"],
 
     "@singularity/plugin-packages-wall-clock": ["@singularity/plugin-packages-wall-clock@workspace:plugins/packages/plugins/wall-clock"],
 

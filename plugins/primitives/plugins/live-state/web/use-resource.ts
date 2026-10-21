@@ -672,7 +672,7 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   const startRef = useRef<number | null>(null);
   const reportedRef = useRef(false);
 
-  const { schema, refusals, bytes } = resource;
+  const { schema, refusals, bytes, patches } = resource;
   const select = options?.select;
   const gate = options?.gate === true;
 
@@ -683,9 +683,26 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   useEffect(() => {
     if (skipped) return;
     startRef.current = performance.now();
-    notifications.observe(key, p, origin, { schema, refusals, bytes }, keyOf);
+    notifications.observe(
+      key,
+      p,
+      origin,
+      { schema, refusals, bytes, patches },
+      keyOf,
+    );
     return () => notifications.unobserve(key, p, origin);
-  }, [notifications, key, origin, schema, refusals, bytes, keyOf, skipped, p]);
+  }, [
+    notifications,
+    key,
+    origin,
+    schema,
+    refusals,
+    bytes,
+    patches,
+    keyOf,
+    skipped,
+    p,
+  ]);
 
   // A skipped read's key is per resource key (never shared across descriptors,
   // whose options differ) and can never collide with a params tuple.
@@ -895,7 +912,7 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
     throw new Error("useResources must be used within a NotificationsProvider");
   }
   const queryClient = useQueryClient();
-  const { key, origin, schema, refusals, bytes } = resource;
+  const { key, origin, schema, refusals, bytes, patches } = resource;
   const keyOf = resource.keyed?.keyOf;
   // Canonical tuples (see `canonicalParams`), one identity per canonical list.
   const listJson = JSON.stringify(
@@ -946,7 +963,7 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
         key,
         p,
         origin,
-        { schema, refusals, bytes },
+        { schema, refusals, bytes, patches },
         keyOf,
         derivations?.[i],
       );
@@ -967,6 +984,7 @@ export function useResources<T, P extends ResourceParams = ResourceParams>(
     derivations,
     refusals,
     bytes,
+    patches,
   ]);
   useEffect(
     () => () => {

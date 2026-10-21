@@ -78,6 +78,16 @@ export interface ResourceDescriptor<
    */
   bytes?: true;
   /**
+   * A PATCHED value (a `liveValue` declared `patches: true`): a change after
+   * the first is pushed as a `patch` frame — what changed
+   * (`packages/value-patch`) against the version every holder holds — rather
+   * than the whole value. Both ends act on it: the runtime diffs and serves
+   * a joining tab the value the others hold, and the client keeps the wire
+   * value it last applied to patch forward. Always pushed. Absent ⇒ every
+   * change ships the whole value.
+   */
+  patches?: true;
+  /**
    * The param names that may be absent (a `liveValue`'s `"scopeId?"`). An
    * optional param is present iff it is a non-empty string: `canonicalParams`
    * drops an `undefined` or `""` one, wherever params enter the substrate, so

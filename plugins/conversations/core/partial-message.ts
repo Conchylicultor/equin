@@ -49,6 +49,9 @@ export const conversationPartialMessage = liveValue(
   {
     schema: PartialMessageSchema.nullable(),
     params: ["id"],
+    // It grows by a few characters per push, up to a whole file's worth of
+    // tool input: each push ships only what was written since.
+    patches: true,
     // The text lives in the agent process, on the computer.
     needsMachine: { feature: "Showing the agent's reply as it is written" },
   },

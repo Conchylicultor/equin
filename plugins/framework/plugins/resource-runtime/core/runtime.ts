@@ -3,6 +3,7 @@ import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import { diffValue } from "@plugins/packages/plugins/value-patch/core";
 import {
   BUILD_GRAPH_HEADER,
   DERIVE_MAX_ID,
@@ -510,6 +511,17 @@ export interface ResourceDefinition<
    * throw otherwise). Absent ⇒ a JSON value.
    */
   bytes?: true;
+  /**
+   * A PATCHED value, declared once on the shared client descriptor (a
+   * `liveValue`'s `patches: true`): a drain that has the value every holder
+   * holds (`RegistryEntry.patchBases`) ships what changed as a `patch` frame
+   * (`packages/value-patch`) instead of an `update`, and a sub-ack while that
+   * base stands is answered FROM it — so one version names one value for
+   * every holder, and every holder can apply the next patch. Mode `push`
+   * only, never beside `revalidate` or a persisted entry (throws). Absent ⇒
+   * every change ships the whole value.
+   */
+  patches?: true;
 }
 
 /**
@@ -711,6 +723,8 @@ export interface ResourceContract<
   refusals?: readonly string[];
   /** A bytes value — see `ResourceDefinition.bytes`. */
   bytes?: true;
+  /** A patched value — see `ResourceDefinition.patches`. */
+  patches?: true;
   /**
    * The params gate, declared once on the shared descriptor: throws
    * `ResourceContractError` when a subscription's wire params do not match
@@ -866,6 +880,7 @@ function contractToDefinition<T, P extends ResourceParams>(
       : {}),
     ...(contract.refusals !== undefined ? { refusals: contract.refusals } : {}),
     ...(contract.bytes === true ? { bytes: true as const } : {}),
+    ...(contract.patches === true ? { patches: true as const } : {}),
     loader: opts.loader,
     dependsOn: opts.dependsOn,
     scopedMembership: opts.scopedMembership,
@@ -1174,6 +1189,8 @@ interface RegistryEntry {
   refusals?: readonly string[];
   /** A bytes value — see `ResourceDefinition.bytes`. */
   bytes?: true;
+  /** A patched value — see `ResourceDefinition.patches`. */
+  patches?: true;
   /**
    * True when declared via `defineExternalResource` — the resource's truth lives
    * outside Postgres, so a hand-`notify()` is legitimate. The backstop check
@@ -1292,6 +1309,17 @@ interface RegistryEntry {
    * version, only the ack it owes.
    */
   lastSent: Map<string, unknown>;
+  /**
+   * A patched entry's per-pk base (`ResourceDefinition.patches`): the value —
+   * as served, after the schema parse — that every holder at `version` holds.
+   * Set by every frame that goes to all the tuple's holders (`update`,
+   * `patch`), and by the sub-ack that opened the span to its sole holder while
+   * no drain minted since. While it stands, a sub-ack is answered from it, so
+   * no holder ever holds another value at its version. Dropped when a drain's
+   * load fails (its holders sit on an error) and at N→0. Undefined on every
+   * other entry.
+   */
+  patchBases?: Map<string, { version: number; value: unknown }>;
   /** Present ⇒ a routed entry (see `ResourceDefinition.routes`). */
   routing?: RoutingRecord;
   /**
@@ -3199,6 +3227,31 @@ export function createResourceRuntime(
     ackTx?: readonly string[],
     pending?: PendingNotify,
   ): number | Promise<number> {
+    // A patched entry ships what changed against the value every holder at
+    // the base's version holds; the first frame of a span, and a change of
+    // the root itself, ship the whole value. Either way the frame goes to every
+    // holder, so its value is the new base. Synchronous: no await before the
+    // wire (H5a) — a patched entry has no `revalidate`.
+    const bases = entry.patchBases;
+    if (bases !== undefined) {
+      const pk = paramsKey(params);
+      const base = bases.get(pk);
+      bases.set(pk, { version, value });
+      const ops = base === undefined ? null : diffValue(base.value, value);
+      if (base !== undefined && ops !== null) {
+        return broadcastJson(subs, {
+          kind: "patch" as const,
+          key: entry.key,
+          params,
+          base: base.version,
+          version,
+          ops,
+          ...(watermark !== undefined ? { watermark } : {}),
+          ...(ackTx !== undefined && ackTx.length > 0 ? { ackTx } : {}),
+          ...(pending !== undefined ? frameTiming(pending) : {}),
+        });
+      }
+    }
     const broadcast = (etag?: string): number => {
       const msg = {
         kind: "update" as const,
@@ -3271,6 +3324,27 @@ export function createResourceRuntime(
       return;
     }
     entry.lastSent.delete(pk);
+  }
+
+  // A patched entry's first base: the value the sub-ack that opened the span
+  // hands its holder — kept only while that holder is still the tuple's only
+  // one and no drain minted since (D8's sole-holder rule, `noteRead`). Two
+  // first reads racing may hand two holders two values at one version; then
+  // there is no base, and the next drain ships the whole value.
+  function notePatchBase(
+    entry: RegistryEntry,
+    pk: string,
+    value: unknown,
+    sole: { state: SocketState; version: number },
+  ): void {
+    const bases = entry.patchBases;
+    if (bases === undefined || bases.has(pk)) return;
+    if (
+      entry.subCounts.get(pk) === 1 &&
+      sole.state.subs.get(entry.key)?.get(pk)?.tabs.size === 1 &&
+      (entry.versions.get(pk) ?? 0) === sole.version
+    )
+      bases.set(pk, { version: sole.version, value });
   }
 
   // Coalesce an incoming notify into the pending map for one pk, applying the
@@ -3774,6 +3848,24 @@ export function createResourceRuntime(
         `defineResource: a bytes resource is mode "invalidate" — "${def.key}" was declared ${mode}`,
       );
     }
+    // A patched value is pushed whole once and patched after: only a push
+    // entry has frames to patch, a `revalidate` one may answer a sub
+    // `up-to-date` against a value the base does not name, and a persisted one
+    // is recomputed and read with nobody holding the base.
+    if (def.patches === true && !placeholder) {
+      const why =
+        mode !== "push"
+          ? `mode "${mode}"`
+          : def.revalidate !== undefined
+            ? "a revalidate signature"
+            : def.preload !== undefined
+              ? "a preload"
+              : null;
+      if (why !== null)
+        throw new Error(
+          `defineResource: a patched resource is a plain pushed value — "${def.key}" declares ${why}`,
+        );
+    }
     // D37: a legacy scope key a cast smuggled through would do nothing at all.
     refuseLegacyScopeKeys(
       externalSource ? "defineExternalResource" : "defineResource",
@@ -4034,6 +4126,7 @@ export function createResourceRuntime(
         : {}),
       ...(def.refusals !== undefined ? { refusals: def.refusals } : {}),
       ...(def.bytes === true ? { bytes: true as const } : {}),
+      ...(def.patches === true ? { patches: true as const } : {}),
       externalSource,
       ...(def.freshness !== undefined ? { freshness: def.freshness } : {}),
       schema: def.schema as ZodParser<unknown>,
@@ -4054,6 +4147,7 @@ export function createResourceRuntime(
       pendingAcks: new Map(),
       draining: new Set(),
       lastSent: new Map(),
+      ...(def.patches === true ? { patchBases: new Map() } : {}),
       ...(routing ? { routing } : {}),
       upstreamKeys,
       downstream: [],
@@ -4140,6 +4234,7 @@ export function createResourceRuntime(
           ? { refusals: contract.refusals }
           : {}),
         ...(contract.bytes === true ? { bytes: true as const } : {}),
+        ...(contract.patches === true ? { patches: true as const } : {}),
         // The contract's gate until the bind hands the server's own.
         validateParams: contract.validateParams,
         ...(external?.freshness !== undefined
@@ -6020,6 +6115,7 @@ export function createResourceRuntime(
           reportLoaderError(`loader failed for ${entry.key}`, err);
           // D8: a refused holder sits on an error, not on the held object.
           entry.lastSent.delete(pk);
+          entry.patchBases?.delete(pk);
           broadcastRefusal(
             deferMint ? subscribersFor(entry.key, pk) : subs,
             entry,
@@ -6686,6 +6782,23 @@ export function createResourceRuntime(
       return;
     }
 
+    // A PATCHED value with a base: the value every holder holds, at its
+    // version — so this holder can apply the next patch like the others. A
+    // change since is a notify already pending: its drain patches it forward.
+    const patchBase = entry.patchBases?.get(pk);
+    if (patchBase !== undefined) {
+      sendJson(state.ws, {
+        kind: "sub-ack",
+        ...req,
+        key,
+        params,
+        value: patchBase.value,
+        version: patchBase.version,
+        epoch: bootEpoch,
+      });
+      return;
+    }
+
     let value: unknown;
     let raw: unknown;
     let etag: string | undefined;
@@ -6768,6 +6881,7 @@ export function createResourceRuntime(
     // starter's floor, so the watermark can never be newer than the value.
     // `up-to-date` frames deliberately carry none (they ship no value).
     noteRead(entry, pk, { raw }, opensSpan ? { state, version } : undefined);
+    if (opensSpan) notePatchBase(entry, pk, value, { state, version });
     sendJson(state.ws, {
       kind: "sub-ack",
       ...req,
@@ -7039,6 +7153,7 @@ export function createResourceRuntime(
       entry.tracked.delete(pk);
       entry.spans.delete(pk);
       entry.lastSent.delete(pk);
+      entry.patchBases?.delete(pk);
       entry.routing?.uses.delete(pk);
       // Bound keyed-snapshot memory to actively-observed pks. Re-subscribe
       // re-hydrates via a full sub-ack and rebuilds the snapshot.

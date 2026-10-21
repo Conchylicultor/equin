@@ -196,7 +196,7 @@ const c = <const K extends string, const F extends WireFields>(
  * - `watermark` (Rule B′): the xid8 snapshot floor a FULLY reconciling value
  *   was read under — sub-ack, update, full keyed delta; never a scoped delta.
  * - `ackTx`: the source-transaction ids a feed-driven recompute folded in.
- * - `timing` (update / delta only): when the change behind a pushed frame
+ * - `timing` (update / patch / delta only): when the change behind a pushed frame
  *   happened and when the frame left — `changedAt` (wall-clock epoch ms of the
  *   change), `sentAt` (wall-clock epoch ms the frame was sent) and `deliverMs`
  *   (first notify → send, on the server's monotonic clock). One object so a
@@ -289,6 +289,29 @@ const SERVER_FRAMES = {
     value: w.unknown,
     version: w.number,
     etag: w.optional(w.string),
+    watermark: w.optional(w.string),
+    ackTx: w.optional(w.array(w.string)),
+    timing: w.optional(FRAME_TIMING),
+  }),
+  /**
+   * A pushed value's change as what changed (a value declared `patches`):
+   * `ops` (`packages/value-patch`) turn the value at version `base` into the
+   * value at `version`. A tab holding another version resubscribes. No etag —
+   * an etag rides only a frame carrying the whole value.
+   */
+  patch: s("patch", {
+    key: w.string,
+    params: w.params,
+    base: w.number,
+    version: w.number,
+    ops: w.array(
+      w.object({
+        at: w.array(w.unknown),
+        set: w.optional(w.unknown),
+        append: w.optional(w.string),
+        push: w.optional(w.array(w.unknown)),
+      }),
+    ),
     watermark: w.optional(w.string),
     ackTx: w.optional(w.array(w.string)),
     timing: w.optional(FRAME_TIMING),

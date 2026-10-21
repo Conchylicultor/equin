@@ -210,6 +210,14 @@ export type LiveRefusalsBrand<C extends string> = [C] extends [never]
 
 /** A param-less value: may be preloaded. */
 export interface LiveValueSpec<T, L extends LiveValueLoad = LiveValueLoad> {
+  /**
+   * `true`: a change after the first ships as a patch — what changed, against
+   * the value every holder holds — never the whole value again (see
+   * `ResourceDescriptor.patches`). For a value that grows (a message being
+   * written, an output tail). A pushed value only (a throw beside an
+   * on-demand / snapshot `load` or a `preload`).
+   */
+  patches?: true;
   /** A typed-query value — see {@link LiveQueryValueSpec}. */
   query?: undefined;
   /** A bytes value — see {@link LiveBytesSpecBase}. */
@@ -240,6 +248,14 @@ export interface LiveCentralValueSpec<
   T,
   L extends LiveValueLoad = LiveValueLoad,
 > {
+  /**
+   * `true`: a change after the first ships as a patch — what changed, against
+   * the value every holder holds — never the whole value again (see
+   * `ResourceDescriptor.patches`). For a value that grows (a message being
+   * written, an output tail). A pushed value only (a throw beside an
+   * on-demand / snapshot `load` or a `preload`).
+   */
+  patches?: true;
   /** A typed-query value — see {@link LiveQueryValueSpec}. */
   query?: undefined;
   /** A bytes value — see {@link LiveBytesSpecBase}. */
@@ -263,6 +279,14 @@ export interface LiveParamValueSpec<
   N extends readonly string[],
   L extends LiveValueLoad = LiveValueLoad,
 > {
+  /**
+   * `true`: a change after the first ships as a patch — what changed, against
+   * the value every holder holds — never the whole value again (see
+   * `ResourceDescriptor.patches`). For a value that grows (a message being
+   * written, an output tail). A pushed value only (a throw beside an
+   * on-demand / snapshot `load` or a `preload`).
+   */
+  patches?: true;
   /** A typed-query value — see {@link LiveQueryValueSpec}. */
   query?: undefined;
   /** A bytes value — see {@link LiveBytesSpecBase}. */
@@ -318,6 +342,14 @@ export interface LiveTypedParamValueSpec<
   R extends LiveValueParamParsers,
   L extends LiveValueLoad = LiveValueLoad,
 > {
+  /**
+   * `true`: a change after the first ships as a patch — what changed, against
+   * the value every holder holds — never the whole value again (see
+   * `ResourceDescriptor.patches`). For a value that grows (a message being
+   * written, an output tail). A pushed value only (a throw beside an
+   * on-demand / snapshot `load` or a `preload`).
+   */
+  patches?: true;
   /** A typed-query value — see {@link LiveQueryValueSpec}. */
   query?: undefined;
   /** A bytes value — see {@link LiveBytesSpecBase}. */
@@ -360,6 +392,14 @@ export interface LiveQueryValueSpec<
   O extends LiveValueOrigin,
   L extends LiveValueLoad = LiveValueLoad,
 > {
+  /**
+   * `true`: a change after the first ships as a patch — what changed, against
+   * the value every holder holds — never the whole value again (see
+   * `ResourceDescriptor.patches`). For a value that grows (a message being
+   * written, an output tail). A pushed value only (a throw beside an
+   * on-demand / snapshot `load` or a `preload`).
+   */
+  patches?: true;
   schema: ZodParser<T>;
   /** The question's schema — its input is what `useLive` takes, its output what the loader gets. */
   query: LiveQuerySchema<Q, QIn>;
@@ -998,10 +1038,43 @@ function plainOrQueryValue<T>(
     ...loadFields(spec.load),
     ...refusalFields(key, spec.refusals),
     ...machineFields(spec),
+    ...patchesFields(key, spec),
     ...bytes,
   };
   registerResourceDescriptor(value as ResourceDescriptor<unknown>);
   return value;
+}
+
+/**
+ * The descriptor field a `patches: true` declaration adds — checked: only a
+ * pushed value has frames to patch, and a preloaded one is hydrated and
+ * persisted whole.
+ */
+function patchesFields(
+  key: string,
+  spec: {
+    patches?: unknown;
+    load?: unknown;
+    preload?: unknown;
+    paged?: unknown;
+  },
+): { patches?: true } {
+  if (spec.patches === undefined) return {};
+  if (spec.paged !== undefined)
+    throw new Error(
+      `liveValue("${key}"): a paged value cannot be patched — its pages already ship keyed deltas.`,
+    );
+  if (spec.patches !== true)
+    throw new Error(`liveValue("${key}"): \`patches\` is \`true\` or absent.`);
+  if (spec.load !== undefined && spec.load !== "push")
+    throw new Error(
+      `liveValue("${key}"): a patched value is pushed — \`load: ${JSON.stringify(spec.load)}\` sends no frames to patch.`,
+    );
+  if (spec.preload !== undefined && spec.preload !== "none")
+    throw new Error(
+      `liveValue("${key}"): a patched value cannot be preloaded — it is hydrated and persisted whole.`,
+    );
+  return { patches: true };
 }
 
 /** What `liveValue`'s implementation declares, erased: a value, or a paged one's (keyed) pages. */
@@ -1212,6 +1285,7 @@ function queryValue<T>(
     ...loadFields(spec.load),
     ...refusalFields(key, spec.refusals),
     ...machineFields(spec),
+    ...patchesFields(key, spec),
     ...bytes,
   };
   let value: DeclaredValue<T>;

@@ -85,7 +85,9 @@ it. Besides `zod` it imports only
 `@plugins/packages/plugins/inflight/core` (a leaf) — and the leaves
 `@plugins/packages/plugins/string-hash/core`,
 `@plugins/packages/plugins/canonical-params/core`, the params rule it shares with
-the browser (see *Optional params* above), and
+the browser (see *Optional params* above),
+`@plugins/packages/plugins/value-patch/core` (a patched value's diff — see
+*Patched values* below), and
 `@plugins/packages/plugins/resource-protocol/core`, the wire vocabulary: every
 frame it sends is a `ServerFrame` carrying only the fields its kind declares
 (`sendJson` / `broadcastJson` take an `ExactServerFrame`, which refuses an
@@ -1028,6 +1030,32 @@ it) and never rides a JSON frame. So, for such an entry:
 
 Pinned by `runtime-bytes.test.ts`.
 
+## Patched values — `patches: true`
+
+A contract may declare `patches: true` (a `liveValue`'s `patches`, threaded
+onto the entry like `bytes`): a pushed value whose changes ship as what
+changed. Design: `research/2026-10-21-global-live-value-patches.md`.
+
+- **One version, one value.** Per tuple, `patchBases` holds the value (as
+  served, after the schema parse) every holder at its `version` holds. Every
+  `update` / `patch` sets it; so does the sub-ack that opened the span, under
+  D8's sole-holder rule (`notePatchBase`) — two racing first reads leave none.
+  While it stands, a sub-ack is answered FROM it (its value, its version, no
+  load): a tab joining mid-stream holds what the others hold. A change since is
+  a notify already pending, whose drain patches every holder forward.
+- **The drain** (`sendUpdate`): with a base, `diffValue(base, value)` →
+  `patch { base, version, ops }` (no etag; `watermark` / `ackTx` / `timing` as
+  an `update`); a root change (`null`), or no base, → `update`. Synchronous,
+  so H5a holds.
+- **Dropped** when a drain's load fails (its holders sit on an error) and at
+  N→0, so the next frame is a whole `update`.
+- **Refused** at registration: a non-push mode, `revalidate` (an `up-to-date`
+  answer would name a value the base does not), a preload (persisted, and read
+  with nobody holding the base).
+- The client half (a holder at another version resubscribes): live-state.
+
+Pinned by `runtime-patch.test.ts`.
+
 ## Profiling seams (all optional; central binds none)
 
 The server binds each of these to a profiler span in `server-core/core/resources.ts`:
@@ -1159,27 +1187,13 @@ and those plugins' `CLAUDE.md`.
 ## Plugin reference
 
 - Core:
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `packages/resource-protocol` ×15
+    - `packages/string-hash` ×2
     - `packages/canonical-params.canonicalParams`
     - `packages/inflight.createInflight`
-    - `packages/resource-protocol.BUILD_GRAPH_HEADER`
-    - `packages/resource-protocol.contractVerdict`
-    - `packages/resource-protocol.ContractVerdict`
-    - `packages/resource-protocol.Derivation`
-    - `packages/resource-protocol.DERIVE_MAX_ID`
-    - `packages/resource-protocol.DERIVE_MAX_SOURCES`
-    - `packages/resource-protocol.DeriveSource`
-    - `packages/resource-protocol.ExactServerFrame`
-    - `packages/resource-protocol.PROTOCOL`
-    - `packages/resource-protocol.ReceivedFrame`
-    - `packages/resource-protocol.resourceBytesHeaders`
-    - `packages/resource-protocol.ResourceContractError`
-    - `packages/resource-protocol.ResourceHttpErrorBody`
-    - `packages/resource-protocol.ResourceRefusal`
-    - `packages/resource-protocol.ServerFrame`
     - `packages/semaphore.createSemaphore`
-    - `packages/string-hash.hash64`
-    - `packages/string-hash.hashHex`
+    - `packages/value-patch.diffValue`
   - Exports (types):
     - `AliasMembership`
     - `ChangeSource`

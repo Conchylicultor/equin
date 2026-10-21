@@ -24339,27 +24339,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `topoSortPlugins`
     - **`resource-runtime`**
       - Core:
-        - Uses:
+        - Uses: 21 symbols — full list in [`plugins/framework/plugins/resource-runtime/REFERENCE.md`](../plugins/framework/plugins/resource-runtime/REFERENCE.md)
+          - `packages/resource-protocol` ×15
+          - `packages/string-hash` ×2
           - `packages/canonical-params.canonicalParams`
           - `packages/inflight.createInflight`
-          - `packages/resource-protocol.BUILD_GRAPH_HEADER`
-          - `packages/resource-protocol.contractVerdict`
-          - `packages/resource-protocol.ContractVerdict`
-          - `packages/resource-protocol.Derivation`
-          - `packages/resource-protocol.DERIVE_MAX_ID`
-          - `packages/resource-protocol.DERIVE_MAX_SOURCES`
-          - `packages/resource-protocol.DeriveSource`
-          - `packages/resource-protocol.ExactServerFrame`
-          - `packages/resource-protocol.PROTOCOL`
-          - `packages/resource-protocol.ReceivedFrame`
-          - `packages/resource-protocol.resourceBytesHeaders`
-          - `packages/resource-protocol.ResourceContractError`
-          - `packages/resource-protocol.ResourceHttpErrorBody`
-          - `packages/resource-protocol.ResourceRefusal`
-          - `packages/resource-protocol.ServerFrame`
           - `packages/semaphore.createSemaphore`
-          - `packages/string-hash.hash64`
-          - `packages/string-hash.hashHex`
+          - `packages/value-patch.diffValue`
         - Exports (types):
           - `AliasMembership`
           - `ChangeSource`
@@ -31164,6 +31150,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `createTicketLine`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
+    - **`value-patch`** — A JSON value's change as what changed: diffValue(prev, next) → set / append / push ops at paths (null when the root itself changed), applyValuePatch(base, ops) → the next value, copy-on-write so every untouched subtree keeps its identity. What a pushed live value declared `patches: true` ships instead of its whole value.
+      - Cross-plugin:
+        - Imported by: `framework/resource-runtime`
+      - Core:
+        - Exports (types):
+          - `ValuePatchOp`
+          - `ValuePatchWireOp`
+          - `ValuePath`
+        - Exports (values):
+          - `applyValuePatch`
+          - `diffValue`
     - **`wall-clock`** — Wall clock ↔ UTC instant for an IANA zone, without a timezone database: a wall time's candidate instants are enumerated from the offsets either side of it and each verified against Intl, so a clock change resolves the same way in every zone rather than by the sign of its offset. Also reads a clock face back out of an instant, and answers when the local day began.
       - Cross-plugin:
         - Imported by:
@@ -40431,6 +40428,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/events/event-list`
           - `apps/pages/page-tree`
           - `conversations/all-conversations`
+          - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversations-view/data-view`
           - `conversations/conversations-view/data-view/history`
           - `framework/browser-server`

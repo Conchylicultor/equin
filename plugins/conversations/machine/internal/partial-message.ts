@@ -13,8 +13,8 @@ const held = new Map<string, PartialMessage | null>();
  * `conversations.partial-message`: the text the agent is streaming, held in
  * memory while a page watches (its runtime's `watchPartial`, opened on the
  * first reader and stopped after the last). Throttled to one push per 50 ms:
- * the model writes faster than a reader reads, and each push is the whole
- * message so far.
+ * the model writes faster than a reader reads. Declared `patches`, so each
+ * push ships what was written since the last one, not the whole message.
  */
 export const partialMessageServed = serveValue(conversationPartialMessage, {
   source: "external",

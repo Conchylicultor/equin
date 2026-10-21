@@ -1458,6 +1458,18 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
   read re-measures on every mount, a remount over a still-cached read too
   (the cached read stays on screen meanwhile). Never beside `preload`
   or `paged` (tsc, and a throw).
+- **Patches — `patches: true`.** A pushed value that grows (a message being
+  written, an output tail): after the first frame of a subscription, each
+  change ships as a `patch` — what changed (`packages/value-patch`: an
+  appended string, pushed array elements, a replaced part) against the
+  version every holder holds — never the whole value again. Declared on the
+  `liveValue` because both halves act on it (the runtime diffs and answers a
+  joining tab from the value the others hold; the client keeps the wire value
+  it last applied and resubscribes when a patch's base is not it). A pushed
+  value only: on-demand / snapshot `load`, `preload`, `paged` and `bytes` are
+  refused (a throw), as is a served `revalidate` (the runtime). The reader is
+  unchanged: unchanged parts keep their identity (`conversations.partial-message`,
+  `research/2026-10-21-global-live-value-patches.md`).
 - **Bytes — `bytes: true`.** A binary payload (a file's bytes, an image):
   `liveValue(key, { bytes: true, params | query, maxBytes?, refusals? })`
   takes no `schema` (the payload is an `ArrayBuffer`, checked as one on both

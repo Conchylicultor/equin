@@ -72,7 +72,30 @@ export function standInsOf(
   return out.reverse();
 }
 
+/**
+ * Each block's stand-in, by the block object: the partial message is patched
+ * (only what was written since arrives) and structurally shared, so a block
+ * that did not grow is the same object push after push — and keeps the same
+ * event, which its row then skips re-rendering, and its tool input is not
+ * parsed again.
+ */
+const standInEvents = new WeakMap<PartialBlock, Map<string, JsonlEvent>>();
+
 function eventOf(
+  block: PartialBlock,
+  messageId: string,
+  at: string,
+): JsonlEvent {
+  let byStamp = standInEvents.get(block);
+  if (byStamp === undefined) standInEvents.set(block, (byStamp = new Map()));
+  const stamp = `${messageId}\0${at}`;
+  let event = byStamp.get(stamp);
+  if (event === undefined)
+    byStamp.set(stamp, (event = buildEvent(block, messageId, at)));
+  return event;
+}
+
+function buildEvent(
   block: PartialBlock,
   messageId: string,
   at: string,

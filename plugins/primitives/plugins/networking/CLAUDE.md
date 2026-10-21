@@ -140,6 +140,7 @@ built on them — see
     - `apps/events/event-list`
     - `apps/pages/page-tree`
     - `conversations/all-conversations`
+    - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversations-view/data-view`
     - `conversations/conversations-view/data-view/history`
     - `framework/browser-server`

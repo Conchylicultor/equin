@@ -148,4 +148,21 @@ describe("standInsOf", () => {
       },
     ]);
   });
+
+  test("a block that did not change keeps its stand-in event; one that grew gets a new one", () => {
+    const think: PartialBlock = { kind: "thinking", index: 0, text: "hmm" };
+    const tool: PartialBlock = {
+      kind: "tool_use",
+      index: 1,
+      toolUseId: "toolu_1",
+      name: "Write",
+      inputJson: '{"file_path":"/a',
+    };
+    const [t1, c1] = drawn([think, tool]);
+    const grown: PartialBlock = { ...tool, inputJson: tool.inputJson + "b" };
+    const [t2, c2] = drawn([think, grown]);
+    expect(t2).toBe(t1);
+    expect(c2).not.toBe(c1);
+    expect(c2).toMatchObject({ input: { file_path: "/ab" } });
+  });
 });

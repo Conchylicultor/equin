@@ -447,6 +447,21 @@ throws outside a running test, so a harness shared across a file's tests cannot
 be written. Transport suites that drive sockets build `new NotificationsClient(qc,
 hooks)` directly.
 
+## Patched reads — `patch` frames
+
+A descriptor declared `patches: true` (`liveValue`'s `patches`) receives its
+changes as `patch { base, version, ops }` frames. `applyUpdate` keeps such a
+read's WIRE value (`ActiveSub.wire`, before the schema parse — a coerced field
+differs from the wire); a patch is applied to it (`applyValuePatch`,
+copy-on-write) only when the read holds exactly `base` — checked after the
+stale-version gate and BEFORE the version is adopted — and then written through
+`applyUpdate` like an `update` (parse, watermark / acks, cache write, latency
+sample). Any other base (a lost frame, an HTTP body, which clears `wire`, a
+forced resub, which clears it too) is `patch-base-resub`: `forceFullResub`,
+nothing written. The runtime's half (one version, one value):
+`resource-runtime/CLAUDE.md`, *Patched values*. Pinned by
+`web/__tests__/notifications-patch.test.ts`.
+
 ## Resource schemas
 
 Every resource **must** declare a `schema` (Zod) — it is required on

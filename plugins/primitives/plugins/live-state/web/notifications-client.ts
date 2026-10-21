@@ -19,6 +19,7 @@ import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import type { ResourceDescriptor, ResourceOrigin } from "../core";
 import { mergeKeyedDelta } from "./keyed-delta-merge";
+import { applyValuePatch } from "@plugins/packages/plugins/value-patch/core";
 import { rootWatermarks, type WatermarkRegistry } from "./watermark-registry";
 import { rootTxAcks, type TxAckRegistry } from "./tx-ack-registry";
 import { httpStaleDropReportSink } from "./stale-drop-reporter";
@@ -62,13 +63,14 @@ export { ResourceHttpError, ResourceStaleReadError };
  * How the client reads one resource's answers: the payload `schema` every
  * value is parsed through, the `refusals` it may be refused with (absent ⇒
  * none), and whether it is a `bytes` value (an `ArrayBuffer` read as
- * `application/octet-stream`, its envelope in response headers). Its
+ * `application/octet-stream`, its envelope in response headers), and whether
+ * its changes arrive as `patch` frames (`patches`). Its
  * declaration's — a `ResourceDescriptor` is one — so a read and the server it
  * reads from are checked against ONE declaration.
  */
 export type ResourceRead<T> = Pick<
   ResourceDescriptor<T>,
-  "schema" | "refusals" | "bytes"
+  "schema" | "refusals" | "bytes" | "patches"
 >;
 
 /**
@@ -309,7 +311,7 @@ type DerivationFrame = Derivation;
 type ServerMsg = ServerFrame;
 /** The co-produced push timing an update / delta frame may carry. */
 type FrameTiming = NonNullable<
-  Extract<ServerMsg, { kind: "update" | "delta" }>["timing"]
+  Extract<ServerMsg, { kind: "update" | "patch" | "delta" }>["timing"]
 >;
 
 function paramsKey(params: ResourceParams | undefined): string {
@@ -401,6 +403,14 @@ interface ActiveSub {
    * slice of it. An HTTP body (read apart from that snapshot) clears it.
    */
   socketValue: boolean;
+  /**
+   * A PATCHED read's base (`ResourceDescriptor.patches`): the value exactly as
+   * the server sent it — before the schema parse — of the last `sub-ack`,
+   * `update` or `patch` applied, at `version`. A `patch` frame applies to it
+   * (the parsed cache value may differ from the wire: a coerced date). An
+   * HTTP body and a forced resub clear it; undefined on every other read.
+   */
+  wire?: { value: unknown };
   /**
    * The derivation this sub's in-flight `sub` asked for (`observe`'s
    * `derive`): the rows to adopt, and the id a derived `sub-ack` must echo
@@ -1646,6 +1656,7 @@ export class NotificationsClient {
       // Read apart from the server's snapshot of the tuple: no derivation may
       // be cut from it (see `ActiveSub.socketValue`).
       entry.socketValue = false;
+      entry.wire = undefined;
       if (crossEpochAdopt) {
         // Cross-epoch adopt: the old-boot version number is meaningless, so take
         // the body's version UNCONDITIONALLY and re-stamp the entry's boot
@@ -2100,6 +2111,7 @@ export class NotificationsClient {
     entry.version = -1;
     entry.lastAckVersion = -1;
     entry.derivation = undefined;
+    entry.wire = undefined;
     this.sendSub(channel, key, params);
   }
 
@@ -2244,6 +2256,23 @@ export class NotificationsClient {
       );
       return;
     }
+    // A patch applies only to the value it was made against: the wire value
+    // this tab holds at `base`. Any other (a frame lost, a value read over
+    // HTTP, nothing yet) is a base the patch cannot build on — reload it whole,
+    // before the version below is adopted.
+    const patchBase = msg.kind === "patch" ? entry.wire : undefined;
+    if (
+      msg.kind === "patch" &&
+      (entry.version !== msg.base ||
+        patchBase === undefined ||
+        !this.hasAppliedValue(msg.key, msg.params))
+    ) {
+      trace(
+        `drop key=${msg.key} params=${pk} base=${msg.base} haveVersion=${entry.version} reason=patch-base-resub`,
+      );
+      this.forceFullResub(channel, entry, msg.key, msg.params);
+      return;
+    }
     // THE INVARIANT: `entry.version` names the version of a value THIS tab
     // actually holds. A value-less `up-to-date` says "what you have is still
     // current" — meaningless, and actively destructive, when we have nothing.
@@ -2369,6 +2398,20 @@ export class NotificationsClient {
         this.reportUpdateLatency(msg.key, msg.params, msg.timing, receivedAt);
       return;
     }
+    if (msg.kind === "patch" && patchBase !== undefined) {
+      // The base check above passed: `patchBase` is the value at `msg.base`.
+      const next = applyValuePatch(patchBase.value, msg.ops);
+      this.applyUpdate(
+        entry,
+        msg.key,
+        msg.params,
+        next,
+        msg.watermark,
+        msg.ackTx,
+      );
+      this.reportUpdateLatency(msg.key, msg.params, msg.timing, receivedAt);
+      return;
+    }
     if (msg.kind === "delta") {
       const outcome = this.applyDelta(
         channel,
@@ -2456,6 +2499,8 @@ export class NotificationsClient {
       );
     }
     const parsed = schema.parse(value);
+    // A patched read keeps the wire value: the next patch applies to it.
+    entry.wire = this.reads.get(key)?.patches === true ? { value } : undefined;
     // Adopt the frame's commit watermark — and note its mutation acks —
     // IMMEDIATELY BEFORE the cache write they describe (load-bearing order:
     // QueryCache listeners — the optimistic hook's confirm pass — read the
