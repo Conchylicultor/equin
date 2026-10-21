@@ -43,10 +43,9 @@
     - `sumByBucket`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/categorical --categorical-1`
-    - `ui/tokens/categorical --categorical-10`
     - `ui/tokens/categorical --categorical-2`
     - `ui/tokens/categorical --categorical-5`
+    - `ui/tokens/categorical --categorical-6`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`

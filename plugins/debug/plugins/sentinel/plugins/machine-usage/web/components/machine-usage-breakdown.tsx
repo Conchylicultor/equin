@@ -25,15 +25,18 @@ import {
 // nothing here is clickable.
 
 /**
- * Each bucket's fill. Theme tokens only: the categorical palette (distinct
- * hues, so four buckets side by side in one bar stay tellable apart), and a
- * neutral for the rest.
+ * Each bucket's fill. Theme tokens only: distinct categorical hues, so four
+ * buckets side by side in one bar stay tellable apart, picked (and the green
+ * deepened) to read as solid fills rather than the palette's paler text-on-dark
+ * tones; the rest is a dim neutral, so the named buckets stand out against it.
  */
 const BUCKET_FILL: Record<MachineUsageBucket, CSSProperties> = {
-  chrome: { background: "var(--categorical-1)" },
+  chrome: { background: "var(--categorical-6)" },
   "agent-ops": { background: "var(--categorical-5)" },
-  "agent-browser": { background: "var(--categorical-2)" },
-  other: { background: "var(--categorical-10)" },
+  "agent-browser": {
+    background: "color-mix(in oklch, var(--categorical-2) 90%, black)",
+  },
+  other: { background: "var(--muted-foreground)", opacity: 0.45 },
 };
 
 /** Fixed columns, so the bars and the numbers line up row to row. */
