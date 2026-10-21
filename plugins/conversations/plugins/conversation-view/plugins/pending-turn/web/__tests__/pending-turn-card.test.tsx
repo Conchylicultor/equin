@@ -37,7 +37,10 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { PendingTurnCard } from "../components/pending-turn-card";
+import {
+  PendingTurnCard,
+  type RenderEcho,
+} from "../components/pending-turn-card";
 import {
   CARD_OF,
   type PendingTurn,
@@ -47,6 +50,14 @@ import { conversationPromptDraft } from "../internal/prompt-draft";
 
 const CONV = "conv-card";
 
+/** A host's user row: the text, then the status the card hands it. */
+const renderEcho: RenderEcho = (t, status) => (
+  <div data-testid="echo">
+    <div>{t.text}</div>
+    {status}
+  </div>
+);
+
 function turn(state: PendingTurnState, over: Partial<PendingTurn> = {}) {
   const card = CARD_OF[state];
   if (card === null) throw new Error(`${state} draws no card`);
@@ -55,6 +66,7 @@ function turn(state: PendingTurnState, over: Partial<PendingTurn> = {}) {
     id: "turn-1",
     kind: "turn",
     text: "fix the build",
+    sentAt: new Date("2026-10-21T10:00:00Z"),
     state,
     extraText: null,
     error: null,
@@ -72,6 +84,7 @@ describe("PendingTurnCard", () => {
   it("echoes a held turn as waiting for the agent", () => {
     render(
       <PendingTurnCard
+        renderEcho={renderEcho}
         conversationId={CONV}
         turn={turn("held")}
         agentStarting={false}
@@ -86,6 +99,7 @@ describe("PendingTurnCard", () => {
     for (const state of ["sending", "held", "typing", "typed"] as const) {
       render(
         <PendingTurnCard
+          renderEcho={renderEcho}
           conversationId={CONV}
           turn={turn(state)}
           agentStarting
@@ -99,6 +113,7 @@ describe("PendingTurnCard", () => {
   it("draws no activity of its own — the host's foot line does", () => {
     const { container } = render(
       <PendingTurnCard
+        renderEcho={renderEcho}
         conversationId={CONV}
         turn={turn("typing")}
         agentStarting
@@ -111,6 +126,7 @@ describe("PendingTurnCard", () => {
     for (const state of ["sending", "typing"] as const) {
       render(
         <PendingTurnCard
+          renderEcho={renderEcho}
           conversationId={CONV}
           turn={turn(state)}
           agentStarting={false}
@@ -124,6 +140,7 @@ describe("PendingTurnCard", () => {
   it("names the text a merged turn was submitted with", () => {
     render(
       <PendingTurnCard
+        renderEcho={renderEcho}
         conversationId={CONV}
         turn={turn("merged", { extraText: "an old draft" })}
         agentStarting={false}
@@ -137,6 +154,7 @@ describe("PendingTurnCard", () => {
   it("offers Retry on a failed row, through the server's retry", async () => {
     render(
       <PendingTurnCard
+        renderEcho={renderEcho}
         conversationId={CONV}
         turn={turn("failed", { error: "input box not empty" })}
         agentStarting={false}
@@ -156,6 +174,7 @@ describe("PendingTurnCard", () => {
   it("Copy to draft withdraws an unverified row and fills the draft", async () => {
     render(
       <PendingTurnCard
+        renderEcho={renderEcho}
         conversationId={CONV}
         turn={turn("unverified")}
         agentStarting={false}
@@ -175,6 +194,7 @@ describe("PendingTurnCard", () => {
   it("an unsent request retries and withdraws in the tab: no ledger call", () => {
     render(
       <PendingTurnCard
+        renderEcho={renderEcho}
         conversationId={CONV}
         turn={turn("unsent", { error: "offline" })}
         agentStarting={false}
@@ -185,9 +205,24 @@ describe("PendingTurnCard", () => {
     expect(calls.routes).toEqual([]);
   });
 
+  it("draws the echo as the host's own row, undimmed, the status under it", () => {
+    render(
+      <PendingTurnCard
+        renderEcho={renderEcho}
+        conversationId={CONV}
+        turn={turn("sending")}
+        agentStarting={false}
+      />,
+    );
+    const echo = screen.getByTestId("echo");
+    expect(echo.textContent).toBe("fix the buildSending…");
+    expect(echo.closest(".opacity-70")).toBeNull();
+  });
+
   it("echoes a typed turn as waiting in the agent's queue", () => {
     render(
       <PendingTurnCard
+        renderEcho={renderEcho}
         conversationId={CONV}
         turn={turn("typed")}
         agentStarting={false}
@@ -199,6 +234,7 @@ describe("PendingTurnCard", () => {
   it("echoes an accepted turn (pendingTurnsOf drops it once the transcript shows it)", () => {
     const { container } = render(
       <PendingTurnCard
+        renderEcho={renderEcho}
         conversationId={CONV}
         turn={turn("accepted")}
         agentStarting={false}

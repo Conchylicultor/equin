@@ -8,7 +8,7 @@ import {
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
@@ -20,6 +20,7 @@ import {
   useTurnRunning,
   usePendingTurns,
   type PendingTurn,
+  type RenderEcho,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { useMarkConversationViewed } from "@plugins/conversations/plugins/hibernation/web";
@@ -37,6 +38,7 @@ import {
 } from "../internal/use-thread";
 import {
   AgentThreadView,
+  UserBubble,
   type RenderThreadResult,
   type ResultWords,
 } from "./agent-thread-view";
@@ -56,6 +58,16 @@ export interface AgentThreadProps<D extends ThreadResultDef> {
   /** In the header after Open conversation — the host's own control (a close). */
   headerAction?: ReactNode;
 }
+
+/** A sent turn's echo: the thread's own user bubble, its status under it. */
+const renderEcho: RenderEcho = (turn, status) => (
+  <Stack gap="sm">
+    <UserBubble text={turn.text} />
+    <Stack gap="none" align="end">
+      {status}
+    </Stack>
+  </Stack>
+);
 
 /** Open the full conversation in the Agent Manager (it crosses apps by itself). */
 function OpenConversation({ conversationId }: { conversationId: string }) {
@@ -143,11 +155,6 @@ function LiveThread<D extends ThreadResultDef>({
   const [onScreen, setOnScreen] = useState(false);
   useInView(boxRef, (entry) => setOnScreen(entry.isIntersecting));
   useMarkViewedWhileVisible(conversation, latestOutputAt(turns), onScreen);
-  // A message on its way with no running turn to show the agent busy (it is
-  // starting, or idle): one dots line under the cards, which draw none.
-  const awaitingAgent =
-    pendingTurns.some((turn) => turn.card === "echo") &&
-    turns.at(-1)?.state !== "running";
 
   return (
     // The box whose intersection says the thread is on screen.
@@ -181,9 +188,9 @@ function LiveThread<D extends ThreadResultDef>({
               conversationId={conversation.id}
               turn={turn}
               agentStarting={status === "starting"}
+              renderEcho={renderEcho}
             />
           ))}
-          {awaitingAgent && <BouncingDots />}
           {pending.status === "error" && (
             <ResourceErrorInline
               variant="inline"

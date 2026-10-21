@@ -14,25 +14,31 @@ import { HostedContextProvider, type ContextMember } from "./hosted-context";
  *
  * `hosted`: the context run folded into this row (its renderer declared
  * `hostsContext`), handed to the renderer through `useHostedContext()`.
+ *
+ * `standIn`: the event is not in the transcript yet — a sent turn's echo
+ * (`EchoRow`) drawn through the renderer its real row will use. It carries no
+ * row identity (nothing may anchor or restore a reading position on a row that
+ * is about to be replaced) and is inert: its actions would act on a line the
+ * transcript does not hold yet. Its action box is still drawn, so the text
+ * wraps exactly as it will once the real row takes over.
  */
 export function EventRow({
   event,
-  index,
   hosted,
+  ...at
 }: {
   event: JsonlEvent;
-  index: number;
   hosted?: readonly ContextMember[];
-}) {
+} & ({ index: number } | { standIn: true })) {
   const dispatch = <JsonlViewer.EventRenderer.Dispatch event={event} />;
+  const identity =
+    "index" in at
+      ? { "data-event-index": at.index, "data-event-key": eventKey(event) }
+      : { inert: true };
   return (
     <EventActionProvider event={event}>
       <RowMarkdownProvider>
-        <div
-          className={rowActionsAnchor}
-          data-event-index={index}
-          data-event-key={eventKey(event)}
-        >
+        <div className={rowActionsAnchor} {...identity}>
           {hosted ? (
             <HostedContextProvider members={hosted}>
               {dispatch}

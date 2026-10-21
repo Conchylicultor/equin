@@ -39,11 +39,20 @@ until then, and shows a ledger read error inline where the cards go.
 
 | State | Card |
 |---|---|
-| `sending` (tab only) / `held` / `typing` / `typed` / `accepted` | dimmed echo, **until the agent confirmed it and the transcript reached that moment** — "Waiting for the agent to start…" when held, "Waiting for the agent to take it…" when typed (queued behind a busy agent) |
+| `sending` (tab only) / `held` / `typing` / `typed` / `accepted` | echo, **until the agent confirmed it and the transcript reached that moment** — "Sending…" under it, "Waiting for the agent to start…" when held, "Waiting for the agent to take it…" when typed (queued behind a busy agent) |
 | `accepted` slash command | nothing: the CLI ran it, no prompt row will come |
 | `returned` / `withdrawn` | nothing: the draft has it |
 | `merged` | warning naming the other text (`extraText`) — only while it is the newest turn |
 | `failed` / `unverified` / `unsent` (tab only) | Retry + Copy to draft, with the error |
+
+**An echo is the host's own user row, not a look-alike.** `PendingTurnCard`
+takes a required `renderEcho(turn, status)`: the host draws the turn with the
+component it draws the confirmed turn with (the transcript: a stand-in
+`user-text` event through its renderer, in its pinned section header —
+`jsonl-viewer`'s `EchoRow`; a thread: its `UserBubble`) and places `status` —
+the caption, a highlight sweeping across it — under it. So when the transcript
+takes over, the message does not move, re-wrap or change colour; only the
+status line goes. Never dim or restyle the echo itself.
 
 **An echo retires on the agent's confirmation AND the transcript, never on a
 guess.** The echo stands in for the message, and the two reach the tab on
@@ -95,7 +104,6 @@ render (`reports/turn-unconfirmed`).
 - Description: The single entry point for sending a turn from the browser (sendConversationTurn: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed, a warning when the CLI merged it with leftover text, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery. Contributes the turn-send-safety lint rule.
 - Web:
   - Uses:
-    - `conversations/conversation-view/user-message.UserMessageCard`
     - `conversations/conversation-view/user-message.UserMessageText`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
@@ -104,6 +112,7 @@ render (`reports/turn-unconfirmed`).
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/working-dots.WorkingText`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
@@ -118,6 +127,7 @@ render (`reports/turn-unconfirmed`).
     - `PendingCard`
     - `PendingTurn`
     - `PendingTurnState`
+    - `RenderEcho`
     - `TurnDelivery`
     - `TurnSend`
   - Exports (values):
@@ -131,7 +141,6 @@ render (`reports/turn-unconfirmed`).
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
-    - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`

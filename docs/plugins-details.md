@@ -12786,8 +12786,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
           - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
           - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-        - Uses: 58 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
-          - `conversations/conversation-view/pending-turn` ×7
+        - Uses: 59 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
+          - `conversations/conversation-view/pending-turn` ×8
           - `primitives/live-state` ×7
           - `conversations/conversation-view/jsonl-viewer` ×3
           - `conversations/conversation-view/user-message` ×2
@@ -14252,12 +14252,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 51 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 52 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `primitives/live-state` ×7
               - `primitives/dom/auto-scroll` ×5
+              - `conversations/conversation-view/pending-turn` ×4
               - `primitives/collapsible` ×4
               - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
-              - `conversations/conversation-view/pending-turn` ×3
               - `primitives/css/ui-kit` ×2
               - `primitives/css/working-dots` ×2
               - `primitives/relative-time` ×2
@@ -16522,7 +16522,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`pending-turn`** — The single entry point for sending a turn from the browser (sendConversationTurn: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed, a warning when the CLI merged it with leftover text, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery. Contributes the turn-send-safety lint rule.
           - Web:
             - Uses:
-              - `conversations/conversation-view/user-message.UserMessageCard`
               - `conversations/conversation-view/user-message.UserMessageText`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
@@ -16531,6 +16530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/working-dots.WorkingText`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/live-state.foldResource`
               - `primitives/live-state.mapResource`
@@ -16545,6 +16545,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PendingCard`
               - `PendingTurn`
               - `PendingTurnState`
+              - `RenderEcho`
               - `TurnDelivery`
               - `TurnSend`
             - Exports (values):
@@ -16558,7 +16559,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --destructive`
-              - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-sm`
@@ -37210,7 +37210,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary-text`
-            - Imported by: `conversations/conversation-view/jsonl-viewer`
+            - Imported by:
+              - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
             - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)

@@ -94,7 +94,8 @@ function ThreadHeader({
   );
 }
 
-function UserBubble({ text }: { text: string }) {
+/** The user's message in a thread — also a sent turn's echo, so the two match. */
+export function UserBubble({ text }: { text: string }) {
   return (
     <Stack gap="none" align="end">
       <div className="max-w-[85%]">

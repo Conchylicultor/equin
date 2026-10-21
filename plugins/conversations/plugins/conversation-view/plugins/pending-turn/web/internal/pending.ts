@@ -34,6 +34,8 @@ export interface PendingTurn {
   kind: TurnKind;
   /** What the user wrote — the echo, and what Copy to draft restores. */
   text: string;
+  /** When the user sent it — the time the echo's row shows. */
+  sentAt: Date;
   state: PendingTurnState;
   /** The card it draws — `CARD_OF[state]`, never null for a turn listed. */
   card: PendingCard;
@@ -123,6 +125,7 @@ export function pendingTurnsOf(
           id: row.id,
           kind: row.kind,
           text: row.text,
+          sentAt: row.createdAt,
           state: row.state,
           card,
           extraText: row.extraText,
@@ -135,6 +138,7 @@ export function pendingTurnsOf(
     id: turn.id,
     kind: turn.kind,
     text: turn.text,
+    sentAt: turn.createdAt,
     state: turn.status.kind === "unsent" ? "unsent" : "sending",
     card: turn.status.kind === "unsent" ? "failure" : "echo",
     extraText: null,

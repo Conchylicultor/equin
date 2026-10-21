@@ -15,7 +15,10 @@ export type {
 } from "./internal/pending";
 export type { TurnDelivery } from "./internal/delivery";
 export { conversationPromptDraft } from "./internal/prompt-draft";
-export { PendingTurnCard } from "./components/pending-turn-card";
+export {
+  PendingTurnCard,
+  type RenderEcho,
+} from "./components/pending-turn-card";
 
 export default {
   description:

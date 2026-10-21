@@ -33,18 +33,29 @@ import {
   usePendingTurns,
   PendingTurnCard,
   type PendingTurn,
+  type RenderEcho,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
+import { EchoRow } from "./echo-row";
 import { JsonlViewer } from "../slots";
 import type { TranscriptSubject } from "./transcript-subject-context";
 
 const CONVERSATION_SUBJECT: TranscriptSubject = { kind: "conversation" };
 
+/** A sent turn's echo, drawn as the transcript's own prompt row. */
+const renderEcho: RenderEcho = (turn, status) => (
+  <EchoRow
+    turnId={turn.id}
+    text={turn.text}
+    sentAt={turn.sentAt}
+    status={status}
+  />
+);
+
 /**
  * The transcript's one activity line, at its foot under the queued messages:
  * what the agent is doing — starting, or working on a turn (read from the
  * transcript's tail: writing, the tool it is running, thinking) — with how long
- * it has been at it; bare dots while a message is on its way to an idle agent.
- * The message cards above draw none of their own.
+ * it has been at it. A message on its way says so itself, under its echo.
  */
 function TranscriptActivity({
   phase,
@@ -52,7 +63,7 @@ function TranscriptActivity({
   conversationId,
   events,
 }: {
-  phase: "starting" | "working" | "sending";
+  phase: "starting" | "working";
   startAt: number | null;
   conversationId: string;
   events: readonly JsonlEvent[];
@@ -67,16 +78,14 @@ function TranscriptActivity({
     // on the column the agent's words and the tool cards' contents start on.
     <Stack direction="row" align="center" gap="sm" className="px-md py-xs">
       <WorkingDots mood={phase === "working" ? working.mood : "working"} />
-      {phase !== "sending" && (
-        <Line>
-          <Text as="span" variant="caption">
-            <WorkingText>
-              {phase === "starting" ? "Starting the agent" : working.label}
-            </WorkingText>
-          </Text>
-        </Line>
-      )}
-      {phase !== "sending" && startAt != null && (
+      <Line>
+        <Text as="span" variant="caption">
+          <WorkingText>
+            {phase === "starting" ? "Starting the agent" : working.label}
+          </WorkingText>
+        </Text>
+      </Line>
+      {startAt != null && (
         <Text
           as="span"
           variant="caption"
@@ -182,15 +191,13 @@ function JsonlPaneInner({
   }, [isWorking]);
 
   const agentStarting = conversation.status === "starting";
-  // The foot's activity line (see TranscriptActivity): the agent's phase, or
-  // a message still on its way to an idle agent.
-  const activity: "starting" | "working" | "sending" | null = agentStarting
+  // The foot's activity line (see TranscriptActivity): the agent's phase. A
+  // message still on its way to an idle agent says so under its own echo.
+  const activity: "starting" | "working" | null = agentStarting
     ? "starting"
     : isWorking
       ? "working"
-      : pendingTurns.some((turn) => turn.card === "echo")
-        ? "sending"
-        : null;
+      : null;
 
   // Working with nothing written yet: the pane's empty state shows it.
   const isStarting =
@@ -249,6 +256,7 @@ function JsonlPaneInner({
           conversationId={conversation.id}
           turn={turn}
           agentStarting={agentStarting}
+          renderEcho={renderEcho}
         />
       ))}
       {activity !== null && !isStarting && (

@@ -1,9 +1,8 @@
+import type { ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import {
-  UserMessageCard,
-  UserMessageText,
-} from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
+import { WorkingText } from "@plugins/primitives/plugins/css/plugins/working-dots/web";
+import { UserMessageText } from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
@@ -76,12 +75,35 @@ function echoCaption(turn: PendingTurn, agentStarting: boolean): string {
 }
 
 /**
+ * Where an echo stands, in words, under the host's user row: muted, with a
+ * highlight sweeping across it while the turn is on its way. It is the ONLY
+ * thing an echo adds to the message — when the transcript takes the turn
+ * over, this line is all that goes away.
+ */
+function EchoStatus({ caption }: { caption: string }) {
+  return (
+    <Text as="div" variant="caption">
+      <WorkingText>{caption}</WorkingText>
+    </Text>
+  );
+}
+
+/**
+ * Draws a turn still on its way exactly as its host draws the turn once the
+ * transcript holds it — the same component, so nothing on screen changes but
+ * `status` going away. `status` is the in-flight line ("Sending…"); the host
+ * places it under the message, aligned as its own rows are.
+ */
+export type RenderEcho = (turn: PendingTurn, status: ReactNode) => ReactNode;
+
+/**
  * One turn's card at the end of the transcript, by state (replace, never
  * duplicate — a turn the transcript shows has no card; see `pendingTurnsOf`
  * for which turns get one):
  *
- * - `sending` / `held` / `typing` / `typed` / `accepted` — the dimmed echo,
- *   until the transcript shows the turn;
+ * - `sending` / `held` / `typing` / `typed` / `accepted` — the echo, drawn by
+ *   the host (`renderEcho`) as its own user row, with the in-flight status
+ *   under it, until the transcript shows the turn;
  * - `merged` — the CLI submitted this turn together with other text (a draft
  *   its input box still held): a warning naming that text;
  * - `failed` / `unverified` / `unsent` — Retry + Copy to draft, with why.
@@ -93,11 +115,14 @@ export function PendingTurnCard({
   conversationId,
   turn,
   agentStarting,
+  renderEcho,
 }: {
   conversationId: string;
   turn: PendingTurn;
   /** The conversation is `starting`: every echo waits for the agent. */
   agentStarting: boolean;
+  /** The host's own user row, so the echo cannot look unlike the message it becomes. */
+  renderEcho: RenderEcho;
 }) {
   const card = turn.card;
   const inFlight = card === "echo";
@@ -110,17 +135,9 @@ export function PendingTurnCard({
   });
 
   if (inFlight) {
-    // The same card and text formatting as the confirmed user row (chips
-    // included), dimmed as "pending".
-    return (
-      <div className="opacity-70">
-        <UserMessageCard>
-          <UserMessageText text={turn.text} />
-          <Text as="div" variant="caption" className="text-muted-foreground/60">
-            {echoCaption(turn, agentStarting)}
-          </Text>
-        </UserMessageCard>
-      </div>
+    return renderEcho(
+      turn,
+      <EchoStatus caption={echoCaption(turn, agentStarting)} />,
     );
   }
 
