@@ -198,6 +198,62 @@ longer classifies into the section it sits in, or when the runner's own
 migration, to one sorting after its claimer, or to one already claimed) — so a
 claim error fails the build, not the boot.
 
+## Supersession (a reset keeps identity)
+
+A reset — push's `regen-migrations`, or `./singularity build --reset-migration`
+— deletes the branch's own schema migrations and drizzle re-emits their delta as
+one new file with a **new hash**. A database that applied the deleted files (the
+worktree's own, which built them) already carries that delta, and the ledger is
+keyed by hash: without more, the next boot would run the new file's
+`ADD COLUMN`s over columns that exist and crash
+(`research/2026-10-20-global-merged-migration-supersedes-authored.md`).
+
+So the regenerated file names what it replaced, in header lines before its
+phase markers (grammar: `core/internal/phases.ts`):
+
+```sql
+-- singularity:supersedes 38bc8c97 f09303fa
+-- singularity:supersedes a1b2c3d4 <- 0badf00d 12345678
+-- singularity:phase expand
+```
+
+The first line lists the hashes this reset deleted; a `<-` line is inherited —
+a deleted file that had itself superseded others passes its lineage on, so a
+regen of a regen (push retried with no build between) still reaches what a
+database actually applied.
+
+**The runner** (`planSchemaSteps`) checks every pending superseding file
+against the ledger: a hash is *covered* when the ledger has it, or when every
+hash it replaced is covered.
+
+- every direct hash covered → **adopted**: its ledger row lands, its expand and
+  contract do not run (claimed data migrations still run if pending);
+- no lineage hash applied (main, a fresh DB, every other worktree) → applied as
+  usual — the header is inert there;
+- anything in between → the boot **throws before any SQL**, naming both sets and
+  `./singularity db fork --replace`.
+
+**The generator** (`cli/plugins/migrations/cli/reset-lineage.ts`) writes the
+header only when skipping the file's SQL is provably right: the deleted
+migrations' tip snapshot, 3-way-merged with what the published tip changed
+since the branch forked (`snapshot-merge.ts`), must equal the snapshot it just
+generated. They differ when `schema.ts` changed after the last generation (the
+new file then carries DDL the deleted ones never ran), when the branch carries a
+merge node, or when the reset regenerates nothing; the build then warns that a
+database which applied the deleted files must be re-forked
+(`./singularity db fork --replace`).
+
+`migration-phases-valid` refuses a superseded hash that is still a file on disk
+(published or not), and a merge node with a `supersedes` header.
+
+**An applied hash with no file** that no file on disk supersedes is logged with
+both possible readings — the branch is behind main (rebase), or the branch
+rewrote its own migration without a header (re-fork) — because the runner has no
+git to tell them apart. A failure anywhere in the plan or its SQL is written to
+the `migrations` log (`logs/migrations.jsonl`) before it propagates; the
+gateway additionally returns the dead backend's last stderr lines in the
+restart error `./singularity build` prints.
+
 ## Views never block a migration
 
 Plain views are derived code (`database/derived-views`), rebuilt from source at
@@ -413,6 +469,7 @@ only agreement that matters.
     - `Statement`
     - `StatementClass`
     - `StatementOp`
+    - `Supersession`
   - Exports (values):
     - `analyzeSnapshotDag`
     - `classifyStatement`

@@ -56,7 +56,11 @@ export {
   UnjoinedSnapshotTipsError,
 } from "./internal/drizzle-stage";
 export type { DrizzleStage } from "./internal/drizzle-stage";
-export type { ParsedMigration, PhasedMigration } from "./internal/phases";
+export type {
+  ParsedMigration,
+  PhasedMigration,
+  Supersession,
+} from "./internal/phases";
 // The one statement splitter for migration SQL (comment/literal/dollar-quote
 // aware), shared by the phaser and the data-migration-dml-only and
 // fork-schema-drift checks.

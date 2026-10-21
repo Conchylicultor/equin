@@ -50,9 +50,13 @@ export interface MigrationFile {
  *   expand statement as expand, a contract statement as contract. That is what
  *   the generator wrote, so a mismatch is a hand-edit or a stale file.
  *
- * - A merge node (a `merge-snapshot` header) must be a no-op: empty sections
- *   and no claims. Its snapshot is a merge, not a diff, so any SQL in it would
- *   apply DDL no snapshot accounts for.
+ * - A merge node (a `merge-snapshot` header) must be a no-op: empty sections,
+ *   no claims and no supersedes. Its snapshot is a merge, not a diff, so any SQL
+ *   in it would apply DDL no snapshot accounts for.
+ *
+ * And, over EVERY file (published too): a hash a `supersedes` header names must
+ * not be a file on disk. A reset deletes what it supersedes; a superseded file
+ * still present would run its DDL AND let the superseding file be adopted.
  *
  * Claims are validated by the runner's `planSchemaSteps` in `run()`.
  */
@@ -80,10 +84,11 @@ export function findPhaseErrors(
       mergeSnapshotParents(m.sql) !== null &&
       (parsed.expand !== "" ||
         parsed.contract !== "" ||
-        parsed.claims.length > 0)
+        parsed.claims.length > 0 ||
+        parsed.supersedes !== null)
     ) {
       errors.push(
-        `${m.file}: a merge node must be a no-op (empty expand and contract, no claims)`,
+        `${m.file}: a merge node must be a no-op (empty expand and contract, no claims, no supersedes)`,
       );
       continue;
     }
@@ -97,6 +102,32 @@ export function findPhaseErrors(
           );
         }
       }
+    }
+  }
+  const fileByHash = new Map(
+    files.map((m) => [MIGRATION_RE.exec(m.file)?.[3], m.file]),
+  );
+  for (const m of files) {
+    let parsed: ReturnType<typeof parseMigration>;
+    try {
+      parsed = parseMigration(m.sql);
+    } catch (e) {
+      // A branch-local schema file's parse error is already reported above.
+      if (!m.isSchema || tracked.has(m.file))
+        errors.push(`${m.file}: ${(e as Error).message}`);
+      continue;
+    }
+    if (parsed.kind !== "phased" || parsed.supersedes === null) continue;
+    const lineage = [
+      ...parsed.supersedes.direct,
+      ...parsed.supersedes.inherited.flatMap((e) => [e.hash, ...e.replaced]),
+    ];
+    for (const h of new Set(lineage)) {
+      const still = fileByHash.get(h);
+      if (still !== undefined)
+        errors.push(
+          `${m.file}: supersedes ${h}, but ${still} is still on disk — a reset deletes what it supersedes`,
+        );
     }
   }
   return errors;

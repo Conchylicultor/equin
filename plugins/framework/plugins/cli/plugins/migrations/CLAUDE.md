@@ -22,6 +22,13 @@ unclaimed data migrations. A statement the table rejects or does not know
 discards the generation and exits 1. See `database/migrations/CLAUDE.md` →
 **Phased schema migrations**.
 
+A reset (`--reset-migration`, push's regen) reads what it is about to delete
+first (`readResetPrior`, `reset-lineage.ts`); after generation, `resetLineage`
+decides whether the new file may say it supersedes those hashes — only when the
+deleted tip, carried over main's changes, equals the new snapshot — and
+`phaseGeneratedMigrations` writes the header. See `database/migrations/CLAUDE.md`
+→ **Supersession**.
+
 Before drizzle-kit runs, `joinSnapshotTips` (`snapshot-join.ts`, merging with
 the pure `snapshot-merge.ts`) joins a snapshot DAG with several published tips —
 an upstream update's fork — with a no-op **merge node**, or fails naming the

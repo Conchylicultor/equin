@@ -35,6 +35,24 @@
 // Its SQL does nothing — each side's own migrations already apply that side's
 // DDL — and its snapshot is the 3-way merge of the parents. The header is the
 // one place a snapshot DAG edge beyond `prevId` is recorded.
+//
+// SUPERSESSION (research/2026-10-20-global-merged-migration-supersedes-authored.md).
+// A reset (push's regen, `--reset-migration`) deletes the branch's own schema
+// migrations and regenerates their delta as one new file with a new hash. A
+// database that applied the deleted files already carries that delta, and the
+// ledger is keyed by hash — so the new file records which hashes it replaced:
+//
+//   -- singularity:supersedes 38bc8c97 f09303fa
+//   -- singularity:supersedes a1b2c3d4 <- 0badf00d 12345678
+//   -- singularity:phase expand
+//   ...
+//
+// The first form (exactly one line) lists the files this reset deleted. The
+// `<-` form is inherited: a deleted file that had itself superseded others
+// passes its own lineage on, so a regen of a regen still reaches the hashes a
+// database actually applied. The runner adopts the file (records it, runs none
+// of its SQL) when its lineage is fully applied. The generator writes the
+// header only when it proved the deleted files expressed the same schema.
 
 const MERGE_HEADER = "-- singularity:merge-snapshot";
 const MERGE_HEADER_RE =
@@ -45,14 +63,24 @@ const SNAPSHOT_ID_RE =
 const EXPAND = "-- singularity:phase expand";
 const CONTRACT = "-- singularity:phase contract";
 const CLAIMS = "-- singularity:claims";
+const SUPERSEDES = "-- singularity:supersedes";
+const HASH_RE = /^[0-9a-f]{8}$/;
 
 const MIGRATION_FILE_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 const CLAIM_ID_RE = /^\d{8}_\d{6}__[a-z0-9_]+$/;
+
+// The hashes a phased migration replaced (see SUPERSESSION above). `direct` is
+// never empty; every `inherited` entry's hash is reachable from `direct`.
+export interface Supersession {
+  direct: readonly string[];
+  inherited: readonly { hash: string; replaced: readonly string[] }[];
+}
 
 export interface PhasedMigration {
   expand: string;
   contract: string;
   claims: readonly string[];
+  supersedes: Supersession | null;
 }
 
 export type ParsedMigration =
@@ -77,6 +105,7 @@ export function renderPhasedMigration(m: PhasedMigration): string {
   for (const c of m.claims) assertClaimId(c);
   const section = (s: string) => (s.trim() === "" ? "" : `${s.trim()}\n`);
   return (
+    renderSupersession(m.supersedes) +
     `${EXPAND}\n${section(m.expand)}` +
     `${CONTRACT}\n${section(m.contract)}` +
     `${CLAIMS}\n${m.claims.map((c) => `-- ${c}\n`).join("")}`
@@ -98,8 +127,116 @@ export function renderMergeSnapshotMigration(
   }
   return (
     `${MERGE_HEADER} parents=${parents.join(",")}\n` +
-    renderPhasedMigration({ expand: "", contract: "", claims: [] })
+    renderPhasedMigration({
+      expand: "",
+      contract: "",
+      claims: [],
+      supersedes: null,
+    })
   );
+}
+
+function renderSupersession(s: Supersession | null): string {
+  if (s === null) return "";
+  assertSupersession(s);
+  return (
+    `${SUPERSEDES} ${s.direct.join(" ")}\n` +
+    s.inherited
+      .map((e) => `${SUPERSEDES} ${e.hash} <- ${e.replaced.join(" ")}\n`)
+      .join("")
+  );
+}
+
+function assertHashes(hashes: readonly string[], line: string): void {
+  if (hashes.length === 0)
+    throw new Error(`supersedes header lists no hash: ${line}`);
+  for (const h of hashes) {
+    if (!HASH_RE.test(h))
+      throw new Error(`malformed hash "${h}" in supersedes header: ${line}`);
+  }
+}
+
+// `direct` non-empty, every hash well-formed, each inherited parent listed
+// once and reachable from `direct` — an edge nothing reaches could never be
+// consulted, so it is a corrupt header, not a harmless extra.
+function assertSupersession(s: Supersession): void {
+  assertHashes(s.direct, s.direct.join(" "));
+  const reachable = new Set(s.direct);
+  const seen = new Set<string>();
+  for (const e of s.inherited) {
+    assertHashes(
+      [e.hash, ...e.replaced],
+      `${e.hash} <- ${e.replaced.join(" ")}`,
+    );
+    if (seen.has(e.hash))
+      throw new Error(`supersedes header lists ${e.hash}'s lineage twice`);
+    seen.add(e.hash);
+  }
+  // Fixed point: an edge may be listed before the edge that reaches it.
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const e of s.inherited) {
+      if (!reachable.has(e.hash)) continue;
+      for (const r of e.replaced) {
+        if (!reachable.has(r)) {
+          reachable.add(r);
+          grew = true;
+        }
+      }
+    }
+  }
+  for (const e of s.inherited) {
+    if (!reachable.has(e.hash))
+      throw new Error(
+        `supersedes header has a lineage for ${e.hash}, which nothing it supersedes reaches`,
+      );
+  }
+}
+
+// Split the leading supersedes lines off `sql`: the lineage (null when there
+// is none) and the body after it.
+function takeSupersession(sql: string): {
+  supersedes: Supersession | null;
+  body: string;
+} {
+  const lines = sql.split("\n");
+  let i = 0;
+  let direct: string[] | null = null;
+  const inherited: { hash: string; replaced: string[] }[] = [];
+  while (i < lines.length && lines[i]!.startsWith(SUPERSEDES)) {
+    const line = lines[i]!.trimEnd();
+    const rest = line.slice(SUPERSEDES.length);
+    if (!rest.startsWith(" "))
+      throw new Error(`malformed supersedes header: ${line}`);
+    const [lhs, rhs, ...more] = rest.split(" <- ");
+    if (more.length > 0)
+      throw new Error(`malformed supersedes header: ${line}`);
+    const left = lhs!.trim().split(/\s+/);
+    if (rhs === undefined) {
+      if (direct !== null)
+        throw new Error(
+          `supersedes header has two direct lines; the second is: ${line}`,
+        );
+      assertHashes(left, line);
+      direct = left;
+    } else {
+      if (left.length !== 1)
+        throw new Error(
+          `an inherited supersedes line names one replaced file: ${line}`,
+        );
+      inherited.push({ hash: left[0]!, replaced: rhs.trim().split(/\s+/) });
+    }
+    i++;
+  }
+  if (i === 0) return { supersedes: null, body: sql };
+  if (direct === null)
+    throw new Error(
+      `supersedes header has inherited lines but no direct line (\`${SUPERSEDES} <hash>…\`)`,
+    );
+  const supersedes = { direct, inherited };
+  assertSupersession(supersedes);
+  return { supersedes, body: lines.slice(i).join("\n") };
 }
 
 // The snapshot ids a merge node joins, read from its first line; null for any
@@ -122,7 +259,8 @@ export function mergeSnapshotParents(sql: string): string[] | null {
 // Parse a migration file body. A file whose first line is not the expand marker
 // is legacy. A file that starts phased but is malformed throws — never degrades
 // to legacy, which would silently apply contract before its data. A merge
-// node's header line is skipped; what follows it must be phased.
+// node's header line is skipped; what follows it must be phased. Leading
+// supersedes lines are the lineage; what follows them must be phased too.
 export function parseMigration(sql: string): ParsedMigration {
   if (mergeSnapshotParents(sql) !== null) {
     const eol = sql.indexOf("\n");
@@ -133,6 +271,19 @@ export function parseMigration(sql: string): ParsedMigration {
       );
     return parsed;
   }
+  const { supersedes, body } = takeSupersession(sql);
+  if (supersedes !== null) {
+    const parsed = parsePhasedBody(body);
+    if (parsed.kind !== "phased")
+      throw new Error(
+        `a migration with a supersedes header must be phased after it`,
+      );
+    return { ...parsed, supersedes };
+  }
+  return parsePhasedBody(sql);
+}
+
+function parsePhasedBody(sql: string): ParsedMigration {
   const lines = sql.split("\n");
   if (lines[0]?.trimEnd() !== EXPAND) return { kind: "legacy", sql };
 
@@ -179,5 +330,6 @@ export function parseMigration(sql: string): ParsedMigration {
       .join("\n")
       .trim(),
     claims,
+    supersedes: null,
   };
 }

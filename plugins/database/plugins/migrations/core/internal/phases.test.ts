@@ -13,6 +13,7 @@ describe("phased migration grammar", () => {
       expand: 'CREATE INDEX IF NOT EXISTS "i" ON "x" ("id");',
       contract: 'ALTER TABLE "a" DROP COLUMN IF EXISTS "b";',
       claims: ["20260927_182347__remap_saved_icons_to_symbols"],
+      supersedes: null,
     };
     expect(parseMigration(renderPhasedMigration(m))).toEqual({
       kind: "phased",
@@ -21,7 +22,12 @@ describe("phased migration grammar", () => {
   });
 
   test("empty sections and no claims round-trip", () => {
-    const m = { expand: "", contract: 'DROP TABLE "q" CASCADE;', claims: [] };
+    const m = {
+      expand: "",
+      contract: 'DROP TABLE "q" CASCADE;',
+      claims: [],
+      supersedes: null,
+    };
     expect(parseMigration(renderPhasedMigration(m))).toEqual({
       kind: "phased",
       ...m,
@@ -79,6 +85,7 @@ describe("merge-snapshot header", () => {
       expand: "",
       contract: "",
       claims: [],
+      supersedes: null,
     });
   });
 
@@ -86,7 +93,12 @@ describe("merge-snapshot header", () => {
     expect(mergeSnapshotParents("SELECT 1;")).toBeNull();
     expect(
       mergeSnapshotParents(
-        renderPhasedMigration({ expand: "", contract: "", claims: [] }),
+        renderPhasedMigration({
+          expand: "",
+          contract: "",
+          claims: [],
+          supersedes: null,
+        }),
       ),
     ).toBeNull();
   });
@@ -113,5 +125,86 @@ describe("merge-snapshot header", () => {
 
   test("fewer than two parents cannot be rendered", () => {
     expect(() => renderMergeSnapshotMigration([A])).toThrow(/at least two/);
+  });
+});
+
+describe("supersedes header", () => {
+  const body = {
+    expand: 'ALTER TABLE "c" ADD COLUMN "w" text;',
+    contract: "",
+    claims: [],
+  };
+
+  test("direct lineage round-trips and leads the file", () => {
+    const m = {
+      ...body,
+      supersedes: { direct: ["38bc8c97", "f09303fa"], inherited: [] },
+    };
+    const sql = renderPhasedMigration(m);
+    expect(sql.split("\n")[0]).toBe(
+      "-- singularity:supersedes 38bc8c97 f09303fa",
+    );
+    expect(parseMigration(sql)).toEqual({ kind: "phased", ...m });
+  });
+
+  test("inherited edges round-trip", () => {
+    const m = {
+      ...body,
+      supersedes: {
+        direct: ["a1a1a1a1"],
+        inherited: [
+          { hash: "a1a1a1a1", replaced: ["38bc8c97", "f09303fa"] },
+          { hash: "38bc8c97", replaced: ["0badf00d"] },
+        ],
+      },
+    };
+    expect(parseMigration(renderPhasedMigration(m))).toEqual({
+      kind: "phased",
+      ...m,
+    });
+  });
+
+  test("a malformed hash throws", () => {
+    expect(() =>
+      parseMigration(
+        "-- singularity:supersedes nothex\n" +
+          renderPhasedMigration({ ...body, supersedes: null }),
+      ),
+    ).toThrow(/malformed hash/);
+  });
+
+  test("an inherited edge nothing reaches throws", () => {
+    expect(() =>
+      renderPhasedMigration({
+        ...body,
+        supersedes: {
+          direct: ["a1a1a1a1"],
+          inherited: [{ hash: "b2b2b2b2", replaced: ["c3c3c3c3"] }],
+        },
+      }),
+    ).toThrow(/nothing it supersedes reaches/);
+  });
+
+  test("inherited lines without a direct line throw", () => {
+    expect(() =>
+      parseMigration(
+        "-- singularity:supersedes a1a1a1a1 <- b2b2b2b2\n" +
+          renderPhasedMigration({ ...body, supersedes: null }),
+      ),
+    ).toThrow(/no direct line/);
+  });
+
+  test("a header over a legacy body throws", () => {
+    expect(() =>
+      parseMigration("-- singularity:supersedes a1a1a1a1\nSELECT 1;\n"),
+    ).toThrow(/must be phased/);
+  });
+
+  test("a supersedes line inside the body is a duplicate marker", () => {
+    expect(() =>
+      parseMigration(
+        "-- singularity:phase expand\n-- singularity:supersedes a1a1a1a1\n-- singularity:phase contract\n-- singularity:claims\n",
+      ),
+    ).toThrow(/duplicate marker/);
   });
 });

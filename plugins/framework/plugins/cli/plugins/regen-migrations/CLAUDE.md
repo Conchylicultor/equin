@@ -21,6 +21,13 @@ expand, then those data migrations, then contract — so a backfill that reads a
 column this branch adds, or one it drops, keeps working however far main moved.
 See `database/migrations/CLAUDE.md` → **Phased schema migrations**.
 
+The regenerated file **supersedes** the hashes the reset deleted (a
+`-- singularity:supersedes` header) when it provably carries the same schema, so
+the worktree that built those migrations adopts the merged file on its next
+boot instead of re-running its DDL. When that cannot be proved, the command
+warns that such a database needs `./singularity db fork --replace`. See
+`database/migrations/CLAUDE.md` → **Supersession**.
+
 Two refusals come before the regeneration, both because "reset and regenerate"
 is destructive in exactly two ways:
 

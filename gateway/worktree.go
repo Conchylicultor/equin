@@ -182,6 +182,7 @@ func (r StartReason) String() string {
 type backend struct {
 	cmd        *exec.Cmd
 	exitCh     chan struct{} // closed when cmd.Wait returns
+	startedAt  int64         // epoch ms of spawn; bounds the stderr tail an early exit reports
 	socketPath string
 	proxy      *httputil.ReverseProxy // nil until waitReady succeeds
 	demoted    bool                   // running darwinbg (taskpolicy -b) until promoted; guarded by the owning Worktree's mu
@@ -877,6 +878,7 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string, reason StartReaso
 	bk := &backend{
 		cmd:        cmd,
 		exitCh:     make(chan struct{}),
+		startedAt:  now.UnixMilli(),
 		socketPath: socketPath,
 		demoted:    demoted,
 	}
@@ -954,7 +956,34 @@ func (w *Worktree) awaitBackendReady(bk *backend, socketPath string) (escalated,
 			"base", base, "extension", w.cfg.ReadyTimeoutMax)
 		w.promoteBackend(bk)
 	}, bk.exitCh)
+	if errors.Is(err, errExitedBeforeReady) {
+		err = withStderrTail(err, w.logBuf.Tail(exitTailLines, "stderr", bk.startedAt))
+	}
 	return escalated, respondedHTTP, err
+}
+
+// exitTailLines is how much of a backend's own stderr an early exit reports:
+// enough for a stack and the error it ends in (a failed boot migration prints
+// its pg error, then the rethrow's stack).
+const exitTailLines = 40
+
+// errExitedBeforeReady: the backend process ended before its readiness probe
+// passed — a boot crash. The error that killed it is on its stderr.
+var errExitedBeforeReady = errors.New("backend exited before ready")
+
+// withStderrTail puts the backend's last stderr lines into the error, so the
+// restart's 500 body — which `./singularity build` prints — says WHY the boot
+// died instead of only that it did. The lines are also in the worktree's
+// gateway log; this is the one place the caller is already looking.
+func withStderrTail(err error, tail []logEntry) error {
+	if len(tail) == 0 {
+		return fmt.Errorf("%w (it wrote nothing to stderr)", err)
+	}
+	lines := make([]string, len(tail))
+	for i, e := range tail {
+		lines[i] = "  " + e.Line
+	}
+	return fmt.Errorf("%w; its last stderr lines:\n%s", err, strings.Join(lines, "\n"))
 }
 
 // waitReady polls the backend's `GET /api/health/ready` over its Unix socket
@@ -1022,7 +1051,7 @@ func waitReady(socketPath string, base, extension time.Duration, demoted bool, o
 		}
 		select {
 		case <-exitCh:
-			return errors.New("backend exited before ready")
+			return errExitedBeforeReady
 		case <-time.After(100 * time.Millisecond):
 		}
 	}

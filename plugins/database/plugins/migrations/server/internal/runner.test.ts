@@ -103,7 +103,7 @@ function phased(
   contract: string,
   claims: string[] = [],
 ): string {
-  return renderPhasedMigration({ expand, contract, claims });
+  return renderPhasedMigration({ expand, contract, claims, supersedes: null });
 }
 
 // The plan as `<file> <phase>` / `<file> record` lines: order is the subject.
@@ -484,5 +484,100 @@ describe("planSchemaSteps over a merged history", () => {
       `${sP.file} record`,
       `${merge.file} record`,
     ]);
+  });
+});
+
+// A worktree authors o1 and o2, builds (its DB applies both), then push's regen
+// replaces them with one merged file that supersedes them.
+describe("planSchemaSteps — supersession", () => {
+  const o1 = "38bc8c97";
+  const o2 = "f09303fa";
+  const data = mig(
+    "20261020",
+    "110000",
+    "dadadada",
+    "backfill_working_on",
+    "UPDATE c SET w = 'x'",
+  );
+  const superseding = (
+    supersedes: Parameters<typeof renderPhasedMigration>[0]["supersedes"],
+  ) =>
+    mig(
+      "20261020",
+      "115443",
+      "d36c582c",
+      "merged_20261020_1154",
+      renderPhasedMigration({
+        expand: 'ALTER TABLE "c" ADD COLUMN "w" text;',
+        contract: 'ALTER TABLE "c" ALTER COLUMN "w" SET NOT NULL;',
+        claims: ["20261020_110000__backfill_working_on"],
+        supersedes,
+      }),
+    );
+  const merged = superseding({ direct: [o1, o2], inherited: [] });
+
+  test("a DB that applied every superseded hash adopts the file: a ledger row, none of its SQL", () => {
+    const plan = planSchemaSteps([data, merged], new Set([o1, o2, data.hash]));
+    expect(
+      plan.steps.map((s) =>
+        s.kind === "record" ? `${s.file} record` : `${s.file} ${s.phase}`,
+      ),
+    ).toEqual([`${merged.file} record`]);
+    expect(plan.adopted).toEqual([{ file: merged.file, via: [o1, o2] }]);
+    expect(plan.superseded).toEqual(new Set([o1, o2]));
+  });
+
+  test("adopting still runs a pending claimed data migration", () => {
+    expect(trace([data, merged], [o1, o2])).toEqual([
+      `${data.file} whole`,
+      `${data.file} record`,
+      `${merged.file} record`,
+    ]);
+  });
+
+  test("a DB that applied none of them (main, a fresh install) applies the file as usual", () => {
+    const plan = planSchemaSteps([data, merged], new Set());
+    expect(plan.adopted).toEqual([]);
+    expect(
+      plan.steps.map((s) =>
+        s.kind === "record" ? `${s.file} record` : `${s.file} ${s.phase}`,
+      ),
+    ).toEqual([
+      `${merged.file} expand`,
+      `${data.file} whole`,
+      `${data.file} record`,
+      `${merged.file} contract`,
+      `${merged.file} record`,
+    ]);
+  });
+
+  test("a DB that applied only part of the lineage throws before any SQL runs", () => {
+    expect(() => planSchemaSteps([data, merged], new Set([o1]))).toThrow(
+      /applied only part of that lineage.*db fork --replace/s,
+    );
+  });
+
+  test("a regen of a regen is adopted through the inherited lineage", () => {
+    const merged2 = superseding({
+      direct: ["a1a1a1a1"],
+      inherited: [{ hash: "a1a1a1a1", replaced: [o1, o2] }],
+    });
+    const plan = planSchemaSteps([data, merged2], new Set([o1, o2, data.hash]));
+    expect(plan.adopted).toEqual([{ file: merged2.file, via: [o1, o2] }]);
+    expect(plan.superseded).toEqual(new Set(["a1a1a1a1", o1, o2]));
+  });
+
+  test("an inherited lineage applied only in part throws", () => {
+    const merged2 = superseding({
+      direct: ["a1a1a1a1"],
+      inherited: [{ hash: "a1a1a1a1", replaced: [o1, o2] }],
+    });
+    expect(() => planSchemaSteps([data, merged2], new Set([o2]))).toThrow(
+      /applied only part/,
+    );
+  });
+
+  test("an already-applied superseding file is a normal skip", () => {
+    expect(trace([data, merged], [o1, o2, data.hash, merged.hash])).toEqual([]);
   });
 });

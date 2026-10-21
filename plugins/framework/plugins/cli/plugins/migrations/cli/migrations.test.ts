@@ -315,7 +315,7 @@ describe("phaseGeneratedMigrations", () => {
         'ALTER TABLE "agents" ADD COLUMN "icon" text NOT NULL;--> statement-breakpoint\nALTER TABLE "agents" DROP COLUMN IF EXISTS "icon_svg_nodes";';
       writeFileSync(join(dir, "0NaN_swap_icons.sql"), fresh);
 
-      phaseGeneratedMigrations(dir, new Set([`${MAIN_DATA}.sql`]));
+      phaseGeneratedMigrations(dir, new Set([`${MAIN_DATA}.sql`]), null);
 
       expect(readFileSync(join(dir, "0NaN_swap_icons.sql"), "utf8")).toBe(
         [
@@ -335,7 +335,7 @@ describe("phaseGeneratedMigrations", () => {
   test("leaves every already-named file untouched", () => {
     withDataDir((dir) => {
       writeFileSync(join(dir, `${NEW_DATA}.sql`), "UPDATE a SET b = 3;\n");
-      phaseGeneratedMigrations(dir, new Set());
+      phaseGeneratedMigrations(dir, new Set(), null);
       expect(readFileSync(join(dir, `${NEW_DATA}.sql`), "utf8")).toBe(
         "UPDATE a SET b = 3;\n",
       );
@@ -346,7 +346,7 @@ describe("phaseGeneratedMigrations", () => {
     withDataDir((dir) => {
       const fresh = 'DROP VIEW "public"."agents_v";';
       writeFileSync(join(dir, "0NaN_bad.sql"), fresh);
-      expect(() => phaseGeneratedMigrations(dir, new Set())).toThrow(
+      expect(() => phaseGeneratedMigrations(dir, new Set(), null)).toThrow(
         /DROP VIEW "public"\."agents_v"/,
       );
       expect(readFileSync(join(dir, "0NaN_bad.sql"), "utf8")).toBe(fresh);

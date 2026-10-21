@@ -169,6 +169,18 @@ export function mergeSnapshots(
   return conflicts.length > 0 ? { ok: false, conflicts } : { ok: true, merged };
 }
 
+/**
+ * Whether two snapshots describe the same schema: deep equality over every
+ * top-level key but `id`, `prevId` and `_meta` — the same keys a merge ignores.
+ */
+export function equivalentSnapshots(a: Snapshot, b: Snapshot): boolean {
+  const strip = (s: Snapshot) =>
+    Object.fromEntries(
+      Object.entries(s).filter(([k]) => !EXCLUDED_TOP_LEVEL.has(k)),
+    );
+  return deepEqual(strip(a), strip(b));
+}
+
 function show(v: Json | undefined): string {
   if (v === undefined) return "<absent>";
   return typeof v === "string" ? v : JSON.stringify(v);

@@ -80,6 +80,7 @@ const push = mig(
     expand: `ALTER TABLE "sl_widgets" ADD COLUMN "name" text;`,
     contract: `ALTER TABLE "sl_widgets" ALTER COLUMN "name" SET NOT NULL;\nALTER TABLE "sl_widgets" DROP COLUMN "old_name";`,
     claims: ["20260102_000000__backfill_name"],
+    supersedes: null,
   }),
 );
 const newView: DeclaredView = {

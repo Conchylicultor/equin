@@ -1,7 +1,9 @@
 import { basename } from "node:path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
+  databaseExists,
   describeUndeclaredSchema,
+  dropDatabase,
   forkDatabase,
 } from "@plugins/database/plugins/admin/server";
 import type { ForkExclusions } from "@plugins/database/plugins/admin/server";
@@ -65,10 +67,26 @@ async function fetchForkExclusions(worktree: string): Promise<ForkExclusions> {
   );
 }
 
-const run: CliAction<[string | undefined], object> = async (target) => {
+const run: CliAction<[string | undefined], { replace?: boolean }> = async (
+  target,
+  opts,
+) => {
   const worktree = basename(await getWorktreeRoot());
   const name = target ?? worktree;
+  if (opts.replace === true && name === MAIN_WORKTREE_NAME) {
+    throw new Error(
+      `--replace drops the target first; "${name}" is main's database and is never replaced.`,
+    );
+  }
+  // Read the exclusions BEFORE dropping anything: if no backend answers, the
+  // command fails with the existing database still in place.
   const exclusions = await fetchForkExclusions(worktree);
+  if (opts.replace === true && (await databaseExists(name))) {
+    console.log(
+      `Dropping "${name}" (--replace): every row only it has is lost...`,
+    );
+    await dropDatabase(name);
+  }
   console.log(`Forking "singularity" → "${name}"...`);
   const outcome = await forkDatabase("singularity", name, exclusions);
   // A human is watching this terminal, so it is the right place to say what the
@@ -85,8 +103,8 @@ const run: CliAction<[string | undefined], object> = async (target) => {
   }
   console.log(
     outcome.kind === "already-present"
-      ? `DB "${name}" already existed — nothing to do.`
-      : `DB "${name}" ready.`,
+      ? `DB "${name}" already existed — nothing to do (--replace forks it afresh).`
+      : `DB "${name}" ready.${opts.replace === true ? " Run ./singularity build to apply this branch's migrations to it." : ""}`,
   );
 };
 

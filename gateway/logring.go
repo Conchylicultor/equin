@@ -98,16 +98,18 @@ func (r *logRing) Subscribe() (snapshot []logEntry, ch <-chan logEntry, unsub fu
 	}
 }
 
-// Tail returns up to the last n entries whose Stream has the given prefix, in
-// chronological order. Used to surface a crashed sidecar's own output.
-func (r *logRing) Tail(n int, streamPrefix string) []logEntry {
+// Tail returns up to the last n entries whose Stream has the given prefix and
+// that were appended at or after sinceMs, in chronological order. Used to
+// surface a backend that died during boot: its own last words, not an earlier
+// boot's (the ring outlives respawns).
+func (r *logRing) Tail(n int, streamPrefix string, sinceMs int64) []logEntry {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	matches := make([]logEntry, 0, r.size)
 	for i := 0; i < r.size; i++ {
 		e := r.buf[(r.head+i)%r.capacity]
-		if strings.HasPrefix(e.Stream, streamPrefix) {
+		if strings.HasPrefix(e.Stream, streamPrefix) && e.TimestampMs >= sinceMs {
 			matches = append(matches, e)
 		}
 	}
@@ -116,4 +118,3 @@ func (r *logRing) Tail(n int, streamPrefix string) []logEntry {
 	}
 	return matches
 }
-

@@ -78,4 +78,25 @@ describe("findPhaseErrors", () => {
       expect.stringContaining("a merge node must be a no-op"),
     ]);
   });
+
+  test("a superseded hash still on disk is refused, published or not", () => {
+    const AUTHORED = "20260901_000000_38bc8c97__add_icon.sql";
+    const merged = `-- singularity:supersedes 38bc8c97\n${GOOD}`;
+    const files = [
+      schema(
+        AUTHORED,
+        phased('ALTER TABLE "agents" ADD COLUMN "icon" text;', "", []),
+      ),
+      data(DATA),
+      schema(SCHEMA, merged),
+    ];
+    const expected = [
+      `${SCHEMA}: supersedes 38bc8c97, but ${AUTHORED} is still on disk — a reset deletes what it supersedes`,
+    ];
+    expect(findPhaseErrors(files, new Set())).toEqual(expected);
+    expect(findPhaseErrors(files, new Set([AUTHORED, DATA, SCHEMA]))).toEqual(
+      expected,
+    );
+    expect(findPhaseErrors(files.slice(1), new Set())).toEqual([]);
+  });
 });

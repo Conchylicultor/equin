@@ -40,6 +40,7 @@ import {
   renderStatements,
   schemaLoadFailures,
   stageDrizzleOut,
+  type Supersession,
 } from "@plugins/database/plugins/migrations/core";
 import {
   promptKey,
@@ -53,6 +54,7 @@ import {
   latestMigrationTimestamp,
   SnapshotJoinError,
 } from "./snapshot-join";
+import { readResetPrior, resetLineage, type ResetPrior } from "./reset-lineage";
 
 // The interactive drizzle-kit runner (the CLI's one sanctioned streaming-stdio
 // child) and its prompt model live in ./migrations-interactive.ts; re-exported
@@ -314,7 +316,12 @@ export async function generateMigration(opts: {
       ? readBranchLocalAnswers(migrationsDir, published)
       : undefined;
 
+  // What the reset deletes, read before it does: the regenerated migration
+  // names those hashes (`supersedes`) when it provably carries the same schema,
+  // so a database that applied them adopts it instead of re-running its DDL.
+  let resetPrior: ResetPrior | null = null;
   if (resetMigration) {
+    resetPrior = readResetPrior(migrationsDir, published);
     resetBranchLocalMigrations(migrationsDir, published);
   }
 
@@ -539,6 +546,12 @@ export async function generateMigration(opts: {
         "--migration-name was provided but no schema change was detected; ignoring.",
       );
     }
+    if (resetPrior !== null && resetPrior.deleted.length > 0) {
+      warnUnsuperseded(
+        resetPrior,
+        "the reset regenerated no schema migration (its delta is already in the published schema)",
+      );
+    }
     return { maxRssBytes: result.maxRssBytes };
   }
 
@@ -567,8 +580,25 @@ export async function generateMigration(opts: {
   // matches the phased body. A --custom data migration is never phased: it is
   // what gets claimed.
   if (!customMigration) {
+    let supersedes: Supersession | null = null;
+    const fresh = freshSchemaMigration(migrationsDir);
+    if (resetPrior !== null && fresh !== null) {
+      const lineage = await resetLineage(
+        migrationsDir,
+        resetPrior,
+        join(migrationsDir, "meta", fresh.snapshot),
+      );
+      if (lineage.kind === "supersedes") {
+        supersedes = lineage.supersedes;
+        console.log(
+          `  supersedes ${supersedes.direct.join(", ")} (same schema: a database that applied them adopts the new migration)`,
+        );
+      } else if (lineage.reason !== null) {
+        warnUnsuperseded(resetPrior, lineage.reason);
+      }
+    }
     try {
-      phaseGeneratedMigrations(migrationsDir, published);
+      phaseGeneratedMigrations(migrationsDir, published, supersedes);
     } catch (err) {
       discardGenerated(migrationsDir, added);
       console.error(`\nError: ${(err as Error).message}\n`);
@@ -802,18 +832,12 @@ export function renameMigrations(migrationsDir: string): RenameResult {
 export function phaseGeneratedMigrations(
   migrationsDir: string,
   published: ReadonlySet<string>,
+  supersedes: Supersession | null,
 ): void {
   const metaDir = join(migrationsDir, "meta");
   const files = readdirSync(migrationsDir).sort();
-  const fresh = files.filter(
-    (f) => f.endsWith(".sql") && !NEW_FORMAT.test(f) && DRIZZLE_FORMAT.test(f),
-  );
-  if (fresh.length === 0) return;
-  if (fresh.length > 1) {
-    throw new Error(
-      `expected one freshly generated schema migration, found ${fresh.length}: ${fresh.join(", ")}`,
-    );
-  }
+  const fresh = freshSchemaMigration(migrationsDir);
+  if (fresh === null) return;
 
   const hasSnapshot = (f: string) =>
     existsSync(join(metaDir, `${f.slice(0, -4)}_snapshot.json`));
@@ -831,7 +855,7 @@ export function phaseGeneratedMigrations(
     .map(migrationClaimId)
     .filter((id) => !claimed.has(id));
 
-  const sqlPath = join(migrationsDir, fresh[0]!);
+  const sqlPath = join(migrationsDir, fresh.sql);
   const phased = phaseStatements(readFileSync(sqlPath, "utf8"));
   writeFileSync(
     sqlPath,
@@ -839,7 +863,46 @@ export function phaseGeneratedMigrations(
       expand: renderStatements(phased.expand),
       contract: renderStatements(phased.contract),
       claims,
+      supersedes,
     }),
+  );
+}
+
+/**
+ * The schema migration drizzle-kit just generated (named in its own `NNNN_`
+ * format until `renameMigrations` stamps it) and its snapshot's file name in
+ * `meta/`, or null when it generated none. Throws on more than one.
+ */
+export function freshSchemaMigration(
+  migrationsDir: string,
+): { sql: string; snapshot: string } | null {
+  const fresh = readdirSync(migrationsDir)
+    .sort()
+    .filter(
+      (f) =>
+        f.endsWith(".sql") && !NEW_FORMAT.test(f) && DRIZZLE_FORMAT.test(f),
+    );
+  if (fresh.length === 0) return null;
+  if (fresh.length > 1) {
+    throw new Error(
+      `expected one freshly generated schema migration, found ${fresh.length}: ${fresh.join(", ")}`,
+    );
+  }
+  const sql = fresh[0]!;
+  return { sql, snapshot: `${DRIZZLE_FORMAT.exec(sql)![1]}_snapshot.json` };
+}
+
+// A reset deleted migrations a database may have applied, and the new file
+// does not supersede them: such a database (this worktree's, if it built them)
+// will fail to apply the new file. Say so now, with the way out, rather than
+// leaving the next boot to discover it.
+function warnUnsuperseded(prior: ResetPrior, reason: string): void {
+  console.warn(
+    `\nWarning: the reset deleted ${prior.deleted.map((d) => d.file).join(", ")}, and the regenerated migration\n` +
+      `does not supersede them: ${reason}.\n` +
+      "A database that applied them (this worktree's, if it built them) will fail to apply\n" +
+      "the regenerated migration. Re-fork it from main after this build or push:\n" +
+      "  ./singularity db fork --replace\n",
   );
 }
 

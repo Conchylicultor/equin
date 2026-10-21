@@ -20,7 +20,11 @@ import {
 // staging, the published set, the snapshot DAG), and this runner runs on every
 // host. Moving that tooling out of `core` is follow-up work (task in the
 // portable-split plan's follow-ups).
-import { migrationClaimId, parseMigration } from "../../core/internal/phases";
+import {
+  migrationClaimId,
+  parseMigration,
+  type Supersession,
+} from "../../core/internal/phases";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { z } from "zod";
@@ -32,6 +36,11 @@ const log = defineLogSink({
 });
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
+
+// The supported way back when this database's state cannot be reconciled with
+// the migrations on disk: re-fork it from main. Named by every failure below.
+const REFORK_HINT =
+  "Re-fork this worktree's database from main with `./singularity db fork --replace` (worktree-only data is lost).";
 
 /** Whether `file` is named as a migration (`YYYYMMDD_HHMMSS_<sha8>__<slug>.sql`). */
 export function isMigrationFileName(file: string): boolean {
@@ -85,9 +94,12 @@ export function migrationsFrom(
   return migrations;
 }
 
-// Hashes already recorded in __singularity_migrations (the applied-state ledger).
-// Creates the ledger table if absent, so callers can use the result directly.
-async function getAppliedHashes(db: NodePgDatabase | Tx): Promise<Set<string>> {
+// The applied-state ledger (__singularity_migrations): hash → the file name it
+// was applied under. Creates the table if absent, so callers can use the
+// result directly.
+async function getAppliedLedger(
+  db: NodePgDatabase | Tx,
+): Promise<Map<string, string>> {
   await db.execute(drizzleSql`
     CREATE TABLE IF NOT EXISTS ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (
       hash text PRIMARY KEY,
@@ -96,11 +108,50 @@ async function getAppliedHashes(db: NodePgDatabase | Tx): Promise<Set<string>> {
     )
   `);
   const applied = await executeRows(db, {
-    query: drizzleSql`SELECT hash FROM ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)}`,
-    row: z.object({ hash: z.string() }),
+    query: drizzleSql`SELECT hash, file FROM ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)}`,
+    row: z.object({ hash: z.string(), file: z.string() }),
     label: "migrations: read applied ledger",
   });
-  return new Set(applied.map((r) => r.hash));
+  return new Map(applied.map((r) => [r.hash, r.file]));
+}
+
+// Every hash a lineage names: its direct entries and every inherited one.
+function lineageHashes(s: Supersession): Set<string> {
+  const all = new Set(s.direct);
+  for (const e of s.inherited) {
+    all.add(e.hash);
+    for (const r of e.replaced) all.add(r);
+  }
+  return all;
+}
+
+// How much of a superseding file's lineage this database applied:
+//   - "adopted": every direct entry is covered — in the ledger, or (for a file
+//     that was itself replaced before any database applied it) every hash IT
+//     replaced is covered. The database already carries the file's delta.
+//   - "none": no hash of the lineage is in the ledger: apply the file.
+//   - "partial": anything else. Neither applying (it would redo DDL that is
+//     there) nor adopting (it would skip DDL that is not) is right.
+type LineageState =
+  | { kind: "adopted"; via: string[] }
+  | { kind: "none" }
+  | { kind: "partial"; applied: string[]; uncovered: string[] };
+
+function lineageState(
+  s: Supersession,
+  appliedHashes: ReadonlySet<string>,
+): LineageState {
+  const replaced = new Map(s.inherited.map((e) => [e.hash, e.replaced]));
+  const covered = (h: string): boolean => {
+    if (appliedHashes.has(h)) return true;
+    const children = replaced.get(h);
+    return children !== undefined && children.every(covered);
+  };
+  const applied = [...lineageHashes(s)].filter((h) => appliedHashes.has(h));
+  if (applied.length === 0) return { kind: "none" };
+  const uncovered = s.direct.filter((h) => !covered(h));
+  if (uncovered.length === 0) return { kind: "adopted", via: applied };
+  return { kind: "partial", applied, uncovered };
 }
 
 // PURE (exported for unit testing): given the ordered migration list and the
@@ -173,6 +224,12 @@ export interface SchemaPlan {
   // Files with at least one step to run or a ledger row to land.
   pendingFiles: string[];
   skippedDuplicates: { file: string; original: string }[];
+  // Superseding files whose lineage this database already applied: recorded,
+  // none of their own SQL run. `via` is the lineage hashes found in the ledger.
+  adopted: { file: string; via: string[] }[];
+  // Every hash some file on disk supersedes (its whole lineage): a ledger row
+  // for one of them has no file here on purpose.
+  superseded: ReadonlySet<string>;
 }
 
 // PURE (exported for unit testing): the ordered steps that bring a database
@@ -189,6 +246,11 @@ export interface SchemaPlan {
 // Grouping is per push, never global: phasing every pending migration together
 // would break a from-scratch replay (a table one push's contract drops and a
 // later push's expand recreates).
+//
+// A pending phased file with a supersedes header (see `lineageState`) whose
+// lineage this database already applied is ADOPTED: its ledger row lands, its
+// expand and contract do not run (its claimed data migrations still do, if
+// pending). A lineage only partly applied THROWS, before any SQL runs.
 //
 // Files already in the ledger — and same-run duplicate-hash siblings, exactly as
 // `planMigrations` decides — contribute no step. Claims are validated over every
@@ -259,6 +321,29 @@ export function planSchemaSteps(
     }
   }
 
+  // Pending superseding files whose lineage this database already applied.
+  const adopted: { file: string; via: string[] }[] = [];
+  const adoptedFiles = new Set<Migration>();
+  const superseded = new Set<string>();
+  for (const m of migrations) {
+    const p = parsed.get(m)!;
+    if (p.kind !== "phased" || p.supersedes === null) continue;
+    for (const h of lineageHashes(p.supersedes)) superseded.add(h);
+    if (!pending.has(m)) continue;
+    const state = lineageState(p.supersedes, appliedHashes);
+    if (state.kind === "partial") {
+      throw new Error(
+        `migration ${m.file} supersedes ${[...p.supersedes.direct].join(", ")}, but this database applied only part of that lineage ` +
+          `(applied: ${state.applied.join(", ")}; not covered: ${state.uncovered.join(", ")}). ` +
+          `Applying it would redo DDL that is already here, adopting it would skip DDL that is not. ${REFORK_HINT}`,
+      );
+    }
+    if (state.kind === "adopted") {
+      adopted.push({ file: m.file, via: state.via });
+      adoptedFiles.add(m);
+    }
+  }
+
   const steps: SchemaStep[] = [];
   const pendingFiles: string[] = [];
   const emitWhole = (m: Migration) => {
@@ -276,7 +361,8 @@ export function planSchemaSteps(
       continue;
     }
     const own = pending.has(m);
-    if (own && p.expand !== "") {
+    const runsSql = own && !adoptedFiles.has(m);
+    if (runsSql && p.expand !== "") {
       steps.push({
         kind: "apply",
         file: m.file,
@@ -289,7 +375,7 @@ export function planSchemaSteps(
       if (claimer.get(d) === m) emitWhole(d);
     }
     if (own) {
-      if (p.contract !== "") {
+      if (runsSql && p.contract !== "") {
         steps.push({
           kind: "apply",
           file: m.file,
@@ -302,7 +388,7 @@ export function planSchemaSteps(
     }
   }
 
-  return { steps, pendingFiles, skippedDuplicates };
+  return { steps, pendingFiles, skippedDuplicates, adopted, superseded };
 }
 
 // Everything the boot schema layer derives from source besides the migration
@@ -320,28 +406,35 @@ export interface SchemaLayerInputs {
 // commits. Distinguished from a real error by identity.
 const ROLLBACK = Symbol("schema-layer-rollback");
 
-// Log what the plan says before running it: an applied hash with no file here,
-// and every same-run duplicate-hash skip. Both are loud, never silent.
+// Log what the plan says before running it: every adoption, an applied hash
+// with no file here that no superseding file accounts for, and every same-run
+// duplicate-hash skip. All loud, never silent.
 function reportPlan(
   migrations: Migration[],
-  appliedHashes: ReadonlySet<string>,
+  ledger: ReadonlyMap<string, string>,
   plan: SchemaPlan,
 ): void {
-  // Applied-but-no-file: a hash recorded as applied with no matching file on
-  // this branch. This is EXPECTED when the worktree branch predates a
-  // migration that landed on main — the DB was forked from main (or merged it)
-  // and already carries that migration's effects, but the branch checkout
-  // doesn't have the file yet. It is only real drift if you deleted a migration
-  // you authored (rebased it away after it ran here), in which case the DB
-  // keeps whatever that migration did. No rollback either way.
-  const onDiskHashes = new Set(migrations.map((m) => m.hash));
-  for (const h of appliedHashes) {
-    if (!onDiskHashes.has(h)) {
-      log.publish(
-        `[migrate] applied hash ${h} has no file on this branch — expected if this worktree predates a migration that landed on main (the DB already has its effects). Real drift only if you deleted a migration you authored.`,
-        "stderr",
-      );
-    }
+  for (const { file, via } of plan.adopted) {
+    log.publish(
+      `[migrate] adopting ${file}: it supersedes ${via.join(", ")}, already applied here, so it is recorded without running its SQL.`,
+    );
+  }
+  // A hash a file on disk supersedes is accounted for (`plan.superseded`): the
+  // reset that wrote that file deleted the hash's own file on purpose.
+  const onDisk = new Set(migrations.map((m) => m.hash));
+  // Applied-but-no-file. The runner cannot tell which of two causes it is (it
+  // has no git), so it names both rather than calling either one expected:
+  //   - the branch is behind main, whose DB this one was forked from: harmless;
+  //   - the branch authored the file and rewrote it with no supersedes header:
+  //     the DB keeps its effects, and a pending migration that redoes them fails.
+  for (const [hash, file] of ledger) {
+    if (onDisk.has(hash) || plan.superseded.has(hash)) continue;
+    log.publish(
+      `[migrate] applied migration ${file} (hash ${hash}) has no file on this branch, and no migration here supersedes it. ` +
+        `If it is on main and this branch is behind, rebase (\`git rebase origin/main\`). ` +
+        `If this branch authored it and later rewrote it, this database keeps its effects, and a pending migration that redoes them will fail to apply — ${REFORK_HINT}`,
+      "stderr",
+    );
   }
   // Identical DDL, so a duplicate skip is a no-op for the DB, but it must never
   // be silent ("fail loudly" rule): a surprise collision means two files share
@@ -351,6 +444,34 @@ function reportPlan(
       `[migrate] skipping ${file}: its sha8 hash is byte-identical to ${original}, which is being applied in this run. The ledger PK is the sha8, so re-applying would duplicate-key; the identical DDL makes the skip a no-op.`,
       "stderr",
     );
+  }
+}
+
+// Plan, report and run the steps on `tx`. A failure — a plan the files refuse
+// (a bad claim, a partly applied lineage) or SQL that does not apply — goes to
+// the migrations log before it propagates: the process is about to die, and
+// its stderr is not where anyone reading this worktree's logs looks.
+//
+// `dropViews` is the boot layer's: the caller rebuilds the views after.
+async function planAndRun(
+  tx: Tx,
+  migrations: Migration[],
+  { dropViews }: { dropViews: boolean },
+): Promise<{ pending: number }> {
+  try {
+    const ledger = await getAppliedLedger(tx);
+    const plan = planSchemaSteps(migrations, new Set(ledger.keys()));
+    reportPlan(migrations, ledger, plan);
+    // Views never block a migration: a live view reading a column a pending
+    // migration drops or retypes would fail it. Drop the whole live layer
+    // first — only when something is pending, so a steady-state boot opens
+    // no lock window — and the caller rebuilds it, in this same transaction.
+    if (dropViews && plan.pendingFiles.length > 0) await dropDerivedViews(tx);
+    await runSteps(tx, plan.steps);
+    return { pending: plan.pendingFiles.length };
+  } catch (e) {
+    log.publish(`[migrate] FAILED: ${(e as Error).message}`, "stderr");
+    throw e;
   }
 }
 
@@ -408,17 +529,7 @@ export async function applySchemaLayerFrom(
         await tx.execute(drizzleSql`SET LOCAL lock_timeout = '1s'`);
         await tx.execute(drizzleSql`SET LOCAL statement_timeout = '60s'`);
       }
-      const applied = await getAppliedHashes(tx);
-      const plan = planSchemaSteps(migrations, applied);
-      reportPlan(migrations, applied, plan);
-      pending = plan.pendingFiles.length;
-
-      // Views never block a migration: a live view reading a column a pending
-      // migration drops or retypes would fail it. Drop the whole live layer
-      // first — only when something is pending, so a steady-state boot opens
-      // no lock window — and rebuild it below, in this same transaction.
-      if (pending > 0) await dropDerivedViews(tx);
-      await runSteps(tx, plan.steps);
+      ({ pending } = await planAndRun(tx, migrations, { dropViews: true }));
 
       // The derived layer, in dependency order: the updatedAt triggers and the
       // rollup tables need the migrated columns; a view may read a rollup
@@ -478,10 +589,7 @@ export async function runMigrations(
   migrations: Migration[],
 ): Promise<void> {
   await db.transaction(async (tx) => {
-    const applied = await getAppliedHashes(tx);
-    const plan = planSchemaSteps(migrations, applied);
-    reportPlan(migrations, applied, plan);
-    await runSteps(tx, plan.steps);
+    await planAndRun(tx, migrations, { dropViews: false });
   });
 }
 
@@ -508,8 +616,8 @@ export async function dryRunPendingMigrations(
   migrations: Migration[],
   inputs: SchemaLayerInputs,
 ): Promise<{ pending: number }> {
-  const applied = await getAppliedHashes(db);
-  const { pendingFiles } = planSchemaSteps(migrations, applied);
+  const ledger = await getAppliedLedger(db);
+  const { pendingFiles } = planSchemaSteps(migrations, new Set(ledger.keys()));
   if (pendingFiles.length === 0) return { pending: 0 };
   const { pending } = await applySchemaLayer(db, migrations, inputs, {
     commit: false,
