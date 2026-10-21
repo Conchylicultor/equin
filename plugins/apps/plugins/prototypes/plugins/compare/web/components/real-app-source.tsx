@@ -6,13 +6,15 @@ import type {
 import { Counterpart, useCounterpartKinds } from "../slots";
 import type { CounterpartResolution } from "../types";
 import { malformedDeclaration, noDeclaration } from "./notices";
+import { declareCounterpartLaunch } from "./declare-launch";
 
 /**
  * The canvas's "Real app" frame: the real thing the prototype declares it
  * mocks (`<meta name="mocks" content="<kind>:<ref>">`), dispatched to whichever
  * kind plugin handles the tag. A prototype that declares nothing, or declares
  * it malformed, gets the notice saying how to — in the frame, where the author
- * is looking for the comparison. This file names no kind.
+ * is looking for the comparison — and a launch for an agent to declare it,
+ * which the canvas's Compare button opens. This file names no kind.
  *
  * The declaration is one-directional — the prototype names its counterpart.
  * Prototypes are host-global and outside git while kinds and their catalogs are
@@ -30,7 +32,15 @@ export function RealAppSource({
       decl.kind === "malformed"
         ? malformedDeclaration(decl, kinds)
         : noDeclaration(kinds);
-    return <>{children({ status: "unresolved", ...notice })}</>;
+    return (
+      <>
+        {children({
+          status: "unresolved",
+          ...notice,
+          launch: declareCounterpartLaunch(meta, kinds),
+        })}
+      </>
+    );
   }
   return (
     <Counterpart.Kind.Dispatch kind={decl.tag} target={decl.ref} meta={meta}>

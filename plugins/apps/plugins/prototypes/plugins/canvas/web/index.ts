@@ -26,6 +26,7 @@ export {
 export type {
   FrameActionRow,
   FrameResolution,
+  FrameLaunch,
   FrameSourceMeta,
   FrameSourceProps,
 } from "./slots";

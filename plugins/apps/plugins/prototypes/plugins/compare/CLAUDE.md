@@ -63,6 +63,12 @@ fallback lives in `slots.tsx` rather than its own file because it reads the
 registry it falls back from — a fallback file importing the slot while the slot
 imports the fallback would be an import cycle.
 
+A missing or malformed declaration also carries a `launch` (the canvas's
+`FrameLaunch`, built in `web/components/declare-launch.ts`): on such a
+prototype the rail's Compare with Real app opens a launch popover whose agent
+finds the real counterpart and declares it (adding an exhibit first when the
+component has none).
+
 The declaration is one-directional — the prototype names its counterpart.
 Prototypes are host-global and outside git while kinds and their catalogs are
 per-worktree, so the lookup can only ever happen at runtime, and "this worktree

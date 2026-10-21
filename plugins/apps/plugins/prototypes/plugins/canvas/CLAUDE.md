@@ -107,7 +107,10 @@ not declare is dropped from its URL.
     at another version.)
   - **Compare with <addLabel>** — one per frame source this prototype
     resolves ("Compare with Real app"), disabled while that source is already
-    on the canvas. The canvas names no source. Adding one switches the canvas
+    on the canvas. A source that does not resolve but offers a `launch` on its
+    `unresolved` arm (the prototype declares no counterpart yet) keeps the
+    button, which opens that agent launch popover instead of adding a frame.
+    The canvas names no source. Adding one switches the canvas
     to Swipe (when that makes two frames) at Responsive size — a source frame
     is there to be compared against.
 - **The options pill** ("Mist · Home +3") opens on click into "Options":
@@ -379,7 +382,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×8
     - `primitives/data-view` ×6
     - `primitives/collapsible` ×5
@@ -420,6 +423,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/dom/web-storage.defineStore`
     - `primitives/embed.isEmbeddedDocument`
     - `primitives/error-boundary.PluginErrorBoundary`
+    - `primitives/launch.LaunchAgentPopover`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/overlay/popover.InlinePopover`
@@ -441,6 +445,7 @@ navigation, so it starts from nothing remembered.
     - `CanvasZoom`
     - `FrameActionRow`
     - `FrameId`
+    - `FrameLaunch`
     - `FrameLayout`
     - `FrameResolution`
     - `FrameSourceMeta`

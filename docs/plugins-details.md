@@ -5573,7 +5573,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 80 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 81 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
@@ -5614,6 +5614,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/web-storage.defineStore`
               - `primitives/embed.isEmbeddedDocument`
               - `primitives/error-boundary.PluginErrorBoundary`
+              - `primitives/launch.LaunchAgentPopover`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/overlay/popover.InlinePopover`
@@ -5635,6 +5636,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CanvasZoom`
               - `FrameActionRow`
               - `FrameId`
+              - `FrameLaunch`
               - `FrameLayout`
               - `FrameResolution`
               - `FrameSourceMeta`
@@ -39260,6 +39262,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/task`
           - `apps/agent-manager/welcome`
           - `apps/home/app-cards`
+          - `apps/prototypes/canvas`
           - `apps/prototypes/gallery`
           - `apps/sonata/transcription`
           - `config_v2/settings/conflict-agent`

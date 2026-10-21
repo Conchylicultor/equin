@@ -104,6 +104,7 @@ started" notification confirms it), so its props are the form's minus
     - `active-data/task`
     - `apps/agent-manager/welcome`
     - `apps/home/app-cards`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/gallery`
     - `apps/sonata/transcription`
     - `config_v2/settings/conflict-agent`

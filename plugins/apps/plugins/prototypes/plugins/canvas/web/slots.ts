@@ -8,6 +8,7 @@ import type {
   PrototypeMeta,
   PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import type { LaunchAgentPopoverProps } from "@plugins/primitives/plugins/launch/web";
 import type { CanvasFrame } from "./internal/canvas-model";
 import { UnknownFrameSource } from "./components/unknown-frame-source";
 
@@ -18,7 +19,17 @@ import { UnknownFrameSource } from "./components/unknown-frame-source";
  */
 export type FrameResolution =
   | { status: "loading"; label?: string }
-  | { status: "unresolved"; title: ReactNode; detail: ReactNode }
+  | {
+      status: "unresolved";
+      title: ReactNode;
+      detail: ReactNode;
+      /**
+       * An agent launch that would resolve it (declare what the prototype
+       * mocks, say). When present, the add rail's Compare button opens this
+       * launch popover instead of being left out.
+       */
+      launch?: FrameLaunch;
+    }
   | {
       status: "found";
       /** The frame's tag in its header, e.g. "/agents · App screen". */
@@ -34,6 +45,12 @@ export type FrameResolution =
        */
       render: (width: number, height: number) => ReactNode;
     };
+
+/** The launch popover an unresolved source offers to fix itself with. */
+export type FrameLaunch = Pick<
+  LaunchAgentPopoverProps,
+  "draftKey" | "title" | "description" | "placeholder" | "getRequest"
+>;
 
 /**
  * What a frame source is handed. A real component (it may run hooks), whose

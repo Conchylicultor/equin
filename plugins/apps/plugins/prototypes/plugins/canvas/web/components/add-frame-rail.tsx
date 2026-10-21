@@ -6,6 +6,7 @@ import {
   type IconButtonProps,
 } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   ADD_FRAME_LABEL,
@@ -29,7 +30,9 @@ export type AddFrameHandlers = Partial<
  * the last prototype frame, to change its variant or version) and one
  * **Compare with <addLabel>** per contributed frame source this prototype
  * resolves (the real app, swiped over it) — disabled while that source is
- * already on the canvas. Names no source.
+ * already on the canvas. A source that cannot resolve here but offers a
+ * `launch` (no counterpart declared yet) keeps its button, which opens that
+ * agent launch popover instead. Names no source.
  *
  * By default each dispatches its action to this canvas. A surface that leads
  * elsewhere (Present's overlays, its new-tab page) passes `extend`, and
@@ -81,20 +84,46 @@ export function AddFrameRail({
               source={source.id}
               meta={meta}
             >
-              {(resolution: FrameResolution) =>
-                resolution.status === "found" ? (
+              {(resolution: FrameResolution) => {
+                if (resolution.status === "found") {
+                  return (
+                    <IconButton
+                      variant="floating"
+                      icon={compareIcon}
+                      label={compareWithLabel(source.addLabel)}
+                      tooltip={reason}
+                      disabled={reason !== undefined}
+                      {...(reason === undefined
+                        ? handlers({ type: "addSource", source: source.id })
+                        : {})}
+                    />
+                  );
+                }
+                if (resolution.status === "loading" || !resolution.launch) {
+                  return null;
+                }
+                const trigger = (
                   <IconButton
                     variant="floating"
                     icon={compareIcon}
                     label={compareWithLabel(source.addLabel)}
-                    tooltip={reason}
-                    disabled={reason !== undefined}
-                    {...(reason === undefined
-                      ? handlers({ type: "addSource", source: source.id })
-                      : {})}
+                    tooltip={
+                      disabled ??
+                      `No ${source.addLabel} to compare with yet — launch an agent to add one`
+                    }
+                    disabled={disabled !== undefined}
                   />
-                ) : null
-              }
+                );
+                return disabled !== undefined ? (
+                  trigger
+                ) : (
+                  <LaunchAgentPopover
+                    {...resolution.launch}
+                    trigger={trigger}
+                    align="end"
+                  />
+                );
+              }}
             </FrameSource.Dispatch>
           );
         })}
