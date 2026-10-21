@@ -1,10 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { HealthReport } from "@plugins/shell/plugins/health-report/web";
 import { ClaudeCodeActions } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
-import {
-  ClaudeCodeGlance,
-  ClaudeCodeRowDetail,
-} from "./components/claude-code-row";
+import { ClaudeCodeRowDetail } from "./components/claude-code-row";
 import { useClaudeCodeRowHealth } from "./internal/use-claude-code-row";
 
 export default {
@@ -19,7 +16,6 @@ export default {
       // first thing a new user needs answered.
       order: 5,
       useStatus: useClaudeCodeRowHealth,
-      glance: ClaudeCodeGlance,
       actions: ClaudeCodeActions,
       component: ClaudeCodeRowDetail,
     }),

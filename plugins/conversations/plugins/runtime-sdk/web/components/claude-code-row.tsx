@@ -8,12 +8,15 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { renderInlineChip } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/web";
 import type { AgentProcesses } from "../../core";
-import { agentsElsewhere } from "../internal/claude-code-row";
+import {
+  agentsElsewhere,
+  type ClaudeCodeRowInputs,
+} from "../internal/claude-code-row";
 import { useClaudeCodeRowInputs } from "../internal/use-claude-code-row";
 
-// The Claude Code row's glance (always shown while the report is open) and its
-// expanded detail. The glance sits inside the row's click target, so it holds
-// no controls: the chips opening the other worktrees' tasks are in the detail.
+// The Claude Code row's expanded detail: the versions and the agents, one line
+// each, then Claude Code's own note and where the other agents run. Collapsed,
+// the row shows only its title and summary.
 
 const plural = (n: number, one: string, many = `${one}s`) =>
   `${n} ${n === 1 ? one : many}`;
@@ -35,11 +38,7 @@ function agentsLine(agents: AgentProcesses): string {
 }
 
 /** Claude Code, the Agent SDK and the agents, one line each. */
-export function ClaudeCodeGlance() {
-  const result = useClaudeCodeRowInputs();
-  // Not loaded (or not readable here): the summary above already says so.
-  if (result.status !== "ready") return null;
-  const { claude, sdk, agents } = result.data;
+function VersionLines({ claude, sdk, agents }: ClaudeCodeRowInputs) {
   return (
     <Stack gap="none">
       {claude.kind === "ready" ? (
@@ -93,11 +92,16 @@ function AgentsElsewhere({ agents }: { agents: AgentProcesses }) {
   );
 }
 
-/** The expanded row: Claude Code's own detail, then where the other agents run. */
+/**
+ * The expanded row: the versions and the agents, Claude Code's own detail, then
+ * where the other agents run.
+ */
 export function ClaudeCodeRowDetail() {
   const result = useClaudeCodeRowInputs();
   return (
     <Stack gap="sm">
+      {/* Not loaded (or not readable here): the summary already says so. */}
+      {result.status === "ready" ? <VersionLines {...result.data} /> : null}
       <ClaudeCodeDetail />
       {result.status === "ready" ? (
         <AgentsElsewhere agents={result.data.agents} />
