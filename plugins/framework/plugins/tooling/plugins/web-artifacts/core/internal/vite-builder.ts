@@ -508,7 +508,7 @@ export async function buildArtifact(
       dynamicImports,
       builtAtMs: Date.now(),
     };
-    publishArtifact(target.dirName, tmpDir, meta);
+    await publishArtifact(target.dirName, tmpDir, meta);
     return meta;
   } catch (err) {
     rmSync(tmpDir, { recursive: true, force: true });
@@ -569,6 +569,6 @@ export async function buildRegistryArtifact(opts: {
     dynamicImports,
     builtAtMs: Date.now(),
   };
-  publishArtifact(opts.dirName, tmpDir, meta);
+  await publishArtifact(opts.dirName, tmpDir, meta);
   return meta;
 }

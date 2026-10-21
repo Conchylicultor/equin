@@ -36,7 +36,6 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
-  renameSync,
   rmSync,
   statSync,
   utimesSync,
@@ -48,7 +47,7 @@ import { BUILDER_VERSION, packageNameOf } from "../constants";
 import { computeIdentityHash, sha256Hex } from "../hash";
 import { packageVersion } from "./identity";
 import { cachedAggregateHash } from "./own-files";
-import { WEB_ARTIFACTS_DIR, type FingerprintCache } from "./store";
+import { publishDir, WEB_ARTIFACTS_DIR, type FingerprintCache } from "./store";
 
 const CSS_ROOT = join(WEB_ARTIFACTS_DIR, "css");
 
@@ -264,8 +263,8 @@ export async function ensureGlobalCss(opts: {
       },
     });
 
-    // Publish into the cache atomically (temp dir + rename, meta.json last),
-    // then install into staging from the emitted output.
+    // Publish into the cache atomically (publishDir: sidecars, meta.json last,
+    // rename), then install into staging from the emitted output.
     const assetsSrc = join(outDir, "assets");
     mkdirSync(CSS_ROOT, { recursive: true });
     const tmpDest = join(
@@ -291,15 +290,12 @@ export async function ensureGlobalCss(opts: {
       throw new Error("global CSS pass emitted no stylesheet");
     }
     const meta: CssCacheMeta = { cssName, key: opts.key };
-    writeFileSync(join(tmpDest, "meta.json"), JSON.stringify(meta, null, 2));
-    try {
-      renameSync(tmpDest, cacheDir);
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code !== "EEXIST" && code !== "ENOTEMPTY" && code !== "EPERM")
-        throw err;
-      rmSync(tmpDest, { recursive: true, force: true }); // concurrent identical build won
-    }
+    await publishDir({
+      tmpDir: tmpDest,
+      dest: cacheDir,
+      meta,
+      isComplete: () => hasGlobalCssCache(opts.key),
+    });
     installAssets(cacheDir, opts.stagingDir);
     return { href: `/assets/${cssName}`, cached: false };
   } finally {

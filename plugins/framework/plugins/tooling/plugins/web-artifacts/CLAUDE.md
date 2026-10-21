@@ -153,6 +153,16 @@ Key invariants:
   which is exactly what made the old `__SINGULARITY_BUILD_ID__` nonce useless as
   an identity — and it also gave every compose-serve composition the SAME pin
   despite each composing a different closure.
+- **Every served file is compressed once, when it is published.** All three
+  write-once caches (artifact store, vendor sets, global-CSS cache) publish
+  through ONE `publishDir` (`core/internal/store.ts`): precompress the tmp dir
+  (`precompress.ts`: `<file>.br` q9 — q11 is 30× slower for 6 % — and
+  `<file>.gz` -9, for js/css/json/wasm/data/svg/
+  html/… ≥ 1 KiB, kept only when ≥ 5 % smaller), write `meta.json`, rename. So
+  no entry is ever visible without its sidecars and nothing backfills; compose
+  precompresses the shell's own top-level files in staging. The gateway only
+  negotiates (`gateway/encoding.go`). Readers that list an entry's files filter
+  by extension, so a `.br`/`.gz` never reads as a module.
 - **Expected vs deployed cannot drift**: the pipeline and the
   `web-artifacts:map-in-sync` check share the same planning code
   (`core/internal/plan.ts`).
@@ -253,7 +263,7 @@ Key invariants:
 - Exemptions:
   - Exempts itself from:
     - `repo-walk-safety/no-adhoc-repo-walk` — `core/internal/global-css.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
+    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/expected.ts`, `core/internal/global-css.ts`, `core/internal/identity.ts`, `core/internal/own-files.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts` (debt)
 - Cli:
   - Exports (types): `CarryForwardResult`
   - Exports (values): `carryForwardServedEntries`

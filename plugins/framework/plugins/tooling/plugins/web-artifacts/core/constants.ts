@@ -8,7 +8,7 @@ import { COMPOSITION_SPECIFIERS } from "./composition-modules";
  * builder's semantics change in a way the other hash inputs can't see (config
  * shape, css-injection snippet, interop wrapper format, …).
  */
-export const BUILDER_VERSION = 7;
+export const BUILDER_VERSION = 8;
 
 /**
  * Inline allowlist: npm PACKAGES bundled *into* consumers instead of vendored.

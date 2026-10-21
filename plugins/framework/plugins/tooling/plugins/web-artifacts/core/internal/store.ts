@@ -16,6 +16,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { webArtifactsDir } from "../../data-dirs";
+import { precompressDir } from "./precompress";
 
 // Read off the declaration in this plugin's `data-dirs/index.ts` rather than
 // joining the data root by hand. These stay module-level consts, exactly as
@@ -101,27 +102,49 @@ export function touchArtifact(dirName: string): void {
 }
 
 /**
- * Atomically publish a freshly-built artifact dir: `meta.json` is written into
- * the temp dir first, then the whole dir is renamed into place. A concurrent
- * build of the identical artifact (another worktree) may win the rename race —
- * that's a success (identical content), so EEXIST/ENOTEMPTY discard the loser.
+ * Atomically publish a freshly-built cache dir — the ONE publish every
+ * write-once cache uses (artifacts, vendor sets, the global-CSS cache): its
+ * files are precompressed (`precompress.ts`), its metadata file is written
+ * LAST, then the whole dir is renamed into place, so a reader sees either no
+ * entry or a complete one, sidecars included. A concurrent build of the
+ * identical entry (another worktree) may win the rename race — that's a
+ * success (identical content), so EEXIST/ENOTEMPTY discard the loser, once
+ * `isComplete` confirms the winner really is a finished entry.
  */
-export function publishArtifact(
-  dirName: string,
-  tmpDir: string,
-  meta: ArtifactMeta,
-): void {
-  writeFileSync(join(tmpDir, "meta.json"), JSON.stringify(meta, null, 2));
-  const dest = artifactStorePath(dirName);
+export async function publishDir(opts: {
+  tmpDir: string;
+  dest: string;
+  meta: unknown;
+  isComplete: () => boolean;
+}): Promise<void> {
+  await precompressDir(opts.tmpDir);
+  writeFileSync(
+    join(opts.tmpDir, "meta.json"),
+    JSON.stringify(opts.meta, null, 2),
+  );
   try {
-    renameSync(tmpDir, dest);
+    renameSync(opts.tmpDir, opts.dest);
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code !== "EEXIST" && code !== "ENOTEMPTY" && code !== "EPERM")
       throw err;
-    if (!hasArtifact(dirName)) throw err; // dest exists but is not a complete artifact
-    rmSync(tmpDir, { recursive: true, force: true });
+    if (!opts.isComplete()) throw err; // dest exists but is not a complete entry
+    rmSync(opts.tmpDir, { recursive: true, force: true });
   }
+}
+
+/** Publish a freshly-built artifact dir into the store ({@link publishDir}). */
+export async function publishArtifact(
+  dirName: string,
+  tmpDir: string,
+  meta: ArtifactMeta,
+): Promise<void> {
+  await publishDir({
+    tmpDir,
+    dest: artifactStorePath(dirName),
+    meta,
+    isComplete: () => hasArtifact(dirName),
+  });
 }
 
 /** A staging area for one artifact build, inside the store (same filesystem). */

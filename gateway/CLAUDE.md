@@ -45,6 +45,19 @@ explicit `/index.html` still gets `http.ServeFile`'s redirect.
 
 `/api/*` and `/ws/*` are the same prefixes as the Vite dev proxy in `web/vite.config.ts`.
 
+**Static files are served precompressed, never compressed per request**
+(`encoding.go`). Every dist file is write-once, so the build writes `<file>.br`
+and `<file>.gz` beside each compressible one when it publishes it (web-artifacts
+`core/internal/precompress.ts`); `serveStaticFile` — the one file serve every
+static path uses — picks `br`, then `gzip`, from `Accept-Encoding` (an explicit
+`q=0` refuses), sets the ORIGINAL file's `Content-Type` by extension (unknown →
+`application/octet-stream`, never sniffed off compressed bytes) and
+`Vary: Accept-Encoding` on any file that has sidecars. No sidecar, not accepted,
+or a `Range` request → identity via `http.ServeFile`, as before. The one dynamic
+body, the head-spliced shell, is gzipped on the fly (`serveBytes`; its ETag gets
+a `-gzip` suffix). `/artifacts/*` is additionally `immutable` (content-addressed);
+the shell is `no-cache`.
+
 ## Worktree Registry
 
 Location: `~/.singularity/worktrees/<name>/spec.json`. Directory name = worktree identifier = subdomain.
@@ -107,6 +120,7 @@ gateway/
 ├── registry.go    # Map of worktrees: dir-level fsnotify watch + lazy Resolve + periodic Reconcile, idle sweeper, stale-socket sweep
 ├── supervisor.go  # Generic service supervisor: start commands, readiness probes, watchdog
 ├── document_head.go # The backend-rendered <head> fragment spliced into the SPA shell
+├── encoding.go    # Content-encoding of statics: precompressed-sidecar negotiation, on-the-fly gzip of the spliced shell
 └── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```
 

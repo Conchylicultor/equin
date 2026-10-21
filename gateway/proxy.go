@@ -113,7 +113,13 @@ const indexURL = "/index.html"
 // an unchanged dist answers with a bodiless 304.
 func serveIndex(w http.ResponseWriter, r *http.Request, indexPath string) {
 	w.Header().Set("Cache-Control", "no-cache")
-	http.ServeFile(w, r, indexPath)
+	if strings.HasSuffix(r.URL.Path, indexURL) {
+		// http.ServeFile redirects an explicit /index.html to the directory
+		// form; the document itself is only ever served at a path.
+		http.ServeFile(w, r, indexPath)
+		return
+	}
+	serveStaticFile(w, r, indexPath)
 }
 
 // serveArtifact serves a content-addressed module file: its directory is named
@@ -123,7 +129,7 @@ func serveIndex(w http.ResponseWriter, r *http.Request, indexPath string) {
 // already holds — one round trip per module, over a thousand per page load.
 func serveArtifact(w http.ResponseWriter, r *http.Request, file string) {
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	http.ServeFile(w, r, file)
+	serveStaticFile(w, r, file)
 }
 
 // serveShell serves the SPA shell, and on a document load starts the backend
@@ -198,7 +204,7 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 			serveArtifact(w, r, full)
 			return
 		}
-		http.ServeFile(w, r, full)
+		serveStaticFile(w, r, full)
 		return
 	}
 	// /artifacts/* URLs are content-addressed module files (import-map targets),

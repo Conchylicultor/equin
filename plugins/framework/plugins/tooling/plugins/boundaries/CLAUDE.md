@@ -216,7 +216,7 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
     - `framework/tooling/guards` (10 debt)
     - `framework/tooling/import-closure` (1 debt)
     - `framework/tooling/lint` (2 debt)
-    - `framework/tooling/web-artifacts` (14 debt)
+    - `framework/tooling/web-artifacts` (15 debt)
     - `framework/web-core` (1 debt)
     - `infra/asset-mirror` (3 debt)
     - `infra/audio-analysis` (4 debt)

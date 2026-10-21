@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 )
 
 // documentHeadFile is what the backend renders into the SPA shell's <head>
@@ -155,7 +154,6 @@ func serveShellWithHead(w http.ResponseWriter, r *http.Request, wt *Worktree, in
 	}
 	sum := fnv.New64a()
 	_, _ = sum.Write(body)
-	w.Header().Set("ETag", fmt.Sprintf(`"dh-%x"`, sum.Sum64()))
-	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(body))
+	serveBytes(w, r, "index.html", fmt.Sprintf(`"dh-%x"`, sum.Sum64()), body)
 	return true
 }

@@ -271,7 +271,7 @@ export async function ensureBrowserHost(opts: {
       dynamicImports: [],
       builtAtMs: Date.now(),
     };
-    publishArtifact(dirName, tmpDir, meta);
+    await publishArtifact(dirName, tmpDir, meta);
     mkdirSync(INPUTS_DIR, { recursive: true });
     writeFileSync(
       inputsFile(plan.pluginPath),

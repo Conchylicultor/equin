@@ -20,6 +20,7 @@ export default [
       "core/internal/own-files.ts",
       "core/internal/pipeline.ts",
       "core/internal/plan.ts",
+      "core/internal/precompress.ts",
       "core/internal/staged-verify.ts",
       "core/internal/store.ts",
       "core/internal/vendor-cache.ts",

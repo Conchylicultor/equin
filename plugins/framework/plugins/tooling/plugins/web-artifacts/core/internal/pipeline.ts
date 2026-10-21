@@ -4,6 +4,7 @@
 // the barrel closure, vendor-request assembly, and map-entry assembly live in
 // `plan.ts`, shared with the `web-artifacts:map-in-sync` check.
 
+import { readdirSync } from "node:fs";
 import os from "node:os";
 import { basename, join } from "node:path";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
@@ -25,6 +26,7 @@ import {
   type FleetSource,
   type PlannedTarget,
 } from "./plan";
+import { precompressFiles } from "./precompress";
 import {
   allStaticImports,
   artifactStorePath,
@@ -415,6 +417,13 @@ export async function runWebArtifactsPipeline(
         entryUrl,
         preloadSeeds,
       });
+      // The shell's own files (index.html, public/): every other served file
+      // came out of a cache entry published with its sidecars.
+      await precompressFiles(
+        readdirSync(opts.stagingDir, { withFileTypes: true })
+          .filter((d) => d.isFile())
+          .map((d) => join(opts.stagingDir, d.name)),
+      );
       const unmappedDynamic = findUnmappedDynamicWarnings(
         dynamicOnly,
         importMap,

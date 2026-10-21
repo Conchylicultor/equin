@@ -18,18 +18,16 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
-  renameSync,
   rmSync,
   statSync,
   utimesSync,
-  writeFileSync,
 } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { init as cjsInit, parse as cjsParse } from "cjs-module-lexer";
 import { init as esInit, parse as esParse } from "es-module-lexer";
 import * as esbuild from "esbuild";
 import { sha256Hex } from "../hash";
-import { WEB_ARTIFACTS_DIR } from "./store";
+import { publishDir, WEB_ARTIFACTS_DIR } from "./store";
 import {
   computeVendorCacheGate,
   loadVendorResolutionCache,
@@ -564,15 +562,12 @@ export async function ensureVendorSet(opts: {
     imports,
     setHash,
   };
-  writeFileSync(join(tmpDir, "meta.json"), JSON.stringify(meta, null, 2));
-  try {
-    renameSync(tmpDir, dest);
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "EEXIST" && code !== "ENOTEMPTY" && code !== "EPERM")
-      throw err;
-    rmSync(tmpDir, { recursive: true, force: true }); // concurrent identical build won
-  }
+  await publishDir({
+    tmpDir,
+    dest,
+    meta,
+    isComplete: () => existsSync(join(dest, "meta.json")),
+  });
   return { meta, stats };
 }
 
