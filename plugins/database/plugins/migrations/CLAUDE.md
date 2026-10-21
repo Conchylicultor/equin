@@ -238,13 +238,38 @@ header only when skipping the file's SQL is provably right: the deleted
 migrations' tip snapshot, 3-way-merged with what the published tip changed
 since the branch forked (`snapshot-merge.ts`), must equal the snapshot it just
 generated. They differ when `schema.ts` changed after the last generation (the
-new file then carries DDL the deleted ones never ran), when the branch carries a
-merge node, or when the reset regenerates nothing; the build then warns that a
-database which applied the deleted files must be re-forked
-(`./singularity db fork --replace`).
+new file then carries DDL the deleted ones never ran) or when the branch carries
+a merge node; the build then warns that a database which applied the deleted
+files must be re-forked (`./singularity db fork --replace`).
+
+**A reset that regenerates nothing** — the branch's delta already landed on main
+through someone else's published migration, under another hash — writes an
+**adoption file** instead (`…__adopt_published.sql`, no snapshot,
+`research/2026-10-21-global-reset-adopts-published-migration.md`):
+
+```sql
+-- singularity:adopts 5d1f2e3a
+-- singularity:supersedes 38bc8c97 f09303fa
+-- singularity:phase expand
+-- singularity:phase contract
+-- singularity:claims
+```
+
+`resetAdoption` (`reset-lineage.ts`) names the shortest contiguous run of
+published schema migrations since the fork whose combined delta is the deleted
+one: the branch's delta replayed onto the snapshot before the run equals the
+snapshot after it. Where the lineage is covered, the runner adopts the named
+files (ledger row, no expand/contract, claimed data still runs) and applies
+every other one as usual; elsewhere the file is a no-op record. When no run
+qualifies (main's migration does more, an unrelated one sits inside the run, the
+branch reverted its schema), the build warns as above. An adoption file is
+never claimed by a later schema migration, and a later reset keeps it, like any
+snapshot-less file.
 
 `migration-phases-valid` refuses a superseded hash that is still a file on disk
-(published or not), and a merge node with a `supersedes` header.
+(published or not), a merge node with a `supersedes` header, an adoption file
+with a snapshot, and one adopting anything but an earlier phased schema
+migration.
 
 **An applied hash with no file** that no file on disk supersedes is logged with
 both possible readings — the branch is behind main (rebase), or the branch
@@ -494,6 +519,7 @@ only agreement that matters.
     - `publishedMigrationRefs`
     - `publishedMigrationRefsSignature`
     - `readSnapshotNodes`
+    - `renderAdoptionMigration`
     - `renderMergeSnapshotMigration`
     - `renderPhasedMigration`
     - `renderStatements`

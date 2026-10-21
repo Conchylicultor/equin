@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  renderAdoptionMigration,
   renderMergeSnapshotMigration,
   renderPhasedMigration,
 } from "@plugins/database/plugins/migrations/core";
@@ -523,7 +524,9 @@ describe("planSchemaSteps — supersession", () => {
         s.kind === "record" ? `${s.file} record` : `${s.file} ${s.phase}`,
       ),
     ).toEqual([`${merged.file} record`]);
-    expect(plan.adopted).toEqual([{ file: merged.file, via: [o1, o2] }]);
+    expect(plan.adopted).toEqual([
+      { file: merged.file, via: [o1, o2], by: merged.file },
+    ]);
     expect(plan.superseded).toEqual(new Set([o1, o2]));
   });
 
@@ -563,7 +566,9 @@ describe("planSchemaSteps — supersession", () => {
       inherited: [{ hash: "a1a1a1a1", replaced: [o1, o2] }],
     });
     const plan = planSchemaSteps([data, merged2], new Set([o1, o2, data.hash]));
-    expect(plan.adopted).toEqual([{ file: merged2.file, via: [o1, o2] }]);
+    expect(plan.adopted).toEqual([
+      { file: merged2.file, via: [o1, o2], by: merged2.file },
+    ]);
     expect(plan.superseded).toEqual(new Set(["a1a1a1a1", o1, o2]));
   });
 
@@ -579,5 +584,118 @@ describe("planSchemaSteps — supersession", () => {
 
   test("an already-applied superseding file is a normal skip", () => {
     expect(trace([data, merged], [o1, o2, data.hash, merged.hash])).toEqual([]);
+  });
+});
+
+// A worktree authors o1 and o2 and builds; main meanwhile lands p, someone
+// else's migration with the same delta. The reset regenerates nothing and
+// writes an adoption file q naming p.
+describe("planSchemaSteps — adoption of a published migration", () => {
+  const o1 = "38bc8c97";
+  const o2 = "f09303fa";
+  const before = mig(
+    "20261019",
+    "090000",
+    "0b0b0b0b",
+    "unrelated",
+    phased('ALTER TABLE "d" ADD COLUMN "z" text;', ""),
+  );
+  const pData = mig(
+    "20261019",
+    "100000",
+    "dadadada",
+    "backfill_w",
+    "UPDATE c SET w = 'x'",
+  );
+  const p = mig(
+    "20261019",
+    "100500",
+    "5d1f2e3a",
+    "add_w",
+    renderPhasedMigration({
+      expand: 'ALTER TABLE "c" ADD COLUMN "w" text;',
+      contract: "",
+      claims: ["20261019_100000__backfill_w"],
+      supersedes: null,
+    }),
+  );
+  const after = mig(
+    "20261019",
+    "110000",
+    "0c0c0c0c",
+    "later",
+    phased('ALTER TABLE "e" ADD COLUMN "y" text;', ""),
+  );
+  const q = mig(
+    "20261021",
+    "120000",
+    "a0a0a0a0",
+    "adopt_published",
+    renderAdoptionMigration([p.hash], { direct: [o1, o2], inherited: [] }),
+  );
+  const files = [before, pData, p, after, q];
+
+  test("a DB that applied the lineage records p without its DDL; the rest applies, p's claimed data still runs", () => {
+    const plan = planSchemaSteps(files, new Set([o1, o2]));
+    expect(plan.adopted).toEqual([{ file: p.file, via: [o1, o2], by: q.file }]);
+    expect(trace(files, [o1, o2])).toEqual([
+      `${before.file} expand`,
+      `${before.file} record`,
+      `${pData.file} whole`,
+      `${pData.file} record`,
+      `${p.file} record`,
+      `${after.file} expand`,
+      `${after.file} record`,
+      `${q.file} record`,
+    ]);
+    expect(plan.superseded).toEqual(new Set([o1, o2]));
+  });
+
+  test("a DB that applied none of it (main, a fresh install) applies p, and records q as a no-op", () => {
+    expect(planSchemaSteps(files, new Set()).adopted).toEqual([]);
+    expect(trace([pData, p, q], [pData.hash])).toEqual([
+      `${p.file} expand`,
+      `${p.file} record`,
+      `${q.file} record`,
+    ]);
+  });
+
+  test("a lineage applied only in part throws before any SQL runs", () => {
+    expect(() => planSchemaSteps(files, new Set([o1]))).toThrow(
+      /applied only part of that lineage.*db fork --replace/s,
+    );
+  });
+
+  test("p already applied: nothing to adopt", () => {
+    expect(trace([pData, p, q], [o1, o2, pData.hash, p.hash])).toEqual([
+      `${q.file} record`,
+    ]);
+  });
+
+  test("an adopts naming no file, a later file or a legacy file throws", () => {
+    const naming = (hash: string) =>
+      mig(
+        "20261021",
+        "120000",
+        "a0a0a0a0",
+        "adopt_published",
+        renderAdoptionMigration([hash], { direct: [o1], inherited: [] }),
+      );
+    expect(() =>
+      planSchemaSteps([pData, p, naming("12345678")], new Set()),
+    ).toThrow(/no migration file has that hash/);
+    const late = mig(
+      "20261022",
+      "000000",
+      "1a1a1a1a",
+      "late",
+      phased('ALTER TABLE "f" ADD COLUMN "x" text;', ""),
+    );
+    expect(() => planSchemaSteps([naming(late.hash), late], new Set())).toThrow(
+      /sorts after it/,
+    );
+    expect(() =>
+      planSchemaSteps([pData, naming(pData.hash)], new Set()),
+    ).toThrow(/not a phased schema migration/);
   });
 });

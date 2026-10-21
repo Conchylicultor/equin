@@ -18809,6 +18809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `publishedMigrationRefs`
           - `publishedMigrationRefsSignature`
           - `readSnapshotNodes`
+          - `renderAdoptionMigration`
           - `renderMergeSnapshotMigration`
           - `renderPhasedMigration`
           - `renderStatements`

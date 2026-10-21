@@ -36,6 +36,7 @@ import {
   parseMigration,
   phaseStatements,
   publishedMigrationOrigins,
+  renderAdoptionMigration,
   renderPhasedMigration,
   renderStatements,
   schemaLoadFailures,
@@ -54,7 +55,12 @@ import {
   latestMigrationTimestamp,
   SnapshotJoinError,
 } from "./snapshot-join";
-import { readResetPrior, resetLineage, type ResetPrior } from "./reset-lineage";
+import {
+  readResetPrior,
+  resetAdoption,
+  resetLineage,
+  type ResetPrior,
+} from "./reset-lineage";
 
 // The interactive drizzle-kit runner (the CLI's one sanctioned streaming-stdio
 // child) and its prompt model live in ./migrations-interactive.ts; re-exported
@@ -546,11 +552,28 @@ export async function generateMigration(opts: {
         "--migration-name was provided but no schema change was detected; ignoring.",
       );
     }
-    if (resetPrior !== null && resetPrior.deleted.length > 0) {
-      warnUnsuperseded(
-        resetPrior,
-        "the reset regenerated no schema migration (its delta is already in the published schema)",
-      );
+    // The reset regenerated nothing: the deleted delta is already in the
+    // published schema, through migrations a database that applied the deleted
+    // ones has not run. Name them in an adoption file, so such a database
+    // records them instead of redoing their DDL.
+    if (resetPrior !== null) {
+      const adoption = await resetAdoption(migrationsDir, resetPrior);
+      if (adoption.kind === "adopts") {
+        const file = writeAdoptionMigration(
+          migrationsDir,
+          adoption.adopts,
+          adoption.supersedes,
+        );
+        console.log(
+          `  wrote ${file}: adopts ${adoption.files.join(", ")} (main's migrations made the change the deleted ${adoption.supersedes.direct.join(", ")} made: a database that applied those records these without running their DDL)`,
+        );
+        regenerateJournal(migrationsDir);
+      } else if (adoption.reason !== null) {
+        warnUnsuperseded(
+          resetPrior,
+          `the reset regenerated no schema migration, and ${adoption.reason}`,
+        );
+      }
     }
     return { maxRssBytes: result.maxRssBytes };
   }
@@ -850,8 +873,14 @@ export function phaseGeneratedMigrations(
     const parsed = parseMigration(readFileSync(join(migrationsDir, f), "utf8"));
     if (parsed.kind === "phased") for (const c of parsed.claims) claimed.add(c);
   }
+  // A snapshot-less phased file is an adoption file, not a data migration: it
+  // runs no SQL and is never claimed.
+  const isData = (f: string) =>
+    !hasSnapshot(f) &&
+    parseMigration(readFileSync(join(migrationsDir, f), "utf8")).kind ===
+      "legacy";
   const claims = branchLocal
-    .filter((f) => !hasSnapshot(f))
+    .filter(isData)
     .map(migrationClaimId)
     .filter((id) => !claimed.has(id));
 
@@ -890,6 +919,24 @@ export function freshSchemaMigration(
   }
   const sql = fresh[0]!;
   return { sql, snapshot: `${DRIZZLE_FORMAT.exec(sql)![1]}_snapshot.json` };
+}
+
+// Write the adoption file for `adopts` (published hashes) and the lineage that
+// already applied their delta, stamped after every migration on disk (it must
+// sort after what it adopts). Returns its file name.
+function writeAdoptionMigration(
+  migrationsDir: string,
+  adopts: readonly string[],
+  supersedes: Supersession,
+): string {
+  const sql = renderAdoptionMigration(adopts, supersedes);
+  const latest = latestMigrationTimestamp(readdirSync(migrationsDir));
+  const ts = formatMigrationTimestamp(
+    Math.max(Date.now(), latest === null ? 0 : latest + 1000),
+  );
+  const file = `${ts}_${migrationContentHash(sql)}__adopt_published.sql`;
+  writeFileSync(join(migrationsDir, file), sql);
+  return file;
 }
 
 // A reset deleted migrations a database may have applied, and the new file

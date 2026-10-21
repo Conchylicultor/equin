@@ -53,6 +53,22 @@
 // database actually applied. The runner adopts the file (records it, runs none
 // of its SQL) when its lineage is fully applied. The generator writes the
 // header only when it proved the deleted files expressed the same schema.
+//
+// ADOPTION (research/2026-10-21-global-reset-adopts-published-migration.md).
+// A reset whose delta already landed on main through someone else's published
+// migration regenerates nothing — and that published file then redoes, in a
+// database that applied the deleted ones, DDL that is already there. The reset
+// writes an adoption file instead: empty sections, the lineage, and one more
+// line naming the published files whose combined delta the lineage applied:
+//
+//   -- singularity:adopts 5d1f2e3a 77aa01bc
+//   -- singularity:supersedes 38bc8c97 f09303fa
+//   -- singularity:phase expand
+//   -- singularity:phase contract
+//   -- singularity:claims
+//
+// Where the lineage is fully applied, the runner records the adopted files
+// without running their DDL; anywhere else the file is a no-op record.
 
 const MERGE_HEADER = "-- singularity:merge-snapshot";
 const MERGE_HEADER_RE =
@@ -64,6 +80,7 @@ const EXPAND = "-- singularity:phase expand";
 const CONTRACT = "-- singularity:phase contract";
 const CLAIMS = "-- singularity:claims";
 const SUPERSEDES = "-- singularity:supersedes";
+const ADOPTS = "-- singularity:adopts";
 const HASH_RE = /^[0-9a-f]{8}$/;
 
 const MIGRATION_FILE_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
@@ -83,8 +100,11 @@ export interface PhasedMigration {
   supersedes: Supersession | null;
 }
 
+// A parsed phased migration also names the published files it adopts (see
+// ADOPTION above): empty for every file but an adoption file.
 export type ParsedMigration =
-  { kind: "legacy"; sql: string } | ({ kind: "phased" } & PhasedMigration);
+  | { kind: "legacy"; sql: string }
+  | ({ kind: "phased"; adopts: readonly string[] } & PhasedMigration);
 
 // The claim id of a migration file: its name without the content hash.
 export function migrationClaimId(file: string): string {
@@ -136,6 +156,24 @@ export function renderMergeSnapshotMigration(
   );
 }
 
+// The body of an adoption file: `adopts` (published hashes, in timestamp
+// order), the lineage that applied their delta, then an empty phased migration.
+export function renderAdoptionMigration(
+  adopts: readonly string[],
+  supersedes: Supersession,
+): string {
+  assertHashes(adopts, adopts.join(" "));
+  return (
+    `${ADOPTS} ${adopts.join(" ")}\n` +
+    renderPhasedMigration({
+      expand: "",
+      contract: "",
+      claims: [],
+      supersedes,
+    })
+  );
+}
+
 function renderSupersession(s: Supersession | null): string {
   if (s === null) return "";
   assertSupersession(s);
@@ -148,11 +186,10 @@ function renderSupersession(s: Supersession | null): string {
 }
 
 function assertHashes(hashes: readonly string[], line: string): void {
-  if (hashes.length === 0)
-    throw new Error(`supersedes header lists no hash: ${line}`);
+  if (hashes.length === 0) throw new Error(`header lists no hash: ${line}`);
   for (const h of hashes) {
     if (!HASH_RE.test(h))
-      throw new Error(`malformed hash "${h}" in supersedes header: ${line}`);
+      throw new Error(`malformed hash "${h}" in header: ${line}`);
   }
 }
 
@@ -271,6 +308,30 @@ export function parseMigration(sql: string): ParsedMigration {
       );
     return parsed;
   }
+  const eol = sql.indexOf("\n");
+  const first = (eol === -1 ? sql : sql.slice(0, eol)).trimEnd();
+  if (first.startsWith(ADOPTS)) {
+    const rest = first.slice(ADOPTS.length);
+    if (!rest.startsWith(" "))
+      throw new Error(`malformed adopts header: ${first}`);
+    const adopts = rest.trim().split(/\s+/);
+    assertHashes(adopts, first);
+    const parsed = eol === -1 ? null : parseMigration(sql.slice(eol + 1));
+    if (parsed?.kind !== "phased" || parsed.supersedes === null)
+      throw new Error(
+        `an adopts header must be followed by a supersedes header and a phased migration`,
+      );
+    if (
+      parsed.adopts.length > 0 ||
+      parsed.expand !== "" ||
+      parsed.contract !== "" ||
+      parsed.claims.length > 0
+    )
+      throw new Error(
+        `an adoption file records only: its sections and claims must be empty, and it has one adopts line`,
+      );
+    return { ...parsed, adopts };
+  }
   const { supersedes, body } = takeSupersession(sql);
   if (supersedes !== null) {
     const parsed = parsePhasedBody(body);
@@ -331,5 +392,6 @@ function parsePhasedBody(sql: string): ParsedMigration {
       .trim(),
     claims,
     supersedes: null,
+    adopts: [],
   };
 }

@@ -31,6 +31,7 @@ export {
   mergeSnapshotParents,
   migrationClaimId,
   parseMigration,
+  renderAdoptionMigration,
   renderMergeSnapshotMigration,
   renderPhasedMigration,
 } from "./internal/phases";

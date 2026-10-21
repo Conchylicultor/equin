@@ -155,6 +155,7 @@ describe("joinSnapshotTips", () => {
       contract: "",
       claims: [],
       supersedes: null,
+      adopts: [],
     });
 
     const snapshot = JSON.parse(

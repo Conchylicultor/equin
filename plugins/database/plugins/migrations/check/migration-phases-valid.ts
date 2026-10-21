@@ -54,7 +54,9 @@ export interface MigrationFile {
  *   no claims and no supersedes. Its snapshot is a merge, not a diff, so any SQL
  *   in it would apply DDL no snapshot accounts for.
  *
- * And, over EVERY file (published too): a hash a `supersedes` header names must
+ * And, over EVERY file (published too): an adoption file (an `adopts` header)
+ * is snapshot-less and adopts only schema migrations (the runner's planner
+ * checks each names an earlier phased file); a hash a `supersedes` header names must
  * not be a file on disk. A reset deletes what it supersedes; a superseded file
  * still present would run its DDL AND let the superseding file be adopted.
  *
@@ -107,6 +109,9 @@ export function findPhaseErrors(
   const fileByHash = new Map(
     files.map((m) => [MIGRATION_RE.exec(m.file)?.[3], m.file]),
   );
+  const isSchemaByHash = new Map(
+    files.map((m) => [MIGRATION_RE.exec(m.file)?.[3], m.isSchema]),
+  );
   for (const m of files) {
     let parsed: ReturnType<typeof parseMigration>;
     try {
@@ -118,6 +123,18 @@ export function findPhaseErrors(
       continue;
     }
     if (parsed.kind !== "phased" || parsed.supersedes === null) continue;
+    if (parsed.adopts.length > 0) {
+      if (m.isSchema)
+        errors.push(
+          `${m.file}: an adoption file has no snapshot — it records, it changes no schema`,
+        );
+      for (const h of parsed.adopts) {
+        if (isSchemaByHash.get(h) === false)
+          errors.push(
+            `${m.file}: adopts ${fileByHash.get(h)}, which is not a schema migration (it has no snapshot)`,
+          );
+      }
+    }
     const lineage = [
       ...parsed.supersedes.direct,
       ...parsed.supersedes.inherited.flatMap((e) => [e.hash, ...e.replaced]),

@@ -224,9 +224,11 @@ export interface SchemaPlan {
   // Files with at least one step to run or a ledger row to land.
   pendingFiles: string[];
   skippedDuplicates: { file: string; original: string }[];
-  // Superseding files whose lineage this database already applied: recorded,
-  // none of their own SQL run. `via` is the lineage hashes found in the ledger.
-  adopted: { file: string; via: string[] }[];
+  // Files a lineage this database already applied accounts for: recorded, none
+  // of their own SQL run. `by` is the file carrying the lineage (the adopted
+  // file itself, or the adoption file naming it); `via` is the lineage hashes
+  // found in the ledger.
+  adopted: { file: string; via: string[]; by: string }[];
   // Every hash some file on disk supersedes (its whole lineage): a ledger row
   // for one of them has no file here on purpose.
   superseded: ReadonlySet<string>;
@@ -250,7 +252,11 @@ export interface SchemaPlan {
 // A pending phased file with a supersedes header (see `lineageState`) whose
 // lineage this database already applied is ADOPTED: its ledger row lands, its
 // expand and contract do not run (its claimed data migrations still do, if
-// pending). A lineage only partly applied THROWS, before any SQL runs.
+// pending). An adoption file (an `adopts` header) extends that to the
+// published files it names: a reset whose delta had already landed on main
+// regenerated nothing, and those files carry the delta instead. A lineage only
+// partly applied THROWS, before any SQL runs, as does an `adopts` naming no
+// earlier phased file.
 //
 // Files already in the ledger — and same-run duplicate-hash siblings, exactly as
 // `planMigrations` decides — contribute no step. Claims are validated over every
@@ -321,26 +327,58 @@ export function planSchemaSteps(
     }
   }
 
-  // Pending superseding files whose lineage this database already applied.
-  const adopted: { file: string; via: string[] }[] = [];
+  // Superseding files whose lineage this database already applied, and the
+  // files they adopt. A superseding file adopts itself (its own delta is the
+  // lineage's); an adoption file adopts the published files it names, which
+  // sort BEFORE it — so every lineage is decided before the walk below.
+  const adopted: { file: string; via: string[]; by: string }[] = [];
   const adoptedFiles = new Set<Migration>();
   const superseded = new Set<string>();
-  for (const m of migrations) {
+  const byHash = new Map(migrations.map((m, index) => [m.hash, { m, index }]));
+  for (const [index, m] of migrations.entries()) {
     const p = parsed.get(m)!;
     if (p.kind !== "phased" || p.supersedes === null) continue;
     for (const h of lineageHashes(p.supersedes)) superseded.add(h);
-    if (!pending.has(m)) continue;
+    const targets: Migration[] = [m];
+    if (p.adopts.length > 0) {
+      targets.length = 0;
+      for (const h of p.adopts) {
+        const target = byHash.get(h);
+        if (!target) {
+          throw new Error(
+            `migration ${m.file} adopts ${h}, but no migration file has that hash.`,
+          );
+        }
+        const t = parsed.get(target.m)!;
+        if (t.kind !== "phased" || t.adopts.length > 0) {
+          throw new Error(
+            `migration ${m.file} adopts ${target.m.file}, which is not a phased schema migration — only one can be adopted.`,
+          );
+        }
+        if (target.index >= index) {
+          throw new Error(
+            `migration ${m.file} adopts ${target.m.file}, which sorts after it — an adopted migration must sort before its adoption file.`,
+          );
+        }
+        targets.push(target.m);
+      }
+    }
+    const pendingTargets = targets.filter((t) => pending.has(t));
+    if (pendingTargets.length === 0) continue;
     const state = lineageState(p.supersedes, appliedHashes);
     if (state.kind === "partial") {
       throw new Error(
         `migration ${m.file} supersedes ${[...p.supersedes.direct].join(", ")}, but this database applied only part of that lineage ` +
           `(applied: ${state.applied.join(", ")}; not covered: ${state.uncovered.join(", ")}). ` +
-          `Applying it would redo DDL that is already here, adopting it would skip DDL that is not. ${REFORK_HINT}`,
+          `Applying ${pendingTargets.map((t) => t.file).join(", ")} would redo DDL that is already here, adopting it would skip DDL that is not. ${REFORK_HINT}`,
       );
     }
     if (state.kind === "adopted") {
-      adopted.push({ file: m.file, via: state.via });
-      adoptedFiles.add(m);
+      for (const t of pendingTargets) {
+        if (adoptedFiles.has(t)) continue;
+        adopted.push({ file: t.file, via: state.via, by: m.file });
+        adoptedFiles.add(t);
+      }
     }
   }
 
@@ -414,9 +452,11 @@ function reportPlan(
   ledger: ReadonlyMap<string, string>,
   plan: SchemaPlan,
 ): void {
-  for (const { file, via } of plan.adopted) {
+  for (const { file, via, by } of plan.adopted) {
     log.publish(
-      `[migrate] adopting ${file}: it supersedes ${via.join(", ")}, already applied here, so it is recorded without running its SQL.`,
+      by === file
+        ? `[migrate] adopting ${file}: it supersedes ${via.join(", ")}, already applied here, so it is recorded without running its SQL.`
+        : `[migrate] adopting ${file}: ${by} records that ${via.join(", ")}, already applied here, made the same change, so it is recorded without running its SQL.`,
     );
   }
   // A hash a file on disk supersedes is accounted for (`plan.superseded`): the

@@ -3,6 +3,7 @@ import {
   mergeSnapshotParents,
   migrationClaimId,
   parseMigration,
+  renderAdoptionMigration,
   renderMergeSnapshotMigration,
   renderPhasedMigration,
 } from "./phases";
@@ -18,6 +19,7 @@ describe("phased migration grammar", () => {
     expect(parseMigration(renderPhasedMigration(m))).toEqual({
       kind: "phased",
       ...m,
+      adopts: [],
     });
   });
 
@@ -31,6 +33,7 @@ describe("phased migration grammar", () => {
     expect(parseMigration(renderPhasedMigration(m))).toEqual({
       kind: "phased",
       ...m,
+      adopts: [],
     });
   });
 
@@ -86,6 +89,7 @@ describe("merge-snapshot header", () => {
       contract: "",
       claims: [],
       supersedes: null,
+      adopts: [],
     });
   });
 
@@ -144,7 +148,7 @@ describe("supersedes header", () => {
     expect(sql.split("\n")[0]).toBe(
       "-- singularity:supersedes 38bc8c97 f09303fa",
     );
-    expect(parseMigration(sql)).toEqual({ kind: "phased", ...m });
+    expect(parseMigration(sql)).toEqual({ kind: "phased", ...m, adopts: [] });
   });
 
   test("inherited edges round-trip", () => {
@@ -161,6 +165,7 @@ describe("supersedes header", () => {
     expect(parseMigration(renderPhasedMigration(m))).toEqual({
       kind: "phased",
       ...m,
+      adopts: [],
     });
   });
 
@@ -206,5 +211,60 @@ describe("supersedes header", () => {
         "-- singularity:phase expand\n-- singularity:supersedes a1a1a1a1\n-- singularity:phase contract\n-- singularity:claims\n",
       ),
     ).toThrow(/duplicate marker/);
+  });
+});
+
+describe("adopts header", () => {
+  const lineage = { direct: ["38bc8c97", "f09303fa"], inherited: [] };
+
+  test("an adoption file round-trips: adopts, then the lineage, then empty sections", () => {
+    const sql = renderAdoptionMigration(["5d1f2e3a", "77aa01bc"], lineage);
+    expect(sql.split("\n").slice(0, 2)).toEqual([
+      "-- singularity:adopts 5d1f2e3a 77aa01bc",
+      "-- singularity:supersedes 38bc8c97 f09303fa",
+    ]);
+    expect(parseMigration(sql)).toEqual({
+      kind: "phased",
+      expand: "",
+      contract: "",
+      claims: [],
+      supersedes: lineage,
+      adopts: ["5d1f2e3a", "77aa01bc"],
+    });
+  });
+
+  test("adopts without a supersedes header throws", () => {
+    expect(() =>
+      parseMigration(
+        "-- singularity:adopts 5d1f2e3a\n" +
+          renderPhasedMigration({
+            expand: "",
+            contract: "",
+            claims: [],
+            supersedes: null,
+          }),
+      ),
+    ).toThrow(/followed by a supersedes header/);
+  });
+
+  test("an adoption file with SQL throws: it only records", () => {
+    expect(() =>
+      parseMigration(
+        "-- singularity:adopts 5d1f2e3a\n" +
+          renderPhasedMigration({
+            expand: 'ALTER TABLE "c" ADD COLUMN "w" text;',
+            contract: "",
+            claims: [],
+            supersedes: lineage,
+          }),
+      ),
+    ).toThrow(/records only/);
+  });
+
+  test("a malformed adopted hash throws", () => {
+    expect(() => renderAdoptionMigration(["nothex"], lineage)).toThrow(
+      /malformed hash/,
+    );
+    expect(() => renderAdoptionMigration([], lineage)).toThrow(/no hash/);
   });
 });

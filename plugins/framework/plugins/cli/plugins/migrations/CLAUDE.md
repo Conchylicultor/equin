@@ -26,7 +26,9 @@ A reset (`--reset-migration`, push's regen) reads what it is about to delete
 first (`readResetPrior`, `reset-lineage.ts`); after generation, `resetLineage`
 decides whether the new file may say it supersedes those hashes — only when the
 deleted tip, carried over main's changes, equals the new snapshot — and
-`phaseGeneratedMigrations` writes the header. See `database/migrations/CLAUDE.md`
+`phaseGeneratedMigrations` writes the header. A reset that regenerates nothing
+asks `resetAdoption` for the published run carrying the deleted delta and writes
+an adoption file naming it. See `database/migrations/CLAUDE.md`
 → **Supersession**.
 
 Before drizzle-kit runs, `joinSnapshotTips` (`snapshot-join.ts`, merging with

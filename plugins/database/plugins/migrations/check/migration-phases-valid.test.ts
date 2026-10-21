@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { renderMergeSnapshotMigration } from "@plugins/database/plugins/migrations/core";
+import {
+  renderAdoptionMigration,
+  renderMergeSnapshotMigration,
+} from "@plugins/database/plugins/migrations/core";
 import { findPhaseErrors, type MigrationFile } from "./migration-phases-valid";
 
 const DATA = "20260902_000000_dddddddd__remap_icons.sql";
@@ -98,5 +101,38 @@ describe("findPhaseErrors", () => {
       expected,
     );
     expect(findPhaseErrors(files.slice(1), new Set())).toEqual([]);
+  });
+});
+
+describe("findPhaseErrors — adoption files", () => {
+  const ADOPT = "20260904_000000_a0a0a0a0__adopt_published.sql";
+  const adoption = (hash: string, isSchema: boolean): MigrationFile => ({
+    file: ADOPT,
+    sql: renderAdoptionMigration([hash], {
+      direct: ["38bc8c97"],
+      inherited: [],
+    }),
+    isSchema,
+  });
+
+  test("a snapshot-less adoption file adopting a schema migration is valid", () => {
+    expect(
+      findPhaseErrors(
+        [data(DATA), schema(SCHEMA, GOOD), adoption("eeeeeeee", false)],
+        new Set(),
+      ),
+    ).toEqual([]);
+  });
+
+  test("an adoption file with a snapshot, or adopting a data migration, is refused", () => {
+    expect(
+      findPhaseErrors(
+        [data(DATA), schema(SCHEMA, GOOD), adoption("eeeeeeee", true)],
+        new Set(),
+      ),
+    ).toEqual([expect.stringContaining("an adoption file has no snapshot")]);
+    expect(
+      findPhaseErrors([data(DATA), adoption("dddddddd", false)], new Set()),
+    ).toEqual([expect.stringContaining("which is not a schema migration")]);
   });
 });

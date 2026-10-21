@@ -17,13 +17,23 @@
  * They differ when schema.ts changed after the last generation (the new file
  * then holds DDL the deleted ones never did) — no header, and the runner
  * applies the file as before.
+ *
+ * A reset can also regenerate NOTHING: the branch's delta already landed on
+ * main through someone else's published migration (a different hash). Those
+ * published files then redo, in a database that applied the deleted ones, DDL
+ * that is already there. `resetAdoption` finds the run of published migrations
+ * whose combined delta is the deleted one, and the reset writes an adoption
+ * file naming them (research/2026-10-21-global-reset-adopts-published-migration.md).
  */
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import {
+  analyzeSnapshotDag,
   mergeSnapshotParents,
   parseMigration,
   readSnapshotNodes,
+  snapshotAncestors,
+  type SnapshotNode,
   type Supersession,
 } from "@plugins/database/plugins/migrations/core";
 import {
@@ -189,6 +199,13 @@ export async function resetLineage(
         "the regenerated schema differs from what the deleted migrations applied (schema.ts changed after their last generation)",
     };
 
+  return { kind: "supersedes", supersedes: lineageOf(gone) };
+}
+
+// The lineage that replaces `gone`: their hashes, plus each one's own lineage
+// passed on as inherited edges (a regen of a regen still reaches what a
+// database actually applied).
+function lineageOf(gone: readonly DeletedMigration[]): Supersession {
   const inherited = new Map<string, readonly string[]>();
   for (const d of gone) {
     if (d.supersedes === null) continue;
@@ -196,13 +213,144 @@ export async function resetLineage(
     for (const e of d.supersedes.inherited) inherited.set(e.hash, e.replaced);
   }
   return {
-    kind: "supersedes",
-    supersedes: {
-      direct: gone.map((d) => d.hash),
-      inherited: [...inherited].map(([hash, replaced]) => ({
-        hash,
-        replaced,
-      })),
-    },
+    direct: gone.map((d) => d.hash),
+    inherited: [...inherited].map(([hash, replaced]) => ({
+      hash,
+      replaced,
+    })),
+  };
+}
+
+/** The published files a reset that regenerated nothing adopts, or why none. */
+export type ResetAdoption =
+  | {
+      kind: "adopts";
+      /** The adopted files, in timestamp order, and their hashes. */
+      files: readonly string[];
+      adopts: readonly string[];
+      supersedes: Supersession;
+    }
+  | { kind: "none"; reason: string | null };
+
+/**
+ * For a reset that regenerated no schema migration: the contiguous run of
+ * published schema migrations `p_i … p_j` whose combined delta is the deleted
+ * migrations' — the branch's delta replayed (3-way merge) onto the snapshot
+ * before `p_i` equals the snapshot after `p_j`, and is not already in it.
+ *
+ * Adopting that run (recording it without its DDL) and applying every other
+ * published migration in order is what main did: a migration before the run
+ * never created the delta's objects (`p_i` would have failed on main), and one
+ * after it ran on main with them already there.
+ *
+ * Call after the reset and the tip join, so every snapshot on disk is
+ * published. `reason` is null when there is nothing to account for (nothing
+ * deleted, or the deleted migrations changed nothing); otherwise it says why
+ * no run qualifies — the caller warns, since a database that applied the
+ * deleted migrations may then fail to apply main's.
+ */
+export async function resetAdoption(
+  migrationsDir: string,
+  prior: ResetPrior,
+): Promise<ResetAdoption> {
+  if (prior.deleted.length === 0) return { kind: "none", reason: null };
+  if (prior.schema.kind === "unknown")
+    return { kind: "none", reason: prior.schema.reason };
+  const { tip: ours, baseId } = prior.schema;
+
+  const nodes = await readSnapshotNodes(migrationsDir);
+  const dag = analyzeSnapshotDag(nodes);
+  const baseNode = dag.byId.get(baseId);
+  if (baseNode === undefined)
+    return {
+      kind: "none",
+      reason: `the snapshot the branch forked from (${baseId}) is not on disk`,
+    };
+  const cache = new Map<string, Snapshot>();
+  const load = (n: SnapshotNode): Snapshot => {
+    let snap = cache.get(n.id);
+    if (snap === undefined) {
+      snap = readSnapshot(join(migrationsDir, "meta", n.file));
+      cache.set(n.id, snap);
+    }
+    return snap;
+  };
+  const base = load(baseNode);
+  if (equivalentSnapshots(base, ours)) return { kind: "none", reason: null };
+
+  // A node a run may hold: a phased schema migration (the runner adopts no
+  // other kind), not a merge node, published after the fork.
+  const runnableHash = (n: SnapshotNode): string | null => {
+    if (n.mergeParents !== null) return null;
+    const tag = n.file.slice(0, -"_snapshot.json".length);
+    const m = NEW_FORMAT.exec(`${tag}.sql`);
+    if (!m) return null;
+    const sqlPath = join(migrationsDir, `${tag}.sql`);
+    if (!existsSync(sqlPath)) return null;
+    const parsed = parseMigration(readFileSync(sqlPath, "utf8"));
+    if (parsed.kind !== "phased" || parsed.adopts.length > 0) return null;
+    return m[3]!;
+  };
+  const hashes = new Map<string, string | null>();
+  const hashOf = (n: SnapshotNode): string | null => {
+    if (!hashes.has(n.id)) hashes.set(n.id, runnableHash(n));
+    return hashes.get(n.id)!;
+  };
+  const forked = new Map<string, boolean>();
+  const afterFork = (n: SnapshotNode): boolean => {
+    if (!forked.has(n.id))
+      forked.set(
+        n.id,
+        n.id !== baseId && snapshotAncestors(dag, n.id).has(baseId),
+      );
+    return forked.get(n.id)!;
+  };
+
+  // The branch's delta replayed onto a snapshot, per snapshot id.
+  const replayed = new Map<string, Snapshot | null>();
+  const replayOnto = (prev: SnapshotNode): Snapshot | null => {
+    if (!replayed.has(prev.id)) {
+      const r = mergeSnapshots(base, ours, load(prev));
+      replayed.set(
+        prev.id,
+        r.ok && !equivalentSnapshots(r.merged, load(prev)) ? r.merged : null,
+      );
+    }
+    return replayed.get(prev.id)!;
+  };
+
+  // Shortest run first, then earliest end: a run that matches is the smallest
+  // set of files the deleted delta stands for.
+  const candidates: SnapshotNode[][] = [];
+  for (const end of [...nodes].sort((a, b) => a.file.localeCompare(b.file))) {
+    if (!afterFork(end) || hashOf(end) === null) continue;
+    const run: SnapshotNode[] = [];
+    let at: SnapshotNode | undefined = end;
+    while (at !== undefined && afterFork(at) && hashOf(at) !== null) {
+      run.unshift(at);
+      const prev = dag.byId.get(at.prevId);
+      if (prev === undefined) break;
+      const merged = replayOnto(prev);
+      if (merged !== null && equivalentSnapshots(merged, load(end)))
+        candidates.push([...run]);
+      at = prev;
+    }
+  }
+  if (candidates.length === 0)
+    return {
+      kind: "none",
+      reason:
+        "no run of main's migrations since the branch forked makes exactly the deleted migrations' change (main's does more, splits it, or the branch's schema change was reverted)",
+    };
+  candidates.sort((a, b) => a.length - b.length);
+  const chosen = candidates[0]!;
+  const files = chosen.map(
+    (n) => `${n.file.slice(0, -"_snapshot.json".length)}.sql`,
+  );
+  return {
+    kind: "adopts",
+    files,
+    adopts: chosen.map((n) => hashOf(n)!),
+    supersedes: lineageOf(prior.deleted),
   };
 }
