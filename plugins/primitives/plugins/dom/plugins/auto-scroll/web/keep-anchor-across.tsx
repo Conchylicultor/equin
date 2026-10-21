@@ -35,6 +35,17 @@ export interface KeepAnchorAcrossProps {
    * against. Default: the box is as tall as its content.
    */
   fill?: boolean;
+  /**
+   * `true`: leave browser scroll anchoring on inside the region. For content
+   * that is NOT windowed — no spacers, no placeholders, no recycled rows for the
+   * browser to anchor on — where it is what holds a parked reader in place
+   * through layout that settles between key changes (images loading, code
+   * highlighting, a restored reading position settling). On a key change both
+   * act; with real rows only, they agree, and the correction here then
+   * measures the anchor where the browser already kept it. Default: the region
+   * opts out (a windowed list, where the two disagree by whole pages).
+   */
+  browserAnchoring?: boolean;
   children: ReactNode;
 }
 
@@ -121,7 +132,9 @@ export class KeepAnchorAcross extends Component<
       <div
         ref={this.setHost}
         className={this.props.fill ? "h-full" : undefined}
-        style={{ overflowAnchor: "none" }}
+        style={
+          this.props.browserAnchoring ? undefined : { overflowAnchor: "none" }
+        }
       >
         {this.props.children}
       </div>

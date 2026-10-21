@@ -403,6 +403,11 @@ function TranscriptViewInner({
           changeKey={seeking ? SEEKING : (ids?.[0] ?? events.length)}
           anchorAttr="data-event-key"
           weakAttr="data-pinned-header"
+          // Real rows only (no windowing): the browser's anchoring is what
+          // holds a parked reader — and a restored position — still while
+          // images and highlighting settle above them. While following,
+          // `useStickyScroll` turns it off on the scroller itself.
+          browserAnchoring
           fill={visibleEvents.length === 0}
         >
           <Stack

@@ -41,6 +41,13 @@ released page's full height, skipping whole pages of rows). Owning the box
 makes the opt-out impossible to forget (a `display: contents` box would draw
 nothing for the property to apply to).
 
+**`browserAnchoring` keeps the browser's anchoring on** — only for a region of
+real rows (no spacers, placeholders or recycled rows), where the browser picks
+a real row and agrees with the correction here. The conversation transcript
+sets it: without it nothing held a parked reader still while images and code
+highlighting settled above them, and a restored reading position drifted by
+hundreds of px. A windowed list must keep the default.
+
 ## `useStickyScroll` — following is an intent, never an inference
 
 You follow until a scroll **the hook did not author** lands you elsewhere; you
