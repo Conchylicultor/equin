@@ -24,12 +24,16 @@ import {
 // Not a DataView: four fixed buckets are a closed set, not domain records, and
 // nothing here is clickable.
 
-/** Each bucket's fill. Theme tokens only: the chart ramp, and muted for the rest. */
+/**
+ * Each bucket's fill. Theme tokens only: the categorical palette (distinct
+ * hues, so four buckets side by side in one bar stay tellable apart), and a
+ * neutral for the rest.
+ */
 const BUCKET_FILL: Record<MachineUsageBucket, CSSProperties> = {
-  chrome: { background: "var(--chart-1)" },
-  "agent-ops": { background: "var(--chart-2)" },
-  "agent-browser": { background: "var(--chart-4)" },
-  other: { background: "var(--muted-foreground)", opacity: 0.45 },
+  chrome: { background: "var(--categorical-1)" },
+  "agent-ops": { background: "var(--categorical-5)" },
+  "agent-browser": { background: "var(--categorical-2)" },
+  other: { background: "var(--categorical-10)" },
 };
 
 /** Fixed columns, so the bars and the numbers line up row to row. */

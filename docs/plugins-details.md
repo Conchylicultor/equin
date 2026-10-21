@@ -21077,9 +21077,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sumByBucket`
           - Cross-plugin:
             - Uses tokens:
-              - `ui/tokens/chart --chart-1`
-              - `ui/tokens/chart --chart-2`
-              - `ui/tokens/chart --chart-4`
+              - `ui/tokens/categorical --categorical-1`
+              - `ui/tokens/categorical --categorical-10`
+              - `ui/tokens/categorical --categorical-2`
+              - `ui/tokens/categorical --categorical-5`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-md`
               - `ui/tokens/shape --spacing`
@@ -48034,8 +48035,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `CategoricalTokenValues`
             - Exports (values): `categoricalGroup`
           - Cross-plugin:
-            - Tokens used by: 32 plugins — full list in [`plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md)
-              - `debug` ×10
+            - Tokens used by: 33 plugins — full list in [`plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md)
+              - `debug` ×11
               - `conversations` ×6
               - `apps` ×5
               - `plugin-meta` ×5
@@ -48067,7 +48068,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/primitives/rhythm-circle`
               - `apps/website/landing/screenshot`
               - `apps/website/shell`
-              - `debug/sentinel/machine-usage`
               - `primitives/css/ui-kit`
         - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key), with their customizer section.
           - Web:
