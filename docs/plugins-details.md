@@ -5644,7 +5644,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageExtent`
               - `PrototypeDetailContextValue`
               - `PrototypeFrame`
-              - `RestoredCanvas`
               - `Room`
               - `SourceFrame`
               - `VersionStepperProps`
@@ -5652,16 +5651,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AddFrameRail`
               - `CanvasFrameView`
               - `canvasWith`
-              - `decodeCanvas`
               - `documentOptions`
-              - `encodeCanvas`
               - `frameA`
               - `FrameSource`
               - `layoutFrames`
               - `letterOf`
+              - `openCanvasInApp`
               - `OptionsPill`
               - `pageHeightOf`
-              - `PrototypeCanvas`
               - `prototypeDetailPane`
               - `PrototypeDetailProvider`
               - `PrototypeDetailWrap`
@@ -5978,27 +5975,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/color-palette --success`
             - Imported by: `apps/home/app-cards`
-        - **`present`** — Two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href) and Full screen (F, which presents the selected frame; the browser's Fullscreen API). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both turning the presentation into the whole canvas — and the left and right arrow keys flip through the canvas's frames. The new tab is present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas; its + / Compare navigate to present-canvas/<id>/<canvas>, the whole canvas as a chromeless page.
+        - **`present`** — Two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href) and Full screen (F, which presents the selected frame; the browser's Fullscreen API). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both adding the frame and leaving to the prototype's canvas in the app — and the left and right arrow keys flip through the canvas's frames. The new tab is present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas; its + / Compare open the app's canvas on the frame plus the new one.
           - Web:
-            - Slots:
-              - `prototypes-present.actions`
-              - `prototypes-present-canvas.actions`
-            - Slot contributors:
-              - `prototypes-present.actions` ← `primitives.pane`
-              - `prototypes-present-canvas.actions` ← `primitives.pane`
+            - Slots: `prototypes-present.actions`
+            - Slot contributors: `prototypes-present.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "prototypes-present"
-              - `Pane.Register` "prototypes-present-canvas"
               - `PrototypeDetailWrap` → `PresentationHost`
               - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
               - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
-            - Uses: 57 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
-              - `apps/prototypes/canvas` ×28
+            - Uses: 54 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
+              - `apps/prototypes/canvas` ×26
               - `primitives/css/ui-kit` ×3
-              - `apps-core/tabs` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/latest-ref` ×2
               - `primitives/pane` ×2
+              - `apps-core/tabs.useSurfaceFocused`
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/pin.Pin`
@@ -40746,7 +40738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Pane.Register`
         - Slot contributors: 88 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×88
-        - Contributes: 115 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Contributes: 114 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ItemMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -40828,7 +40820,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pluginViewPane.Actions` "title" → `PaneTitleItem`
           - `profilingPane.Actions` "title" → `PaneTitleItem`
           - `prototypeDetailPane.Actions` "title" → `PaneTitleItem`
-          - `prototypes-present-canvas.actions` "title" → `PaneTitleItem`
           - `prototypes-present.actions` "title" → `PaneTitleItem`
           - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
           - `queue-dead.actions` "title" → `PaneTitleItem`
@@ -42956,8 +42947,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Slots: `ReorderSlots.AreaEditor`
     - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
-    - Contributes: 239 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×239
+    - Contributes: 238 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×238
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -42992,8 +42983,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderSlots`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 238 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×238
+    - Contributes: 237 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×237
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`

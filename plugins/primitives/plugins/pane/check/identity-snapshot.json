@@ -523,12 +523,6 @@
       "parent": null
     },
     {
-      "paneId": "prototypes-present-canvas",
-      "segment": "present-canvas/:name/:canvas",
-      "appIndex": false,
-      "parent": null
-    },
-    {
       "paneId": "queue",
       "segment": "queue/:tab?",
       "appIndex": false,

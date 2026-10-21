@@ -16,8 +16,6 @@ import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Movable } from "@plugins/primitives/plugins/dom/plugins/movable/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { embedUrl } from "@plugins/primitives/plugins/embed/web";
-import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   prototypeDetailRoute,
@@ -40,7 +38,7 @@ import {
   useFrameNames,
   usePrototypeDetail,
   canvasWith,
-  encodeCanvas,
+  openCanvasInApp,
   type CanvasAddAction,
   type CanvasFrame,
   type FrameId,
@@ -49,7 +47,6 @@ import {
   sameExtent,
   type PageExtent,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
-import { presentCanvasPath } from "../internal/routes";
 import { usePresentChrome, usePresentRoot } from "./present-box";
 
 /**
@@ -81,8 +78,8 @@ export function PresentStage({
   onExit?: () => void;
   /**
    * What the right edge's `+` / Compare do. Absent on the new-tab page, where
-   * each opens the canvas page on the canvas the action leads to; an overlay
-   * applies the action to the live canvas and shows the whole of it instead.
+   * each opens the prototype's canvas in the full app on the canvas the action
+   * leads to; an overlay applies the action to the live canvas and leaves.
    */
   onExtend?: (action: CanvasAddAction) => void;
   /**
@@ -247,7 +244,7 @@ function PresentedFrame({
   );
 }
 
-/** The frame tag's card look (the overlays' Exit button beside it is `variant="floating"`). */
+/** The frame tag's card look (the overlay's Exit button beside it is `variant="floating"`). */
 const CHROME = "rounded-md border border-border bg-background shadow-md";
 
 /**
@@ -331,7 +328,7 @@ function FrameTag({
   );
 }
 
-export function ExitButton({ onExit }: { onExit: () => void }): ReactElement {
+function ExitButton({ onExit }: { onExit: () => void }): ReactElement {
   return (
     <Button
       variant="floating"
@@ -354,17 +351,9 @@ const nextIcon = symbol("chevron-right");
  * document load, not an in-app navigation, because this document was opened
  * chromeless and stays so for its lifetime (`embedMode` is read once).
  */
-export function LeaveToCanvasButton({
-  name,
-  variant,
-}: {
-  name: string;
-  /** `floating` standing alone; the default sits inside a pill. */
-  variant?: "floating";
-}): ReactElement {
+function LeaveToCanvasButton({ name }: { name: string }): ReactElement {
   return (
     <IconButton
-      {...(variant === undefined ? {} : { variant })}
       icon={exitIcon}
       label="Exit to the prototype's canvas"
       onClick={() =>
@@ -377,12 +366,13 @@ export function LeaveToCanvasButton({
 }
 
 /**
- * The canvas's add rail, as a presentation hands it its actions: an overlay
- * (`onExtend`) applies each to the live canvas. The new-tab page opens the
- * canvas page on the frame plus the new one, in this tab — and only a page
- * reading the shared picks record (frame A's link) can: one carrying a variant
- * of its own would, as frame A of a canvas, have to write that variant to the
- * record.
+ * The canvas's add rail, as a presentation hands it its actions: either way the
+ * comparison is made on the prototype's canvas in the app. An overlay
+ * (`onExtend`) applies each to the live canvas and leaves. The new-tab page
+ * opens the app's canvas on the frame plus the new one, in this tab — and only
+ * a page reading the shared picks record (frame A's link) can: one carrying a
+ * variant of its own would, as frame A of a canvas, have to write that variant
+ * to the record.
  */
 function ExtendActions({
   meta,
@@ -402,19 +392,12 @@ function ExtendActions({
           ? "This page shows a variant of its own — open frame A to compare"
           : undefined
       }
-      extend={(action) =>
-        onExtend !== undefined
-          ? { onClick: () => onExtend(action) }
-          : appLinkProps(
-              embedUrl(
-                presentCanvasPath(
-                  meta.name,
-                  encodeCanvas(canvasWith(canvas, action, shared)),
-                ),
-                "chromeless",
-              ),
-            )
-      }
+      extend={(action) => ({
+        onClick: () =>
+          onExtend !== undefined
+            ? onExtend(action)
+            : openCanvasInApp(meta.name, canvasWith(canvas, action, shared)),
+      })}
     />
   );
 }

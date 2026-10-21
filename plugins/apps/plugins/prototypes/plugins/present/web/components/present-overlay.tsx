@@ -8,9 +8,8 @@ import {
   type CanvasAddAction,
   type FrameId,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
-import { CanvasStage } from "./canvas-stage";
 import { PresentBox } from "./present-box";
-import { ExitButton, PresentStage } from "./present-stage";
+import { PresentStage } from "./present-stage";
 
 /**
  * One canvas frame alone, full screen (the whole page, handed to the browser's
@@ -19,9 +18,8 @@ import { ExitButton, PresentStage } from "./present-stage";
  * and zoom fitted to the space it now has. ← / → flip through the canvas's
  * frames in place.
  *
- * `+` / Compare add the frame to the live canvas — the pane's own, so it is
- * still there on leaving — and the overlay then presents the whole canvas, in
- * the same box (so full screen stays full screen).
+ * `+` / Compare add the frame to the live canvas — the pane's own — and leave,
+ * so the comparison is made on the canvas in the app.
  *
  * Escape leaves: the browser exits fullscreen and the resulting
  * `fullscreenchange` closes (our own key handler closes too, should the
@@ -42,7 +40,6 @@ export function PresentOverlay({
   const surfaceFocused = useSurfaceFocused();
   const { canvas, dispatch } = usePrototypeDetail();
   const [shown, setShown] = useState<FrameId>(frameId);
-  const [wholeCanvas, setWholeCanvas] = useState(false);
 
   // Leaving selects the frame last on show, so the canvas comes back on it
   // (and `F` presents it again). Stable, like `onClose`.
@@ -61,37 +58,35 @@ export function PresentOverlay({
     const next = canvas.frames[(i + delta + n) % n];
     if (next) setShown(next.id);
   });
+  // The added frame is selected by the reducer, so leave without `exit`'s
+  // re-selection of the frame on show.
   const extend = useEventCallback((action: CanvasAddAction) => {
     dispatch(action);
-    setWholeCanvas(true);
+    onClose();
   });
 
-  // The whole canvas has no one frame on show to flip.
   const flipKeys = useMemo(
-    () =>
-      wholeCanvas
-        ? []
-        : [
-            {
-              id: "prototypes.present-previous",
-              keys: "arrowleft",
-              label: "Present the previous frame",
-              group: "Prototypes",
-              handler: () => flip(-1),
-              // Over the canvas's own ← / → (select a frame), still mounted
-              // under the presentation.
-              priority: 1,
-            },
-            {
-              id: "prototypes.present-next",
-              keys: "arrowright",
-              label: "Present the next frame",
-              group: "Prototypes",
-              handler: () => flip(1),
-              priority: 1,
-            },
-          ],
-    [flip, wholeCanvas],
+    () => [
+      {
+        id: "prototypes.present-previous",
+        keys: "arrowleft",
+        label: "Present the previous frame",
+        group: "Prototypes",
+        handler: () => flip(-1),
+        // Over the canvas's own ← / → (select a frame), still mounted under
+        // the presentation.
+        priority: 1,
+      },
+      {
+        id: "prototypes.present-next",
+        keys: "arrowright",
+        label: "Present the next frame",
+        group: "Prototypes",
+        handler: () => flip(1),
+        priority: 1,
+      },
+    ],
+    [flip],
   );
   useSurfaceShortcuts(flipKeys);
 
@@ -136,17 +131,13 @@ export function PresentOverlay({
           positioning context the chrome pins to (so it is inside the fullscreened
           subtree and stays visible there). */}
       <PresentBox boxRef={rootRef}>
-        {wholeCanvas ? (
-          <CanvasStage exit={<ExitButton onExit={exit} />} />
-        ) : (
-          <PresentStage
-            name={name}
-            frameId={shown}
-            onExit={exit}
-            onExtend={extend}
-            onFlip={flip}
-          />
-        )}
+        <PresentStage
+          name={name}
+          frameId={shown}
+          onExit={exit}
+          onExtend={extend}
+          onFlip={flip}
+        />
       </PresentBox>
     </ViewportOverlay>
   );

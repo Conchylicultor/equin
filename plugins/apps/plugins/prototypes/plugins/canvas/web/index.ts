@@ -33,6 +33,7 @@ export type {
 export {
   PrototypeDetailProvider,
   documentOptions,
+  openCanvasInApp,
   prototypeDocumentSrc,
   useFramePicks,
   useFrameSrc,
@@ -67,9 +68,6 @@ export { SizeChip } from "./components/size-chip";
 export { AddFrameRail } from "./components/add-frame-rail";
 export type { AddFrameHandlers } from "./components/add-frame-rail";
 export { useFrameNames } from "./components/canvas";
-export { PrototypeCanvas } from "./components/prototype-detail";
-export { decodeCanvas, encodeCanvas } from "./internal/saved-canvas";
-export type { RestoredCanvas } from "./internal/saved-canvas";
 
 export default {
   description:

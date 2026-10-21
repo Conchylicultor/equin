@@ -49,18 +49,3 @@ export function presentPath({
     ...(picks === undefined ? {} : { picks: encodePicks(picks) }),
   });
 }
-
-/**
- * `present-canvas/<id>/<canvas>`: the whole canvas — every frame, its version
- * and picks, the size, zoom and layout — as `canvas` encodes it
- * (`encodeCanvas`). Frame A carries no picks: the page reads the shared record.
- */
-export const prototypePresentCanvasRoute = defineRoute({
-  id: "prototypes-present-canvas",
-  segment: "present-canvas/:name/:canvas",
-});
-
-/** The in-app path of a canvas shown as a page of its own. */
-export function presentCanvasPath(name: string, canvas: string): string {
-  return prototypePresentCanvasRoute.link(prototypesApp, { name, canvas });
-}

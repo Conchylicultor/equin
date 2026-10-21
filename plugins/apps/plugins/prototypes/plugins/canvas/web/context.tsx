@@ -25,6 +25,10 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
+  prototypeDetailRoute,
+  prototypesApp,
+} from "@plugins/apps/plugins/prototypes/plugins/shell/core";
+import {
   applyPicksChange,
   DEFAULT_PROTOTYPE_VIEWPORT,
   prototypesList,
@@ -85,12 +89,69 @@ const savedCanvasStore = defineStore({
 });
 
 /**
- * The canvas saved under `slot` in this tab, or a fresh one at `size` — the
- * size the prototype declares.
+ * A canvas handed to the NEXT detail pane this browser tab opens on a
+ * prototype, keyed by prototype ({@link openCanvasInApp}). Taken once: the pane
+ * that takes it saves it as its own. Short-lived, so a hand-off whose
+ * navigation never happened is not picked up by a later visit.
  */
-function openCanvas(slot: string, size: PrototypeViewport): CanvasState {
+const handedCanvasStore = defineStore({
+  owner: "prototypes.canvas-handoff",
+  label: "Prototype canvas hand-offs",
+  area: "session",
+  cap: "64 KB",
+  ttl: 60_000,
+  whenFull: "evict-oldest",
+  schema: SavedCanvasSchema,
+});
+
+/**
+ * Opens the prototype's canvas in the full app ON `state` — a document load
+ * of `proto/<name>` in this browser tab, whose new pane opens on `state`
+ * instead of frame A alone. The URL names only the prototype, so the canvas
+ * goes through this tab's sessionStorage, which survives the load. For a
+ * chromeless page (Present's new-tab page), which cannot navigate in-app.
+ */
+export function openCanvasInApp(name: string, state: CanvasState): void {
+  const written = handedCanvasStore.write(name, serializeCanvas(state));
+  if (!written.ok) {
+    throw new Error(`Could not hand the canvas over: ${written.reason}`);
+  }
+  window.location.assign(prototypeDetailRoute.link(prototypesApp, { name }));
+}
+
+/**
+ * The canvas handed over for `name`, taken: saved under `slot` straight away,
+ * so a second read of the same open (StrictMode runs initializers twice) finds
+ * it there.
+ */
+function takeHandedCanvas(slot: string, name: string): CanvasState | null {
+  const handed = handedCanvasStore.read(name);
+  if (handed.kind === "none") return null;
+  handedCanvasStore.remove(name);
+  const restored = restoreCanvas(handed.value);
+  if (restored.kind === "rejected") {
+    console.warn(`Handed canvas for ${name} not opened: ${restored.reason}`);
+    return null;
+  }
+  writeDraft(savedCanvasStore, serializeCanvas(restored.state), {
+    scope: slot,
+  });
+  return restored.state;
+}
+
+/**
+ * The canvas saved under `slot` in this tab, else one handed over for `name`,
+ * else a fresh one at `size` — the size the prototype declares.
+ */
+function openCanvas(
+  slot: string,
+  name: string,
+  size: PrototypeViewport,
+): CanvasState {
   const raw = readDraft(savedCanvasStore, { scope: slot });
-  if (raw === null) return initialCanvasState({ size });
+  if (raw === null) {
+    return takeHandedCanvas(slot, name) ?? initialCanvasState({ size });
+  }
   const restored = restoreCanvas(raw);
   if (restored.kind === "restored") return restored.state;
   // Written by an older shape of the canvas: open fresh, and say why.
@@ -168,13 +229,6 @@ interface PrototypeDetailProviderProps {
    * "Responsive, in a new browser tab"). Not with `remember`.
    */
   initialSize?: PrototypeViewport;
-  /**
-   * The whole canvas to open on — frames, versions, picks, size, zoom, layout —
-   * for a surface handed another pane's canvas (Present's "Open the canvas in a
-   * new tab"). Frame A's `"shared"` still reads the shared record. Not with
-   * `remember`, nor with the one-frame `initial*` props, which it replaces.
-   */
-  initialCanvas?: CanvasState;
   children: ReactNode;
 }
 
@@ -264,7 +318,6 @@ function DetailProvider({
   initialVersion = null,
   initialPicks,
   initialSize,
-  initialCanvas,
   children,
 }: PrototypeDetailProviderProps & {
   size: PrototypeViewport;
@@ -298,13 +351,12 @@ function DetailProvider({
     slot,
     state:
       slot !== null
-        ? openCanvas(slot, size)
-        : (initialCanvas ??
-          initialCanvasState({
+        ? openCanvas(slot, name, size)
+        : initialCanvasState({
             size: initialSize ?? size,
             version: initialVersion,
             picks: initialPicks ?? "shared",
-          })),
+          }),
   });
   const [held, setHeld] = useState<Held>(open);
   let current = held;

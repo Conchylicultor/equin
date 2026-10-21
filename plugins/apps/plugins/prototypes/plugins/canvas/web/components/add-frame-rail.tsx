@@ -34,8 +34,8 @@ export type AddFrameHandlers = Partial<
  * `launch` (no counterpart declared yet) keeps its button, which opens that
  * agent launch popover instead. Names no source.
  *
- * By default each dispatches its action to this canvas. A surface that leads
- * elsewhere (Present's overlays, its new-tab page) passes `extend`, and
+ * By default each dispatches its action to this canvas. A surface that also
+ * leaves (Present's overlay, its new-tab page) passes `extend`, and
  * `disabled` (with the reason as tooltip) when it cannot add at all.
  */
 export function AddFrameRail({

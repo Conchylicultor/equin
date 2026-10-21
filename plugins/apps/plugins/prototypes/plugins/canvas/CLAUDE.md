@@ -67,6 +67,14 @@ canvas. A reopened source frame whose plugin has not loaded yet (they load in
 a later tier) reads `loading` in the dispatch fallback until the deferred tier
 completes, and only then "nothing shows these frames".
 
+**Handing a canvas to the app** (`openCanvasInApp(name, state)`): a page that
+cannot navigate in-app (Present's chromeless new-tab page) opens `proto/<id>`
+by a document load ON a canvas it computed. The URL still names only the
+prototype: the canvas goes through this tab's sessionStorage (a second store,
+`prototypes.canvas-handoff`, keyed by prototype, one-minute TTL), and the next
+detail pane that opens on that prototype with nothing saved takes it — saving
+it as its own at once, so it is taken exactly once.
+
 ## Frame A holds the shared picks
 
 The option picks a person makes are, first of all, `files`' ONE shared record
@@ -254,8 +262,7 @@ only for this dynamic scaling geometry.
 
 With exactly two frames, a floating pill sits in the gap between them —
 **Swipe** (`LayoutToggle`, a canvas control like the add rail's `+`, so every
-canvas has it: the pane, and a presentation of the whole canvas, which has no
-header). Swipe paints the two frames in one box, B under A, A clipped at a
+canvas has it, header or not). Swipe paints the two frames in one box, B under A, A clipped at a
 divider you drag; the divider carries the way back, a **Side by side** pill
 at its top. Each prototype frame keeps its options pill while swiped,
 bottom-centre of its own half — A's on the left, the side A shows on. Adding or closing a frame
@@ -309,10 +316,8 @@ other.
 
 For surfaces that show a frame outside the pane (Present, its new-tab page)
 the barrel exports `PrototypeDetailProvider` (standalone for one frame, with
-`initialVersion` / `initialPicks`; or on a whole given canvas, with
-`initialCanvas`), `PrototypeCanvas` (the pane's body, for a page drawing the
-whole canvas), `encodeCanvas` / `decodeCanvas` (the canvas as one url segment,
-validated like a saved one), `usePrototypeDetail`, `CanvasFrameView`
+`initialVersion` / `initialPicks`), `openCanvasInApp` (above),
+`usePrototypeDetail`, `CanvasFrameView`
 (the very same frame screen), `OptionsPill`, `VersionStepper`, `SizeChip`,
 `AddFrameRail` (its buttons' actions handed over by `extend`),
 `layoutFrames` and `useFrameNames`.
@@ -453,7 +458,6 @@ navigation, so it starts from nothing remembered.
     - `PageExtent`
     - `PrototypeDetailContextValue`
     - `PrototypeFrame`
-    - `RestoredCanvas`
     - `Room`
     - `SourceFrame`
     - `VersionStepperProps`
@@ -461,16 +465,14 @@ navigation, so it starts from nothing remembered.
     - `AddFrameRail`
     - `CanvasFrameView`
     - `canvasWith`
-    - `decodeCanvas`
     - `documentOptions`
-    - `encodeCanvas`
     - `frameA`
     - `FrameSource`
     - `layoutFrames`
     - `letterOf`
+    - `openCanvasInApp`
     - `OptionsPill`
     - `pageHeightOf`
-    - `PrototypeCanvas`
     - `prototypeDetailPane`
     - `PrototypeDetailProvider`
     - `PrototypeDetailWrap`

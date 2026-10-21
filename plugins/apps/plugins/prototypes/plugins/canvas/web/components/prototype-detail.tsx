@@ -63,11 +63,9 @@ export function PrototypeTitle(): ReactNode {
 }
 
 /**
- * The pane body — also what a surface mounting its own provider draws to show
- * the whole canvas (Present's canvas page). Each meta carries its `rev`, the
- * live frames' cache-bust.
+ * The pane body. Each meta carries its `rev`, the live frames' cache-bust.
  */
-export function PrototypeCanvas(): ReactNode {
+function PrototypeCanvas(): ReactNode {
   const { name } = usePrototypeDetail();
   return matchResource(useLive(prototypesList), {
     loading: () => <Loading variant="block" />,

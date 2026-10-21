@@ -864,7 +864,7 @@ See "Open questions" in the design doc.
   - Slots: `Pane.Register`
   - Slot contributors: 88 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×88
-  - Contributes: 115 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 114 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ItemMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -946,7 +946,6 @@ See "Open questions" in the design doc.
     - `pluginViewPane.Actions` "title" → `PaneTitleItem`
     - `profilingPane.Actions` "title" → `PaneTitleItem`
     - `prototypeDetailPane.Actions` "title" → `PaneTitleItem`
-    - `prototypes-present-canvas.actions` "title" → `PaneTitleItem`
     - `prototypes-present.actions` "title" → `PaneTitleItem`
     - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
     - `queue-dead.actions` "title" → `PaneTitleItem`

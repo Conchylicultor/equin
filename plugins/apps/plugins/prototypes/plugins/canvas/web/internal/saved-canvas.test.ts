@@ -10,12 +10,7 @@ import {
   type CanvasAction,
   type CanvasState,
 } from "./canvas-model";
-import {
-  decodeCanvas,
-  encodeCanvas,
-  restoreCanvas,
-  serializeCanvas,
-} from "./saved-canvas";
+import { restoreCanvas, serializeCanvas } from "./saved-canvas";
 
 const design: PrototypeOption = {
   kind: "choice",
@@ -150,28 +145,5 @@ describe("saved canvas", () => {
       expect(back.kind).toBe("restored");
       if (back.kind === "restored") expect(back.state.layout).toBe("side");
     }
-  });
-});
-
-describe("canvas url segment", () => {
-  it("opens exactly the canvas it was made from", () => {
-    const state = apply(
-      initialCanvasState({ size: DEFAULT_PROTOTYPE_VIEWPORT }),
-      { type: "addPrototype" },
-      { type: "setPick", id: 2, option: "design", value: "paper" },
-      { type: "setLayout", layout: "swipe" },
-      { type: "setZoom", zoom: 0.75 },
-    );
-    const segment = encodeCanvas(state);
-    expect(segment).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(decodeCanvas(segment)).toEqual({ kind: "restored", state });
-  });
-
-  it("rejects a segment that is not a canvas", () => {
-    expect(decodeCanvas("!!!").kind).toBe("rejected");
-    expect(decodeCanvas(btoa("not json")).kind).toBe("rejected");
-    expect(decodeCanvas(btoa(JSON.stringify({ frames: [] }))).kind).toBe(
-      "rejected",
-    );
   });
 });
