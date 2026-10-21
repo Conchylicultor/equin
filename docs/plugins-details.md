@@ -5572,7 +5572,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `prototypeDetailPane.Actions` "layout" → `LayoutAction`
               - `prototypeDetailPane.Actions` "add" → `AddFrameActions`
               - `PrototypeFrameActions` "keep-only" → `KeepOnlyFrameAction`
-              - `PrototypeFrameActions` "duplicate" → `DuplicateFrameAction`
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
