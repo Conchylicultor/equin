@@ -130,3 +130,34 @@ export function sortRows<R extends SortableRow>(
     row.kind === "info" ? -1 : RANK[levelOf(statusOf(row))];
   return [...rows].sort((a, b) => rank(a) - rank(b) || a.order - b.order);
 }
+
+/** One entry of the report: a row on its own, or several quiet rows folded into one card. */
+export type ReportItem<R> =
+  { kind: "row"; row: R } | { kind: "quiet"; rows: R[] };
+
+/**
+ * Fold the quiet rows into ONE card, placed where the first of them sorts.
+ *
+ * A row is quiet when it is a status row with nothing to show beyond its
+ * summary (`isPlain`: no glance, no detail, no actions) and it is `ok`: a line
+ * that only says "fine". Several of them stacked are noise, so they collapse
+ * into one card that lists them when expanded. The moment one is not `ok` it
+ * leaves the card and sorts on its own, so a problem is never hidden behind a
+ * chevron. Fewer than two quiet rows fold nothing — a card of one is a row.
+ */
+export function foldQuietRows<R extends SortableRow>(
+  sorted: ReadonlyArray<R>,
+  statusOf: (row: R) => ReportedStatus,
+  isPlain: (row: R) => boolean,
+): ReportItem<R>[] {
+  const isQuiet = (row: R): boolean =>
+    row.kind === "status" && isPlain(row) && levelOf(statusOf(row)) === "ok";
+  const quiet = sorted.filter(isQuiet);
+  if (quiet.length < 2) return sorted.map((row) => ({ kind: "row", row }));
+  const items: ReportItem<R>[] = [];
+  for (const row of sorted) {
+    if (!isQuiet(row)) items.push({ kind: "row", row });
+    else if (row === quiet[0]) items.push({ kind: "quiet", rows: quiet });
+  }
+  return items;
+}

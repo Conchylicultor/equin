@@ -10,6 +10,7 @@ export type {
   StatusRow,
 } from "./types";
 export {
+  foldQuietRows,
   isPending,
   isPulsing,
   isTransitioning,
@@ -17,6 +18,7 @@ export {
   mergeHealth,
   sortRows,
   verdictOf,
+  type ReportItem,
   type ReportedStatus,
   type SortableRow,
 } from "./merge";

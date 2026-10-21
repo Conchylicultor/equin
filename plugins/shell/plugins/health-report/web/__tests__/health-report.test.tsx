@@ -331,6 +331,28 @@ describe("the report", () => {
     ).toBeTruthy();
   });
 
+  it("folds the plain rows that are fine into one card, listed when expanded", async () => {
+    renderReport([
+      status("Connection", { state: "ok", summary: "conn-summary" }),
+      status("Database", { state: "ok", summary: "db-summary" }),
+      status("Live reads", { state: "attention", summary: "reads-summary" }),
+      status("Socket", { state: "ok", summary: "socket-summary" }),
+    ]);
+    await openReport();
+    // The row that needs a look stays on its own, outside the card.
+    expect(summary("reads-summary")).toBeTruthy();
+    expect(summary("All normal")).toBeTruthy();
+    expect(screen.queryByText("conn-summary")).toBeNull();
+
+    const card = screen.getByRole("button", {
+      name: /Connection, Database, Socket/,
+    });
+    fireEvent.click(card);
+    expect(summary("conn-summary")).toBeTruthy();
+    expect(summary("db-summary")).toBeTruthy();
+    expect(summary("socket-summary")).toBeTruthy();
+  });
+
   it("is green with an info row alone", () => {
     renderReport([info("worktree")]);
     expect(button().dataset.health).toBe("ok");

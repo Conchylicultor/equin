@@ -28,6 +28,7 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   isPulsing,
+  isTransitioning,
   levelOf,
   type HealthReportRow,
   type ReportedStatus,
@@ -233,6 +234,51 @@ export function StatusRowView({
           <LeadBox />
           <Fill>
             {renderIsolated(HealthReport.Row, row as unknown as Contribution)}
+          </Fill>
+        </Stack>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+/**
+ * The quiet rows folded into one card (`foldQuietRows`): a green dot, every
+ * folded row's title, "All normal" — and, expanded, each row as it would read
+ * on its own, indented under the card's title. The rows are passed in already
+ * rendered, each in its own boundary.
+ */
+export function QuietRowsView({
+  rows,
+  statuses,
+  children,
+}: {
+  rows: ReadonlyArray<SealedStatusRow>;
+  statuses: Readonly<Record<string, ReportedStatus>>;
+  children: ReactNode;
+}) {
+  const leading = (
+    <ControlSizeProvider size="lg">
+      <HealthDot
+        level="ok"
+        pulsing={rows.some((row) => isTransitioning(statuses[row.id]))}
+      />
+    </ControlSizeProvider>
+  );
+  return (
+    <Collapsible>
+      <ExpandTrigger actions={null}>
+        <RowText
+          leading={leading}
+          title={rows.map((row) => row.title).join(", ")}
+          summary="All normal"
+          summaryClassName={SUMMARY_CLASS.ok}
+        />
+      </ExpandTrigger>
+      <CollapsibleContent>
+        <Stack direction="row" gap="sm" align="start" className="px-row">
+          <LeadBox />
+          <Fill>
+            <Stack gap="2xs">{children}</Stack>
           </Fill>
         </Stack>
       </CollapsibleContent>

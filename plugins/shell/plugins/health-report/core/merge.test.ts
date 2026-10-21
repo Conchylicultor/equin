@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { mergeHealth, sortRows, verdictOf, type ReportedStatus } from "./merge";
+import {
+  foldQuietRows,
+  mergeHealth,
+  sortRows,
+  verdictOf,
+  type ReportedStatus,
+} from "./merge";
 import type { HealthStatus } from "./types";
 
 const ok = (summary = "fine"): HealthStatus => ({ state: "ok", summary });
@@ -180,5 +186,60 @@ describe("sortRows", () => {
     const input = [row("b", "status", 2, ok()), row("a", "status", 1, ok())];
     sortRows(input, (r) => r.status);
     expect(input.map((r) => r.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("foldQuietRows", () => {
+  type R = {
+    id: string;
+    kind: "status" | "info";
+    order: number;
+    status?: ReportedStatus;
+    plain: boolean;
+  };
+  const row = (
+    id: string,
+    status: ReportedStatus,
+    plain = true,
+    kind: R["kind"] = "status",
+  ): R => ({ id, kind, order: 0, status, plain });
+  const shape = (rows: R[]) =>
+    foldQuietRows(
+      rows,
+      (r) => r.status,
+      (r) => r.plain,
+    ).map((item) =>
+      item.kind === "row" ? item.row.id : item.rows.map((r) => r.id),
+    );
+
+  it("folds every plain ok status row into one card where the first sorts", () => {
+    expect(
+      shape([
+        row("info", undefined, true, "info"),
+        row("bad", critical()),
+        row("conn", ok()),
+        row("queue", ok(), false),
+        row("db", ok()),
+        row("n/a", notApplicable()),
+      ]),
+    ).toEqual(["info", "bad", ["conn", "db"], "queue", "n/a"]);
+  });
+
+  it("leaves a plain row that is not ok on its own", () => {
+    expect(
+      shape([
+        row("db", attention()),
+        row("conn", ok()),
+        row("reads", ok()),
+        row("late", undefined),
+      ]),
+    ).toEqual(["db", ["conn", "reads"], "late"]);
+  });
+
+  it("folds nothing when fewer than two rows are quiet", () => {
+    expect(shape([row("db", attention()), row("conn", ok())])).toEqual([
+      "db",
+      "conn",
+    ]);
   });
 });

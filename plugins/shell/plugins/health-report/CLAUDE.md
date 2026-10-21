@@ -79,6 +79,13 @@ accessible name: "All systems normal", "Checking…", the one non-green row's ow
 summary, or "N things need attention". When every unknown row has said why it
 is unknown, the verdict gives that reason instead of "Checking…".
 
+**Quiet rows fold into one card** (`foldQuietRows`, pure, bun-tested): a
+status row with nothing beyond its summary (no `glance`, `component` or
+`actions`) that is `ok` only says "fine", so two or more of them collapse into
+one card — their titles, "All normal" — that lists each when expanded. A row
+leaves the card the moment it is not `ok`, so a problem is never behind a
+chevron. The rule reads only the row's shape and state, never its id.
+
 Row order (`sortRows`): info rows first, then status rows worst-first
 (`not-applicable` last), ties by
 `order`, then registration order. This is why the slot is a plain `defineSlot`
@@ -186,10 +193,12 @@ detail is rendered through `renderIsolated`.
     - `HealthStatus`
     - `InfoRow`
     - `ReportedStatus`
+    - `ReportItem`
     - `RowLevel`
     - `SortableRow`
     - `StatusRow`
   - Exports (values):
+    - `foldQuietRows`
     - `isPending`
     - `isPulsing`
     - `isTransitioning`

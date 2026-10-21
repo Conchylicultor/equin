@@ -4,15 +4,58 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { mergeHealth, sortRows, verdictOf } from "../../core";
+import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  foldQuietRows,
+  mergeHealth,
+  sortRows,
+  verdictOf,
+  type HealthReportRow,
+  type ReportedStatus,
+} from "../../core";
 import { HealthReport } from "../slots";
 import { HealthStore } from "../internal/store";
 import { HealthDot } from "./health-dot";
-import { InfoRowView, StatusRowView } from "./health-row";
+import { InfoRowView, QuietRowsView, StatusRowView } from "./health-row";
+
+type SealedRow = SealContributions<HealthReportRow>;
+
+/** A row with nothing beyond its summary — what `foldQuietRows` may fold. */
+function isPlain(row: SealedRow): boolean {
+  return (
+    row.kind === "status" &&
+    row.glance === undefined &&
+    row.component === undefined &&
+    row.actions === undefined
+  );
+}
+
+/** One row in its own boundary, so a crashing contributor leaves the rest readable. */
+function BoundaryRow({
+  row,
+  statuses,
+}: {
+  row: SealedRow;
+  statuses: Readonly<Record<string, ReportedStatus>>;
+}) {
+  return (
+    <PluginErrorBoundary
+      slot={HealthReport.Row.id}
+      label={row._pluginId ?? row.id}
+    >
+      {row.kind === "status" ? (
+        <StatusRowView row={row} status={statuses[row.id]} />
+      ) : (
+        <InfoRowView row={row} useInfo={row.useInfo} />
+      )}
+    </PluginErrorBoundary>
+  );
+}
 
 /**
  * The report: a header with the merged dot and the verdict, then every row —
- * info rows first, then status rows worst-first, ties by `order`. No footer:
+ * info rows first, then status rows worst-first, ties by `order` — with the
+ * plain rows that are fine folded into one expandable card (`foldQuietRows`). No footer:
  * a row that has a pane to point at does so through its own `actions`, so the
  * report never names a contributor.
  *
@@ -27,9 +70,9 @@ export function HealthReportPanel() {
   );
   const merged = mergeHealth(statusList);
   const verdict = verdictOf(statusList);
-  const sorted = sortRows(rows, (row) =>
-    row.kind === "status" ? statuses[row.id] : undefined,
-  );
+  const statusOf = (row: SealedRow) =>
+    row.kind === "status" ? statuses[row.id] : undefined;
+  const items = foldQuietRows(sortRows(rows, statusOf), statusOf, isPlain);
 
   return (
     <>
@@ -46,25 +89,32 @@ export function HealthReportPanel() {
           </Text>
         </Fill>
       </Line>
-      {sorted.length > 0 ? (
+      {items.length > 0 ? (
         <Stack gap="2xs" className="p-xs">
           {/* Not a DataView: these are the report's own rows — slot
               contributions, a handful at most — in an order the report
-              decides, inside a transient popover. Each row has its own
-              boundary so one crashing contributor leaves the rest readable. */}
-          {sorted.map((row) => (
-            <PluginErrorBoundary
-              key={row.id}
-              slot={HealthReport.Row.id}
-              label={row._pluginId ?? row.id}
-            >
-              {row.kind === "status" ? (
-                <StatusRowView row={row} status={statuses[row.id]} />
-              ) : (
-                <InfoRowView row={row} useInfo={row.useInfo} />
-              )}
-            </PluginErrorBoundary>
-          ))}
+              decides, inside a transient popover. */}
+          {items.map((item) =>
+            item.kind === "row" ? (
+              <BoundaryRow
+                key={item.row.id}
+                row={item.row}
+                statuses={statuses}
+              />
+            ) : (
+              <QuietRowsView
+                key="quiet"
+                rows={item.rows.flatMap((row) =>
+                  row.kind === "status" ? [row] : [],
+                )}
+                statuses={statuses}
+              >
+                {item.rows.map((row) => (
+                  <BoundaryRow key={row.id} row={row} statuses={statuses} />
+                ))}
+              </QuietRowsView>
+            ),
+          )}
         </Stack>
       ) : null}
     </>
