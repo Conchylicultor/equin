@@ -62,7 +62,12 @@ import { launchWithHeldTurn } from "./turns";
 import { spawnConversationJob } from "./spawn-job";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
-import { resolvePreprompt } from "@plugins/conversations/plugins/preprompts/server";
+import { resolvePrepromptItem } from "@plugins/conversations/plugins/preprompts/server";
+import {
+  getConversationPreprompt,
+  recordConversationPreprompt,
+  type ConversationPrepromptSnapshot,
+} from "@plugins/conversations/plugins/conversation-preprompt/server";
 import { getTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
 import { getTaskEffort } from "@plugins/tasks/plugins/task-effort/server";
 import { getTaskWorkspace } from "@plugins/conversations/plugins/workspace/plugins/launch-option/server";
@@ -127,7 +132,8 @@ export interface CreateConversationOpts {
 // The `runtime.create` options a launch spawns with — the spawn job's `create`
 // input, and the inline reuse-branch spawn's options.
 interface SpawnCreate {
-  prompt?: string;
+  /** Appended to Claude Code's own system prompt (the conversation's preprompt). */
+  appendSystemPrompt?: string;
   model: ConversationModel;
   effort?: EffortLevel;
   resumeSessionId?: string;
@@ -172,10 +178,11 @@ export interface PreparedConversation {
   rawPrompt: string | undefined;
   // The launch's prompt as the conversation's first ledger turn (kind
   // `launch`), held from the commit on: the pane echoes it at once, and the
-  // launch delivers it as its message (`launchWithHeldTurn`), behind
-  // `create.prompt` — which is then only the baked preprompt block.
+  // launch delivers it as its message (`launchWithHeldTurn`).
   launchTurn: { text: string; typedText: string } | undefined;
-  prepromptId: string | undefined;
+  // The preprompt this conversation runs under, snapshotted on the commit —
+  // the instructions every spawn of it appends to the system prompt.
+  preprompt: ConversationPrepromptSnapshot | undefined;
   // The attempt's workspace: its path and the spec it was launched with.
   workspace: WorkspaceAt;
   create: SpawnCreate;
@@ -186,6 +193,33 @@ export interface PreparedConversation {
     | { kind: "reuse"; attemptId: string; transcriptCopy?: TranscriptCopy }
     // Mint a new attempt (and a new task when `taskId` is absent).
     | { kind: "new"; attemptId: string; taskId: string | undefined };
+}
+
+// The launching task's selected preprompt, resolved from the library.
+async function taskPreprompt(
+  taskId: string | undefined,
+): Promise<ConversationPrepromptSnapshot | undefined> {
+  if (!taskId) return undefined;
+  const item = resolvePrepromptItem(
+    (await getTaskPreprompt(taskId))?.prepromptId,
+  );
+  return (
+    item && {
+      prepromptId: item.id,
+      title: item.title,
+      text: item.prompt,
+      icon: item.icon,
+    }
+  );
+}
+
+// A preprompt as the runtime adds it to Claude Code's own system prompt (the
+// preset is kept, never replaced), wrapped in <special_instructions> so the
+// model reads it as an imperative to follow.
+function systemPromptAppend(
+  preprompt: ConversationPrepromptSnapshot | undefined,
+): string | undefined {
+  return preprompt ? wrapPreprompt(preprompt.text) : undefined;
 }
 
 // Phase 1 of a launch: READS ONLY. Everything slow or off-DB (fork-source
@@ -282,7 +316,7 @@ export async function prepareConversation(
   let workspace: WorkspaceAt;
   let target: PreparedConversation["target"];
   // The task this conversation belongs to, used to resolve a per-task preprompt
-  // (baked into the first user turn as a <special_instructions> block). Derived
+  // (appended to the system prompt as a <special_instructions> block). Derived
   // from the existing attempt when reusing a worktree, otherwise the task we
   // launch under — undefined when the commit will create the task, which then
   // has no preprompt or effort of its own yet.
@@ -336,28 +370,17 @@ export async function prepareConversation(
       }
     : undefined;
 
-  // Resolve the preprompt (config list-item id → text). It comes only from the
-  // launching task — a launch has no preprompt of its own, so a conversation
-  // can never run under one its task does not show. A dangling or empty
-  // selection resolves to undefined → nothing is injected.
-  const prepromptId = effectiveTaskId
-    ? (await getTaskPreprompt(effectiveTaskId))?.prepromptId
-    : undefined;
-  const preprompt = resolvePreprompt(prepromptId);
-
-  // Bake the preprompt into the FIRST user turn (wrapped in
-  // <special_instructions>) so it's durable, visible in the transcript, and
-  // replayed verbatim on resume/fork. Only on a fresh launch: a
-  // forked/resumed transcript already contains the baked first turn, so
-  // re-injecting (`claude --resume --fork-session` copies the original) would
-  // duplicate it. The launch turn rides behind it (`mergeLaunchPrompt`); with
-  // none, the first turn is the preprompt block alone.
-  const basePrompt =
-    preprompt && !resumeSessionId ? wrapPreprompt(preprompt) : undefined;
+  // The preprompt the conversation runs under. A fork keeps its source's —
+  // the session it continues was started under those instructions. Otherwise
+  // the launching task's: a launch has no preprompt of its own, so a
+  // conversation can never run under one its task does not show. A dangling
+  // or empty selection resolves to undefined → nothing is appended.
+  const preprompt = opts.forkFromConversationId
+    ? await getConversationPreprompt(opts.forkFromConversationId)
+    : await taskPreprompt(effectiveTaskId);
 
   // Thinking mode: the launching task's, for the same reason as the preprompt.
-  // Threaded to the runtime as CLI args; no prompt mutation (unlike preprompt,
-  // ultracode rides --settings, not the transcript).
+  // Threaded to the runtime as CLI args (ultracode rides --settings).
   const effort = await resolveTaskEffort(effectiveTaskId);
   const runtimeId = resolveRuntimeId(opts.runtimeId, inheritedRuntime);
 
@@ -369,11 +392,11 @@ export async function prepareConversation(
     kind: opts.kind ?? "user",
     rawPrompt: opts.prompt,
     launchTurn,
-    prepromptId,
+    preprompt,
     workspace,
     target,
     create: {
-      prompt: basePrompt,
+      appendSystemPrompt: systemPromptAppend(preprompt),
       model,
       effort,
       resumeSessionId,
@@ -441,6 +464,12 @@ export async function commitConversation(
     tx,
   );
 
+  // The instructions of record for every later spawn (resume, fork), on this
+  // transaction, so the conversation never exists without them.
+  if (p.preprompt) {
+    await recordConversationPreprompt(conv.id, p.preprompt, tx);
+  }
+
   // The launch's prompt is a turn from the start: held (the row above is
   // `starting`), on this transaction, so the conversation never exists
   // without the message it was launched with.
@@ -470,7 +499,7 @@ export async function commitConversation(
       createdAt: conv.createdAt.toISOString(),
       prompt: p.rawPrompt?.trim() || undefined,
       kind: conv.kind,
-      prepromptId: p.prepromptId,
+      prepromptId: p.preprompt?.prepromptId,
     },
     { tx: queueTx },
   );
@@ -524,7 +553,7 @@ export async function finishConversation(
       );
     }
     // The launch turn rides the launch message, as in the spawn job.
-    await launchWithHeldTurn(p.conversationId, p.create.prompt, (prompt) =>
+    await launchWithHeldTurn(p.conversationId, (prompt) =>
       Runtime.get(p.runtimeId).create(
         p.conversationId,
         p.workspace.path,
@@ -664,6 +693,10 @@ async function respawnResume(row: Conversation): Promise<void> {
     }),
     {
       resumeSessionId: row.claudeSessionId!,
+      // Not in the transcript: the system prompt is given anew on every spawn.
+      appendSystemPrompt: systemPromptAppend(
+        await getConversationPreprompt(row.id),
+      ),
       model: row.model,
       effort: await resolveTaskEffort(row.taskId),
     },

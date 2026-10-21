@@ -4,10 +4,10 @@ import "./internal/saved-icons";
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { prepromptsConfig } from "../shared/config";
 
-export { resolvePreprompt, resolvePrepromptItem } from "./internal/resolve";
+export { resolvePrepromptItem } from "./internal/resolve";
 
 export default {
   description:
-    "Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.",
+    "Library of named instruction snippets added to a task's agent system prompt, after Claude Code's own, as a <special_instructions> block.",
   contributions: [ConfigV2.Register({ descriptor: prepromptsConfig })],
 } satisfies ServerPluginDefinition;

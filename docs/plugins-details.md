@@ -12514,10 +12514,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 75 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 78 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×25
       - `conversations/turn-ledger` ×11
       - `conversations/transcript-watcher` ×7
+      - `conversations/conversation-preprompt` ×3
       - `conversations/spawn-failure` ×3
       - `conversations/workspace` ×3
       - `infra/claude-cli/availability` ×3
@@ -12529,7 +12530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/auto-start` ×2
       - `tasks/task-category` ×2
       - `conversations/model-provider/catalog.getModelCatalog`
-      - `conversations/preprompts.resolvePreprompt`
+      - `conversations/preprompts.resolvePrepromptItem`
       - `conversations/workspace/launch-option.getTaskWorkspace`
       - `infra/attachments.getAttachment`
       - `infra/jobs.defineJob`
@@ -13246,7 +13247,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConversationCategorySchema`
           - `SetCategoryItemBodySchema`
           - `setConversationCategory`
-    - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with a default-glyph fallback). Serves the snapshot of the launching task's selected preprompt (id + title + text + icon) on each conversation, surfaced as a chip in the conversation header. The job that takes the snapshot when a conversation is created (it resolves the preprompt from config) lives in the machine half.
+    - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with a default-glyph fallback). The snapshot of the preprompt each conversation was launched with (id + title + text + icon): written by the conversation launch on its own transaction, read back by every spawn of the conversation as the instructions appended to its system prompt, and served to the header chip.
       - Web:
         - Contributes:
           - `conversationPane.Actions` "preprompt" → `PrepromptChip`
@@ -13269,9 +13270,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/popover.InlinePopover`
         - Exports (values): `useConversationPreprompt`
       - Server:
-        - Contributes:
-          - `resource.declare` "conversation-preprompts:rows"
-          - `trigger` "conversation-preprompt.record"
+        - Contributes: `resource.declare` "conversation-preprompts:rows"
         - Uses:
           - `database.db`
           - `database/sql-projection.nullable`
@@ -13282,8 +13281,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons/saved-sources.defineSavedIconSource`
         - DB schema: `plugins/conversations/plugins/conversation-preprompt/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)
+        - Exports (types): `ConversationPrepromptSnapshot`
         - Exports (values):
           - `conversationPreprompt`
+          - `getConversationPreprompt`
           - `recordConversationPreprompt`
         - Resources: `conversation-preprompts:rows` (keyed, point)
       - Core:
@@ -13303,9 +13304,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
-        - Imported by: `apps/agent-manager/demo`
-      - Machine:
-        - Register: `defineJob('conversation-preprompt.record')`
+        - Imported by:
+          - `apps/agent-manager/demo`
+          - `conversations`
     - **`conversation-progress`** — 4-step progress bar (started → designed → implemented → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed): serves the per-conversation progress row and marks every conversation of an attempt pushed when its work lands. The git heuristic that classifies the first three phases runs in the machine half.
       - Web:
         - Contributes:
@@ -17399,7 +17400,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `loadRouteForConversation`
       - Cross-plugin:
         - Imported by: `conversations/conversations-view`
-    - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.
+    - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets added to a task's agent system prompt, after Claude Code's own, as a <special_instructions> block.
       - Web:
         - Contributes: `ConfigV2.WebRegister` "config"
         - Uses:
@@ -17428,9 +17429,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.getConfig`
           - `config_v2.watchConfig`
           - `ui/icons/saved-sources.defineSavedIconSource`
-        - Exports (values):
-          - `resolvePreprompt`
-          - `resolvePrepromptItem`
+        - Exports (values): `resolvePrepromptItem`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
@@ -46383,7 +46382,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/auto-start`
           - `tasks/task-deps-tree`
           - `tasks/task-detail`
-    - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
+    - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is added to the agent's system prompt on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, added to the agent's system prompt at launch, after Claude Code's own, as a <special_instructions> block.
       - Web:
         - Contributes: `TaskLaunch.Option` "Preprompt" → `PrepromptLaunchControl`
         - Uses:

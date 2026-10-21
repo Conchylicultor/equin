@@ -19,10 +19,11 @@
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "held-turn-undelivered"
     - `resource.declare` "conversations.partial-message"
-  - Uses: 75 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 78 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×25
     - `conversations/turn-ledger` ×11
     - `conversations/transcript-watcher` ×7
+    - `conversations/conversation-preprompt` ×3
     - `conversations/spawn-failure` ×3
     - `conversations/workspace` ×3
     - `infra/claude-cli/availability` ×3
@@ -34,7 +35,7 @@
     - `tasks/auto-start` ×2
     - `tasks/task-category` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
-    - `conversations/preprompts.resolvePreprompt`
+    - `conversations/preprompts.resolvePrepromptItem`
     - `conversations/workspace/launch-option.getTaskWorkspace`
     - `infra/attachments.getAttachment`
     - `infra/jobs.defineJob`
@@ -314,7 +315,7 @@
         - Plugins:
           - **`baseline`** (excluded) — The model catalog of a host without the computer: provides ModelCatalogSource as the code baseline (BASELINE_MODELS) — the catalog of a machine that never probed its Claude CLI, since there is no…
   - **`pane-restore`** — Saves and restores the pane route per conversation in the budgeted web storage.
-  - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a…
+  - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets added to a task's agent system prompt, after Claude Code's…
   - **`question-relay`** — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form, answered as the tool's real result. The AskUserQuestion relay's backend…
   - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
   - **`runtime-catalog`**

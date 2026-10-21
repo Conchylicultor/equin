@@ -46,7 +46,7 @@ export const spawnConversationJob = defineJob({
     workspace: WorkspaceSpecSchema.default({ kind: "worktree" }),
     runtimeId: z.string(),
     create: z.object({
-      prompt: z.string().optional(),
+      appendSystemPrompt: z.string().optional(),
       model: ConversationModelSchema,
       effort: EffortLevelSchema.optional(),
       resumeSessionId: z.string().optional(),
@@ -89,10 +89,9 @@ export const spawnConversationJob = defineJob({
       if (!(await runtime.isRunning(conversationId))) {
         // Path A of held-turn delivery (turns.ts): the oldest held turn — the
         // launch's own prompt (kind `launch`), else one the user sent while
-        // this was starting — becomes the launch message, behind the baked
-        // preprompt block `create.prompt` carries, so Claude starts on it
-        // directly instead of idling at an empty prompt.
-        await launchWithHeldTurn(conversationId, create.prompt, (prompt) =>
+        // this was starting — becomes the launch message, so Claude starts on
+        // it directly instead of idling at an empty prompt.
+        await launchWithHeldTurn(conversationId, (prompt) =>
           runtime.create(
             conversationId,
             worktreePath,

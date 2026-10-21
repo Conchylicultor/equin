@@ -30,15 +30,3 @@ export function resolvePrepromptItem(
   const icon = item.icon?.icon != null ? item.icon : null;
   return { id: item.id, title: item.title, prompt, icon };
 }
-
-/**
- * Resolve a preprompt id to its prompt text. Returns undefined when the id is
- * absent, deleted, or resolves to empty text — callers inject nothing into the
- * first user turn in that case (fail-soft, never crashes a launch over a
- * dangling reference).
- */
-export function resolvePreprompt(
-  id: string | null | undefined,
-): string | undefined {
-  return resolvePrepromptItem(id)?.prompt;
-}

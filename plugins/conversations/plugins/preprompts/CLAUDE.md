@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.
+- Description: Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets added to a task's agent system prompt, after Claude Code's own, as a <special_instructions> block.
 - Web:
   - Contributes: `ConfigV2.WebRegister` "config"
   - Uses:
@@ -33,9 +33,7 @@
     - `config_v2.getConfig`
     - `config_v2.watchConfig`
     - `ui/icons/saved-sources.defineSavedIconSource`
-  - Exports (values):
-    - `resolvePreprompt`
-    - `resolvePrepromptItem`
+  - Exports (values): `resolvePrepromptItem`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

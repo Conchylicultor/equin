@@ -309,7 +309,8 @@ export async function buildJsonlEvents(
   // ended mid-call (`toolDenialKind: "interrupted"`): the synthetic reply it
   // appends to such a line ("No response requested.") is skipped below.
   const sessionEndedResultLines = new Set<string>();
-  // The launch preprompt is baked into the first user turn (wrapped in
+  // A conversation launched before preprompts moved to the system prompt has
+  // its preprompt baked into the first user turn (wrapped in
   // <special_instructions>). Lift it out into a dedicated `preprompt` event so
   // it renders as a collapsed Instructions card, not as raw user text. Only
   // ever appears once; set true on a real hit so a later turn can't re-trigger.

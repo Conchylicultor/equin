@@ -281,8 +281,15 @@ const session = query({
   options: {
     cwd: options.cwd,
     // Exactly the CLI's harness: its system prompt and the launch's settings
-    // sources (CLAUDE.md, hooks, guards, MCP servers).
-    systemPrompt: { type: "preset", preset: "claude_code" },
+    // sources (CLAUDE.md, hooks, guards, MCP servers). The launch's own
+    // instructions (a preprompt) are appended to the preset, never replace it.
+    systemPrompt: {
+      type: "preset",
+      preset: "claude_code",
+      ...(options.appendSystemPrompt
+        ? { append: options.appendSystemPrompt }
+        : {}),
+    },
     settingSources: options.settingSources,
     settings: options.settings,
     ...(options.mcpServers ? { mcpServers: options.mcpServers } : {}),

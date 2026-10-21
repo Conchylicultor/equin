@@ -14,7 +14,7 @@ export { useTaskPreprompt } from "./hooks";
 
 export default {
   description:
-    "Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is prepended to the agent's first user turn on launch.",
+    "Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is added to the agent's system prompt on launch.",
   contributions: [
     // A launch option, not a section: it configures the agent's first turn, so
     // it belongs beside the description and the Launch button rather than in
@@ -23,7 +23,7 @@ export default {
       id: prepromptLaunchOption.id,
       label: "Preprompt",
       description:
-        "A reusable set of instructions prepended to the agent's first message, such as a working style or a checklist to follow.",
+        "A reusable set of instructions added to the agent's system prompt, such as a working style or a checklist to follow.",
       def: prepromptLaunchOption,
       component: PrepromptLaunchControl,
       // Its own pill on the leading half of a composer bar: a preprompt shapes

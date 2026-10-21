@@ -29,6 +29,7 @@ export interface SdkLaunchInput {
   resumeSessionId?: string;
   forkSession?: boolean;
   prompt?: string;
+  appendSystemPrompt?: string;
 }
 
 /**
@@ -62,6 +63,7 @@ export function sdkLaunchOptions(input: SdkLaunchInput): AgentLaunchOptions {
     fork: input.forkSession ?? false,
     sessionId: launchSessionId(input.resumeSessionId, input.forkSession),
     prompt: input.prompt && input.prompt.length > 0 ? input.prompt : null,
+    appendSystemPrompt: input.appendSystemPrompt || null,
   };
 }
 

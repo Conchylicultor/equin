@@ -262,6 +262,7 @@ export const sdkRuntime: ConversationRuntime = {
     launch: LaunchFragment,
     opts?: {
       prompt?: string;
+      appendSystemPrompt?: string;
       model?: ConversationModel;
       effort?: EffortLevel;
       resumeSessionId?: string;
@@ -283,6 +284,7 @@ export const sdkRuntime: ConversationRuntime = {
       resumeSessionId: opts?.resumeSessionId,
       forkSession: opts?.forkSession,
       prompt: opts?.prompt,
+      appendSystemPrompt: opts?.appendSystemPrompt,
     });
     const fresh = !eventsExist(id);
     await prepareAgentRow(id, cwd, !fresh, options.sessionId);

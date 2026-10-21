@@ -26,7 +26,7 @@ import { conversationRuntime, withTerminal, type TypedTurn } from "./runtime";
 // exactly one of two paths:
 //
 //   A. The launch message (spawn-job.ts → launchWithHeldTurn): the oldest held
-//      turn rides the launch prompt, after the baked preprompt block.
+//      turn is the launch prompt.
 //   B. The flush once the agent can take input (deliver-held-turns-job.ts →
 //      deliverHeldTurns), oldest first, through the ordinary verified send.
 //
@@ -164,21 +164,9 @@ export async function deliverHeldTurns(conversationId: string): Promise<void> {
 }
 
 /**
- * The launch message: the launch's own prompt (which carries the baked
- * preprompt block first, when the task has one), then the held turn.
- */
-export function mergeLaunchPrompt(
-  basePrompt: string | undefined,
-  heldText: string,
-): string {
-  return basePrompt ? `${basePrompt}\n\n${heldText}` : heldText;
-}
-
-/**
- * Path A. `launch` starts the session with the prompt it is handed; the oldest
- * held turn, if any, rides it — its row records the whole launch prompt as what
- * was typed, which is what the CLI's hook reports for a launch argument. A
- * launch that throws puts the turn back to held: it never left.
+ * Path A. `launch` starts the session with the prompt it is handed: the oldest
+ * held turn, if any, is the launch prompt. A launch that throws puts the turn
+ * back to held: it never left.
  *
  * Call it only for a session that does not exist yet: a retry whose earlier
  * attempt already created the session must not, since `create` would no-op and
@@ -186,26 +174,24 @@ export function mergeLaunchPrompt(
  */
 export async function launchWithHeldTurn(
   conversationId: string,
-  basePrompt: string | undefined,
   launch: (prompt: string | undefined) => Promise<void>,
 ): Promise<void> {
   await withTerminal(conversationId, async () => {
     const [first] = await listHeldTurns(conversationId);
     if (!first) {
-      await launch(basePrompt);
+      await launch(undefined);
       return;
     }
-    const prompt = mergeLaunchPrompt(basePrompt, first.typedText);
     const claimed = await applyTurnEvent(first.id, {
       kind: "deliver",
-      typedText: prompt,
+      typedText: first.typedText,
     });
     if (claimed.state !== "typing") {
-      await launch(basePrompt);
+      await launch(undefined);
       return;
     }
     try {
-      await launch(prompt);
+      await launch(first.typedText);
     } catch (err) {
       await applyTurnEvent(first.id, {
         kind: "release",

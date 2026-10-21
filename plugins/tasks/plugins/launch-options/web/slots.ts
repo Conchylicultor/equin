@@ -116,7 +116,7 @@ export interface LaunchOptionPill<V> {
 
 /**
  * One launch option: a labelled control that configures HOW the agent launches
- * (which model auto-starts it, which preprompt is prepended, which thinking
+ * (which model auto-starts it, which preprompt it is given, which thinking
  * mode it runs at). Each host owns its own chrome — the detail card paints a
  * label column, the draft card paints an inline chip — so a contribution is
  * only its control plus the value contract behind it.

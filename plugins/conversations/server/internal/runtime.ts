@@ -71,7 +71,13 @@ export interface ConversationRuntime {
     cwd: string,
     launch: LaunchFragment,
     opts?: {
+      /** The first user turn. */
       prompt?: string;
+      /**
+       * Added after Claude Code's own system prompt, never in its place. Not
+       * kept in the transcript, so every spawn of a session passes it again.
+       */
+      appendSystemPrompt?: string;
       model?: ConversationModel;
       effort?: EffortLevel;
       resumeSessionId?: string;

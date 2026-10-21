@@ -222,5 +222,13 @@ export const AgentLaunchOptionsSchema = z.object({
    * already took it, a new one takes it from here.
    */
   prompt: z.string().nullable(),
+  /**
+   * Added after Claude Code's own system prompt (`systemPrompt.append` on the
+   * `claude_code` preset), never in its place: the launch's instructions (a
+   * preprompt). Kept here, so a relaunch of the same agent (a rewind) keeps
+   * them. Defaulted for an options file written before the field existed —
+   * those sessions carry their instructions in the transcript instead.
+   */
+  appendSystemPrompt: z.string().nullable().default(null),
 });
 export type AgentLaunchOptions = z.infer<typeof AgentLaunchOptionsSchema>;

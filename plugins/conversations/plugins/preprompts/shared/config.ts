@@ -11,9 +11,9 @@ import {
   migrateClassicAvatar,
 } from "@plugins/fields/plugins/avatar/plugins/config/core";
 
-// Library of named preprompts. Each item's text is prepended to the agent's
-// first user turn (wrapped in a `<special_instructions>` block) when a task
-// that selects it launches an agent. Mirrors the prompt-templates config (a
+// Library of named preprompts. Each item's text is added to the agent's system
+// prompt, after Claude Code's own (wrapped in a `<special_instructions>`
+// block), when a task that selects it launches an agent. Mirrors the prompt-templates config (a
 // listField of { title, prompt }), but feeds the launch instead of the prompt
 // editor.
 type JsonObject = { [key: string]: JsonValue };
@@ -42,7 +42,7 @@ export const prepromptsConfig = defineConfig({
     preprompts: listField({
       label: "Preprompts",
       description:
-        "Instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.",
+        "Instruction snippets added to a task's agent system prompt, after Claude Code's own, as a <special_instructions> block.",
       itemFields: {
         icon: avatarField({
           label: "Icon",

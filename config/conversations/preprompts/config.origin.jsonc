@@ -1,5 +1,5 @@
 // @hash b6e792270644
 {
-  // Instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.
+  // Instruction snippets added to a task's agent system prompt, after Claude Code's own, as a <special_instructions> block.
   "preprompts": []
 }

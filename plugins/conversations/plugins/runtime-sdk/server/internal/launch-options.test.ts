@@ -51,6 +51,20 @@ describe("sdkLaunchOptions", () => {
     expect(o.prompt).toBeNull();
   });
 
+  test("instructions ride the system prompt, not the first turn", () => {
+    const o = sdkLaunchOptions({
+      ...base,
+      launch: { settings: {} },
+      prompt: "hi",
+      appendSystemPrompt: "be terse",
+    });
+    expect(o).toMatchObject({ prompt: "hi", appendSystemPrompt: "be terse" });
+    expect(
+      sdkLaunchOptions({ ...base, launch: { settings: {} } })
+        .appendSystemPrompt,
+    ).toBeNull();
+  });
+
   test("a fragment setting a key the launch already sets throws", () => {
     expect(() =>
       sdkLaunchOptions({ ...base, launch: { settings: { hooks: {} } } }),
@@ -86,6 +100,7 @@ describe("rewindRelaunchOptions", () => {
     ...base,
     launch: { settings: {} },
     prompt: "first",
+    appendSystemPrompt: "be terse",
     forkSession: true,
     resumeSessionId: "src",
   });
@@ -104,6 +119,7 @@ describe("rewindRelaunchOptions", () => {
       sessionId: "sid",
       fork: false,
       prompt: null,
+      appendSystemPrompt: "be terse",
       cwd: "/w",
     });
   });

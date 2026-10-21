@@ -124,7 +124,7 @@ function prepared(taskId: string): PreparedConversation {
     kind: "user",
     rawPrompt: "do the thing",
     launchTurn: { text: "do the thing", typedText: "do the thing" },
-    prepromptId: undefined,
+    preprompt: undefined,
     workspace: {
       attemptId,
       path: `/tmp/${attemptId}`,

@@ -17,7 +17,7 @@ export { getTaskPreprompt, setTaskPreprompt } from "./internal/mutations";
 
 export default {
   description:
-    "Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.",
+    "Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, added to the agent's system prompt at launch, after Claude Code's own, as a <special_instructions> block.",
   contributions: [
     ...taskPrepromptsServed.declare,
     TaskLaunchServer({

@@ -2,15 +2,17 @@ import { z } from "zod";
 import { RequestConfigSchema } from "./request-config";
 import { RequestShapeChangeSchema, RequestShapeSchema } from "./request-shape";
 
-// Wire tag the agent reads in its first user turn. Named `special_instructions`
+// Wire tag wrapping a conversation's preprompt. Named `special_instructions`
 // (not `preprompt`) so the model reads it as an imperative to follow. The
 // internal event kind stays `preprompt`; the UI label is "Instructions". This
-// constant is the SINGLE SOURCE OF TRUTH shared by the launch injector
-// (lifecycle.ts) and the transcript parser (parse-jsonl.ts) — a drift between
-// the two would silently break extraction.
+// constant is the SINGLE SOURCE OF TRUTH shared by the launch (lifecycle.ts),
+// which appends the wrapped block to the agent's system prompt, and the
+// transcript parser (parse-jsonl.ts), which lifts the block out of the first
+// user turn of a conversation launched before that — when it was baked into
+// the turn instead.
 export const PREPROMPT_TAG = "special_instructions";
 
-/** Wrap preprompt text for prepending to the first user turn. */
+/** Wrap preprompt text as the block the agent's system prompt is given. */
 export function wrapPreprompt(text: string): string {
   return `<${PREPROMPT_TAG}>\n${text}\n</${PREPROMPT_TAG}>`;
 }
@@ -20,8 +22,8 @@ export function extractPreprompt(text: string): {
   preprompt: string | null;
   rest: string;
 } {
-  // Local regex (no `g` flag) — first match only; the preprompt is only ever
-  // injected into the first user turn.
+  // Local regex (no `g` flag) — first match only; the preprompt was only ever
+  // baked into the first user turn.
   const re = new RegExp(`<${PREPROMPT_TAG}>([\\s\\S]*?)</${PREPROMPT_TAG}>`);
   const m = re.exec(text);
   if (!m) return { preprompt: null, rest: text };
