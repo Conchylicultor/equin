@@ -58,7 +58,8 @@ HealthReport.Row({
 - **The chevron exists iff a `component` does** (detail-sections' rule). The
   detail is mounted only while expanded. `glance` sits inside the row's click
   target when the row is expandable, so it must be presentational — controls go
-  in `actions`.
+  in `actions`. It gets `expanded` (`GlanceProps`), so it can show less while
+  the row is collapsed.
 - **Point at your own pane from `actions`.** The report has no footer and never
   names a contributor's pane.
 
@@ -185,6 +186,7 @@ detail is rendered through `renderIsolated`.
     - `tasks/worktree-identity`
 - Core:
   - Exports (types):
+    - `GlanceProps`
     - `HealthInfo`
     - `HealthLevel`
     - `HealthMerge`

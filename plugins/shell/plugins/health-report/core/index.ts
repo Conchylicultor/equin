@@ -1,4 +1,5 @@
 export type {
+  GlanceProps,
   HealthInfo,
   HealthLevel,
   HealthMerge,

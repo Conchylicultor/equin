@@ -17661,7 +17661,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CONVERSATION_RUNTIMES`
           - `ConversationRuntimeIdSchema`
           - `DEFAULT_CONVERSATION_RUNTIME`
-    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, and the agent processes running — here, and in every other worktree (each as its task's chip). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file.
+    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — and the subscription's usage limits as meters (the week collapsed, the session too expanded; attention while a limit is reached). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file.
       - Web:
         - Contributes: `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
         - Uses:
@@ -17676,13 +17676,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/rigid.Rigid`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/live-state.combineResources`
+          - `primitives/relative-time.useNow`
           - `primitives/text-editor/inline-chip.renderInlineChip`
           - `shell/health-report.HealthReport`
       - Server:
         - Contributes:
           - `resource.declare` "runtime-sdk.agent-processes"
           - `resource.declare` "runtime-sdk.bundled-cli"
+          - `resource.declare` "runtime-sdk.claude-usage"
         - Uses:
           - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
           - `conversations/agent-launch.mergeLaunchSettings`
@@ -17694,6 +17697,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources:
           - `runtime-sdk.agent-processes` (push, notified)
           - `runtime-sdk.bundled-cli` (push, fixed)
+          - `runtime-sdk.claude-usage` (push, notified)
       - Machine:
         - Uses: `network/live.serveValue`
         - Register:
@@ -17708,6 +17712,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentLaunchOptions`
           - `AgentLifecycle`
           - `AgentProcesses`
+          - `ClaudeUsage`
+          - `ClaudeUsageRead`
+          - `ClaudeUsageWindow`
           - `CommandReply`
           - `HelloReply`
           - `OpenRequest`
@@ -17723,6 +17730,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentLifecycleSchema`
           - `AgentProcessesSchema`
           - `applyPartialFrame`
+          - `CLAUDE_USAGE_FILE`
+          - `claudeUsage`
+          - `claudeUsageOf`
+          - `ClaudeUsageReadSchema`
+          - `ClaudeUsageSchema`
           - `CommandReplySchema`
           - `DismissReplySchema`
           - `HelloReplySchema`
@@ -17737,7 +17749,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SubscribeReplySchema`
           - `TurnReplySchema`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/color-palette --foreground`
+        - Uses tokens:
+          - `ui/tokens/color-palette --destructive`
+          - `ui/tokens/color-palette --foreground`
+          - `ui/tokens/color-palette --input`
+          - `ui/tokens/color-palette --primary`
+          - `ui/tokens/color-palette --warning`
+          - `ui/tokens/density --space-sm`
+          - `ui/tokens/shape --spacing`
         - Imported by: `apps/agent-manager/demo`
     - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has run under. Knows nothing about transcript files.
       - Web:
@@ -37151,10 +37170,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×2
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 419 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 420 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
               - `apps` ×93
-              - `conversations` ×52
+              - `conversations` ×53
               - `page` ×25
               - `debug` ×23
               - `ui` ×21
@@ -41364,10 +41383,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 64 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×23
           - `debug` ×13
-          - `conversations` ×7
+          - `conversations` ×8
           - `infra` ×4
           - `tasks` ×4
           - `build` ×3
@@ -44603,6 +44622,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/worktree-identity`
       - Core:
         - Exports (types):
+          - `GlanceProps`
           - `HealthInfo`
           - `HealthLevel`
           - `HealthMerge`
@@ -48354,10 +48374,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 316 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 317 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×66
               - `apps` ×65
-              - `conversations` ×47
+              - `conversations` ×48
               - `debug` ×28
               - `page` ×20
               - `ui` ×16
@@ -48673,8 +48693,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 417 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×91
+            - Tokens used by: 418 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×92
               - `apps` ×82
               - `primitives` ×70
               - `page` ×35

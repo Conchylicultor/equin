@@ -28,6 +28,7 @@ import {
   agentLogPath,
   agentPidPath,
   agentSocketPath,
+  claudeUsagePath,
 } from "./paths";
 
 // The agent process itself: started detached — its own session and process
@@ -101,6 +102,8 @@ export async function startAgentProcess(
       agentSocketPath(id),
       "--pid-file",
       agentPidPath(id),
+      "--usage-file",
+      claudeUsagePath(),
     ]
       .map(shellWord)
       .join(" ");

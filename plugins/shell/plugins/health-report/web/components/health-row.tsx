@@ -180,6 +180,19 @@ function ExpandTrigger({
 }
 
 /**
+ * A row's glance, told whether the row is expanded: read off the row's own
+ * `Collapsible`, absent on a row with no detail (never expanded).
+ */
+function RowGlance({
+  Glance,
+}: {
+  Glance: NonNullable<SealedStatusRow["glance"]>;
+}) {
+  const expanded = useCollapsibleContext()?.open ?? false;
+  return <Glance expanded={expanded} />;
+}
+
+/**
  * A status row: dot, title, summary, optional glance, optional trailing actions.
  * A row that declares a `component` is expandable — the chevron exists exactly
  * when a detail does (detail-sections' rule) — and its detail is mounted only
@@ -215,7 +228,7 @@ export function StatusRowView({
       extra={
         Glance ? (
           <ContributedPart row={row}>
-            <Glance />
+            <RowGlance Glance={Glance} />
           </ContributedPart>
         ) : undefined
       }

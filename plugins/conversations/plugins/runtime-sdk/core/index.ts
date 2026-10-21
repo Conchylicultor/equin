@@ -27,6 +27,18 @@ export { sdkBundledCli, sameMajorMinor } from "./cli-version";
 export { AgentProcessesSchema, sdkAgentProcesses } from "./agent-processes";
 export type { AgentProcesses } from "./agent-processes";
 export {
+  CLAUDE_USAGE_FILE,
+  claudeUsage,
+  claudeUsageOf,
+  ClaudeUsageReadSchema,
+  ClaudeUsageSchema,
+} from "./claude-usage";
+export type {
+  ClaudeUsage,
+  ClaudeUsageRead,
+  ClaudeUsageWindow,
+} from "./claude-usage";
+export {
   applyPartialFrame,
   partialFrameOf,
   PartialFrameSchema,

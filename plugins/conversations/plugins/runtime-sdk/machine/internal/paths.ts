@@ -1,8 +1,12 @@
 import { join } from "node:path";
 import { socketsDir } from "@plugins/infra/plugins/launcher/data-dirs";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { AGENT_EVENTS_FILE, AGENT_OPTIONS_FILE } from "../../core";
-import { sdkAgentPidsDir, sdkAgentsDir } from "../../data-dirs";
+import {
+  AGENT_EVENTS_FILE,
+  AGENT_OPTIONS_FILE,
+  CLAUDE_USAGE_FILE,
+} from "../../core";
+import { claudeUsageDir, sdkAgentPidsDir, sdkAgentsDir } from "../../data-dirs";
 
 // Where one agent's pieces live — always under the namespace of the backend
 // that launched it, read here and never passed in, so a backend can only spell
@@ -55,6 +59,14 @@ export function ownAgentPidsDir(): string {
 
 export function agentPidPath(conversationId: string): string {
   return join(ownAgentPidsDir(), `${conversationId}.pid`);
+}
+
+/**
+ * The subscription usage every agent of every namespace overwrites — the
+ * limits are the account's, so the one path is machine-wide on purpose.
+ */
+export function claudeUsagePath(): string {
+  return claudeUsageDir.file(CLAUDE_USAGE_FILE);
 }
 
 export function agentSocketPath(conversationId: string): string {

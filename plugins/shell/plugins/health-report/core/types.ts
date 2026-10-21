@@ -55,6 +55,11 @@ interface RowCommon {
   actions?: ComponentType;
 }
 
+/** What a status row's `glance` is rendered with. */
+export interface GlanceProps {
+  expanded: boolean;
+}
+
 /**
  * A row with a health state. Its state feeds the merged dot.
  *
@@ -71,9 +76,11 @@ export interface StatusRow extends RowCommon {
    * Presentational content under the summary, shown while the report is open
    * (per-class fill bars). It sits inside the row's click target when the row
    * is expandable, so it must hold no controls of its own — put those in
-   * `actions`.
+   * `actions`. `expanded` says whether the row's detail is open (always
+   * `false` on a row without one), so a glance can show less while collapsed
+   * and leave the rest to sit beside its detail.
    */
-  glance?: ComponentType;
+  glance?: ComponentType<GlanceProps>;
   /**
    * The expandable detail, mounted only while the row is expanded. Its presence
    * is what gives the row a chevron: a row without one cannot be expanded.

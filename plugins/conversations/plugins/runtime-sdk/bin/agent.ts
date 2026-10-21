@@ -7,6 +7,7 @@
 //   events    ← <dir>/events.jsonl  (every SDK message, numbered, unchanged)
 //   partial   ← --socket, `subscribe` (the text being streamed, never on disk)
 //   pid       → --pid-file          (written at start, removed on exit)
+//   usage     → --usage-file        (the subscription's limits, last reported)
 //   stdout    → a human-readable log (the backend points it at `agent.log`)
 //
 // A dumb relay: it never interprets Claude's messages beyond what it needs for
@@ -21,17 +22,25 @@ import {
   type SDKMessage,
   type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer, type Socket } from "node:net";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
 import { basename, dirname, join } from "node:path";
 import { parseArgs } from "node:util";
+import { ZodError } from "zod";
 import {
   AGENT_EVENTS_FILE,
   AGENT_OPTIONS_FILE,
   AgentCommandSchema,
   AgentLaunchOptionsSchema,
   PROTOCOL_VERSION,
+  claudeUsageOf,
   applyPartialFrame,
   partialFrameOf,
   type AgentAnswer,
@@ -49,16 +58,20 @@ const { values: args } = parseArgs({
     dir: { type: "string" },
     socket: { type: "string" },
     "pid-file": { type: "string" },
+    "usage-file": { type: "string" },
   },
 });
-if (!args.dir || !args.socket || !args["pid-file"])
-  throw new Error("agent: --dir, --socket and --pid-file are required");
+if (!args.dir || !args.socket || !args["pid-file"] || !args["usage-file"])
+  throw new Error(
+    "agent: --dir, --socket, --pid-file and --usage-file are required",
+  );
 const dir = args.dir;
 mkdirSync(dir, { recursive: true });
 const eventsPath = join(dir, AGENT_EVENTS_FILE);
 const socketPath = args.socket;
 mkdirSync(dirname(socketPath), { recursive: true });
 const pidPath = args["pid-file"];
+const usagePath = args["usage-file"];
 const options = AgentLaunchOptionsSchema.parse(
   JSON.parse(readFileSync(join(dir, AGENT_OPTIONS_FILE), "utf8")),
 );
@@ -103,6 +116,28 @@ function emit(body: EventBody): void {
   // finds it on replay (the page cache outlives the process; only a host crash
   // would need an fsync).
   events.append(JSON.stringify(line));
+}
+
+// ── usage file ──────────────────────────────────────────────────────────────
+// The subscription's limits, from each `rate_limit_event`: one machine-wide
+// file every agent overwrites (the limits are the account's), written whole
+// through a rename so a reader never sees half of it.
+function recordUsage(msg: SDKMessage, t: number): void {
+  let usage;
+  try {
+    usage = claudeUsageOf(msg, t);
+  } catch (err) {
+    // The CLI changed the event's shape: said in the log, never fatal to the
+    // agent's turn — a meter is not worth a conversation.
+    if (!(err instanceof ZodError)) throw err;
+    log(`rate_limit_event did not parse: ${err.message}`);
+    return;
+  }
+  if (!usage) return;
+  mkdirSync(dirname(usagePath), { recursive: true });
+  const tmp = `${usagePath}.${process.pid}.tmp`;
+  writeFileSync(tmp, JSON.stringify(usage));
+  renameSync(tmp, usagePath);
 }
 
 // ── human log (agent.log) ──────────────────────────────────────────────────
@@ -480,6 +515,7 @@ for await (const msg of session) {
     continue;
   }
   emit({ kind: "sdk", payload: msg });
+  recordUsage(msg, Date.now());
   logMessage(msg);
   // A failed turn's message never lands in the transcript. A successful one
   // does, a few ms later: its text stays until the page sees it there.
