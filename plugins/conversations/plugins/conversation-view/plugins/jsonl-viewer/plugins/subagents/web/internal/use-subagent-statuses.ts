@@ -188,7 +188,7 @@ export function useConversationSubagents(
   }
 
   const rows = reads.data.activity;
-  const { idleTimes, resumeTimes } = reads.data.facts;
+  const { idleTimes, resumeTimes, stopTimes } = reads.data.facts;
   // The server filtered these by kind; the wire type is the whole event union.
   const taskNotifications = reads.data.facts.taskNotifications.filter(
     (e): e is TaskNotificationEvent => e.kind === "task-notification",
@@ -234,6 +234,7 @@ export function useConversationSubagents(
     rows,
     workflowCalls,
     taskNotifications,
+    stopTimes,
     conversationStatus,
   });
   const runEnded = new Map(

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import {
   JsonlEventSchema,
+  taskStopTimes,
   type JsonlEvent,
 } from "@plugins/conversations/plugins/transcript-source/core";
 import { agentCallsIn } from "./join";
@@ -13,9 +14,9 @@ import { workflowCallsIn } from "./workflow-join";
  * What sub-agent state needs from the PARENT transcript, folded over all of it.
  *
  * The conversation pane holds only its latest events, but a sub-agent's launch
- * (`Agent` call), completion (`task-notification`), resume and idle can sit
- * anywhere in the transcript — so the server reduces the whole transcript to
- * these few events and two small maps, and the page joins them to the
+ * (`Agent` call), completion (`task-notification`, or a `TaskStop` of its
+ * workflow run), resume and idle can sit anywhere in the transcript — so the
+ * server reduces the whole transcript to these few events and three small maps, and the page joins them to the
  * sub-agent rows as before. Events keep their transcript order.
  */
 export const ParentFactsSchema = z.object({
@@ -29,6 +30,8 @@ export const ParentFactsSchema = z.object({
   idleTimes: z.record(z.string(), z.string()),
   /** `agentResumeTimes`, by agent id. */
   resumeTimes: z.record(z.string(), z.string()),
+  /** `taskStopTimes`, by the stopped background task's id. */
+  stopTimes: z.record(z.string(), z.string()),
 });
 export type ParentFacts = z.infer<typeof ParentFactsSchema>;
 
@@ -40,6 +43,9 @@ export function parentFactsOf(events: readonly JsonlEvent[]): ParentFacts {
     workflowCalls: workflowCallsIn(events),
     idleTimes: Object.fromEntries(teammateIdleTimes(events)),
     resumeTimes: Object.fromEntries(agentResumeTimes(events)),
+    stopTimes: Object.fromEntries(
+      [...taskStopTimes(events)].map(([id, at]) => [id, at.toISOString()]),
+    ),
   };
 }
 

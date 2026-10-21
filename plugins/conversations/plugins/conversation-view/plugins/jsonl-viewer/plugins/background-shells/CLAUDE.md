@@ -22,7 +22,8 @@ on the page. A launch is a background `Bash` call whose result parses as the
 acknowledgement; a result that does not is a failed launch, never a shell. The
 end joins the `task-notification` by `taskId === shellId` (fallback: the
 notification's `toolUseId`). A shell the agent stopped itself with a
-successful `TaskStop` (`{ task_id }`) is `killed` at that call's result time —
+successful `TaskStop` (`{ task_id }`, read by `taskStopTimes` from
+`transcript-source/core`, which workflow runs share) is `killed` at that call's result time —
 Claude Code writes no notification for it, so without this it would read
 `running` for the conversation's whole life. With neither, the conversation's own
 liveness (`hasLiveProcess`, the same evidence `subagentRunState` uses) decides
@@ -136,6 +137,8 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
 - Core:
   - Uses:
     - `conversations.hasLiveProcess`
+    - `conversations/transcript-source.JsonlEvent`
+    - `conversations/transcript-source.taskStopTimes`
     - `network/live.liveValue`
   - Exports (types):
     - `BackgroundShell`

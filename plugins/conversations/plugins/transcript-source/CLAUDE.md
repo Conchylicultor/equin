@@ -4,7 +4,7 @@ A conversation's transcript, independent of the host that stores it.
 
 - **`core/`** — the transcript format: the `JsonlEvent` protocol the
   conversation view renders and its helpers (branch filter, relay envelopes,
-  pasted content, request config / shape, token usage). Moved here from
+  pasted content, request config / shape, token usage, `TaskStop` times). Moved here from
   `transcript-watcher`, so the format sits BELOW the file watcher.
 - **`server/`** (portable) — the Claude Code JSONL parser
   (`mergeChainLines` merges a session chain's files, `buildJsonlEvents` builds
@@ -81,6 +81,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `RequestConfigSchema`
     - `requestShapeChange`
     - `stripRelayBoilerplate`
+    - `taskStopTimes`
     - `tokenUsageOf`
     - `TokenUsageSchema`
     - `TranscriptImageSchema`

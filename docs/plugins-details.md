@@ -14885,6 +14885,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Core:
                 - Uses:
                   - `conversations.hasLiveProcess`
+                  - `conversations/transcript-source.JsonlEvent`
+                  - `conversations/transcript-source.taskStopTimes`
                   - `network/live.liveValue`
                 - Exports (types):
                   - `BackgroundShell`
@@ -15314,6 +15316,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.WORKFLOW_TOOL_NAME`
                   - `conversations/transcript-source.JsonlEvent`
                   - `conversations/transcript-source.JsonlEventSchema`
+                  - `conversations/transcript-source.taskStopTimes`
                   - `conversations/transcript-source.TokenUsage`
                   - `conversations/transcript-source.tokenUsageOf`
                   - `conversations/transcript-source.TokenUsageSchema`
@@ -17905,6 +17908,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RequestConfigSchema`
           - `requestShapeChange`
           - `stripRelayBoilerplate`
+          - `taskStopTimes`
           - `tokenUsageOf`
           - `TokenUsageSchema`
           - `TranscriptImageSchema`

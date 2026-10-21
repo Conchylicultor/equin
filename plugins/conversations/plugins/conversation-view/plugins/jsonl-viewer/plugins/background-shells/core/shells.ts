@@ -1,4 +1,7 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import {
+  taskStopTimes,
+  type JsonlEvent,
+} from "@plugins/conversations/plugins/transcript-source/core";
 import { hasLiveProcess } from "@plugins/conversations/core";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
@@ -7,9 +10,6 @@ type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
 
 /** The tool name Claude Code gives a shell command in a transcript. */
 export const BASH_TOOL_NAME = "Bash";
-
-/** The tool an agent stops a background task with (`{ task_id }`). */
-const TASK_STOP_TOOL_NAME = "TaskStop";
 
 /**
  * Where a background shell stands, as far as the transcript can honestly say.
@@ -175,26 +175,6 @@ function stateOfNotification(
 }
 
 /**
- * When each shell id was stopped by a successful `TaskStop` call — the time of
- * its result. First wins: a shell stops once.
- */
-function taskStopsIn(events: readonly JsonlEvent[]): Map<string, Date> {
-  const stops = new Map<string, Date>();
-  for (const event of events) {
-    if (event.kind !== "tool-call" || event.name !== TASK_STOP_TOOL_NAME) {
-      continue;
-    }
-    if (event.result === undefined || event.result.isError === true) continue;
-    const input = event.input;
-    if (typeof input !== "object" || input === null) continue;
-    const taskId = (input as Record<string, unknown>).task_id;
-    if (typeof taskId !== "string" || stops.has(taskId)) continue;
-    stops.set(taskId, new Date(event.result.at));
-  }
-  return stops;
-}
-
-/**
  * What a transcript says about one background shell, before the conversation's
  * liveness is applied — the part derivable from the transcript alone, so the
  * server can fold it over the WHOLE transcript and push only this. Times are
@@ -226,7 +206,7 @@ export function shellFactsOf(events: readonly JsonlEvent[]): ShellFact[] {
       byToolUseId.set(event.toolUseId, event);
     }
   }
-  const stops = taskStopsIn(events);
+  const stops = taskStopTimes(events);
 
   return shellLaunchesIn(events).map((launch): ShellFact => {
     const base = { ...launch, startedAt: launch.startedAt.toISOString() };

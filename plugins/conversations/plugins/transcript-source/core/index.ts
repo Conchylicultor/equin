@@ -18,6 +18,7 @@ export {
 export { tokenUsageOf } from "./token-usage";
 export { withPicksInResponse, replyOf } from "./question-response";
 export { isInterruptContent } from "./interrupt";
+export { taskStopTimes } from "./task-stop";
 export { unwrapPastedContent } from "./pasted-content";
 export { userPromptText } from "./user-prompt";
 export { activeLineUuids } from "./branch-filter";

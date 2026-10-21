@@ -118,6 +118,7 @@ describe("workflowRunsOf", () => {
       rows: [ordinary, agent("a1", "wf_a"), agent("a2", "wf_a")],
       workflowCalls: [call],
       taskNotifications: [],
+      stopTimes: {},
       conversationStatus: "working",
     });
     expect(runs).toHaveLength(1);
@@ -135,6 +136,7 @@ describe("workflowRunsOf", () => {
       rows: [agent("a1", "wf_a")],
       workflowCalls: [call],
       taskNotifications: [notification("toolu_w")],
+      stopTimes: {},
       conversationStatus: "working",
     });
     expect(run!.state).toEqual({ kind: "finished" });
@@ -146,6 +148,7 @@ describe("workflowRunsOf", () => {
       rows: [agent("a1", "wf_a", { reported: true })],
       workflowCalls: [call],
       taskNotifications: [],
+      stopTimes: {},
       conversationStatus: "working",
     });
     expect(run!.state).toEqual({ kind: "running" });
@@ -156,10 +159,46 @@ describe("workflowRunsOf", () => {
       rows: [agent("a1", "wf_a")],
       workflowCalls: [call],
       taskNotifications: [],
+      stopTimes: {},
       conversationStatus: "done",
     });
     expect(run!.state).toEqual({ kind: "ended-without-reporting" });
     expect(run!.endedAt?.toISOString()).toBe("2026-09-27T01:30:00.000Z");
+  });
+
+  test("a TaskStop of the run's task ends it at the stop, with the parent still live", () => {
+    // Claude Code writes no notification for a run the agent stopped itself.
+    const [run] = workflowRunsOf({
+      rows: [agent("a1", "wf_a"), agent("a2", "wf_a")],
+      workflowCalls: [call],
+      taskNotifications: [],
+      stopTimes: { wqdogd8d9: "2026-09-27T01:18:03.000Z" },
+      conversationStatus: "waiting",
+    });
+    expect(run!.state).toEqual({ kind: "ended-without-reporting" });
+    expect(run!.endedAt?.toISOString()).toBe("2026-09-27T01:18:03.000Z");
+  });
+
+  test("a TaskStop of another task leaves the run running", () => {
+    const [run] = workflowRunsOf({
+      rows: [agent("a1", "wf_a")],
+      workflowCalls: [call],
+      taskNotifications: [],
+      stopTimes: { bsh_other: "2026-09-27T01:18:03.000Z" },
+      conversationStatus: "waiting",
+    });
+    expect(run!.state).toEqual({ kind: "running" });
+  });
+
+  test("the notification outranks a stop", () => {
+    const [run] = workflowRunsOf({
+      rows: [agent("a1", "wf_a")],
+      workflowCalls: [call],
+      taskNotifications: [notification("toolu_w")],
+      stopTimes: { wqdogd8d9: "2026-09-27T01:18:03.000Z" },
+      conversationStatus: "working",
+    });
+    expect(run!.state).toEqual({ kind: "finished" });
   });
 
   describe("with no call to read", () => {
@@ -168,6 +207,7 @@ describe("workflowRunsOf", () => {
         rows: [agent("a1", "wf_a", { reported: true }), agent("a2", "wf_a")],
         workflowCalls: [],
         taskNotifications: [],
+        stopTimes: {},
         conversationStatus: "working",
       });
       expect(run!.call).toBeUndefined();
@@ -187,6 +227,7 @@ describe("workflowRunsOf", () => {
         ],
         workflowCalls: [],
         taskNotifications: [],
+        stopTimes: {},
         conversationStatus: "done",
       });
       expect(run!.state).toEqual({ kind: "finished" });
@@ -198,6 +239,7 @@ describe("workflowRunsOf", () => {
         rows: [agent("a1", "wf_a", { reported: true }), agent("a2", "wf_a")],
         workflowCalls: [],
         taskNotifications: [],
+        stopTimes: {},
         conversationStatus: "done",
       });
       expect(run!.state).toEqual({ kind: "ended-without-reporting" });
@@ -212,6 +254,7 @@ describe("workflowRunsOf", () => {
       ],
       workflowCalls: [],
       taskNotifications: [],
+      stopTimes: {},
       conversationStatus: "working",
     });
     expect(runs.map((r) => r.runId)).toEqual(["wf_a", "wf_b"]);

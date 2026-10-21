@@ -314,8 +314,8 @@ One hook, because the two directions are the same three reads (activity,
 `subagents.parent-facts`, the conversation) and the same `pending` gate. `subagents.parent-facts` (`parentFactsOf`, core) is served by the
 server over the WHOLE parent transcript — the pane's `jsonl-events` holds only its
 latest window, and an `Agent` call, notification or resume can be older: the
-`task-notification` events, `Agent` / `Workflow` calls and the idle / resume
-maps. The pane's header and report read their `Agent` call from it too. Every caller in a
+`task-notification` events, `Agent` / `Workflow` calls and the idle / resume /
+`TaskStop` maps. The pane's header and report read their `Agent` call from it too. Every caller in a
 conversation subscribes on the same id, so a band listing ten sub-agents and a
 hundred cards each reading their own still cost one query and one subscription
 each.
@@ -371,8 +371,12 @@ unreadable still sits in its run's folder.
 `WorkflowRunEntry` per run seen on a row. The run joins its `Workflow` call
 through the call result's `Run ID: wf_…` (`parseWorkflowResult`, from the
 workflow tool plugin's `core`). A run is finished when the `task-notification`
-carrying that call's id lands. With no call left to read, it is running while
-one of its agents is. Otherwise the parent's liveness decides. Each workflow
+carrying that call's id lands. A successful `TaskStop` of the run's task (the
+call result's `Task ID:`, joined through `stopTimes` — `taskStopTimes` from
+`transcript-source/core`) ends it without reporting at the stop: Claude Code
+writes no notification for a run the agent stopped itself, so without it the
+run and its agents read running for the parent's whole life. With no call left
+to read, it is running while one of its agents is. Otherwise the parent's liveness decides. Each workflow
 agent then gets two inputs to `subagentRunState`: `workflowReported` (its
 journal line, checked first ⇒ finished) and `workflowRunEnded` (its run is no
 longer running, checked after its own turn end and before liveness ⇒ ended
@@ -483,6 +487,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.WORKFLOW_TOOL_NAME`
     - `conversations/transcript-source.JsonlEvent`
     - `conversations/transcript-source.JsonlEventSchema`
+    - `conversations/transcript-source.taskStopTimes`
     - `conversations/transcript-source.TokenUsage`
     - `conversations/transcript-source.tokenUsageOf`
     - `conversations/transcript-source.TokenUsageSchema`

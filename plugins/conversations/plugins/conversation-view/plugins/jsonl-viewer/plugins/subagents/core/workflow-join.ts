@@ -45,6 +45,20 @@ export function workflowRunIdOf(call: ToolCallEvent): string | undefined {
 }
 
 /**
+ * When the run a `Workflow` call launched was stopped by a `TaskStop` of its
+ * task id (read off the call's result), or `undefined` when it was not.
+ */
+function stopTimeOf(
+  call: ToolCallEvent,
+  stopTimes: Readonly<Record<string, string>>,
+): string | undefined {
+  const result = call.result;
+  if (result === undefined || result.isError === true) return undefined;
+  const taskId = parseWorkflowResult(result.content).taskId;
+  return taskId === undefined ? undefined : stopTimes[taskId];
+}
+
+/**
  * One workflow run, as the conversation's surfaces see it: the parent for the
  * agents it spawned.
  */
@@ -57,8 +71,8 @@ export interface WorkflowRunEntry {
   /** The call's time, else the earliest of its agents' starts. */
   startedAt: Date;
   /**
-   * When it stopped: the run's completion notification, else its latest
-   * agent's last write. `null` while running.
+   * When it stopped: the run's completion notification, else the `TaskStop`
+   * that stopped it, else its latest agent's last write. `null` while running.
    */
   endedAt: Date | null;
 }
@@ -70,6 +84,8 @@ export interface WorkflowRunsInput {
   workflowCalls: readonly ToolCallEvent[];
   /** Every `task-notification` in the parent transcript. */
   taskNotifications: readonly TaskNotificationEvent[];
+  /** `taskStopTimes` of the parent transcript (ISO times), by stopped task id. */
+  stopTimes: Readonly<Record<string, string>>;
   conversationStatus: ConversationStatus;
 }
 
@@ -108,6 +124,10 @@ function ownState(
  *   its end arrives as the `task-notification` carrying the `Workflow` call's
  *   tool-use id ⇒ finished. (The call's own `tool_result` is only a launch
  *   receipt and means nothing.)
+ * - **a successful `TaskStop` of its task** (the `Task ID:` the call's result
+ *   prints) ⇒ ended without reporting, at the stop. Claude Code writes no
+ *   notification for a run the agent stopped itself, so without this the run —
+ *   and every agent in it — reads running for as long as the parent lives.
  * - **no call to read** (scrolled out of the kept chain, or its result has not
  *   landed) ⇒ running exactly while one of its agents is, by that agent's own
  *   evidence; once none is, finished only if every one of them finished.
@@ -118,7 +138,13 @@ function ownState(
  * An agent's `workflowRunEnded` input is then `state.kind !== "running"`.
  */
 export function workflowRunsOf(input: WorkflowRunsInput): WorkflowRunEntry[] {
-  const { rows, workflowCalls, taskNotifications, conversationStatus } = input;
+  const {
+    rows,
+    workflowCalls,
+    taskNotifications,
+    stopTimes,
+    conversationStatus,
+  } = input;
 
   const agentsByRun = new Map<string, SubagentActivityRow[]>();
   for (const row of rows) {
@@ -143,10 +169,16 @@ export function workflowRunsOf(input: WorkflowRunsInput): WorkflowRunEntry[] {
       call === undefined
         ? undefined
         : taskNotifications.find((n) => n.toolUseId === call.toolUseId);
+    const stoppedAt =
+      notification !== undefined || call === undefined
+        ? undefined
+        : stopTimeOf(call, stopTimes);
 
     let state: SubagentRunState;
     if (notification !== undefined) {
       state = { kind: "finished" };
+    } else if (stoppedAt !== undefined) {
+      state = { kind: "ended-without-reporting" };
     } else if (call === undefined) {
       const own = agents.map((row) => ownState(row, conversationStatus).kind);
       state = own.includes("running")
@@ -174,7 +206,7 @@ export function workflowRunsOf(input: WorkflowRunsInput): WorkflowRunEntry[] {
       endedAt:
         state.kind === "running"
           ? null
-          : new Date(notification?.at ?? latestWrite),
+          : new Date(notification?.at ?? stoppedAt ?? latestWrite),
     });
   }
 
