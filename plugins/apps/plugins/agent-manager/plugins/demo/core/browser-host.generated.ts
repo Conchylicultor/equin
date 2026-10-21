@@ -445,6 +445,7 @@ export const browserHost = {
     "primitives.dom.element-size",
     "primitives.dom.in-view",
     "primitives.dom.layout-host",
+    "primitives.dom.movable",
     "primitives.dom.overscroll-hint",
     "primitives.dom.scroll-reveal",
     "primitives.dom.web-storage",

@@ -111,6 +111,11 @@ beforeEach(() => {
     return 1;
   });
   vi.stubGlobal("cancelAnimationFrame", () => {});
+  // jsdom has no CSS zoom: every element is drawn at 1, as an unzoomed page's.
+  Object.defineProperty(HTMLElement.prototype, "currentCSSZoom", {
+    configurable: true,
+    get: () => 1,
+  });
   vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
     function (this: Element) {
       return fakeLayout(this);
@@ -120,6 +125,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  delete (HTMLElement.prototype as { currentCSSZoom?: number }).currentCSSZoom;
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });

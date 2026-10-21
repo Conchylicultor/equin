@@ -21,6 +21,7 @@ import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ra
 import type { InTreeLayer } from "@plugins/primitives/plugins/css/plugins/z-layers/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { NOT_A_HANDLE, useDragGesture } from "./use-drag-gesture";
 
 /**
  * Where the piece sits at home — by a ramp step, as a `Pin` (`{ pin: "bottom",
@@ -56,13 +57,8 @@ interface Offset {
   y: number;
 }
 
-/** How far the pointer travels before a press becomes a drag. */
-const DRAG_THRESHOLD_PX = 4;
 /** The gap kept between the piece and the edge of its bounds. */
 const EDGE_GAP_PX = 4;
-/** Presses that belong to the control under them, never to the drag. */
-const NOT_A_HANDLE =
-  "input, textarea, select, [contenteditable=''], [contenteditable='true'], [role='slider']";
 
 const HOME: Offset = { x: 0, y: 0 };
 
@@ -70,7 +66,7 @@ const HOME: Offset = { x: 0, y: 0 };
  * A floating piece the user can drag off whatever it covers.
  *
  * Grab it anywhere: on its surface the drag starts at once; on a button it
- * starts only once the pointer travels {@link DRAG_THRESHOLD_PX}, so a plain
+ * starts only once the pointer travels a few px (`useDragGesture`), so a plain
  * press is still a click — and the release that ends a drag is swallowed, so
  * it never also presses the button it started on. The pointer is captured when
  * the drag starts, so it keeps following over an iframe.
@@ -113,63 +109,29 @@ export function Movable({
     { deps: [bounds] },
   );
 
-  function onPointerDown(e: ReactPointerEvent<HTMLElement>) {
-    const el = ref.current;
-    if (e.button !== 0 || !el || !bounds) return;
-    if (!(e.target instanceof Element) || e.target.closest(NOT_A_HANDLE))
-      return;
-    const onControl = e.target.closest("button, a, [role='button']") !== null;
-    // On the bare surface, keep the press from selecting text as it moves.
-    if (!onControl) e.preventDefault();
-    const pointerId = e.pointerId;
-    const x0 = e.clientX;
-    const y0 = e.clientY;
-    const from = offsetRef.current;
-    let live = false;
-
-    const move = (ev: PointerEvent) => {
-      if (ev.pointerId !== pointerId) return;
-      const dx = ev.clientX - x0;
-      const dy = ev.clientY - y0;
-      if (!live) {
-        if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
-        live = true;
-        // Captured only now: captured from the press, the release would land on
-        // this wrapper and the button's click would never fire.
-        el.setPointerCapture(pointerId);
-        setHoming(false);
-        setDragging(true);
-      }
+  // The offset the live drag started from.
+  const from = useRef<Offset>(HOME);
+  const startDrag = useDragGesture({
+    onStart: () => {
+      from.current = offsetRef.current;
+      setHoming(false);
+      setDragging(true);
+    },
+    onMove: ({ dx, dy }) => {
+      const el = ref.current;
+      if (!el || !bounds) return;
       setOffset(
         clampOffset(el, bounds, offsetRef.current, {
-          x: from.x + dx,
-          y: from.y + dy,
+          x: from.current.x + dx,
+          y: from.current.y + dy,
         }),
       );
-    };
-    const end = (ev: PointerEvent) => {
-      if (ev.pointerId !== pointerId) return;
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", end);
-      window.removeEventListener("pointercancel", end);
-      if (!live) return;
-      setDragging(false);
-      // The click this release dispatches belongs to the drag, not to the
-      // button it started on. It is dispatched in the same task, so the
-      // swallow is gone before any later click.
-      const swallow = (click: MouseEvent) => {
-        click.stopPropagation();
-        click.preventDefault();
-      };
-      window.addEventListener("click", swallow, { capture: true });
-      setTimeout(
-        () => window.removeEventListener("click", swallow, { capture: true }),
-        0,
-      );
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", end);
-    window.addEventListener("pointercancel", end);
+    },
+    onEnd: () => setDragging(false),
+  });
+  function onPointerDown(e: ReactPointerEvent<HTMLElement>) {
+    if (!bounds) return;
+    startDrag(e);
   }
 
   function onDoubleClick(e: ReactMouseEvent<HTMLElement>) {

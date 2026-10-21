@@ -196,9 +196,10 @@ new window of the focused window's app; F3 toggles the overview.
     - `windowRectFraction`
     - `WindowSnapshot`
 - Cross-plugin:
-  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 24 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×13
     - `ui/tokens/type-scale` ×8
+    - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
   - Imported by:

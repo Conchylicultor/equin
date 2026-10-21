@@ -4,15 +4,17 @@ import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/eleme
 /**
  * The CSS var `pr-floating-bar` / `pr-floating-bar-pane` read: the right inset
  * a surface-edge header reserves so the floating bar does not cover its
- * actions. It exists on `:root` **iff** the floating bar is mounted, so a
- * header falls back to its own end inset whenever the bar is docked or off.
+ * actions. It exists on `:root` **iff** the floating bar is mounted and in its
+ * home slot, so a header falls back to its own end inset whenever the bar is
+ * docked, off, or dragged elsewhere.
  */
 const SAFE_AREA_VAR = "--floating-bar-safe-area";
 
 /**
- * Publish the floating bar's safe area while the calling component is mounted.
- * Returns a callback ref for the bar's band — the fixed box holding the
- * collapsed-footprint hitbox.
+ * Publish the floating bar's safe area while `reserve` holds (the bar sits in
+ * its home slot, or is being dragged onto it) and the calling component is
+ * mounted. Returns a callback ref for the home slot's band — the fixed box the
+ * size of the bar's collapsed footprint, at the bar's home corner.
  *
  * The reservation is measured from the band's LEFT edge to the viewport's right
  * edge (so it includes the bar's corner offset and its panel chrome, and
@@ -27,29 +29,36 @@ const SAFE_AREA_VAR = "--floating-bar-safe-area";
  * viewport's right one and the distance holds — only a resize of the band
  * itself (the footprint re-derived on close) needs a re-measure.
  */
-export function useFloatingBarSafeArea(): (node: HTMLElement | null) => void {
+export function useFloatingBarSafeArea(
+  reserve: boolean,
+): (node: HTMLElement | null) => void {
   const [node, setNode] = useState<HTMLElement | null>(null);
 
   useResizeObserver(
     () => node,
     () => {
-      if (!node) return;
+      if (!node || !reserve) return;
       const room = window.innerWidth - node.getBoundingClientRect().left;
       document.documentElement.style.setProperty(
         SAFE_AREA_VAR,
         `calc(${Math.ceil(room)}px + var(--chrome-pane-pad-end))`,
       );
     },
-    { deps: [node] },
+    // Undebounced: a resize observation is delivered before paint, so the
+    // header never paints a frame with a stale reservation (the slot sizing
+    // itself to the bar on mount would otherwise glide in from 0).
+    { deps: [node, reserve], debounce: false },
   );
 
-  // Withdraw the reservation with the bar (docked mode, config off, embed).
-  useEffect(
-    () => () => {
+  // Withdraw the reservation when the bar leaves its slot (dragged off it) or
+  // goes away (docked mode, config off, embed). The headers' `pr-floating-bar*`
+  // transition their padding, so their actions glide into the freed room.
+  useEffect(() => {
+    if (!reserve) return;
+    return () => {
       document.documentElement.style.removeProperty(SAFE_AREA_VAR);
-    },
-    [],
-  );
+    };
+  }, [reserve]);
 
   return setNode;
 }

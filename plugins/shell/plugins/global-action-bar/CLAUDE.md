@@ -53,6 +53,30 @@ on hover, so the bar's icons sit quietly until pointed at. Only the pieces that
 read as words — the Improve label, the Build tray's status — set
 `text-foreground` themselves. Never colour an item's icon at the contribution.
 
+## Moving it: home slot, free place, snap back
+
+The floating bar can be dragged anywhere on screen (`FloatingBar`, using
+`primitives/dom/movable`'s `useDragGesture`: a press on a button becomes a drag
+only past a few px, so a click is still a click). Its place — `home` or `free`
+at a viewport fraction — is ONE per browser (`internal/use-bar-place.ts`, a
+`web-storage` store): the host is mounted once at `Core.Root`, so the bar stays
+where it was put across apps, surface modes (solo, the desktop) and reloads.
+
+- **Home** is the slot at the surface's top-right corner on the anchored band.
+  The slot is its own invisible box, sized to the bar's collapsed footprint;
+  the safe area is measured from IT (`useFloatingBarSafeArea(reserve)`), never
+  from the bar, and is published only while the bar is home, settling home, or
+  hovering home mid-drag.
+- **Dragged off**, the reservation is withdrawn: `pr-floating-bar*` (and the
+  desktop titlebar's inset) transition their padding, so the header's actions
+  glide into the freed room. Back within `SNAP_RADIUS_PX` of the slot, the slot
+  outline lights up and the header makes room again; dropped there, the bar
+  glides into the slot (`settling`) and is home.
+- **While dragged** the bar is the collapsed dot (`FloatingAction
+  suppressed`), and stays collapsed after the drop until the pointer re-enters.
+- Placed free, the open row grows away from the nearer screen edge
+  (`anchor` top-right on the right half, top-left on the left half).
+
 ## Density — the host picks it
 
 `ActionBar.Item` and `ActionBar.Glance` declare `controlSize: "sm"`, the slot
@@ -94,10 +118,10 @@ tab bar, which an embed does not paint.
     - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
     - `ActionBar.Item` → `ViewOptionsButton`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×3
+    - `primitives/css/ui-kit` ×3
     - `config_v2` ×2
-    - `primitives/css/ui-kit` ×2
     - `primitives/overlay/floating-action` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core.Apps`
@@ -105,6 +129,8 @@ tab bar, which an embed does not paint.
     - `primitives/css/spacing.Stack`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/dom/movable.useDragGesture`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/embed.isChromelessDocument`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/icon-button.IconButton`
@@ -118,6 +144,7 @@ tab bar, which an embed does not paint.
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
     - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --chrome-pane-pad-end`
     - `ui/tokens/density --space-2xs`

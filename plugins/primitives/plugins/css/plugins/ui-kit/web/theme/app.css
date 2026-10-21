@@ -796,7 +796,7 @@
  * the header's own end inset otherwise. A sub-pane strip (`tier="subpane"`,
  * the conversation toolbar) insets by `subpanePadX` (default the `sm` step). */
 @utility px-chrome-pane { padding-left: var(--chrome-pane-pad-start); padding-right: var(--chrome-pane-pad-end); } /* twmerge: extend px */
-@utility pr-floating-bar-pane { padding-right: var(--floating-bar-safe-area, var(--chrome-pane-pad-end)); } /* twmerge: extend pr */
+@utility pr-floating-bar-pane { padding-right: var(--floating-bar-safe-area, var(--chrome-pane-pad-end)); transition: padding-right 280ms cubic-bezier(0.2, 0.8, 0.2, 1); } /* twmerge: extend pr */
 @utility px-subpane { padding-inline: var(--subpane-pad-x); } /* twmerge: extend px */
 /* A pane header's bottom rule width (`Bar tier="pane"`) — density
  * `chromePaneRule`, default `1px` (the `border-b` it always drew); a theme sets
@@ -1145,8 +1145,11 @@
  * global-action-bar plugin (while it floats, i.e. in solo) as
  * --floating-bar-safe-area; it falls back to the chrome
  * pad when the bar is hidden (config off / a toolbar-hosting app), so an app
- * header never sits under the bar without hand-reserving a pr-14. */
-@utility pr-floating-bar { padding-right: var(--floating-bar-safe-area, var(--chrome-pad-x)); } /* twmerge: extend pr */
+ * header never sits under the bar without hand-reserving a pr-14.
+ * The bar can be dragged off its slot and back (the var withdrawn and
+ * republished), so both utilities transition the inset: the header's actions
+ * glide into the room the bar leaves and back out of the room it retakes. */
+@utility pr-floating-bar { padding-right: var(--floating-bar-safe-area, var(--chrome-pad-x)); transition: padding-right 280ms cubic-bezier(0.2, 0.8, 0.2, 1); } /* twmerge: extend pr */
 
 /* Floating-bar band — the header row the floating bar sits in, so the bar is
  * centred on that header's own line whatever its height, tier or theme. The

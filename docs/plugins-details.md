@@ -2977,9 +2977,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `windowRectFraction`
               - `WindowSnapshot`
           - Cross-plugin:
-            - Uses tokens: 23 vars — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
+            - Uses tokens: 24 vars — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
               - `ui/tokens/color-palette` ×13
               - `ui/tokens/type-scale` ×8
+              - `ui/tokens/density --chrome-pad-x`
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shape --spacing`
             - Imported by:
@@ -38668,7 +38669,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `flowAxis`
               - `layoutHost`
-        - **`movable`** — Drag-to-move floating chrome: <Movable at bounds> is a placed floating piece (a pill, a tag, a chip — `at` places it as a Pin step or Placed coordinates and it IS that positioned element, so nothing is left at home after a drag) the user can pull off whatever it covers — grabbed by its surface, or by one of its buttons once the pointer travels (a plain press stays a click, and the release after a drag never clicks). It stays inside `bounds`, is pulled back in when bounds shrink, and a double-click on its surface sends it home.
+        - **`movable`** — Drag-to-move floating chrome: <Movable at bounds> is a placed floating piece (a pill, a tag, a chip — `at` places it as a Pin step or Placed coordinates and it IS that positioned element, so nothing is left at home after a drag) the user can pull off whatever it covers — grabbed by its surface, or by one of its buttons once the pointer travels (a plain press stays a click, and the release after a drag never clicks). It stays inside `bounds`, is pulled back in when bounds shrink, and a double-click on its surface sends it home. The gesture itself is useDragGesture — the onPointerDown of a handle (threshold on buttons, capture at drag start, the post-drag click swallowed) — for a piece that places itself.
           - Web:
             - Uses:
               - `primitives/css/coords.Extent`
@@ -38680,11 +38681,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/latest-ref.useLatestRef`
             - Exports (types):
+              - `DragGestureHandlers`
+              - `DragPoint`
               - `MovableAt`
               - `MovableProps`
-            - Exports (values): `Movable`
+            - Exports (values):
+              - `Movable`
+              - `useDragGesture`
           - Cross-plugin:
-            - Imported by: `apps/prototypes/present`
+            - Imported by:
+              - `apps/prototypes/present`
+              - `shell/global-action-bar`
         - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
           - Web:
             - Contributes: `Core.Root` → `OverscrollHintController`
@@ -38747,7 +38754,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStorageUsage`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×14
               - `apps` ×10
               - `conversations` ×5
@@ -38756,6 +38763,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `map`
               - `page/editor`
               - `reports/web-storage`
+              - `shell/global-action-bar`
               - `tasks/task-draft-form`
               - `ui/theme-engine`
           - Exemptions:
@@ -39428,8 +39436,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 71 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
-          - `primitives` ×33
+        - Imported by: 72 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+          - `primitives` ×34
           - `apps` ×22
           - `page` ×4
           - `conversations` ×3
@@ -40573,6 +40581,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.OverlayPanel`
               - `primitives/css/ui-kit.PopoverPadding`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/latest-ref.useLatestRef`
               - `primitives/overlay/popup-open.PopupOpenScope`
             - Exports (types):
               - `FloatingActionFadeInProps`
@@ -44646,10 +44655,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
           - `ActionBar.Item` → `ViewOptionsButton`
           - `ConfigV2.WebRegister` "config"
-        - Uses: 21 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/shell/plugins/global-action-bar/REFERENCE.md`](../plugins/shell/plugins/global-action-bar/REFERENCE.md)
           - `apps-core/tabs` ×3
+          - `primitives/css/ui-kit` ×3
           - `config_v2` ×2
-          - `primitives/css/ui-kit` ×2
           - `primitives/overlay/floating-action` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core.Apps`
@@ -44657,6 +44666,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/dom/element-size.useResizeObserver`
+          - `primitives/dom/movable.useDragGesture`
+          - `primitives/dom/web-storage.defineStore`
           - `primitives/embed.isChromelessDocument`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/icon-button.IconButton`
@@ -44670,6 +44681,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/color-palette --primary`
           - `ui/tokens/density --chrome-pad-x`
           - `ui/tokens/density --chrome-pane-pad-end`
           - `ui/tokens/density --space-2xs`
@@ -48483,9 +48495,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 320 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 321 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×67
-              - `apps` ×65
+              - `apps` ×66
               - `conversations` ×49
               - `debug` ×28
               - `page` ×20

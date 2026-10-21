@@ -73,6 +73,13 @@ opened inside it is open, the panel stays open, and Escape and presses belong
 to that popup — closing it does not take the panel along. First consumer: the
 prototypes options picker's version list.
 
+## `suppressed` — kept closed while the host moves it
+
+A host that drags the control (the floating action bar) passes `suppressed`:
+the panel stays closed whatever the pointer, focus or a press does, and the
+hover / latch it saw meanwhile are dropped — so lifting it leaves the panel
+closed under a pointer still on it, until the next enter, focus or press.
+
 ## Hover is the DOM box, focus is the keyboard
 
 Hover is read from native `pointerenter` / `pointerleave` on the wrapper, plus
@@ -103,6 +110,7 @@ global action bar's `e2e/focus-restore.ts` checks this in Chromium.
     - `primitives/css/ui-kit.OverlayPanel`
     - `primitives/css/ui-kit.PopoverPadding`
     - `primitives/dom/element-size.useResizeObserver`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/overlay/popup-open.PopupOpenScope`
   - Exports (types):
     - `FloatingActionFadeInProps`

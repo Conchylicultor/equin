@@ -407,9 +407,15 @@ export function WindowChrome({
         )}
         style={{
           ...TITLEBAR_STYLE,
-          // Under the action-bar dot, its published safe area is the right inset.
+          // Under the action-bar dot, its published safe area is the right
+          // inset — gliding as the bar is dragged off its slot and back, as
+          // the `pr-floating-bar*` headers do.
           ...(underActionBar
-            ? { paddingRight: "var(--floating-bar-safe-area, 6px)" }
+            ? {
+                paddingRight: "var(--floating-bar-safe-area, 6px)",
+                transition:
+                  "padding-right 280ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+              }
             : null),
           height: WINDOW_TITLEBAR_INSET,
           touchAction: "none",

@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 
 const DEFAULT_CLOSE_DELAY = 150;
 
@@ -64,6 +65,13 @@ export interface DisclosureIntent {
  *                belong to the popup: the panel ignores them, so closing the
  *                popup does not take the panel with it.
  *
+ * And one override:
+ *   - suppressed — the control is being moved (dragged by its host): it stays
+ *                closed whatever the pointer does, and the hover and latch it
+ *                saw meanwhile are dropped. So lifting it leaves the control
+ *                closed under a pointer still on it; it opens again on the next
+ *                enter, focus or press, never by itself.
+ *
  * Flicker (rapid open/close as the morphing panel's geometry shifts under the
  * cursor) is handled structurally by the caller pinning a stable hover hitbox,
  * plus the grace delay here — never by ignoring input.
@@ -72,13 +80,25 @@ export function useDisclosureIntent(
   rootRef: RefObject<HTMLElement | null>,
   closeDelay = DEFAULT_CLOSE_DELAY,
   held = false,
+  suppressed = false,
 ): DisclosureIntent {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [latched, setLatched] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // For the DOM listeners, which outlive a render.
+  const suppressedRef = useLatestRef(suppressed);
 
-  const open = hovered || focused || latched || held;
+  // While suppressed, whatever opened it is forgotten (adjusting state from a
+  // prop during render, React's documented pattern): the press that started
+  // the drag latched it, and the pointer is still over it.
+  if (suppressed && (hovered || focused || latched)) {
+    setHovered(false);
+    setFocused(false);
+    setLatched(false);
+  }
+
+  const open = !suppressed && (hovered || focused || latched || held);
 
   // `closeTimer.current` is defined exactly while a hover close is pending.
   const cancelClose = useCallback(() => {
@@ -103,6 +123,7 @@ export function useDisclosureIntent(
     const root = rootRef.current;
     if (!root) return;
     const enter = () => {
+      if (suppressedRef.current) return;
       cancelClose();
       setHovered(true);
     };
@@ -112,7 +133,7 @@ export function useDisclosureIntent(
       root.removeEventListener("pointerenter", enter);
       root.removeEventListener("pointerleave", scheduleClose);
     };
-  }, [rootRef, cancelClose, scheduleClose]);
+  }, [rootRef, cancelClose, scheduleClose, suppressedRef]);
 
   // An element removed from under the cursor (a portaled overlay closing)
   // fires no leave on the root, and focus restored to the trigger by a closing
@@ -131,18 +152,21 @@ export function useDisclosureIntent(
   const onPointerDown = useCallback(() => {
     // Touch has no hover: the first press on a closed control opens it. While
     // already open, leave the press alone so it reaches the content.
+    if (suppressedRef.current) return;
     setLatched((latchedNow) => (open ? latchedNow : true));
-  }, [open]);
+  }, [open, suppressedRef]);
 
   const onFocus = useCallback(
     (e: FocusEvent) => {
       // Only keyboard focus opens (see `focus` above); a pointer-driven focus
       // moving inside clears it, so the panel follows the pointer again.
-      const keyboard = (e.target as Element).matches(":focus-visible");
+      const keyboard =
+        !suppressedRef.current &&
+        (e.target as Element).matches(":focus-visible");
       if (keyboard) cancelClose();
       setFocused(keyboard);
     },
-    [cancelClose],
+    [cancelClose, suppressedRef],
   );
 
   const onBlur = useCallback((e: FocusEvent) => {

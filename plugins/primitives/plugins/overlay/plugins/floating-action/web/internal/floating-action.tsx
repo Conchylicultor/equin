@@ -115,6 +115,13 @@ export interface FloatingActionProps extends Omit<
    * which is `inert` while closed and so names nothing a user can reach.
    */
   label?: string;
+  /**
+   * Keep the panel closed, whatever the pointer or focus does — for a host
+   * that is moving the control (dragging it), when an expanding panel would
+   * only get in the way. Lifting it does not reopen the panel under a pointer
+   * still on it: the next enter, focus or press does.
+   */
+  suppressed?: boolean;
 }
 
 /**
@@ -146,6 +153,7 @@ function FloatingActionPanel({
   anchor = "bottom-right",
   trigger,
   label,
+  suppressed,
   children,
   ...props
 }: FloatingActionProps & { held: boolean }) {
@@ -158,7 +166,12 @@ function FloatingActionPanel({
   // closed — the one moment it is guaranteed to be at rest (nothing has opened
   // it yet, so no morph can be in flight).
   const chromeRef = useRef<{ width: number; height: number } | null>(null);
-  const { open, rootProps } = useDisclosureIntent(wrapperRef, closeDelay, held);
+  const { open, rootProps } = useDisclosureIntent(
+    wrapperRef,
+    closeDelay,
+    held,
+    suppressed,
+  );
 
   // The morphing panel is `position: absolute`, so it contributes no intrinsic
   // size to the wrapper. Pin the wrapper to the panel's *collapsed* footprint so
