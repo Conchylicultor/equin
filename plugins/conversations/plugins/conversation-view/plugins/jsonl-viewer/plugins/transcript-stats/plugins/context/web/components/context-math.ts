@@ -46,7 +46,10 @@ export function contextRows(usage: ContextUsage): ContextRows {
       .reduce((total, c) => total + c.tokens, 0);
   return {
     messages: used.find((c) => c.name === MESSAGES_ROW) ?? null,
-    setup: used.filter((c) => c.name !== MESSAGES_ROW),
+    // Largest first, so the bar and the rows read in the same order.
+    setup: used
+      .filter((c) => c.name !== MESSAGES_ROW)
+      .sort((a, b) => b.tokens - a.tokens),
     free: sum("free"),
     reserve: sum("buffer"),
   };

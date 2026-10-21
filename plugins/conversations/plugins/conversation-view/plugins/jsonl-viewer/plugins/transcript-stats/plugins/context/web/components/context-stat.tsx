@@ -51,7 +51,7 @@ function ContextStatFor({ conversationId }: { conversationId: string }) {
         onOpenChange={setOpen}
         side="top"
         align="end"
-        width="sm"
+        width="xl"
         trigger={
           <StatBadge
             as="button"

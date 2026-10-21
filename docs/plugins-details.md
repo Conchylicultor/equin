@@ -16254,10 +16254,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`context`** — The context window as a transcript stat: a ring at the end of the strip showing how full the agent's window is against where the harness compacts it (the harness's own measure, conversations.context-usage), opening a card with the breakdown — the conversation's messages, the setup it starts with (system prompt, tools, memory files, skills, MCP) and what is free — and a Compact action that sends /compact with optional compaction instructions.
                   - Web:
                     - Contributes: `TranscriptStats.Item` "context" → `ContextStat`
-                    - Uses: 23 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md)
+                    - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md)
+                      - `primitives/css/ui-kit` ×4
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×3
                       - `conversations/conversation-view/jsonl-viewer` ×3
-                      - `primitives/css/ui-kit` ×3
                       - `primitives/css/spacing` ×2
                       - `conversations/conversation-view/pending-turn.sendConversationTurn`
                       - `network/live.useLive`
@@ -16277,7 +16277,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/color-palette --primary`
                       - `ui/tokens/color-palette --warning`
+                      - `ui/tokens/density --space-2xs`
                       - `ui/tokens/density --space-sm`
+                      - `ui/tokens/density --space-xs`
+                      - `ui/tokens/shape --radius`
                       - `ui/tokens/shape --spacing`
                 - **`token-budget`** — The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports the total spent rather than the number the harness prints, which is a padded per-request allowance handed to the model and so reads as a constant. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering. Serves the token-budget stat's fold of a conversation's transcript before the page's window.
                   - Web:

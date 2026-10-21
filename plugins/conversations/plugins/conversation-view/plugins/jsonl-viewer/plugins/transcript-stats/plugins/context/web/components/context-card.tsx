@@ -15,6 +15,7 @@ import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import {
   Button,
+  Separator,
   Textarea,
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -37,6 +38,12 @@ const seriesColor = (i: number) => `var(--categorical-${(i % 10) + 1})`;
 // The harness's names for the rows that carry a per-item breakdown.
 const MEMORY_FILES_ROW = "Memory files";
 const MCP_TOOLS_ROW = "MCP tools";
+
+// A window far larger than what is used (1M against a 60k conversation) would
+// squeeze every share into a sliver at the bar's start. The bar then spans
+// only enough of the window for the used part to fill this share of it, and
+// fades out on the right to say the window goes on.
+const USED_FLOOR = 0.5;
 
 /**
  * The context window, as the harness measures it — the used share against the
@@ -74,9 +81,10 @@ export function ContextCard({
             : "This agent started before context readings existed; it reports them from its next start."}
         </Text>
       )}
+      <Separator />
       <Stack gap="sm">
         <Textarea
-          rows={2}
+          rows={1}
           placeholder="Compaction instructions"
           value={instructions}
           onChange={(e) => setInstructions(e.target.value)}
@@ -98,10 +106,12 @@ export function ContextCard({
   );
 }
 
-function Breakdown({ usage }: { usage: ContextUsage }) {
+export function Breakdown({ usage }: { usage: ContextUsage }) {
   const { messages, setup, free, reserve } = contextRows(usage);
   const window = usage.rawMaxTokens;
-  const share = (tokens: number) => `${(tokens / window) * 100}%`;
+  const scale = Math.min(window, usage.totalTokens / USED_FLOOR);
+  const zoomed = scale < window;
+  const share = (tokens: number) => `${(tokens / scale) * 100}%`;
   const percent = Math.round((usage.totalTokens / window) * 100);
   const toAutoCompact = tokensToAutoCompact(usage);
   const showAutoCompact =
@@ -111,65 +121,88 @@ function Breakdown({ usage }: { usage: ContextUsage }) {
 
   return (
     <Stack gap="sm">
-      <Stack direction="row" align="baseline" justify="between" gap="sm">
-        <Stack direction="row" align="baseline" gap="xs">
-          <Text variant="heading" className="tabular-nums">
-            {percent}%
-          </Text>
-          <Text variant="caption" tone="muted">
-            used
-          </Text>
-        </Stack>
-        <Text variant="caption" tone="muted" className="tabular-nums">
-          <Text tone="strong">{formatTokenCount(usage.totalTokens)}</Text> /{" "}
-          {formatTokenCount(window)}
-        </Text>
-      </Stack>
-
-      <Stack gap="xs">
-        <Clip className="h-1.5 rounded-full bg-muted">
-          <Stack direction="row" gap="none" className="h-full">
-            {setup.map((c, i) => (
-              <span
-                key={c.name}
-                title={`${c.name} · ${formatTokenCount(c.tokens)}`}
-                style={{ width: share(c.tokens), background: seriesColor(i) }}
-              />
-            ))}
-            {messages && (
-              <span
-                title={`${messages.name} · ${formatTokenCount(messages.tokens)}`}
-                style={{
-                  width: share(messages.tokens),
-                  background: MESSAGES_COLOR,
-                }}
-              />
-            )}
-            {/* Free space, then the reserve flush right, as the window ends. */}
-            <span className={growClass()} />
-            {reserve > 0 && (
-              <span
-                title={`Reserved for compacting · ${formatTokenCount(reserve)}`}
-                className="opacity-40"
-                style={{
-                  width: share(reserve),
-                  backgroundImage:
-                    "repeating-linear-gradient(-45deg, transparent 0 3px, var(--muted-foreground) 3px 4.5px)",
-                }}
-              />
-            )}
-          </Stack>
-        </Clip>
-        {showAutoCompact && (
-          <Stack direction="row" justify="end" gap="none">
-            <Text variant="caption" className="text-warning tabular-nums">
-              Auto-compacts in {formatTokenCount(toAutoCompact)}
+      {/* Inset like the rows' own padding, so the bar lines up with their dots. */}
+      <Inset x="xs">
+        <Stack gap="sm">
+          <Stack direction="row" align="baseline" justify="between" gap="sm">
+            <Stack direction="row" align="baseline" gap="xs">
+              <Text variant="heading" className="tabular-nums">
+                {percent}%
+              </Text>
+              <Text variant="caption" tone="muted">
+                used
+              </Text>
+            </Stack>
+            <Text variant="caption" tone="muted" className="tabular-nums">
+              <Text tone="strong">{formatTokenCount(usage.totalTokens)}</Text> /{" "}
+              {formatTokenCount(window)}
             </Text>
           </Stack>
-        )}
-      </Stack>
 
-      <Stack gap="2xs">
+          <Stack gap="xs">
+            <Clip
+              className="h-1.5 rounded-full bg-muted"
+              title={
+                zoomed
+                  ? `Shows the first ${formatTokenCount(scale)} of the ${formatTokenCount(window)} window`
+                  : undefined
+              }
+              style={
+                zoomed
+                  ? {
+                      maskImage:
+                        "linear-gradient(to right, black 80%, transparent)",
+                    }
+                  : undefined
+              }
+            >
+              <Stack direction="row" gap="2xs" className="h-full">
+                {setup.map((c, i) => (
+                  <span
+                    key={c.name}
+                    title={`${c.name} · ${formatTokenCount(c.tokens)}`}
+                    style={{
+                      width: share(c.tokens),
+                      background: seriesColor(i),
+                    }}
+                  />
+                ))}
+                {messages && (
+                  <span
+                    title={`${messages.name} · ${formatTokenCount(messages.tokens)}`}
+                    style={{
+                      width: share(messages.tokens),
+                      background: MESSAGES_COLOR,
+                    }}
+                  />
+                )}
+                {/* Free space, then the reserve flush right, as the window ends. */}
+                <span className={growClass()} />
+                {reserve > 0 && !zoomed && (
+                  <span
+                    title={`Reserved for compacting · ${formatTokenCount(reserve)}`}
+                    className="opacity-40"
+                    style={{
+                      width: share(reserve),
+                      backgroundImage:
+                        "repeating-linear-gradient(-45deg, transparent 0 3px, var(--muted-foreground) 3px 4.5px)",
+                    }}
+                  />
+                )}
+              </Stack>
+            </Clip>
+            {showAutoCompact && (
+              <Stack direction="row" justify="end" gap="none">
+                <Text variant="caption" className="text-warning tabular-nums">
+                  Auto-compacts in {formatTokenCount(toAutoCompact)}
+                </Text>
+              </Stack>
+            )}
+          </Stack>
+        </Stack>
+      </Inset>
+
+      <Stack gap="none">
         {messages && (
           <Share
             color={MESSAGES_COLOR}
@@ -190,7 +223,7 @@ function Breakdown({ usage }: { usage: ContextUsage }) {
             />
           ))}
         </Share>
-        <Share name="Free" tokens={free} />
+        <Share color="var(--muted)" name="Free" tokens={free} />
       </Stack>
     </Stack>
   );
@@ -254,7 +287,7 @@ function Share({
   const [open, setOpen] = useState(defaultOpen);
   const discloses = detail.length > 0 || children !== undefined;
   const label = (
-    <Line className="w-full gap-sm">
+    <Line className="w-full gap-sm rounded-sm px-xs py-2xs">
       <span
         className={cn("size-2 rounded-xs", rigidClass())}
         style={{ background: color ?? "transparent" }}
@@ -280,13 +313,13 @@ function Share({
     </Line>
   );
   return (
-    <Stack gap="2xs">
+    <Stack gap="none">
       {discloses ? (
         <button
           type="button"
           aria-expanded={open}
           onClick={() => setOpen(!open)}
-          className="w-full rounded-xs hover:bg-muted/50"
+          className="w-full rounded-sm hover:bg-muted/60"
         >
           {label}
         </button>
@@ -296,10 +329,10 @@ function Share({
       {discloses && (
         <FoldMotion open={open}>
           <Inset l="md">
-            <Stack gap="2xs">
+            <Stack gap="none">
               {children}
               {detail.map((item) => (
-                <Line key={item.name} className="gap-sm">
+                <Line key={item.name} className="gap-sm px-xs py-2xs">
                   <Text
                     variant="caption"
                     tone="faint"
