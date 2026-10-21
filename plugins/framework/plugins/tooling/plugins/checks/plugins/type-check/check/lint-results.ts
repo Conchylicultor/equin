@@ -7,8 +7,8 @@
 //   - a SYNTACTIC group's result is a function of the text and the group's
 //     rules — its key is the group fingerprint (`./lint-groups`);
 //   - the TYPED part also reads the checker's types, which are a function of
-//     the declarations the file can see — its key folds in the file's type
-//     fingerprint (`typedResultKey`, `../shared/type-fingerprint`);
+//     the declarations the file can see — its key folds in the file's result
+//     key (`typedResultKey`, `../shared/keys`; `../shared/name-walk.ts`);
 //   - a directive file's WHOLE result is keyed the same way, on every rule.
 //
 // The closure key this replaced re-linted every transitive importer of a file

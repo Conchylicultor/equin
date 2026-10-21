@@ -28,10 +28,3 @@ export interface TscProgram {
 export function repoProgram(root: string): TscProgram {
   return { name: "repo", tsconfigPath: join(root, "tsconfig.json") };
 }
-
-// Where the type-check worker writes the program manifest: the files its
-// program loaded, which the program key hashes. Under `.cache/` (gitignored),
-// outside `node_modules`, so it survives the `bun install` every build runs.
-export function programManifestPath(root: string, programName: string): string {
-  return join(root, ".cache", "type-check", `${programName}.program.json`);
-}

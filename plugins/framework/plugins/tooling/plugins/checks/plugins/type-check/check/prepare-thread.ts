@@ -27,7 +27,6 @@ export type PrepareRequest =
 /** Thread → runner: one reply per request. */
 export type PrepareReply =
   | { type: "plan"; plan: Plan }
-  /** `lines` are the transcript lines the record phase produced (the warm-base publish summary). */
   | { type: "finalized"; finalized: Finalized }
   /** The request threw on the thread; `stack` is the thread's own. */
   | { type: "error"; message: string; stack: string | undefined };
@@ -37,7 +36,7 @@ export interface PrepareThread {
   prepare(input: PrepareInput): Promise<Plan>;
   /**
    * Run the record phase of the session `prepare` opened, and hand back the
-   * lines it wants logged. `undefined` when the worker crashed or never ran.
+   * lint line and verdict. `undefined` when the worker crashed.
    */
   finalize(outcome: ProgramOutcome | undefined): Promise<Finalized>;
   /** Terminate the thread. Idempotent; a call still pending is rejected. */

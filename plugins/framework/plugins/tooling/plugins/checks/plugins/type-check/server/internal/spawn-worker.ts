@@ -22,7 +22,31 @@ import {
   type TypeCheckWorkerJob,
   type TypeCheckWorkerResult,
 } from "../../core";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { reportMisses, type MissReportSink } from "./miss-reports";
 import { typeCheckWorkerPool } from "./worker-pool";
+
+// A wedge-breaker for one metadata read, not a latency budget.
+const GIT_TIMEOUT_MS = 30_000;
+
+/** The real outbox, and the checkout's HEAD. */
+function outboxSink(root: string): MissReportSink {
+  return {
+    file: fileReportFromProcess,
+    async head() {
+      const rev = await spawnCaptured(["git", "rev-parse", "HEAD"], {
+        cwd: root,
+        env: process.env,
+        timeoutMs: GIT_TIMEOUT_MS,
+      });
+      // The report is filed either way: what it names is the miss.
+      return rev.exitCode === 0
+        ? rev.stdout.trim()
+        : `unknown (git rev-parse HEAD exited ${rev.exitCode})`;
+    },
+  };
+}
 
 const WORKER = fileURLToPath(
   new URL("../../shared/worker.ts", import.meta.url),
@@ -83,24 +107,20 @@ export async function spawnTypeCheckWorker(opts: {
   root: string;
   name: string;
   tsconfigPath: string;
-  manifestPath: string;
   tscMode: TypeCheckWorkerJob["tscMode"];
+  onMiss: TypeCheckWorkerJob["onMiss"];
   lintFiles: TypeCheckWorkerJob["lintFiles"];
-  typeFps: TypeCheckWorkerJob["typeFps"];
+  /** The typed parts the lint jobs decide (none: a run that lints nothing). */
+  typedParts?: TypeCheckWorkerJob["typedParts"];
+  /** File versions the caller already hashed (none: the worker hashes all). */
+  versions?: TypeCheckWorkerJob["versions"];
   grant: Grant;
 }): Promise<TypeCheckWorkerRun> {
-  const {
-    root,
-    name,
-    tsconfigPath,
-    manifestPath,
-    tscMode,
-    lintFiles,
-    typeFps,
-    grant,
-  } = opts;
+  const { root, name, tsconfigPath, tscMode, onMiss, lintFiles, grant } = opts;
+  const typedParts = opts.typedParts ?? { split: [], whole: [] };
+  const versions = opts.versions ?? {};
   const queuedAt = performance.now();
-  return typeCheckWorkerPool.run(
+  const run = await typeCheckWorkerPool.run(
     (slot) => {
       const slotWaitMs = performance.now() - queuedAt;
       return grant.run(
@@ -112,10 +132,11 @@ export async function spawnTypeCheckWorker(opts: {
               root,
               name,
               tsconfigPath,
-              manifestPath,
               tscMode,
+              onMiss,
               lintFiles,
-              typeFps,
+              typedParts,
+              versions,
             },
             slot,
           })),
@@ -126,6 +147,12 @@ export async function spawnTypeCheckWorker(opts: {
     },
     { lane: grant.lane },
   );
+  // A miss in the affected set answered from one whole program: filed here,
+  // so no caller can forget to.
+  run.result.tscLines.push(
+    ...(await reportMisses(run.result.missed, outboxSink(root))),
+  );
+  return run;
 }
 
 async function spawnWorker(opts: {

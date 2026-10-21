@@ -1,8 +1,7 @@
 // Everything type-check does that reads file bytes or walks the tree, before and
 // after the tsc worker: the import graph, the content hashes, the tsconfig's
-// include-expansion and the coverage gate, the program key, the signature
-// table and the lint result lookups — and, once the worker is back, every
-// record.
+// include-expansion and the coverage gate, and the lint result lookups — and,
+// once the worker is back, every record and the lint verdict.
 //
 // It is 70–130 s of SYNCHRONOUS work, and it used to run on the check runner's
 // own thread. `./singularity check` runs every selected check concurrently in
@@ -19,22 +18,18 @@
 //
 // ONE session per run, in two phases, because the record phase needs state the
 // prepare phase built: the content hash and stored entry of every file sent to
-// lint, the program key and signature table when it skipped, and above all
-// `keyCtx.contentHash`, the memo the post-run key recompute reuses. Keeping that memo in memory is what keeps the
-// recorded program key exactly what it was when this all ran in one function.
+// lint, and the keys of the parts prepare found fresh.
 //
-// The two orderings `../CLAUDE.md` calls load-bearing both live inside this
-// one module: the skip clause AFTER `lintFiles` is built (which itself needs
-// the key: the signature table is looked up by it); a PASS — and a signature
-// table — recorded from the manifest the worker WROTE, through the same
-// `keyCtx`.
+// The worker always runs: only it knows each file's result key — what keys the
+// typed lint parts — and it computes them in one walk over the type check's
+// store (`../shared/name-run.ts`), so every file goes to it with its typed
+// parts to decide. An unchanged tree costs that walk; the outer read-set
+// replay skips the whole check before this runs.
 
 import { join, relative } from "path";
 import ts from "typescript";
 import {
-  programManifestPath,
   repoProgram,
-  type ContentHashMemo,
   type TscProgram,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { globPaths } from "@plugins/framework/plugins/tooling/core";
@@ -45,28 +40,14 @@ import {
   type LintFileJob,
   type LintFileResult,
   type RawLintMessage,
-  type TypedDecision,
   type TypedPartFp,
-  type TypeFpTable,
+  type TypedParts,
 } from "../core";
-import { typedResultKey } from "../shared/type-fingerprint";
 import { buildImportGraphs } from "./import-graph";
 import { computeContentHashes, type TreeListing } from "./fingerprint";
 import { computeLintGroups, typedGroupFps } from "./lint-groups";
-import {
-  mergeLintEntry,
-  openLintResultStore,
-  sameEntry,
-  type LintEntry,
-  type LintEntryUpdate,
-} from "./lint-results";
+import { openLintResultStore, type LintEntry } from "./lint-results";
 import { lintViolationLines } from "./lint-verdict";
-import {
-  openProgramKeyContext,
-  openProgramPasses,
-  programKey,
-} from "./program-key";
-import { openTypeFpTables, type TableLookup } from "./type-fp-tables";
 
 /** What the runner hands the session. Structured-cloned to the thread. */
 export interface PrepareInput {
@@ -76,12 +57,6 @@ export interface PrepareInput {
    * different tree than the one recorded. Its `root` is the worktree root.
    */
   listing: TreeListing;
-  /**
-   * `ctx.cacheEnabled !== false`. Disarms the SKIP, never the record: someone
-   * forcing a real run wants the program rebuilt, and the pass it produces is
-   * still a good fact to keep.
-   */
-  cacheEnabled: boolean;
 }
 
 /**
@@ -95,18 +70,14 @@ export type Plan =
   | { kind: "uncovered"; uncovered: string[] }
   | {
       kind: "run";
-      /** The program the worker builds. */
+      /** The tsconfig the worker type-checks. */
       program: TscProgram;
-      /** Whether the worker must run at all (false = the program is unchanged). */
-      run: boolean;
-      /** The files the worker must lint, each with its stale (or undecided) parts. */
+      /** Every lintable file: its stale syntactic groups and its typed keys known. */
       lintFiles: LintFileJob[];
-      /** True iff the program key is already recorded green (so `run` is false). */
-      skipped: boolean;
-      /** Why the program could not be keyed at all, when it could not. */
-      unkeyed?: string;
-      /** What computing the program key cost, rounded. */
-      keysMs: number;
+      /** The typed parts every split / directive file decides. */
+      typedParts: TypedParts;
+      /** Every lintable file's version (sha256 of its text), for the worker. */
+      versions: Record<string, string>;
     };
 
 /** The worker that came back (a crashed worker has no outcome, and records nothing). */
@@ -115,20 +86,15 @@ export interface ProgramOutcome {
   tscClean: boolean;
   /** The raw lint results, one per file the plan sent. */
   lint: LintFileResult[];
-  /** The type fingerprints of the program the worker built. */
-  typeFps: TypeFpTable;
 }
 
 /** What the record phase hands back to the runner. */
 export interface Finalized {
   /**
    * The transcript line saying what the worker linted, and why — after the
-   * worker, because without a signature table only it can tell which typed
-   * parts were stale.
+   * worker, because only it can tell which typed parts were stale.
    */
   lintLine: string;
-  /** Further transcript lines (the table record). */
-  lines: string[];
   /**
    * The lint violations, assembled from every file's stored and fresh results
    * under the current exemptions — "" when there are none. Undefined when the
@@ -147,11 +113,11 @@ export type Preparation =
   | {
       plan: Extract<Plan, { kind: "run" }>;
       /**
-       * The record phase, in the order it always ran. Call once, with the
-       * worker's outcome — or `undefined` when there is none, because the
-       * worker crashed or the program was skipped. Returns the transcript lines
-       * the run should log and the lint verdict, which only this side can
-       * assemble: most files' results are in the store, not in the outcome.
+       * The record phase. Call once, with the worker's outcome — or
+       * `undefined` when there is none, because the worker crashed. Returns
+       * the transcript line the run should log and the lint verdict, which
+       * only this side can assemble: most files' results are in the store,
+       * not in the outcome.
        */
       finalize(outcome: ProgramOutcome | undefined): Promise<Finalized>;
     };
@@ -176,17 +142,13 @@ const toRel = (root: string, abs: string): string =>
 
 /**
  * The program's include-expansion — its ROOTS — or the reason there is none.
+ * The coverage gate is `lintable − roots`.
  *
- * Two things need it: the coverage gate is `lintable − roots`, and half of what
- * the program key says is "which roots is this".
- *
- * A tsconfig that will not parse is its own arm rather than an empty root list,
- * and the difference is load-bearing in both directions. An empty list would
- * make the coverage gate report EVERY lintable file as orphaned — a wall of
- * noise for one broken JSON file — and it would mint a program key for a
- * program we could not describe. The `unparsed` arm instead skips the gate and
- * the key and lets the worker run, where tsc reports the broken config as the
- * one diagnostic it is.
+ * A tsconfig that will not parse is its own arm rather than an empty root list:
+ * an empty list would make the coverage gate report EVERY lintable file as
+ * orphaned — a wall of noise for one broken JSON file. The `unparsed` arm
+ * instead skips the gate and lets the worker run, where tsc reports the broken
+ * config as the one diagnostic it is.
  */
 type ProgramRoots =
   { kind: "roots"; roots: string[] } | { kind: "unparsed"; why: string };
@@ -217,7 +179,6 @@ function parseProgramRoots(program: TscProgram): ProgramRoots {
 /** Prepare one run: the plan, and the session its record phase closes over. */
 export async function openPreparation({
   listing,
-  cacheEnabled,
 }: PrepareInput): Promise<Preparation> {
   const { root } = listing;
   const program = repoProgram(root);
@@ -265,45 +226,12 @@ export async function openPreparation({
   const keepSyntactic = 3 * groups.fps.size;
   const keepTyped = 3 * typedParts.length;
 
-  // The program key says "this exact program — these roots, this content,
-  // these options", enumerated from the manifest the last worker wrote. It
-  // keys two records: the program PASS (below) and the signature table. ONE
-  // content-hash memo for the whole run, so the key recomputed after the
-  // worker reads each file once and sees the same tree.
-  const contentHash: ContentHashMemo = new Map();
-  const keyStart = performance.now();
-  const keyCtx = openProgramKeyContext(listing, contentHash);
-  const passes = openProgramPasses();
-  const tables = openTypeFpTables();
-  const manifestPath = programManifestPath(root, program.name);
-  let key: string | undefined;
-  let unkeyed: string | undefined;
-  if (rootsResult.kind === "unparsed") {
-    unkeyed = `tsconfig did not parse: ${rootsResult.why}`;
-  } else {
-    const result = programKey(
-      keyCtx,
-      { tsconfigPath: program.tsconfigPath, manifestPath },
-      rootsResult.roots,
-    );
-    if (result.kind === "key") key = result.key;
-    else unkeyed = result.why; // no enumeration → cold run, then recorded below
-  }
-
-  // The signature table: every lintable file's type fingerprint in THIS
-  // program, recorded by whichever run built it. With it every typed key is
-  // known now, so only stale parts go to the worker and an all-fresh tree skips
-  // it; without it (the program changed, or a cold run) the typed decisions
-  // move into the worker, which alone will have the signatures.
-  const table: TableLookup =
-    key === undefined
-      ? { kind: "none", why: "no program key" }
-      : tables.read(program.name, key, graphs.files);
-
-  // The lint result store, per (file, content hash): which parts already have
-  // a result under their current key. Each file sends only its stale syntactic
-  // groups (run with no program) and its typed part when it is stale or not yet
-  // decidable; a file with an eslint directive is one unit and goes whole.
+  // The lint result store, per (file, content hash): which syntactic parts
+  // already have a result under their current key. Each file sends its stale
+  // syntactic groups (run with no program) and its typed parts with the keys
+  // stored for them — the worker, which alone knows the file's result key,
+  // runs the ones whose key is not among them. A file with an eslint
+  // directive is one unit and goes whole.
   const store = openLintResultStore();
   const states = new Map<string, FileState>();
   const lintFiles: LintFileJob[] = [];
@@ -316,35 +244,14 @@ export async function openPreparation({
       reusedTyped: new Set(),
     };
     states.set(rel, state);
-    const decide = (parts: TypedPartFp[]): TypedDecision => {
-      if (table.kind === "none") {
-        return { kind: "deferred", parts, known: entry?.typed ?? [] };
-      }
-      const typeFp = table.fps.get(rel)!;
-      const stale: { group: string; key: string }[] = [];
-      for (const { group, fp } of parts) {
-        const key = typedResultKey(fp, typeFp);
-        if (entry?.typed.includes(key)) {
-          state.cached.push(...(entry.messages[key] ?? []));
-          state.reusedTyped.add(key);
-        } else {
-          stale.push({ group, key });
-        }
-      }
-      return { kind: "decided", stale };
-    };
-    const needsRun = (d: TypedDecision): boolean =>
-      d.kind === "deferred" || d.stale.length > 0;
+    const typed = { known: entry?.typed ?? [] };
     if (directives.has(rel)) {
-      const typed = decide(wholeParts);
-      if (needsRun(typed)) {
-        lintFiles.push({
-          file: join(root, rel),
-          unit: "whole",
-          syntactic: [],
-          typed,
-        });
-      }
+      lintFiles.push({
+        file: join(root, rel),
+        unit: "whole",
+        syntactic: [],
+        typed,
+      });
       continue;
     }
     const known = new Set(entry?.syntactic);
@@ -357,59 +264,27 @@ export async function openPreparation({
         syntactic.push(g);
       }
     }
-    const typed = decide(typedParts);
-    if (syntactic.length === 0 && !needsRun(typed)) continue;
-    lintFiles.push({ file: join(root, rel), unit: "split", syntactic, typed });
+    lintFiles.push({
+      file: join(root, rel),
+      unit: "split",
+      syntactic,
+      typed,
+    });
   }
-
-  // THE SKIP. An outer-cache MISS rebuilds the program even when the edit
-  // cannot have changed it; a program whose key is already recorded green has
-  // nothing left to compute.
-  //
-  // The `lintFiles` clause is load-bearing, and so is its ORDERING. A file with
-  // a part still to lint — a rule edit's group, an evicted result, or a typed
-  // part no signature table could decide — can only be linted by the worker,
-  // so a non-empty lint list defeats the skip. Reading it before `lintFiles`
-  // was built would silently make that clause always true.
-  //
-  // `--no-cache` disarms the SKIP but not the RECORD: someone forcing a real
-  // run wants the program rebuilt, and the pass it produces is still a
-  // perfectly good fact to keep.
-  const skipped =
-    key !== undefined &&
-    cacheEnabled &&
-    passes.has(program.name, key) &&
-    lintFiles.length === 0;
-  const keysMs = Math.round(performance.now() - keyStart);
 
   const plan: Extract<Plan, { kind: "run" }> = {
     kind: "run",
     program,
-    run: !skipped,
     lintFiles,
-    skipped,
-    ...(unkeyed !== undefined ? { unkeyed } : {}),
-    keysMs,
+    typedParts: { split: typedParts, whole: wholeParts },
+    versions: Object.fromEntries(graphs.files.map((f) => [f, ch(f)])),
   };
 
   async function finalize(
     outcome: ProgramOutcome | undefined,
   ): Promise<Finalized> {
-    // The key of the program the worker actually built, RECOMPUTED from the
-    // manifest it just WROTE, so what is recorded describes that program rather
-    // than the one predicted before it ran — on a cold run the two differ, since
-    // there was no enumeration to predict from at all.
-    const lines: string[] = [];
-    let builtKey: string | undefined;
-    if (outcome && rootsResult.kind === "roots") {
-      const result = programKey(
-        keyCtx,
-        { tsconfigPath: program.tsconfigPath, manifestPath },
-        rootsResult.roots,
-      );
-      if (result.kind === "key") builtKey = result.key;
-    }
-
+    const t0 = performance.now();
+    let moveUps = 0;
     // Record every fresh result — violations included: the store holds what
     // the rules SAID, and the verdict is assembled from it below. A crashed
     // worker records nothing (re-lints next time).
@@ -424,21 +299,10 @@ export async function openPreparation({
     const count = (part: string): void => {
       ran.byPart.set(part, (ran.byPart.get(part) ?? 0) + 1);
     };
-    // The files the worker answered; every other file's update (only reused
-    // keys) is recorded after the loop.
+    // The files the worker answered — only those where something happened;
+    // every other file reused its newest stored keys, read back below.
     const answered = new Set<string>();
     if (outcome) {
-      // A worker whose program parsed answers every job: one that silently
-      // dropped a file would leave it with no verdict at all. (One whose
-      // tsconfig did not parse answers none, and its tsc error is the failure.)
-      if (
-        rootsResult.kind === "roots" &&
-        outcome.lint.length !== lintFiles.length
-      ) {
-        throw new Error(
-          `type-check: the worker returned ${outcome.lint.length} lint results for ${lintFiles.length} files`,
-        );
-      }
       for (const r of outcome.lint) {
         const rel = toRel(root, r.file);
         const state = states.get(rel);
@@ -509,49 +373,43 @@ export async function openPreparation({
           keepTyped,
         });
       }
-
-      // The signature table of the program just built, under its built key:
-      // recorded whatever the verdict, since signatures are facts of the
-      // program, not of whether it type-checks.
-      if (builtKey !== undefined) {
-        if (outcome.typeFps.kind === "table") {
-          tables.record(
-            program.name,
-            builtKey,
-            graphs.files,
-            new Map(Object.entries(outcome.typeFps.fps)),
-          );
-        } else {
-          lines.push(
-            `type-check: no signature table recorded — ${outcome.typeFps.why}`,
-          );
-        }
-      }
     }
 
-    // Every file no worker answered whose reused keys are not already in
-    // front: one write moves them up, so a result in use is never the one a
-    // sibling's newer version evicts. Judged on the entry prepare read, so the
-    // common case — every reused key already in front — reads and writes
-    // nothing more. A skipped program records too: its results were in use.
-    if (outcome || skipped) {
+    // Every file the worker did not answer: its syntactic parts were all
+    // fresh (`state.cached` holds their messages) and its typed parts reused
+    // the NEWEST of its stored typed keys — one per part, so the first of
+    // them. Read back here, with no write unless a reused syntactic key is
+    // not already in front (one write moves it up, so a result in use is
+    // never the one a sibling's newer version evicts). O(files) in memory,
+    // no I/O for the common case.
+    if (outcome) {
       for (const [rel, state] of states) {
-        if (answered.has(rel) || state.entry === undefined) continue;
-        const update: LintEntryUpdate = {
+        if (answered.has(rel)) continue;
+        const entry = state.entry;
+        if (entry === undefined) {
+          throw new Error(
+            `type-check: ${rel} has no stored lint result and the worker did not lint it`,
+          );
+        }
+        const n = directives.has(rel) ? wholeParts.length : typedParts.length;
+        for (const k of entry.typed.slice(0, n)) {
+          state.cached.push(...(entry.messages[k] ?? []));
+        }
+        const front = entry.syntactic.slice(0, state.reusedSyntactic.size);
+        if (front.every((k) => state.reusedSyntactic.has(k))) continue;
+        moveUps++;
+        store.add(rel, ch(rel), {
           syntactic: new Map(),
           typed: new Map(),
           reusedSyntactic: state.reusedSyntactic,
-          reusedTyped: state.reusedTyped,
+          reusedTyped: new Set(entry.typed.slice(0, n)),
           keepSyntactic,
           keepTyped,
-        };
-        if (sameEntry(state.entry, mergeLintEntry(state.entry, update))) {
-          continue;
-        }
-        store.add(rel, ch(rel), update);
+        });
       }
     }
 
+    const recordMs = performance.now() - t0;
     // One greppable line: how much the worker linted, of which kinds, and which
     // parts are why — the instrument for "did that edit cost its group, its
     // importers, or the repo".
@@ -564,21 +422,22 @@ export async function openPreparation({
       `type-check: lint ${ran.files}/${graphs.files.length} files ` +
       `(${ran.whole} whole, ${ran.files - ran.whole} partial; ` +
       `syntactic ${ran.syntactic}, typed ${ran.typed}; ` +
-      `${lintFiles.length} sent; ` +
-      `${groups.fps.size} groups, engine ${groups.engineFiles} files; ` +
-      `typed keys from ${table.kind === "table" ? "table" : `worker (${table.why})`})` +
-      (outcome === undefined && plan.run ? " — worker did not come back" : "") +
+      `${groups.fps.size} groups, engine ${groups.engineFiles} files)` +
+      (outcome === undefined ? " — worker did not come back" : "") +
       (topStale ? ` — stale: ${topStale}` : "");
 
     // The lint verdict: every file's results — stored or fresh — under the
-    // exemptions as they are NOW. With files to lint and no outcome the worker
-    // crashed, and there is nothing to assemble.
+    // exemptions as they are NOW. With no outcome the worker crashed, and
+    // there is nothing to assemble.
     let lintViolations: string | undefined;
-    if (outcome || lintFiles.length === 0) {
+    let exemptionsMs = 0;
+    const t1 = performance.now();
+    if (outcome) {
       const exemptions = await loadExemptions({
         root,
         glob: (pattern) => globPaths(listing.files, pattern),
       });
+      exemptionsMs = performance.now() - t1;
       lintViolations = lintViolationLines(
         graphs.files.map((rel) => ({
           rel,
@@ -591,31 +450,11 @@ export async function openPreparation({
       ).join("\n");
     }
 
-    // Record a program PASS when the worker came back completely clean, under
-    // the key of the program it built.
-    //
-    // Only a fully-clean run records. A tsc error obviously must not be recorded
-    // green; a lint failure need not block a TSC key, but keeping the rule
-    // "clean means clean" costs one re-run of a program that was failing anyway
-    // and leaves nothing to reason about later.
-    if (outcome?.tscClean && lintViolations === "" && builtKey !== undefined) {
-      passes.record(program.name, builtKey);
-    }
-
-    // Re-record the key of a SKIPPED program, and its signature table. Not a
-    // new claim — both are the identical facts already recorded — but the
-    // stores age entries out by when they were last WRITTEN, so without this a
-    // program that skips successfully every day for a fortnight would be
-    // evicted for being unused and pay a cold run. One write each turns the age
-    // bound into "unused for 14 days", which is what it was always meant to say.
-    if (skipped && key !== undefined) {
-      passes.record(program.name, key);
-      if (table.kind === "table") {
-        tables.record(program.name, key, graphs.files, table.fps);
-      }
-    }
-
-    return { lintLine, lines, lintViolations };
+    const ms = (x: number): string => (x / 1000).toFixed(1);
+    return {
+      lintLine: `${lintLine} (finalize: records ${ms(recordMs)}s — ${answered.size} answered, ${moveUps} moved up; exemptions ${ms(exemptionsMs)}s, verdict ${ms(performance.now() - t1 - exemptionsMs)}s)`,
+      lintViolations,
+    };
   }
 
   return { plan, finalize };

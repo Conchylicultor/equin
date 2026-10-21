@@ -64,7 +64,7 @@ const priorDataRoot = process.env.SINGULARITY_DIR;
 beforeAll(async () => {
   // The program name is a fixed literal now (`repo`), not a per-suite one, so
   // the host-global stores this preparation touches — the
-  // lint result store, the program-pass set, the signature tables — are the
+  // lint result store — are the
   // REAL ones unless pointed
   // elsewhere. Left alone, the suite would score (and copy) every pooled
   // multi-GB base of every checkout on this machine. `SINGULARITY_DIR` is the
@@ -98,13 +98,8 @@ afterAll(() => {
   if (notARepo) rmSync(notARepo, { recursive: true, force: true });
 });
 
-/** The one field that is a measurement, not a decision, zeroed for comparison. */
-function decisions(plan: Plan): Plan {
-  return plan.kind === "run" ? { ...plan, keysMs: 0 } : plan;
-}
-
 async function input(): Promise<PrepareInput> {
-  return { listing: await readTreeListing(root), cacheEnabled: true };
+  return { listing: await readTreeListing(root) };
 }
 
 /**
@@ -129,31 +124,31 @@ test(
     try {
       const fromThread = await thread.prepare(await input());
       const inProcess = (await openPreparation(await input())).plan;
-      expect(decisions(fromThread)).toEqual(decisions(inProcess));
-      // Not a vacuous equality: the fixture is a runnable, unkeyed cold tree,
-      // whose every file needs every syntactic rule group (the result store is
-      // empty) and whose typed parts only the worker can decide (no program
-      // key, so no signature table).
+      expect(fromThread).toEqual(inProcess);
+      // Not a vacuous equality: the fixture is a runnable cold tree, whose
+      // every file needs every syntactic rule group (the result store is
+      // empty) and whose typed parts only the worker can decide.
       const everyGroup = [LINT_GROUP_BASE, ...lintContributionPaths()];
       const job = (rel: string) => ({
         file: join(root, rel),
         unit: "split" as const,
         syntactic: everyGroup,
-        typed: {
-          kind: "deferred" as const,
-          parts: expect.any(Array) as { group: string; fp: string }[],
-          known: [],
-        },
+        typed: { known: [] },
       });
-      expect(decisions(fromThread)).toEqual({
+      const expected: Plan = {
         kind: "run",
         program: { name: PROGRAM, tsconfigPath: join(root, "tsconfig.json") },
-        run: true,
         lintFiles: [job("src/a.ts"), job("src/b.ts")],
-        skipped: false,
-        unkeyed: "no program manifest yet",
-        keysMs: 0,
-      });
+        typedParts: {
+          split: expect.any(Array) as { group: string; fp: string }[],
+          whole: expect.any(Array) as { group: string; fp: string }[],
+        },
+        versions: {
+          "src/a.ts": expect.any(String) as string,
+          "src/b.ts": expect.any(String) as string,
+        },
+      };
+      expect(fromThread).toEqual(expected);
     } finally {
       thread.close();
     }
@@ -188,13 +183,11 @@ test(
   async () => {
     const thread = openPrepareThread();
     try {
-      // A real directory that is not a git checkout: the program key's name
-      // census lists the composition registries with `git ls-files`, which
-      // fails loudly there — inside `./prepare`, on the thread.
+      // A listing naming a file that is not there: hashing it fails loudly
+      // — inside `./prepare`, on the thread.
       const err = await rejection(
         thread.prepare({
-          listing: { root: notARepo, files: [] },
-          cacheEnabled: true,
+          listing: { root: notARepo, files: ["src/missing.ts"] },
         }),
       );
       expect(err.message).toContain(notARepo);

@@ -1,7 +1,7 @@
 export { checkCollectedDir } from "./collected-dir";
 export { runChecks, listAllChecks, scopeOf, requestedJobs } from "./runner";
 export type { RunChecksOptions } from "./runner";
-export { repoProgram, programManifestPath } from "./discover";
+export { repoProgram } from "./discover";
 export type { TscProgram } from "./discover";
 export { hashFileBytes, hashFileCached } from "./content-hash";
 export type { ContentHashMemo } from "./content-hash";

@@ -1,10 +1,10 @@
 // A content-keyed PASS set on disk: "this exact key was recorded green before".
 //
 // Three of type-check's caches are the same store with different keys — the
-// per-file lint result store (key = a file's path and content hash), the
-// program-pass record and the signature tables (key = a tsc program's content
-// key). Every entry is one small JSON file, the largest a ~200 KB signature
-// table, read and parsed whole. All are host-global on purpose: a fresh worktree reuses whatever a sibling recorded
+// per-file lint result store (key = a file's path and content hash), the type
+// check's name records (key = a file's path and version) and its contracts
+// (key = a `.d.ts` text's hash). Every entry is one small JSON file, read and
+// parsed whole. All are host-global on purpose: a fresh worktree reuses whatever a sibling recorded
 // for an identical key, which is the whole reason the key is content-addressed
 // rather than tree- or worktree-scoped.
 //

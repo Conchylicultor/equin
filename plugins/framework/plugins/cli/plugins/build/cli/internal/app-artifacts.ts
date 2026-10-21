@@ -10,10 +10,7 @@ import {
   generateConfigGitLayer,
   type CodegenStep,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import {
-  programManifestPath,
-  repoProgram,
-} from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { repoProgram } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { spawnTypeCheckWorker } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/server";
 import {
   admitThroughGate,
@@ -693,9 +690,9 @@ export async function fastValidationJobs(opts: {
     // The SAME worker the `type-check` check runs — not a `tsc --noEmit` of
     // our own — so the compiler options, the declaration emit that gives every
     // checked file a real signature (the hash of its public shape), and the
-    // keyed check that re-checks only the files whose key moved are written
-    // down in one place. It reads and writes the same host-wide
-    // checked-results store as the check, so this path and the check never
+    // two-program check that re-checks only the files whose key moved are
+    // written down in one place. It reads and writes the same host-wide
+    // name-records store as the check, so this path and the check never
     // re-check what the other already checked.
     //
     // Admitted exactly like the check's worker — the host-wide
@@ -707,13 +704,13 @@ export async function fastValidationJobs(opts: {
       root,
       name: program.name,
       tsconfigPath: program.tsconfigPath,
-      manifestPath: programManifestPath(root, program.name),
       tscMode: "keyed",
+      // A missed prediction answers from one whole program and is reported,
+      // never a failed build (`type-check`'s `shared/name-run.ts`).
+      onMiss: "whole",
       // Type-checking only: linting belongs to the check pass this path is
       // skipping, and an empty list is what the worker reads as "none".
       lintFiles: [],
-      // Nor the type fingerprints: only the check records a signature table.
-      typeFps: false,
       grant,
     });
     end({ maxRssBytes: run.maxRssBytes });

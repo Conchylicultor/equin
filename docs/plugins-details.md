@@ -24662,7 +24662,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling` (1 debt)
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (11 debt)
-              - `framework/tooling/checks/type-check` (9 debt)
+              - `framework/tooling/checks/type-check` (14 debt)
               - `framework/tooling/codegen` (29 debt)
               - `framework/tooling/format` (5 debt)
               - `framework/tooling/guards` (10 debt)
@@ -24792,7 +24792,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `listRepoFiles`
               - `markBuildInProgress`
               - `openCheckCache`
-              - `programManifestPath`
               - `readCheckProgress`
               - `readTranscriptVerdict`
               - `repoProgram`
@@ -24896,26 +24895,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (types):
                   - `LintFileJob`
                   - `LintFileResult`
+                  - `ProgramSize`
                   - `RawLintMessage`
                   - `TscDivergence`
                   - `TscMode`
+                  - `TscPredictionMiss`
+                  - `TypeCheckDivergencePayload`
+                  - `TypeCheckStats`
                   - `TypeCheckWorkerJob`
                   - `TypeCheckWorkerResult`
                   - `TypedDecision`
                   - `TypedPartFp`
                   - `TypedPartOutcome`
-                  - `TypeFpTable`
+                  - `TypedParts`
                 - Exports (values):
                   - `LINT_GROUP_ALL`
                   - `LINT_GROUP_BASE`
+                  - `TYPE_CHECK_DIVERGENCE_KIND`
                   - `TYPE_CHECK_WORKER_PEAK_BYTES`
                   - `TYPE_CHECK_WORKER_UNITS`
+                  - `TypeCheckDivergencePayloadSchema`
               - Cross-plugin:
+                - Uses tokens: `ui/tokens/shadow --shadow`
                 - Imported by: `framework/tooling/checks/type-check/backstop`
               - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/contract-refs.ts`, `shared/keyed-check.ts`, `shared/lockfile.ts`, `shared/pass-set.ts`, `shared/program-graph.ts`, `shared/program-manifest.ts`, `shared/type-fingerprint.ts`, `shared/worker.ts` (debt)
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
               - Plugins:
-                - **`backstop`** — The keyed type check's backstop: a daily main-only job runs the type-check worker in dual mode (the keyed check beside a full check of a fresh program, compared file by file) and files a type-check-divergence report for every file whose keyed result differs.
+                - **`backstop`** — The two-program type check's backstop: a daily main-only job runs the type-check worker in dual mode (the two-program check beside a full check of a fresh whole program, compared file by file) and files a type-check-divergence report for every file whose result differs.
                   - Server:
                     - Contributes: `report-kind` "type-check-divergence"
                     - Uses:
@@ -48625,10 +48631,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 65 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 66 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×27
               - `primitives` ×17
-              - `framework` ×4
+              - `framework` ×5
               - `ui` ×4
               - `apps-core` ×2
               - `page` ×2

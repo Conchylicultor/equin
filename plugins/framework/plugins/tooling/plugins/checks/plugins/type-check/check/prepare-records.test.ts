@@ -1,20 +1,16 @@
 /**
- * The record phase closes the loop the signature table exists for
- * (research/2026-10-17-global-lint-keyed-on-what-it-reads.md §3):
- *   1. a first run on a program with no table defers every typed part to the
- *      worker, and `finalize` stores what came back under the keys the worker
- *      computed, plus the program's table and PASS;
- *   2. the next run on the SAME program decides every part in prepare — all
- *      fresh — and skips the worker outright;
- *   3. a syntactic group answered from the store on a run where the worker
- *      returns nothing for it is still part of the verdict;
- *   4. on a changed program a file whose typed key did not move is reused by
- *      the worker (`cached`), not re-linted.
+ * The record phase (research/2026-10-21-global-type-check-two-programs.md):
+ *   1. every lintable file goes to the worker with its typed parts to decide
+ *      (only the worker knows each file's result key), and `finalize` stores
+ *      what came back under the keys the worker computed;
+ *   2. the next run sends every file again, its syntactic groups fresh and its
+ *      typed keys known; the worker answers `cached`, and a stored violation
+ *      is still part of the verdict;
+ *   3. after an edit, a file whose result key did not move is reused by the
+ *      worker (`cached`), not re-linted.
  *
  * The worker is not spawned: its outcome is written here, shaped exactly as
- * the protocol says. A real git fixture, because the listing is read from git;
- * a hand-written program manifest, because the program key enumerates the
- * program from one.
+ * the protocol says. A real git fixture, because the listing is read from git.
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
@@ -28,13 +24,11 @@ import type {
   RawLintMessage,
   TypedPartOutcome,
 } from "../core";
-import { typedResultKey } from "../shared/type-fingerprint";
+import { typedResultKey } from "../shared/keys";
 import { readTreeListing } from "./fingerprint";
-import {
-  openPreparation,
-  type Preparation,
-  type ProgramOutcome,
-} from "./prepare";
+import { openPreparation, type Preparation } from "./prepare";
+
+type Plan = Extract<Preparation, { finalize: unknown }>["plan"];
 
 // Loading every lint contribution (to learn which groups are type-aware) and
 // the TypeScript compiler is seconds on a loaded host.
@@ -64,7 +58,8 @@ async function git(...args: string[]): Promise<void> {
   }
 }
 
-const TYPE_FPS: Record<string, string> = {
+/** The result keys the worker would compute (`../shared/name-walk.ts`). */
+const RESULT_KEYS: Record<string, string> = {
   "src/a.ts": "0123456789abcdef",
   "src/b.ts": "fedcba9876543210",
 };
@@ -83,11 +78,6 @@ beforeAll(async () => {
   write("src/b.ts", 'import { a } from "./a";\nexport const b = a + 1;\n');
   write("package.json", JSON.stringify({ name: "fixture" }));
   for (const rel of LINT_DATA_FILES) write(rel, "@utility fixture {}\n");
-  // What the program loaded, as the program key reads it: names only.
-  write(
-    ".cache/type-check/repo.program.json",
-    JSON.stringify({ files: ["src/a.ts", "src/b.ts"] }),
-  );
   await git("init", "-q");
   await git("config", "core.excludesFile", "/dev/null");
 });
@@ -100,28 +90,24 @@ afterAll(() => {
 });
 
 async function prepare(): Promise<Extract<Preparation, { finalize: unknown }>> {
-  const p = await openPreparation({
-    listing: await readTreeListing(root),
-    cacheEnabled: true,
-  });
+  const p = await openPreparation({ listing: await readTreeListing(root) });
   if (!("finalize" in p)) throw new Error("expected a runnable plan");
   return p;
 }
 
-/** A deferred job's typed parts, each with the key the worker would compute. */
-function deferredKeys(job: LintFileJob, rel: string) {
-  if (job.typed.kind !== "deferred") {
-    throw new Error("expected a deferred typed part");
-  }
-  return job.typed.parts.map(({ group, fp }) => ({
+/** A split job's typed parts, each with the key the worker would compute. */
+function typedKeys(plan: Plan, rel: string) {
+  return plan.typedParts.split.map(({ group, fp }) => ({
     group,
-    key: typedResultKey(fp, TYPE_FPS[rel]!),
+    key: typedResultKey(fp, RESULT_KEYS[rel]!),
   }));
 }
 
-/** Every typed part of a deferred job, run, with no messages. */
-const ranAll = (job: LintFileJob, rel: string): TypedPartOutcome[] =>
-  deferredKeys(job, rel).map((p) => ({ ...p, kind: "ran", messages: [] }));
+/** Every typed part of a job, run, with no messages. */
+const ranAll = (plan: Plan, rel: string): TypedPartOutcome[] =>
+  typedKeys(plan, rel).map((p) => ({ ...p, kind: "ran", messages: [] }));
+
+const relOf = (job: LintFileJob): string => job.file.slice(root.length + 1);
 
 const violation: RawLintMessage = {
   ruleId: "x/syntactic",
@@ -132,20 +118,15 @@ const violation: RawLintMessage = {
 };
 
 test(
-  "a run's records let the next run on the same program decide every part, and skip",
+  "a run's records answer the next run's syntactic groups, and its typed keys come back cached",
   async () => {
-    // 1. No table yet: every typed part is deferred, so the worker must run.
+    // 1. Nothing stored: every part runs.
     const first = await prepare();
-    expect(first.plan.skipped).toBe(false);
-    expect(first.plan.lintFiles.map((j) => j.typed.kind)).toEqual([
-      "deferred",
-      "deferred",
-    ]);
-    // The worker's answer: every syntactic group clean but one message on b,
-    // every typed part run under the key it computes from the type fps.
+    expect(first.plan.lintFiles.map(relOf)).toEqual(["src/a.ts", "src/b.ts"]);
+    for (const job of first.plan.lintFiles) expect(job.typed.known).toEqual([]);
     const lint: LintFileResult[] = first.plan.lintFiles.map((job) => {
       if (job.unit !== "split") throw new Error("expected split jobs");
-      const rel = job.file.slice(root.length + 1);
+      const rel = relOf(job);
       return {
         file: job.file,
         unit: "split",
@@ -155,106 +136,64 @@ test(
             rel === "src/b.ts" && i === 0 ? [violation] : [],
           ]),
         ),
-        typed: ranAll(job, rel),
+        typed: ranAll(first.plan, rel),
       };
     });
-    const outcome: ProgramOutcome = {
-      tscClean: true,
-      lint,
-      typeFps: { kind: "table", fps: TYPE_FPS },
-    };
-    const done = await first.finalize(outcome);
+    const done = await first.finalize({ tscClean: true, lint });
     expect(done.lintViolations).toBe("src/b.ts:1:1  x/syntactic  stored");
     expect(done.lintLine).toContain(
-      "type-check: lint 2/2 files (2 whole, 0 partial; syntactic 2, typed 2; 2 sent;",
-    );
-    expect(done.lintLine).toContain(
-      "typed keys from worker (no table for this program yet)",
+      "type-check: lint 2/2 files (2 whole, 0 partial; syntactic 2, typed 2;",
     );
 
-    // 2. The same program again: the table decides every typed part, the
-    //    store answers every syntactic group — nothing is sent. The program did
-    //    not PASS (a lint violation), so the worker still runs, with no files.
+    // 2. The same tree: every file sent again, every syntactic group fresh,
+    //    every typed key known and newest — the worker reuses them all and
+    //    answers nothing.
     const second = await prepare();
-    expect(second.plan.lintFiles).toEqual([]);
-    expect(second.plan.skipped).toBe(false);
+    for (const job of second.plan.lintFiles) {
+      expect(job.syntactic).toEqual([]);
+      expect([...job.typed.known].sort()).toEqual(
+        typedKeys(second.plan, relOf(job))
+          .map((p) => p.key)
+          .sort(),
+      );
+    }
+    const again = await second.finalize({ tscClean: true, lint: [] });
     // 3. The stored violation is part of the verdict though nothing re-ran.
-    const again = await second.finalize({
-      tscClean: true,
-      lint: [],
-      typeFps: { kind: "table", fps: TYPE_FPS },
-    });
     expect(again.lintViolations).toBe("src/b.ts:1:1  x/syntactic  stored");
     expect(again.lintLine).toContain("type-check: lint 0/2 files");
-    expect(again.lintLine).toContain("typed keys from table");
   },
   TIMEOUT_MS,
 );
 
 test(
-  "a changed program defers every typed part, the worker reuses what it can, and the next run skips",
+  "after an edit, a file whose result key did not move is reused, not re-linted",
   async () => {
-    // Fix the violation. b's text changed, so b's entry is new; and a loaded
-    // file's content is in the program key, so there is no table for this
-    // program: a — its text, and so its syntactic results, unchanged — is sent
-    // too, its typed part deferred with the key it already holds.
+    // Fix the violation. b's text changed, so b's entry is new; a's did not,
+    // so its syntactic groups are fresh and its typed keys known.
     write("src/b.ts", 'import { a } from "./a";\nexport const b = a + 2;\n');
     const run = await prepare();
     const [jobA, jobB] = run.plan.lintFiles;
-    if (
-      jobA?.unit !== "split" ||
-      jobA.typed.kind !== "deferred" ||
-      jobB?.unit !== "split" ||
-      jobB.typed.kind !== "deferred"
-    ) {
-      throw new Error("expected a and b split, typed parts deferred");
+    if (jobA?.unit !== "split" || jobB?.unit !== "split") {
+      throw new Error("expected a and b split");
     }
-    expect([jobA.file, jobB.file]).toEqual([
-      join(root, "src/a.ts"),
-      join(root, "src/b.ts"),
-    ]);
-    const keysA = deferredKeys(jobA, "src/a.ts");
-    expect(keysA.length).toBeGreaterThan(0);
     expect(jobA.syntactic).toEqual([]);
-    expect([...jobA.typed.known].sort()).toEqual(
-      keysA.map((p) => p.key).sort(),
-    );
     expect(jobB.typed.known).toEqual([]);
-
-    // a's type fingerprint did not move (a body edit in b cannot move it), so
-    // the worker finds a's key among `known` and reuses it.
+    // a reused its newest keys: no answer. b ran.
     const done = await run.finalize({
       tscClean: true,
       lint: [
         {
-          file: jobA.file,
-          unit: "split",
-          syntactic: {},
-          typed: keysA.map((p) => ({ ...p, kind: "cached" as const })),
-        },
-        {
           file: jobB.file,
           unit: "split",
           syntactic: Object.fromEntries(jobB.syntactic.map((g) => [g, []])),
-          typed: ranAll(jobB, "src/b.ts"),
+          typed: ranAll(run.plan, "src/b.ts"),
         },
       ],
-      typeFps: { kind: "table", fps: TYPE_FPS },
     });
     expect(done.lintViolations).toBe("");
     expect(done.lintLine).toContain(
-      "type-check: lint 1/2 files (1 whole, 0 partial; syntactic 1, typed 1; 2 sent;",
+      "type-check: lint 1/2 files (1 whole, 0 partial; syntactic 1, typed 1;",
     );
-
-    // Clean, recorded, and the table under the program it built: nothing to
-    // send, so nothing to run.
-    const next = await prepare();
-    expect(next.plan.lintFiles).toEqual([]);
-    expect(next.plan.skipped).toBe(true);
-    const skipped = await next.finalize(undefined);
-    expect(skipped.lintViolations).toBe("");
-    expect(skipped.lintLine).toContain("type-check: lint 0/2 files");
-    expect(skipped.lintLine).toContain("typed keys from table");
   },
   TIMEOUT_MS,
 );

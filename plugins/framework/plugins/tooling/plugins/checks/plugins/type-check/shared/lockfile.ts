@@ -1,6 +1,6 @@
 // The lockfile as far as types and lint rules can tell — shared by the lint
 // rule groups' engine (`../check/lint-groups.ts`) and the compiler's engine
-// (`./keyed-check.ts`): both depend on which npm packages are installed, and
+// (`./tsc-engine.ts`): both depend on which npm packages are installed, and
 // neither on which workspace plugins exist.
 
 import { createHash } from "crypto";

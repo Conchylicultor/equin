@@ -28,21 +28,22 @@ export interface TypedPartFp {
 }
 
 /**
- * Which of a file's typed parts must run: its typed rule groups' parts (a
- * split file), or its whole result (a directive file, one part under
- * `LINT_GROUP_ALL`).
- *
- * - `decided` — prepare computed every key from a signature table; `stale` are
- *   the parts with no stored result, each with the key its fresh one goes
- *   under (empty: nothing typed to run).
- * - `deferred` — no signature table for this program, so no key is known until
- *   the worker has the program's type fingerprints: for each part it computes
- *   `typedResultKey(fp, typeFp)` and runs it iff that key is not among `known`
- *   (the file's stored typed keys, a few per part).
+ * Which of a file's typed parts must run — the job's `typedParts.split` for a
+ * split file, `typedParts.whole` (one part under `LINT_GROUP_ALL`) for a
+ * directive file. Decided in the worker, which alone knows each file's result
+ * key: for each part it computes `typedResultKey(fp, resultKey)` and runs it
+ * iff that key is not among `known` (the file's stored typed keys, newest
+ * first, a few per part).
  */
-export type TypedDecision =
-  | { kind: "decided"; stale: { group: string; key: string }[] }
-  | { kind: "deferred"; parts: TypedPartFp[]; known: string[] };
+export interface TypedDecision {
+  known: string[];
+}
+
+/** The typed parts of every split file, and of every directive file. */
+export interface TypedParts {
+  split: TypedPartFp[];
+  whole: TypedPartFp[];
+}
 
 /**
  * One file to lint, and which of its parts to run.
@@ -73,16 +74,21 @@ export interface RawLintMessage {
 }
 
 /**
- * What became of one typed part the job named (a `decided` stale part, or any
- * `deferred` one). `cached`: the worker found the deferred key among `known`,
- * so the stored result under `key` stands. `ran`: fresh messages, to be stored
- * under `key`.
+ * What became of one typed part the job named. `cached`: its key is among
+ * `known`, so the stored result under `key` stands. `ran`: fresh messages, to
+ * be stored under `key`.
  */
 export type TypedPartOutcome =
   | { group: string; kind: "cached"; key: string }
   | { group: string; kind: "ran"; key: string; messages: RawLintMessage[] };
 
-/** One job's results, part by part. */
+/**
+ * One job's results, part by part — returned only for a file where something
+ * happened: a part ran, or a typed key it reused is not already among the
+ * newest of its stored keys (the record moves it up). Every other file's
+ * typed parts reused the newest stored keys, which is what the check reads
+ * back without an answer.
+ */
 export interface LintFileResult {
   /** Absolute path, as the job named it. */
   file: string;
@@ -94,26 +100,19 @@ export interface LintFileResult {
 }
 
 /**
- * The program's type fingerprints, by repo-relative path, as the keyed check
- * computed them — or why there are none.
- */
-export type TypeFpTable =
-  | { kind: "table"; fps: Record<string, string> }
-  | { kind: "unavailable"; why: string };
-
-/**
- * How the worker type-checks (`../shared/keyed-check.ts`):
+ * How the worker type-checks (`../shared/name-run.ts`):
  *
- * - `keyed` — re-check only the files whose key moved; everything else comes
- *   from the host-wide checked-results store. The verdict.
- * - `dual` — the keyed walk, then a FULL check of a fresh program, compared
- *   file by file. The verdict is the full check's, and every divergence is
- *   reported (and the full check's results overwrite the store). What
- *   validated the keyed mode, and what the backstop on main runs.
+ * - `keyed` — the two programs: re-check only the files with no valid stored
+ *   result and what their changed names reach; everything else comes from the
+ *   host-wide store. The verdict.
+ * - `dual` — the same, then a FULL check of a fresh whole program
+ *   (`../shared/full-check.ts`), compared file by file. The verdict is the
+ *   full check's, every divergence is reported, and on any divergence a cold
+ *   run overwrites the store. What the backstop on main runs.
  */
 export type TscMode = "keyed" | "dual";
 
-/** One file whose keyed result differed from the full check's (dual only). */
+/** One file whose two-program result differed from the full check's (dual only). */
 export interface TscDivergence {
   file: string;
   kind: "diagnostics" | "signature" | "missing";
@@ -121,25 +120,39 @@ export interface TscDivergence {
   full: string;
 }
 
+/**
+ * A name program 2 found moved that the affected set predicted stable — a bug
+ * in the affected set. A check run answers with one whole program instead and
+ * reports it; dual mode fails.
+ */
+export interface TscPredictionMiss {
+  file: string;
+  name: string;
+}
+
 /** The job file handed to the worker as `argv[2]` (see `../shared/worker.ts`). */
 export interface TypeCheckWorkerJob {
   root: string;
   name: string;
   tsconfigPath: string;
-  /**
-   * Where the worker writes the program manifest — the files its program
-   * loaded (`../shared/program-manifest.ts`), which the program key hashes.
-   */
-  manifestPath: string;
   tscMode: TscMode;
-  /** The files to lint under this program — only their stale parts. */
-  lintFiles: LintFileJob[];
   /**
-   * Whether to return the program's type fingerprints. The check always does
-   * — it records them as the signature table; the build's type-check-only
-   * fast path never reads them. (The keyed check computes them either way.)
+   * When program 2 finds a name moved that the affected set predicted stable:
+   * `throw` (the backstop, the validation script — a miss is the failure they
+   * look for), or `whole` (a check run: answer from one whole program and
+   * return the miss in `missed`; throwing would fail every later run alike,
+   * since a failed run records nothing).
    */
-  typeFps: boolean;
+  onMiss: "throw" | "whole";
+  /** The files to lint — their stale syntactic parts, and every typed part to decide. */
+  lintFiles: LintFileJob[];
+  typedParts: TypedParts;
+  /**
+   * Repo files' versions (sha256 of the text) the caller already computed —
+   * the check's preparation hashes every lintable file. The worker hashes the
+   * rest itself.
+   */
+  versions: Record<string, string>;
 }
 
 /** The worker's JSON stdout contract (see `../shared/worker.ts`). */
@@ -149,28 +162,49 @@ export interface TypeCheckWorkerResult {
   /** Raw results, one per job: the check applies exemptions. */
   lint: LintFileResult[];
   /**
-   * Every repo file's type fingerprint in the program just built — what the
-   * check records as the signature table, so the next run on this program
-   * decides every typed part before spawning anything.
-   */
-  typeFps: TypeFpTable;
-  /**
-   * Transcript lines from the type check: what the keyed walk reused and
-   * checked, and in dual mode what the full check found.
+   * Transcript lines from the type check: what each program held and
+   * checked, what the walk cost, and in dual mode what the full check found.
    */
   tscLines: string[];
   /** Dual mode only: every file whose keyed result differed from the full check's. */
   divergences: TscDivergence[];
   /**
-   * CPU seconds the worker spent in each phase: building the program (parse
-   * and bind), the keyed check (the graph, the keys, and checking and emitting
-   * the files whose key moved), the full check a dual run adds, and linting.
-   * What tells a run whose cost is tsc's re-check from one whose cost is lint.
+   * Keyed mode: the names the affected set missed, when it did — the verdict
+   * is then one whole program's, and the check files each as a report.
+   */
+  missed: TscPredictionMiss[];
+  /**
+   * CPU seconds the worker spent in each phase: the type check (the walk,
+   * both programs' build, checking and emitting the files they check), the
+   * full check a dual run adds, and linting (typed lint inside the programs,
+   * syntactic lint with none). What tells a run whose cost is tsc's re-check
+   * from one whose cost is lint.
    */
   phaseCpuSeconds: {
-    program: number;
     check: number;
     full: number;
     lint: number;
   };
+  /** What the type check did: program sizes, files checked and linted. */
+  stats: TypeCheckStats;
+}
+
+/** One program of a run: its sources (checked, or there to be linted) and served `.d.ts`. */
+export interface ProgramSize {
+  sources: number;
+  checked: number;
+  contracts: number;
+}
+
+/** What one worker run did, for the cost line. */
+export interface TypeCheckStats {
+  /** Repo source files. */
+  files: number;
+  first: ProgramSize | null;
+  second: ProgramSize | null;
+  /** Files checked (program 1 ∪ program 2). */
+  checked: number;
+  /** Files whose typed lint ran, and whose syntactic lint ran. */
+  typedLinted: number;
+  syntacticLinted: number;
 }

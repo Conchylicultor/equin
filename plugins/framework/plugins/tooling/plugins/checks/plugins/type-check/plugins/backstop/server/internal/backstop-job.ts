@@ -1,9 +1,7 @@
 import { z } from "zod";
+import { repoProgram } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
-  programManifestPath,
-  repoProgram,
-} from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import {
+  TYPE_CHECK_DIVERGENCE_KIND,
   TYPE_CHECK_WORKER_UNITS,
   type TypeCheckWorkerResult,
 } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/core";
@@ -20,12 +18,11 @@ import {
 } from "@plugins/infra/plugins/spawn/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
-import { TYPE_CHECK_DIVERGENCE_KIND } from "./divergence-kind";
 
 const backstopLog = defineLogSink({
   id: "type-check-backstop",
   description:
-    "Type-check backstop ops log: the daily dual run on main (keyed check beside a full check) and its divergences.",
+    "Type-check backstop ops log: the daily dual run on main (the two-program check beside a full check) and its divergences.",
 });
 
 // Reports filed per run. A divergence is a key bug, so one is enough to act on;
@@ -36,14 +33,15 @@ const MAX_REPORTS = 20;
 const GIT_TIMEOUT_MS = 30_000;
 
 /**
- * The keyed type check's BACKSTOP. A check run re-checks only the files whose
- * key moved and trusts the store for the rest (type-check's
- * `shared/keyed-check.ts`), so nothing in it would notice a key that misses
- * something a file's check reads. Once a day, on main, this runs the worker in
- * `dual` mode: the keyed check, then a full check of a fresh program, compared
- * file by file. Every divergence is logged and filed as a
- * `type-check-divergence` report, and the full check's results overwrite the
- * store, so the next run on any worktree reads the right answer.
+ * The two-program type check's BACKSTOP. A check run re-checks only the files
+ * whose key moved — and what their changed names reach — and trusts the store
+ * for the rest (type-check's `shared/name-run.ts`), so nothing in it would
+ * notice a key or an affected set that misses something a file's check reads.
+ * Once a day, on main, this runs the worker in `dual` mode: the two-program
+ * check, then a full check of a fresh whole program, compared file by file.
+ * Every divergence is logged and filed as a `type-check-divergence` report, and
+ * on any divergence a cold run rewrites the store, so the next run on any
+ * worktree reads the right answer.
  *
  * In a supervised child (`./singularity supervised-exec`), so a restart does
  * not kill it part-way and no job slot is held for its minutes. Admitted like
@@ -55,7 +53,7 @@ const GIT_TIMEOUT_MS = 30_000;
 export const typeCheckBackstopJob = defineSupervisedJob({
   name: "type-check.backstop",
   description:
-    "Runs the keyed type check beside a full check on main and reports any file where they disagree.",
+    "Runs the two-program type check beside a full check on main and reports any file where they disagree.",
   input: z.object({}),
   channel: backstopLog,
   schedule: { cron: "30 4 * * *" }, // daily at 04:30 UTC; main only
@@ -80,10 +78,9 @@ export const typeCheckBackstopJob = defineSupervisedJob({
           root,
           name: program.name,
           tsconfigPath: program.tsconfigPath,
-          manifestPath: programManifestPath(root, program.name),
           tscMode: "dual",
+          onMiss: "throw",
           lintFiles: [],
-          typeFps: false,
           grant,
         })
       ).result;
@@ -99,9 +96,9 @@ export const typeCheckBackstopJob = defineSupervisedJob({
           spawn,
         );
     for (const line of result.tscLines) log(line);
-    const { program: build, check, full } = result.phaseCpuSeconds;
+    const { check, full } = result.phaseCpuSeconds;
     log(
-      `backstop at ${head}: cpu program ${build.toFixed(1)}s, keyed ${check.toFixed(1)}s, full ${full.toFixed(1)}s; ${result.divergences.length} divergences`,
+      `backstop at ${head}: cpu two-program check ${check.toFixed(1)}s, full ${full.toFixed(1)}s; ${result.divergences.length} divergences`,
     );
 
     const unfiled: string[] = [];
@@ -112,7 +109,7 @@ export const typeCheckBackstopJob = defineSupervisedJob({
       // serving backend, which is the only process that may record a report.
       const filed = await fileReportFromProcess({
         kind: TYPE_CHECK_DIVERGENCE_KIND,
-        message: `keyed type check diverged on ${d.file} (${d.kind})`,
+        message: `two-program type check diverged on ${d.file} (${d.kind})`,
         data: { ...d, head },
       });
       if (filed.outcome !== "written")

@@ -42,75 +42,86 @@ export const retiredLintResultsDir = defineDataDir({
 });
 
 /**
- * The program-PASS record.
+ * The two-program type check's per-file records: one entry per file TEXT
+ * (path, version) — its imports, its resolutions and what they probed, and up
+ * to four recent results, each under the result key it is valid for
+ * (diagnostics, signature, `.d.ts` hash, per-name records and edges).
  *
- * A sibling of the lint result store rather than a namespace inside it: the two are
- * keyed on different things (a file's content vs a whole tsc program's
- * content) and are bounded independently — this one holds a handful of entries
- * per run where that one holds thousands. The data-dir declaration is the
- * reclaim audit's description of what lives on disk, so two stores are two
- * declarations.
+ * Content-addressed, host-global: a fresh worktree on a main tree reads the
+ * entries main's build wrote, and a run writes only the files it checked.
  *
- * Host-global for the same reason: a program key is content-addressed, so a
- * fresh worktree skips a program that main — or a sibling — already passed on
- * an identical tree.
- *
- * @see plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/check/program-key.ts
+ * @see plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/shared/name-store.ts
  */
-export const programPassDir = defineDataDir({
+export const nameRecordsDir = defineDataDir({
   kind: "cache",
-  name: "type-check-programs",
+  name: "type-check-name-records",
   owner: "framework/tooling/checks/type-check",
   description:
-    "Per-tsc-target program verdicts keyed by the content of everything the program loaded, host-global so an unaffected target is not re-checked",
+    "Per file text (path, version): its imports, resolutions and recent type-check results with per-name records, host-global so a run re-checks only files with no valid result",
   reclaim: { kind: "safe" },
 });
 
 /**
- * The signature tables: per program key, every lintable file's type
- * fingerprint in that program. What lets prepare decide every file's typed
- * lint part BEFORE the worker runs — and so skip the worker outright — on a
- * program some run already built.
+ * The emitted `.d.ts` of every checked file, by the hash of its text: what a
+ * later program is served for a file it does not hold as source. Plus, per
+ * global hash, the program-level diagnostics of that environment.
  *
- * A sibling of the PASS record, keyed the same way, but its own store: a table
- * is recorded whatever the program's verdict (signatures are facts of the
- * program, not of whether it type-checks), and its entries are ~200 KB where a
- * PASS is a few bytes, so the two are bounded apart.
- *
- * @see plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/check/type-fp-tables.ts
+ * @see plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/shared/name-store.ts
  */
-export const typeFpTablesDir = defineDataDir({
+export const contractsDir = defineDataDir({
   kind: "cache",
-  name: "type-check-type-fps",
+  name: "type-check-contracts",
   owner: "framework/tooling/checks/type-check",
   description:
-    "Per-program signature tables (every lintable file's type fingerprint), keyed by program content, host-global so a run on an already-built program decides its typed lint before spawning a worker",
+    "Emitted .d.ts texts by content hash (what a type-check program is served for a file it does not check), host-global",
   reclaim: { kind: "safe" },
 });
 
 /**
- * The checked-results store: per unit key — a hash of a file's text and of
- * every declaration its check can see — that file's tsc diagnostics, its
- * signature, and what its `.d.ts` names. What lets a run re-check only the
- * files whose key moved.
- *
- * Content-addressed, host-global: a fresh worktree reuses what any worktree
- * checked for the same key.
- *
- * @see plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/shared/keyed-check.ts
+ * RETIRED: step 1c's checked-results store (per unit key), replaced by
+ * `nameRecordsDir`. Declared only so the data-dir audit reads the leftover
+ * directory as safe to delete. Drop the declaration once no host has it.
  */
-export const fileResultsDir = defineDataDir({
+export const retiredFileResultsDir = defineDataDir({
   kind: "cache",
   name: "type-check-file-results",
   owner: "framework/tooling/checks/type-check",
   description:
-    "Per unit key (a file's text and every declaration its check sees) its tsc diagnostics, signature and contract specifiers, host-global so only files whose key moved are re-checked",
+    "RETIRED, no longer written: per unit key tsc results of the whole-program keyed check, replaced by type-check-name-records — safe to delete",
   reclaim: { kind: "safe" },
 });
 
 /**
- * RETIRED: the contract-refs store, superseded by `fileResultsDir`, which
- * holds each checked file's specifiers with its other results. Declared only
+ * RETIRED: the program-PASS record (per whole-program content key). The
+ * two-program check has no whole program to key. Declared only so the
+ * data-dir audit reads the leftover directory as safe to delete.
+ */
+export const retiredProgramPassDir = defineDataDir({
+  kind: "cache",
+  name: "type-check-programs",
+  owner: "framework/tooling/checks/type-check",
+  description:
+    "RETIRED, no longer written: per-program tsc verdicts keyed by whole-program content — safe to delete",
+  reclaim: { kind: "safe" },
+});
+
+/**
+ * RETIRED: the signature tables (per whole-program key, every file's type
+ * fingerprint). Typed lint is keyed on each file's result key now, which the
+ * worker computes. Declared only so the data-dir audit reads the leftover
+ * directory as safe to delete.
+ */
+export const retiredTypeFpTablesDir = defineDataDir({
+  kind: "cache",
+  name: "type-check-type-fps",
+  owner: "framework/tooling/checks/type-check",
+  description:
+    "RETIRED, no longer written: per-program signature tables of type fingerprints — safe to delete",
+  reclaim: { kind: "safe" },
+});
+
+/**
+ * RETIRED: the contract-refs store of the step 1b/1c type fingerprint. Declared only
  * so the data-dir audit reads the leftover directory as safe to delete. Drop
  * the declaration once no host has it.
  */
@@ -119,15 +130,17 @@ export const retiredContractRefsDir = defineDataDir({
   name: "type-check-contract-refs",
   owner: "framework/tooling/checks/type-check",
   description:
-    "RETIRED, no longer written: per (file, signature) contract specifiers, replaced by type-check-file-results — safe to delete",
+    "RETIRED, no longer written: per (file, signature) contract specifiers — safe to delete",
   reclaim: { kind: "safe" },
 });
 
 export default [
   lintResultsV2Dir,
   retiredLintResultsDir,
-  programPassDir,
-  typeFpTablesDir,
-  fileResultsDir,
+  nameRecordsDir,
+  contractsDir,
+  retiredFileResultsDir,
+  retiredProgramPassDir,
+  retiredTypeFpTablesDir,
   retiredContractRefsDir,
 ];

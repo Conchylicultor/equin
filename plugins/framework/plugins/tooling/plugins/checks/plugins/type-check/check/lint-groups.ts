@@ -3,7 +3,7 @@
 //
 // A file's lint messages are a function of (a) the file's own text — the key
 // of its store entry (`./lint-results`); (b) for the type-aware rules only, the
-// declarations it can see — its type fingerprint (`../shared/type-fingerprint`);
+// declarations it can see — its result key (`../shared/name-walk.ts`);
 // and (c) the rules that ran on it, keyed here. (c) used to be ONE global hash
 // over every `lint/`, `exempt/`, tsconfig, lockfile and `.d.ts` file, so a
 // change to any of them flipped every file's key and the worker re-linted all
@@ -17,8 +17,8 @@
 //     and what rules read from the lint data files (`lintDataKey`). Folded
 //     into every group below.
 //   - the TYPED ENGINE, what only a result that reads types depends on: the
-//     type fingerprint, the contract edges it walks, and the emit options
-//     that decide what a signature says. Folded into every typed part and
+//     two-program check that computes each file's result key, and the emit
+//     options that decide what a `.d.ts` says. Folded into every typed part and
 //     every directive file's whole result, so editing them re-runs no
 //     syntactic result.
 //   - the BASE group: the rules the config builder enables itself
@@ -30,10 +30,10 @@
 // Each group's fingerprint keys that group's SYNTACTIC rules, which read the
 // text alone. A group that holds a type-aware rule also has a TYPED part — its
 // type-aware rules — keyed on `typedGroupFps` (the group's fingerprint and the
-// typed engine) together with the file's type fingerprint. One typed part per
+// typed engine) together with the file's result key. One typed part per
 // group, like the syntactic ones, so editing one type-aware rule re-runs that
-// group's typed part only; a file whose type fingerprint moved still runs all
-// its stale typed parts in ONE pass with the program.
+// group's typed part only; a file whose result key moved still runs all its
+// stale typed parts in ONE pass, in the program holding it.
 //
 // Exemption manifests are in none of them: an exemption only decides which
 // messages are DROPPED, so the result store keeps messages unfiltered and the
@@ -41,7 +41,7 @@
 //
 // A file holding an eslint directive is one unit (`LINT_GROUP_ALL`): whether a
 // disable directive is "unused" depends on every rule, so its result is keyed
-// on every group at once (and its type fingerprint) and it is re-linted whole.
+// on every group at once (and its result key) and it is re-linted whole.
 //
 // See research/2026-10-15-global-lint-cache-per-contribution.md and
 // research/2026-10-17-global-lint-keyed-on-what-it-reads.md.
@@ -55,6 +55,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { LINT_GROUP_ALL, LINT_GROUP_BASE } from "../core";
 import { lockfileLintDigest } from "../shared/lockfile";
+import { engineSources } from "../shared/tsc-engine";
 import { safeRead, type ImportGraphs } from "./import-graph";
 import type { TreeListing } from "./fingerprint";
 
@@ -106,20 +107,14 @@ function ownSources(root: string, files: readonly string[]): string[] {
 const WORKER_SOURCES = ["../shared/worker.ts"];
 
 /**
- * The typed engine: the type fingerprint, which decides when a typed result is
- * reused; the program graph and contract edges it walks; the keyed check that
- * computes it; and the emit options, which decide what the signatures it reads
- * say. (Each type fingerprint folds in the same files through the compiler's
- * engine, `tscEngineFp`; naming them here keeps the rules half honest on its
- * own.)
+ * The typed engine: the two-program check, whose result key decides when a
+ * typed result is reused and whose programs the typed rules run in, and the
+ * emit options, which decide what the `.d.ts` it reads says — its own
+ * `engineSources()`, listed from the directory. (Each result key folds in the
+ * same files through the compiler's engine, `tscEngineFp`; naming them here
+ * keeps the rules half honest on its own.)
  */
-const TYPED_ENGINE_SOURCES = [
-  "../shared/type-fingerprint.ts",
-  "../shared/program-graph.ts",
-  "../shared/contract-refs.ts",
-  "../shared/keyed-check.ts",
-  "../shared/emit-options.ts",
-];
+const TYPED_ENGINE_SOURCES = engineSources().map((f) => `../shared/${f}`);
 
 /** A repo-relative file's content hash, memoized for the run. */
 export type ContentHasher = (rel: string) => string;

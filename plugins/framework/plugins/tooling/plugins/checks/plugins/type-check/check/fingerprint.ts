@@ -4,7 +4,7 @@
 // A file's lint result is stored per (file, content hash) (`./lint-results`):
 // what its rules read is its own text, the rules (keyed per GROUP,
 // `./lint-groups`), and — for the type-aware ones only — the declarations it
-// can see (its type fingerprint, `../shared/type-fingerprint`). It used to be
+// can see (its result key, `../shared/name-walk.ts`). It used to be
 // keyed on the source of the file's whole forward import CLOSURE, so a body-only
 // edit in a hub re-linted every transitive importer, though no rule reads
 // another file's text (research/2026-10-17-global-lint-keyed-on-what-it-reads.md).

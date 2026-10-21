@@ -261,7 +261,7 @@ test("each typed part moves with its own group only", () => {
       typedGroupFps(lintGroups({ ...groups, "typed/one": "o2" }), typeAware),
     ),
   ).toEqual(["typed/one"]);
-  // The typed engine (the type fingerprint's code): every typed part.
+  // The typed engine (the two-program check's code): every typed part.
   expect(moved(typedGroupFps(lintGroups(groups, "te2"), typeAware))).toEqual([
     "(base)",
     "typed/one",

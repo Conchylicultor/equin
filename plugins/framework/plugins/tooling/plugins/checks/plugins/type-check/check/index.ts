@@ -14,12 +14,11 @@
  * loaded the identical type environment. The split cost 3.7 checks of the
  * average file per cold miss and bought no type isolation.
  *
- * Warm paths: tsc re-checks only the files whose key moved (the keyed check,
- * `../shared/keyed-check.ts`, over a host-wide checked-results store), lint
- * reuses the per-file lint result store (a file's syntactic rule groups
- * re-run only when its text or their rules change, its type-aware rules only
- * when the declarations it can see change too), and a program whose content key
- * is already recorded green runs no worker at all.
+ * Warm paths: tsc checks only the files with no valid stored result, in at
+ * most two programs sized by what changed (`../shared/name-run.ts`, over a
+ * host-wide per-file store), and lint reuses the per-file lint result store (a
+ * file's syntactic rule groups re-run only when its text or their rules
+ * change, its type-aware rules only when its result key moves too).
  *
  * This file runs on the check runner's thread, which every other check in the
  * pass shares, so it holds nothing that reads file bytes or walks the tree: the
@@ -29,11 +28,14 @@
  */
 import {
   currentScanView,
-  programManifestPath,
   type TscProgram,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import type { TypeCheckWorkerJob, TypeCheckWorkerResult } from "../core";
+import type {
+  TypeCheckStats,
+  TypeCheckWorkerJob,
+  TypeCheckWorkerResult,
+} from "../core";
 import { spawnTypeCheckWorker } from "../server";
 import type {
   Check,
@@ -64,19 +66,23 @@ interface WorkerResult extends TypeCheckWorkerResult {
 async function runWorker(
   root: string,
   program: TscProgram,
-  lintFiles: TypeCheckWorkerJob["lintFiles"],
+  lint: Pick<TypeCheckWorkerJob, "lintFiles" | "typedParts" | "versions">,
   grant: Grant,
 ): Promise<WorkerResult> {
   const run = await spawnTypeCheckWorker({
     root,
     name: program.name,
     tsconfigPath: program.tsconfigPath,
-    manifestPath: programManifestPath(root, program.name),
-    // The keyed check decides. `dual` (beside a full check) is the backstop
-    // job's (`../server`) and the validation script's, never a check run's.
+    // The two-program check decides. `dual` (beside a full check) is the
+    // backstop job's and the validation script's, never a check run's.
     tscMode: "keyed",
-    lintFiles,
-    typeFps: true,
+    // A miss in the affected set must not fail this run (nor, since a failed
+    // run records nothing, every later one): one whole program answers, and
+    // the miss is filed as a report below.
+    onMiss: "whole",
+    lintFiles: lint.lintFiles,
+    typedParts: lint.typedParts,
+    versions: lint.versions,
     grant,
   });
   return {
@@ -172,13 +178,26 @@ function workerCostLine(
   return `${label}: ${parts.join(", ")}`;
 }
 
+/**
+ * What the worker type-checked and linted, e.g. "type-check worker repo
+ * programs: 1: 3 sources (3 checked) + 412 .d.ts, 2: 41 (40 checked) + 3,310
+ * .d.ts; 43 checked of 12,369; linted typed 41, syntactic 3".
+ */
+function programsLine(label: string, s: TypeCheckStats): string {
+  const p = (n: string, x: TypeCheckStats["first"]): string =>
+    x === null
+      ? `${n}: none`
+      : `${n}: ${x.sources} sources (${x.checked} checked) + ${x.contracts} .d.ts`;
+  return `${label} programs: ${p("1", s.first)}, ${p("2", s.second)}; ${s.checked} checked of ${s.files}; linted typed ${s.typedLinted}, syntactic ${s.syntacticLinted}`;
+}
+
 /** Milliseconds as the seconds figure of a log line, e.g. `71.3`. */
 const seconds = (ms: number): string => (ms / 1000).toFixed(1);
 
 const check: Check = {
   id: "type-check",
   description:
-    "TypeScript types and type-aware ESLint pass (one shared program for the whole repo)",
+    "TypeScript types and type-aware ESLint pass (at most two programs, sized by what changed)",
   // OUTER input-keyed via validate-by-replay (Stage 2). run() records EVERY input
   // its verdict depends on (lintable-file membership + contents + the global-
   // trigger set) into the recording FileSystemView; on the next run those facts
@@ -215,8 +234,7 @@ const check: Check = {
 
     // Everything that reads file bytes or walks the tree — the import graph,
     // content hashes, tsconfig include-expansion, the coverage gate, the lint
-    // result store, the program key and signature table, and the records after
-    // the run —
+    // result store, and the records after the run —
     // runs on the preparation thread, so this thread (shared by every other
     // check in the pass) keeps servicing timers and sockets throughout.
     const thread = openPrepareThread();
@@ -224,7 +242,6 @@ const check: Check = {
       const prepareStart = performance.now();
       const plan = await thread.prepare({
         listing,
-        cacheEnabled: ctx.cacheEnabled !== false,
       });
       const prepareMs = performance.now() - prepareStart;
 
@@ -243,25 +260,9 @@ const check: Check = {
         };
       }
 
-      const { program, lintFiles, skipped, unkeyed, keysMs } = plan;
-      // Emitted on EVERY run, skipped or not — the "running" half is the datum
-      // that says the key was computed and did NOT match, which is what
-      // separates a cold tree from a broken key. The cost of computing the key
-      // is on the same line because it is paid either way.
-      ctx.log?.(
-        skipped
-          ? `type-check: program unchanged since last pass, skipped (program keys ${keysMs}ms)`
-          : `type-check: program changed, running (program keys ${keysMs}ms)`,
-        "stderr",
-      );
-      // Named, not just implied: "running" with no explanation of why there was
-      // no key to compare against is the shape of a report that hides a broken
-      // key. A cold worktree legitimately says this on its first run.
-      if (unkeyed !== undefined) {
-        ctx.log?.(`type-check: no program key — ${unkeyed}`, "stderr");
-      }
+      const { program } = plan;
 
-      if (plan.run) {
+      {
         ctx.log?.(
           workerPriorityLine(
             `type-check worker ${program.name}`,
@@ -277,7 +278,7 @@ const check: Check = {
         // build/check/push already holds (`ctx.grant`). The worker runs in the
         // foreground as the slot's holder, whatever the lane.
         try {
-          result = await runWorker(root, program, lintFiles, ctx.grant);
+          result = await runWorker(root, program, plan, ctx.grant);
         } catch (err) {
           crash = (err as Error).message;
         }
@@ -301,38 +302,37 @@ const check: Check = {
       );
       if (costLine !== null) ctx.log?.(costLine, "stderr");
       // Where that CPU went, phase by phase (in the worker's own clock, so it
-      // excludes process start-up): building the program, the keyed check
-      // (graph, keys, and checking the files whose key moved), lint — and
-      // what the keyed check reused and checked.
+      // excludes process start-up): the type check (the walk, both programs'
+      // build and check) and lint — then what each program held and checked.
       if (result) {
-        const { program: build, check, lint } = result.phaseCpuSeconds;
+        const { check, lint } = result.phaseCpuSeconds;
         ctx.log?.(
-          `type-check worker ${program.name} phases: program ${build.toFixed(1)}s, keyed check ${check.toFixed(1)}s, lint ${lint.toFixed(1)}s (cpu)`,
+          `type-check worker ${program.name} phases: type check ${check.toFixed(1)}s, lint ${lint.toFixed(1)}s (cpu)`,
+          "stderr",
+        );
+        ctx.log?.(
+          programsLine(`type-check worker ${program.name}`, result.stats),
           "stderr",
         );
         for (const line of result.tscLines) ctx.log?.(line, "stderr");
       }
 
       // The record phase, on the thread that holds the session: the per-file
-      // lint results, the signature table, the lint verdict, the
-      // program PASS, the skipped re-record (see `./prepare`). The outcome is handed over only
-      // when the worker RETURNED — a crashed or skipped run records nothing
-      // new. The lint verdict comes back from there, not from the worker: most
-      // files' results are in the store, and exemptions apply at read time.
+      // lint results and the lint verdict (see `./prepare`). The outcome is
+      // handed over only when the worker RETURNED — a crashed run records
+      // nothing new. The lint verdict comes back from there, not from the
+      // worker: most files' results are in the store, and exemptions apply at
+      // read time.
       const outcome: ProgramOutcome | undefined = result && {
         tscClean: !result.tscErrors,
         lint: result.lint,
-        typeFps: result.typeFps,
       };
       const finalizeStart = performance.now();
       const finalized = await thread.finalize(outcome);
       lintLines = finalized.lintViolations ?? "";
-      // What the worker linted, and why — on EVERY run, skipped or not. After
-      // the worker, because without a signature table only the worker could
-      // tell which typed parts were stale.
+      // What the worker linted, and why — after the worker, because only it
+      // can tell which typed parts were stale.
       ctx.log?.(finalized.lintLine, "stderr");
-      // What the record phase recorded (or why it could not).
-      for (const line of finalized.lines) ctx.log?.(line, "stderr");
       // What used to be a freeze of the runner's thread, still measured: the
       // instrument for making the preparation itself cheaper.
       ctx.log?.(
