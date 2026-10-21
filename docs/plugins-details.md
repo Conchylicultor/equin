@@ -16445,7 +16445,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
               - `network/live.useLive`
-              - `primitives/css/bouncing-dots.BouncingDots`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
@@ -16461,6 +16460,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/sync-status.useReportSync`
               - `shell/toast.showToast`
             - Exports (types):
+              - `PendingCard`
               - `PendingTurn`
               - `PendingTurnState`
               - `TurnDelivery`
@@ -16480,7 +16480,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-sm`
-              - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --radius`
             - Imported by:
               - `conversations/agent-thread`
@@ -35672,7 +35671,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/agent-thread`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
-              - `conversations/conversation-view/pending-turn`
         - **`card`** — Card chrome primitive (rounded + border + bg + padding) with the Ctrl+A select-scope baked into its root, so cards are a sanctioned home for ad-hoc card markup.
           - Web:
             - Uses:

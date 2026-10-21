@@ -8,7 +8,11 @@ export {
   useOptimisticConversationStatus,
   useTurnRunning,
 } from "./internal/pending";
-export type { PendingTurn, PendingTurnState } from "./internal/pending";
+export type {
+  PendingCard,
+  PendingTurn,
+  PendingTurnState,
+} from "./internal/pending";
 export type { TurnDelivery } from "./internal/delivery";
 export { conversationPromptDraft } from "./internal/prompt-draft";
 export { PendingTurnCard } from "./components/pending-turn-card";

@@ -100,7 +100,6 @@ render (`reports/turn-unconfirmed`).
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `network/live.useLive`
-    - `primitives/css/bouncing-dots.BouncingDots`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
@@ -116,6 +115,7 @@ render (`reports/turn-unconfirmed`).
     - `primitives/sync-status.useReportSync`
     - `shell/toast.showToast`
   - Exports (types):
+    - `PendingCard`
     - `PendingTurn`
     - `PendingTurnState`
     - `TurnDelivery`
@@ -135,7 +135,6 @@ render (`reports/turn-unconfirmed`).
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
-    - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
   - Imported by:
     - `conversations/agent-thread`

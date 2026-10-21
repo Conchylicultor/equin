@@ -38,13 +38,20 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { PendingTurnCard } from "../components/pending-turn-card";
-import type { PendingTurn, PendingTurnState } from "../internal/pending";
+import {
+  CARD_OF,
+  type PendingTurn,
+  type PendingTurnState,
+} from "../internal/pending";
 import { conversationPromptDraft } from "../internal/prompt-draft";
 
 const CONV = "conv-card";
 
 function turn(state: PendingTurnState, over: Partial<PendingTurn> = {}) {
+  const card = CARD_OF[state];
+  if (card === null) throw new Error(`${state} draws no card`);
   return {
+    card,
     id: "turn-1",
     kind: "turn",
     text: "fix the build",
@@ -63,15 +70,52 @@ afterEach(() => {
 
 describe("PendingTurnCard", () => {
   it("echoes a held turn as waiting for the agent", () => {
-    render(<PendingTurnCard conversationId={CONV} turn={turn("held")} />);
+    render(
+      <PendingTurnCard
+        conversationId={CONV}
+        turn={turn("held")}
+        agentStarting={false}
+      />,
+    );
     expect(screen.getByText("fix the build")).toBeTruthy();
     expect(screen.getByText("Waiting for the agent to start…")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   });
 
+  it("waits for the agent to start while it is starting, whatever the state", () => {
+    for (const state of ["sending", "held", "typing", "typed"] as const) {
+      render(
+        <PendingTurnCard
+          conversationId={CONV}
+          turn={turn(state)}
+          agentStarting
+        />,
+      );
+      expect(screen.getByText("Waiting for the agent to start…")).toBeTruthy();
+      cleanup();
+    }
+  });
+
+  it("draws no activity of its own — the host's foot line does", () => {
+    const { container } = render(
+      <PendingTurnCard
+        conversationId={CONV}
+        turn={turn("typing")}
+        agentStarting
+      />,
+    );
+    expect(container.querySelector(".animate-bounce")).toBeNull();
+  });
+
   it("echoes a turn being sent or typed", () => {
     for (const state of ["sending", "typing"] as const) {
-      render(<PendingTurnCard conversationId={CONV} turn={turn(state)} />);
+      render(
+        <PendingTurnCard
+          conversationId={CONV}
+          turn={turn(state)}
+          agentStarting={false}
+        />,
+      );
       expect(screen.getByText("Sending…")).toBeTruthy();
       cleanup();
     }
@@ -82,6 +126,7 @@ describe("PendingTurnCard", () => {
       <PendingTurnCard
         conversationId={CONV}
         turn={turn("merged", { extraText: "an old draft" })}
+        agentStarting={false}
       />,
     );
     expect(screen.getByText("an old draft")).toBeTruthy();
@@ -94,6 +139,7 @@ describe("PendingTurnCard", () => {
       <PendingTurnCard
         conversationId={CONV}
         turn={turn("failed", { error: "input box not empty" })}
+        agentStarting={false}
       />,
     );
     expect(
@@ -108,7 +154,13 @@ describe("PendingTurnCard", () => {
   });
 
   it("Copy to draft withdraws an unverified row and fills the draft", async () => {
-    render(<PendingTurnCard conversationId={CONV} turn={turn("unverified")} />);
+    render(
+      <PendingTurnCard
+        conversationId={CONV}
+        turn={turn("unverified")}
+        agentStarting={false}
+      />,
+    );
     expect(screen.getByText(/Not confirmed/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Copy to draft" }));
     await waitFor(() =>
@@ -125,6 +177,7 @@ describe("PendingTurnCard", () => {
       <PendingTurnCard
         conversationId={CONV}
         turn={turn("unsent", { error: "offline" })}
+        agentStarting={false}
       />,
     );
     expect(screen.getByText(/Failed to send — offline/)).toBeTruthy();
@@ -133,24 +186,24 @@ describe("PendingTurnCard", () => {
   });
 
   it("echoes a typed turn as waiting in the agent's queue", () => {
-    render(<PendingTurnCard conversationId={CONV} turn={turn("typed")} />);
+    render(
+      <PendingTurnCard
+        conversationId={CONV}
+        turn={turn("typed")}
+        agentStarting={false}
+      />,
+    );
     expect(screen.getByText("Waiting for the agent to take it…")).toBeTruthy();
   });
 
   it("echoes an accepted turn (pendingTurnsOf drops it once the transcript shows it)", () => {
     const { container } = render(
-      <PendingTurnCard conversationId={CONV} turn={turn("accepted")} />,
+      <PendingTurnCard
+        conversationId={CONV}
+        turn={turn("accepted")}
+        agentStarting={false}
+      />,
     );
     expect(container.textContent).toContain("Sending…");
-  });
-
-  it("draws nothing for a turn given back", () => {
-    for (const state of ["returned", "withdrawn"] as const) {
-      const { container } = render(
-        <PendingTurnCard conversationId={CONV} turn={turn(state)} />,
-      );
-      expect(container.innerHTML).toBe("");
-      cleanup();
-    }
   });
 });

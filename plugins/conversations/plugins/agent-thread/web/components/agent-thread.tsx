@@ -8,6 +8,7 @@ import {
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
@@ -121,6 +122,11 @@ function LiveThread<D extends ThreadResultDef>({
   const pendingTurns =
     pending.status === "ready" ? pending.data : (pending.stale ?? []);
   useMarkViewedWhileVisible(conversation, latestOutputAt(turns));
+  // A message on its way with no running turn to show the agent busy (it is
+  // starting, or idle): one dots line under the cards, which draw none.
+  const awaitingAgent =
+    pendingTurns.some((turn) => turn.card === "echo") &&
+    turns.at(-1)?.state !== "running";
 
   return (
     <AgentThreadView
@@ -142,8 +148,10 @@ function LiveThread<D extends ThreadResultDef>({
               key={turn.id}
               conversationId={conversation.id}
               turn={turn}
+              agentStarting={status === "starting"}
             />
           ))}
+          {awaitingAgent && <BouncingDots />}
           {pending.status === "error" && (
             <ResourceErrorInline
               variant="inline"

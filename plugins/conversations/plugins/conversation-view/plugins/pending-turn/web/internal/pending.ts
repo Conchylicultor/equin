@@ -35,6 +35,8 @@ export interface PendingTurn {
   /** What the user wrote — the echo, and what Copy to draft restores. */
   text: string;
   state: PendingTurnState;
+  /** The card it draws — `CARD_OF[state]`, never null for a turn listed. */
+  card: PendingCard;
   /** `merged` only: the text the CLI submitted around this turn's. */
   extraText: string | null;
   /** `failed` / `unverified` / `unsent`: why. */
@@ -107,26 +109,34 @@ export function pendingTurnsOf(
   const newestId = unseen.length ? null : (newestFirst[0]?.id ?? null);
   const reachedAt = transcriptReachedAt(events);
   const fromLedger: PendingTurn[] = newestFirst
-    .filter(
-      (row) =>
-        CARD_OF[row.state] !== null &&
-        !echoRetired(row, reachedAt) &&
-        (row.state !== "merged" || row.id === newestId),
-    )
-    .map((row) => ({
-      id: row.id,
-      kind: row.kind,
-      text: row.text,
-      state: row.state,
-      extraText: row.extraText,
-      error: row.error,
-    }))
+    .flatMap((row) => {
+      const card = CARD_OF[row.state];
+      if (
+        card === null ||
+        echoRetired(row, reachedAt) ||
+        (row.state === "merged" && row.id !== newestId)
+      ) {
+        return [];
+      }
+      return [
+        {
+          id: row.id,
+          kind: row.kind,
+          text: row.text,
+          state: row.state,
+          card,
+          extraText: row.extraText,
+          error: row.error,
+        },
+      ];
+    })
     .reverse();
   const fromTab: PendingTurn[] = unseen.map((turn) => ({
     id: turn.id,
     kind: turn.kind,
     text: turn.text,
     state: turn.status.kind === "unsent" ? "unsent" : "sending",
+    card: turn.status.kind === "unsent" ? "failure" : "echo",
     extraText: null,
     error: turn.status.kind === "unsent" ? turn.status.error : null,
   }));

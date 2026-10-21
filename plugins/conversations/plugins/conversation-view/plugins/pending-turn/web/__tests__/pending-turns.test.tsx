@@ -158,6 +158,15 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
     });
   }
 
+  it("names the card each listed turn draws", () => {
+    const cards = pendingTurnsOf(
+      [row("c", "t2", "failed"), row("c", "t1", "held")],
+      [],
+      NO_EVENTS,
+    );
+    expect(cards.map((c) => c.card)).toEqual(["echo", "failure"]);
+  });
+
   it("shows a merged warning only while its turn is the newest", () => {
     const merged = row("c", "old", "merged", { extraText: "stale draft" });
     expect(pendingTurnsOf([merged], [], NO_EVENTS)[0]?.extraText).toBe(

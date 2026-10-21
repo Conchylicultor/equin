@@ -1,6 +1,5 @@
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import {
   UserMessageCard,
   UserMessageText,
@@ -11,7 +10,7 @@ import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { writeDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { conversationPromptDraft } from "../internal/prompt-draft";
-import { CARD_OF, type PendingTurn } from "../internal/pending";
+import type { PendingTurn } from "../internal/pending";
 import { dismissSentTurn, resendTurn } from "../internal/send";
 import { retryLedgerTurn, withdrawLedgerTurn } from "../internal/delivery";
 
@@ -56,16 +55,25 @@ function takeBack(conversationId: string, turn: PendingTurn): Promise<void> {
   );
 }
 
+const WAITING_FOR_START = "Waiting for the agent to start…";
+
 /**
  * What an echo says where its turn is: `held` before the agent is up, `typed`
  * while it sits in the agent's input queue (a busy agent takes it when its
  * current step ends — the transcript shows it there as Queued); every other
- * echo state is still on its way.
+ * echo state is still on its way. While the agent is starting, every echo is
+ * waiting for it — the launch message is already `typing` as the agent comes
+ * up, which is not "Sending…" to the user.
  */
 const ECHO_CAPTION: Partial<Record<PendingTurn["state"], string>> = {
-  held: "Waiting for the agent to start…",
+  held: WAITING_FOR_START,
   typed: "Waiting for the agent to take it…",
 };
+
+function echoCaption(turn: PendingTurn, agentStarting: boolean): string {
+  if (agentStarting) return WAITING_FOR_START;
+  return ECHO_CAPTION[turn.state] ?? "Sending…";
+}
 
 /**
  * One turn's card at the end of the transcript, by state (replace, never
@@ -77,15 +85,21 @@ const ECHO_CAPTION: Partial<Record<PendingTurn["state"], string>> = {
  * - `merged` — the CLI submitted this turn together with other text (a draft
  *   its input box still held): a warning naming that text;
  * - `failed` / `unverified` / `unsent` — Retry + Copy to draft, with why.
+ *
+ * The card is the message only: what the agent is doing (starting, working)
+ * is the host's one activity line at the foot of the transcript.
  */
 export function PendingTurnCard({
   conversationId,
   turn,
+  agentStarting,
 }: {
   conversationId: string;
   turn: PendingTurn;
+  /** The conversation is `starting`: every echo waits for the agent. */
+  agentStarting: boolean;
 }) {
-  const card = CARD_OF[turn.state];
+  const card = turn.card;
   const inFlight = card === "echo";
   const failed = card === "failure";
   useReportSync({
@@ -97,20 +111,16 @@ export function PendingTurnCard({
 
   if (inFlight) {
     // The same card and text formatting as the confirmed user row (chips
-    // included), dimmed as "pending", with the shared BouncingDots activity
-    // indicator below.
+    // included), dimmed as "pending".
     return (
-      <Stack gap="sm" className="opacity-70">
+      <div className="opacity-70">
         <UserMessageCard>
           <UserMessageText text={turn.text} />
           <Text as="div" variant="caption" className="text-muted-foreground/60">
-            {ECHO_CAPTION[turn.state] ?? "Sending…"}
+            {echoCaption(turn, agentStarting)}
           </Text>
         </UserMessageCard>
-        <Stack direction="row" gap="sm" align="center" className="px-xs py-xs">
-          <BouncingDots />
-        </Stack>
-      </Stack>
+      </div>
     );
   }
 
@@ -128,7 +138,6 @@ export function PendingTurnCard({
     );
   }
 
-  if (!failed) return null;
   const destructive = turn.state !== "unverified";
   const caption =
     turn.state === "unverified"

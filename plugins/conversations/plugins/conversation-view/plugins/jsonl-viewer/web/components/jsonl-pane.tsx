@@ -31,17 +31,32 @@ import type { TranscriptSubject } from "./transcript-subject-context";
 
 const CONVERSATION_SUBJECT: TranscriptSubject = { kind: "conversation" };
 
-function WorkingIndicator({ startAt }: { startAt: number }) {
+/**
+ * The transcript's one activity line, at its foot under the queued messages:
+ * what the agent is doing — starting, or working on a turn — with how long it
+ * has been at it; bare dots while a message is on its way to an idle agent.
+ * The message cards above draw none of their own.
+ */
+function TranscriptActivity({
+  phase,
+  startAt,
+}: {
+  phase: "starting" | "working" | "sending";
+  startAt: number | null;
+}) {
   return (
     <Stack direction="row" align="center" gap="sm" className="px-xs py-xs">
       <BouncingDots />
-      <Text
-        as="span"
-        variant="caption"
-        className="tabular-nums text-muted-foreground/60"
-      >
-        Working for <ElapsedTime since={new Date(startAt)} />
-      </Text>
+      {phase !== "sending" && startAt != null && (
+        <Text
+          as="span"
+          variant="caption"
+          className="tabular-nums text-muted-foreground/60"
+        >
+          {phase === "starting" ? "Starting the agent · " : "Working for "}
+          <ElapsedTime since={new Date(startAt)} />
+        </Text>
+      )}
     </Stack>
   );
 }
@@ -138,6 +153,17 @@ function JsonlPaneInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot events once per working transition
   }, [isWorking]);
 
+  const agentStarting = conversation.status === "starting";
+  // The foot's activity line (see TranscriptActivity): the agent's phase, or
+  // a message still on its way to an idle agent.
+  const activity: "starting" | "working" | "sending" | null = agentStarting
+    ? "starting"
+    : isWorking
+      ? "working"
+      : pendingTurns.some((turn) => turn.card === "echo")
+        ? "sending"
+        : null;
+
   // Working with nothing written yet: the pane's empty state shows it.
   const isStarting =
     isWorking &&
@@ -183,9 +209,6 @@ function JsonlPaneInner({
       <JsonlViewer.TranscriptEnd.Render>
         {(item) => <item.component conversation={conversation} />}
       </JsonlViewer.TranscriptEnd.Render>
-      {isWorking && !isStarting && workingStartAt != null && (
-        <WorkingIndicator startAt={workingStartAt} />
-      )}
       {!isWorking && !!conversation.waitingFor && (
         <JsonlViewer.PendingPrompt.Dispatch
           conversationId={conversation.id}
@@ -197,8 +220,12 @@ function JsonlPaneInner({
           key={turn.id}
           conversationId={conversation.id}
           turn={turn}
+          agentStarting={agentStarting}
         />
       ))}
+      {activity !== null && !isStarting && (
+        <TranscriptActivity phase={activity} startAt={workingStartAt} />
+      )}
       {pending.status === "error" && (
         <ResourceErrorInline
           variant="inline"
