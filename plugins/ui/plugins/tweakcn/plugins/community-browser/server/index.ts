@@ -1,13 +1,13 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { getCatalog, applyCatalogTheme } from "../core/endpoints";
-import { handleGetCatalog } from "./internal/handle-get-catalog";
+import { applyCatalogTheme } from "../core/endpoints";
 import { handleApply } from "./internal/handle-apply";
+import { communityCatalogServed } from "./internal/resource";
 
 export default {
   description:
-    "The tweakcn community catalog, and the endpoint that saves one of its themes as a saved theme.",
+    "Serves the tweakcn community catalog (the live tweakcn.community-catalog value), and the endpoint that saves one of its themes as a saved theme.",
+  contributions: [...communityCatalogServed.declare],
   httpRoutes: {
-    [getCatalog.route]: handleGetCatalog,
     [applyCatalogTheme.route]: handleApply,
   },
 } satisfies ServerPluginDefinition;

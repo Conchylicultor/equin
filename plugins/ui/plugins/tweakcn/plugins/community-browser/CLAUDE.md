@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The tweakcn community catalog as a browsable theme source (picking a theme saves it as a saved theme), plus a customizer section that imports any tweakcn theme by URL. The tweakcn community catalog, and the endpoint that saves one of its themes as a saved theme.
+- Description: The tweakcn community catalog as a browsable theme source (picking a theme saves it as a saved theme), plus a customizer section that imports any tweakcn theme by URL. Serves the tweakcn community catalog (the live tweakcn.community-catalog value), and the endpoint that saves one of its themes as a saved theme.
 - Web:
   - Contributes:
     - `ThemeEngine.ThemeSource` "community"
@@ -14,6 +14,7 @@
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.useLive`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -23,28 +24,26 @@
     - `primitives/live-state.mapResource`
     - `primitives/live-state.PortableGateInput`
     - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useEndpointResource`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.ThemeSourceEntry`
     - `ui/theme-engine.useThemes`
     - `ui/theme-engine.useThemeScopeId`
-    - `ui/theme-engine/saved-themes.refreshSavedThemes`
+    - `ui/theme-engine/saved-themes.awaitSavedThemesWrite`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`
 - Server:
+  - Contributes: `resource.declare` "tweakcn.community-catalog"
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `network/live.serveValue`
     - `ui/theme-engine/saved-themes.saveTheme`
-  - Routes:
-    - `GET /api/tweakcn/community/catalog`
-    - `POST /api/tweakcn/community/apply`
+  - Resources: `tweakcn.community-catalog` (push, fixed)
+  - Routes: `POST /api/tweakcn/community/apply`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `ui/theme-engine/saved-themes.SavedThemeSchema`
-  - Exports (values):
-    - `applyCatalogTheme`
-    - `getCatalog`
+    - `ui/theme-engine/saved-themes.SavedThemeWriteSchema`
+  - Exports (values): `applyCatalogTheme`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
@@ -59,8 +58,6 @@
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-- Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/internal/catalog-source.ts` (debt)
 - Shared:
   - Exports (types): `CatalogTheme`
 

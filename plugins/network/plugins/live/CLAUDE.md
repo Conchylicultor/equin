@@ -2177,7 +2177,7 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 261 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 263 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×71
     - `conversations` ×48
     - `debug` ×27
@@ -2191,6 +2191,7 @@ never add one.
     - `plugin-meta` ×4
     - `auth` ×3
     - `review` ×3
+    - `ui` ×3
     - `apps-core` ×2
     - `config_v2` ×2
     - `history` ×2
@@ -2205,7 +2206,6 @@ never add one.
     - `runs`
     - `shell/notifications`
     - `stats/responsiveness`
-    - `ui/icons/sprites`
 - Exemptions:
   - Exempts itself from:
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
@@ -2245,8 +2245,6 @@ never add one.
     - `stats/pushes` (3 debt)
     - `stats/tasks` (2 debt)
     - `ui/icons/sprites` (1 debt)
-    - `ui/theme-engine/saved-themes` (2 debt)
-    - `ui/tweakcn/community-browser` (1 debt)
 - Machine:
   - Exports (values):
     - `serveCollection`

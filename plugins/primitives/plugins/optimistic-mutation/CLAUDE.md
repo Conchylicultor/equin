@@ -450,6 +450,20 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
   self-healing push.
 - Op insertion order is preserved, so fast chained ops compose deterministically.
 
+## Awaiting a write without an overlay: `awaitResourceWrite`
+
+A caller that writes but predicts nothing — it only must not act (select, close,
+report) before the page's live read has the write — awaits
+`awaitResourceWrite(value, [params,] watermark)` with the endpoint's ack token.
+It is the same causal confirmation as an op's (Rule A: the tuple's `ackTx` names
+the commit, or a full frame's snapshot watermark is strictly past it), as a
+promise, so it works outside React (saved-themes' `awaitSavedThemesWrite`, the
+tweakcn catalog adopt). It **rejects** with the read's error when the tuple's
+query is, or turns, failed before confirming — never a silent hang. It does not
+subscribe the tuple: a mounted reader must, and for a write that may change
+nothing that reader must ask for acks (`useResourceAcks`; any
+`useOptimisticResource` does). Pinned by `web/__tests__/await-resource-write.test.ts`.
+
 ## Two rejected fixes, so they aren't re-proposed
 
 - **A causal floor on content confirmation** (reject a confirmation when
@@ -568,7 +582,10 @@ that drops it from the overlay — is emitted on `clientLatencySink`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/live-state.ensureNotificationsClient`
+    - `primitives/live-state.LiveRegistries`
     - `primitives/live-state.queryKeyFor`
+    - `primitives/live-state.ResourceError`
     - `primitives/live-state.useLiveRegistries`
     - `primitives/live-state.useLiveSocketKindOf`
     - `primitives/live-state.useResource`
@@ -582,6 +599,7 @@ that drops it from the overlay — is emitted on `clientLatencySink`
     - `OptimisticResult`
     - `OptimisticSettled`
   - Exports (values):
+    - `awaitResourceWrite`
     - `enqueueDetachedWrite`
     - `enqueueResourceWrite`
     - `OpNoLongerApplies`
@@ -598,6 +616,7 @@ that drops it from the overlay — is emitted on `clientLatencySink`
     - `page/tags`
     - `reports/optimistic-divergence`
     - `reports/optimistic-rejection`
+    - `ui/theme-engine/saved-themes`
 - Exemptions:
   - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
 

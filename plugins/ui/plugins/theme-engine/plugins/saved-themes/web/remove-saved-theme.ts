@@ -9,7 +9,7 @@ import {
   SavedThemeInUseSchema,
   type ThemeScopeRef,
 } from "../core";
-import { refreshSavedThemes } from "./refresh-saved-themes";
+import { awaitSavedThemesWrite } from "./await-saved-themes-write";
 
 export type RemoveSavedThemeResult =
   | { kind: "removed"; reassigned: ThemeScopeRef[] }
@@ -22,19 +22,26 @@ export type RemoveSavedThemeResult =
  * result names those scopes, so the caller can ask the user before retrying
  * with `reassign` — which first moves them to the Default theme.
  *
- * The list drops the theme only once no scope on this page selects it. The
- * server moves the scopes before it deletes, but the two changes reach the page
- * separately; dropping the theme first would leave a scope, for a moment,
- * selecting a theme the list does not have — which the painter reports as a
- * missing theme. Rejects with the endpoint's error for any other failure.
+ * Resolves once every scope on this page has its new selection and the live
+ * theme list has re-read the delete (`awaitSavedThemesWrite`), so the caller
+ * sees the theme gone. Rejects with the endpoint's error for any other failure.
+ *
+ * Ordering is assumed, not guaranteed: the server moves the scopes (an
+ * in-process config notify) before its delete transaction starts, so in
+ * practice their new selections reach the page ahead of the list's
+ * change-feed recompute. Nothing orders the two resources' pushes, though: a
+ * config push that lags the list's shows one missing-theme frame. The order
+ * this awaits in does not change that — the live list drops the theme when
+ * its recompute lands. Tracked: task-1792600740-e0u219.
  */
 export async function removeSavedTheme(
   id: ThemeId,
   opts: { reassign: boolean },
 ): Promise<RemoveSavedThemeResult> {
   let reassigned: ThemeScopeRef[];
+  let watermark: string;
   try {
-    ({ reassigned } = await fetchEndpoint(
+    ({ reassigned, watermark } = await fetchEndpoint(
       deleteSavedTheme,
       { id },
       { query: opts.reassign ? { reassign: true } : {} },
@@ -49,6 +56,6 @@ export async function removeSavedTheme(
     throw err;
   }
   await whenNoScopeSelects(id);
-  await refreshSavedThemes();
+  await awaitSavedThemesWrite(watermark);
   return { kind: "removed", reassigned };
 }

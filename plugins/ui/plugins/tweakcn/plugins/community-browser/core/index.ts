@@ -1,1 +1,1 @@
-export { getCatalog, applyCatalogTheme } from "./endpoints";
+export { applyCatalogTheme } from "./endpoints";

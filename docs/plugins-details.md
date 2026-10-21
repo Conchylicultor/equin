@@ -25677,9 +25677,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 41 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Slot contributors: 40 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `Core.Root` ×39
-          - `Core.Boot` ×2
+          - `Core.Boot` ← `infra.boot-snapshot`
       - Core:
         - Uses:
           - `framework/plugin-id.asPluginId`
@@ -30595,7 +30595,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 261 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 263 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×48
           - `debug` ×27
@@ -30609,6 +30609,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×4
           - `auth` ×3
           - `review` ×3
+          - `ui` ×3
           - `apps-core` ×2
           - `config_v2` ×2
           - `history` ×2
@@ -30623,7 +30624,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runs`
           - `shell/notifications`
           - `stats/responsiveness`
-          - `ui/icons/sprites`
       - Exemptions:
         - Exempts itself from:
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
@@ -30663,8 +30663,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/pushes` (3 debt)
           - `stats/tasks` (2 debt)
           - `ui/icons/sprites` (1 debt)
-          - `ui/theme-engine/saved-themes` (2 debt)
-          - `ui/tweakcn/community-browser` (1 debt)
       - Machine:
         - Exports (values):
           - `serveCollection`
@@ -39527,9 +39525,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-events`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
       - Web:
-        - Uses: 27 symbols — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `primitives/networking` ×10
-          - `infra/endpoints` ×4
+          - `infra/endpoints` ×3
           - `primitives/css/spacing` ×2
           - `primitives/css/ui-kit` ×2
           - `primitives/css/center.Center`
@@ -39552,6 +39550,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `GateInput`
           - `GateStatus`
           - `HttpStaleDropReport`
+          - `LiveRegistries`
           - `LiveStateSocketKind`
           - `MatchResourceHandlers`
           - `MissedFrame`
@@ -39588,8 +39587,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `foldResource`
           - `getNotificationsClient`
           - `httpStaleDropReportSink`
-          - `hydrateEndpoint`
-          - `hydrateQuery`
           - `hydrateResource`
           - `liveStateSocketKind`
           - `mapResource`
@@ -40346,7 +40343,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.getEndpointErrorMessage`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/live-state.ensureNotificationsClient`
+          - `primitives/live-state.LiveRegistries`
           - `primitives/live-state.queryKeyFor`
+          - `primitives/live-state.ResourceError`
           - `primitives/live-state.useLiveRegistries`
           - `primitives/live-state.useLiveSocketKindOf`
           - `primitives/live-state.useResource`
@@ -40360,6 +40360,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OptimisticResult`
           - `OptimisticSettled`
         - Exports (values):
+          - `awaitResourceWrite`
           - `enqueueDetachedWrite`
           - `enqueueResourceWrite`
           - `OpNoLongerApplies`
@@ -40376,6 +40377,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/tags`
           - `reports/optimistic-divergence`
           - `reports/optimistic-rejection`
+          - `ui/theme-engine/saved-themes`
       - Exemptions:
         - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - **`outline`** — Umbrella for the outline primitive: the scroll-spy position half and the rail chrome half.
@@ -47991,21 +47993,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `ui/theme-engine/theme-gallery`
               - `ui/theme-toggle`
-        - **`saved-themes`** — Saved themes (tweakcn imports and custom themes) as a resident theme source, hydrated before first paint, plus useEditTheme — the one place theme edits land, copying a read-only theme into a custom one on first edit. Stores tweakcn imports and custom themes in one table, with the create / edit / rename / delete endpoints, and serves them to the server's first-frame theme painter (ThemeEngine.Source). A delete refuses while any scope still selects the theme unless asked to reassign those scopes to Default.
+        - **`saved-themes`** — Saved themes (tweakcn imports and custom themes) as a resident theme source read live (saved-themes.list, hydrated before first paint), plus useEditTheme — the one place theme edits land, copying a read-only theme into a custom one on first edit — and awaitSavedThemesWrite, which resolves once the list has re-read a write. Stores tweakcn imports and custom themes in one table, with the create / edit / rename / delete endpoints (each answering its commit's ack token), serves the live saved-themes.list value, and serves them to the server's first-frame theme painter (ThemeEngine.Source). A delete refuses while any scope still selects the theme unless asked to reassign those scopes to Default.
           - Web:
-            - Contributes:
-              - `Core.Boot`
-              - `ThemeEngine.ThemeSource` "saved"
+            - Contributes: `ThemeEngine.ThemeSource` "saved"
             - Uses:
               - `config_v2.useConfigResult`
               - `config_v2.useSetConfig`
               - `infra/endpoints.EndpointError`
-              - `infra/endpoints.endpointQueryKey`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.useEndpointMutation`
-              - `primitives/live-state.hydrateEndpoint`
+              - `network/live.useLive`
               - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useEndpointResource`
+              - `primitives/live-state.useResourceAcks`
+              - `primitives/optimistic-mutation.awaitResourceWrite`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.useThemes`
               - `ui/theme-engine.whenNoScopeSelects`
@@ -48013,26 +48013,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RemoveSavedThemeResult`
               - `ThemeEdits`
             - Exports (values):
-              - `refreshSavedThemes`
+              - `awaitSavedThemesWrite`
               - `removeSavedTheme`
               - `useEditTheme`
           - Server:
-            - Contributes: `ThemeEngine.Source` "saved-themes"
+            - Contributes:
+              - `resource.declare` "saved-themes.list"
+              - `ThemeEngine.Source` "saved-themes"
             - Uses:
               - `config_v2.getConfig`
               - `config_v2.getConfigScopeIds`
               - `config_v2.setConfig`
+              - `database.currentTxId`
               - `database.db`
               - `database/derived-updated-at.deriveUpdatedAt`
               - `database/sql-column.parsedJson`
               - `database/sql-column.parsedText`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
+              - `network/live.serveValue`
               - `ui/theme-engine.ThemeEngine`
             - DB schema: `plugins/ui/plugins/theme-engine/plugins/saved-themes/server/internal/tables.ts`
             - Exports (values): `saveTheme`
+            - Resources: `saved-themes.list` (push, unbounded: every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or import (single digits in practice))
             - Routes:
-              - `GET /api/saved-themes`
               - `POST /api/saved-themes`
               - `PATCH /api/saved-themes/:id/fragment`
               - `PATCH /api/saved-themes/:id/color-adjust`
@@ -48050,6 +48054,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SavedTheme`
               - `SavedThemeInUse`
               - `SavedThemeSource`
+              - `SavedThemeWrite`
               - `SaveThemeInput`
               - `ThemeScopeRef`
             - Exports (values):
@@ -48058,13 +48063,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `deleteSavedTheme`
               - `FragmentEditSchema`
               - `importedThemeId`
-              - `listSavedThemes`
               - `patchSavedThemeColorAdjust`
               - `patchSavedThemeFragment`
               - `renameSavedTheme`
               - `SavedThemeInUseSchema`
               - `SavedThemeSchema`
               - `SavedThemeSourceSchema`
+              - `SavedThemeWriteSchema`
               - `SaveThemeInputSchema`
               - `ThemeScopeRefSchema`
           - Cross-plugin:
@@ -48074,10 +48079,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tweakcn`
               - `ui/tweakcn/community-browser`
           - Exemptions:
-            - Exempts itself from:
-              - `ids:pk-declared` — `server/internal/tables.ts` (debt)
-              - `live/no-endpoint-read` — `web/internal/use-saved-themes.ts` (debt)
-              - `live/no-endpoint-read` — `web/use-edit-theme.ts` (debt)
+            - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
           - Web:
             - Slots:
@@ -48158,13 +48160,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `QuickTheme.Section` "Theme" → `QuickThemePicker`
               - `item-actions` "rename" → `RenameThemeAction`
               - `item-actions` "delete" → `DeleteThemeAction`
-            - Uses: 40 symbols — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md)
+            - Uses: 41 symbols — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md)
               - `primitives/data-view` ×7
               - `ui/theme-engine` ×7
               - `primitives/css/ui-kit` ×4
               - `infra/endpoints` ×3
               - `primitives/live-state` ×3
               - `config_v2` ×2
+              - `ui/theme-engine/saved-themes` ×2
               - `apps-core.Apps`
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
@@ -48177,7 +48180,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/syntax-highlight.useDarkMode`
               - `ui/theme-engine/quick-theme.QuickTheme`
-              - `ui/theme-engine/saved-themes.removeSavedTheme`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
           - Cross-plugin:
             - Uses tokens:
@@ -48919,7 +48921,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
-          - `ui/theme-engine/saved-themes.SavedThemeSchema`
+          - `ui/theme-engine/saved-themes.SavedThemeWriteSchema`
         - Exports (types):
           - `TweakcnCssVars`
           - `TweakcnFragment`
@@ -48943,7 +48945,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow --shadow-xl`
           - `ui/tokens/shadow --shadow-xs`
       - Plugins:
-        - **`community-browser`** — The tweakcn community catalog as a browsable theme source (picking a theme saves it as a saved theme), plus a customizer section that imports any tweakcn theme by URL. The tweakcn community catalog, and the endpoint that saves one of its themes as a saved theme.
+        - **`community-browser`** — The tweakcn community catalog as a browsable theme source (picking a theme saves it as a saved theme), plus a customizer section that imports any tweakcn theme by URL. Serves the tweakcn community catalog (the live tweakcn.community-catalog value), and the endpoint that saves one of its themes as a saved theme.
           - Web:
             - Contributes:
               - `ThemeEngine.ThemeSource` "community"
@@ -48953,6 +48955,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
               - `primitives/css/fill.fillClasses`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -48962,28 +48965,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.mapResource`
               - `primitives/live-state.PortableGateInput`
               - `primitives/live-state.ResourceResult`
-              - `primitives/live-state.useEndpointResource`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.ThemeSourceEntry`
               - `ui/theme-engine.useThemes`
               - `ui/theme-engine.useThemeScopeId`
-              - `ui/theme-engine/saved-themes.refreshSavedThemes`
+              - `ui/theme-engine/saved-themes.awaitSavedThemesWrite`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
           - Server:
+            - Contributes: `resource.declare` "tweakcn.community-catalog"
             - Uses:
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
+              - `network/live.serveValue`
               - `ui/theme-engine/saved-themes.saveTheme`
-            - Routes:
-              - `GET /api/tweakcn/community/catalog`
-              - `POST /api/tweakcn/community/apply`
+            - Resources: `tweakcn.community-catalog` (push, fixed)
+            - Routes: `POST /api/tweakcn/community/apply`
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
-              - `ui/theme-engine/saved-themes.SavedThemeSchema`
-            - Exports (values):
-              - `applyCatalogTheme`
-              - `getCatalog`
+              - `ui/theme-engine/saved-themes.SavedThemeWriteSchema`
+            - Exports (values): `applyCatalogTheme`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -48998,8 +48999,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-          - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/internal/catalog-source.ts` (debt)
           - Shared:
             - Exports (types): `CatalogTheme`
     - **`variant-region`** — Factory for pluggable chrome regions with per-app switchable variants. Collapses the config + slot + host + picker + registrations boilerplate into defineVariantRegion (core) and defineVariantRegionWeb (web).

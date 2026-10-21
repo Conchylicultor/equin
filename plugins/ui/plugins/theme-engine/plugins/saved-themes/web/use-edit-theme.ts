@@ -1,10 +1,6 @@
 import { useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
-import {
-  endpointQueryKey,
-  useEndpointMutation,
-} from "@plugins/infra/plugins/endpoints/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   DEFAULT_THEME_ID,
   resolveTheme,
@@ -18,11 +14,11 @@ import { ThemeEngine, useThemes } from "@plugins/ui/plugins/theme-engine/web";
 import {
   applyFragmentEdit,
   createSavedTheme,
-  listSavedThemes,
   patchSavedThemeColorAdjust,
   patchSavedThemeFragment,
   type FragmentEdit,
 } from "../core";
+import { awaitSavedThemesWrite } from "./await-saved-themes-write";
 
 export interface ThemeEdits {
   /**
@@ -74,14 +70,9 @@ export function useEditTheme(scopeId: string | undefined): ThemeEdits {
   const selection = useConfigResult(themeSelectionConfig, { scopeId });
   const groups = ThemeEngine.TokenGroup.useContributions();
   const selectTheme = useSetConfig(themeSelectionConfig, { scopeId });
-  const queryClient = useQueryClient();
   const create = useEndpointMutation(createSavedTheme);
-  const patchFragment = useEndpointMutation(patchSavedThemeFragment, {
-    invalidates: [listSavedThemes],
-  });
-  const patchColorAdjust = useEndpointMutation(patchSavedThemeColorAdjust, {
-    invalidates: [listSavedThemes],
-  });
+  const patchFragment = useEndpointMutation(patchSavedThemeFragment);
+  const patchColorAdjust = useEndpointMutation(patchSavedThemeColorAdjust);
 
   // The scope now selects the copy its first edit made: later edits see a
   // custom theme and patch it directly, so the queue entry is done.
@@ -126,22 +117,24 @@ export function useEditTheme(scopeId: string | undefined): ThemeEdits {
     return { theme, themesById };
   }
 
+  // Resolves once the live theme list has the edit (its ack), so an edit's
+  // promise settles on what the painter shows.
   async function patch(id: ThemeId, edit: Edit): Promise<void> {
-    if ("fragment" in edit) {
-      await patchFragment.mutateAsync({
-        params: { id },
-        body: edit.fragment,
-      });
-    } else {
-      await patchColorAdjust.mutateAsync({
-        params: { id },
-        body: { colorAdjust: edit.colorAdjust },
-      });
-    }
+    const { watermark } =
+      "fragment" in edit
+        ? await patchFragment.mutateAsync({
+            params: { id },
+            body: edit.fragment,
+          })
+        : await patchColorAdjust.mutateAsync({
+            params: { id },
+            body: { colorAdjust: edit.colorAdjust },
+          });
+    await awaitSavedThemesWrite(watermark);
   }
 
   async function createCopy(theme: Theme, edit: Edit): Promise<ThemeId> {
-    const copy = await create.mutateAsync({
+    const { theme: copy, watermark } = await create.mutateAsync({
       body: {
         source: "custom",
         label: `${theme.label} copy`,
@@ -151,11 +144,9 @@ export function useEditTheme(scopeId: string | undefined): ThemeEdits {
         ...("colorAdjust" in edit ? { colorAdjust: edit.colorAdjust } : {}),
       },
     });
-    // Refetch the list BEFORE selecting the copy, so no render sees the scope
-    // select a theme its theme list does not have yet.
-    await queryClient.invalidateQueries({
-      queryKey: endpointQueryKey(listSavedThemes, {}, undefined),
-    });
+    // Wait for the live list to have the copy BEFORE selecting it, so no
+    // render sees the scope select a theme its theme list does not have yet.
+    await awaitSavedThemesWrite(watermark);
     selectTheme("theme", copy.id);
     return copy.id;
   }

@@ -229,7 +229,7 @@ let singleton: NotificationsClient | null = null;
 // later calls this same function, so it reuses THIS singleton — the
 // one-socket-per-origin invariant is preserved (no eager second socket, no
 // per-tab WS regression). It owns the default QueryClient, the one
-// `hydrateResource` / `hydrateQuery` seed, so seeded cache entries line up.
+// `hydrateResource` seed, so seeded cache entries line up.
 export function ensureNotificationsClient(): NotificationsClient {
   singleton ??= new NotificationsClient(getDefaultQueryClient());
   return singleton;
@@ -326,15 +326,6 @@ export function hydrateResource<T, P extends ResourceParams = ResourceParams>(
     ),
     parsed,
   );
-}
-
-// Seed an arbitrary query on the app's default QueryClient before mount — the
-// non-resource companion to hydrateResource, for boot tasks that pre-fetch
-// plain query data (e.g. endpoints' hydrateEndpoint). The caller owns the key
-// shape; this only guarantees the write lands on the SAME client the app's
-// QueryClientProvider mounts.
-export function hydrateQuery(queryKey: unknown[], data: unknown): void {
-  getDefaultQueryClient().setQueryData(queryKey, data);
 }
 
 /**

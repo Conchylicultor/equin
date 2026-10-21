@@ -1,32 +1,14 @@
-import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { SavedThemeSchema } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/core";
-
-const CatalogThemeSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  tags: z.array(z.string()),
-  source: z.enum(["registry", "community"]),
-  likeCount: z.number().optional(),
-  author: z.string().optional(),
-  cssVars: z.object({
-    theme: z.record(z.string(), z.string()),
-    light: z.record(z.string(), z.string()),
-    dark: z.record(z.string(), z.string()),
-  }),
-});
-
-export const getCatalog = defineEndpoint({
-  route: "GET /api/tweakcn/community/catalog",
-  response: z.object({ themes: z.array(CatalogThemeSchema) }),
-});
+import { z } from "zod";
+import { SavedThemeWriteSchema } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/core";
 
 /**
  * Save one catalog theme as a `tweakcn` saved theme (idempotent: saving it again
- * updates the same theme). Selecting it is the caller's move.
+ * updates the same theme), answering the saved theme and its commit's ack token
+ * (`awaitSavedThemesWrite`). Selecting it is the caller's move.
  */
 export const applyCatalogTheme = defineEndpoint({
   route: "POST /api/tweakcn/community/apply",
   body: z.object({ themeId: z.string() }),
-  response: SavedThemeSchema,
+  response: SavedThemeWriteSchema,
 });

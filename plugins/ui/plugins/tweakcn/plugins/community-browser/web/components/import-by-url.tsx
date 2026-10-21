@@ -10,7 +10,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { themeSelectionConfig } from "@plugins/ui/plugins/theme-engine/core";
 import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
-import { refreshSavedThemes } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
+import { awaitSavedThemesWrite } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
 import { importTweakcnTheme } from "@plugins/ui/plugins/tweakcn/core";
 
 /** Extract a bare theme ID from a tweakcn URL or raw ID string. */
@@ -58,9 +58,9 @@ export function ImportByUrlSection() {
   const handleImport = async () => {
     const themeId = parseThemeId(input);
     if (!themeId) return;
-    let saved;
+    let write;
     try {
-      saved = await importMutation.mutateAsync({ body: { themeId } });
+      write = await importMutation.mutateAsync({ body: { themeId } });
     } catch (err) {
       // Shown inline below (and by the global error toast).
       if (err instanceof EndpointError) return;
@@ -68,8 +68,8 @@ export function ImportByUrlSection() {
     }
     // The theme list must have the import before the scope selects it, or the
     // painter would paint a missing theme for a frame.
-    await refreshSavedThemes();
-    selectTheme("theme", saved.id);
+    await awaitSavedThemesWrite(write.watermark);
+    selectTheme("theme", write.theme.id);
     setInput("");
   };
 

@@ -13,10 +13,8 @@ import {
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
 import type { Theme } from "@plugins/ui/plugins/theme-engine/core";
-import {
-  listSavedThemes,
-  renameSavedTheme,
-} from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/core";
+import { renameSavedTheme } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/core";
+import { awaitSavedThemesWrite } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
 
 /**
  * The rename dialog's body (opened through `openDialog`, which owns the
@@ -32,9 +30,7 @@ export function RenameThemeDialog({
 }) {
   const [label, setLabel] = useState(theme.label);
   const [error, setError] = useState<string | null>(null);
-  const rename = useEndpointMutation(renameSavedTheme, {
-    invalidates: [listSavedThemes],
-  });
+  const rename = useEndpointMutation(renameSavedTheme);
   const next = label.trim();
   const canSave = next.length > 0 && next !== theme.label;
 
@@ -44,10 +40,13 @@ export function RenameThemeDialog({
     if (!canSave) return;
     setError(null);
     try {
-      await rename.mutateAsync({
+      const { watermark } = await rename.mutateAsync({
         params: { id: theme.id },
         body: { label: next },
       });
+      // Close once the live list carries the new label, so the gallery row
+      // behind the dialog never shows the old one after it closes.
+      await awaitSavedThemesWrite(watermark);
       onClose();
     } catch (err) {
       setError(getEndpointErrorMessage(err));

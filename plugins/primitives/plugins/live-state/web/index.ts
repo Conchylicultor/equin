@@ -7,7 +7,6 @@ export {
   useResources,
   useResourceAcks,
   hydrateResource,
-  hydrateQuery,
   useNotificationsStatus,
   useNotificationsChannelStatuses,
   useNotificationsClient,
@@ -16,7 +15,6 @@ export {
   useLiveRegistries,
   useLiveSocketKindOf,
 } from "./use-resource";
-export { hydrateEndpoint } from "./hydrate-endpoint";
 export { useEndpointResource } from "./use-endpoint-resource";
 export { useQueryResource } from "./use-query-resource";
 export type {
@@ -80,6 +78,7 @@ export type {
   DebugSnapshot,
   TransportInfo,
   MissedFrame,
+  LiveRegistries,
 } from "./notifications-client";
 export { resourceDescriptorByKey, ResourceError } from "../core";
 export type {

@@ -1,7 +1,6 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { originOf } from "@plugins/infra/plugins/request-origin/core";
 import {
-  listSavedThemes,
   createSavedTheme,
   patchSavedThemeFragment,
   patchSavedThemeColorAdjust,
@@ -9,15 +8,12 @@ import {
   deleteSavedTheme,
 } from "../../core";
 import {
-  listSavedThemes as listRows,
   saveTheme,
   editThemeFragment,
   setThemeColorAdjust,
   renameTheme,
   deleteTheme,
 } from "./store";
-
-export const handleList = implement(listSavedThemes, () => listRows());
 
 export const handleCreate = implement(createSavedTheme, ({ body }) =>
   saveTheme(body),

@@ -10,7 +10,7 @@ import type { ResourceResult } from "./use-resource";
 
 /**
  * A GET endpoint read as a `ResourceResult` — the endpoint companion to
- * `useResource`, as `hydrateEndpoint` is to `hydrateResource`. `useEndpoint`
+ * `useResource`. `useEndpoint`
  * hands back React Query's own result, whose `data` is `undefined` both while
  * loading and after a first-load failure; a domain hook re-shaping that by hand
  * either collapses the two (a failed catalog renders as forever-loading) or has
@@ -27,8 +27,8 @@ import type { ResourceResult } from "./use-resource";
  * `useQueryResource`'s (`queryResult`). Query options (`staleTime`, …) pass through, except
  * `enabled`: a disabled read would be `loading` forever.
  *
- * Lives here, not in endpoints, for the same reason `hydrateEndpoint` does:
- * live-state owns `ResourceResult` and already sits downstream of endpoints.
+ * Lives here, not in endpoints: live-state owns `ResourceResult` and already
+ * sits downstream of endpoints.
  */
 export function useEndpointResource<
   Route extends string,

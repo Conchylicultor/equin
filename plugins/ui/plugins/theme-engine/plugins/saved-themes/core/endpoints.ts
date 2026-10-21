@@ -4,13 +4,12 @@ import {
   ColorAdjustmentSchema,
   TokenGroupFragmentsSchema,
 } from "@plugins/ui/plugins/theme-engine/core";
-import { SavedThemeSchema, ThemeScopeRefSchema } from "./saved-theme";
+import { SavedThemeWriteSchema, ThemeScopeRefSchema } from "./saved-theme";
 import { FragmentEditSchema } from "./fragment-edit";
 
-export const listSavedThemes = defineEndpoint({
-  route: "GET /api/saved-themes",
-  response: z.array(SavedThemeSchema),
-});
+// The list is read live (`saved-themes.list`, shared/resources.ts); every write
+// below answers its commit's ack token, so a caller can wait for that list to
+// have it (`awaitSavedThemesWrite`, web).
 
 const createFields = {
   label: z.string().min(1),
@@ -42,27 +41,27 @@ export type SaveThemeInput = z.infer<typeof SaveThemeInputSchema>;
 export const createSavedTheme = defineEndpoint({
   route: "POST /api/saved-themes",
   body: SaveThemeInputSchema,
-  response: SavedThemeSchema,
+  response: SavedThemeWriteSchema,
 });
 
 /** Edit one token group of a custom theme — see `FragmentEditSchema`. */
 export const patchSavedThemeFragment = defineEndpoint({
   route: "PATCH /api/saved-themes/:id/fragment",
   body: FragmentEditSchema,
-  response: SavedThemeSchema,
+  response: SavedThemeWriteSchema,
 });
 
 /** Set a custom theme's own color adjustment; `null` clears it, so the inherited one applies again. */
 export const patchSavedThemeColorAdjust = defineEndpoint({
   route: "PATCH /api/saved-themes/:id/color-adjust",
   body: z.object({ colorAdjust: ColorAdjustmentSchema.nullable() }),
-  response: SavedThemeSchema,
+  response: SavedThemeWriteSchema,
 });
 
 export const renameSavedTheme = defineEndpoint({
   route: "PATCH /api/saved-themes/:id",
   body: z.object({ label: z.string().min(1) }),
-  response: SavedThemeSchema,
+  response: SavedThemeWriteSchema,
 });
 
 /**
@@ -79,5 +78,8 @@ export const deleteSavedTheme = defineEndpoint({
       .transform((v) => v === "true")
       .optional(),
   }),
-  response: z.object({ reassigned: z.array(ThemeScopeRefSchema) }),
+  response: z.object({
+    reassigned: z.array(ThemeScopeRefSchema),
+    watermark: z.string(),
+  }),
 });

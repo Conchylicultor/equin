@@ -60,7 +60,7 @@ Use `fetchEndpoint` for imperative fetches outside React. Non-2xx responses thro
 
 An `EndpointError` maps to `not-found` on a 404 and `loader-failed` otherwise, with the server's message; a `fetch` that got no answer to `transport`; a response the schema rejects to `client-outdated`.
 
-To make a GET available on the **first render** (no loading flash), seed it from a `Core.Boot` task with `hydrateEndpoint(endpoint, params, opts, data)` — exported from `@plugins/primitives/plugins/live-state/web` (live-state owns the app's default QueryClient and sits downstream of endpoints, so the import can only point that way). It writes the exact query key `useEndpoint` reads via the shared `endpointQueryKey` helper this plugin exports, so the two cannot drift. Canonical use: tweakcn's preset list (`plugins/ui/plugins/tweakcn/web/boot.ts`).
+Data the **first render** needs (no loading flash) is not an endpoint read: declare it a `liveValue` with `preload: "boot"` / `"boot-and-keep"` (`network/live`), which the boot snapshot hydrates.
 
 ## Desktop-only endpoints — `needsMachine`
 

@@ -27,7 +27,7 @@ committed `theme.jsonc` does it in git (the website's: `{ "theme": "equin" }`).
     once its `adopt` saves it into a resident source.
 
 Each source's hook (`useThemes` / `useEntries`) returns a `ResourceResult`
-(`useEndpointResource` for an endpoint-backed one), so a failed read is its own
+(`useLive` over the source's live value), so a failed read is its own
 state, never a forever-loading or empty list.
 
 `useThemes()` = code themes + every resident source, pending while any resident
@@ -314,7 +314,7 @@ without its own theme document is the `""` entry exactly.
     - `reports/theme-resolution`
 - Sub-plugins:
   - **`quick-theme`** — Quick-switch theme popover on the global action bar: contributed quick sections (the theme picker, the light/dark switch), every component variant picker, and a hand-off to the full customizer pane…
-  - **`saved-themes`** — Saved themes (tweakcn imports and custom themes) as a resident theme source, hydrated before first paint, plus useEditTheme — the one place theme edits land, copying a read-only theme into a custom…
+  - **`saved-themes`** — Saved themes (tweakcn imports and custom themes) as a resident theme source read live (saved-themes.list, hydrated before first paint), plus useEditTheme — the one place theme edits land, copying a…
   - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu)…
   - **`theme-gallery`** — The Theme DataView: every selectable theme plus every catalog's unsaved entries, with My themes / Community / Curated views. Picking one selects it for the current scope (saving a catalog entry…
 

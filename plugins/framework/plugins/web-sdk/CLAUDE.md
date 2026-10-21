@@ -306,9 +306,9 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
   - Slots:
     - `Core.Root`
     - `Core.Boot`
-  - Slot contributors: 41 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 40 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Core.Root` ×39
-    - `Core.Boot` ×2
+    - `Core.Boot` ← `infra.boot-snapshot`
 - Core:
   - Uses:
     - `framework/plugin-id.asPluginId`

@@ -1,5 +1,5 @@
 import { asc, eq, sql } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import { currentTxId, db } from "@plugins/database/server";
 import { setConfig } from "@plugins/config_v2/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
@@ -12,6 +12,7 @@ import {
   importedThemeId,
   type FragmentEdit,
   type SavedTheme,
+  type SavedThemeWrite,
   type SaveThemeInput,
   type ThemeScopeRef,
 } from "../../core";
@@ -72,8 +73,14 @@ export async function listSavedThemes(): Promise<SavedTheme[]> {
  * importer (tweakcn) calling in-process. Refuses (422) an `extends` the chain
  * rules reject, so the resolver's missing-target / cycle throw stays
  * unreachable for anything written here.
+ *
+ * Answers the commit's ack token beside the theme (`SavedThemeWrite`): an
+ * endpoint wrapping this returns it as is, so its web caller can wait for the
+ * live list to have the theme (`awaitSavedThemesWrite`) before selecting it.
  */
-export async function saveTheme(input: SaveThemeInput): Promise<SavedTheme> {
+export async function saveTheme(
+  input: SaveThemeInput,
+): Promise<SavedThemeWrite> {
   const id = idFor(input);
   const saved = await db.transaction(async (tx) => {
     if (input.extends !== undefined) {
@@ -109,7 +116,7 @@ export async function saveTheme(input: SaveThemeInput): Promise<SavedTheme> {
       })
       .returning();
     if (!row) throw new Error(`[saved-themes] saving "${id}" returned no row`);
-    return toSavedTheme(row);
+    return { theme: toSavedTheme(row), watermark: await currentTxId(tx) };
   });
   notifyChanged();
   return saved;
@@ -125,8 +132,8 @@ async function updateCustomTheme(
   change: (
     theme: SavedTheme,
   ) => Partial<Pick<Row, "label" | "fragments" | "colorAdjust">>,
-): Promise<SavedTheme> {
-  const theme = await db.transaction(async (tx) => {
+): Promise<SavedThemeWrite> {
+  const written = await db.transaction(async (tx) => {
     const [row] = await tx
       .select()
       .from(_savedThemes)
@@ -146,16 +153,16 @@ async function updateCustomTheme(
       .returning();
     if (!updated)
       throw new Error(`[saved-themes] updating "${id}" returned no row`);
-    return toSavedTheme(updated);
+    return { theme: toSavedTheme(updated), watermark: await currentTxId(tx) };
   });
   notifyChanged();
-  return theme;
+  return written;
 }
 
 export function editThemeFragment(
   id: string,
   edit: FragmentEdit,
-): Promise<SavedTheme> {
+): Promise<SavedThemeWrite> {
   return updateCustomTheme(id, (theme) => ({
     fragments: applyFragmentEdit(theme.fragments, edit),
   }));
@@ -164,11 +171,14 @@ export function editThemeFragment(
 export function setThemeColorAdjust(
   id: string,
   colorAdjust: ColorAdjustment | null,
-): Promise<SavedTheme> {
+): Promise<SavedThemeWrite> {
   return updateCustomTheme(id, () => ({ colorAdjust }));
 }
 
-export function renameTheme(id: string, label: string): Promise<SavedTheme> {
+export function renameTheme(
+  id: string,
+  label: string,
+): Promise<SavedThemeWrite> {
   return updateCustomTheme(id, () => ({ label }));
 }
 
@@ -181,7 +191,7 @@ export function renameTheme(id: string, label: string): Promise<SavedTheme> {
 export async function deleteTheme(
   id: string,
   opts: { reassign: boolean; writer: WriteOrigin },
-): Promise<{ reassigned: ThemeScopeRef[] }> {
+): Promise<{ reassigned: ThemeScopeRef[]; watermark: string }> {
   const [row] = await db
     .select()
     .from(_savedThemes)
@@ -203,7 +213,7 @@ export async function deleteTheme(
     });
   }
 
-  await db.transaction(async (tx) => {
+  const watermark = await db.transaction(async (tx) => {
     const [parent] = await tx
       .select()
       .from(_savedThemes)
@@ -227,8 +237,9 @@ export async function deleteTheme(
         .where(eq(_savedThemes.id, child.id));
     }
     await tx.delete(_savedThemes).where(eq(_savedThemes.id, id));
+    return currentTxId(tx);
   });
   notifyChanged();
 
-  return { reassigned: plan.reassign };
+  return { reassigned: plan.reassign, watermark };
 }

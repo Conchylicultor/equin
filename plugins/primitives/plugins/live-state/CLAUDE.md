@@ -69,12 +69,9 @@ lands, so it stays `loading` instead. (The old `resourceDescriptor` factory and
 its `initialData` placeholder are deleted —
 `research/2026-10-08-global-page-tree-and-agents-routed.md`.)
 
-For non-resource query data there is `hydrateQuery(queryKey, data)` — a raw
-seeder on the same default client. Don't call it with a hand-built key; go
-through a typed wrapper that owns the key shape. `hydrateEndpoint(endpoint,
-params, opts, data)` is the canonical one, seeding a GET endpoint with the exact
-key `useEndpoint` reads (endpoints' `endpointQueryKey`); it lives here because
-live-state already sits downstream of endpoints (via log-channels).
+Data the first render needs is a `liveValue` declared `preload: "boot"` /
+`"boot-and-keep"` (the boot snapshot hydrates it); there is no seeder for
+endpoint reads.
 
 ## A burst of landings is one commit (`internal/coalesced-notify.ts`)
 
@@ -356,7 +353,7 @@ reports against the page's server, and the page never sees its tuples.
   driving the optimistic overlay without a provider reads). The module-level
   `noteResource…` / `getResourceWatermark` / `hasResourceTxAck` functions are
   the page pipeline's registries only — test support, not a read path.
-- **Not scoped:** boot hydration (`hydrateResource` / `hydrateQuery` seed the
+- **Not scoped:** boot hydration (`hydrateResource` seeds the
   page's own client), the contract-mismatch store (version skew is about the
   page's bundle) and the pending-mount counters (page diagnostics).
 
@@ -431,7 +428,7 @@ error (`isTerminalResourceError`): the same bundle is refused the same way.
 
 The tab has ONE `NotificationsClient` (`ensureNotificationsClient()`, hoisted
 to the start of boot), and it OWNS its `QueryClient` (`client.queryClient`,
-the default one `hydrateResource` / `hydrateQuery` seed). `NotificationsProvider`
+the default one `hydrateResource` seeds). `NotificationsProvider`
 takes only `children`: it mounts the singleton and that client's own cache,
 through the internal `NotificationsClientProvider`, which takes the client
 alone — so the cache React reads and the cache the client writes cannot differ.
@@ -924,7 +921,7 @@ remaining request/response reads. What is left renders through the result
 vocabulary too:
 
 ```ts
-useEndpointResource(getCatalog, {}, { staleTime: Infinity }); // a GET endpoint (legacy — being migrated)
+useEndpointResource(someGetEndpoint, params); // a GET endpoint (legacy — being migrated)
 useQueryResource({ queryKey, queryFn: () => import("./x") });  // a LOCAL async load, never a server read
 ```
 
@@ -1071,9 +1068,9 @@ keeps every row's identity rather than re-minting each moved row.
 - Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
 - Load-bearing: yes
 - Web:
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/networking` ×10
-    - `infra/endpoints` ×4
+    - `infra/endpoints` ×3
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/css/center.Center`
@@ -1096,6 +1093,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `GateInput`
     - `GateStatus`
     - `HttpStaleDropReport`
+    - `LiveRegistries`
     - `LiveStateSocketKind`
     - `MatchResourceHandlers`
     - `MissedFrame`
@@ -1132,8 +1130,6 @@ keeps every row's identity rather than re-minting each moved row.
     - `foldResource`
     - `getNotificationsClient`
     - `httpStaleDropReportSink`
-    - `hydrateEndpoint`
-    - `hydrateQuery`
     - `hydrateResource`
     - `liveStateSocketKind`
     - `mapResource`

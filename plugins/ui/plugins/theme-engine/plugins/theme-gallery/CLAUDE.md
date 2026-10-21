@@ -54,13 +54,14 @@ draws `ThemeCard`, `list` draws `ThemeSwatch`.
     - `QuickTheme.Section` "Theme" → `QuickThemePicker`
     - `item-actions` "rename" → `RenameThemeAction`
     - `item-actions` "delete" → `DeleteThemeAction`
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7
     - `ui/theme-engine` ×7
     - `primitives/css/ui-kit` ×4
     - `infra/endpoints` ×3
     - `primitives/live-state` ×3
     - `config_v2` ×2
+    - `ui/theme-engine/saved-themes` ×2
     - `apps-core.Apps`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
@@ -73,7 +74,6 @@ draws `ThemeCard`, `list` draws `ThemeSwatch`.
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/syntax-highlight.useDarkMode`
     - `ui/theme-engine/quick-theme.QuickTheme`
-    - `ui/theme-engine/saved-themes.removeSavedTheme`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`
 - Cross-plugin:
   - Uses tokens:

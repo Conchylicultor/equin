@@ -39,6 +39,19 @@ export const SavedThemeSchema = z.object({
 export type SavedTheme = z.infer<typeof SavedThemeSchema>;
 
 /**
+ * What a write to the saved themes answers: the theme as written, and the
+ * write transaction's id (`currentTxId`, read inside it) — the ack token a
+ * caller hands `awaitSavedThemesWrite` (web) to wait until the page's theme
+ * list has re-read that commit. A caller that selects the theme it just saved
+ * must wait, or the painter would paint a missing theme for a frame.
+ */
+export const SavedThemeWriteSchema = z.object({
+  theme: SavedThemeSchema,
+  watermark: z.string(),
+});
+export type SavedThemeWrite = z.infer<typeof SavedThemeWriteSchema>;
+
+/**
  * A scope that selects a theme: the desktop (no `scopeId` — the base config
  * document) or one app (`scopeId: "app:<id>"`).
  */

@@ -3,19 +3,20 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   combineResources,
   mapResource,
-  useEndpointResource,
   type PortableGateInput,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import type { ThemeId } from "@plugins/ui/plugins/theme-engine/core";
 import {
   useThemes,
   type ThemeSourceEntry,
 } from "@plugins/ui/plugins/theme-engine/web";
 import { importedThemeId } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/core";
-import { refreshSavedThemes } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
+import { awaitSavedThemesWrite } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
 import { tweakcnPalettePreview } from "@plugins/ui/plugins/tweakcn/core";
-import { applyCatalogTheme, getCatalog } from "../../core";
+import { applyCatalogTheme } from "../../core";
+import { communityCatalog } from "../../shared/resources";
 
 /**
  * The community catalog as browse-source entries. An entry already saved
@@ -28,7 +29,7 @@ import { applyCatalogTheme, getCatalog } from "../../core";
  * they are tagged `curated` so a picker can filter on it.
  */
 export function useCatalogEntries(): ResourceResult<ThemeSourceEntry[]> {
-  const catalog = useEndpointResource(getCatalog, {});
+  const catalog = useLive(communityCatalog);
   const themes = useThemes();
 
   return useMemo(
@@ -72,11 +73,11 @@ function themesGate(pending: boolean): PortableGateInput {
  * without a frame of "missing theme". Rejects with the endpoint's error.
  */
 export async function adoptCatalogTheme(entryId: string): Promise<ThemeId> {
-  const saved = await fetchEndpoint(
+  const { theme, watermark } = await fetchEndpoint(
     applyCatalogTheme,
     {},
     { body: { themeId: entryId } },
   );
-  await refreshSavedThemes();
-  return saved.id;
+  await awaitSavedThemesWrite(watermark);
+  return theme.id;
 }

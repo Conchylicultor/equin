@@ -1,9 +1,9 @@
 import type { EndpointDef, MachineEndpointDef } from "../../core";
 
 // Single source of the TanStack Query key for an endpoint read. useEndpoint
-// (the subscriber) and hydrateEndpoint (the boot-time seeder) must build the
-// SAME key byte-for-byte, or a seeded entry is silently invisible to the hook —
-// so neither constructs it inline.
+// (the subscriber) and every reader of its cache entry must build the SAME key
+// byte-for-byte, or an entry is silently invisible to the hook — so none
+// constructs it inline.
 export function endpointQueryKey<
   Route extends string,
   TParams,

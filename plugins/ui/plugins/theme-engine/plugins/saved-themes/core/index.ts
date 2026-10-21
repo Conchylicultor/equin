@@ -1,5 +1,4 @@
 export {
-  listSavedThemes,
   createSavedTheme,
   patchSavedThemeFragment,
   patchSavedThemeColorAdjust,
@@ -10,6 +9,7 @@ export {
 export type { SaveThemeInput } from "./endpoints";
 export {
   SavedThemeSchema,
+  SavedThemeWriteSchema,
   SavedThemeSourceSchema,
   SavedThemeInUseSchema,
   ThemeScopeRefSchema,
@@ -17,6 +17,7 @@ export {
 } from "./saved-theme";
 export type {
   SavedTheme,
+  SavedThemeWrite,
   SavedThemeSource,
   SavedThemeInUse,
   ThemeScopeRef,
