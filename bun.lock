@@ -3375,6 +3375,10 @@
       "name": "@singularity/plugin-framework-tooling-guards",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/guards/plugins/refusal-format": {
+      "name": "@singularity/plugin-framework-tooling-guards-refusal-format",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/import-closure": {
       "name": "@singularity/plugin-framework-tooling-import-closure",
       "version": "0.0.1",
@@ -8565,6 +8569,8 @@
     "@singularity/plugin-framework-tooling-format": ["@singularity/plugin-framework-tooling-format@workspace:plugins/framework/plugins/tooling/plugins/format"],
 
     "@singularity/plugin-framework-tooling-guards": ["@singularity/plugin-framework-tooling-guards@workspace:plugins/framework/plugins/tooling/plugins/guards"],
+
+    "@singularity/plugin-framework-tooling-guards-refusal-format": ["@singularity/plugin-framework-tooling-guards-refusal-format@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/refusal-format"],
 
     "@singularity/plugin-framework-tooling-import-closure": ["@singularity/plugin-framework-tooling-import-closure@workspace:plugins/framework/plugins/tooling/plugins/import-closure"],
 

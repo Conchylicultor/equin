@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { HookRecordSchema } from "./hook-record";
 import { RequestConfigSchema } from "./request-config";
 import { RequestShapeChangeSchema, RequestShapeSchema } from "./request-shape";
 
@@ -138,6 +139,9 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     usage: TokenUsageSchema.optional(),
     result: ToolCallResultSchema.optional(),
     injectedContext: z.array(z.string()).optional(),
+    /** The hooks that ran on this call (PreToolUse, PostToolUse, …), in
+     *  transcript order. A PreToolUse `block` means the call never ran. */
+    hooks: z.array(HookRecordSchema).optional(),
   }),
   z.object({
     kind: z.literal("assistant-thinking"),

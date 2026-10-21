@@ -38,3 +38,5 @@ export type {
 } from "./request-config";
 export { requestShapeChange } from "./request-shape";
 export type { RequestShape, RequestShapeChange } from "./request-shape";
+export { hookRecordOf, resultBlockOf, sameHookOutcome } from "./hook-record";
+export type { HookRecord, HookOutcome } from "./hook-record";

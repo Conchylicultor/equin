@@ -132,3 +132,136 @@ describe("buildJsonlEvents — the launch preprompt", () => {
     expect(events[1]).toMatchObject({ kind: "user-text", text: "hi" });
   });
 });
+
+// Hook records carry the toolUseID of the call they ran on.
+const hookLine = (uuid: string, attachment: Record<string, unknown>) => ({
+  type: "attachment",
+  uuid,
+  parentUuid: "a1",
+  timestamp: AT,
+  attachment,
+});
+const preHook = {
+  hookName: "PreToolUse:Bash",
+  hookEvent: "PreToolUse",
+  toolUseID: "toolu_1",
+};
+
+describe("buildJsonlEvents — hooks ride on the call they ran on", () => {
+  test("a pre-hook before the result and a block after it both land on the call", async () => {
+    const events = await buildJsonlEvents(
+      [
+        toolUse,
+        hookLine("h1", {
+          type: "hook_success",
+          ...preHook,
+          exitCode: 0,
+          command: "guard",
+          durationMs: 12,
+        }),
+        resultLine({}, "PreToolUse:Bash hook error: BLOCKED"),
+        hookLine("h2", {
+          type: "hook_stopped_continuation",
+          ...preHook,
+          message: "BLOCKED",
+        }),
+      ],
+      noImages,
+    );
+    expect(events.map((e) => e.kind)).toEqual(["tool-call"]);
+    const call = events[0];
+    if (call?.kind !== "tool-call") throw new Error("expected a tool call");
+    expect(call.hooks?.map((h) => [h.event, h.outcome, h.text])).toEqual([
+      ["PreToolUse", "pass", undefined],
+      ["PreToolUse", "block", "BLOCKED"],
+    ]);
+    expect(call.hooks?.[0]?.durationMs).toBe(12);
+  });
+
+  test("a block only the result reports still lands on the call, once", async () => {
+    const block = resultLine({}, "PreToolUse:Bash hook error: BLOCKED\n");
+    const alone = await buildJsonlEvents([toolUse, block], noImages);
+    const call = alone[0];
+    if (call?.kind !== "tool-call") throw new Error("expected a tool call");
+    expect(call.hooks).toEqual([
+      {
+        at: AT,
+        event: "PreToolUse",
+        name: "PreToolUse:Bash",
+        outcome: "block",
+        text: "BLOCKED",
+      },
+    ]);
+  });
+
+  test("a result that is not a hook's refusal adds no hook", async () => {
+    const events = await buildJsonlEvents(
+      [toolUse, resultLine({}, "Exit code 1")],
+      noImages,
+    );
+    const call = events[0];
+    if (call?.kind !== "tool-call") throw new Error("expected a tool call");
+    expect(call.hooks).toBeUndefined();
+  });
+
+  test.each([
+    ["hook_success", { exitCode: 2 }, "error"],
+    ["hook_success", { exitCode: 0, stderr: "warn" }, "error"],
+    ["hook_additional_context", { content: ["a", "b"] }, "context"],
+    ["hook_system_message", { content: "tip" }, "message"],
+    ["hook_non_blocking_error", { stderr: "x" }, "error"],
+    ["hook_blocking_error", {}, "block"],
+    ["hook_cancelled", {}, "cancelled"],
+  ] as const)("%s %p is a %s", async (type, extra, outcome) => {
+    const events = await buildJsonlEvents(
+      [toolUse, hookLine("h1", { type, ...preHook, ...extra })],
+      noImages,
+    );
+    const call = events[0];
+    if (call?.kind !== "tool-call") throw new Error("expected a tool call");
+    expect(call.hooks?.[0]?.outcome).toBe(outcome);
+  });
+
+  test("added context is joined into the record's text", async () => {
+    const events = await buildJsonlEvents(
+      [
+        toolUse,
+        hookLine("h1", {
+          type: "hook_additional_context",
+          ...preHook,
+          content: ["a", "b"],
+        }),
+      ],
+      noImages,
+    );
+    const call = events[0];
+    if (call?.kind !== "tool-call") throw new Error("expected a tool call");
+    expect(call.hooks?.[0]?.text).toBe("a\n\nb");
+  });
+
+  test("a hook naming no call, an unknown call, or an unknown subtype stays an attachment", async () => {
+    const events = await buildJsonlEvents(
+      [
+        toolUse,
+        hookLine("h1", {
+          type: "hook_success",
+          hookName: "SessionStart:startup",
+          hookEvent: "SessionStart",
+          exitCode: 0,
+        }),
+        hookLine("h2", { type: "hook_success", ...preHook, toolUseID: "nope" }),
+        hookLine("h3", { type: "hook_brand_new", ...preHook }),
+      ],
+      noImages,
+    );
+    expect(events.map((e) => e.kind)).toEqual([
+      "tool-call",
+      "attachment",
+      "attachment",
+      "attachment",
+    ]);
+    const call = events[0];
+    if (call?.kind !== "tool-call") throw new Error("expected a tool call");
+    expect(call.hooks).toBeUndefined();
+  });
+});

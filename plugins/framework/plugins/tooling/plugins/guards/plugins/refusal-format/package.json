@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-guards-refusal-format",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The text format of a guard's denial — the did-not-run banner, then 'Why it was blocked:' and the guard's own reason — written (joinRefusal) and read back (refusalReason) in one place, so a transcript viewer can show the reason without the banner."
+}

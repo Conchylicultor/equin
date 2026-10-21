@@ -55,6 +55,8 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
 - Core:
   - Exports (types):
     - `ForeignSessionPayload`
+    - `HookOutcome`
+    - `HookRecord`
     - `JsonlEvent`
     - `QuestionAnswer`
     - `RequestConfig`
@@ -72,6 +74,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `extractPreprompt`
     - `extractTeammateMessages`
     - `ForeignSessionPayloadSchema`
+    - `hookRecordOf`
     - `isInterruptContent`
     - `JsonlEventSchema`
     - `PREPROMPT_TAG`
@@ -80,6 +83,8 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `requestConfigChanges`
     - `RequestConfigSchema`
     - `requestShapeChange`
+    - `resultBlockOf`
+    - `sameHookOutcome`
     - `stripRelayBoilerplate`
     - `taskStopTimes`
     - `tokenUsageOf`

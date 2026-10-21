@@ -12,6 +12,9 @@ import {
   QuestionAnswerSchema,
   requestConfigChanges,
   requestShapeChange,
+  hookRecordOf,
+  resultBlockOf,
+  sameHookOutcome,
 } from "../../core";
 import type {
   JsonlEvent,
@@ -19,6 +22,7 @@ import type {
   RequestShape,
   UserTextSegment,
   ToolCallResult,
+  HookRecord,
 } from "../../core";
 import { requestConfigOf, requestShapeOf } from "./api-request";
 import { imageMimeOf } from "./image-key";
@@ -313,6 +317,16 @@ function insertBeforeFirstPrompt(
 }
 
 /**
+ * Records a hook on the call it ran on, once: a block is read off the call's
+ * result AND may be written again as a `hook_*` attachment.
+ */
+function addHook(call: ToolCallEvent, hook: HookRecord | undefined): void {
+  if (!hook) return;
+  if (call.hooks?.some((h) => sameHookOutcome(h, hook))) return;
+  call.hooks = [...(call.hooks ?? []), hook];
+}
+
+/**
  * The transcript's events, from its merged chain lines (`mergeChainLines`):
  * the live branch only, tool calls paired with their results, prompts'
  * referenced images inlined through `readImage`.
@@ -524,6 +538,8 @@ export async function buildJsonlEvents(
             const existing = toolCallByUseId.get(toolUseId);
             if (existing) {
               existing.result = result;
+              if (result.isError)
+                addHook(existing, resultBlockOf(result.content, ts));
             } else {
               pendingResults.push({ toolUseId, result });
             }
@@ -712,6 +728,20 @@ export async function buildJsonlEvents(
             insertBeforeFirstPrompt(events, preprompt, ts);
           }
         }
+        // A hook record that names a call rides on that call, as its result
+        // does: the hook ran ON it, and a block means it never ran. The call
+        // is always earlier in the transcript than its hooks (pre-hooks land
+        // between call and result, a block's record after the result). A
+        // record naming no call (SessionStart, UserPromptSubmit, Stop) or an
+        // unknown call stays an event of its own.
+        const hook = hookRecordOf(subtype, att as Record<string, unknown>, ts);
+        if (hook.kind === "hook" && hook.toolUseId) {
+          const call = toolCallByUseId.get(hook.toolUseId);
+          if (call) {
+            addHook(call, hook.record);
+            continue;
+          }
+        }
         events.push({ kind: "attachment", at: ts, subtype, attachment: att });
       }
       continue;
@@ -829,6 +859,8 @@ export async function buildJsonlEvents(
     const call = toolCallByUseId.get(toolUseId);
     if (call) {
       call.result = result;
+      if (result.isError)
+        addHook(call, resultBlockOf(result.content, result.at));
     } else {
       // Orphan result — no matching call; emit as a tool-call with empty name
       events.push({

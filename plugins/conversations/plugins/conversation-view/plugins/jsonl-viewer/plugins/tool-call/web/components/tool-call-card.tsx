@@ -1,6 +1,14 @@
 import { type ReactNode } from "react";
-import { toolName, type ToolCallEvent } from "../../core";
+import {
+  blockingHook,
+  isLoudHook,
+  toolName,
+  type ToolCallEvent,
+} from "../../core";
 import { ToolNameLabel } from "./tool-name-label";
+import { HookBand, HookIndicator } from "./hook-band";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import type { HookRecord } from "@plugins/conversations/plugins/transcript-source/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -47,6 +55,10 @@ interface ToolCallFrameProps {
    * says so here, and the card believes it.
    */
   running?: boolean;
+  /** The hooks that ran on the call: a shield beside the tool badge (coloured
+   *  by the worst outcome) on the closed card, and what the loud ones said (a
+   *  block, a failure, added context) at the top of the opened body. */
+  hooks?: readonly HookRecord[];
 }
 
 /**
@@ -64,6 +76,7 @@ export function ToolCallFrame({
   defaultOpen = false,
   isError,
   running,
+  hooks,
 }: ToolCallFrameProps) {
   const tool = toolName(name);
   return (
@@ -99,6 +112,13 @@ export function ToolCallFrame({
           >
             <ToolNameLabel tool={tool} />
           </Badge>
+          {/* The hook shield keeps its own hover (the list of hooks), so it
+              opts back into pointer events like the leading chip. */}
+          {hooks?.length ? (
+            <CardHeaderAction className={rigidClass()}>
+              <HookIndicator hooks={hooks} />
+            </CardHeaderAction>
+          ) : null}
           {/* Interactive chip sits inside the (click-through) label, so it opts
               back into pointer events via CardHeaderAction to keep its onClick. */}
           {leading && (
@@ -109,7 +129,14 @@ export function ToolCallFrame({
         </>
       }
     >
-      {children}
+      {hooks?.some(isLoudHook) ? (
+        <Stack gap="sm">
+          <HookBand hooks={hooks} />
+          {children}
+        </Stack>
+      ) : (
+        children
+      )}
     </CollapsibleCard>
   );
 }
@@ -136,13 +163,22 @@ export function ToolCallCard({
   ...frame
 }: ToolCallCardProps) {
   const unknown = outcomeUnknown ?? event.result?.outcomeUnknown === true;
+  const blocked = blockingHook(event) !== undefined;
   return (
     <ToolCallFrame
       {...frame}
       name={event.name || "tool_call"}
       isError={isError ?? (event.result?.isError === true && !unknown)}
-      note={note ?? (unknown ? "· session ended, outcome unknown" : undefined)}
+      note={
+        note ??
+        (unknown
+          ? "· session ended, outcome unknown"
+          : blocked
+            ? "· did not run"
+            : undefined)
+      }
       running={running ?? !event.result}
+      hooks={event.hooks}
     />
   );
 }

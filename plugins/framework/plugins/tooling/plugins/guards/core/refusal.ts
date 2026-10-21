@@ -1,5 +1,9 @@
 import { parseShell } from "./parse-shell";
 import type { ToolMatcher } from "./types";
+import {
+  REFUSAL_HEADER,
+  joinRefusal,
+} from "@plugins/framework/plugins/tooling/plugins/guards/plugins/refusal-format/core";
 
 /**
  * The first lines of EVERY guard denial: what did not happen because of it.
@@ -33,8 +37,6 @@ const NOT_DONE: Record<
     "No agent was launched. Nothing it would have done has happened.",
 };
 
-const HEADER = "BLOCKED BY A GUARD: this tool call did NOT run.";
-
 function stringField(
   input: Record<string, unknown>,
   key: string,
@@ -62,7 +64,7 @@ export function withRefusalBanner(
     tool
   ];
   const lines = notDone
-    ? `${HEADER}\n${notDone(input)}`
-    : `${HEADER} None of its effects happened.`;
-  return `${lines}\n\nWhy it was blocked:\n${reason}`;
+    ? `${REFUSAL_HEADER}\n${notDone(input)}`
+    : `${REFUSAL_HEADER} None of its effects happened.`;
+  return joinRefusal(lines, reason);
 }

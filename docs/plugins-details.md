@@ -15548,21 +15548,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                   - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
-                - Uses:
+                - Uses: 21 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                  - `primitives/collapsible` ×4
+                  - `primitives/slot-render` ×3
+                  - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
+                  - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
+                  - `primitives/css/ui-kit` ×2
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                  - `conversations/conversation-view/jsonl-viewer/collapsible-card.CardHeaderAction`
-                  - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
-                  - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
-                  - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/bouncing-dots.BouncingDots`
                   - `primitives/css/rigid.rigidClass`
                   - `primitives/css/scroll.Scroll`
+                  - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.cn`
-                  - `primitives/slot-render.defineDispatchSlot`
-                  - `primitives/slot-render.defineRenderSlot`
-                  - `primitives/slot-render.DispatchContribution`
+                  - `ui/icons.Icon`
                 - Exports (types):
                   - `ToolFooterContribution`
                   - `ToolFooterProps`
@@ -15572,25 +15571,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ToolCallCard`
                   - `ToolCallFrame`
                   - `ToolNameLabel`
+              - Core:
+                - Uses: `framework/tooling/guards/refusal-format.refusalReason`
+                - Exports (types):
+                  - `ToolCallEvent`
+                  - `ToolName`
+                  - `ToolRendererProps`
+                - Exports (values):
+                  - `blockingHook`
+                  - `hookSummary`
+                  - `isLoudHook`
+                  - `toolName`
               - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/color-palette --destructive`
-                  - `ui/tokens/color-palette --muted`
-                  - `ui/tokens/color-palette --primary`
-                  - `ui/tokens/color-palette --primary-text`
-                  - `ui/tokens/density --pad-tool-badge-x`
-                  - `ui/tokens/density --pad-tool-badge-y`
-                  - `ui/tokens/density --space-sm`
+                - Uses tokens: 26 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/REFERENCE.md)
+                  - `ui/tokens/type-scale` ×9
+                  - `ui/tokens/color-palette` ×8
+                  - `ui/tokens/density` ×4
+                  - `ui/tokens/shape` ×4
                   - `ui/tokens/font-family --font-mono`
-                  - `ui/tokens/shape --border-tool-badge`
-                  - `ui/tokens/shape --radius`
-                  - `ui/tokens/shape --radius-tool-badge`
-                  - `ui/tokens/shape --spacing`
-                  - `ui/tokens/type-scale --font-scale`
-                  - `ui/tokens/type-scale --font-size-tag`
-                  - `ui/tokens/type-scale --font-weight-tag`
-                  - `ui/tokens/type-scale --font-weight-tag-strong`
-                  - `ui/tokens/type-scale --line-height-tag`
                 - Imported by:
                   - `apps/places/places-map`
                   - `conversations/agent-thread`
@@ -15611,12 +15609,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/write`
                   - `debug/browser-recordings`
-              - Core:
-                - Exports (types):
-                  - `ToolCallEvent`
-                  - `ToolName`
-                  - `ToolRendererProps`
-                - Exports (values): `toolName`
               - Plugins:
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
                   - Web:
@@ -17949,6 +17941,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types):
           - `ForeignSessionPayload`
+          - `HookOutcome`
+          - `HookRecord`
           - `JsonlEvent`
           - `QuestionAnswer`
           - `RequestConfig`
@@ -17966,6 +17960,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `extractPreprompt`
           - `extractTeammateMessages`
           - `ForeignSessionPayloadSchema`
+          - `hookRecordOf`
           - `isInterruptContent`
           - `JsonlEventSchema`
           - `PREPROMPT_TAG`
@@ -17974,6 +17969,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `requestConfigChanges`
           - `RequestConfigSchema`
           - `requestShapeChange`
+          - `resultBlockOf`
+          - `sameHookOutcome`
           - `stripRelayBoilerplate`
           - `taskStopTimes`
           - `tokenUsageOf`
@@ -25243,6 +25240,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `framework/tooling/collected-dir.defineCollectedDir`
               - `framework/tooling/collected-dir.loadCollectedDir`
+              - `framework/tooling/guards/refusal-format.joinRefusal`
+              - `framework/tooling/guards/refusal-format.REFUSAL_HEADER`
               - `infra/namespace.asNamespace`
               - `infra/namespace.isNamespace`
               - `infra/paths.HOME_DIR`
@@ -25295,6 +25294,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `guard-path-safety/no-adhoc-path-resolve` — `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts` (sanctioned)
               - `python/no-system-python` — `core` (sanctioned)
               - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts` (debt)
+          - Plugins:
+            - **`refusal-format`** — The text format of a guard's denial — the did-not-run banner, then 'Why it was blocked:' and the guard's own reason — written (joinRefusal) and read back (refusalReason) in one place, so a transcript viewer can show the reason without the banner.
+              - Cross-plugin:
+                - Imported by:
+                  - `conversations/conversation-view/jsonl-viewer/tool-call`
+                  - `framework/tooling/guards`
+              - Core:
+                - Exports (values):
+                  - `joinRefusal`
+                  - `REFUSAL_HEADER`
+                  - `refusalReason`
         - **`import-closure`** — Static import-closure measurement (importClosure): the exact repo modules an entrypoint loads, the tree-shaken live subset, the npm specifiers it reaches, and the import chain to any one module — measured with Bun.build so it cannot drift from what actually loads.
           - Core:
             - Uses: `framework/cli.defineCliCommand`
@@ -35534,8 +35544,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
-          - `conversations` ×12
+        - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+          - `conversations` ×13
           - `apps` ×10
           - `ui` ×10
           - `primitives` ×8
@@ -36618,9 +36628,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 401 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 402 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×105
-              - `conversations` ×62
+              - `conversations` ×63
               - `primitives` ×54
               - `debug` ×37
               - `ui` ×29
@@ -47197,9 +47207,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 307 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 308 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×70
-          - `conversations` ×56
+          - `conversations` ×57
           - `primitives` ×42
           - `page` ×40
           - `fields` ×34

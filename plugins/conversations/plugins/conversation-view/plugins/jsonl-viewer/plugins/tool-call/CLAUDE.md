@@ -31,21 +31,20 @@
   - Contributes:
     - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
     - `JsonlRowActions.Item` "copy-tool-result" → `CopyToolResultAction`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/collapsible` ×4
+    - `primitives/slot-render` ×3
+    - `conversations/conversation-view/jsonl-viewer/collapsible-card` ×2
+    - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
+    - `primitives/css/ui-kit` ×2
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-    - `conversations/conversation-view/jsonl-viewer/collapsible-card.CardHeaderAction`
-    - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
-    - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
-    - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
     - `primitives/css/badge.Badge`
     - `primitives/css/bouncing-dots.BouncingDots`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/slot-render.defineDispatchSlot`
-    - `primitives/slot-render.defineRenderSlot`
-    - `primitives/slot-render.DispatchContribution`
+    - `ui/icons.Icon`
   - Exports (types):
     - `ToolFooterContribution`
     - `ToolFooterProps`
@@ -55,25 +54,24 @@
     - `ToolCallCard`
     - `ToolCallFrame`
     - `ToolNameLabel`
+- Core:
+  - Uses: `framework/tooling/guards/refusal-format.refusalReason`
+  - Exports (types):
+    - `ToolCallEvent`
+    - `ToolName`
+    - `ToolRendererProps`
+  - Exports (values):
+    - `blockingHook`
+    - `hookSummary`
+    - `isLoudHook`
+    - `toolName`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --destructive`
-    - `ui/tokens/color-palette --muted`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/color-palette --primary-text`
-    - `ui/tokens/density --pad-tool-badge-x`
-    - `ui/tokens/density --pad-tool-badge-y`
-    - `ui/tokens/density --space-sm`
+  - Uses tokens: 26 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/type-scale` ×9
+    - `ui/tokens/color-palette` ×8
+    - `ui/tokens/density` ×4
+    - `ui/tokens/shape` ×4
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --border-tool-badge`
-    - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --radius-tool-badge`
-    - `ui/tokens/shape --spacing`
-    - `ui/tokens/type-scale --font-scale`
-    - `ui/tokens/type-scale --font-size-tag`
-    - `ui/tokens/type-scale --font-weight-tag`
-    - `ui/tokens/type-scale --font-weight-tag-strong`
-    - `ui/tokens/type-scale --line-height-tag`
   - Imported by:
     - `apps/places/places-map`
     - `conversations/agent-thread`
@@ -94,12 +92,6 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/jsonl-viewer/tool-call/write`
     - `debug/browser-recordings`
-- Core:
-  - Exports (types):
-    - `ToolCallEvent`
-    - `ToolName`
-    - `ToolRendererProps`
-  - Exports (values): `toolName`
 - Sub-plugins:
   - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
   - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).

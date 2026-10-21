@@ -7,3 +7,4 @@ export interface ToolRendererProps {
 }
 
 export { toolName, type ToolName } from "./tool-name";
+export { blockingHook, hookSummary, isLoudHook } from "./hooks";
