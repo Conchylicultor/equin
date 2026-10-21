@@ -1,7 +1,8 @@
 /*
  * Geometry for <WorkingDots>: three dots of --wd-dot, centres 5/3 of a dot apart (shapes.ts PITCH), in a
- * box tall enough for the shapes' rise. The engine writes each dot's transform
- * and each halo's opacity/scale per frame; everything here is the rest pose.
+ * box tall enough for the shapes' rise. The engine writes each dot's and each
+ * halo's transform (and the halo's opacity) per frame; everything here is the
+ * rest pose.
  */
 .working-dots {
   position: relative;
@@ -11,7 +12,14 @@
   height: calc(var(--wd-dot, 6px) * 7 / 3);
 }
 
-.working-dots-dot {
+/* Two stacked layers: the halos, then the dots (the dots' layer carries the goo filter). */
+.working-dots-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.working-dots-dot,
+.working-dots-halo {
   position: absolute;
   top: calc(var(--wd-dot, 6px) * 2 / 3);
   width: var(--wd-dot, 6px);
@@ -21,17 +29,11 @@
   will-change: transform;
 }
 
-.working-dots-dot:nth-of-type(1) { left: 0; }
-.working-dots-dot:nth-of-type(2) { left: calc(var(--wd-dot, 6px) * 5 / 3); }
-.working-dots-dot:nth-of-type(3) { left: calc(var(--wd-dot, 6px) * 10 / 3); }
+.working-dots-halo { opacity: 0; }
 
-.working-dots-halo {
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  background: currentColor;
-  opacity: 0;
-}
+.working-dots-dot:nth-child(1), .working-dots-halo:nth-child(1) { left: 0; }
+.working-dots-dot:nth-child(2), .working-dots-halo:nth-child(2) { left: calc(var(--wd-dot, 6px) * 5 / 3); }
+.working-dots-dot:nth-child(3), .working-dots-halo:nth-child(3) { left: calc(var(--wd-dot, 6px) * 10 / 3); }
 
 /*
  * <WorkingText>: a highlight sweeps across the label (the text is the gradient,

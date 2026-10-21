@@ -63,7 +63,9 @@ function TranscriptActivity({
   const streaming = partial.status === "ready" && partial.data !== null;
   const working = workingActivityOf(events, streaming);
   return (
-    <Stack direction="row" align="center" gap="sm" className="px-xs py-xs">
+    // px-md: the same inset as the transcript's text rows, so the dots start
+    // on the column the agent's words and the tool cards' contents start on.
+    <Stack direction="row" align="center" gap="sm" className="px-md py-xs">
       <WorkingDots mood={phase === "working" ? working.mood : "working"} />
       {phase !== "sending" && (
         <Line>

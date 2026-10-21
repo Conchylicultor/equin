@@ -20,8 +20,6 @@ export interface DotPose {
 export type DotStyleName = "gooey" | "wave" | "leap" | "orbit" | "glow";
 
 export interface DotStyle {
-  /** Run through the gooey (blur + alpha threshold) filter, so touching dots melt together. */
-  goo?: boolean;
   /** Most passes in one run of this style (default 3). */
   maxReps?: number;
   pose: (p: number, i: number, a: number) => DotPose;
@@ -43,7 +41,6 @@ const stagger = (p: number, i: number) => clamp01((p - i * 0.25) / 0.5);
 export const DOT_STYLES: Record<DotStyleName, DotStyle> = {
   // The middle dot rolls into the left dot, through, into the right one, and back — melting into each.
   gooey: {
-    goo: true,
     pose: (p, i, a) => {
       const w = Math.sin(2 * Math.PI * p);
       if (i === 1) return { x: -PITCH * a * w };

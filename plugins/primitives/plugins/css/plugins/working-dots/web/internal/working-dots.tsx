@@ -44,10 +44,7 @@ export function WorkingDots({ mood = "working", className }: WorkingDotsProps) {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const dots = [...row.querySelectorAll<HTMLElement>(".working-dots-dot")];
     const halos = [...row.querySelectorAll<HTMLElement>(".working-dots-halo")];
-    const engine = createDotsEngine(
-      { row, dots, halos, gooFilter: `url(#${filterId})` },
-      moodRef.current,
-    );
+    const engine = createDotsEngine({ dots, halos }, moodRef.current);
     engineRef.current = engine;
     return () => {
       engine.stop();
@@ -81,7 +78,8 @@ export function WorkingDots({ mood = "working", className }: WorkingDotsProps) {
         className,
       )}
     >
-      {/* The gooey filter: blur, then a hard alpha threshold, so touching dots melt into one. */}
+      {/* The gooey filter: blur, then a hard alpha threshold, so touching dots melt into one.
+          EVERY style draws through it, so a dot is the same size whatever the style. */}
       <svg width="0" height="0" className="absolute">
         <filter id={filterId} x="-100%" y="-150%" width="300%" height="400%">
           <feGaussianBlur
@@ -95,11 +93,20 @@ export function WorkingDots({ mood = "working", className }: WorkingDotsProps) {
           />
         </filter>
       </svg>
-      {DOTS.map((i) => (
-        <span key={i} className="working-dots-dot">
-          <span className="working-dots-halo" />
-        </span>
-      ))}
+      {/* Halos on their own layer: through the filter, a soft halo would threshold into a solid blob. */}
+      <span className="working-dots-layer">
+        {DOTS.map((i) => (
+          <span key={i} className="working-dots-halo" />
+        ))}
+      </span>
+      <span
+        className="working-dots-layer"
+        style={{ filter: `url(#${filterId})` }}
+      >
+        {DOTS.map((i) => (
+          <span key={i} className="working-dots-dot" />
+        ))}
+      </span>
     </span>
   );
 }

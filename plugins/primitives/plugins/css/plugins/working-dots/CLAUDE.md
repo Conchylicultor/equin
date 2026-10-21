@@ -23,6 +23,11 @@ way something alive does rather than looping a keyframe.
   (default) calm. A change of mood lifts the energy briefly and hands the next
   pass to the new mood's styles. Never the same style twice in a row; a style
   repeats 1–3 times (orbit once).
+- **One rendering for every style.** The dots always draw through the goo
+  filter (blur + alpha threshold), which also shaves a small dot's edge — so a
+  style drawn without it would show bigger dots. Halos sit on their own
+  unfiltered layer under the dots, following them, so the threshold cannot
+  turn a soft halo into a solid blob.
 - The loop pauses while the dots are off screen (`useInView` — a
   keep-alive tab hidden with `display: none` keeps its rAF running otherwise),
   and does not start under `prefers-reduced-motion` (a still row).

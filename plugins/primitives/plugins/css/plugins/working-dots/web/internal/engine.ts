@@ -39,14 +39,10 @@ function valueNoise(): (x: number) => number {
 }
 
 export interface DotsEngineTarget {
-  /** The row; gets the goo filter while a gooey pass runs. */
-  row: HTMLElement;
-  /** The three dots, left to right at rest. */
+  /** The three dots, left to right at rest (drawn through the goo filter). */
   dots: readonly HTMLElement[];
-  /** Each dot's halo layer. */
+  /** Each dot's halo, on its own unfiltered layer under the dots. */
   halos: readonly HTMLElement[];
-  /** CSS `filter` value of the gooey filter. */
-  gooFilter: string;
 }
 
 interface Pass {
@@ -75,7 +71,7 @@ export function createDotsEngine(
   target: DotsEngineTarget,
   initialMood: WorkingMood,
 ) {
-  const { row, dots, halos, gooFilter } = target;
+  const { dots, halos } = target;
   const noise = valueNoise();
   let mood = MOODS[initialMood];
   let burst = 0;
@@ -109,7 +105,6 @@ export function createDotsEngine(
       style = pickStyle();
       const max = DOT_STYLES[style].maxReps ?? 3;
       repsLeft = 1 + Math.floor(Math.random() * max);
-      row.style.filter = DOT_STYLES[style].goo ? gooFilter : "";
     }
     repsLeft--;
     // Offsets are authored for a 6-wide dot; follow the rendered size (density).
@@ -211,7 +206,7 @@ export function createDotsEngine(
       const h = halos[i];
       if (h) {
         h.style.opacity = String(0.25 * halo);
-        h.style.transform = `scale(${1 + 0.9 * halo})`;
+        h.style.transform = `translate(${x * unit}px, ${y * unit}px) scale(${s * (1 + 0.9 * halo)})`;
       }
     });
     raf = requestAnimationFrame(frame);
