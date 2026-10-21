@@ -19,7 +19,8 @@ import {
 
 // The Claude Code row's glance: the subscription's usage limits as meters.
 // Collapsed, the week alone (the limit that decides the days ahead); expanded,
-// the session above it. It sits inside the row's click target: no controls.
+// the session below it, so the week never moves. It sits inside the row's
+// click target: no controls.
 
 const FILL_CLASS: Record<UsageLevel, string> = {
   ok: cn("bg-primary"),
@@ -107,10 +108,10 @@ export function ClaudeUsageGlance({ expanded }: GlanceProps) {
   const { session, week } = read.data.usage;
   return (
     <Stack gap="xs">
+      {week ? <UsageMeter id="week" window={week} now={now} /> : null}
       {expanded && session ? (
         <UsageMeter id="session" window={session} now={now} />
       ) : null}
-      {week ? <UsageMeter id="week" window={week} now={now} /> : null}
     </Stack>
   );
 }
