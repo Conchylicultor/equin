@@ -7,7 +7,11 @@ import {
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { jsonlEvents, type TranscriptEventRow } from "../core";
+import {
+  jsonlEvents,
+  transcriptPrompts,
+  type TranscriptEventRow,
+} from "../core";
 import type { TranscriptOlder } from "./components/transcript-view";
 
 /** The loaded tail of a conversation's transcript, oldest first. */
@@ -38,10 +42,13 @@ function windowOf(
   rows: readonly TranscriptEventRow[],
   paging: Paging,
   firstAssistantSeq: number | null,
+  prompts: readonly TranscriptEventRow[],
 ): TranscriptWindow {
   // Newest first on the wire; drawn oldest first.
   const oldestFirst = [...rows].reverse();
   const firstSeq = oldestFirst[0]?.seq ?? 0;
+  // The view picks the one opening the window's first turn (the latest it shows).
+  const before = prompts.filter((p) => p.seq < firstSeq);
   return {
     events: oldestFirst.map((r) => r.event),
     ids: oldestFirst.map((r) => r.id),
@@ -52,6 +59,7 @@ function windowOf(
       loadMore: paging.loadMore,
       answeredBefore:
         firstAssistantSeq !== null && firstAssistantSeq < firstSeq,
+      prompts: before,
     },
   };
 }
@@ -86,14 +94,21 @@ export function useTranscriptWindow(
     options?.limit === undefined ? undefined : { limit: options.limit },
   );
   const meta = useLive(jsonlEvents.meta, params);
-  // The window is drawn once both have landed: which folds open the session
-  // depends on whether the agent answered before the window (the meta).
-  const both = useCombinedResources({ rows, meta });
+  const prompts = useLive(transcriptPrompts, params);
+  // The window is drawn once all three have landed: which folds open the
+  // session depends on whether the agent answered before the window (the
+  // meta), and a window opening mid-turn pins that turn's prompt (the prompts).
+  const all = useCombinedResources({ rows, meta, prompts });
   return useMemo(
     () =>
-      mapResource(both, (data) =>
-        windowOf(data.rows, pagingOf(rows), data.meta.firstAssistantSeq),
+      mapResource(all, (data) =>
+        windowOf(
+          data.rows,
+          pagingOf(rows),
+          data.meta.firstAssistantSeq,
+          data.prompts,
+        ),
       ),
-    [both, rows],
+    [all, rows],
   );
 }

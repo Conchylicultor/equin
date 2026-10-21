@@ -2,6 +2,7 @@ import { serveValue, sliceRange } from "@plugins/network/plugins/live/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import {
   jsonlEvents,
+  transcriptPrompts,
   transcriptToolCall,
   type TranscriptEventRow,
   type TranscriptMeta,
@@ -10,6 +11,7 @@ import {
   conversationEvents,
   watchConversationEvents,
 } from "./conversation-events";
+import { serveTranscriptValue } from "./transcript-value";
 
 // Rows are derived once per events array (the memo hands out the same array
 // until the transcript changes), so every page of one change slices one list.
@@ -109,3 +111,11 @@ export const transcriptToolCallServed = serveValue(transcriptToolCall, {
     };
   },
 });
+
+// Every prompt, with the same ids the pages give it — so the view can draw a
+// prompt before its window and have the page's own row take over unchanged.
+export const transcriptPromptsServed = serveTranscriptValue(
+  transcriptPrompts,
+  (events) =>
+    transcriptRows(events).filter((row) => row.event.kind === "user-text"),
+);

@@ -36,10 +36,20 @@ import type { ContextFoldPhase } from "../context-runs";
 import { ContextFold } from "./context-fold";
 import { RowEnter } from "./row-enter";
 import { JsonlViewer } from "../slots";
-import { eventKey } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import {
+  eventKey,
+  type TranscriptEventRow,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 
 /** The anchor's change key while seeking: constant, so nothing is anchored. */
 const SEEKING = Symbol("seeking");
+
+/** The prompt of the turn a window opens inside, which lies before it. */
+interface OpeningPrompt {
+  event: JsonlEvent;
+  /** Its row id — the one its own row carries once older events load it. */
+  id: string;
+}
 
 const FOLD_LABEL: Record<ContextFoldPhase, string> = {
   session: "Session context",
@@ -50,6 +60,7 @@ function EventSections({
   events,
   idOf,
   isNew,
+  opening,
   answeredBefore,
 }: {
   events: JsonlEvent[];
@@ -57,6 +68,12 @@ function EventSections({
   idOf: (event: JsonlEvent, index: number) => string;
   /** The event landed after the view first drew — the reader is watching it arrive. */
   isNew: (event: JsonlEvent) => boolean;
+  /**
+   * The window opens inside this prompt's turn: its first section draws it as
+   * its pinned header, keyed by its row id — so when older events load the
+   * prompt's own row, that row takes the same place and nothing remounts.
+   */
+  opening: OpeningPrompt | null;
   answeredBefore: boolean;
 }) {
   const items = useContextRuns(events, answeredBefore);
@@ -137,6 +154,18 @@ function EventSections({
         const key = idOf(events[firstIndex]!, firstIndex);
         const opensWithPrompt =
           first.kind === "event" && events[first.index]?.kind === "user-text";
+        if (!opensWithPrompt && section.start === 0 && opening) {
+          return (
+            <Stack key={opening.id} gap="sm">
+              <StickyUserHeader>
+                <RowEnter key={opening.id} arrived={false}>
+                  <EventRow event={opening.event} beforeWindow />
+                </RowEnter>
+              </StickyUserHeader>
+              {Array.from({ length: section.end }, (_, j) => renderItem(j))}
+            </Stack>
+          );
+        }
         if (!opensWithPrompt) {
           return (
             <Fragment key={key}>
@@ -175,6 +204,12 @@ export interface TranscriptOlder {
    * harness context in the window is an update, never the session's opening.
    */
   answeredBefore: boolean;
+  /**
+   * The transcript's prompts before the first loaded event, oldest first. A
+   * window opening in the middle of a turn draws that turn's prompt above it,
+   * pinned like any other, so a long turn never loses its header.
+   */
+  prompts: readonly TranscriptEventRow[];
 }
 
 export interface TranscriptViewProps {
@@ -260,6 +295,20 @@ function TranscriptViewInner({
   // Plugin-contributed hide predicates, via the shared owner — every surface
   // that enumerates the transcript must agree on which events exist.
   const visibleEvents = useVisibleEvents(events);
+
+  // A window that opens mid-turn: the turn's prompt lies before it, and is
+  // drawn ahead of it (see `EventSections`' `opening`).
+  const priorPrompts = useMemo(
+    () => older?.prompts.map((row) => row.event) ?? [],
+    [older?.prompts],
+  );
+  const lastPriorPrompt = useVisibleEvents(priorPrompts).at(-1);
+  const opening = useMemo((): OpeningPrompt | null => {
+    const first = visibleEvents[0];
+    if (!lastPriorPrompt || !first || first.kind === "user-text") return null;
+    const row = older?.prompts.find((r) => r.event === lastPriorPrompt);
+    return row ? { event: row.event, id: row.id } : null;
+  }, [lastPriorPrompt, visibleEvents, older?.prompts]);
 
   // Row identity: the caller's ids, else the event's position (a whole
   // transcript, which only grows at its end).
@@ -389,6 +438,7 @@ function TranscriptViewInner({
                 events={visibleEvents}
                 idOf={idOf}
                 isNew={isNew}
+                opening={opening}
                 answeredBefore={older?.answeredBefore ?? false}
               />
             )}

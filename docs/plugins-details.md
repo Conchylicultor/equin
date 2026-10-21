@@ -14349,6 +14349,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes:
               - `resource.declare` "jsonl-events"
+              - `resource.declare` "jsonl-events.prompts"
               - `resource.declare` "jsonl-events.tool-call"
               - `resource.declare` "jsonl-events:meta"
             - Uses:
@@ -14389,6 +14390,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `TranscriptEventRowSchema`
               - `transcriptImageUrl`
               - `TranscriptMetaSchema`
+              - `transcriptPrompts`
               - `transcriptToolCall`
           - Cross-plugin:
             - Uses tokens: 23 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)

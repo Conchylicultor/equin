@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { getTranscriptImage } from "../core";
 import {
   jsonlEventsServed,
+  transcriptPromptsServed,
   transcriptToolCallServed,
 } from "./internal/jsonl-events-resource";
 import { handleTranscriptImage } from "./internal/image-handler";
@@ -24,6 +25,7 @@ export default {
   contributions: [
     ...jsonlEventsServed.declare,
     ...transcriptToolCallServed.declare,
+    ...transcriptPromptsServed.declare,
   ],
   httpRoutes: {
     [getTranscriptImage.route]: handleTranscriptImage,

@@ -77,3 +77,14 @@ export const transcriptToolCall = liveValue("jsonl-events.tool-call", {
   schema: JsonlEventSchema.nullable(),
   params: ["id", "toolUseId"],
 });
+
+/**
+ * Every user prompt of a conversation's transcript, as its rows (`jsonlEvents`'
+ * ids and seqs) — so a window that opens in the middle of a long turn can still
+ * pin the prompt that turn answers, which lies before it. Small (prompt text,
+ * images by reference), and pushed only when a prompt is added.
+ */
+export const transcriptPrompts = liveValue("jsonl-events.prompts", {
+  schema: z.array(TranscriptEventRowSchema),
+  params: ["id"],
+});

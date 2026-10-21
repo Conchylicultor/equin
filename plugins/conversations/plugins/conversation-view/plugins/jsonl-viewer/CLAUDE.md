@@ -237,6 +237,7 @@ back.
 - Server:
   - Contributes:
     - `resource.declare` "jsonl-events"
+    - `resource.declare` "jsonl-events.prompts"
     - `resource.declare` "jsonl-events.tool-call"
     - `resource.declare` "jsonl-events:meta"
   - Uses:
@@ -277,6 +278,7 @@ back.
     - `TranscriptEventRowSchema`
     - `transcriptImageUrl`
     - `TranscriptMetaSchema`
+    - `transcriptPrompts`
     - `transcriptToolCall`
 - Cross-plugin:
   - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)

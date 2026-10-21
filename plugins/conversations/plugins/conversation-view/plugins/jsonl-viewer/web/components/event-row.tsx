@@ -21,6 +21,10 @@ import { HostedContextProvider, type ContextMember } from "./hosted-context";
  * is about to be replaced) and is inert: its actions would act on a line the
  * transcript does not hold yet. Its action box is still drawn, so the text
  * wraps exactly as it will once the real row takes over.
+ *
+ * `beforeWindow`: a real event drawn ahead of the loaded window (the prompt of
+ * the turn the window opens inside). It keeps its content identity but has no
+ * position in the drawn events, so it carries no `data-event-index`.
  */
 export function EventRow({
   event,
@@ -29,12 +33,14 @@ export function EventRow({
 }: {
   event: JsonlEvent;
   hosted?: readonly ContextMember[];
-} & ({ index: number } | { standIn: true })) {
+} & ({ index: number } | { beforeWindow: true } | { standIn: true })) {
   const dispatch = <JsonlViewer.EventRenderer.Dispatch event={event} />;
   const identity =
     "index" in at
       ? { "data-event-index": at.index, "data-event-key": eventKey(event) }
-      : { inert: true };
+      : "beforeWindow" in at
+        ? { "data-event-key": eventKey(event) }
+        : { inert: true };
   return (
     <EventActionProvider event={event}>
       <RowMarkdownProvider>

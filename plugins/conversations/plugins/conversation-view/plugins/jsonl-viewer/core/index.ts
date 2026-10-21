@@ -1,6 +1,7 @@
 export {
   jsonlEvents,
   transcriptToolCall,
+  transcriptPrompts,
   seqKey,
   JSONL_EVENTS_PAGE,
   JSONL_EVENTS_MAX,
