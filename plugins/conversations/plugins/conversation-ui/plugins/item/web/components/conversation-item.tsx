@@ -103,13 +103,17 @@ export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {
 /**
  * What to call this conversation in one line.
  *
- * A conversation exists before its title is generated, so every surface that
- * names one needs the same word for that window — as the visible label here, and
- * as the hover title of the row / chip / token wrapped around it. Spelled once
- * so those two can never disagree.
+ * A conversation takes its task's title when it is created, so an untitled one
+ * is rare — but every surface that names one needs the same word for it, as the
+ * visible label here and as the hover title of the row / chip / token wrapped
+ * around it. Spelled once so those two can never disagree. "Starting…" is a
+ * claim about the status, so it is said only while the conversation IS
+ * starting; an untitled conversation that is running is just untitled.
  */
 export function conversationTitle(conv: ConversationItemConv): string {
-  return conv.title?.trim() || "Starting…";
+  const title = conv.title?.trim();
+  if (title) return title;
+  return conv.status === "starting" ? "Starting…" : "Untitled";
 }
 
 export function ConvTitle({

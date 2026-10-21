@@ -1,11 +1,11 @@
-import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
+import { and, eq, inArray, isNull, notInArray, or } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type {
   ConversationStatus,
   ConversationWorkingOn,
 } from "../../../core/conversation-status";
-import { _attempts, _conversations } from "../tables";
+import { _attempts, _conversations, _tasks } from "../tables";
 import { conversations } from "../views";
 import { emitConversationStatusChange } from "../status-emit";
 import { noteAttributionChanged } from "../push-ledger/attribution";
@@ -61,16 +61,23 @@ async function conversationContext(
   };
 }
 
-async function taskIdForAttempt(
+// The task an attempt belongs to: its id and current title. Null when the
+// attempt is already gone (teardown). A new conversation is titled with the
+// title its task has at that moment — the same copy
+// `updateConversationsTitleForTask` keeps in step when the task's title is
+// generated later — so a conversation launched on a task that is already
+// titled (a relaunch, a follow-up attempt) is never left untitled.
+async function taskOfAttempt(
   attemptId: string,
   exec: DbExecutor = db,
-): Promise<string | null> {
+): Promise<{ taskId: string; title: string } | null> {
   const [row] = await exec
-    .select({ taskId: _attempts.taskId })
+    .select({ taskId: _attempts.taskId, title: _tasks.title })
     .from(_attempts)
+    .innerJoin(_tasks, eq(_tasks.id, _attempts.taskId))
     .where(eq(_attempts.id, attemptId))
     .limit(1);
-  return row?.taskId ?? null;
+  return row ?? null;
 }
 
 /**
@@ -108,7 +115,8 @@ export async function insertConversation(
   input: InsertConversationInput,
   exec: DbExecutor = db,
 ) {
-  const taskId = await taskIdForAttempt(input.attemptId, exec);
+  const task = await taskOfAttempt(input.attemptId, exec);
+  const taskId = task?.taskId ?? null;
   // An orphan conversation (its attempt/task already deleted during teardown)
   // seeds the scope with NOTHING: an empty seed set costs no query and emits
   // nothing, which is the honest reading of "no task's status can have moved".
@@ -121,7 +129,7 @@ export async function insertConversation(
       spawnedBy: input.spawnedBy,
       kind: input.kind ?? "user",
       status: input.status ?? "starting",
-      title: input.title ?? null,
+      title: input.title ?? task?.title ?? null,
     });
   });
   const [row] = await exec
@@ -137,7 +145,8 @@ export async function insertConversationOnConflictDoNothing(
     status: Exclude<ConversationStatus, "working">;
   },
 ) {
-  const taskId = await taskIdForAttempt(input.attemptId);
+  const task = await taskOfAttempt(input.attemptId);
+  const taskId = task?.taskId ?? null;
   const row = await withTaskStatusChange(taskId ?? [], db, async () => {
     // A conflict inserts nothing, so the status is unchanged and the scope emits
     // nothing of its own accord — no `if (row)` guard needed here.
@@ -151,7 +160,7 @@ export async function insertConversationOnConflictDoNothing(
         spawnedBy: input.spawnedBy,
         kind: input.kind ?? "user",
         status: input.status,
-        title: input.title ?? null,
+        title: input.title ?? task?.title ?? null,
       },
       { ignoreConflict: true },
     );
@@ -196,15 +205,28 @@ export async function updateConversation(
     await emitConversationStatusChange(id, taskId, prevStatus, patch.status);
 }
 
+// Copies a task's freshly generated title onto its conversations that still
+// carry no title or the one it replaced (`replacing`: the placeholder or
+// fallback the task was filed with, which `insertConversation` copied onto them).
+// A conversation titled anything else keeps its title.
 export async function updateConversationsTitleForTask(
   taskId: string,
   title: string,
+  replacing: readonly string[],
 ): Promise<void> {
   const rows = await db
     .select({ id: _conversations.id })
     .from(_conversations)
     .innerJoin(_attempts, eq(_conversations.attemptId, _attempts.id))
-    .where(and(eq(_attempts.taskId, taskId), isNull(_conversations.title)));
+    .where(
+      and(
+        eq(_attempts.taskId, taskId),
+        or(
+          isNull(_conversations.title),
+          inArray(_conversations.title, [...replacing]),
+        ),
+      ),
+    );
 
   if (rows.length === 0) return;
 

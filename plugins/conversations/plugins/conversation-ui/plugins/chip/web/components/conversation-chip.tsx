@@ -27,8 +27,8 @@ export type ConversationChipProps = {
  * their active state from `useConversationOpener`, so the chip lights up for
  * exactly the column the row would.
  *
- * A chip with no title yet reads "Starting…" — a conversation is created before
- * its title is generated, so the alternative is a chip that is momentarily blank.
+ * A chip with no title reads like every surface does (`conversationTitle`):
+ * "Starting…" while it starts, "Untitled" after — never blank.
  */
 export function ConversationChip({ conv }: ConversationChipProps) {
   const opener = useConversationOpener();

@@ -24,8 +24,18 @@ describe("resolveListTitle", () => {
 
   it("conversation mode names an untitled conversation like every surface", () => {
     expect(
-      resolveListTitle("conversation", { ...conv, title: null }, null),
+      resolveListTitle(
+        "conversation",
+        { ...conv, title: null, status: "starting" },
+        null,
+      ),
     ).toEqual({ label: "Starting…", full: "Starting…" });
+  });
+
+  it("an untitled conversation past starting is not called Starting…", () => {
+    expect(
+      resolveListTitle("conversation", { ...conv, title: null }, null),
+    ).toEqual({ label: "Untitled", full: "Untitled" });
   });
 
   it("task mode shows the task title", () => {
