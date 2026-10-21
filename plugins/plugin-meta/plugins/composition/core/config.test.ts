@@ -198,6 +198,12 @@ test("anchor demo: flattened full \\ lean is exactly the self-improvement pack",
   for (const c of lean.selectedContributors) {
     expect(full.selectedContributors).toContain(c);
   }
+
+  // And the two rows' OWN entry points agree: the app they ship is the same,
+  // so the pack (and the reporters it extends) is the whole difference.
+  expect(byName("agent-manager").entryPoints).toEqual(
+    byName("agent-manager-lean").entryPoints,
+  );
 });
 
 test("the main app is seeded exactly once, as the root composition", () => {
@@ -267,6 +273,7 @@ test("the base-exclusions row keeps the browser-only host-service providers out 
     "conversations.model-provider.catalog.baseline",
     "tasks.task-title.filed-titles",
     "config_v2.browser-store",
+    "config_v2.bundled-layer",
   ]) {
     expect(base.entryPoints).toContain(`!${provider}.**`);
   }
@@ -277,4 +284,22 @@ test("main's entry points stay exactly `**` — the exclusion lives on the base 
   // hold for main alone, and any other composition reaching the same plugins
   // would ship what the repo decided it does not want.
   expect(byName(MAIN_COMPOSITION_ID).entryPoints).toEqual(["**"]);
+});
+
+test("the demo profile is the agent manager minus machine-only surfaces", () => {
+  // `agent-manager-demo` is what the in-page demo's browser host serves: it
+  // takes the full agent manager by `extends` and only SUBTRACTS — every own
+  // entry is a negative and it selects nothing — so a plugin the agent manager
+  // gains reaches the demo with no edit here. Never served, same home.
+  const demo = byName("agent-manager-demo");
+  expect(demo.category).toBe("profile");
+  expect(demo.extends).toEqual(["agent-manager"]);
+  expect(demo.selectedContributors).toEqual([]);
+  expect(demo.entryPoints.length).toBeGreaterThan(0);
+  for (const e of demo.entryPoints) expect(e.startsWith("!")).toBe(true);
+  expect(demo.entryPoints).toContain(
+    "!conversations.conversation-view.push-and-exit.**",
+  );
+  expect(demo.serve).toBe("off");
+  expect(demo.home).toBe(byName("agent-manager").home);
 });

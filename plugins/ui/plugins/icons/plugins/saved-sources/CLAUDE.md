@@ -17,6 +17,7 @@ It is not a `sprites/core` export: `SavedIconSource.tables` names
 - Cross-plugin:
   - Imported by:
     - `conversations/agents`
+    - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/preprompts`
     - `page/callout`

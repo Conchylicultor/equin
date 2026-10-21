@@ -121,8 +121,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
-    - `infra/host/duress.createShedBuffer`
-    - `infra/host/duress.ShedSummary`
+    - `infra/host/duress/shed.createShedBuffer`
+    - `infra/host/duress/shed.ShedSummary`
     - `infra/retention.defineRetention`
     - `infra/warmup.defineWarmup`
     - `network/live.serveCollection`
@@ -214,6 +214,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Exempts itself from:
     - `sink-safety/no-adhoc-file-sink` — `server/internal/buffer.ts` (sanctioned)
     - `boundaries/no-platform-api` — `server/internal/buffer.ts` (debt)
+    - `config-v2:host-registrations-paired` — `server/index.ts` (debt)
 - Sub-plugins:
   - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside…
   - **`caret-flight`** — Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the…

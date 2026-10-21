@@ -44,6 +44,11 @@ export interface CompanionFlag {
 
 export interface SlotOptions<P> {
   docLabel?: (props: P) => string | undefined;
+  /**
+   * The slot's contributions are page-wide definitions that no `PluginScope`
+   * filters (see `SlotMeta.pageWide`).
+   */
+  pageWide?: true;
 }
 
 /**
@@ -70,9 +75,12 @@ export function defineSlot<P>(
     _doc: { label: opts?.docLabel?.(props) },
     ...props,
   })) as unknown as Slot<P>;
-  slot.meta = opts?.companions
-    ? { kind: "slot", reorderable: false, companions: opts.companions }
-    : { kind: "slot", reorderable: false };
+  slot.meta = {
+    kind: "slot",
+    reorderable: false,
+    ...(opts?.companions ? { companions: opts.companions } : {}),
+    ...(opts?.pageWide ? { pageWide: true } : {}),
+  };
   // DERIVED, never given. There is no id parameter, so a computed id — the
   // `` `pane.${paneId}.actions` `` that build-time scanners could not read, and
   // that no rule could keep in step with its owner — has no spelling. Reading it

@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-framework-browser-server-demo",
   "version": "0.0.1",
   "private": true,
-  "description": "Demo scenarios for a browser server (core: DemoScenario — the app, the route and the browser host whose real server code serves the story; DemoMissingError for a key nothing serves) and the two slots a plugin answers its own keys in every demo scope through (web)."
+  "description": "Demo scenarios for a browser server (core only): DemoScenario — the app, the route, and the browser host (DemoHost: the composition scope the page renders the demo in, and the worker whose real server code serves the story)."
 }

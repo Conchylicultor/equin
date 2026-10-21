@@ -96,15 +96,6 @@ export {
   type OriginDefaultsPreparer,
 } from "./config-origin-gen";
 
-// Build-ONLY: the committed config layer resolved and bundled for the browser
-// server, one per resident composition (gitignored, beside the web
-// registries). Runs after seeding.
-export {
-  collectConfigGitLayer,
-  generateConfigGitLayer,
-  renderConfigGitLayer,
-} from "./config-git-layer-gen";
-
 // Build-ONLY seeding of the mandatory (`requiresAuthoredOverride`) config
 // overrides, plus the marker scan `regen-generated` asserts on. Deliberately NOT
 // part of `regenerateManifestCodegen` — see the note in regen-pipeline.ts.
@@ -253,6 +244,7 @@ export {
   discoverBrowserHosts,
   generateBrowserHosts,
   renderBrowserHost,
+  renderBrowserHostScope,
 } from "./browser-host-gen";
 export type {
   BrowserHostDecl,

@@ -21,6 +21,10 @@ import { CONTRACT_VERDICTS, SUB_ERROR_REASONS } from "./frames";
  *   empty range). Expected and caller-caused — never a server fault, never
  *   reported — and it carries a `code` the resource declares (its
  *   `refusals`) and a user-readable message.
+ * - `unserved` — this host serves a CLOSED key set (a browser host, loaded by
+ *   the same bundle that reads it) and the key is not in it. Never skew, so it
+ *   carries no verdict: the page asked a host for something it does not ship —
+ *   a bug, refused the same way every time (HTTP 404).
  */
 export type SubErrorReason = (typeof SUB_ERROR_REASONS)[number];
 
@@ -37,7 +41,7 @@ export type SubErrorReason = (typeof SUB_ERROR_REASONS)[number];
 export type ContractVerdict = (typeof CONTRACT_VERDICTS)[number];
 
 /**
- * The JSON body of a failed `GET /api/resources/:key` (404 unknown key, 409
+ * The JSON body of a failed `GET /api/resources/:key` (404 unknown or unserved key, 409
  * contract mismatch, 422 refused — `code` its declared code, `detail` its
  * message —, 500 loader failure), so the client's error carries a typed
  * reason instead of a bare status.

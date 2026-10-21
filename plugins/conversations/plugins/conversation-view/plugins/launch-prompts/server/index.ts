@@ -6,4 +6,5 @@ export default {
   description:
     "Pre-configured prompts that launch a new background conversation in the same worktree.",
   contributions: [ConfigV2.Register({ descriptor: launchPromptsConfig })],
+  portable: true,
 } satisfies ServerPluginDefinition;

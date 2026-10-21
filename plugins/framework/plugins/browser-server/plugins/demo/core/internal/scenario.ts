@@ -1,23 +1,16 @@
-/** A read of a key nothing in the demo serves (the browser server answers it `loader-failed`). */
-export class DemoMissingError extends Error {
-  readonly key: string;
-  readonly params: unknown;
-  constructor(key: string, params: unknown) {
-    super(`demo: "${key}" has no answer for ${describe(params)}.`);
-    this.name = "DemoMissingError";
-    this.key = key;
-    this.params = params;
-  }
-}
+import type { ScopedComposition } from "@plugins/framework/plugins/web-sdk/core";
 
-function describe(params: unknown): string {
-  try {
-    return JSON.stringify(params) ?? String(params);
-  } catch (err) {
-    if (err instanceof TypeError) return String(params);
-    throw err;
-  }
-}
+/**
+ * A demo's browser host, as its owner's codegen emits it
+ * (`core/browser-host.generated.ts`, `browserHost`): the composition the
+ * worker boots — its id, home and web plugins, the scope the page renders the
+ * demo's subtree in (`<PluginScope>`) — and the worker's start
+ * (`import("@browser-host/<plugin path>")`). One derivation writes both, so
+ * the page shows exactly the plugins the worker serves.
+ */
+export type DemoHost = ScopedComposition & {
+  start(): Promise<{ start(): Worker }>;
+};
 
 /**
  * A demo: the app it shows, the route it opens at, and the browser host its
@@ -32,10 +25,10 @@ export interface DemoScenario {
   route: string;
   /**
    * The scenario's browser host: a Web Worker running real server code on an
-   * in-browser database seeded with the scenario's story
-   * (`import("@browser-host/<plugin path>")`). The keys it serves are answered
-   * by it; every other key by the `Demo.Resource` backends. Absent: only the
-   * backends answer.
+   * in-browser database seeded with the scenario's story, and the composition
+   * scope the page renders the demo in. It answers every read and request in
+   * the demo: a key it does not serve fails `loader-failed` (its key set is
+   * closed), an endpoint it does not implement is refused unsupported.
    */
-  host?: () => Promise<{ start(): Worker }>;
+  host: DemoHost;
 }

@@ -1637,13 +1637,11 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
   public overloads are their own, so a call site never sees it. It and
   `serveCollectionOn` are exported from `network/live/core` for a host that
   is not a plugin runtime; the resource vocabulary classifies them as serving
-  primitives, not factories. **`bindExternalServe(rt, origin)`** binds both to
-  a runtime as `{ serveValue, serveCollection }` typed by
-  `LiveExternalServe<O>` — the external-arm overloads of the Bun and central
-  wrappers, with the served shapes (`ExternalNotifiedValue`,
-  `ExternalSilentValue`, …; central's `Central*` types alias them) — for a host
-  that hands its caller this surface (`framework/browser-server`'s `serve`
-  callback). A value of the other origin throws.
+  primitives, not factories (a test serving declarations on a bare runtime —
+  `browser-server/core/testing`'s `inRealmServer` — calls them directly; a
+  browser host boots a plugin graph and serves through the plugins' own
+  `serveValue`). The external served shapes (`ExternalNotifiedValue`,
+  `ExternalSilentValue`, …) stay exported; central's `Central*` types alias them.
 - **Read.** `useLive(value, params?)` → `ResourceResult<T>` (it delegates to
   `useResource`, which canonicalizes the params); a `load: "snapshot"` value's
   is `LiveSnapshotResult<T>` — the same plus `refresh()` (its HTTP refetch:
@@ -2072,7 +2070,6 @@ never add one.
     - `LiveDecodedQuery`
     - `LiveExposedColumns`
     - `LiveExposes`
-    - `LiveExternalServe`
     - `LiveField`
     - `LiveFieldIds`
     - `LiveFields`
@@ -2160,7 +2157,6 @@ never add one.
     - `ServeValueOnOptions`
     - `WithContributedColumns`
   - Exports (values):
-    - `bindExternalServe`
     - `clientFields`
     - `exposedColumns`
     - `isPointId`
@@ -2177,7 +2173,7 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 263 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 262 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×71
     - `conversations` ×48
     - `debug` ×27
@@ -2201,7 +2197,6 @@ never add one.
     - `backup/runs-arm`
     - `database/query-deadline`
     - `fields/secret/config`
-    - `framework/browser-server`
     - `reports`
     - `runs`
     - `shell/notifications`

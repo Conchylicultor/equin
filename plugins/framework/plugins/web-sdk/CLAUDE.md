@@ -201,6 +201,36 @@ collected folder (`server`, `central`, `check`, `lint`, `facet`, …), each mark
 contributions into React context → `<RootRenderer>` renders all `Core.Root` contributions.
 Those layouts in turn call `.useContributions()` on the slots they define.
 
+### Scoping a subtree to a composition: `<PluginScope>`
+
+`<PluginScope composition={{ id, home, plugins }}>` renders its subtree as if
+the page had been deployed as that composition: every slot read inside sees
+only the contributions whose stamped `_pluginId` is in `plugins`
+(`scopedReader` in `core/registry.ts`), and `useComposition()` answers its
+`id` and `home`. Used by the demo (`browser-server/demo/scope`'s
+`<DemoScope>`), whose embedded app is served by a worker booting only that
+composition's server code — so the page shows exactly what the worker serves,
+and an out-of-composition read has no spelling inside the demo.
+
+- **The plugin set is generated, never hand-listed** (`ScopedComposition`,
+  e.g. `browserHost` from codegen's `browser-host-gen.ts`): a hand subset would
+  drop a companion an in-set owner needs (`useCompanionLookup` throws).
+- **Page-wide slots are declared by the slot**: `defineSlot(id, { pageWide:
+  true })` stamps `SlotMeta.pageWide`, and a scope passes that slot's list
+  through unfiltered. For a slot whose contributions are a page-global
+  definition set rather than content — today only `Pane.Register`, which
+  `useSyncPaneRegistry` syncs into one module-global registry from both the
+  apps root and the embed (scoped, the inner sync would wipe out-of-scope
+  panes for the whole page). The richer slot-render constructors (render,
+  mount, wrapper, dispatch) do not take the option yet.
+- **Identity kept**: a read that filters nothing returns the parent array;
+  `subscribe` delegates to the parent; nested scopes intersect; `replace`
+  throws.
+- **Limits**: the global `register` phase (module writes applied once per
+  page — error-boundary, pending-turn) is not scopable; the first read of a
+  slot from inside a scope records the scope's contributors in its
+  `slot-read:` timing mark.
+
 ## Panes: use `Pane.define`
 
 For opening a view or mounting a URL, use the `pane` plugin (`@plugins/primitives/plugins/pane/web`) — not a command. `defineRoute` declares the URL identity (id, segment, parent); `Pane.define` attaches the component and typed params to it; `Pane.Register` contributes it to the router. See [`plugins/primitives/plugins/pane/CLAUDE.md`](../../../primitives/plugins/pane/CLAUDE.md).
@@ -331,6 +361,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `PluginRegistry`
     - `RootContribution`
     - `RootSlot`
+    - `ScopedComposition`
     - `SealContributions`
     - `SealedComponent`
     - `SealedMeta`
@@ -355,6 +386,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `partitionWebEntries`
     - `pluginLoadReportSink`
     - `PluginProvider`
+    - `PluginScope`
     - `SLOT_READ_TIMING_PREFIX`
     - `slots`
     - `subscribeDeferredLoadState`

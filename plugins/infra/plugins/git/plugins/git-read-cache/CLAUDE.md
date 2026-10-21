@@ -188,7 +188,6 @@ primitive and Stage 2.1).
     - `build/deployment`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/jsonl-viewer`
-    - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/subagents`
     - `plugin-meta/plugin-tree`
     - `release`

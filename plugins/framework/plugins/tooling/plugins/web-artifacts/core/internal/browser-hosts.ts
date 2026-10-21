@@ -10,6 +10,8 @@
 // repo file the LAST build of the host loaded (the bundler's own module list,
 // raw-imported SQL included), the listing of every directory holding one (so a
 // new sibling — a new migration a glob would pick up — re-addresses it), the
+// recursive listing of every `import.meta.glob` pattern's static base (so a new
+// file in a new subdirectory — a new config document — does too), the
 // lockfile, and the builder identity. That list is recorded per host beside the
 // store; a host never built, or whose list names a file that is gone, builds.
 //
@@ -27,7 +29,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import type { Plugin as VitePlugin } from "vite";
 import { webArtifactsDir } from "../../data-dirs";
 import {
@@ -66,6 +68,13 @@ export interface BrowserHostPlan {
 interface HostInputs {
   /** Repo-relative files the bundler loaded. */
   files: string[];
+  /**
+   * Repo-relative static bases of the `import.meta.glob` patterns those files
+   * hold, listed recursively by the address. Absent from a record an older
+   * build wrote: such a record no longer describes the address, so the host
+   * builds.
+   */
+  globRoots?: string[];
 }
 
 const slugOf = (pluginPath: string) => pluginPath.split("/plugins/").join(".");
@@ -81,15 +90,17 @@ function readInputs(pluginPath: string): HostInputs | null {
 }
 
 /**
- * The address of a host over `files`: their contents, their directories'
- * listings, the lockfile and the builder identity. `null` when a listed file
- * is gone (the recorded list no longer describes this tree: build).
+ * The address of a host over `files` and `globRoots`: the files' contents,
+ * their directories' listings, each glob root's recursive listing, the lockfile
+ * and the builder identity. `null` when a listed file is gone (the recorded
+ * list no longer describes this tree: build).
  */
-function hostInputsHash(
+export function hostInputsHash(
   root: string,
-  files: readonly string[],
+  inputs: Required<HostInputs>,
   identityHash: string,
 ): string | null {
+  const { files, globRoots } = inputs;
   const h = createHash("sha256");
   h.update(`identity\t${identityHash}\n`);
   h.update(`lock\t${readFileSync(join(root, "bun.lock"), "utf8")}\n`);
@@ -106,7 +117,64 @@ function hostInputsHash(
     const names = readdirSync(join(root, dir)).sort();
     h.update(`dir\t${dir}\t${names.join("\0")}\n`);
   }
+  for (const rel of [...globRoots].sort()) {
+    const abs = join(root, rel);
+    const names = existsSync(abs)
+      ? (readdirSync(abs, { recursive: true }) as string[])
+          .map((n) => n.split(sep).join("/"))
+          .sort()
+      : null;
+    h.update(`globroot\t${rel}\t${names === null ? "-" : names.join("\0")}\n`);
+  }
   return h.digest("hex");
+}
+
+// `import.meta.glob(` with an optional type argument; what follows decides
+// whether the pattern is a literal the address can list.
+const GLOB_CALL_RE = /import\.meta\.glob\s*(?:<[^>()]*>)?\s*\(\s*/g;
+const STRING_LITERAL_RE = /^(["'])((?:(?!\1)[^\\\n])*)\1/;
+const GLOB_META_RE = /[*?{}[\]!]/;
+
+/**
+ * The repo-relative static bases of every `import.meta.glob` pattern in one
+ * module's source: the path segments before the first holding a glob
+ * metacharacter, resolved against the module's directory (or the repo root,
+ * for a root-absolute pattern — the host build's `root` is the repo). A
+ * pattern that is not one string literal throws, naming the module: vite
+ * requires literals, and an address cannot list what it cannot read.
+ */
+export function globRootsOf(
+  root: string,
+  moduleRel: string,
+  source: string,
+): string[] {
+  const roots: string[] = [];
+  for (const m of source.matchAll(GLOB_CALL_RE)) {
+    const rest = source.slice(m.index + m[0].length);
+    const lit = STRING_LITERAL_RE.exec(rest);
+    if (lit === null) {
+      throw new Error(
+        `${moduleRel}: import.meta.glob takes one string-literal pattern here (the browser host's address lists its static base)`,
+      );
+    }
+    const pattern = lit[2]!;
+    const segments = pattern.split("/");
+    const metaAt = segments.findIndex((seg) => GLOB_META_RE.test(seg));
+    const staticPart = segments
+      .slice(0, metaAt < 0 ? segments.length - 1 : metaAt)
+      .join("/");
+    const abs = pattern.startsWith("/")
+      ? join(root, staticPart)
+      : resolve(root, dirname(moduleRel), staticPart);
+    const rel = relative(root, abs).split(sep).join("/");
+    if (rel.startsWith("..")) {
+      throw new Error(
+        `${moduleRel}: import.meta.glob pattern "${pattern}" reaches outside the repo`,
+      );
+    }
+    roots.push(rel === "" ? "." : rel);
+  }
+  return roots;
 }
 
 /**
@@ -125,9 +193,13 @@ export function planBrowserHosts(opts: {
     if (!existsSync(entryFile)) continue;
     const inputs = readInputs(pluginPath);
     const hash =
-      inputs === null
+      inputs === null || inputs.globRoots === undefined
         ? null
-        : hostInputsHash(opts.root, inputs.files, opts.identityHash);
+        : hostInputsHash(
+            opts.root,
+            { files: inputs.files, globRoots: inputs.globRoots },
+            opts.identityHash,
+          );
     const dirName =
       hash === null
         ? null
@@ -143,12 +215,13 @@ export function planBrowserHosts(opts: {
   return plans;
 }
 
-/** Records every repo module the worker bundle loads. */
+/** Records every repo module the worker bundle loads, and the static bases of their globs. */
 function moduleRecorder(root: string): {
   plugin: VitePlugin;
-  files: () => string[];
+  inputs: () => Required<HostInputs>;
 } {
   const files = new Set<string>();
+  const globRoots = new Set<string>();
   return {
     plugin: {
       name: "browser-host-inputs",
@@ -159,11 +232,19 @@ function moduleRecorder(root: string): {
           const rel = relative(root, path);
           if (rel.startsWith("..") || rel.split(sep).includes("node_modules"))
             continue;
-          if (existsSync(path) && statSync(path).isFile()) files.add(rel);
+          if (!existsSync(path) || !statSync(path).isFile()) continue;
+          files.add(rel);
+          if (!/\.[cm]?[jt]sx?$/.test(path)) continue;
+          const source = readFileSync(path, "utf8");
+          if (!source.includes("import.meta.glob")) continue;
+          for (const g of globRootsOf(root, rel, source)) globRoots.add(g);
         }
       },
     },
-    files: () => [...files].sort(),
+    inputs: () => ({
+      files: [...files].sort(),
+      globRoots: [...globRoots].sort(),
+    }),
   };
 }
 
@@ -247,11 +328,12 @@ export async function ensureBrowserHost(opts: {
         `the worker bundle reaches Node builtins from repo code — a browser host boots portable code only:\n  ${offenders.join("\n  ")}`,
       );
     }
-    const files = recorder.files();
+    const inputs = recorder.inputs();
+    const { files } = inputs;
     if (files.length === 0) {
       throw new Error("the worker bundle recorded no repo module");
     }
-    const hash = hostInputsHash(root, files, opts.identityHash);
+    const hash = hostInputsHash(root, inputs, opts.identityHash);
     if (hash === null) {
       throw new Error("a module the worker bundle loaded vanished mid-build");
     }
@@ -275,10 +357,10 @@ export async function ensureBrowserHost(opts: {
     mkdirSync(INPUTS_DIR, { recursive: true });
     writeFileSync(
       inputsFile(plan.pluginPath),
-      JSON.stringify({ files } satisfies HostInputs, null, 2),
+      JSON.stringify(inputs satisfies HostInputs, null, 2),
     );
     opts.log(
-      `browser host ${plan.pluginPath}: ${files.length} repo modules, ${(bytes / 1_048_576).toFixed(1)} MB (${dirName})`,
+      `browser host ${plan.pluginPath}: ${files.length} repo modules, ${bytes} bytes (${(bytes / 1_048_576).toFixed(1)} MB) (${dirName})`,
     );
     return dirName;
   } catch (err) {

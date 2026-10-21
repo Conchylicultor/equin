@@ -1,6 +1,6 @@
 import { onResourceDelivery } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { createShedBuffer } from "@plugins/infra/plugins/host/plugins/duress/server";
+import { createShedBuffer } from "@plugins/infra/plugins/host/plugins/duress/plugins/shed/server";
 import { isUnderDuress } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import {
   onHealthSample,

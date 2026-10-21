@@ -29,11 +29,13 @@ import {
 import { join } from "node:path";
 import { parse as parseJsonc, type ParseError } from "jsonc-parser";
 import { z } from "zod";
-import { computeHash, type JsonValue } from "@plugins/config_v2/core";
+import {
+  computeHash,
+  CONFIG_HASH_RE,
+  type JsonValue,
+} from "@plugins/config_v2/core";
 
 const appliedSchema = z.object({ applied: z.array(z.string()) });
-
-const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 
 /** Every file under `dir`, relative to it, forward-slash separated. */
 export function walkConfigFiles(
@@ -101,7 +103,7 @@ export function runConfigLedger<R>(opts: {
 
 export function parseConfigText(file: string, text: string): JsonValue {
   const errors: ParseError[] = [];
-  const body = text.replace(HASH_RE, "");
+  const body = text.replace(CONFIG_HASH_RE, "");
   const value = parseJsonc(body, errors, { allowTrailingComma: true }) as
     JsonValue | undefined;
   if (errors.length > 0 || value === undefined) {
@@ -112,11 +114,11 @@ export function parseConfigText(file: string, text: string): JsonValue {
 
 /** The hash a config file's first line records, or undefined when it has none. */
 export function configTextHash(text: string): string | undefined {
-  return HASH_RE.exec(text)?.[1];
+  return CONFIG_HASH_RE.exec(text)?.[1];
 }
 
 function setHash(text: string, hash: string): string {
-  return text.replace(HASH_RE, `// @hash ${hash}\n`);
+  return text.replace(CONFIG_HASH_RE, `// @hash ${hash}\n`);
 }
 
 const isSnapshot = (f: string) =>

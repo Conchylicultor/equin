@@ -119,11 +119,7 @@ export { LIVE_ROW_KEY, LIVE_ROW_KEY_MAX_BYTES } from "./internal/row-key";
 // The one serving code path every host runs (Bun server, central, a browser
 // server) — `serve-on.ts`. Classified as serving primitives (not factories) by
 // `tooling/resource-vocabulary`.
-export {
-  bindExternalServe,
-  serveCollectionOn,
-  serveValueOn,
-} from "./internal/serve-on";
+export { serveCollectionOn, serveValueOn } from "./internal/serve-on";
 export type {
   ExternalAllCollection,
   ExternalLookupCollection,
@@ -136,7 +132,6 @@ export type {
   ExternalSilentValue,
   LiveCollectionChange,
   LiveCollectionChanges,
-  LiveExternalServe,
   LiveHost,
   LiveHostSource,
   LiveHostSources,

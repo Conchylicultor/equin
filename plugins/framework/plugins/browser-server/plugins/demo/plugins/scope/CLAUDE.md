@@ -1,77 +1,59 @@
 # scope
 
-`<DemoScope scenario>` renders its subtree against a browser server of its own
-(`framework/browser-server`), so the unchanged app reads fake data through
-`useLive` / `useFetchEndpoint` and nothing reaches the page's real server.
-Design: `research/2026-10-14-global-demo-scope-and-pack.md` §2.
+`<DemoScope scenario>` renders its subtree against the scenario's browser host
+(`framework/browser-server`) — real server code in a worker, on the scenario's
+seed — so the unchanged app reads demo data through `useLive` /
+`useFetchEndpoint` and nothing reaches the page's real server. Design:
+`research/2026-10-14-global-demo-scope-and-pack.md` §2; page server retired by
+`research/2026-10-21-global-demo-config-from-worker.md`.
 
 ```tsx
-<DemoScope scenario={{ id: "agent-manager", app, route, host: () => import("@browser-host/<plugin>") }}>
+<DemoScope scenario={{ id: "agent-manager", app, route, host: browserHost }}>
   …the unchanged app…
 </DemoScope>
-
-// a plugin answering its own keys in every scope (web/index.ts contributions;
-// `Demo` is declared by the leaf `demo/web`, so config_v2 contributes without
-// depending on this scope — which reaches config_v2 through its UI imports)
-Demo.Resource({ id: "config-v2", useBackend: useConfigDemoBackend })
 ```
 
-- **`Demo.Resource`** — `useBackend` is called once per scope mount, inside the
-  scope's tree, one component per contribution (the `CollectFieldExtensions`
-  fold, so every hook keeps a stable position). It returns the plugin's
-  `DemoBackend` — the serve function the server calls when it is built, and
-  the routes that share its state; return a stable object and read changing
-  inputs through a ref (a new identity rebuilds the server). To push a change,
-  keep what `s.serveValue` / `s.serveCollection` returned and call its
-  `notify()` (config_v2's contribution does, when a lazy plugin registers a
-  descriptor and when its `set-field` route writes).
-- **Routes** — every backend's routes, routed by the shared router; a route
-  key answered by two backends throws naming both sources.
-- **One server per mount**, built in an effect (so StrictMode's remount
-  disposes the first) and disposed on unmount; one
-  `browserServerTransport` per server; `<TransportProvider>` +
-  `<NotificationsProvider>` around the children.
-- **A browser host** (`scenario.host`, a `@browser-host/…` import): the scope
-  starts its worker once the page server is built, shows `<Loading/>` until it
-  reports ready, then serves through `composeBrowserServers` — the keys the
-  backends serve first (the page), every other key the worker serves, the
-  page's `unserved` errors last. The story — and every other key a demo
-  reads — comes from the host (real portable server code, or a `needsMachine`
-  read answered unavailable). The page server now carries only config_v2's
-  `Demo.Resource` backend, which claims every portable `config-v2.*` key ahead
-  of the host's own (empty) config registry until the committed layer reaches
-  the host; then the page server and the composition go. A host that fails to boot throws
-  to the error boundary; unmount disposes the server and terminates the worker.
+- **One host per mount**: started in an effect (so StrictMode's remount ends
+  the first), `<Loading/>` until the worker reports ready, then one
+  `browserServerTransport` over `portBrowserServer(worker)`, with
+  `<TransportProvider>` + `<NotificationsProvider>` around the children.
+  Unmount disposes the server and terminates the worker. A host that fails to
+  boot throws to the error boundary.
+- **Scoped to the host's composition**: the children render inside
+  `<PluginScope composition={scenario.host}>` (`web-sdk`), so only the plugins
+  the worker's composition ships contribute to any slot read inside the demo
+  (page-wide slots such as `Pane.Register` excepted). An out-of-composition
+  read has no spelling in the demo.
+- **Everything is the host's**: the story, config (its registry runs over a
+  memory store seeded lazily from the bundled committed layer,
+  `config_v2/bundled-layer`), and every other key (real portable server code,
+  or a `needsMachine` read answered unavailable). There is no page-side server
+  and no backend slot.
+- **Unserved keys** fail `loader-failed` naming the key (the host's key set is
+  closed → `unserved`), terminal, never as skew.
+- **Unsupported requests**: `toastingRefusals` decorates the worker's server
+  and toasts "Not available in the demo" only on its real 409 refusal
+  (`isUnsupportedEndpointResponse`) — never on a request it answers; at most
+  one toast from a scope while the last is still up (sonner's default 4 s, a
+  timestamp, no timer). The response passes through, so the caller still sees
+  `EndpointUnsupportedError`.
 - **Boot time** — every host boot writes one line to the `demo-host-boot` client log
   (`~/.singularity/worktrees/<wt>/logs/demo-host-boot.jsonl`, also the page console): the wait
   the page saw, the worker's ready instant on its own clock, its stages (`graph`: load →
   ready barrier with migrations; `seed`), the plugin count and the slowest boot spans.
-- **A key served twice** (by two contributions) throws naming both sources, before the runtime sees it.
-- **Unserved keys** fail `loader-failed` (`DemoMissingError`), never as skew.
-- **Unmatched `/api` requests** answer `unsupportedEndpointResponse`
-  (`fetchEndpoint` throws `EndpointUnsupportedError`, reports nothing) and show
-  "Not available in the demo" — at most one toast from a scope while the last
-  is still up (sonner's default 4 s, a timestamp, no timer). Other paths 404.
-
-Another plugin's test mounts the real scope from `web/testing` (`DemoScope`)
-— unless that plugin is below the scope (config_v2): its in-scope test lives
-here instead, `useConfigDemoBackend` (over a fixture git layer) taken from
-`config_v2/web/testing`.
 
 Tests (jsdom, the real `NotificationsClient`): `web/__tests__/demo-scope.test.tsx`,
-`web/__tests__/config-v2.test.tsx`.
+over `browser-server/core/testing`'s `inRealmServer` + `channelHost` (an
+in-realm `MessageChannel` standing in for the worker).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: <DemoScope scenario>: renders its subtree against a browser server of its own: the scenario's browser host (real server code in a worker, on the scenario's seed), every Demo.Resource contribution's serves and routes (a plugin answering its own live keys, e.g. config from code defaults). Any other live key fails loader-failed; any other /api request is refused as unsupported with one deduped 'Not available in the demo' toast; a host that fails to boot, or a key served twice, throws to the error boundary.
+- Description: <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. A key the host does not serve fails loader-failed naming it; an /api request it refuses as unsupported shows one deduped 'Not available in the demo' toast; a host that fails to boot throws to the error boundary.
 - Web:
   - Uses:
     - `framework/browser-server.browserServerTransport`
-    - `framework/browser-server/demo.Demo`
-    - `framework/browser-server/demo.DemoBackend`
-    - `framework/browser-server/demo.DemoRoute`
     - `primitives/live-state.NotificationsProvider`
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
@@ -80,8 +62,5 @@ Tests (jsdom, the real `NotificationsClient`): `web/__tests__/demo-scope.test.ts
   - Exports (values): `DemoScope`
 - Cross-plugin:
   - Imported by: `apps/demo/shell`
-- Test helpers:
-  - Web: `@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web/testing`
-    - `DemoScope` — Renders `children` against a browser server of its own: the scenario's host (real server code in a worker, on the scenario's seed), and every `Demo.Resource` contribution's backend (its serves and its routes — today config_v2's alone).
 
 <!-- AUTOGENERATED:END -->

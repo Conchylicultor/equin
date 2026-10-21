@@ -184,9 +184,24 @@ failing on any file still carrying the seeded `// @review` marker. `alwaysRun` (
 after that run's tree hash was taken.
 
 `config-v2:registrations-paired` (`check/registrations-paired.ts`) — every server
-`ConfigV2.Register` (in the plugin's `server/` or `machine/` barrel — a portable plugin
-registers its config from `machine/`) has a matching web `ConfigV2.WebRegister` at the same
+`ConfigV2.Register` (in the plugin's `server/` or `machine/` barrel — register from a
+portable `server/` whenever the plugin's web half can render in a browser host, see the twin
+below) has a matching web `ConfigV2.WebRegister` at the same
 storePath, and vice versa.
+
+`config-v2:host-registrations-paired` (`check/host-registrations-paired.ts`) — its
+browser-host twin: every `ConfigV2.WebRegister` contributed by a web plugin a browser
+host scopes its page to (`webPlugins` of `deriveBrowserHostGraph`) has a
+`ConfigV2.Register` at the same storePath in a `server/` barrel of the host's worker
+graph (never `machine/`, which no browser host boots). Keyed by the REGISTERING plugin
+(reorder plants directives under other plugins' ids). A registrar that cannot join the
+worker yet declares a `kind: "debt"` exemption naming its barrel (today `build` and
+`reports`, whose config no scoped page reads). The exemption is only for a registrar the
+scoped page never renders a reader of: a scoped plugin that READS a debt-exempted config
+crashes the `useConfig` guard on render, so it is split or left out of the host's
+composition instead. Both checks read
+registrations through one pure `collectConfigRegistrations`
+(`check/config-registrations.ts`).
 
 ### Mandatory overrides (`requiresAuthoredOverride`)
 
@@ -255,11 +270,13 @@ or touches the body. Consumer: reorder's `reorderDirectiveDescriptor`
 `config_v2/server` holds the registry, its live values and the scope routes, and reads no
 file: every document goes through `ConfigStore` (`config-v2.store`, the user layer — `proxy`,
 `remove`, `stamp`, `scopes`, `dropScope`, `watch`, `armed`, and `edit`, which every write path
-runs its mutation through) and the one committed-layer read, `ConfigGitLayer.hasScope`
-(`config-v2.git-layer`). Both are declared in `server/internal/host-services.ts` over the
+runs its mutation through) and the committed layer, `ConfigGitLayer.document`
+(`config-v2.git-layer`, one storePath's resolved committed document — the registry asks it
+whether a scope is committed). Both are declared in `server/internal/host-services.ts` over the
 `ConfigStoreImpl` / `ConfigGitLayerImpl` interfaces in `core/internal/store.ts`, which also holds
-the one file layout (`configFileRelPath`) and `createMemoryConfigStore` (a demo scope's user
-layer). `config_v2/machine` is the desktop: `fileConfigStore` (`machine/internal/file-store.ts` —
+the one file layout (`configFileRelPath` and its inverse `parseConfigFileRelPath`);
+`core/internal/memory-store.ts` holds `createMemoryConfigStore` (a browser host's user layer),
+`core/internal/config-file.ts` the one `// @hash` reader (`CONFIG_HASH_RE`, `parseConfigFile`). `config_v2/machine` is the desktop: `fileConfigStore` (`machine/internal/file-store.ts` —
 JSONC files under the namespace's config dir, the config-files watcher, the agent-write ledger),
 `repoConfigLayer` (the checkout's `config/`), the watcher lifecycle (feeding
 `notifyConfigDirChange`) and the raw-file view (`config-v2.raw-file`, `needsMachine`), which moves
@@ -340,48 +357,31 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
 - **Per-field Reset restores the git-layer value**, not the code default (`resetConfigByPath`) — and when the reset leaves the user document saying nothing the origin doesn't already say, it DELETES the override instead of writing a copy of the origin into it, so a phantom override can't become a stale-hash conflict banner on the next build. Never while a conflict is open: deleting the override there is a terminal resolution that takes the ancestor (the merge base) with it.
 - **`ConfigRegistration.descriptor` is typed `Omit<ConfigDescriptor, "defaults">`** so the settings pane cannot reach the code default at all. `defaults` stays on the descriptor itself (`useConfig` needs it for the pre-hydration window); withholding it from the registration is what stops a fourth surface from re-deriving "modified" the wrong way.
 
-## Config in a demo scope (the browser server)
+## Config in a demo scope (the browser host)
 
-Inside a `<DemoScope>` config is served by the page, never the host
-(`web/internal/demo-resource.ts`, contributed as `Demo.Resource` "config-v2").
-It runs the server's tier cascade (`readTypedConfig`) over two browser layers
-built on the `ConfigProxy` seam:
+Inside a `<DemoScope>` config is the scenario's browser host's, like every
+other key: the worker boots `config_v2/server` (portable) over two host
+services, both portable providers in the host's graph:
 
-- **Git layer** — the committed `config/` resolved by `resolveGitLayer` (core;
-  the same rule `propagateConfigToUser` propagates with: `override ⊕ origin`, a
-  stale override losing; each `@app/<id>` delta over that base). `./singularity
-  build` bundles it PER COMPOSITION (codegen's `config-git-layer-gen.ts`, stage
-  2 after the seeder) as the GITIGNORED `.generated/composition-modules/config-layer.<name>.ts`,
-  keeping only the composition's own plugins (its web registry) and its own
-  apps' `@app` scopes, and of those only documents the committed layer arranges
-  — a path with only its generated origin reads its code `defaults`, which it
-  equals. It is NOT in this plugin's artifact (which every composition shares):
-  it is a composition module, served from the deployed composition's registry
-  artifact behind `@composition-config-layer` (typed by
-  `web/internal/composition-config-layer.d.ts`; `web-artifacts`'
-  `composition-modules.ts`). Loaded by a dynamic import, so only a demo fetches
-  it. Committed files hold no secrets (provider fields keep their default
-  there), so nothing is redacted.
-- **User layer** — `createMemoryConfigStore()` (core), one per scope mount.
-  The scope's own `POST /api/config-v2/set-field` writes a full document
-  `{ ...current, [key]: value }` (schema-checked, 400 otherwise) under the hash
-  of the origin it resolved against, and notifies its tuple; a scoped write to a
-  scope with no document forks it (the base as it resolves becomes the scope's
-  origin) and notifies `config-v2.scopes`. A remount or reload is the committed
-  state again. A persistent store (IndexedDB / OPFS) is the same interface.
+- **Committed layer** — `config_v2/plugins/bundled-layer` (`ConfigGitLayer`):
+  the repo's whole `config/` inlined as text (`import.meta.glob`, root-absolute),
+  resolved per storePath by `committedDocument` (core) — `resolveGitLayer` over
+  strictly parsed files (`parseConfigFile`; a hashless file throws). The same
+  rule the desktop's `repoConfigLayer` reads the checkout with.
+- **User layer** — `config_v2/plugins/browser-store` (`ConfigStore`):
+  `createMemoryConfigStore({ propagatedFrom })` (core). The first time the
+  registry touches a storePath, the store propagates its committed document
+  into itself through `propagateGitLayerDocument` — the function
+  `propagateConfigToUser` propagates into a file store with — so origins are a
+  fresh user's (reorder's directives included: their committed arrangement,
+  not `[]` defaults) and writes (`set-field`, served by `config_v2/settings`)
+  land under the origin's hash. A reload is the committed state again; a
+  persistent store (IndexedDB / OPFS) is the same interface.
 
-The scenario's worker boots `config_v2/server` too (portable; its host services
-from `config_v2/plugins/browser-store`: a memory store, and a committed layer
-not delivered to the worker yet, which throws if asked), over a registry with
-no descriptor. Until the next step delivers the committed layer there, the page
-stays authoritative: DemoScope routes a key to the first part serving it, so
-the page also claims `conflicts`, `tiers`, `conflict-locations` and
-`modified-counts`, answering them `DemoMissingError` rather than letting the
-worker's empty registry answer stand-ins. `raw-file` needs the computer, and
-the settings app's other write endpoints stay unserved and fail loudly. Design:
-[`research/2026-10-16-global-config-git-layer-in-browser-server.md`](../../research/2026-10-16-global-config-git-layer-in-browser-server.md),
-per-composition scoping:
-[`research/2026-10-16-global-config-git-layer-per-composition.md`](../../research/2026-10-16-global-config-git-layer-per-composition.md).
+`raw-file` needs the computer (`config_v2#machine`). Which config the page reads
+inside the scope is what its scoped web plugins register; that each has a
+worker `ConfigV2.Register` is `config-v2:host-registrations-paired`. Design:
+[`research/2026-10-21-global-demo-config-from-worker.md`](../../research/2026-10-21-global-demo-config-from-worker.md).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -392,9 +392,7 @@ per-composition scoping:
   - Slots: `ConfigV2.WebRegister`
   - Slot contributors: 87 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `ConfigV2.WebRegister` ×87
-  - Contributes: `Demo.Resource` "config-v2"
   - Uses:
-    - `framework/browser-server/demo.Demo`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
     - `primitives/live-state.combineResources`
@@ -477,6 +475,7 @@ per-composition scoping:
     - `network/live.liveValue`
     - `primitives/rank.Rank`
   - Exports (types):
+    - `CommittedFiles`
     - `ConfigDescriptor`
     - `ConfigDocRef`
     - `ConfigDocumentFile`
@@ -514,7 +513,10 @@ per-composition scoping:
     - `APP_SCOPE_DIR`
     - `appScopeId`
     - `codeConfigProxy`
+    - `committedDocument`
+    - `committedFilesFromMap`
     - `computeHash`
+    - `CONFIG_HASH_RE`
     - `configConflict`
     - `configConflictLocations`
     - `configFileOwner`
@@ -551,7 +553,9 @@ per-composition scoping:
     - `orphanReasonSchema`
     - `orphanReportSchema`
     - `orphanRiskClassSchema`
+    - `parseConfigFile`
     - `propagate`
+    - `propagateGitLayerDocument`
     - `readonlyProxy`
     - `readTypedConfig`
     - `readTypedConfigWithLayer`
@@ -567,14 +571,14 @@ per-composition scoping:
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 113 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 114 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×32
     - `backup` ×13
     - `conversations` ×13
     - `debug` ×12
     - `ui` ×11
     - `auth` ×6
-    - `config_v2` ×4
+    - `config_v2` ×5
     - `tasks` ×4
     - `primitives` ×3
     - `infra` ×2
@@ -590,13 +594,11 @@ per-composition scoping:
     - `review/code-review`
     - `shell/global-action-bar`
 - Test helpers:
-  - Web: `@plugins/config_v2/web/testing`
-    - `useConfigDemoBackend` — Config inside a demo scope (`Demo.Resource`): the server's tier cascade over two browser layers, so a demo surface reads exactly what a fresh user of the committed repo would — and can change it.
-    - Types: `GitLayer`, `LoadGitLayer`
   - Core: `@plugins/config_v2/core/testing`
     - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
 - Sub-plugins:
-  - **`browser-store`** (excluded) — The config host services of a host without the computer (a browser worker host): the user layer held in memory (ConfigStore) and a committed layer not yet delivered to this host (ConfigGitLayer…
+  - **`browser-store`** (excluded) — The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore), each document propagated from the host's committed layer (ConfigGitLayer) on first touch…
+  - **`bundled-layer`** (excluded) — The committed config layer bundled as text: provides the ConfigGitLayer host service from the repo's config/ inlined at build time, for a host without the repo on disk (a browser worker host). Never…
   - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear…
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
   - **`ledger`** [exempt] — The rewrite-saved-config-once ledger: replays keyed entries (plugin moves, config migrations) onto a namespace's user-layer config before propagation, recording each per namespace and keeping the…

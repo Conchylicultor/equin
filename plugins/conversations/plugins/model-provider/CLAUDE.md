@@ -18,7 +18,7 @@ Single source of truth for the models an agent can run, and for what the user as
 
 ## Plugin reference
 
-- Description: Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's version as a hint, pinned versions the user turned on), and the corruption reporter for malformed stored models.
+- Description: Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's version as a hint, pinned versions the user turned on), and the corruption reporter for malformed stored models. Model ids, families and choices: the id grammar every concrete version follows (flag, label and family derive from the id alone), the catalog shape and its pure readers (resolveModel, choiceHint, selectableChoices), and the model-provider config.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "config"
@@ -54,6 +54,7 @@ Single source of truth for the models an agent can run, and for what the user as
     - `useVisibleModels`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
+  - Uses: `config_v2.ConfigV2`
 - Core:
   - Uses:
     - `infra/endpoints.HttpError`

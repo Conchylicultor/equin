@@ -1,4 +1,4 @@
-// @hash b539cafe2ec9
+// @hash 7f4afacd4d72
 {
   "manifests": [
     {
@@ -29,7 +29,8 @@
         "!conversations.transcript-source.memory.**",
         "!conversations.model-provider.catalog.baseline.**",
         "!tasks.task-title.filed-titles.**",
-        "!config_v2.browser-store.**"
+        "!config_v2.browser-store.**",
+        "!config_v2.bundled-layer.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -42,10 +43,36 @@
       "name": "agent-manager",
       "category": "profile",
       "entryPoints": [
-        "apps.agent-manager.**"
+        "apps.agent-manager.**",
+        "conversations.**",
+        "tasks.**",
+        "fields.**",
+        "active-data.**",
+        "!active-data.song.**",
+        "!active-data.event-source.**",
+        "!active-data.prototype.**",
+        "page.**",
+        "!page.place.**",
+        "!page.map.**",
+        "ui.tokens.rich-text-palette",
+        "code-explorer.**",
+        "primitives.file-viewer.**",
+        "primitives.prompt-editor.**",
+        "primitives.syntax-highlight.**",
+        "primitives.data-view.**",
+        "!primitives.data-view.map.**",
+        "reorder.**",
+        "apps-core.**",
+        "shell.**",
+        "fullscreen.**",
+        "ui.breadcrumb-separator.**",
+        "ui.segmented-progress-bar.**",
+        "ui.sidebar-framing.**",
+        "ui.tab-bar.**",
+        "ui.tree-disclosure.**",
+        "ui.tweakcn.**"
       ],
       "selectedContributors": [
-        "tasks.attempt-view",
         "ui.theme-toggle"
       ],
       "extends": [
@@ -61,14 +88,59 @@
       "name": "agent-manager-lean",
       "category": "profile",
       "entryPoints": [
-        "apps.agent-manager.**"
+        "apps.agent-manager.**",
+        "conversations.**",
+        "tasks.**",
+        "fields.**",
+        "active-data.**",
+        "!active-data.song.**",
+        "!active-data.event-source.**",
+        "!active-data.prototype.**",
+        "page.**",
+        "!page.place.**",
+        "!page.map.**",
+        "ui.tokens.rich-text-palette",
+        "code-explorer.**",
+        "primitives.file-viewer.**",
+        "primitives.prompt-editor.**",
+        "primitives.syntax-highlight.**",
+        "primitives.data-view.**",
+        "!primitives.data-view.map.**",
+        "reorder.**",
+        "apps-core.**",
+        "shell.**",
+        "fullscreen.**",
+        "ui.breadcrumb-separator.**",
+        "ui.segmented-progress-bar.**",
+        "ui.sidebar-framing.**",
+        "ui.tab-bar.**",
+        "ui.tree-disclosure.**",
+        "ui.tweakcn.**"
       ],
       "selectedContributors": [
-        "tasks.attempt-view",
         "ui.theme-toggle"
       ],
       "extends": [
         "served-baseline"
+      ],
+      "excludes": [],
+      "serve": "off",
+      "home": "agent-manager"
+    },
+    {
+      "id": "agent-manager-demo",
+      "name": "agent-manager-demo",
+      "category": "profile",
+      "entryPoints": [
+        "!conversations.conversation-view.push-and-exit.**",
+        "!tasks.reports-investigation.**",
+        "!tasks.sidequest-autopilot.**",
+        "!stats.**",
+        "!apps.file-explorer.**"
+      ],
+      "selectedContributors": [],
+      "extends": [
+        "agent-manager"
       ],
       "excludes": [],
       "serve": "off",

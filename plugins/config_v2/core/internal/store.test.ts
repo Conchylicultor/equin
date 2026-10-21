@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { configFileRelPath, createMemoryConfigStore } from "./store";
+import { createMemoryConfigStore } from "./memory-store";
+import { configFileRelPath, parseConfigFileRelPath } from "./store";
 
 const base = { storePath: "a/b/config.jsonc" };
 const scoped = { storePath: "a/b/config.jsonc", scopeId: "app:pages" };
@@ -69,5 +70,31 @@ describe("configFileRelPath", () => {
     expect(configFileRelPath({ ...scoped, file: "ancestor" })).toBe(
       "a/b/@app/pages/config.ancestor.jsonc",
     );
+  });
+});
+
+describe("parseConfigFileRelPath", () => {
+  test("round-trips configFileRelPath for every file of base and scoped documents", () => {
+    for (const ref of [
+      { ...base, file: "origin" as const },
+      { ...base, file: "override" as const },
+      { ...base, file: "ancestor" as const },
+      { ...scoped, file: "origin" as const },
+      { ...scoped, file: "override" as const },
+      { ...scoped, file: "ancestor" as const },
+    ]) {
+      expect(parseConfigFileRelPath(configFileRelPath(ref))).toEqual(ref);
+    }
+  });
+
+  test("a path outside the layout throws", () => {
+    for (const rel of [
+      "a/b/config.json",
+      "config.jsonc",
+      "a/@app/x/@app/y/config.jsonc",
+      "a/b/.jsonc",
+    ]) {
+      expect(() => parseConfigFileRelPath(rel)).toThrow(/Not a config file/);
+    }
   });
 });

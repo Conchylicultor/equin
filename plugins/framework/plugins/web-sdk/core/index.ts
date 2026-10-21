@@ -24,8 +24,13 @@ export {
   useComposition,
   useRawContributions,
   SLOT_READ_TIMING_PREFIX,
+  PluginScope,
 } from "./context";
-export type { CompositionIdentity, SlotReadDetail } from "./context";
+export type {
+  CompositionIdentity,
+  ScopedComposition,
+  SlotReadDetail,
+} from "./context";
 export { createPluginRegistry } from "./registry";
 export {
   MissingCompanionError,

@@ -1,75 +1,62 @@
 # browser-server
 
-A server that runs in the page (or a worker): the **third host of the unified
-live API**, beside the Bun server and central. It is not a second way to
-register resources — declarations (`liveValue`, `liveCollection`,
-`defineEndpoint`), the client (`useLive`, `NotificationsClient`), the wire
-protocol (`createResourceRuntime`), serving (`network/live`'s `serveValueOn` /
-`serveCollectionOn`) and routing (`http-router`) are the one code path every
-host runs. A host contributes only its runtime instance, its socket and request
-entry points, its error sink and what it serves. It knows nothing about demos.
-Design: `research/2026-10-13-framework-browser-server-host-v2.md` (D).
+A server that runs in the page's realm or across a worker's port: the **third
+host of the unified live API**, beside the Bun server and central. It is not a
+second way to register resources — declarations (`liveValue`,
+`liveCollection`, `defineEndpoint`), the client (`useLive`,
+`NotificationsClient`), the wire protocol (`createResourceRuntime`), serving
+(`network/live`'s `serveValueOn` / `serveCollectionOn`) and routing
+(`http-router`) are the one code path every host runs. A host contributes only
+its runtime instance, its socket and request entry points. It knows nothing
+about demos. Design: `research/2026-10-13-framework-browser-server-host-v2.md`
+(D); the page server was retired by
+`research/2026-10-21-global-demo-config-from-worker.md` — every browser server
+now hosts a booted plugin graph (server-core's `bootBrowserHost`), there is no
+hand-served page-side server.
 
 ## Usage
 
 ```ts
-// core/ — no DOM, no React
-const server = createBrowserServer({
-  serve: (s) => [
-    s.serveValue(transcript, { source: "external", changes: { fixed: { reason: "demo pack" } },
-      loader: ({ id }) => pack.transcript(id) }),
-    s.serveCollection(conversations, { source: "external", changes: "notified",
-      all: () => pack.conversations, rows: (ids) => pack.byIds(ids) }),
-  ],
-  routes: [[markViewed.route, implement(markViewed, () => undefined)]],
-  unserved: (key) => new Error(`not served here: ${key}`),
+// worker (a plugin's bin/browser-host.ts) — boot the graph, serve it over the port
+serveOverPort(port, async () => {
+  const host = await bootBrowserHost({ entries: hostEntries, seed, onUnmatched: unmatchedApiResponse });
+  return { server: runtimeBrowserServer(host), keys: new Set(host.keys), boot: host.boot };
 });
 
-// web/ — one transport per server, kept for its lifetime
+// page — one transport per server, kept for its lifetime
+const { server } = await portBrowserServer(worker);
 <TransportProvider transport={browserServerTransport(server)}>…the unchanged app…</TransportProvider>
 ```
 
-## core/: `createBrowserServer`
+## core/: the `BrowserServer` interface
 
-- **The runtime** is `createResourceRuntime({})`: the portable `snapHash`, no
-  read-set, no L2, no profiler.
-- **`serve(s)`** — `s` is `bindExternalServe(runtime, "worktree")`
-  (`network/live/core`): `serveValue` / `serveCollection` typed by
-  `LiveExternalServe<"worktree">`, external arm only (no change feed). It
-  returns what it served (`{ keys }` — every served value and collection
-  carries them).
-- **Unserved keys fail as `loader-failed`, never as version skew.** Every
-  descriptor `live-state/core` knows (`allResourceDescriptors()`) whose key
-  nothing served is registered with an external loader rejecting
-  `unserved(key)` — keyed ones on the point arm, which registers any keyed
-  contract and reads nothing before its loader. A descriptor registered later
-  (a lazy plugin) is registered as it arrives
-  (`onResourceDescriptorRegistered`). The client sees `loader-failed` (the
-  runtime does not ship a loader's message — the read names the key), which
-  never touches the page-global contract-mismatch store; an unknown key would
-  read as skew and advise a reload. Serving a key twice — or serving one
-  without returning it from `serve` — is the runtime's loud duplicate-key
-  throw. A central value (`origin: "central"`) is skipped: the central channel is not
-  hosted.
-- **`request(req)`** — the shared router (`createRequestHandler`) over
-  `routes` plus `[RESOURCE_HTTP_ROUTE, runtime.handleResourceHttp]`. Unmatched
-  (`unmatchedApiResponse` from `infra/endpoints/core`, the same answer the
-  worker's `bootBrowserHost` graph gives):
-  an `/api/…` path is `unsupportedEndpointResponse` —
-  `409 { reason: "unsupported", method, path }`, which `fetchEndpoint` throws as
-  `EndpointUnsupportedError` without reporting it (the server
-  is real, that endpoint is just not part of it — `/api/central-resources/*`
-  included), any other path a 404 naming it. `onError` defaults to
-  `console.error`.
-- **`connect(peer)`** — one in-memory notifications socket: a stable
-  `RuntimeSocket` (the runtime keys its state by it) whose `send` calls
-  `peer.deliver(frame)`; the returned end's `send(frame)` is the runtime's
-  `message`, `close(code?, reason?)` its `close` (idempotent; a `send` after
-  it throws). `dispose()` closes every socket from the server side — each
-  peer's `closed(code, reason)` is told, as a real socket's close event — and
-  stops following late descriptors.
+`{ id, request(req), connect(peer), dispose() }` (`internal/browser-server.ts`).
+Two implementations:
 
-## core/: a server in a Web Worker (`port.ts`, `compose.ts`)
+- **`runtimeBrowserServer({ request, notifications })`** — over a resource
+  runtime a host booted in this realm (`runtime-socket.ts`).
+  - `request` is the host's router: the graph's routes plus
+    `/api/resources/:key`; an unmatched `/api/…` path is
+    `unmatchedApiResponse` (`infra/endpoints/core`) —
+    `409 { reason: "unsupported", method, path }`, which `fetchEndpoint`
+    throws as `EndpointUnsupportedError` without reporting it
+    (`/api/central-resources/*` included); any other path is a 404 naming it.
+  - `connect(peer)` — one in-memory notifications socket: a stable
+    `RuntimeSocket` (the runtime keys its state by it) whose `send` calls
+    `peer.deliver(frame)`; the returned end's `send(frame)` is the runtime's
+    `message`, `close(code?, reason?)` its `close` (idempotent; a `send` after
+    it throws). `dispose()` closes every socket from the server side — each
+    peer's `closed(code, reason)` is told, as a real socket's close event.
+- **`portBrowserServer(worker)`** (page side) — a `BrowserServer` over a port
+  (see below).
+
+**A browser host serves a closed key set.** `bootBrowserHost` closes the
+runtime's key set before booting the graph, so a key no plugin of the graph
+serves is refused `unserved` (HTTP 404, no verdict, reported once per key) —
+which the client reads as a terminal `loader-failed` naming the key, never as
+version skew ("App updated — reload"). See `resource-runtime`'s `keySet`.
+
+## core/: a server in a Web Worker (`port.ts`)
 
 - **`serveOverPort(port, boot)`** (worker side, `port` = the worker's `self`):
   serves the `{ server, keys, boot }` `boot` resolves to over the port — `ready`
@@ -83,24 +70,26 @@ const server = createBrowserServer({
   a `BrowserServer` over that port, so `browserServerTransport` and the whole
   app path are unchanged. Rejects with `PortHostBootError` when the worker
   reports `failed`.
-- **`runtimeBrowserServer({ request, notifications })`** — a `BrowserServer`
-  over a resource runtime a host booted in this realm (server-core's
-  `bootBrowserHost`); `createBrowserServer` shares its socket wiring
-  (`runtime-socket.ts`).
-- **`composeBrowserServers(parts, fallback)`** — several servers behind ONE
-  transport, routed by key (every frame names its key): a key belongs to the
-  first part whose `keys` hold it, else to `fallback`. A `sub-batch` is split
-  per server (a `complete` one reaches every server); `unsub-tab` reaches all;
-  pings come from `fallback` only; a non-resource request tries `fallback` and
-  then each part while the answer is an unsupported refusal. A server may be
-  both a part and the fallback.
 
 The worker itself is a plugin's `bin/browser-host.ts`, built by web-artifacts
 (`browser-hosts.ts`) and imported by the page as `@browser-host/<pluginPath>`
 (typed by `core/browser-host.d.ts`: `start(): Worker`).
 
 Tests: `core/internal/port.test.ts` (a real `MessageChannel`: read, sub-ack, a
-boot failure on both ends, a composition routing a split `sub-batch`).
+boot failure on both ends).
+
+## core/testing: servers for tests
+
+Tests cannot start a real Web Worker:
+
+- **`inRealmServer({ serve?, routes?, keySet? })`** — a browser server over a
+  runtime in the test's own realm, wired as a browser host is (closed key set
+  by default, the shared router, the unsupported refusal for any other `/api`
+  path).
+- **`channelHost(boot)`** — a scenario `host.start` whose "worker" is one end
+  of an in-realm `MessageChannel` running `serveOverPort` over `boot()`'s
+  server (or reporting its failure, as a real worker whose graph fails to
+  boot). Both ports are `.start()`ed — `addEventListener` alone does not.
 
 ## web/: `browserServerTransport(server)`
 
@@ -126,49 +115,35 @@ Tests: `web/__tests__/browser-server.test.tsx` drives the real
 
 ## Plugin reference
 
-- Description: A server that runs in the page — a third host of the unified live API (core: createBrowserServer serves liveValue / liveCollection declarations on a real resource runtime through serveValueOn / serveCollectionOn, routes requests through the shared http-router, and fails every other known resource key as loader-failed). Web: browserServerTransport(server), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket.
+- Description: A server that runs in the page's realm or across a worker's port — a third host of the unified live API (core: the BrowserServer interface; runtimeBrowserServer over a resource runtime booted in this realm; serveOverPort / portBrowserServer carrying one across a MessageChannel or a Web Worker). Web: browserServerTransport(server), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket.
 - Web:
   - Uses:
     - `primitives/networking.publishWsStatus`
     - `primitives/networking.Transport`
     - `primitives/networking.TransportSocket`
   - Exports (values): `browserServerTransport`
+- Cross-plugin:
+  - Imported by: `framework/browser-server/demo/scope`
 - Core:
-  - Uses:
-    - `framework/http-router.createRequestHandler`
-    - `framework/http-router.RouteHandler`
-    - `framework/resource-runtime.createResourceRuntime`
-    - `framework/resource-runtime.KeyedResourceContract`
-    - `infra/endpoints.isUnsupportedEndpointRefusal`
-    - `infra/endpoints.unmatchedApiResponse`
-    - `network/live.bindExternalServe`
-    - `network/live.LiveExternalServe`
-    - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
-    - `primitives/live-state.allResourceDescriptors`
-    - `primitives/live-state.onResourceDescriptorRegistered`
-    - `primitives/live-state.ResourceDescriptor`
   - Exports (types):
-    - `BrowserServe`
-    - `BrowserServed`
     - `BrowserServer`
-    - `BrowserServerOptions`
     - `BrowserServerPeer`
     - `BrowserServerSocket`
-    - `ComposedServer`
     - `HostBoot`
     - `HostBooted`
     - `PortEnd`
     - `PortServer`
   - Exports (values):
-    - `composeBrowserServers`
-    - `createBrowserServer`
     - `portBrowserServer`
     - `PortHostBootError`
     - `runtimeBrowserServer`
     - `serveOverPort`
-- Cross-plugin:
-  - Imported by: `framework/browser-server/demo/scope`
+- Test helpers:
+  - Core: `@plugins/framework/plugins/browser-server/core/testing`
+    - `channelHost` — A host's `start`, as a scenario's `host.start` takes it, whose "worker" is one end of an in-realm `MessageChannel`: the other end runs `serveOverPort` over the server `boot` returns — or, when `boot` throws, reports the failure (`PortHostBootError` on the page side), as a real worker whose graph fails to boot does.
+    - `inRealmServer` — A browser server over a resource runtime in this realm, wired as a browser host is (`bootBrowserHost` + `runtimeBrowserServer`): the served declarations, the given routes and `/api/resources/:key` through the shared router, any other `/api` request the unsupported refusal (`unmatchedApiResponse`).
+    - Types: `InRealmServerOptions`
 - Sub-plugins:
-  - **`demo`** — Demo scenarios (core) and the slot a plugin answers its own keys in every demo scope through (web): Demo.Resource (a useBackend hook returning a plugin's per-scope backend: a browser server serve…
+  - **`demo`** — Demo scenarios for a browser server (core only): DemoScenario — the app, the route, and the browser host (DemoHost: the composition scope the page renders the demo in, and the worker whose real…
 
 <!-- AUTOGENERATED:END -->

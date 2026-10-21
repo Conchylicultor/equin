@@ -8,6 +8,7 @@ import {
   barrelStubsPath,
   collectImportGraph,
   collectedDirRegistryPath,
+  discoverBrowserHosts,
   discoverCollectedDirsIn,
   postWebManifests,
   preBarrelManifests,
@@ -21,10 +22,11 @@ const RUNTIMES = ["web", "server", "machine", "central"] as const;
  *   - every pre-barrel manifest (regenerated before the first barrel import),
  *   - every post-web manifest (written between the web and server import
  *     phases — allowed to a SERVER/central barrel only, see below), and
- *   - the registry-phase outputs (collected-dir registries + the auto-stubs
- *     file) — these are written in the EARLIER `regenerateRegistryCodegen`
- *     phase, so they're always fresh by the time any barrel import happens in
- *     the manifest phase.
+ *   - the registry-phase outputs (collected-dir registries, the auto-stubs
+ *     file and each browser host's page scope, `browserHost`) — these are
+ *     written in the EARLIER, barrel-free `regenerateRegistryCodegen` phase, so
+ *     they're always fresh by the time any barrel import happens in the
+ *     manifest phase.
  *
  * Composition-filtered registries need no entry: they are reached only through
  * the `@composition-{web,server,machine}-registry` bundler alias or a variable dynamic
@@ -38,6 +40,9 @@ async function buildAllowSet(repo: RepoFiles): Promise<Set<string>> {
   allow.add(resolve(barrelStubsPath(root)));
   for (const def of await discoverCollectedDirsIn(repo)) {
     allow.add(resolve(collectedDirRegistryPath(def)));
+  }
+  for (const host of discoverBrowserHosts(repo)) {
+    allow.add(resolve(join(root, host.scopeGenerated)));
   }
   return allow;
 }

@@ -14,13 +14,15 @@ import { parse as parseJsonc } from "jsonc-parser";
 import { buildEnrichedTree } from "./enriched-tree";
 import {
   computeHash,
+  configFileRelPath,
   effective,
-  propagate,
+  propagateGitLayerDocument,
   readonlyProxy,
   readTypedConfig,
   resolveGitLayer,
   stringifyConfigValue,
   APP_SCOPE_DIR,
+  CONFIG_HASH_RE,
   configFileOwner,
 } from "@plugins/config_v2/core";
 import type {
@@ -39,7 +41,6 @@ import {
   asPluginId,
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { HASH_RE } from "./git-layer-config";
 import { mainBundle } from "./main-bundle";
 import { writeGenerated } from "./write-generated";
 import {
@@ -584,7 +585,7 @@ export function fileConfigProxy(filePath: string): ConfigProxy {
     read() {
       if (!existsSync(filePath)) return null;
       const raw = readFileSync(filePath, "utf-8");
-      const match = HASH_RE.exec(raw);
+      const match = CONFIG_HASH_RE.exec(raw);
       const hash = match ? match[1]! : null;
       const body = match ? raw.slice(match[0].length) : raw;
       const content = parseJsonc(body) as JsonValue;
@@ -740,74 +741,41 @@ export async function propagateConfigToUser(opts: {
     const gitLayer = resolveGitLayer(gitOrigin, gitOverwrites, gitScopedDeltas);
     if (gitLayer === undefined) continue;
 
-    const gitEffProxy = readonlyProxy(gitLayer.base);
-    const userOrigin = fileConfigProxy(
-      join(userConfigDir, hierarchyPath, `${descriptor.name}.origin.jsonc`),
+    // The one propagation (config_v2 core), shared with a memory store seeding
+    // itself from a bundled committed layer — the two cannot disagree.
+    const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
+    const { conflicts } = propagateGitLayerDocument(
+      storePath,
+      gitLayer,
+      (ref) => fileConfigProxy(join(userConfigDir, configFileRelPath(ref))),
     );
-    const userOverwrites = fileConfigProxy(
-      join(userConfigDir, hierarchyPath, `${descriptor.name}.jsonc`),
-    );
+    for (const ref of conflicts) {
+      const where = join(
+        userConfigDir,
+        configFileRelPath({ ...ref, file: "override" }),
+      );
+      console.warn(
+        ref.scopeId === undefined
+          ? `[config-v2] conflict: user overwrites for "${descriptor.name}" at ${hierarchyPath} ` +
+              `were based on a different upstream. Review ${where}`
+          : `[config-v2] conflict: user scoped override for "${descriptor.name}" ${ref.scopeId} at ${hierarchyPath} ` +
+              `was based on a different upstream. Review ${where}`,
+      );
+    }
     // Sibling snapshot of the merge base, captured by propagate() when an
     // in-sync override is about to go stale (see threeWayMerge / mergeConflict).
+    // No live base conflict — any leftover ancestor snapshot is orphaned
+    // (override reconciled or deleted out-of-band). Self-correcting cleanup so
+    // the file never lingers and can't seed a stale merge base on a future
+    // conflict.
     const ancestorPath = join(
       userConfigDir,
-      hierarchyPath,
-      `${descriptor.name}.ancestor.jsonc`,
+      configFileRelPath({ storePath, file: "ancestor" }),
     );
-    const userAncestor = fileConfigProxy(ancestorPath);
-
-    const { conflict } = propagate(
-      gitEffProxy,
-      userOrigin,
-      userOverwrites,
-      userAncestor,
-    );
-    if (conflict) {
-      console.warn(
-        `[config-v2] conflict: user overwrites for "${descriptor.name}" at ${hierarchyPath} ` +
-          `were based on a different upstream. Review ${join(userConfigDir, hierarchyPath, `${descriptor.name}.jsonc`)}`,
-      );
-    } else if (existsSync(ancestorPath)) {
-      // No live conflict — any leftover ancestor snapshot is orphaned (override
-      // reconciled or deleted out-of-band). Self-correcting cleanup so the file
-      // never lingers and can't seed a stale merge base on a future conflict.
-      unlinkSync(ancestorPath);
-    }
+    const baseConflict = conflicts.some((ref) => ref.scopeId === undefined);
+    if (!baseConflict && existsSync(ancestorPath)) unlinkSync(ancestorPath);
 
     const gitScopedAppIds = new Set(Object.keys(gitLayer.scopes));
-    for (const [appId, scoped] of Object.entries(gitLayer.scopes)) {
-      const userScopedOrigin = fileConfigProxy(
-        join(
-          userConfigDir,
-          hierarchyPath,
-          APP_SCOPE_DIR,
-          appId,
-          `${descriptor.name}.origin.jsonc`,
-        ),
-      );
-      const userScopedOverwrites = fileConfigProxy(
-        join(
-          userConfigDir,
-          hierarchyPath,
-          APP_SCOPE_DIR,
-          appId,
-          `${descriptor.name}.jsonc`,
-        ),
-      );
-
-      const { conflict: scopedConflict } = propagate(
-        readonlyProxy(scoped),
-        userScopedOrigin,
-        userScopedOverwrites,
-      );
-      if (scopedConflict) {
-        console.warn(
-          `[config-v2] conflict: user scoped override for "${descriptor.name}" @app/${appId} at ${hierarchyPath} ` +
-            `was based on a different upstream. Review ${join(userConfigDir, hierarchyPath, APP_SCOPE_DIR, appId, `${descriptor.name}.jsonc`)}`,
-        );
-      }
-    }
-
     // Reconcile: a user scoped origin with NO git backing is a scope that was
     // removed from version control — revert it to base so git stays the source of
     // truth (the base layer self-heals the same way via propagate). A runtime user

@@ -13,7 +13,7 @@ import { getServerGraphHash } from "@plugins/build/plugins/server-build-id/serve
 import {
   createShedBuffer,
   type ShedSummary,
-} from "@plugins/infra/plugins/host/plugins/duress/server";
+} from "@plugins/infra/plugins/host/plugins/duress/plugins/shed/server";
 import { reportDetailRoute } from "@plugins/reports/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";

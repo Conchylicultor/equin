@@ -4,4 +4,5 @@ import { breadcrumbSeparator } from "../core";
 
 export default {
   contributions: [variantRegionServerContribution(breadcrumbSeparator)],
+  portable: true,
 } satisfies ServerPluginDefinition;

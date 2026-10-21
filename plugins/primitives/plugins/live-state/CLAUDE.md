@@ -422,7 +422,10 @@ Every `sub` / `sub-batch` frame carries `build` (`VITE_BUILD_GRAPH ?? "dev"`) �
 per frame, because one shared socket carries tabs running other bundles —
 and every HTTP read the `BUILD_GRAPH_HEADER`, so the server can judge the
 verdict. `useResource` does not retry a `contract-mismatch` / `unknown-key`
-error (`isTerminalResourceError`): the same bundle is refused the same way.
+/ `unserved` error (`isTerminalResourceError`): the same bundle is refused the
+same way. `unserved` (a closed-key-set host — a browser host shipped with this
+very bundle — does not serve the key) is never skew: it records nothing in the
+contract store and reads as a `loader-failed` naming the key.
 
 ## One client, one cache — `NotificationsProvider` takes no client
 
@@ -788,7 +791,7 @@ is the opt-in `stale` on the `error` arm, never what a `.data` read reaches.
 |---|---|---|
 | `client-outdated` | `contract-mismatch` / `unknown-key` unless the verdict is `same-build`; a client-side zod rejection | reload the tab |
 | `not-found` | a 404 (or `unknown-key` on the same build) | a bug |
-| `loader-failed` | any other HTTP failure, a `same-build` contract mismatch, anything else thrown | retry, else a bug |
+| `loader-failed` | any other HTTP failure, a `same-build` contract mismatch, an `unserved` key (message: `<key> is not served by this host`), anything else thrown | retry, else a bug (an `unserved` key is terminal — never retried: the host does not serve it) |
 | `transport` | `fetch`'s `TypeError`, a lost version race (`ResourceStaleReadError`) | retry heals it |
 | `refused` | a loader's `ResourceRefusal` (`packages/resource-protocol`): HTTP 422 `refused`, its `code` one the read declares (`ResourceDescriptor.refusals`) — on `error.code`, typed by `ResourceResult<T, C>` — and its `detail` the message. A refusal whose code the read does not declare (or with none) is a `contract-mismatch` instead (`fetchOverHttp`: the server only sends its own declared codes, so this bundle declares the resource differently — `client-outdated`, marked `skew`) | none — the message IS the answer (an unknown id, an empty range); `ResourceErrorInline` offers no Retry, it is never retried, never counted as failing (health row), never reported |
 
@@ -1165,7 +1168,7 @@ keeps every row's identity rather than re-minting each moved row.
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/shadow --shadow`
-  - Imported by: 256 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 255 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×69
     - `conversations` ×48
     - `debug` ×24
@@ -1178,10 +1181,10 @@ keeps every row's identity rather than re-minting each moved row.
     - `plugin-meta` ×5
     - `auth` ×4
     - `build` ×4
-    - `framework` ×3
     - `integrations` ×3
     - `review` ×3
     - `config_v2` ×2
+    - `framework` ×2
     - `reports` ×2
     - `code-explorer/commit-detail`
     - `fields/secret/config`
@@ -1212,9 +1215,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `WindowResourceDescriptor`
     - `WindowSelector`
   - Exports (values):
-    - `allResourceDescriptors`
     - `compareTxWatermark`
-    - `onResourceDescriptorRegistered`
     - `registerResourceDescriptor`
     - `resolvableSchema`
     - `resolved`

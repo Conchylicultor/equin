@@ -10,10 +10,15 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
+import {
+  asFsPath,
+  asPluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   deriveBrowserHostGraph,
   discoverBrowserHosts,
+  renderBrowserHostScope,
   resolveHostGraph,
   type HostClosure,
   type HostGraphInputs,
@@ -33,7 +38,7 @@ describe("deriveBrowserHostGraph over the repo", () => {
     );
     expect(host).toBeDefined();
     const graph = await deriveBrowserHostGraph(ctx, host!);
-    expect(graph.composition).toBe("agent-manager");
+    expect(graph.composition).toBe("agent-manager-demo");
 
     const committed = readFileSync(join(root, host!.generated), "utf8");
     const entries = [...committed.matchAll(/\{ pluginPath: "([^"]+)"/g)].map(
@@ -54,6 +59,39 @@ describe("deriveBrowserHostGraph over the repo", () => {
         p.startsWith("review/plugins/plugin-changes"),
       ),
     ).toEqual([]);
+
+    // The page side: the composition's home, its web plugins (bundle ∩ web
+    // barrels, by dot id, sorted) and what it leaves out.
+    expect(graph.home).toBe("agent-manager");
+    expect(graph.webPlugins).toEqual([...graph.webPlugins].sort());
+    expect(graph.webPlugins).toContain(asPluginId("apps.agent-manager.shell"));
+    const repo = await ctx.repo();
+    for (const id of graph.webPlugins) {
+      expect(repo.has(`plugins/${asFsPath(id)}/web/index.ts`)).toBe(true);
+    }
+    // A bundled plugin without a web barrel is not a web plugin.
+    expect(graph.webPlugins).not.toContain(asPluginId("database"));
+    // `available` is the out-of-bundle frontier: disjoint from the web set,
+    // sorted, and non-empty (review.code-review soft-contributes to the bundled
+    // review pane but is not shipped).
+    expect(graph.available).toEqual([...graph.available].sort());
+    for (const id of graph.available) {
+      expect(graph.webPlugins).not.toContain(id);
+    }
+    expect(graph.available).toContain(asPluginId("review.code-review"));
+
+    // The page's scope file names exactly the web plugins, the home and the
+    // host's own start module.
+    const scope = renderBrowserHostScope(host!, graph);
+    expect(host!.scopeGenerated).toBe(
+      `plugins/${DEMO}/core/browser-host.generated.ts`,
+    );
+    const listed = [...scope.matchAll(/^ {4}"([^"]+)",$/gm)].map((m) => m[1]!);
+    expect(listed).toEqual(graph.webPlugins);
+    expect(scope).toContain('  id: "agent-manager-demo",');
+    expect(scope).toContain('  home: "agent-manager",');
+    expect(scope).toContain(`import("@browser-host/${DEMO}")`);
+    expect(scope).toContain("} satisfies DemoHost;");
   });
 });
 

@@ -14,7 +14,7 @@ import {
 import {
   createShedBuffer,
   type ShedSummary,
-} from "@plugins/infra/plugins/host/plugins/duress/server";
+} from "@plugins/infra/plugins/host/plugins/duress/plugins/shed/server";
 import type { SlowOpMarker } from "../../core";
 import { foldSlowOpBatch, type FoldedBatch, type FoldItem } from "./fold-batch";
 import type { RecordSlowOpInput } from "./input";

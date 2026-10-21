@@ -25,9 +25,9 @@ export type OpenSockets = Map<
 
 /**
  * Open one in-memory notifications socket on a runtime's handler: the
- * `connect` of every server that hosts a resource runtime in this realm (a
- * page's `createBrowserServer`, a worker's booted graph). `open` tracks it
- * until it closes, so the server can close it from its side.
+ * `connect` of a server that hosts a resource runtime in this realm (a
+ * worker's booted graph, `runtimeBrowserServer`). `open` tracks it until it
+ * closes, so the server can close it from its side.
  */
 export function connectRuntimeSocket(
   ws: NotificationsHandler,

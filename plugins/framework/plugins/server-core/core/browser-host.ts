@@ -18,7 +18,11 @@ import { createRequestHandler } from "@plugins/framework/plugins/http-router/cor
 import { bootPluginGraph, type ServerRegistryEntry } from "./boot-stages";
 import { hostHttpRoutes } from "./host-routes";
 import { getProfilingData } from "./profiler";
-import { notificationsWsHandler, Resource } from "./resources";
+import {
+  closeResourceKeySet,
+  notificationsWsHandler,
+  Resource,
+} from "./resources";
 
 export interface BrowserHostOptions {
   /** The host's plugin graph — its generated `browser-host.generated.ts`. */
@@ -67,6 +71,9 @@ export async function bootBrowserHost(
   opts: BrowserHostOptions,
 ): Promise<BrowserHost> {
   const t0 = performance.now();
+  // A browser host ships with its only client (the page that loaded it), so a
+  // key it does not register is never skew: closed before anything can serve.
+  closeResourceKeySet();
   const ordered = await bootPluginGraph({
     mode: "browser",
     entries: opts.entries,

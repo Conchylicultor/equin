@@ -59,3 +59,25 @@ export function isUnsupportedEndpointRefusal(
 ): boolean {
   return status === UNSUPPORTED_STATUS && isUnsupportedEndpointBody(body);
 }
+
+/**
+ * Whether a response is an unsupported-endpoint refusal — for a host boundary
+ * that tells the user itself (a decorator over a server), without consuming
+ * the body the caller still reads (it reads a clone). Any status but 409
+ * answers `false` before touching the body; a body that is not JSON (a plain
+ * `HttpError` text) is not a refusal.
+ */
+export async function isUnsupportedEndpointResponse(
+  res: Response,
+): Promise<boolean> {
+  if (res.status !== UNSUPPORTED_STATUS) return false;
+  const raw = await res.clone().text();
+  let body: unknown;
+  try {
+    body = JSON.parse(raw);
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
+    return false;
+  }
+  return isUnsupportedEndpointRefusal(res.status, body);
+}

@@ -4,4 +4,5 @@ import { treeDisclosure } from "../core";
 
 export default {
   contributions: [variantRegionServerContribution(treeDisclosure)],
+  portable: true,
 } satisfies ServerPluginDefinition;

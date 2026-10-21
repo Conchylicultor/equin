@@ -6,4 +6,5 @@ export default {
   description:
     "Registers the conversation list's config (which title each row shows) so the Settings → Config value persists.",
   contributions: [ConfigV2.Register({ descriptor: conversationListConfig })],
+  portable: true,
 } satisfies ServerPluginDefinition;

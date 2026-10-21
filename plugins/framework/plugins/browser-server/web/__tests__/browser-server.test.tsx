@@ -1,10 +1,11 @@
 /**
  * The real live-state client (`NotificationsProvider` under a
- * `<TransportProvider>`, the path the app takes) against a `createBrowserServer`
+ * `<TransportProvider>`, the path the app takes) against a browser server
+ * over an in-realm runtime (`inRealmServer`, wired as a browser host is)
  * through `browserServerTransport`: a served value and an external collection
  * (window and `:rows`) resolve and the channel reads open; a socket replay
- * restates every sub in one `sub-batch`; an unserved known key — present at
- * creation or registered later — fails as `loader-failed` and never reaches the
+ * restates every sub in one `sub-batch`; a key the host does not serve (its key
+ * set is closed) fails as `loader-failed` naming the key and never reaches the
  * contract-mismatch store; an `implement()` route answers through the
  * transport's `fetch`; an unmatched request is a 409 (API) or a 404; a
  * `notify` on a `"notified"` collection lands a keyed delta in the client.
@@ -25,7 +26,12 @@ import {
 } from "@plugins/infra/plugins/endpoints/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import {
+  liveCollection,
+  liveValue,
+  serveCollectionOn,
+  serveValueOn,
+} from "@plugins/network/plugins/live/core";
 import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import {
   NotificationsProvider,
@@ -42,12 +48,12 @@ import {
   EndpointUnsupportedError,
   fetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
-import {
-  createBrowserServer,
-  type BrowserServer,
-  type BrowserServerPeer,
-  type BrowserServerSocket,
+import type {
+  BrowserServer,
+  BrowserServerPeer,
+  BrowserServerSocket,
 } from "../../core/internal/browser-server";
+import { inRealmServer } from "../../core/testing";
 import { browserServerTransport } from "../browser-server-transport";
 
 let seq = 0;
@@ -70,7 +76,7 @@ const tasks = liveCollection(key("tasks"), {
   default: { orderBy: [["rank", "asc"]], limit: 10 },
   maxLimit: 50,
 });
-// Known to the page, served by nothing.
+// Declared, served by nothing.
 const missingValue = liveValue(key("missing-value"), {
   schema: z.object({ n: z.number() }),
 });
@@ -113,13 +119,12 @@ function setup() {
     ["c", { id: "c", title: "C", rank: 3 }],
   ]);
   const ordered = () => [...rows.values()].sort((x, y) => x.rank - y.rank);
-  const unservedReads: string[] = [];
   let servedTasks: {
     notify(change?: { ids: readonly string[] }): void;
   } | null = null;
-  const server = createBrowserServer({
-    serve: (s) => {
-      const tasksServed = s.serveCollection(tasks, {
+  const server = inRealmServer({
+    serve: (rt) => {
+      servedTasks = serveCollectionOn(rt, tasks, {
         source: "external",
         changes: "notified",
         // `rank` is a number: its `$key` text, zero-padded so text order is its order.
@@ -131,15 +136,16 @@ function setup() {
             return r === undefined ? [] : [r];
           }),
       });
-      servedTasks = tasksServed;
-      return [
-        s.serveValue(greeting, {
+      serveValueOn(
+        rt,
+        greeting,
+        {
           source: "external",
           changes: { fixed: { reason: "test fixture" } },
-          loader: ({ who }) => ({ text: `hello ${who}` }),
-        }),
-        tasksServed,
-      ];
+          loader: ({ who }: { who: string }) => ({ text: `hello ${who}` }),
+        },
+        { sources: "external" },
+      );
     },
     routes: [
       [
@@ -150,10 +156,6 @@ function setup() {
         })),
       ],
     ],
-    unserved: (k) => {
-      unservedReads.push(k);
-      return new Error(`not served here: ${k}`);
-    },
   });
 
   // Every client frame, and a hand on the live server end so a test can
@@ -200,7 +202,6 @@ function setup() {
   return {
     server,
     transport,
-    unservedReads,
     rows,
     sent,
     reconnect,
@@ -321,14 +322,10 @@ describe("browser server ⇄ the real live-state client", () => {
   });
 
   it(
-    "an unserved known key fails as loader-failed — at creation or registered later — never a contract mismatch",
+    "a key the host does not serve fails as loader-failed naming it — never a contract mismatch",
     { timeout: 15_000 },
     async () => {
-      const { transport, server, unservedReads } = setup();
-      // Registered after the server: a lazy plugin's descriptor.
-      const late = liveValue(key("late"), {
-        schema: z.object({ n: z.number() }),
-      });
+      const { transport, server } = setup();
       const seen: Record<string, unknown> = {};
       const failure = (r: {
         status: string;
@@ -348,32 +345,23 @@ describe("browser server ⇄ the real live-state client", () => {
             onRead={(r) => (seen.row = failure(r))}
           />
           <Probe
-            read={() => useLive(late)}
-            onRead={(r) => (seen.late = failure(r))}
-          />
-          <Probe
             read={() => useResourceContractMismatches()}
             onRead={(m) => (seen.mismatches = m)}
           />
         </Scoped>,
       );
-      // The client answers a WS sub-error with an HTTP read, retried once
-      // (TanStack's 1 s backoff) before the read settles as failed.
-      // The runtime never ships a loader's own message to the client (a
-      // server failure is reported, not exposed), so the read names the key
-      // and the kind; the `unserved` error is what the loader threw.
+      // `unserved` is terminal: the client answers the WS sub-error with one
+      // HTTP read and settles failed, no retry.
       await waitFor(
         () => {
-          expect(seen.value).toMatch(/^loader-failed: .*500 \(loader-failed\)/);
-          expect(seen.row).toMatch(/^loader-failed: .*500 \(loader-failed\)/);
-          expect(seen.late).toMatch(/^loader-failed: .*500 \(loader-failed\)/);
+          expect(seen.value).toBe(
+            `loader-failed: ${missingValue.key} is not served by this host`,
+          );
+          expect(seen.row).toBe(
+            `loader-failed: ${missingCollection.rows.key} is not served by this host`,
+          );
         },
         { timeout: 5000 },
-      );
-      expect(String(seen.value)).toContain(missingValue.key);
-      expect(String(seen.late)).toContain(late.key);
-      expect(new Set(unservedReads)).toEqual(
-        new Set([missingValue.key, missingCollection.rows.key, late.key]),
       );
       expect(seen.mismatches).toEqual([]);
       view.unmount();
@@ -456,52 +444,9 @@ describe("browser server ⇄ the real live-state client", () => {
   });
 });
 
-describe("createBrowserServer", () => {
-  it("serving a key twice — or registering one the unserved fallback holds — fails loudly", () => {
-    expect(() =>
-      createBrowserServer({
-        serve: (s) => [
-          s.serveValue(greeting, {
-            source: "external",
-            changes: "notified",
-            loader: () => ({ text: "x" }),
-          }),
-          s.serveValue(greeting, {
-            source: "external",
-            changes: "notified",
-            loader: () => ({ text: "y" }),
-          }),
-        ],
-        unserved: (k) => new Error(k),
-      }),
-    ).toThrow(/duplicate key/);
-  });
-
-  it("a value of the central origin is not served here", () => {
-    const central = liveValue(key("central"), {
-      schema: z.object({ n: z.number() }),
-      origin: "central",
-    });
-    expect(() =>
-      createBrowserServer({
-        serve: (s) => [
-          // @ts-expect-error — a central value: this host serves worktree values.
-          s.serveValue(central, {
-            source: "external",
-            changes: "notified",
-            loader: () => ({ n: 1 }),
-          }),
-        ],
-        unserved: (k) => new Error(k),
-      }),
-    ).toThrow(/central value/);
-  });
-
+describe("runtimeBrowserServer", () => {
   it("a frame after close throws; close is idempotent; dispose closes every socket", () => {
-    const server = createBrowserServer({
-      serve: () => [],
-      unserved: (k) => new Error(k),
-    });
+    const server = inRealmServer();
     const closedBy: string[] = [];
     const end = server.connect({
       deliver: () => {},

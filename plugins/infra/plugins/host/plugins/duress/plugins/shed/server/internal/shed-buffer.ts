@@ -1,4 +1,3 @@
-import { getConfig } from "@plugins/config_v2/server";
 import {
   runInBackgroundLane,
   runWithoutProfiling,
@@ -8,7 +7,7 @@ import {
   isUnderDuress,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
-import { duressConfig } from "../../core";
+import { readDuressConfig } from "@plugins/infra/plugins/host/plugins/duress/server";
 
 // The duress shed engine. Observability choke points (trace capture, slow-op
 // recording, report filing — wired in Phase C2) construct one buffer each and
@@ -222,7 +221,7 @@ export function createShedBuffer<T>(opts: ShedBufferOptions<T>): ShedBuffer<T> {
   let flushing = false;
 
   function readCfg(): ShedConfigValues {
-    return configOverride ?? getConfig(duressConfig);
+    return configOverride ?? readDuressConfig();
   }
 
   function maybeArmFlush(delayMs: number): void {

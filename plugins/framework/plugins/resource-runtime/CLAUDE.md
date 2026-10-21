@@ -975,6 +975,21 @@ after a deploy, a tab still running the previous bundle. Only the flat
   programmer errors and must crash loudly. Pinned by
   `runtime-contract-mismatch.test.ts`.
 
+## A closed key set — `unserved`
+
+An unknown key is skew only on a host deployed under tabs that may run another
+bundle. `keySet: () => "closed"` (`ResourceRuntimeOptions`) declares a host that
+ships with its only client — a browser host, loaded by the same bundle that
+reads it — so its unknown key is a bug: `refuseUnknownKey` answers `sub`,
+`sub-batch` and the HTTP read with `unserved` (HTTP 404, no verdict) and
+reports it (`unserved key <key>`; the reports engine fingerprints per key). The
+default (`open`) is unchanged: `unknown-key` with its verdict, never reported.
+The key-less HTTP path stays `unknown-key`. server-core closes it in
+`bootBrowserHost` (`closeResourceKeySet`, before the graph boots — no option, so
+no browser host can forget it); the desktop server and central stay open. The
+client reads `unserved` as a terminal `loader-failed` naming the key, with no
+reload advice (`live-state`). Pinned by `runtime-unserved.test.ts`.
+
 ## Refusals — `ResourceRefusal`
 
 A loader throws `ResourceRefusal(code, message)` (`packages/resource-protocol`)
@@ -1224,7 +1239,6 @@ and those plugins' `CLAUDE.md`.
     - `tableLayoutRequirements`
 - Cross-plugin:
   - Imported by:
-    - `framework/browser-server`
     - `framework/central-core`
     - `framework/server-core`
 - Exemptions:

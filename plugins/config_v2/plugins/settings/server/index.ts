@@ -19,6 +19,7 @@ import {
 export default {
   description:
     "HTTP endpoints for setting and resetting config_v2 field values, and the Config task category the conflict-resolution agent files under.",
+  portable: true,
   contributions: [
     TaskCategory({ id: CONFIG_CATEGORY_ID, label: "Config", order: 10 }),
   ],

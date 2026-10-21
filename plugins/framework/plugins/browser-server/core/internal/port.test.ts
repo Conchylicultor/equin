@@ -2,20 +2,18 @@
  * A browser server across a real MessageChannel: the page side
  * (`portBrowserServer`) reads, subscribes and gets acks from a server served by
  * the worker side (`serveOverPort`) exactly as it would in-process; a boot that
- * throws rejects the page side with the worker's error; and
- * `composeBrowserServers` routes reads and subscriptions — a split `sub-batch`
- * included — to the server owning each key.
+ * throws rejects the page side with the worker's error.
  */
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { liveValue } from "@plugins/network/plugins/live/core";
+import { liveValue, serveValueOn } from "@plugins/network/plugins/live/core";
 import {
   PROTOCOL,
   type ServerFrame,
 } from "@plugins/packages/plugins/resource-protocol/core";
-import { createBrowserServer, type BrowserServer } from "./browser-server";
-import { composeBrowserServers } from "./compose";
+import { inRealmServer } from "../testing";
+import type { BrowserServer } from "./browser-server";
 import { PortHostBootError, portBrowserServer, serveOverPort } from "./port";
 
 let seq = 0;
@@ -25,33 +23,20 @@ const greeting = liveValue(key("greeting"), {
   schema: z.object({ text: z.string() }),
   params: ["who"],
 });
-const farewell = liveValue(key("farewell"), {
-  schema: z.object({ text: z.string() }),
-});
-
 function greetingServer(prefix: string): BrowserServer {
-  return createBrowserServer({
-    serve: (s) => [
-      s.serveValue(greeting, {
-        source: "external",
-        changes: { fixed: { reason: "test fixture" } },
-        loader: ({ who }) => ({ text: `${prefix} ${who}` }),
-      }),
-    ],
-    unserved: (k) => new Error(`not served here: ${k}`),
-  });
-}
-
-function farewellServer(): BrowserServer {
-  return createBrowserServer({
-    serve: (s) => [
-      s.serveValue(farewell, {
-        source: "external",
-        changes: { fixed: { reason: "test fixture" } },
-        loader: () => ({ text: "bye" }),
-      }),
-    ],
-    unserved: (k) => new Error(`not served here: ${k}`),
+  return inRealmServer({
+    serve: (rt) => {
+      serveValueOn(
+        rt,
+        greeting,
+        {
+          source: "external",
+          changes: { fixed: { reason: "test fixture" } },
+          loader: ({ who }: { who: string }) => ({ text: `${prefix} ${who}` }),
+        },
+        { sources: "external" },
+      );
+    },
   });
 }
 
@@ -161,52 +146,5 @@ describe("a browser server over a port", () => {
     expect((pageErr as PortHostBootError).message).toContain(
       "migration 42 failed",
     );
-  });
-});
-
-describe("composeBrowserServers", () => {
-  test("routes reads, subs and a split sub-batch to each key's server", async () => {
-    const worker = await overChannel(greetingServer("from worker"), [
-      greeting.key,
-    ]);
-    const page = farewellServer();
-    const composed = composeBrowserServers([worker], page);
-
-    const read = async (k: string, query = "") => {
-      const res = await composed.request(
-        new Request(`http://x/api/resources/${k}${query}`),
-      );
-      return ((await res.json()) as { value: unknown }).value;
-    };
-    expect(await read(greeting.key, "?who=ada")).toEqual({
-      text: "from worker ada",
-    });
-    expect(await read(farewell.key)).toEqual({ text: "bye" });
-
-    const r = recorder();
-    const socket = composed.connect(r.peer);
-    socket.send(
-      JSON.stringify({
-        op: "sub-batch",
-        tabId: "tab",
-        build: "dev",
-        protocol: PROTOCOL,
-        complete: true,
-        entries: [
-          { id: 1, key: greeting.key, params: { who: "bob" } },
-          { id: 2, key: farewell.key, params: {} },
-        ],
-      }),
-    );
-    const g = await r.next(
-      (f) => f.kind === "sub-ack" && f.key === greeting.key,
-    );
-    const f = await r.next(
-      (f) => f.kind === "sub-ack" && f.key === farewell.key,
-    );
-    expect(g).toMatchObject({ value: { text: "from worker bob" } });
-    expect(f).toMatchObject({ value: { text: "bye" } });
-    socket.close();
-    composed.dispose();
   });
 });

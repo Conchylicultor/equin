@@ -27,7 +27,7 @@ A persistent global trigger on `conversationTurnCompleted` (contributed by this 
 
 ## Plugin reference
 
-- Description: Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. Serves each conversation's latest turn summary (a one-line summary, caveats list, and actions list) rendered above the prompt input. The Haiku job that writes it after every assistant turn, and its config, live in the machine half.
+- Description: Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. Serves each conversation's latest turn summary (a one-line summary, caveats list, and actions list) rendered above the prompt input, and registers the turn-summary config. The Haiku job that writes it after every assistant turn lives in the machine half.
 - Web:
   - Contributes:
     - `Conversation.AbovePromptInput` → `TurnSummaryCard`
@@ -48,10 +48,11 @@ A persistent global trigger on `conversationTurnCompleted` (contributed by this 
     - `ui/icons.Icon`
 - Server:
   - Contributes:
-    - `resource.declare` "turn-summaries:rows"
     - `ConfigV2.Register` "config"
+    - `resource.declare` "turn-summaries:rows"
     - `trigger` "turn-summary.generate"
   - Uses:
+    - `config_v2.ConfigV2`
     - `infra/entities.defaultNow`
     - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`

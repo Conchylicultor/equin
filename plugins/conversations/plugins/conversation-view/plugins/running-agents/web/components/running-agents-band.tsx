@@ -164,6 +164,9 @@ function shellLastLineText(
 ): string | null {
   switch (output.status) {
     case "loading":
+    // No computer behind the page (the in-browser demo): the task alone is
+    // true; the pane says why when it is opened.
+    case "unavailable":
       return null;
     case "error":
       return "output unavailable";

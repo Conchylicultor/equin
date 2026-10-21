@@ -259,12 +259,13 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `isCodec`
     - `isUnsupportedEndpointBody`
     - `isUnsupportedEndpointRefusal`
+    - `isUnsupportedEndpointResponse`
     - `multipart`
     - `unavailableMessage`
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 198 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 197 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×54
     - `conversations` ×29
     - `debug` ×17
@@ -285,7 +286,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps-core/app-usage`
     - `backup`
     - `database/fork`
-    - `framework/browser-server`
     - `plugin-meta/plugin-health`
     - `release`
     - `screenshot`

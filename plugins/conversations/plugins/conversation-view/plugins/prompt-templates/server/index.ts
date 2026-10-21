@@ -8,4 +8,5 @@ export default {
   contributions: [
     ConfigV2.Register({ descriptor: promptTemplatesConfig }),
   ],
+  portable: true,
 } satisfies ServerPluginDefinition;

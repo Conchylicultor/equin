@@ -103,7 +103,7 @@ on a host without the computer gets the unavailable arm instead of a 404.
 
 ## Plugin reference
 
-- Description: Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. The conversation-category assignments, portable half: the table, the lookup-only conversation-categories collection over it, the cross-plugin per-category item read, and clearing one assignment. The config, the Haiku classifier and setting an item are the machine/ half's.
+- Description: Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. The conversation-category assignments, portable half: the categories config, the configured avatars' saved-icon source, the table, the lookup-only conversation-categories collection over it, the cross-plugin per-category item read, and clearing one assignment. The Haiku classifier and setting an item are the machine/ half's.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "config"
@@ -133,16 +133,20 @@ on a host without the computer gets the unavailable arm instead of a 404.
     - `useCategoryAvatars`
 - Server:
   - Contributes:
-    - `resource.declare` "conversation-categories:rows"
     - `ConfigV2.Register` "config"
+    - `resource.declare` "conversation-categories:rows"
     - `trigger` "conversation-category.classify"
   - Uses:
+    - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
+    - `config_v2.watchConfig`
     - `database.db`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`
+    - `ui/icons/saved-sources.defineSavedIconSource`
   - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
   - Exports (types): `CategoriesConfigValue`
   - Exports (values):

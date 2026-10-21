@@ -199,9 +199,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
   - Contributes: 237 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `ConfigV2.Register` ×237
   - Uses: `config_v2.ConfigV2`
-  - Exports (values):
-    - `reorderableSlots`
-    - `reorderDirectiveDescriptor`
+  - Exports (values): `reorderDirectiveDescriptor`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --space-xs`
   - Imported by:
@@ -220,6 +218,8 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
 - Test helpers:
   - Web: `@plugins/reorder/web/testing`
     - `ReorderItemClaim` — Stands in for the list middleware's per-`renderItem` claim, so a test can render `ReorderItemMiddleware` as an item of a hand-built area.
+  - Server: `@plugins/reorder/server/testing`
+    - `reorderableSlots`
 - Sub-plugins:
   - **`area`** — What a reorder area draws, shared by applying a slot layout (reorder) and editing one (reorder/editor, reorder/edit-mode): the area context, the entry types, and ReorderItemBox — an item box at rest…
   - **`edit-mode`** — Slot-layout editing, opt-in: the Edit layout switch in the action bar's view-options popover (Esc exits), and the area editor every reorderable slot mounts beside its items while edit mode is on…

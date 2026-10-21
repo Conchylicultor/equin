@@ -19,7 +19,7 @@ Idle conversations are hibernated (their agent session killed, the row kept
 
 ## Plugin reference
 
-- Description: Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation, portable half: the viewed endpoint that stamps lastViewedAt (resetting the idle timer).
+- Description: Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation, portable half: the global hibernation config, and the viewed endpoint that stamps lastViewedAt (resetting the idle timer).
 - Web:
   - Contributes: `ConfigV2.WebRegister` "conversation-hibernation"
   - Uses:
@@ -30,6 +30,7 @@ Idle conversations are hibernated (their agent session killed, the row kept
 - Server:
   - Contributes: `ConfigV2.Register` "conversation-hibernation"
   - Uses:
+    - `config_v2.ConfigV2`
     - `infra/endpoints.implement`
     - `tasks/tasks-core.touchConversationViewed`
   - Routes: `POST /api/conversations/:id/viewed`

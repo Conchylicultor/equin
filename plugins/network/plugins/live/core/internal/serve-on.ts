@@ -17,16 +17,11 @@ import {
   registerValueOf,
   tupleKey,
   type AnyServeOptions,
-  type ExternalServed,
   type LiveRuntime,
   type LiveValueChanges,
   type LiveValueSource,
-  type PagedChanges,
   type ServedFor,
   type ServedValueBase,
-  type ServePagedValueOptions,
-  type ServeValueOptions,
-  type SnapshotPairing,
 } from "./compile-value";
 import { LIVE_COLUMNS_KEY } from "./live-columns";
 import type {
@@ -39,7 +34,6 @@ import type {
   LiveKeyDirection,
   LivePagedPages,
   LivePagedValue,
-  LiveQueryValue,
   LiveValue,
   LiveValueOrigin,
 } from "./live-value";
@@ -1136,131 +1130,3 @@ export type ExternalNotifiedPagedValue<Item, Q> =
   ExternalSilentPagedValue<Item> & {
     notify(query: Q): void;
   };
-
-/**
- * The external arm of `serveValue` and `serveCollection`, typed against the
- * declaration, for values of origin `O` — what a host with no change feed and
- * no plugin-boot declare step hands its caller (a browser server's `serve`
- * callback). Implemented by binding {@link serveValueOn} (`sources:
- * "external"`) and {@link serveCollectionOn} to the host's runtime.
- */
-export interface LiveExternalServe<O extends LiveValueOrigin> {
-  serveValue: {
-    <
-      Item,
-      Meta,
-      Q,
-      QIn,
-      const R extends readonly ExternalServed[] = [],
-      C extends PagedChanges = "notified",
-      K extends string = never,
-    >(
-      value: LivePagedValue<Item, Meta, Q, QIn, O, K>,
-      opts: ServePagedValueOptions<
-        NoInfer<Item>,
-        NoInfer<Meta>,
-        NoInfer<Q>,
-        R,
-        C
-      >,
-    ): ServedFor<
-      C,
-      ExternalNotifiedPagedValue<Item, Q>,
-      ExternalSilentPagedValue<Item>
-    >;
-    <
-      T,
-      Q,
-      QIn,
-      const R extends readonly ExternalServed[] = [],
-      C extends LiveValueChanges = "notified",
-    >(
-      value: LiveQueryValue<T, Q, QIn, O> & SnapshotPairing<C>,
-      opts: ServeValueOptions<NoInfer<T>, NoInfer<Q>, "external", R, C>,
-    ): ServedFor<
-      C,
-      ExternalNotifiedQueryValue<T, LiveQueryParams, Q>,
-      ExternalSilentValue<T, LiveQueryParams>
-    >;
-    <
-      T,
-      P extends Record<string, string>,
-      const R extends readonly ExternalServed[] = [],
-      C extends LiveValueChanges = "notified",
-    >(
-      value: LiveValue<T, P, O> & { query?: undefined } & SnapshotPairing<C>,
-      opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, "external", R, C>,
-    ): ServedFor<C, ExternalNotifiedValue<T, P>, ExternalSilentValue<T, P>>;
-  };
-  serveCollection: {
-    <Row, const C extends LiveCollectionChanges = "notified">(
-      collection: ExternalAllCollection<Row>,
-      opts: ServeExternalAllOptions<ExternalSourceRow<NoInfer<Row>>, C>,
-    ): ServedExternalAll<Row, C>;
-    <Row, const C extends LiveCollectionChanges = "notified">(
-      collection: ExternalLookupCollection<Row>,
-      opts: ServeExternalLookupOptions<ExternalSourceRow<NoInfer<Row>>, C>,
-    ): ServedExternalLookup<Row, C>;
-    <
-      Row,
-      F,
-      S extends string,
-      Cn,
-      const C extends LiveCollectionChanges = "notified",
-    >(
-      collection: ExternalWindowCollection<Row, F, S, Cn>,
-      opts: ServeExternalWindowOptions<
-        ExternalSourceRow<NoInfer<Row>>,
-        NoInfer<F>,
-        NoInfer<S>,
-        NoInfer<Cn>,
-        C
-      >,
-    ): ServedExternalWindow<Row, C>;
-  };
-}
-
-/**
- * Bind the external arm to a host's runtime: `serveValue` is
- * {@link serveValueOn} (`sources: "external"`) and `serveCollection`
- * {@link serveCollectionOn}, both on `rt`, typed by {@link LiveExternalServe}.
- * For a host that is not a plugin runtime and hands its caller this surface
- * (a browser server's `serve` callback). `origin` is the one origin this host
- * serves — a value of the other origin throws (its readers subscribe on the
- * other socket, so serving it here would answer nobody).
- */
-export function bindExternalServe<O extends LiveValueOrigin>(
-  rt: LiveRuntime,
-  origin: O,
-): LiveExternalServe<O> {
-  const serveValue = (
-    value:
-      | LiveValue<unknown, Record<string, string>, LiveValueOrigin>
-      // biome-ignore lint/suspicious/noExplicitAny: a generic item's schema is invariant — erased, as page-source's `AnyPagedValue` is.
-      | LivePagedPages<any, any, any, LiveValueOrigin>,
-    opts: AnyServeOptions,
-  ): ServedValueOn<unknown, Record<string, string>> | ServedPagedOn => {
-    const valueOrigin = value.origin ?? "worktree";
-    if (valueOrigin !== origin) {
-      throw new Error(
-        `serveValue("${value.key}"): a ${valueOrigin} value — this host serves ${origin} values only.`,
-      );
-    }
-    return serveValueOn(
-      rt,
-      value as LiveValue<unknown, Record<string, string>, LiveValueOrigin>,
-      opts as ServeValueOnOptions<"external">,
-      { sources: "external" },
-    );
-  };
-  const serveCollection = (
-    collection: AnyCollection,
-    opts: AnyExternalCollectionOptions,
-  ): AnyServedExternal => compileExternalCollection(rt, collection, opts);
-  // Erased: the interface's overloads check each call against its
-  // declaration; both bodies dispatch on the declaration itself.
-  return {
-    serveValue: serveValue as LiveExternalServe<O>["serveValue"],
-    serveCollection: serveCollection as LiveExternalServe<O>["serveCollection"],
-  };
-}

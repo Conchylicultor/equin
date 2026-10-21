@@ -381,7 +381,9 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `build/runs-arm`
     - `debug/reports`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-terminal.ts` (debt)
+  - Exempts itself from:
+    - `boundaries/no-platform-api` — `server/internal/run-terminal.ts` (debt)
+    - `config-v2:host-registrations-paired` — `server/index.ts` (debt)
 - Shared:
   - Exports (types): `BuildRun`
   - Exports (values):

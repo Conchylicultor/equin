@@ -1,7 +1,10 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
-import { parse as parseJsonc } from "jsonc-parser";
-import { computeHash, readTypedConfig } from "@plugins/config_v2/core";
+import {
+  computeHash,
+  parseConfigFile,
+  readTypedConfig,
+} from "@plugins/config_v2/core";
 import type {
   ConfigDescriptor,
   ConfigProxy,
@@ -9,9 +12,6 @@ import type {
   JsonValue,
 } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
-
-/** The `// @hash <digest>` header every generated config document carries. */
-export const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 
 /**
  * The same `// @hash`-header contract as `fileConfigProxy`, but STRICT: a
@@ -28,18 +28,7 @@ function strictReadOnlyFileConfigProxy(filePath: string): ConfigProxy {
   return {
     read() {
       if (!existsSync(filePath)) return null;
-      const raw = readFileSync(filePath, "utf-8");
-      const match = HASH_RE.exec(raw);
-      if (!match) {
-        throw new Error(
-          `Config file is missing its "// @hash" header: ${filePath}. ` +
-            `A hashless config file is corrupt — restore the header or delete the file.`,
-        );
-      }
-      return {
-        content: parseJsonc(raw.slice(match[0].length)) as JsonValue,
-        hash: match[1]!,
-      };
+      return parseConfigFile(readFileSync(filePath, "utf-8"), filePath);
     },
     write() {
       throw new Error(`readGitLayerConfig proxy is read-only: ${filePath}`);

@@ -121,6 +121,10 @@ function ShellOutputView({
         <BodyMessage>
           <Loading />
         </BodyMessage>
+      ) : output.status === "unavailable" ? (
+        <BodyMessage>
+          <Muted>{output.message}</Muted>
+        </BodyMessage>
       ) : output.status === "error" ? (
         <BodyMessage>
           <ResourceErrorInline

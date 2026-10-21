@@ -61,9 +61,9 @@ export interface DemoRead {
  * one is either served by the demo's browser host or declares `needsMachine`
  * (the app renders it "not available") — asserted by
  * `bin/browser-host.test.ts` against the booted host graph. Config's reads are
- * not here: they are still answered page-side (`config_v2`'s Demo.Resource)
- * until the config split. A latent read joins the list when it becomes
- * visible in the demo.
+ * not here: the host serves every portable `config-v2.*` value over its
+ * bundled committed layer, asserted by their own tests in the same file. A
+ * latent read joins the list when it becomes visible in the demo.
  */
 export const DEMO_READS: readonly DemoRead[] = [
   // The stories: tasks, attempts, conversations, pushes, queue, transcripts.

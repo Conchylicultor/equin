@@ -84,14 +84,12 @@ Key invariants:
   co-entry file).
 - **What depends on the composition lives only in the registry artifact.**
   A plugin artifact is shared by every composition holding the plugin, so it
-  must not carry anything composition-specific. The modules that are
-  (`core/composition-modules.ts`: `@composition-web-registry` →
-  `index.js`, the web registry; `@composition-config-layer` →
-  `config-layer.js`, the committed config of the composition's own plugins and
-  apps) are type-stripped into the ONE per-composition registry artifact, whose
-  address hashes both sources. Each sits behind a fixed bare specifier that is
-  external to every build (`COMPOSITION_SPECIFIERS`) and mapped to the deployed
-  composition's file — so a config edit rebuilds only that cheap artifact.
+  must not carry anything composition-specific. The module that is
+  (`core/composition-modules.ts`: `@composition-web-registry` → `index.js`,
+  the web registry) is type-stripped into the ONE per-composition registry
+  artifact, addressed by its source. It sits behind a fixed bare specifier that
+  is external to every build (`COMPOSITION_SPECIFIERS`) and mapped to the
+  deployed composition's file.
 - **A worker is bundled whole, from its own plugin only.** A
   `new SharedWorker(new URL("./x.worker.ts", import.meta.url), { type: "module" })`
   (networking's shared socket is the one user) is built by vite's nested
@@ -116,9 +114,12 @@ Key invariants:
   is served as `@browser-host/<pluginPath>` (external to every artifact build,
   never a vendor). Its address cannot be "its own plugin's files": it is the
   content of every repo file the LAST build loaded (vite's module list, `?raw`
-  SQL included), every such file's directory listing (a new migration
-  re-addresses it), `bun.lock` and the builder identity, the list recorded per
-  host under the store's `browser-hosts/`. The build fails when repo code in the
+  SQL and config included), every such file's directory listing (a new
+  migration re-addresses it), the recursive listing of every
+  `import.meta.glob` pattern's static base (`globRoots` — a new config file in a
+  new directory re-addresses it; a non-literal pattern fails the build),
+  `bun.lock` and the builder identity, the list recorded per host under the
+  store's `browser-hosts/` (a record without `globRoots` rebuilds). The build fails when repo code in the
   bundle imports a Node builtin. Its graph is the plugin's
   `bin/browser-host.generated.ts` (codegen's `browser-host-gen.ts`).
 - **An artifact's address covers exactly what its bytes inline.** The store
@@ -228,10 +229,7 @@ Key invariants:
     - `BROWSER_UNREACHABLE_DYNAMIC_KINDS`
     - `BUILDER_VERSION`
     - `buildImportMap`
-    - `COMPOSITION_CONFIG_LAYER_SPECIFIER`
-    - `COMPOSITION_MODULES_REL`
     - `COMPOSITION_SPECIFIERS`
-    - `compositionConfigLayerFileName`
     - `compositionFleetSource`
     - `computeIdentityHash`
     - `computeInputsHash`

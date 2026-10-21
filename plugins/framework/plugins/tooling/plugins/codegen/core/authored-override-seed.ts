@@ -3,6 +3,7 @@ import { join } from "path";
 import { parse as parseJsonc } from "jsonc-parser";
 import {
   APP_SCOPE_DIR,
+  CONFIG_HASH_RE,
   REVIEW_MARKER,
   configFileOwner,
   hasReviewMarker,
@@ -47,10 +48,6 @@ import { writeGenerated } from "./write-generated";
  * seeded file comes from the descriptor's own `guidance`. Adding a third family
  * that owes an authored override costs zero edits here.
  */
-
-// The generated-origin header. Re-spelled per consumer throughout the config
-// stack (generator, in-sync check, runtime proxy) — same shape everywhere.
-const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 
 export interface AuthoredOverrideSeedResult {
   /** Overrides created from scratch (relative to `config/`). */
@@ -229,7 +226,7 @@ async function remarkIfStale(opts: {
   // on. Rewriting it would clobber a marker they may have already edited.
   if (hasReviewMarker(raw)) return false;
 
-  const match = HASH_RE.exec(raw);
+  const match = CONFIG_HASH_RE.exec(raw);
   // A hashless override is corrupt, not stale — `config-origins-in-sync` says so
   // by name. Minting a header here would repair it silently, so leave it be.
   if (!match) return false;
@@ -287,7 +284,7 @@ export async function applyAuthoredOverrideSeeding(opts: {
       );
     }
     const originRaw = readFileSync(originPath, "utf8");
-    const originMatch = HASH_RE.exec(originRaw);
+    const originMatch = CONFIG_HASH_RE.exec(originRaw);
     if (!originMatch) {
       throw new Error(
         `seedAuthoredOverrides: config/${originRel} carries no // @hash header.`,

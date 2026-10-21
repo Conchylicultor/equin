@@ -832,6 +832,37 @@ describe("NotificationsClient — HTTP fetch path", () => {
       ]);
     });
 
+    test("a 404 unserved body is a terminal loader-failed naming the key, and marks nothing", async () => {
+      const { client, fetchQueue } = await setup();
+      const store = renderHook(() => useResourceContractMismatches());
+      client.observe("nope", {}, undefined, { schema: pushSchema });
+      fetchQueue.push(
+        makeResponse({ status: 404, body: { reason: "unserved" } }),
+      );
+      let err: unknown;
+      try {
+        await client.fetchOverHttp(
+          "nope",
+          {},
+          undefined,
+          { schema: pushSchema },
+          "fallback",
+        );
+      } catch (e) {
+        err = e;
+      }
+      expect(err).toMatchObject({ status: 404, reason: "unserved" });
+      expect(toResourceError(err)).toMatchObject({
+        kind: "loader-failed",
+        message: "nope is not served by this host",
+      });
+      // A closed host refuses it the same way every time: no retry, and no
+      // reload advice (it is not skew).
+      expect(isTerminalResourceError(err)).toBe(true);
+      store.rerender();
+      expect(store.result.current).toEqual([]);
+    });
+
     const metricRead = {
       schema: pushSchema,
       refusals: ["unknown-metric", "bad-range"],

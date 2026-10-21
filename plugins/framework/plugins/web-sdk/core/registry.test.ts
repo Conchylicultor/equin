@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { createPluginRegistry, readerOf } from "./registry";
+import { createPluginRegistry, readerOf, scopedReader } from "./registry";
 import { defineSlot } from "./slots";
 import type { Contribution, LoadedPlugin } from "./types";
 
@@ -84,5 +84,87 @@ describe("plugin registry — per-slot notification", () => {
     reader.replace([p1]);
     expect(calls).toEqual({ a: 1, b: 2 });
     expect(reader.read(B)).toHaveLength(0);
+  });
+});
+
+describe("scopedReader — a registry view narrowed to a plugin set", () => {
+  const Wide = defineSlot<{ id: string }>({ pageWide: true });
+
+  function scoped(plugins: string[]) {
+    const registry = createPluginRegistry();
+    const parent = readerOf(registry);
+    registry.append([
+      plugin("in", [
+        A({ id: "a-in" }),
+        B({ id: "b-in" }),
+        Wide({ id: "w-in" }),
+      ]),
+      plugin("out", [A({ id: "a-out" }), Wide({ id: "w-out" })]),
+    ]);
+    return { registry, parent, reader: scopedReader(parent, new Set(plugins)) };
+  }
+
+  it("keeps only the contributions stamped with an in-set plugin", () => {
+    const { reader } = scoped(["in"]);
+    expect(reader.read(A).map((c) => c.id)).toEqual(["a-in"]);
+  });
+
+  it("returns the parent's array when nothing is filtered, and a stable array across reads", () => {
+    const { parent, reader } = scoped(["in"]);
+    expect(reader.read(B)).toBe(parent.read(B));
+    expect(reader.read(A)).toBe(reader.read(A));
+  });
+
+  it("a filtered list changes identity only when the parent's list does", () => {
+    const { registry, reader } = scoped(["in"]);
+    const before = reader.read(A);
+    registry.append([plugin("later", [B({ id: "b-later" })])]);
+    expect(reader.read(A)).toBe(before);
+    registry.append([plugin("in2", [A({ id: "a-in2" })])]);
+    expect(reader.read(A)).not.toBe(before);
+    expect(reader.read(A).map((c) => c.id)).toEqual(["a-in"]);
+  });
+
+  it("leaves a page-wide slot unfiltered", () => {
+    const { parent, reader } = scoped(["in"]);
+    expect(reader.read(Wide)).toBe(parent.read(Wide));
+    expect(reader.read(Wide).map((c) => c.id)).toEqual(["w-in", "w-out"]);
+  });
+
+  it("forwards subscriptions to the parent", () => {
+    const { registry, reader } = scoped(["in"]);
+    let calls = 0;
+    const off = reader.subscribe(A, () => calls++);
+    registry.append([plugin("out2", [A({ id: "a-out2" })])]);
+    expect(calls).toBe(1);
+    off();
+    registry.append([plugin("out3", [A({ id: "a-out3" })])]);
+    expect(calls).toBe(1);
+  });
+
+  it("nested scopes intersect", () => {
+    const { reader } = scoped(["in", "out"]);
+    expect(reader.read(A).map((c) => c.id)).toEqual(["a-in", "a-out"]);
+    const inner = scopedReader(reader, new Set(["out"]));
+    expect(inner.read(A).map((c) => c.id)).toEqual(["a-out"]);
+    expect(scopedReader(inner, new Set(["in"])).read(A)).toHaveLength(0);
+  });
+
+  it("declared() keeps only the slots an in-set plugin declares", () => {
+    const Own = defineSlot<{ id: string }>();
+    const Other = defineSlot<{ id: string }>();
+    const registry = createPluginRegistry();
+    registry.append([
+      { ...plugin("in", []), slots: { own: Own } },
+      { ...plugin("out", []), slots: { other: Other } },
+    ]);
+    const reader = scopedReader(readerOf(registry), new Set(["in"]));
+    expect(reader.declared().map((e) => e.id)).toEqual(["in.own"]);
+    expect(reader.declared()).toBe(reader.declared());
+  });
+
+  it("replace throws: the plugin set belongs to the enclosing provider", () => {
+    const { reader } = scoped(["in"]);
+    expect(() => reader.replace([])).toThrow(/read-only/);
   });
 });

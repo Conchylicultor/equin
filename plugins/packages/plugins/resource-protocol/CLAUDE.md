@@ -71,7 +71,11 @@ yields no latency sample by construction.
 ## Failure vocabulary (`core/internal/protocol.ts`)
 
 - `SubErrorReason` — `unknown-key` / `unauthorized` / `loader-failed` /
-  `contract-mismatch` / `refused`.
+  `contract-mismatch` / `refused` / `unserved`. `unserved` is the unknown key
+  of a host whose key set is CLOSED (a browser host, shipped with its only
+  client): never skew, so it carries no verdict (HTTP 404). Only an in-page
+  host sends it, and that host shares its client's build, so adding it moved
+  `PROTOCOL` (the vocabulary hash) and nothing else.
 - `ContractVerdict` + `contractVerdict(clientBuild, serverGraph)` — whose fault a
   mismatch is: `skew` (the tab runs another bundle; a reload fixes it — absent a
   build, the bundle predates this protocol, which is skew too), `same-build` (a
@@ -142,7 +146,6 @@ yields no latency sample by construction.
     - `ResourceRefusal`
 - Cross-plugin:
   - Imported by:
-    - `framework/browser-server`
     - `framework/resource-runtime`
     - `framework/server-core`
     - `network/live`

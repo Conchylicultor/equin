@@ -109,6 +109,7 @@ export function isTerminalResourceError(err: unknown): boolean {
     err instanceof ResourceHttpError &&
     (err.reason === "contract-mismatch" ||
       err.reason === "unknown-key" ||
+      err.reason === "unserved" ||
       err.reason === "refused")
   );
 }

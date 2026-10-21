@@ -50,6 +50,20 @@ export interface SlotMeta {
    * per-view-type renderers.
    */
   companions?: SlotCompanions;
+  /**
+   * The slot's contributions are PAGE-WIDE definitions, not content rendered
+   * where the slot is read: a `PluginScope` (web-sdk) never filters it, so a
+   * reader inside a scoped subtree sees every loaded plugin's contributions.
+   *
+   * For a slot whose reader writes a page-global structure from the list it
+   * reads (`Pane.Register`: `useSyncPaneRegistry` clears and refills the one
+   * module-level pane registry, and runs both at the apps root and inside an
+   * embedded app). Scoped, the inner read would drop every out-of-scope pane
+   * from the whole page, and the two reads would flap. The slot declares it, so
+   * a reader has no per-call escape hatch. Set through
+   * `defineSlot({ pageWide: true })`.
+   */
+  pageWide?: true;
 }
 
 /**

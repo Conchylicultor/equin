@@ -73,6 +73,14 @@ function kindOf(raw: unknown): {
         ? { kind: "not-found", message: raw.message }
         : { kind: "loader-failed", message: raw.message };
     }
+    // A closed-key-set host (a browser host, shipped with this very bundle)
+    // does not serve the key: never skew, so no reload advice — a bug, named.
+    if (raw.reason === "unserved") {
+      return {
+        kind: "loader-failed",
+        message: `${raw.key} is not served by this host`,
+      };
+    }
     if (raw.status === 404) return { kind: "not-found", message: raw.message };
     return { kind: "loader-failed", message: raw.message };
   }

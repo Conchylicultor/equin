@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-framework-browser-server",
   "version": "0.0.1",
   "private": true,
-  "description": "A third host of the unified live API, running in a page (or a worker): createBrowserServer({ serve, routes, unserved }) holds a real resource runtime and the shared HTTP router, serves liveValue / liveCollection declarations through the same serveValueOn / serveCollectionOn every host runs, answers every other known resource key with a loader failure, and connects in-memory sockets; browserServerTransport(server) is the Transport a <TransportProvider> points a subtree at, so the unchanged app reads it through useLive / endpoints."
+  "description": "A server that runs in the page's realm or across a worker's port — a third host of the unified live API (core: the BrowserServer interface; runtimeBrowserServer over a resource runtime booted in this realm; serveOverPort / portBrowserServer carrying one across a MessageChannel or a Web Worker). Web: browserServerTransport(server), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket."
 }

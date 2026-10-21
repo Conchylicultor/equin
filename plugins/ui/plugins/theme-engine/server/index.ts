@@ -13,4 +13,5 @@ export default {
     ConfigV2.Register({ descriptor: themeSelectionConfig }),
     themeDocumentHead,
   ],
+  portable: true,
 } satisfies ServerPluginDefinition;

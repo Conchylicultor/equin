@@ -4,4 +4,5 @@ import { segmentedProgressBarConfig } from "../core";
 
 export default {
   contributions: [ConfigV2.Register({ descriptor: segmentedProgressBarConfig })],
+  portable: true,
 } satisfies ServerPluginDefinition;

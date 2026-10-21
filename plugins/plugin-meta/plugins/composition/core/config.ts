@@ -31,6 +31,65 @@ import { SERVE_MODE_OPTIONS } from "./serve-mode";
 //
 // Code defaults carry an EXPLICIT stable `id` (the UI only auto-injects one on
 // "Add"), so seeded rows are editable. Order is array position — no `rank`.
+/**
+ * What the agent manager IS, as entry patterns shared by both profiles
+ * (`agent-manager` and `agent-manager-lean`): its app shell, and every umbrella
+ * whose whole subtree is something the agent manager renders — so a renderer a
+ * future plugin adds under one of them (a transcript row, a field type, a page
+ * block, a task-detail section) ships with the app with no edit here. An entry
+ * pattern rather than selected contributors: the app is these subtrees, not an
+ * opt-in list of their children.
+ *
+ * - the domain it manages: `conversations` (the transcript, its renderers, the
+ *   prompt box, the sidebar lists) and `tasks` (the task list, detail sections,
+ *   automations);
+ * - what that domain renders through: the field types (`fields`), the inline
+ *   widgets agents write (`active-data`), the page editor and its blocks (`page`,
+ *   opened beside a conversation by `agent-manager.pages-nav`, plus its
+ *   rich-text palette), code and commit views (`code-explorer`), the file viewer,
+ *   prompt editor and code previews, every data-view feature, and slot layouts
+ *   (`reorder`);
+ * - the app chrome it is shown in on main: `apps-core` (rail, tab bar, surfaces,
+ *   launcher), `shell` (action bar, notifications, health report), fullscreen,
+ *   and the variant regions that chrome draws (breadcrumb separator, sidebar
+ *   framing, tab bar) with the tweakcn theme catalog.
+ *
+ * The negatives are adapters INTO another app, which the agent manager does not
+ * ship: the song / event-source / prototype chips (Sonata, Events, Prototypes),
+ * the place and map page blocks and the data view's map (Google Maps, auth, the
+ * map primitive).
+ */
+const AGENT_MANAGER_ENTRY_POINTS = [
+  "apps.agent-manager.**",
+  "conversations.**",
+  "tasks.**",
+  "fields.**",
+  "active-data.**",
+  "!active-data.song.**",
+  "!active-data.event-source.**",
+  "!active-data.prototype.**",
+  "page.**",
+  "!page.place.**",
+  "!page.map.**",
+  "ui.tokens.rich-text-palette",
+  "code-explorer.**",
+  "primitives.file-viewer.**",
+  "primitives.prompt-editor.**",
+  "primitives.syntax-highlight.**",
+  "primitives.data-view.**",
+  "!primitives.data-view.map.**",
+  "reorder.**",
+  "apps-core.**",
+  "shell.**",
+  "fullscreen.**",
+  "ui.breadcrumb-separator.**",
+  "ui.segmented-progress-bar.**",
+  "ui.sidebar-framing.**",
+  "ui.tab-bar.**",
+  "ui.tree-disclosure.**",
+  "ui.tweakcn.**",
+];
+
 export const compositionsConfig = defineConfig({
   name: "compositions",
   fields: {
@@ -169,10 +228,11 @@ export const compositionsConfig = defineConfig({
         // computer — the PGlite database driver, the in-process job queue, the
         // memory stores for attachment bytes, logs, the push ledger and
         // transcripts, the migration history bundled as text, the baseline
-        // model catalog, the task titles kept as filed and the in-memory config
-        // store. A desktop backend provides each of those services from a
-        // machine half (`database#machine`, `jobs#machine`, `config_v2#machine`,
-        // …), and a host booting two providers of one service fails boot
+        // model catalog, the task titles kept as filed, the in-memory config
+        // store and the committed config bundled as text. A desktop backend
+        // provides each of those services from a machine half
+        // (`database#machine`, `jobs#machine`, `config_v2#machine`, …), and a
+        // host booting two providers of one service fails boot
         // (`assertHostServices`), so no app that runs on the desktop may ship
         // them. A composition that runs without the computer takes them back by
         // naming them.
@@ -192,6 +252,7 @@ export const compositionsConfig = defineConfig({
             "!conversations.model-provider.catalog.baseline.**",
             "!tasks.task-title.filed-titles.**",
             "!config_v2.browser-store.**",
+            "!config_v2.bundled-layer.**",
           ],
           selectedContributors: [] as string[],
           extends: [] as string[],
@@ -204,12 +265,14 @@ export const compositionsConfig = defineConfig({
         // Full = lean + the self-improvement PACK (first-class `extends`, replacing
         // the formerly-inlined ids). full \ lean is still exactly the pack's set —
         // now sourced through the reference rather than duplicated here.
+        // Both rows share AGENT_MANAGER_ENTRY_POINTS (above), so the two profiles
+        // differ ONLY by the pack.
         {
           id: "agent-manager",
           name: "agent-manager",
           category: "profile",
-          entryPoints: ["apps.agent-manager.**"],
-          selectedContributors: ["tasks.attempt-view", "ui.theme-toggle"],
+          entryPoints: [...AGENT_MANAGER_ENTRY_POINTS],
+          selectedContributors: ["ui.theme-toggle"],
           extends: ["self-improvement", "served-baseline"],
           excludes: [] as string[],
           serve: "off",
@@ -219,9 +282,51 @@ export const compositionsConfig = defineConfig({
           id: "agent-manager-lean",
           name: "agent-manager-lean",
           category: "profile",
-          entryPoints: ["apps.agent-manager.**"],
-          selectedContributors: ["tasks.attempt-view", "ui.theme-toggle"],
+          entryPoints: [...AGENT_MANAGER_ENTRY_POINTS],
+          selectedContributors: ["ui.theme-toggle"],
           extends: ["served-baseline"],
+          excludes: [] as string[],
+          serve: "off",
+          home: "agent-manager",
+        },
+
+        // ── Profile: the agent manager as its in-page demo serves it ─────────────
+        // What `/demo` renders (the Agent Manager on made-up data, inside
+        // `<DemoScope>`) and what its browser host's worker serves: the full
+        // agent manager MINUS the surfaces that mean nothing without the
+        // computer behind it. A profile — a variant of the one agent-manager
+        // app, like full vs. lean — not an app of its own: same home, same
+        // shell. Never served (`serve: "off"`): it is a browser host's scope,
+        // not a deployment.
+        //
+        // Every negative here is a whole surface whose subject is the user's
+        // real machine, so a demo has nothing true to show in it:
+        //
+        // - Push & Close (`push-and-exit`): pushes the agent's worktree to main
+        //   and closes the session;
+        // - the two automations whose whole job is launching real agents on the
+        //   user's tasks (report investigations, the sidequest autopilot);
+        // - Stats (`stats.**`, and `conversations.usage` that imports it): cost
+        //   and commit history read off this computer's transcripts and git;
+        // - the file explorer (`apps.file-explorer.**`, and the conversation's
+        //   Explorer tab that embeds it): browses a checkout on disk.
+        //
+        // The rule they also satisfy: a plugin in a browser host's scope whose
+        // config the worker cannot serve crashes the use-config guard the
+        // moment it reads it (`config-v2:host-registrations-paired`).
+        {
+          id: "agent-manager-demo",
+          name: "agent-manager-demo",
+          category: "profile",
+          entryPoints: [
+            "!conversations.conversation-view.push-and-exit.**",
+            "!tasks.reports-investigation.**",
+            "!tasks.sidequest-autopilot.**",
+            "!stats.**",
+            "!apps.file-explorer.**",
+          ],
+          selectedContributors: [] as string[],
+          extends: ["agent-manager"],
           excludes: [] as string[],
           serve: "off",
           home: "agent-manager",

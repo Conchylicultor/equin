@@ -22,6 +22,33 @@ agent-manager profile pulls in). The full bundle is never enforced at runtime
 yet — compositions remain a Studio inspection concept; releasing/runtime-gating
 is future work.
 
+## The agent-manager profiles — widened by pattern
+
+`agent-manager` and `agent-manager-lean` share ONE entry list,
+`AGENT_MANAGER_ENTRY_POINTS` (`core/config.ts`, documented in place): the app
+shell plus every umbrella whose whole subtree the agent manager renders
+(`conversations.**`, `tasks.**`, `fields.**`, `active-data.**`, `page.**`,
+`code-explorer.**`, `apps-core.**`, `shell.**`, `reorder.**`, the data view,
+file viewer, prompt editor and code previews, and the chrome's variant
+regions), with negatives for the adapters into another app (the song /
+event-source / prototype chips, the place and map blocks, the data view's map).
+A pattern, never a hand list of contributors: a renderer a future plugin adds
+under one of those umbrellas ships with the app with no edit here. The two
+profiles still differ only by the `self-improvement` pack (`config.test.ts`
+pins both facts).
+
+`agent-manager-demo` (`profile`, `serve: "off"`, home `agent-manager`) is the
+composition the Agent Manager demo's browser host serves
+(`apps/agent-manager/demo/bin/browser-host.composition.ts`): it `extends:
+["agent-manager"]` and only subtracts what means nothing without the computer
+— push-and-exit, the report-investigation and sidequest automations, `stats.**`
+and the file explorer. Its web plugins are the scope the demo page renders in
+(`web-sdk`'s `<PluginScope>`) and its portable server barrels the worker's
+graph, both derived by codegen (`browser-host-gen.ts`). A plugin in this scope
+whose config registrar is not portable crashes the use-config guard on render,
+so it is split or excluded here — a `host-registrations-paired` debt exemption
+is not an option for it.
+
 ## Manifests are a config_v2 config — no codegen
 
 Manifests live in a [`config_v2`](../../../config_v2/CLAUDE.md) config named

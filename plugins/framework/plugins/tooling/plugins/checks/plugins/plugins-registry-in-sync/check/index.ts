@@ -14,6 +14,7 @@ import {
   discoverBrowserHosts,
   formatGenerated,
   renderBrowserHost,
+  renderBrowserHostScope,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 
@@ -132,6 +133,19 @@ const check: Check = {
     for (const host of discoverBrowserHosts(repo)) {
       const actual = await repo.read(host.generated);
       const graph = await deriveBrowserHostGraph(ctx, host);
+      // Its page side (`core/browser-host.generated.ts`): the scope, from the
+      // same derivation.
+      const scope = await formatGenerated({
+        file: join(root, host.scopeGenerated),
+        content: renderBrowserHostScope(host, graph),
+      });
+      if ((await repo.read(host.scopeGenerated)) !== scope) {
+        return {
+          ok: false,
+          message: `${host.scopeGenerated} is missing or out of sync with the "${graph.composition}" composition's web plugins (${host.declaration})`,
+          hint: "Run `./singularity build` and commit the regenerated file.",
+        };
+      }
       const expected = await formatGenerated({
         file: join(root, host.generated),
         content: await renderBrowserHost(ctx, graph),

@@ -1594,6 +1594,18 @@ export interface ResourceRuntimeOptions {
    * through `setClientBuildIdentity`; central: omit (every verdict `unknown`).
    */
   serverBuildGraph?: () => string | null;
+  /**
+   * Whether this host's key set is OPEN or CLOSED, read at call time (like
+   * `serverBuildGraph`). Open (the default) = a host deployed under tabs that
+   * may run another bundle: an unknown key is the other face of skew
+   * (`unknown-key` + a verdict, never reported). Closed = a host that ships
+   * with its only client (a browser host, loaded by the same bundle that reads
+   * it): an unknown key cannot be skew, so it is a bug — refused as `unserved`
+   * (HTTP 404, no verdict) and reported, naming the key. server: closed by
+   * `bootBrowserHost` through server-core's `closeResourceKeySet`; the desktop
+   * server and central: open.
+   */
+  keySet?: () => "open" | "closed";
   /** Per-key owner metadata for the _debug endpoint. server: from Resource.Declare; central: omit. */
   debugOwners?: () => Array<{ key: string; pluginId?: string }>;
   /** Fired once per push to >=1 subscriber, with whether the push carried a content change.
@@ -2464,6 +2476,30 @@ export function createResourceRuntime(
    */
   function unknownKeyVerdict(clientBuild: string | undefined): ContractVerdict {
     return contractVerdict(clientBuild, opts.serverBuildGraph?.() ?? null);
+  }
+
+  /**
+   * Why a key no resource is registered under is refused, by the host's key
+   * set (`keySet`): open → `unknown-key` with its skew verdict, unreported;
+   * closed → `unserved`, reported — the page asked its own host for a key the
+   * host does not ship, a bug no reload fixes.
+   */
+  function refuseUnknownKey(
+    key: string,
+    clientBuild: string | undefined,
+  ):
+    | { reason: "unknown-key"; verdict: ContractVerdict }
+    | { reason: "unserved" } {
+    if ((opts.keySet?.() ?? "open") === "open") {
+      return { reason: "unknown-key", verdict: unknownKeyVerdict(clientBuild) };
+    }
+    reportLoaderError(
+      `unserved key ${key}`,
+      new Error(
+        `${key} is not served by this host: its key set is closed (it ships with its only client), so a read of a key it does not register is a bug, not skew`,
+      ),
+    );
+    return { reason: "unserved" };
   }
 
   /**
@@ -6417,8 +6453,7 @@ export function createResourceRuntime(
         ...req,
         key,
         params,
-        reason: "unknown-key",
-        verdict: unknownKeyVerdict(build),
+        ...refuseUnknownKey(key, build),
       });
       return;
     }
@@ -6792,8 +6827,7 @@ export function createResourceRuntime(
           tabId,
           key: e.key,
           params,
-          reason: "unknown-key",
-          verdict: unknownKeyVerdict(build),
+          ...refuseUnknownKey(e.key, build),
         });
         continue;
       }
@@ -7052,12 +7086,7 @@ export function createResourceRuntime(
     if (!key) return httpError(404, { reason: "unknown-key" });
     if (key === "_debug") return handleResourcesDebug();
     const entry = registry.get(key);
-    if (!entry) {
-      return httpError(404, {
-        reason: "unknown-key",
-        verdict: unknownKeyVerdict(build),
-      });
-    }
+    if (!entry) return httpError(404, refuseUnknownKey(key, build));
     // Everything past the registry lookup — the revalidate signature and its 304
     // included — runs inside `wrapHttp` (server: an `http` entry span), so a
     // conditional GET is measured even when it never reaches a loader. Wrapped

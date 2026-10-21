@@ -155,8 +155,8 @@ state rather than the previous window's numbers.
     - `debug/health-monitor.onHostSample`
     - `debug/health-monitor.onStackSamples`
     - `infra/endpoints.implement`
-    - `infra/host/duress.createShedBuffer`
     - `infra/host/duress/latch.isUnderDuress`
+    - `infra/host/duress/shed.createShedBuffer`
     - `infra/retention.defineRetention`
     - `network/live.serveValue`
   - DB schema: `plugins/debug/plugins/latency-ledger/server/internal/tables.ts`

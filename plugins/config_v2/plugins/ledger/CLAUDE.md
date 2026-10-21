@@ -9,6 +9,7 @@
   - Uses:
     - `config_v2.APP_SCOPE_DIR`
     - `config_v2.computeHash`
+    - `config_v2.CONFIG_HASH_RE`
     - `config_v2.ConfigDescriptor`
     - `config_v2.JsonValue`
   - Exports (types):

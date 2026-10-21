@@ -234,6 +234,21 @@ export function setClientBuildIdentity(fn: () => string | null): void {
   clientBuildIdentity = fn;
 }
 
+// Whether this process's resource key set is closed
+// (`ResourceRuntimeOptions.keySet`). Open by default: the desktop server and
+// central run under tabs that may hold another bundle, so an unknown key is
+// skew. A browser host ships with its only client, so `bootBrowserHost` closes
+// it — unconditionally, before the graph boots — and an unknown key there is
+// refused as `unserved`, reported. Not on the barrel: no host chooses it.
+let keySet: "open" | "closed" = "open";
+/** Close this process's key set. Once per process, before the graph boots. */
+export function closeResourceKeySet(): void {
+  if (keySet === "closed") {
+    throw new Error("[resources] the resource key set is already closed.");
+  }
+  keySet = "closed";
+}
+
 function errorReport(context: string, err: unknown): ServerErrorReport {
   const e = err instanceof Error ? err : new Error(String(err));
   return {
@@ -420,6 +435,7 @@ const runtime = createResourceRuntime({
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
   // Reads the boot-injected holder at call time (see `setClientBuildIdentity`).
   serverBuildGraph: () => clientBuildIdentity(),
+  keySet: () => keySet,
   // Fan each push outcome out to every registered observer (no-op detector et al).
   onPush: (key, info) => {
     for (const cb of pushObservers) cb(key, info);

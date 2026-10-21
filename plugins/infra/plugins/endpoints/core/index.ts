@@ -19,4 +19,5 @@ export {
   unmatchedApiResponse,
   isUnsupportedEndpointBody,
   isUnsupportedEndpointRefusal,
+  isUnsupportedEndpointResponse,
 } from "./unsupported";

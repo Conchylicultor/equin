@@ -1,15 +1,14 @@
 /**
  * `<DemoScope>` against the real live-state client (`NotificationsClient`
- * under its own `<TransportProvider>`): a contributed value and collection
- * render through `useLive`, beside another `Demo.Resource` contribution's value
- * and its later `notify()`; a backend's own route answers through
- * `useFetchEndpoint()`;
- * a known key nothing serves fails `loader-failed` and never reaches the
- * contract-mismatch store; unsupported POSTs throw `EndpointUnsupportedError`
- * with ONE toast and nothing on the error sink; a key served twice reaches the
- * error boundary; a page pipeline beside the scope reading the same tuple sees
- * its own backend only. (A scenario's browser host is a Web Worker — driven in
- * a real browser, not jsdom.)
+ * under its own `<TransportProvider>`), its scenario's host an in-realm
+ * "worker" (`channelHost` over `inRealmServer`, the same port protocol a real
+ * Web Worker speaks — jsdom cannot start one): a served value and collection
+ * render through `useLive`, and a `notify()` lands; a key the host does not
+ * serve fails `loader-failed` and never reaches the contract-mismatch store;
+ * unsupported POSTs throw `EndpointUnsupportedError` with ONE toast and
+ * nothing on the error sink; a POST the host serves toasts nothing; a host
+ * whose boot throws reaches the error boundary; a page pipeline beside the
+ * scope reading the same tuple sees its own backend only.
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -34,6 +33,12 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type { BrowserServer } from "@plugins/framework/plugins/browser-server/core";
+import {
+  channelHost,
+  inRealmServer,
+  type InRealmServerOptions,
+} from "@plugins/framework/plugins/browser-server/core/testing";
 import type { DemoScenario } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
 import {
   defineEndpoint,
@@ -47,7 +52,12 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import {
+  liveCollection,
+  liveValue,
+  serveCollectionOn,
+  serveValueOn,
+} from "@plugins/network/plugins/live/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   NotificationsProvider,
@@ -58,10 +68,6 @@ import {
   type Transport,
   type TransportSocket,
 } from "@plugins/primitives/plugins/networking/web";
-import {
-  Demo,
-  type DemoBackend,
-} from "@plugins/framework/plugins/browser-server/plugins/demo/web";
 import { DemoScope } from "../components/demo-scope";
 
 let seq = 0;
@@ -78,7 +84,7 @@ const tracks = liveCollection(key("tracks"), {
   all: { orderBy: [["rank", "asc"]], unbounded: { reason: "test fixture" } },
 });
 const note = liveValue(key("note"), { schema: z.object({ text: z.string() }) });
-// Known to the page, answered by nothing in the scope.
+// Declared, served by no host.
 const missing = liveValue(key("missing"), {
   schema: z.object({ n: z.number() }),
 });
@@ -98,73 +104,86 @@ const TRACKS = [
 ];
 const FIXED = { fixed: { reason: "test fixture" } } as const;
 
-/** A `Demo.Resource` whose answers depend on nothing in the scope's tree (a module-level, stable backend). */
-function demoResource(id: string, serve: DemoBackend["serve"]) {
-  const backend: DemoBackend = { serve };
-  const useBackend = (): DemoBackend => backend;
-  return Demo.Resource({ id, useBackend });
+/** The story: a greeting per person, the tracks, the echo route — and `more`. */
+function storyServer(more?: InRealmServerOptions["serve"]): BrowserServer {
+  return inRealmServer({
+    serve: (rt) => {
+      serveValueOn(
+        rt,
+        greeting,
+        {
+          source: "external",
+          changes: FIXED,
+          loader: ({ who }: { who: string }) => ({
+            text: `hello ${who} (demo)`,
+          }),
+        },
+        { sources: "external" },
+      );
+      serveCollectionOn(rt, tracks, {
+        source: "external",
+        changes: FIXED,
+        all: () => TRACKS,
+        rows: (ids) => TRACKS.filter((t) => ids.includes(t.id)),
+      });
+      more?.(rt);
+    },
+    routes: [
+      [
+        echo.route,
+        implement(echo, ({ params, body }) => ({
+          id: params.id,
+          doubled: body.n * 3,
+        })),
+      ],
+    ],
+  });
 }
 
-/** The story's own backend: a greeting per person and the tracks. */
-const story = demoResource("story", (s) => [
-  s.serveValue(greeting, {
-    source: "external",
-    changes: FIXED,
-    loader: ({ who }) => ({ text: `hello ${who} (demo)` }),
-  }),
-  s.serveCollection(tracks, {
-    source: "external",
-    changes: FIXED,
-    all: () => TRACKS,
-    rows: (ids) => TRACKS.filter((t) => ids.includes(t.id)),
-  }),
-]);
+/** The fixture plugins the scope's composition names. */
+const SCOPE_PLUGINS = ["test.demo-contributor"];
 
-type DemoServe = DemoBackend["serve"];
-
-const scenarioOf = (id = "test"): DemoScenario => ({
+const scenarioOf = (
+  boot: () => BrowserServer | Promise<BrowserServer> = storyServer,
+  id = "test",
+): DemoScenario => ({
   id,
   app: "test-app",
   route: "/",
+  host: { id, home: null, plugins: SCOPE_PLUGINS, start: channelHost(boot) },
 });
 
-/** The contributed `note` value, its text changeable and announced with `notify()`. */
-function noteResource() {
+/** A `note` value the host serves, its text changeable and announced with `notify()`. */
+function noteServer() {
   let text = "first note";
-  let served: { notify(): void } | null = null;
-  const serve: DemoServe = (s) => {
-    const n = s.serveValue(note, {
-      source: "external",
-      changes: "notified",
-      loader: () => ({ text }),
-    });
-    served = n;
-    return [n];
+  let notify: (() => void) | null = null;
+  const serve = (
+    rt: Parameters<NonNullable<InRealmServerOptions["serve"]>>[0],
+  ) => {
+    const served = serveValueOn(
+      rt,
+      note,
+      { source: "external", changes: "notified", loader: () => ({ text }) },
+      { sources: "external" },
+    );
+    notify = () => served.notify!();
   };
   return {
     serve,
     set(next: string) {
       text = next;
-      served!.notify();
+      notify!();
     },
   };
 }
 
-function plugins(contributions: LoadedPlugin["contributions"]): LoadedPlugin[] {
-  return [
-    {
-      id: "framework.browser-server.demo" as PluginId,
-      description: "demo scope fixture",
-      slots: Demo,
-      contributions: [],
-    } as unknown as LoadedPlugin,
-    {
-      id: "test.demo-contributor" as PluginId,
-      description: "contributor fixture",
-      contributions,
-    } as unknown as LoadedPlugin,
-  ];
-}
+const PLUGINS: LoadedPlugin[] = [
+  {
+    id: "test.demo-contributor" as PluginId,
+    description: "contributor fixture",
+    contributions: [],
+  } as unknown as LoadedPlugin,
+];
 
 class Boundary extends Component<
   { children: ReactNode },
@@ -212,15 +231,27 @@ async function renderAsync(ui: ReactElement) {
   return view!;
 }
 
+/** The scope's `fetchEndpoint`, once the host is ready. */
+async function scopedFetch(scenario: DemoScenario) {
+  let fetchIn: ReturnType<typeof useFetchEndpoint> | null = null;
+  await renderAsync(
+    <PluginProvider plugins={PLUGINS}>
+      <DemoScope scenario={scenario}>
+        <Probe read={() => useFetchEndpoint()} onRead={(f) => (fetchIn = f)} />
+      </DemoScope>
+    </PluginProvider>,
+  );
+  await waitFor(() => expect(fetchIn).not.toBeNull());
+  return fetchIn!;
+}
+
 describe("<DemoScope>", () => {
-  it("serves the contributions through the real client; a contribution notifies", async () => {
-    const contributed = noteResource();
+  it("serves the host's keys through the real client; a notify lands", async () => {
+    const noted = noteServer();
     const seen: Record<string, unknown> = {};
     await renderAsync(
-      <PluginProvider
-        plugins={plugins([story, demoResource("note", contributed.serve)])}
-      >
-        <DemoScope scenario={scenarioOf()}>
+      <PluginProvider plugins={PLUGINS}>
+        <DemoScope scenario={scenarioOf(() => storyServer(noted.serve))}>
           <Probe
             read={() => useLive(greeting, { who: "ada" })}
             onRead={(r) => (seen.greeting = textOf(r))}
@@ -244,22 +275,26 @@ describe("<DemoScope>", () => {
       expect(seen.tracks).toEqual(["t1", "t2"]);
       expect(seen.note).toBe("first note");
     });
-    act(() => contributed.set("second note"));
+    act(() => noted.set("second note"));
     await waitFor(() => expect(seen.note).toBe("second note"));
   });
 
   it(
-    "a known key nothing serves fails loader-failed; the contract-mismatch store stays empty",
+    "a key the host does not serve fails loader-failed; the contract-mismatch store stays empty",
     { timeout: 15_000 },
     async () => {
+      console.error = () => {};
       const seen: Record<string, unknown> = {};
       await renderAsync(
-        <PluginProvider plugins={plugins([])}>
+        <PluginProvider plugins={PLUGINS}>
           <DemoScope scenario={scenarioOf()}>
             <Probe
               read={() => useLive(missing)}
               onRead={(r) =>
-                (seen.missing = r.status === "error" ? r.error.kind : r.status)
+                (seen.missing =
+                  r.status === "error"
+                    ? `${r.error.kind}: ${r.error.message}`
+                    : r.status)
               }
             />
             <Probe
@@ -269,9 +304,13 @@ describe("<DemoScope>", () => {
           </DemoScope>
         </PluginProvider>,
       );
-      await waitFor(() => expect(seen.missing).toBe("loader-failed"), {
-        timeout: 5000,
-      });
+      await waitFor(
+        () =>
+          expect(seen.missing).toBe(
+            `loader-failed: ${missing.key} is not served by this host`,
+          ),
+        { timeout: 5000 },
+      );
       expect(seen.mismatches).toEqual([]);
     },
   );
@@ -279,20 +318,9 @@ describe("<DemoScope>", () => {
   it("unsupported POSTs throw EndpointUnsupportedError, toast once, report nothing", async () => {
     const reported: EndpointErrorInfo[] = [];
     endpointErrorSink.register((r) => reported.push(r));
-    let fetchIn: ReturnType<typeof useFetchEndpoint> | null = null;
-    await renderAsync(
-      <PluginProvider plugins={plugins([])}>
-        <DemoScope scenario={scenarioOf()}>
-          <Probe
-            read={() => useFetchEndpoint()}
-            onRead={(f) => (fetchIn = f)}
-          />
-        </DemoScope>
-      </PluginProvider>,
-    );
-    await waitFor(() => expect(fetchIn).not.toBeNull());
+    const fetchIn = await scopedFetch(scenarioOf());
     for (let i = 0; i < 2; i++) {
-      await expect(fetchIn!(notHere, {})).rejects.toBeInstanceOf(
+      await expect(fetchIn(notHere, {})).rejects.toBeInstanceOf(
         EndpointUnsupportedError,
       );
     }
@@ -305,106 +333,43 @@ describe("<DemoScope>", () => {
     expect(reported).toEqual([]);
   });
 
-  it("a key served by two contributions throws, naming both", async () => {
-    console.error = () => {};
-    const view = await renderAsync(
-      <PluginProvider
-        plugins={plugins([
-          story,
-          demoResource("greeter", (s) => [
-            s.serveValue(greeting, {
-              source: "external",
-              changes: "notified",
-              loader: () => ({ text: "again" }),
-            }),
-          ]),
-        ])}
-      >
-        <Boundary>
-          <DemoScope scenario={scenarioOf("twice")}>
-            <p>never</p>
-          </DemoScope>
-        </Boundary>
-      </PluginProvider>,
-    );
-    await waitFor(() =>
-      expect(view.getByTestId("boundary").textContent).toBe(
-        `demo scope "twice": "${greeting.key}" is served by both Demo.Resource "story" and Demo.Resource "greeter".`,
-      ),
-    );
-  });
-
-  it("a backend's own route is answered beside its serves", async () => {
-    let fetchIn: ReturnType<typeof useFetchEndpoint> | null = null;
-    const backend: DemoBackend = {
-      serve: () => [],
-      routes: [
-        [
-          echo.route,
-          implement(echo, ({ params, body }) => ({
-            id: params.id,
-            doubled: body.n * 3,
-          })),
-        ],
-      ],
-    };
-    await renderAsync(
-      <PluginProvider
-        plugins={plugins([
-          Demo.Resource({ id: "echoer", useBackend: () => backend }),
-        ])}
-      >
-        <DemoScope scenario={scenarioOf("backend-route")}>
-          <Probe
-            read={() => useFetchEndpoint()}
-            onRead={(f) => (fetchIn = f)}
-          />
-        </DemoScope>
-      </PluginProvider>,
-    );
-    await waitFor(() => expect(fetchIn).not.toBeNull());
-    expect(await fetchIn!(echo, { id: "x" }, { body: { n: 2 } })).toEqual({
+  it("a POST the host serves is answered and toasts nothing", async () => {
+    const fetchIn = await scopedFetch(scenarioOf());
+    expect(await fetchIn(echo, { id: "x" }, { body: { n: 2 } })).toEqual({
       id: "x",
       doubled: 6,
     });
+    expect(toasts).toEqual([]);
   });
 
-  it("a route answered by two backends throws, naming both", async () => {
+  it("a host whose boot throws reaches the error boundary", async () => {
     console.error = () => {};
-    const handler = implement(echo, ({ params }) => ({
-      id: params.id,
-      doubled: 0,
-    }));
-    const backend: DemoBackend = {
-      serve: () => [],
-      routes: [[echo.route, handler]],
-    };
     const view = await renderAsync(
-      <PluginProvider
-        plugins={plugins([
-          Demo.Resource({ id: "first", useBackend: () => backend }),
-          Demo.Resource({ id: "echoer", useBackend: () => backend }),
-        ])}
-      >
+      <PluginProvider plugins={PLUGINS}>
         <Boundary>
-          <DemoScope scenario={scenarioOf("route-twice")}>
+          <DemoScope
+            scenario={scenarioOf(() => {
+              throw new Error("migration 42 failed");
+            }, "failing")}
+          >
             <p>never</p>
           </DemoScope>
         </Boundary>
       </PluginProvider>,
     );
     await waitFor(() =>
-      expect(view.getByTestId("boundary").textContent).toBe(
-        `demo scope "route-twice": route "${echo.route}" is answered by both Demo.Resource "first" and Demo.Resource "echoer".`,
+      expect(view.getByTestId("boundary").textContent).toContain(
+        "migration 42 failed",
       ),
     );
+    expect(view.queryByText("never")).toBeNull();
   });
 
   it("a page pipeline beside the scope reading the same tuple sees only its own backend", async () => {
     const page = pageBackend();
     const seen: Record<string, unknown> = {};
     await renderAsync(
-      <PluginProvider plugins={plugins([story])}>
+      <PluginProvider plugins={PLUGINS}>
         <TransportProvider transport={page}>
           <NotificationsProvider>
             <Probe

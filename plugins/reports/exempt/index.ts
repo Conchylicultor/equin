@@ -15,4 +15,12 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "config-v2:host-registrations-paired",
+    paths: ["server/index.ts"],
+    kind: "debt",
+    task: "task-1792587903-22dhup",
+    reason:
+      "reports' server barrel (fan-out, database/admin, crash buffer) is not portable, so the demo worker cannot boot its ConfigV2.Register.",
+  },
 ] satisfies Exemptions;

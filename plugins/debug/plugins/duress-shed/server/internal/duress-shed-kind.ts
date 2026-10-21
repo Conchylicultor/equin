@@ -1,6 +1,6 @@
 import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
-import type { ShedSummary } from "@plugins/infra/plugins/host/plugins/duress/server";
+import type { ShedSummary } from "@plugins/infra/plugins/host/plugins/duress/plugins/shed/server";
 import { DuressShedPayloadSchema, type DuressShedPayload } from "../../core";
 
 // Compile-time drift guard: consumers file `data: { ...summary }` verbatim, so

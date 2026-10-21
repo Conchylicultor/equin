@@ -1505,6 +1505,10 @@
       "name": "@singularity/plugin-config_v2-browser-store",
       "version": "0.0.1",
     },
+    "plugins/config_v2/plugins/bundled-layer": {
+      "name": "@singularity/plugin-config_v2-bundled-layer",
+      "version": "0.0.1",
+    },
     "plugins/config_v2/plugins/config-link": {
       "name": "@singularity/plugin-config_v2-config-link",
     },
@@ -3778,6 +3782,10 @@
     },
     "plugins/infra/plugins/host/plugins/duress/plugins/latch": {
       "name": "@singularity/plugin-infra-host-duress-latch",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/host/plugins/duress/plugins/shed": {
+      "name": "@singularity/plugin-infra-host-duress-shed",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/host/plugins/host-admission": {
@@ -7664,6 +7672,8 @@
 
     "@singularity/plugin-config_v2-browser-store": ["@singularity/plugin-config_v2-browser-store@workspace:plugins/config_v2/plugins/browser-store"],
 
+    "@singularity/plugin-config_v2-bundled-layer": ["@singularity/plugin-config_v2-bundled-layer@workspace:plugins/config_v2/plugins/bundled-layer"],
+
     "@singularity/plugin-config_v2-config-link": ["@singularity/plugin-config_v2-config-link@workspace:plugins/config_v2/plugins/config-link"],
 
     "@singularity/plugin-config_v2-fields": ["@singularity/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
@@ -8753,6 +8763,8 @@
     "@singularity/plugin-infra-host-duress": ["@singularity/plugin-infra-host-duress@workspace:plugins/infra/plugins/host/plugins/duress"],
 
     "@singularity/plugin-infra-host-duress-latch": ["@singularity/plugin-infra-host-duress-latch@workspace:plugins/infra/plugins/host/plugins/duress/plugins/latch"],
+
+    "@singularity/plugin-infra-host-duress-shed": ["@singularity/plugin-infra-host-duress-shed@workspace:plugins/infra/plugins/host/plugins/duress/plugins/shed"],
 
     "@singularity/plugin-infra-host-fs": ["@singularity/plugin-infra-host-fs@workspace:plugins/infra/plugins/host-fs"],
 

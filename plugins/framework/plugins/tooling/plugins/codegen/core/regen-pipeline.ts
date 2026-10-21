@@ -81,6 +81,11 @@ export interface RegistryCodegenResult {
    * how (build re-runs `ensureDeps`).
    */
   renamedPackages: string[];
+  /**
+   * One line per browser host: its graph's size and what its composition
+   * leaves out (`generateBrowserHosts`), for the caller to log.
+   */
+  browserHosts: string[];
 }
 
 /**
@@ -123,10 +128,11 @@ export async function regenerateRegistryCodegen({
   await onStep("eagerTier", "eager-tier manifest", () =>
     generateEagerTier({ root, ctx }),
   );
-  await onStep("browserHosts", "browser host graphs", () =>
-    generateBrowserHosts(ctx),
-  );
-  return { renamedPackages };
+  let browserHosts: string[] = [];
+  await onStep("browserHosts", "browser host graphs", async () => {
+    browserHosts = await generateBrowserHosts(ctx);
+  });
+  return { renamedPackages, browserHosts };
 }
 
 /**

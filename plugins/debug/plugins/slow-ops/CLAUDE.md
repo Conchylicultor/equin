@@ -250,7 +250,7 @@ bar).
     - `infra/entities` ×3
     - `config_v2` ×2
     - `infra/host/contention` ×2
-    - `infra/host/duress` ×2
+    - `infra/host/duress/shed` ×2
     - `reports` ×2
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.defineChangeProducer`

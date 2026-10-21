@@ -167,7 +167,14 @@ export function useConversationSubagents(
   // pending, as the gate below reports.
   const params = conversationId === null ? null : { id: conversationId };
   const activity = useLive(subagentActivity, params);
-  const facts = useLive(conversationParentFacts, params);
+  // The parent-transcript facts are only ever joined onto activity rows, so a
+  // host that cannot list the sub-agents (no computer behind the page:
+  // `subagentActivity` is `needsMachine`) has nothing to join them to — the
+  // read is skipped rather than asked of a host that does not serve it.
+  const facts = useLive(
+    conversationParentFacts,
+    activity.status === "unavailable" ? null : params,
+  );
   const conversation = useConversationById(conversationId);
 
   // Gate FIRST, derive after — nothing below may run on a half-arrived read.
@@ -176,12 +183,12 @@ export function useConversationSubagents(
   // finished sub-agent as running until it landed: a surface asserting
   // something false about the user's work, which is the whole reason this arm
   // exists.
+  if (activity.status === "unavailable") {
+    return { kind: "unavailable", message: activity.message };
+  }
   const reads = combineResources({ activity, facts });
   if (reads.status === "error") {
     return { kind: "failed", error: reads.error, refetch: reads.refetch };
-  }
-  if (reads.status === "unavailable") {
-    return { kind: "unavailable", message: reads.message };
   }
   if (reads.status === "loading" || conversation === null) {
     return { kind: "pending" };

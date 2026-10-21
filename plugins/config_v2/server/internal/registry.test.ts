@@ -1,7 +1,7 @@
 /**
  * The portable registry over its two host services, with no file in sight: the
  * user layer is `createMemoryConfigStore()` (wrapped to record every `edit`),
- * the committed layer a fixture answering `hasScope` from a set.
+ * the committed layer a fixture answering `document` from a set.
  *
  * `initRegistry` reads its registrations from collected contributions, so the
  * suite fakes a collect of its own two descriptors (cleared after, so no later
@@ -80,8 +80,15 @@ const committedScopes = new Set<string>();
 const providers = [
   ConfigStore.provide(store),
   ConfigGitLayer.provide({
-    hasScope: (storePath, appId) =>
-      committedScopes.has(`${storePath}|${appId}`),
+    document: (storePath) => ({
+      base: {},
+      scopes: Object.fromEntries(
+        [...committedScopes]
+          .map((pair) => pair.split("|"))
+          .filter(([sp]) => sp === storePath)
+          .map(([, appId]) => [appId!, {}]),
+      ),
+    }),
   }),
 ];
 const run = <T>(fn: () => T | Promise<T>) => withHostServices(providers, fn);

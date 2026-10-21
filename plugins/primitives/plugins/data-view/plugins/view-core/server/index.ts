@@ -11,4 +11,5 @@ export default {
   // Headless engine — registers only the view-instance id kind (`view-…`).
   // Consumers register their own per-id `ConfigV2.Register` via `buildViewConfigRegistrations`.
   contributions: [IdKinds.Kind({ kind: viewIdKind })],
+  portable: true,
 } satisfies ServerPluginDefinition;

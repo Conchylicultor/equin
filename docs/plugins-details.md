@@ -532,6 +532,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `demoTaskId`
               - `demoTranscriptJsonl`
               - `demoWorktreePath`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/shadow --shadow`
         - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
           - Web:
             - Contributes: `Conversation.ActionBar` → `PagesTreeButton`
@@ -11485,7 +11487,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `build/runs-arm`
       - `debug/reports`
   - Exemptions:
-    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-terminal.ts` (debt)
+    - Exempts itself from:
+      - `boundaries/no-platform-api` — `server/internal/run-terminal.ts` (debt)
+      - `config-v2:host-registrations-paired` — `server/index.ts` (debt)
   - Shared:
     - Exports (types): `BuildRun`
     - Exports (values):
@@ -12136,9 +12140,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots: `ConfigV2.WebRegister`
     - Slot contributors: 87 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `ConfigV2.WebRegister` ×87
-    - Contributes: `Demo.Resource` "config-v2"
     - Uses:
-      - `framework/browser-server/demo.Demo`
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
       - `primitives/live-state.combineResources`
@@ -12221,6 +12223,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live.liveValue`
       - `primitives/rank.Rank`
     - Exports (types):
+      - `CommittedFiles`
       - `ConfigDescriptor`
       - `ConfigDocRef`
       - `ConfigDocumentFile`
@@ -12258,7 +12261,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `APP_SCOPE_DIR`
       - `appScopeId`
       - `codeConfigProxy`
+      - `committedDocument`
+      - `committedFilesFromMap`
       - `computeHash`
+      - `CONFIG_HASH_RE`
       - `configConflict`
       - `configConflictLocations`
       - `configFileOwner`
@@ -12295,7 +12301,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `orphanReasonSchema`
       - `orphanReportSchema`
       - `orphanRiskClassSchema`
+      - `parseConfigFile`
       - `propagate`
+      - `propagateGitLayerDocument`
       - `readonlyProxy`
       - `readTypedConfig`
       - `readTypedConfigWithLayer`
@@ -12311,14 +12319,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 113 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 114 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×32
       - `backup` ×13
       - `conversations` ×13
       - `debug` ×12
       - `ui` ×11
       - `auth` ×6
-      - `config_v2` ×4
+      - `config_v2` ×5
       - `tasks` ×4
       - `primitives` ×3
       - `infra` ×2
@@ -12334,20 +12342,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `review/code-review`
       - `shell/global-action-bar`
   - Test helpers:
-    - Web: `@plugins/config_v2/web/testing`
-      - `useConfigDemoBackend` — Config inside a demo scope (`Demo.Resource`): the server's tier cascade over two browser layers, so a demo surface reads exactly what a fresh user of the committed repo would — and can change it.
-      - Types: `GitLayer`, `LoadGitLayer`
     - Core: `@plugins/config_v2/core/testing`
       - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.
   - Plugins:
-    - **`browser-store`** (excluded) — The config host services of a host without the computer (a browser worker host): the user layer held in memory (ConfigStore) and a committed layer not yet delivered to this host (ConfigGitLayer, which throws naming the missing step). Never booted by the desktop, whose providers are config_v2#machine.
+    - **`browser-store`** (excluded) — The user config layer of a host without the computer (a browser worker host): held in memory (ConfigStore), each document propagated from the host's committed layer (ConfigGitLayer) on first touch, so it starts as a fresh user's. Never booted by the desktop, whose provider is config_v2#machine.
       - Server:
-        - Contributes:
-          - `host-service:config-v2.store` "config-v2.store"
-          - `host-service:config-v2.git-layer` "config-v2.git-layer"
+        - Contributes: `host-service:config-v2.store` "config-v2.store"
         - Uses:
           - `config_v2.ConfigGitLayer`
           - `config_v2.ConfigStore`
+    - **`bundled-layer`** (excluded) — The committed config layer bundled as text: provides the ConfigGitLayer host service from the repo's config/ inlined at build time, for a host without the repo on disk (a browser worker host). Never booted by the desktop, which reads the checkout's config/ (config_v2#machine).
+      - Server:
+        - Contributes: `host-service:config-v2.git-layer` "config-v2.git-layer"
+        - Uses: `config_v2.ConfigGitLayer`
     - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useConfigLink() links a descriptor to its config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
       - Web:
         - Uses:
@@ -12446,6 +12453,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `config_v2.APP_SCOPE_DIR`
           - `config_v2.computeHash`
+          - `config_v2.CONFIG_HASH_RE`
           - `config_v2.ConfigDescriptor`
           - `config_v2.JsonValue`
         - Exports (types):
@@ -13251,7 +13259,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/annotations/agent-access`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/hook-entry.ts` (debt)
-    - **`conversation-category`** — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. The conversation-category assignments, portable half: the table, the lookup-only conversation-categories collection over it, the cross-plugin per-category item read, and clearing one assignment. The config, the Haiku classifier and setting an item are the machine/ half's.
+    - **`conversation-category`** — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. The conversation-category assignments, portable half: the categories config, the configured avatars' saved-icon source, the table, the lookup-only conversation-categories collection over it, the cross-plugin per-category item read, and clearing one assignment. The Haiku classifier and setting an item are the machine/ half's.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "config"
@@ -13281,16 +13289,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useCategoryAvatars`
       - Server:
         - Contributes:
-          - `resource.declare` "conversation-categories:rows"
           - `ConfigV2.Register` "config"
+          - `resource.declare` "conversation-categories:rows"
           - `trigger` "conversation-category.classify"
         - Uses:
+          - `config_v2.ConfigV2`
+          - `config_v2.getConfig`
+          - `config_v2.watchConfig`
           - `database.db`
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
           - `network/live.serveCollection`
           - `tasks/tasks-core._conversations`
+          - `ui/icons/saved-sources.defineSavedIconSource`
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
         - Exports (types): `CategoriesConfigValue`
         - Exports (values):
@@ -14920,7 +14932,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/icons.Icon`
                   - Cross-plugin:
                     - Uses tokens: `ui/tokens/shape --spacing`
-            - **`background-shells`** — The background-shell surfaces: every background Bash shell of a conversation and its state (useConversationShells, folded from the transcript the view already holds), its live output tail (useShellOutput), the one state chip every surface shows, and the read-only output pane that streams it. Serves the live tail of one background shell's output file: resolves the file from the conversation's own transcript (never from the browser), checks its shape, reads its last 64 KB per change, and watches it with a per-write (kqueue) file watcher while subscribed.
+            - **`background-shells`** — The background-shell surfaces: every background Bash shell of a conversation and its state (useConversationShells, folded from the transcript the view already holds), its live output tail (useShellOutput), the one state chip every surface shows, and the read-only output pane that streams it. Serves a conversation's background shells as its whole transcript records them (launch, command, output file, end), folded on every host from the transcript source; the live tail of a shell's output file is the machine half's.
               - Web:
                 - Slots: `shellOutputPane.Actions`
                 - Slot contributors: `shellOutputPane.Actions` ← `primitives.pane`
@@ -14962,17 +14974,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `resource.declare` "background-shell-output"
                   - `resource.declare` "background-shells.facts"
-                - Uses:
-                  - `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
-                  - `conversations/transcript-source.transcriptChainReads`
-                  - `conversations/transcript-watcher.readJsonlEventsFromChain`
-                  - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
-                  - `conversations/transcript-watcher.transcriptChainSignature`
-                  - `infra/file-watcher.defineFileWatcher`
-                  - `infra/git/git-read-cache.createSignedMemo`
-                  - `network/live.serveValue`
-                - Register: `defineFileWatcher('background-shells.output')`
+                - Uses: `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
                 - Resources: `background-shell-output` (push, notified)
+              - Machine:
+                - Uses: `network/live.serveValue`
+                - Register: `defineFileWatcher('background-shells.output')`
               - Core:
                 - Uses:
                   - `conversations.hasLiveProcess`
@@ -15019,8 +15025,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
                   - `conversations/conversation-view/running-agents`
-              - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/output-path.ts`, `server/internal/output-resource.ts`, `server/internal/tail-read.ts` (debt)
             - **`code-listing`** — Renders `cat -n` tool output (`CatNListing`) as a syntax-highlighted, line-numbered listing: parses the gutter off and hands the code to syntax-highlight's `CodeListing`.
               - Web:
                 - Uses: `primitives/syntax-highlight.CodeListing`
@@ -16944,7 +16948,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --chip`
               - `ui/tokens/color-palette --subtle-foreground`
               - `ui/tokens/shape --spacing`
-        - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. Serves each conversation's latest turn summary (a one-line summary, caveats list, and actions list) rendered above the prompt input. The Haiku job that writes it after every assistant turn, and its config, live in the machine half.
+        - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. Serves each conversation's latest turn summary (a one-line summary, caveats list, and actions list) rendered above the prompt input, and registers the turn-summary config. The Haiku job that writes it after every assistant turn lives in the machine half.
           - Web:
             - Contributes:
               - `Conversation.AbovePromptInput` → `TurnSummaryCard`
@@ -16965,10 +16969,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
           - Server:
             - Contributes:
-              - `resource.declare` "turn-summaries:rows"
               - `ConfigV2.Register` "config"
+              - `resource.declare` "turn-summaries:rows"
               - `trigger` "turn-summary.generate"
             - Uses:
+              - `config_v2.ConfigV2`
               - `infra/entities.defaultNow`
               - `infra/entity-extensions.defineExtension`
               - `network/live.serveCollection`
@@ -17309,7 +17314,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `tasks/task-effort`
-    - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation, portable half: the viewed endpoint that stamps lastViewedAt (resetting the idle timer).
+    - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation, portable half: the global hibernation config, and the viewed endpoint that stamps lastViewedAt (resetting the idle timer).
       - Web:
         - Contributes: `ConfigV2.WebRegister` "conversation-hibernation"
         - Uses:
@@ -17320,6 +17325,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `ConfigV2.Register` "conversation-hibernation"
         - Uses:
+          - `config_v2.ConfigV2`
           - `infra/endpoints.implement`
           - `tasks/tasks-core.touchConversationViewed`
         - Routes: `POST /api/conversations/:id/viewed`
@@ -17331,7 +17337,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/agent-thread`
           - `conversations/conversation-view`
-    - **`model-provider`** — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's version as a hint, pinned versions the user turned on), and the corruption reporter for malformed stored models.
+    - **`model-provider`** — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's version as a hint, pinned versions the user turned on), and the corruption reporter for malformed stored models. Model ids, families and choices: the id grammar every concrete version follows (flag, label and family derive from the id alone), the catalog shape and its pure readers (resolveModel, choiceHint, selectableChoices), and the model-provider config.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "config"
@@ -17367,6 +17373,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useVisibleModels`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
+        - Uses: `config_v2.ConfigV2`
       - Core:
         - Uses:
           - `infra/endpoints.HttpError`
@@ -18086,7 +18093,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/prototypes/checkpoints`
           - `backup/sources/transcripts`
           - `conversations`
-          - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/subagents`
           - `conversations/transcript-api`
           - `conversations/transcript-retention`
@@ -19793,8 +19799,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/health-monitor.onHostSample`
           - `debug/health-monitor.onStackSamples`
           - `infra/endpoints.implement`
-          - `infra/host/duress.createShedBuffer`
           - `infra/host/duress/latch.isUnderDuress`
+          - `infra/host/duress/shed.createShedBuffer`
           - `infra/retention.defineRetention`
           - `network/live.serveValue`
         - DB schema: `plugins/debug/plugins/latency-ledger/server/internal/tables.ts`
@@ -21297,7 +21303,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities` ×3
           - `config_v2` ×2
           - `infra/host/contention` ×2
-          - `infra/host/duress` ×2
+          - `infra/host/duress/shed` ×2
           - `reports` ×2
           - `database/admin.ExcludeFromFork`
           - `database/change-feed.defineChangeProducer`
@@ -21756,8 +21762,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/entities.defaultNow`
               - `infra/entities.defaultRandom`
               - `infra/entities.defineEntity`
-              - `infra/host/duress.createShedBuffer`
-              - `infra/host/duress.ShedSummary`
+              - `infra/host/duress/shed.createShedBuffer`
+              - `infra/host/duress/shed.ShedSummary`
               - `infra/retention.defineRetention`
               - `network/live.serveCollection`
               - `reports.recordReport`
@@ -23794,72 +23800,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
-    - **`browser-server`** — A server that runs in the page — a third host of the unified live API (core: createBrowserServer serves liveValue / liveCollection declarations on a real resource runtime through serveValueOn / serveCollectionOn, routes requests through the shared http-router, and fails every other known resource key as loader-failed). Web: browserServerTransport(server), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket.
+    - **`browser-server`** — A server that runs in the page's realm or across a worker's port — a third host of the unified live API (core: the BrowserServer interface; runtimeBrowserServer over a resource runtime booted in this realm; serveOverPort / portBrowserServer carrying one across a MessageChannel or a Web Worker). Web: browserServerTransport(server), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket.
       - Web:
         - Uses:
           - `primitives/networking.publishWsStatus`
           - `primitives/networking.Transport`
           - `primitives/networking.TransportSocket`
         - Exports (values): `browserServerTransport`
+      - Cross-plugin:
+        - Imported by: `framework/browser-server/demo/scope`
       - Core:
-        - Uses:
-          - `framework/http-router.createRequestHandler`
-          - `framework/http-router.RouteHandler`
-          - `framework/resource-runtime.createResourceRuntime`
-          - `framework/resource-runtime.KeyedResourceContract`
-          - `infra/endpoints.isUnsupportedEndpointRefusal`
-          - `infra/endpoints.unmatchedApiResponse`
-          - `network/live.bindExternalServe`
-          - `network/live.LiveExternalServe`
-          - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
-          - `primitives/live-state.allResourceDescriptors`
-          - `primitives/live-state.onResourceDescriptorRegistered`
-          - `primitives/live-state.ResourceDescriptor`
         - Exports (types):
-          - `BrowserServe`
-          - `BrowserServed`
           - `BrowserServer`
-          - `BrowserServerOptions`
           - `BrowserServerPeer`
           - `BrowserServerSocket`
-          - `ComposedServer`
           - `HostBoot`
           - `HostBooted`
           - `PortEnd`
           - `PortServer`
         - Exports (values):
-          - `composeBrowserServers`
-          - `createBrowserServer`
           - `portBrowserServer`
           - `PortHostBootError`
           - `runtimeBrowserServer`
           - `serveOverPort`
-      - Cross-plugin:
-        - Imported by: `framework/browser-server/demo/scope`
+      - Test helpers:
+        - Core: `@plugins/framework/plugins/browser-server/core/testing`
+          - `channelHost` — A host's `start`, as a scenario's `host.start` takes it, whose "worker" is one end of an in-realm `MessageChannel`: the other end runs `serveOverPort` over the server `boot` returns — or, when `boot` throws, reports the failure (`PortHostBootError` on the page side), as a real worker whose graph fails to boot does.
+          - `inRealmServer` — A browser server over a resource runtime in this realm, wired as a browser host is (`bootBrowserHost` + `runtimeBrowserServer`): the served declarations, the given routes and `/api/resources/:key` through the shared router, any other `/api` request the unsupported refusal (`unmatchedApiResponse`).
+          - Types: `InRealmServerOptions`
       - Plugins:
-        - **`demo`** — Demo scenarios (core) and the slot a plugin answers its own keys in every demo scope through (web): Demo.Resource (a useBackend hook returning a plugin's per-scope backend: a browser server serve function plus endpoint routes sharing its state). A leaf: the scope that reads them lives in demo/scope, so a low plugin (config_v2) can contribute without depending on the scope's UI.
-          - Web:
-            - Slots: `Demo.Resource`
-            - Slot contributors: `Demo.Resource` ← `config_v2`
-            - Exports (types):
-              - `DemoBackend`
-              - `DemoRoute`
-            - Exports (values): `Demo`
-          - Cross-plugin:
-            - Imported by:
-              - `config_v2`
-              - `framework/browser-server/demo/scope`
+        - **`demo`** — Demo scenarios for a browser server (core only): DemoScenario — the app, the route, and the browser host (DemoHost: the composition scope the page renders the demo in, and the worker whose real server code serves the story).
           - Core:
-            - Exports (types): `DemoScenario`
-            - Exports (values): `DemoMissingError`
+            - Exports (types):
+              - `DemoHost`
+              - `DemoScenario`
           - Plugins:
-            - **`scope`** — <DemoScope scenario>: renders its subtree against a browser server of its own: the scenario's browser host (real server code in a worker, on the scenario's seed), every Demo.Resource contribution's serves and routes (a plugin answering its own live keys, e.g. config from code defaults). Any other live key fails loader-failed; any other /api request is refused as unsupported with one deduped 'Not available in the demo' toast; a host that fails to boot, or a key served twice, throws to the error boundary.
+            - **`scope`** — <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. A key the host does not serve fails loader-failed naming it; an /api request it refuses as unsupported shows one deduped 'Not available in the demo' toast; a host that fails to boot throws to the error boundary.
               - Web:
                 - Uses:
                   - `framework/browser-server.browserServerTransport`
-                  - `framework/browser-server/demo.Demo`
-                  - `framework/browser-server/demo.DemoBackend`
-                  - `framework/browser-server/demo.DemoRoute`
                   - `primitives/live-state.NotificationsProvider`
                   - `primitives/loading.Loading`
                   - `primitives/log-channels.clientLog`
@@ -23868,9 +23847,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `DemoScope`
               - Cross-plugin:
                 - Imported by: `apps/demo/shell`
-              - Test helpers:
-                - Web: `@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web/testing`
-                  - `DemoScope` — Renders `children` against a browser server of its own: the scenario's host (real server code in a worker, on the scenario's seed), and every `Demo.Resource` contribution's backend (its serves and its routes — today config_v2's alone).
     - **`central-core`**
       - Core:
         - Uses:
@@ -24202,9 +24178,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `Hook`
     - **`http-router`** — The one HTTP request router every host mounts: createRequestHandler turns "METHOD /path/:param" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in registration order, a default cache-control: no-store, and a logged generic 500 on a throw. A duplicate route key throws at construction.
       - Cross-plugin:
-        - Imported by:
-          - `framework/browser-server`
-          - `framework/server-core`
+        - Imported by: `framework/server-core`
       - Core:
         - Exports (types):
           - `RequestHandlerOptions`
@@ -24342,7 +24316,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tableLayoutRequirements`
       - Cross-plugin:
         - Imported by:
-          - `framework/browser-server`
           - `framework/central-core`
           - `framework/server-core`
       - Exemptions:
@@ -24658,7 +24631,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations` (3 debt)
               - `conversations/compaction-context` (1 debt)
               - `conversations/conversation-view/code` (2 debt)
-              - `conversations/conversation-view/jsonl-viewer/background-shells` (3 debt)
               - `conversations/conversation-view/jsonl-viewer/subagents` (1 debt)
               - `conversations/conversation-view/rewind` (1 debt)
               - `conversations/summary` (1 debt)
@@ -24703,7 +24675,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (11 debt)
               - `framework/tooling/checks/type-check` (14 debt)
-              - `framework/tooling/codegen` (29 debt)
+              - `framework/tooling/codegen` (28 debt)
               - `framework/tooling/format` (5 debt)
               - `framework/tooling/guards` (10 debt)
               - `framework/tooling/import-closure` (1 debt)
@@ -24974,8 +24946,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 97 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
-              - `config_v2` ×14
+            - Uses: 96 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+              - `config_v2` ×15
               - `framework/plugin-id` ×14
               - `plugin-meta/parse-utils` ×13
               - `plugin-meta/closure` ×7
@@ -24985,7 +24957,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/resource-vocabulary` ×4
               - `plugin-meta/plugin-tree` ×4
               - `framework/slot-declaration` ×3
-              - `framework/tooling/web-artifacts` ×3
               - `config_v2/ledger` ×2
               - `framework/tooling/format` ×2
               - `framework/tooling` ×2
@@ -24994,6 +24965,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/import-closure.importClosure`
               - `framework/tooling/lint.loadLintContributions`
+              - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
               - `packages/semaphore.createSemaphore`
               - `plugin-meta/facets/contributions.contributionsFacetDef`
               - `plugin-meta/facets/exemptions.exemptionsFacetDef`
@@ -25034,7 +25006,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `buildRegistryGenContext`
               - `collectAllPlugins`
               - `collectBareSpecifiers`
-              - `collectConfigGitLayer`
               - `collectDataViews`
               - `collectedDirNamedCompositionRegistryPath`
               - `collectedDirRegistryPath`
@@ -25068,7 +25039,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `generateBarrelStubs`
               - `generateBrowserHosts`
               - `generateCompositionRegistry`
-              - `generateConfigGitLayer`
               - `generateConfigOrigins`
               - `generateCustomUtilities`
               - `generateDataViews`
@@ -25109,10 +25079,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `regenerateRegistryCodegen`
               - `renderBarrelStubs`
               - `renderBrowserHost`
+              - `renderBrowserHostScope`
               - `renderCollectedDirRegistry`
               - `renderCompactDoc`
               - `renderCompanionManifest`
-              - `renderConfigGitLayer`
               - `renderConfigOriginContent`
               - `renderCustomUtilities`
               - `renderDataViewsManifest`
@@ -25158,7 +25128,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --pad-row-y`
               - `ui/tokens/shadow --shadow`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `core/app-css-utilities.ts`, `core/authored-override-seed.ts`, `core/barrel-free-tree.ts`, `core/barrel-stubs-gen.ts`, `core/companion-manifest-gen.ts`, `core/config-git-layer-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/enriched-tree.ts`, `core/exempt-rule-ids-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/reorderable-slots-gen.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/theme-declarations-gen.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `core/app-css-utilities.ts`, `core/authored-override-seed.ts`, `core/barrel-free-tree.ts`, `core/barrel-stubs-gen.ts`, `core/companion-manifest-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/enriched-tree.ts`, `core/exempt-rule-ids-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/reorderable-slots-gen.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/theme-declarations-gen.ts`, `core/token-group-vars-gen.ts`, `core/write-generated.ts` (debt)
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
             - Imported by:
@@ -25591,10 +25561,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BROWSER_UNREACHABLE_DYNAMIC_KINDS`
               - `BUILDER_VERSION`
               - `buildImportMap`
-              - `COMPOSITION_CONFIG_LAYER_SPECIFIER`
-              - `COMPOSITION_MODULES_REL`
               - `COMPOSITION_SPECIFIERS`
-              - `compositionConfigLayerFileName`
               - `compositionFleetSource`
               - `computeIdentityHash`
               - `computeInputsHash`
@@ -25702,6 +25669,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PluginRegistry`
           - `RootContribution`
           - `RootSlot`
+          - `ScopedComposition`
           - `SealContributions`
           - `SealedComponent`
           - `SealedMeta`
@@ -25726,6 +25694,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `partitionWebEntries`
           - `pluginLoadReportSink`
           - `PluginProvider`
+          - `PluginScope`
           - `SLOT_READ_TIMING_PREFIX`
           - `slots`
           - `subscribeDeferredLoadState`
@@ -26901,12 +26870,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isCodec`
           - `isUnsupportedEndpointBody`
           - `isUnsupportedEndpointRefusal`
+          - `isUnsupportedEndpointResponse`
           - `multipart`
           - `unavailableMessage`
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 198 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 197 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×54
           - `conversations` ×29
           - `debug` ×17
@@ -26927,7 +26897,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-usage`
           - `backup`
           - `database/fork`
-          - `framework/browser-server`
           - `plugin-meta/plugin-health`
           - `release`
           - `screenshot`
@@ -27347,12 +27316,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `statHistory`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, reconcile, mainOnly) whose start({dirs, label, onChange, onReconcile}) opens instances over one @parcel/watcher engine (debounce + ceiling flush, reconcile timer, kqueue sizing). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: one native watch per folder tree, refcounted, a dir under a watched root riding its watch, with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children, fs.watch), never a recursive one.
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 23 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `debug` ×7
           - `infra` ×7
           - `apps` ×2
-          - `conversations` ×2
           - `build`
+          - `conversations/transcript-watcher`
           - `framework/cli/await`
           - `integrations/google-maps`
           - `plugin-meta/plugin-tree`
@@ -27442,7 +27411,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/deployment`
               - `conversations/conversation-view/code`
               - `conversations/conversation-view/jsonl-viewer`
-              - `conversations/conversation-view/jsonl-viewer/background-shells`
               - `conversations/conversation-view/jsonl-viewer/subagents`
               - `plugin-meta/plugin-tree`
               - `release`
@@ -27586,7 +27554,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `ContentionSnapshotSchema`
               - `ContentionTopDatabaseSchema`
-        - **`duress`** — Duress web presence: registers the shed-engine config (enabled, persist-first-N, buffer caps, flush delay) for Settings → Config. Host-global duress latch (a mtime-leased latch file the cluster sentinel sets while the box is in trouble; backends gate observability writes on the cheap synchronous isUnderDuress()) plus the shed engine: createShedBuffer routes durable observability writes through per-episode first-N persistence, a bounded in-memory buffer, and a flush-on-clear replay.
+        - **`duress`** — Duress web presence: registers the shed-engine config (enabled, persist-first-N, buffer caps, flush delay) for Settings → Config. Host-global duress: registers the shed engine's config (enabled, persist-first-N, buffer caps, flush delay). The latch file (a mtime-leased latch the cluster sentinel sets while the box is in trouble, read via the cheap synchronous isUnderDuress()) is the latch sub-plugin, the shed engine (per-episode first-N persistence, a bounded buffer, flush-on-clear replay) the shed sub-plugin.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "duress"
             - Uses: `config_v2.ConfigV2`
@@ -27595,15 +27563,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
-              - `infra/host/duress/latch.duressEpisode`
-              - `infra/host/duress/latch.isUnderDuress`
-              - `primitives/log-channels.defineLogSink`
-            - Exports (types):
-              - `ShedBuffer`
-              - `ShedBufferOptions`
-              - `ShedCascadeStats`
-              - `ShedSummary`
-            - Exports (values): `createShedBuffer`
+            - Exports (values): `readDuressConfig`
           - Core:
             - Uses:
               - `config_v2.defineConfig`
@@ -27611,18 +27571,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/int/config.intField`
             - Exports (values): `duressConfig`
           - Cross-plugin:
-            - Imported by:
-              - `debug/latency-ledger`
-              - `debug/slow-ops`
-              - `debug/trace/engine`
-              - `reports`
+            - Imported by: `infra/host/duress/shed`
           - Plugins:
             - **`latch`** — The host-global duress latch file (mtime-leased, set/refresh/clear by the cluster sentinel, read via the cheap synchronous isUnderDuress()). A leaf on purpose: module-eval depends only on node:fs + infra/paths — no config, no DB, no worktree identity — so env-independent processes (the CLI's build admission valve) can import it safely.
               - Cross-plugin:
                 - Imported by:
                   - `debug/latency-ledger`
                   - `debug/sentinel`
-                  - `infra/host/duress`
+                  - `infra/host/duress/shed`
               - Exemptions:
                 - Exempts itself from: `boundaries/no-platform-api` — `server/internal/latch.ts` (debt)
               - Server:
@@ -27643,6 +27599,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Server: `@plugins/infra/plugins/host/plugins/duress/plugins/latch/server/testing`
                   - `_setClockForTests` — Override the clock (memo TTL + freshness math).
                   - `_setLatchDirForTests` — Point the latch at a temp dir.
+            - **`shed`** — The duress shed engine: createShedBuffer routes an observability choke point's durable writes through per-episode first-N persistence, a bounded in-memory buffer and a flush-on-clear replay, gated on the duress latch and tuned live by the duress config.
+              - Server:
+                - Uses:
+                  - `infra/host/duress.readDuressConfig`
+                  - `infra/host/duress/latch.duressEpisode`
+                  - `infra/host/duress/latch.isUnderDuress`
+                  - `primitives/log-channels.defineLogSink`
+                - Exports (types):
+                  - `ShedBuffer`
+                  - `ShedBufferOptions`
+                  - `ShedCascadeStats`
+                  - `ShedSummary`
+                - Exports (values): `createShedBuffer`
+              - Cross-plugin:
+                - Imported by:
+                  - `debug/latency-ledger`
+                  - `debug/slow-ops`
+                  - `debug/trace/engine`
+                  - `reports`
         - **`host-admission`** — Host-admission registry: one place a host-wide concurrency pool comes into existence, wrapping createHostSemaphore with a summed CPU/RAM ceiling and true host occupancy.
           - Server:
             - Uses:
@@ -30490,7 +30465,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveDecodedQuery`
           - `LiveExposedColumns`
           - `LiveExposes`
-          - `LiveExternalServe`
           - `LiveField`
           - `LiveFieldIds`
           - `LiveFields`
@@ -30578,7 +30552,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ServeValueOnOptions`
           - `WithContributedColumns`
         - Exports (values):
-          - `bindExternalServe`
           - `clientFields`
           - `exposedColumns`
           - `isPointId`
@@ -30595,7 +30568,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 263 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 262 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×48
           - `debug` ×27
@@ -30619,7 +30592,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup/runs-arm`
           - `database/query-deadline`
           - `fields/secret/config`
-          - `framework/browser-server`
           - `reports`
           - `runs`
           - `shell/notifications`
@@ -30892,7 +30864,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceRefusal`
       - Cross-plugin:
         - Imported by:
-          - `framework/browser-server`
           - `framework/resource-runtime`
           - `framework/server-core`
           - `network/live`
@@ -39622,7 +39593,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 256 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 255 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×69
           - `conversations` ×48
           - `debug` ×24
@@ -39635,10 +39606,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×5
           - `auth` ×4
           - `build` ×4
-          - `framework` ×3
           - `integrations` ×3
           - `review` ×3
           - `config_v2` ×2
+          - `framework` ×2
           - `reports` ×2
           - `code-explorer/commit-detail`
           - `fields/secret/config`
@@ -39669,9 +39640,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WindowResourceDescriptor`
           - `WindowSelector`
         - Exports (values):
-          - `allResourceDescriptors`
           - `compareTxWatermark`
-          - `onResourceDescriptorRegistered`
           - `registerResourceDescriptor`
           - `resolvableSchema`
           - `resolved`
@@ -43092,9 +43061,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes: 237 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
       - `ConfigV2.Register` ×237
     - Uses: `config_v2.ConfigV2`
-    - Exports (values):
-      - `reorderableSlots`
-      - `reorderDirectiveDescriptor`
+    - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
     - Uses tokens: `ui/tokens/density --space-xs`
     - Imported by:
@@ -43113,6 +43080,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Test helpers:
     - Web: `@plugins/reorder/web/testing`
       - `ReorderItemClaim` — Stands in for the list middleware's per-`renderItem` claim, so a test can render `ReorderItemMiddleware` as an item of a hand-built area.
+    - Server: `@plugins/reorder/server/testing`
+      - `reorderableSlots`
   - Plugins:
     - **`area`** — What a reorder area draws, shared by applying a slot layout (reorder) and editing one (reorder/editor, reorder/edit-mode): the area context, the entry types, and ReorderItemBox — an item box at rest display: contents, which wears the item chrome an editor publishes into it. A leaf library both sides import, imports no drag code.
       - Web:
@@ -43384,8 +43353,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/endpoints.implement`
       - `infra/entities.defaultNow`
       - `infra/entities.defineEntity`
-      - `infra/host/duress.createShedBuffer`
-      - `infra/host/duress.ShedSummary`
+      - `infra/host/duress/shed.createShedBuffer`
+      - `infra/host/duress/shed.ShedSummary`
       - `infra/retention.defineRetention`
       - `infra/warmup.defineWarmup`
       - `network/live.serveCollection`
@@ -43477,6 +43446,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exempts itself from:
       - `sink-safety/no-adhoc-file-sink` — `server/internal/buffer.ts` (sanctioned)
       - `boundaries/no-platform-api` — `server/internal/buffer.ts` (debt)
+      - `config-v2:host-registrations-paired` — `server/index.ts` (debt)
   - Plugins:
     - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside another bar, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, nested-bar = a measuring bar was written inside another bar's occupant so both claim the same row's slack, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading, empty-rung = a widget declared a smaller form and rendered nothing as it), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode + the offending occupant's id, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
       - Web:
@@ -47408,6 +47378,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `conversations/agents`
+              - `conversations/conversation-category`
               - `conversations/conversation-preprompt`
               - `conversations/preprompts`
               - `page/callout`
@@ -48659,8 +48630,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 65 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
-              - `apps` ×27
+            - Tokens used by: 66 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+              - `apps` ×28
               - `primitives` ×16
               - `framework` ×5
               - `ui` ×4

@@ -49,6 +49,9 @@ export type ShellOutput = z.infer<typeof ShellOutputSchema>;
 export const shellOutput = liveValue("background-shell-output", {
   schema: ShellOutputSchema,
   params: ["id", "shellId"],
+  // The output file is on this computer's disk, watched per write: only the
+  // desktop app's machine half serves it.
+  needsMachine: { feature: "Reading a background shell's output" },
 });
 
 const ShellStateSchema = z.discriminatedUnion("kind", [

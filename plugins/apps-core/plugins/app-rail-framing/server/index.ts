@@ -4,4 +4,5 @@ import { appRailFraming } from "../core";
 
 export default {
   contributions: [variantRegionServerContribution(appRailFraming)],
+  portable: true,
 } satisfies ServerPluginDefinition;

@@ -9,7 +9,6 @@ export default [
       "core/barrel-free-tree.ts",
       "core/barrel-stubs-gen.ts",
       "core/companion-manifest-gen.ts",
-      "core/config-git-layer-gen.ts",
       "core/config-origin-gen.ts",
       "core/custom-utilities-gen.ts",
       "core/data-views-gen.ts",

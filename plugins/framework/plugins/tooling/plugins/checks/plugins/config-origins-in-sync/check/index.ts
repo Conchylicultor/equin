@@ -5,7 +5,11 @@ import {
   loadConfigDescriptorsByOriginPath,
   formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { computeHash, APP_SCOPE_DIR } from "@plugins/config_v2/core";
+import {
+  computeHash,
+  APP_SCOPE_DIR,
+  CONFIG_HASH_RE,
+} from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import type { ConfigDescriptor, JsonValue } from "@plugins/config_v2/core";
 import {
@@ -32,8 +36,6 @@ function stripScopeSegment(p: string): string {
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
-const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
-
 // Validate a config file's content against its descriptor's Zod schema. Returns
 // a failure when the parsed document fails — the same `safeParse` the runtime
 // applies in `readTypedConfig`, lifted to check time so a schema that drifts
@@ -45,7 +47,7 @@ function validateSchema(
   raw: string,
   rel: string,
 ): CheckResult {
-  const match = HASH_RE.exec(raw);
+  const match = CONFIG_HASH_RE.exec(raw);
   const body = match ? raw.slice(match[0].length) : raw;
   const content = parseJsonc(body) as JsonValue;
   const result = descriptor.schema.safeParse(content);
@@ -149,7 +151,7 @@ const check: Check = {
       if (!existsSync(filePath)) continue;
 
       const raw = readFileSync(filePath, "utf8");
-      const match = HASH_RE.exec(raw);
+      const match = CONFIG_HASH_RE.exec(raw);
       if (!match) {
         return {
           ok: false,
@@ -173,7 +175,7 @@ const check: Check = {
       }
 
       const originRaw = readFileSync(originPath, "utf8");
-      const originMatch = HASH_RE.exec(originRaw);
+      const originMatch = CONFIG_HASH_RE.exec(originRaw);
       const originBody = originMatch
         ? originRaw.slice(originMatch[0].length)
         : originRaw;

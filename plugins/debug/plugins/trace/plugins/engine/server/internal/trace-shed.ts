@@ -1,7 +1,7 @@
 import {
   createShedBuffer,
   type ShedSummary,
-} from "@plugins/infra/plugins/host/plugins/duress/server";
+} from "@plugins/infra/plugins/host/plugins/duress/plugins/shed/server";
 import { recordReport } from "@plugins/reports/server";
 import type { TraceTrigger } from "../../core";
 

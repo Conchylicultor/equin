@@ -20,13 +20,7 @@ import {
   isBrowserUnreachableDynamic,
 } from "../constants";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
-import {
-  COMPOSITION_CONFIG_LAYER_SPECIFIER,
-  COMPOSITION_MODULES_REL,
-  COMPOSITION_REGISTRY_SPECIFIER,
-  CONFIG_LAYER_ARTIFACT_FILE,
-  compositionConfigLayerFileName,
-} from "../composition-modules";
+import { COMPOSITION_REGISTRY_SPECIFIER } from "../composition-modules";
 import { computeInputsHash, sha256Hex } from "../hash";
 import type { ImportMapEntry } from "../import-map";
 import {
@@ -75,38 +69,12 @@ export interface FleetSource {
   /** The registry module the registry artifact is built from (absolute path). */
   registryFile: string;
   /**
-   * The composition's config layer module (absolute path) — the registry
-   * artifact's second file (`composition-modules.ts`), so the committed config
-   * a deploy ships is its own composition's, never another's.
-   */
-  configLayerFile: string;
-  /**
    * Store slug for the registry artifact. The `@composition-web-registry`
    * import-map alias stays FIXED across sources (it is the seam the entry
    * artifact imports — same entry, different registry artifact = different
    * composition); only the store name carries the source identity.
    */
   registrySlug: string;
-}
-
-/**
- * The composition's config layer source, which codegen emits in build stage 2
- * for every registry resident in the checkout — THROWS when it is missing, so a
- * dist can never ship without its composition's layer (or with another's).
- */
-function configLayerFileOf(root: string, composition: string): string {
-  const file = join(
-    root,
-    COMPOSITION_MODULES_REL,
-    compositionConfigLayerFileName(composition),
-  );
-  if (!existsSync(file)) {
-    throw new Error(
-      `composition fleet source: ${file} does not exist — emit it first via ` +
-        `codegen's generateConfigGitLayer (build stage 2).`,
-    );
-  }
-  return file;
 }
 
 /** The committed full registry — the source every plain build plans from. */
@@ -122,7 +90,6 @@ export async function defaultFleetSource(root: string): Promise<FleetSource> {
     webEntries,
     deferredPaths: DEFERRED_PLUGIN_PATHS,
     registryFile,
-    configLayerFile: configLayerFileOf(root, MAIN_COMPOSITION_ID),
     registrySlug: "composition-web-registry",
   };
 }
@@ -174,7 +141,6 @@ export async function compositionFleetSource(opts: {
     webEntries,
     deferredPaths: DEFERRED_PLUGIN_PATHS,
     registryFile,
-    configLayerFile: configLayerFileOf(opts.root, opts.name),
     registrySlug: `web-registry-${opts.name}`,
   };
 }
@@ -187,7 +153,6 @@ export interface RegistryTargetPlan {
   dirName: string;
   inputsHash: string;
   registryFile: string;
-  configLayerFile: string;
   needsBuild: boolean;
 }
 
@@ -274,7 +239,7 @@ export async function planFleet(opts: {
   const webSrcDir = join(root, WEB_CORE_REL, "web");
 
   const source = opts.source ?? (await defaultFleetSource(root));
-  const { webEntries, registryFile, configLayerFile } = source;
+  const { webEntries, registryFile } = source;
 
   const identity = await computeBuilderIdentity({
     repoRoot: root,
@@ -335,15 +300,10 @@ export async function planFleet(opts: {
     null,
   );
 
-  // The registry artifact carries both composition modules, so its address
-  // covers both: a config edit re-addresses it (a cheap type-strip) and leaves
-  // every plugin artifact — config_v2's included — untouched.
+  // The registry artifact is the one composition module, addressed by its source.
   const registrySource = await readFile(registryFile, "utf8");
-  const configLayerSource = await readFile(configLayerFile, "utf8");
   const registryInputsHash = computeInputsHash({
-    ownHash: sha256Hex(
-      `${sha256Hex(registrySource)}\n${sha256Hex(configLayerSource)}`,
-    ),
+    ownHash: sha256Hex(registrySource),
     kind: "registry",
     identityHash: identity.identityHash,
   });
@@ -355,7 +315,6 @@ export async function planFleet(opts: {
     ),
     inputsHash: registryInputsHash,
     registryFile,
-    configLayerFile,
     needsBuild: !hasArtifact(
       artifactDirName(source.registrySlug, "registry", registryInputsHash),
     ),
@@ -596,10 +555,6 @@ export function composeMapEntries(opts: {
   entries.push({
     specifier: COMPOSITION_REGISTRY_SPECIFIER,
     url: artifactUrl(opts.registryDirName),
-  });
-  entries.push({
-    specifier: COMPOSITION_CONFIG_LAYER_SPECIFIER,
-    url: `/artifacts/${opts.registryDirName}/${CONFIG_LAYER_ARTIFACT_FILE}`,
   });
   for (const host of opts.hosts) {
     entries.push({

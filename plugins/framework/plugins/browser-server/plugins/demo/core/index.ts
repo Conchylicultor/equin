@@ -1,2 +1,1 @@
-export { DemoMissingError } from "./internal/scenario";
-export type { DemoScenario } from "./internal/scenario";
+export type { DemoHost, DemoScenario } from "./internal/scenario";

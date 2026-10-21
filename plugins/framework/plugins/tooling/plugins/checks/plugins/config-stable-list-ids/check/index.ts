@@ -1,7 +1,11 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { loadConfigDescriptorsByOriginPath } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { APP_SCOPE_DIR, mapConfigLists } from "@plugins/config_v2/core";
+import {
+  APP_SCOPE_DIR,
+  CONFIG_HASH_RE,
+  mapConfigLists,
+} from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import {
   getWorktreeRoot,
@@ -26,8 +30,6 @@ function stripScopeSegment(p: string): string {
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 
 const HINT =
   "Identity-bearing list rows need a stable, content-independent id so external " +
@@ -69,7 +71,7 @@ const check: Check = {
       if (!descriptor) continue;
 
       const raw = readFileSync(filePath, "utf8");
-      const match = HASH_RE.exec(raw);
+      const match = CONFIG_HASH_RE.exec(raw);
       const body = match ? raw.slice(match[0].length) : raw;
       const doc = parseJsonc(body) as Record<string, unknown> | undefined;
       if (!doc || typeof doc !== "object") continue;

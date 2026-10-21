@@ -57,10 +57,16 @@ export {
   validationIssues,
 } from "./internal/tier-logic";
 export type { ResolvedLayer, ResolvedConfig } from "./internal/tier-logic";
-export { resolveGitLayer } from "./internal/git-layer";
-export type { GitLayerDocument } from "./internal/git-layer";
 export {
-  createMemoryConfigStore,
+  resolveGitLayer,
+  committedDocument,
+  committedFilesFromMap,
+  propagateGitLayerDocument,
+} from "./internal/git-layer";
+export type { CommittedFiles, GitLayerDocument } from "./internal/git-layer";
+export { CONFIG_HASH_RE, parseConfigFile } from "./internal/config-file";
+export { createMemoryConfigStore } from "./internal/memory-store";
+export {
   configFileRelPath,
   scopeSegment,
   storePathParts,

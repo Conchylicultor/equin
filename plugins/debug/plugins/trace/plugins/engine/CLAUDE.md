@@ -243,8 +243,8 @@ expandable JSON.
     - `infra/entities.defaultNow`
     - `infra/entities.defaultRandom`
     - `infra/entities.defineEntity`
-    - `infra/host/duress.createShedBuffer`
-    - `infra/host/duress.ShedSummary`
+    - `infra/host/duress/shed.createShedBuffer`
+    - `infra/host/duress/shed.ShedSummary`
     - `infra/retention.defineRetention`
     - `network/live.serveCollection`
     - `reports.recordReport`

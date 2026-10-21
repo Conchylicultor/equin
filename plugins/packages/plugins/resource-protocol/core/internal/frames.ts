@@ -128,6 +128,7 @@ export const SUB_ERROR_REASONS = [
   "loader-failed",
   "contract-mismatch",
   "refused",
+  "unserved",
 ] as const;
 
 /** Whose fault a contract mismatch is — see `ContractVerdict`. */
@@ -212,7 +213,7 @@ const SERVER_FRAMES = {
     key: w.string,
     params: w.params,
     reason: w.oneOf(SUB_ERROR_REASONS),
-    /** On `contract-mismatch` / `unknown-key` — both are what skew looks like. */
+    /** On `contract-mismatch` / `unknown-key` — both are what skew looks like (never on `unserved`). */
     verdict: w.optional(w.oneOf(CONTRACT_VERDICTS)),
     /** On `refused`: the refusal's declared code (`ResourceRefusal.code`). */
     code: w.optional(w.string),

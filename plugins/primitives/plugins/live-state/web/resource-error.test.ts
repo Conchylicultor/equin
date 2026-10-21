@@ -71,6 +71,12 @@ describe("toResourceError", () => {
     ).toBe("not-found");
   });
 
+  test("an unserved key is loader-failed naming the key, never client-outdated", () => {
+    const e = toResourceError(new ResourceHttpError("k.x", 404, "unserved"));
+    expect(e.kind).toBe("loader-failed");
+    expect(e.message).toBe("k.x is not served by this host");
+  });
+
   test("status codes: 404 is not-found, anything else loader-failed", () => {
     expect(kindOf(new ResourceHttpError("k", 404))).toBe("not-found");
     expect(kindOf(new ResourceHttpError("k", 500, "loader-failed"))).toBe(

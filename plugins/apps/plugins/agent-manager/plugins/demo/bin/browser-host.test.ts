@@ -6,10 +6,11 @@
  * renders (`DEMO_READS`) is either served by that graph or declares
  * `needsMachine`.
  *
- * One substitution: the host's migration history is bundled text
- * (`migrations/bundled-source`, a vite `import.meta.glob`), which Bun cannot
- * evaluate, so this harness provides the same history read off disk. Every
- * other entry is the graph the worker boots.
+ * Two substitutions, one per provider whose data is bundled text (a vite
+ * `import.meta.glob`, which Bun cannot evaluate): the migration history
+ * (`migrations/bundled-source`) and the committed config layer
+ * (`config_v2/bundled-layer`) are provided by the same data read off disk.
+ * Every other entry is the graph the worker boots.
  *
  * Boots in a FRESH bun process (this file re-run as a child with
  * `DEMO_HOST_BOOT_CHILD` set): a boot collects its own host-service providers
@@ -20,18 +21,20 @@
  */
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   jsonlEvents,
   JSONL_EVENTS_MAX,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import {
+  bootBrowserHost,
   loadResourceByKey,
   Resource,
+  type BrowserHost,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
-import { bootPluginGraph } from "@plugins/framework/plugins/server-core/core/testing";
+import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
 import { PLUGINS_DIR, REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -40,6 +43,9 @@ import {
   MigrationSource,
 } from "@plugins/database/plugins/migrations/server";
 import {
+  appScopeId,
+  committedDocument,
+  committedFilesFromMap,
   configConflict,
   configConflictLocations,
   configModifiedCounts,
@@ -47,7 +53,15 @@ import {
   configScopes,
   configTiers,
   configValues,
+  type ConfigV2ScopesMap,
 } from "@plugins/config_v2/core";
+import {
+  ConfigGitLayer,
+  ConfigStore,
+  getAllDescriptors,
+  setConfigByPath,
+} from "@plugins/config_v2/server";
+import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
@@ -67,7 +81,6 @@ setDefaultTimeout(300_000);
 
 type Entry = (typeof hostEntries)[number];
 
-const BUNDLED_SOURCE = hostProviders[MigrationSource.id];
 const MIGRATIONS_DATA = join(PLUGINS_DIR, "database/plugins/migrations/data");
 const diskMigrations: Entry = {
   pluginPath: "apps/plugins/agent-manager/plugins/demo/boot-test-migrations",
@@ -91,6 +104,43 @@ const diskMigrations: Entry = {
     } satisfies ServerPluginDefinition,
   }),
   dependsOn: ["database/plugins/migrations"],
+};
+
+/** The repo's `config/`, read off disk: what the bundled layer inlines. */
+function diskConfigFiles(): Map<string, string> {
+  const dir = join(REPO_ROOT, "config");
+  const files = new Map<string, string>();
+  for (const rel of readdirSync(dir, { recursive: true }) as string[]) {
+    if (!rel.endsWith(".jsonc") || !statSync(join(dir, rel)).isFile()) continue;
+    files.set(rel, readFileSync(join(dir, rel), "utf8"));
+  }
+  return files;
+}
+const committedFiles = committedFilesFromMap(diskConfigFiles());
+const diskGitLayer: Entry = {
+  pluginPath: "apps/plugins/agent-manager/plugins/demo/boot-test-config",
+  id: "apps.agent-manager.demo.boot-test-config",
+  loader: async () => ({
+    default: {
+      portable: true,
+      contributions: [
+        ConfigGitLayer.provide({
+          document: (storePath) => committedDocument(storePath, committedFiles),
+        }),
+      ],
+    } satisfies ServerPluginDefinition,
+  }),
+  dependsOn: ["config_v2"],
+};
+
+/**
+ * Host service → the disk-backed entry standing in for its bundled provider.
+ * Each swapped provider must provide that one service only, or the swap would
+ * drop another service with it.
+ */
+const SWAPS: Record<string, Entry> = {
+  [MigrationSource.id]: diskMigrations,
+  [ConfigGitLayer.id]: diskGitLayer,
 };
 
 const IN_CHILD = process.env.DEMO_HOST_BOOT_CHILD === "1";
@@ -122,21 +172,35 @@ if (!IN_CHILD) {
 type Row = Record<string, unknown> & { id: string };
 
 describe.if(IN_CHILD)("the demo's browser host", () => {
+  let host: BrowserHost;
   beforeAll(async () => {
-    const graph = hostEntries.filter((e) => e.pluginPath !== BUNDLED_SOURCE);
-    expect(graph).toHaveLength(hostEntries.length - 1);
-    const ordered = await bootPluginGraph({
-      // The worker's own mode (`bootBrowserHost`): no L2, frames without a
-      // commit watermark.
-      mode: "browser",
-      entries: [...graph, diskMigrations],
-      hasCoreBarrel: () => false,
-    });
-    // What the worker asserts at boot (`bootBrowserHost`).
-    expect(ordered.filter((p) => p.portable !== true).map((p) => p.id)).toEqual(
-      [],
+    const swapped = new Set(
+      Object.keys(SWAPS).map((service) => hostProviders[service]),
     );
-    await seed();
+    expect(swapped.size).toBe(Object.keys(SWAPS).length);
+    for (const [service, provider] of Object.entries(hostProviders)) {
+      if (swapped.has(provider)) expect(Object.keys(SWAPS)).toContain(service);
+    }
+    const graph = hostEntries.filter((e) => !swapped.has(e.pluginPath));
+    expect(graph).toHaveLength(hostEntries.length - swapped.size);
+    // The worker's own boot (`./browser-host.ts`): browser mode (no L2,
+    // frames without a commit watermark), every plugin asserted portable, the
+    // resource key set closed.
+    host = await bootBrowserHost({
+      entries: [...graph, ...Object.values(SWAPS)],
+      seed,
+      onUnmatched: unmatchedApiResponse,
+    });
+  });
+
+  test("a key the host does not serve is refused as unserved, not as skew", async () => {
+    const res = await host.request(
+      new Request("http://demo.invalid/api/resources/nope", {
+        headers: { "x-singularity-build-graph": "some-other-build" },
+      }),
+    );
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ reason: "unserved" });
   });
 
   test("tasks carry the stories' categories", async () => {
@@ -224,6 +288,90 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
         .sort(),
     );
     expect(served).not.toContain(configRawFile.key);
+  });
+
+  test("every registered document starts as a fresh user's: its origins are the committed layer", async () => {
+    const scopes = (await loadResourceByKey(
+      configScopes.key,
+      {},
+    )) as ConfigV2ScopesMap;
+    const paths = Object.keys(scopes);
+    expect(paths.length).toBeGreaterThan(0);
+    const store = ConfigStore.get();
+    const mismatched: string[] = [];
+    for (const storePath of paths) {
+      const doc = committedDocument(storePath, committedFiles);
+      if (doc === undefined) {
+        mismatched.push(`${storePath}: nothing committed`);
+        continue;
+      }
+      const origin = store.proxy({ storePath, file: "origin" }).read();
+      if (JSON.stringify(origin?.content) !== JSON.stringify(doc.base))
+        mismatched.push(`${storePath}: base origin differs`);
+      for (const [appId, scoped] of Object.entries(doc.scopes)) {
+        const scopeId = appScopeId(appId);
+        const read = store.proxy({ storePath, scopeId, file: "origin" }).read();
+        if (JSON.stringify(read?.content) !== JSON.stringify(scoped))
+          mismatched.push(`${storePath} ${scopeId}: scoped origin differs`);
+        if (!scopes[storePath]!.includes(scopeId))
+          mismatched.push(
+            `${storePath}: ${scopeId} missing from the scopes map`,
+          );
+      }
+    }
+    expect(mismatched).toEqual([]);
+  });
+
+  test("reorder's directives read their committed arrangement, not empty defaults", async () => {
+    const directives = getAllDescriptors().filter(
+      ([, d]) => d.source === "reorder",
+    );
+    expect(directives.length).toBeGreaterThan(0);
+    const empty: string[] = [];
+    for (const [storePath] of directives) {
+      const values = (await loadResourceByKey(configValues.key, {
+        path: storePath,
+      })) as { items?: unknown[] };
+      const committed = committedDocument(storePath, committedFiles)?.base as
+        { items?: unknown[] } | undefined;
+      if (
+        (committed?.items?.length ?? 0) > 0 &&
+        (values.items?.length ?? 0) === 0
+      )
+        empty.push(storePath);
+    }
+    expect(empty).toEqual([]);
+  });
+
+  test("a config write round-trips: set-field's registry path, read back live", async () => {
+    // Any registered document with a top-level boolean: flip it.
+    let target: { storePath: string; key: string; value: boolean } | undefined;
+    for (const [storePath] of getAllDescriptors()) {
+      const values = (await loadResourceByKey(configValues.key, {
+        path: storePath,
+      })) as Record<string, unknown>;
+      const key = Object.keys(values).find(
+        (k) => typeof values[k] === "boolean",
+      );
+      if (key !== undefined) {
+        target = { storePath, key, value: values[key] as boolean };
+        break;
+      }
+    }
+    expect(target).toBeDefined();
+    const { storePath, key, value } = target!;
+    await setConfigByPath(storePath, key, !value, {
+      writer: systemOrigin("demo-host-test"),
+    });
+    const after = (await loadResourceByKey(configValues.key, {
+      path: storePath,
+    })) as Record<string, unknown>;
+    expect(after[key]).toBe(!value);
+    // Written against the propagated origin: an override in force, no conflict.
+    const store = ConfigStore.get();
+    expect(store.proxy({ storePath, file: "override" }).read()?.hash).toBe(
+      store.proxy({ storePath, file: "origin" }).read()?.hash,
+    );
   });
 
   test("the stories carry their short titles, tracks, progress and notes", async () => {

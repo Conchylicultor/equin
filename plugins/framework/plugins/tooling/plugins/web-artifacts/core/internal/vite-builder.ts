@@ -24,10 +24,7 @@ import {
 import type { Plugin as VitePlugin } from "vite";
 import { init as esLexerInit, parse as esLexerParse } from "es-module-lexer";
 import type { BabelPluginItem } from "@plugins/framework/plugins/web-core/core";
-import {
-  COMPOSITION_REGISTRY_SPECIFIER,
-  CONFIG_LAYER_ARTIFACT_FILE,
-} from "../composition-modules";
+import { COMPOSITION_REGISTRY_SPECIFIER } from "../composition-modules";
 import { WORKER_ASSETS_DIR } from "../constants";
 import { makeArtifactExternal } from "../externals";
 import { inlinedRootsFor } from "../own-roots";
@@ -523,26 +520,19 @@ export async function buildArtifact(
 
 /**
  * The registry artifact — the composition artifact (`composition-modules.ts`):
- * one file per composition module, each type-stripped to plain ESM. No bundling
- * — neither file has a static import.
- *
- * - `index.js` ← `web.generated.ts`, its `() => import("@plugins/…/web")`
- *   dynamic imports preserved as bare specifiers (the import map resolves them).
- * - `config-layer.js` ← the composition's config layer (pure data).
+ * `index.js` ← `web.generated.ts`, type-stripped to plain ESM, its
+ * `() => import("@plugins/…/web")` dynamic imports preserved as bare specifiers
+ * (the import map resolves them). No bundling — it has no static import.
  */
 export async function buildRegistryArtifact(opts: {
   dirName: string;
   inputsHash: string;
   registryFile: string;
-  configLayerFile: string;
   minify: boolean;
 }): Promise<ArtifactMeta> {
   const { transform } = await import("esbuild");
   const tmpDir = artifactTmpDir(opts.dirName);
-  const modules = [
-    { file: opts.registryFile, out: "index.js" },
-    { file: opts.configLayerFile, out: CONFIG_LAYER_ARTIFACT_FILE },
-  ];
+  const modules = [{ file: opts.registryFile, out: "index.js" }];
   for (const m of modules) {
     const result = await transform(readFileSync(m.file, "utf8"), {
       loader: "ts",

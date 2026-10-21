@@ -1,6 +1,4 @@
 export {
-  allResourceDescriptors,
-  onResourceDescriptorRegistered,
   resourceDescriptorByKey,
   registerResourceDescriptor,
 } from "./resource";

@@ -7,7 +7,6 @@ import {
   regenerateManifestCodegen,
   regenerateRegistryCodegen,
   seedAuthoredOverrides,
-  generateConfigGitLayer,
   type CodegenStep,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { repoProgram } from "@plugins/framework/plugins/tooling/plugins/checks/core";
@@ -130,10 +129,7 @@ import {
  *     `regenerateManifestCodegen`) and must land before the caller propagates
  *     config, so the user layer never sees a half-seeded git layer. NB it mints
  *     `@review` markers into the checkout — today's behaviour for a release
- *     too, since a release reaches it through this same pipeline. Only the
- *     config git-layer bundle (`generateConfigGitLayer`) follows it: it reads
- *     the seeded tree and writes one layer per resident web registry, which
- *     stage 3 serves from each composition's registry artifact.
+ *     too, since a release reaches it through this same pipeline.
  *   - stage 3 LAST, under ONE host CPU grant covering every heavy child
  *     (checks, tsc, vite / web-artifacts). Nothing inside re-acquires host-wide.
  *
@@ -412,10 +408,11 @@ export async function prepareCompositionSources(opts: {
   // build after a push reproduces the exact same tree. Per-step profiler
   // spans are threaded through `onStep` so build keeps its granularity.
   hooks.log("Generating plugin registry...");
-  const { renamedPackages } = await regenerateRegistryCodegen({
+  const { renamedPackages, browserHosts } = await regenerateRegistryCodegen({
     root,
     onStep: codegenStep,
   });
+  for (const line of browserHosts) hooks.log(line);
 
   // 1b'. A plugin `package.json` whose derived `"name"` codegen just corrected
   // (a new or moved plugin) leaves `bun.lock` — which records every workspace
@@ -587,20 +584,6 @@ export async function generateAppSources(opts: {
       `[config-v2] re-marked stale override config/${rel} (marked @review)`,
     );
   }
-
-  // 4b''. Bundle the committed config layer for the browser server (a demo
-  // scope answers `config-v2.values` from it, never from the host), once per
-  // composition registry stage 1 left resident, each restricted to that
-  // composition's plugins and apps. After the seeder, so it reads the same git
-  // layer the caller then propagates; before stage 3, which serves each one
-  // from its composition's registry artifact (`@composition-config-layer`).
-  endSpan = hooks.span(
-    "configGitLayer",
-    "build:codegen",
-    "bundle the committed config layer",
-  );
-  await generateConfigGitLayer({ root });
-  endSpan();
 }
 
 /**

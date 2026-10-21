@@ -22,6 +22,7 @@ export type ExemptableRuleId =
   | "collapsible/no-unanimated-disclosure"
   | "color-palette/no-fill-color-as-text"
   | "config-link/no-unlinked-config-picker"
+  | "config-v2:host-registrations-paired"
   | "context-safety/no-unstable-context-value"
   | "control-panel/no-adhoc-panel-body"
   | "control-panel/no-row-in-panel"

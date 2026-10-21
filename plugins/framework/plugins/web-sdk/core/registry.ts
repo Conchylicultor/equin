@@ -198,3 +198,59 @@ export function createPluginRegistry(): PluginRegistry {
   });
   return registry;
 }
+
+/**
+ * A read-only view of `parent` narrowed to the plugins in `plugins`: every slot
+ * read keeps only the contributions whose stamped `_pluginId` is in the set, and
+ * `declared()` only the slots those plugins declare. What `PluginScope` provides
+ * to its subtree, so an out-of-set contribution has no spelling inside it.
+ *
+ * - A `pageWide` slot (`SlotMeta.pageWide`) passes unfiltered — the slot says
+ *   its list is a page-global definition set, not content.
+ * - Identity contract kept: the filtered list is memoised per parent ARRAY, and
+ *   a read that filters nothing out returns the parent array itself, so a slot
+ *   whose list is unchanged keeps its snapshot.
+ * - `subscribe` delegates: a parent change is the only way a filtered list
+ *   changes. Nested scopes therefore intersect with no extra code.
+ * - `replace` throws: the plugin set belongs to the parent's provider.
+ */
+export function scopedReader(
+  parent: PluginRegistryReader,
+  plugins: ReadonlySet<string>,
+): PluginRegistryReader {
+  const filtered = new WeakMap<
+    readonly Contribution[],
+    readonly Contribution[]
+  >();
+  let declaredFrom: readonly SlotNamingEntry[] | undefined;
+  let declaredScoped: readonly SlotNamingEntry[] = [];
+  return {
+    read(slot) {
+      const list = parent.read(slot);
+      if (slot.meta.pageWide) return list;
+      let out = filtered.get(list);
+      if (!out) {
+        const kept = list.filter(
+          (c) => c._pluginId !== undefined && plugins.has(c._pluginId),
+        );
+        out = kept.length === list.length ? list : Object.freeze(kept);
+        filtered.set(list, out);
+      }
+      return out;
+    },
+    subscribe: (slot, listener) => parent.subscribe(slot, listener),
+    replace() {
+      throw new Error(
+        "[plugins] a scoped plugin registry is read-only — its plugin set belongs to the enclosing PluginProvider",
+      );
+    },
+    declared() {
+      const all = parent.declared();
+      if (all !== declaredFrom) {
+        declaredFrom = all;
+        declaredScoped = all.filter((e) => plugins.has(e.pluginId));
+      }
+      return declaredScoped;
+    },
+  };
+}

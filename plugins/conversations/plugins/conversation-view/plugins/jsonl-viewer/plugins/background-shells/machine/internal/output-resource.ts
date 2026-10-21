@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { basename, dirname } from "node:path";
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
   readJsonlEventsFromChain,
   resolveConversationTranscriptPaths,

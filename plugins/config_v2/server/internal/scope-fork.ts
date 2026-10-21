@@ -56,7 +56,7 @@ async function forkDescriptor(
 function gitBacksScope(storePath: string, scopeId: string): boolean {
   const appId = scopeAppId(scopeId);
   if (!appId) return false;
-  return ConfigGitLayer.get().hasScope(storePath, appId);
+  return ConfigGitLayer.get().document(storePath)?.scopes[appId] !== undefined;
 }
 
 // Un-fork ONE descriptor: drop the user's runtime scoped override. For a scope

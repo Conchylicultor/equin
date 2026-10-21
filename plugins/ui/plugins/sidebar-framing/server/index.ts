@@ -4,4 +4,5 @@ import { sidebarFraming } from "../core";
 
 export default {
   contributions: [variantRegionServerContribution(sidebarFraming)],
+  portable: true,
 } satisfies ServerPluginDefinition;

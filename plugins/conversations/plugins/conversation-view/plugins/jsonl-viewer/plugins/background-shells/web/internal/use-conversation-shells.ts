@@ -3,7 +3,10 @@ import {
   combineResources,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
-import type { ResourceError } from "@plugins/primitives/plugins/live-state/core";
+import type {
+  ResourceError,
+  ResourceUnavailable,
+} from "@plugins/primitives/plugins/live-state/core";
 import { useConversationById } from "@plugins/conversations/web";
 import {
   conversationShellFacts,
@@ -62,12 +65,13 @@ export function useConversationShells(
 /**
  * The live tail of one shell's output file. The server resolves the file from
  * the conversation's own transcript; this names only the shell. A band row
- * and the open pane on the same shell share one subscription.
+ * and the open pane on the same shell share one subscription. `unavailable`
+ * where no computer is behind the page: the file is on the desktop's disk.
  */
 export function useShellOutput(
   conversationId: string | null,
   shellId: string,
-): ResourceResult<ShellOutput> {
+): ResourceResult<ShellOutput> | ResourceUnavailable {
   return useLive(
     shellOutput,
     conversationId === null ? null : { id: conversationId, shellId },

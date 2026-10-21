@@ -1,7 +1,8 @@
 import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
 import type { ConfigProxy } from "./config-proxy";
-import { APP_SCOPE_DIR } from "./scope-format";
-import type { Disposable, JsonValue } from "./types";
+import type { GitLayerDocument } from "./git-layer";
+import { APP_SCOPE_DIR, appScopeId } from "./scope-format";
+import type { Disposable } from "./types";
 
 /**
  * The three files a config document is made of. The user layer keeps all
@@ -36,8 +37,10 @@ export interface ConfigFileRef extends ConfigDocRef {
  * note-complete pair.
  *
  * The git layer is not here: the running registry never resolves values from
- * the repo — it cascades over the build-propagated `origin` — so the only
- * committed-layer read it makes is {@link ConfigGitLayerImpl.hasScope}.
+ * the repo — it cascades over the propagated `origin` (the build propagates it
+ * into a file store; a memory store propagates it itself, on first touch) — so
+ * the registry's only committed-layer read is whether a scope is committed
+ * ({@link ConfigGitLayerImpl.document}).
  */
 export interface ConfigStoreImpl {
   /** Synchronous read / write / exists of one file. */
@@ -76,15 +79,18 @@ export interface ConfigStoreImpl {
   ): T;
 }
 
-/** The committed (repo) layer, as far as the running registry reads it. */
+/**
+ * The committed (repo) layer: one descriptor's git-layer document, resolved
+ * (`committedDocument` — `override ⊕ origin`, each `@app/<id>` delta over that
+ * base), or `undefined` when the repo commits nothing at `storePath`.
+ *
+ * The desktop reads it off the checkout's `config/`; a browser host off the
+ * `config/` bundled into it. Read by the registry to decide whether a scope
+ * survives un-forking (a committed scope does), and by a memory store to
+ * propagate the committed layer into itself.
+ */
 export interface ConfigGitLayerImpl {
-  /**
-   * Whether the repo commits a scoped document for (`storePath`, `appId`) —
-   * `config/<hier>/@app/<appId>/<name>.jsonc`. Such a scope survives
-   * un-forking: removal drops the user's runtime override and falls back to the
-   * committed scope.
-   */
-  hasScope(storePath: string, appId: string): boolean;
+  document(storePath: string): GitLayerDocument | undefined;
 }
 
 const FILE_SUFFIX: Record<ConfigDocumentFile, string> = {
@@ -92,6 +98,9 @@ const FILE_SUFFIX: Record<ConfigDocumentFile, string> = {
   override: ".jsonc",
   ancestor: ".ancestor.jsonc",
 };
+
+// Longest suffix first: every file name ends in ".jsonc".
+const SUFFIX_ORDER: ConfigDocumentFile[] = ["origin", "ancestor", "override"];
 
 /** A store path `<hier>/<name>.jsonc` split into its hierarchy and descriptor name. */
 export function storePathParts(storePath: string): {
@@ -128,59 +137,30 @@ export function configFileRelPath(ref: ConfigFileRef): string {
 }
 
 /**
- * A user layer held in memory: what a demo scope writes to. Lives exactly as
- * long as its owner (a remount or reload is the committed state again); a
- * persistent store (IndexedDB / OPFS) implements the same interface.
- *
- * Every writer is in-process, so `watch` never calls back, `armed` resolves at
- * once, and `edit` keeps no ledger.
+ * The inverse of {@link configFileRelPath}: which file of which document a
+ * layer-relative path names. Throws on a path outside the layout (not a
+ * `.jsonc`, a misplaced `@app` segment) — a layer holding such a file is not
+ * a config layer.
  */
-export function createMemoryConfigStore(): ConfigStoreImpl {
-  const docs = new Map<
-    string,
-    { content: JsonValue; hash: string | null; version: number }
-  >();
-  let writes = 0;
-  const scopeOf = (ref: ConfigDocRef) => ref.scopeId ?? "";
-  const keyOf = (ref: ConfigFileRef) =>
-    `${ref.storePath}\0${scopeOf(ref)}\0${ref.file}`;
-  return {
-    proxy(ref) {
-      const key = keyOf(ref);
-      return {
-        read: () => {
-          const doc = docs.get(key);
-          return doc ? { content: doc.content, hash: doc.hash } : null;
-        },
-        write: (content, hash) => {
-          docs.set(key, { content, hash, version: ++writes });
-        },
-        exists: () => docs.has(key),
-      };
-    },
-    remove(ref) {
-      docs.delete(keyOf(ref));
-    },
-    stamp(ref) {
-      const doc = docs.get(keyOf(ref));
-      return doc ? `w${doc.version}` : "-";
-    },
-    scopes(storePath) {
-      const { hier } = storePathParts(storePath);
-      const ids = new Set<string>();
-      for (const key of docs.keys()) {
-        const [path, scopeId] = key.split("\0");
-        if (scopeId && storePathParts(path!).hier === hier) ids.add(scopeId);
-      }
-      return [...ids].sort();
-    },
-    dropScope() {
-      // A scope here is its documents: once they are removed it is gone.
-    },
-    watch() {
-      return { dispose: () => {} };
-    },
-    armed: () => Promise.resolve(),
-    edit: (_doc, _writer, _operation, mutate) => mutate(),
-  };
+export function parseConfigFileRelPath(rel: string): ConfigFileRef {
+  const segments = rel.split("/");
+  const fileName = segments.pop()!;
+  const file = SUFFIX_ORDER.find((f) => fileName.endsWith(FILE_SUFFIX[f]));
+  const name =
+    file === undefined ? "" : fileName.slice(0, -FILE_SUFFIX[file].length);
+  if (file === undefined || name === "") {
+    throw new Error(`Not a config file path: "${rel}"`);
+  }
+  let scopeId: string | undefined;
+  if (segments.length >= 2 && segments[segments.length - 2] === APP_SCOPE_DIR) {
+    scopeId = appScopeId(segments.pop()!);
+    segments.pop();
+  }
+  if (segments.length === 0 || segments.includes(APP_SCOPE_DIR)) {
+    throw new Error(`Not a config file path: "${rel}"`);
+  }
+  const storePath = `${segments.join("/")}/${name}.jsonc`;
+  return scopeId === undefined
+    ? { storePath, file }
+    : { storePath, scopeId, file };
 }

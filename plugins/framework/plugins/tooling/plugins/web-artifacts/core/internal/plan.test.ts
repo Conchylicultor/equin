@@ -53,8 +53,6 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
     });
     const map = buildImportMap(entries).imports;
     expect(map).toEqual({
-      "@composition-config-layer":
-        "/artifacts/composition-web-registry.registry.999/config-layer.js",
       "@composition-web-registry":
         "/artifacts/composition-web-registry.registry.999/index.js",
       "@plugins/tasks/core": "/artifacts/tasks.core.def/index.js",
@@ -216,11 +214,6 @@ describe("planFleet with an injected fleet source", () => {
   test("plans targets from the source's entries and slugs the registry per source", async () => {
     const registryFile = join(tmp, "web.composition.testcomp.generated.ts");
     writeFileSync(registryFile, "export const webEntries = [];\n");
-    const configLayerFile = join(
-      tmp,
-      "config-layer.composition.testcomp.generated.ts",
-    );
-    writeFileSync(configLayerFile, "export const gitLayer = {};\n");
 
     const deferredPaths = new Set(["some/deferred/path"]);
     const plan = await planFleet({
@@ -231,7 +224,6 @@ describe("planFleet with an injected fleet source", () => {
         webEntries: [{ pluginPath: "shell", id: "shell", dependsOn: [] }],
         deferredPaths,
         registryFile,
-        configLayerFile,
         registrySlug: "web-registry-testcomp",
       },
     });
@@ -243,23 +235,16 @@ describe("planFleet with an injected fleet source", () => {
       plan.registryTarget.dirName.startsWith("web-registry-testcomp.registry."),
     ).toBe(true);
     expect(plan.registryTarget.registryFile).toBe(registryFile);
-    expect(plan.registryTarget.configLayerFile).toBe(configLayerFile);
     expect(plan.deferredPaths).toBe(deferredPaths);
   });
 
   test("the registry store name is a pure function of source content + slug", async () => {
     const registryFile = join(tmp, "web.composition.other.generated.ts");
     writeFileSync(registryFile, "export const webEntries = [];\n");
-    const configLayerFile = join(
-      tmp,
-      "config-layer.composition.other.generated.ts",
-    );
-    writeFileSync(configLayerFile, "export const gitLayer = {};\n");
     const source = {
       webEntries: [],
       deferredPaths: new Set<string>(),
       registryFile,
-      configLayerFile,
       registrySlug: "web-registry-other",
     };
     const opts = { root: repoRoot, minify: false, source };
@@ -270,33 +255,6 @@ describe("planFleet with an injected fleet source", () => {
     expect(
       a.registryTarget.dirName.startsWith("web-registry-other.registry."),
     ).toBe(true);
-  });
-
-  test("a config layer edit alone re-addresses the registry artifact", async () => {
-    const registryFile = join(tmp, "web.composition.cfg.generated.ts");
-    writeFileSync(registryFile, "export const webEntries = [];\n");
-    const configLayerFile = join(
-      tmp,
-      "config-layer.composition.cfg.generated.ts",
-    );
-    const plan = async (layer: string) => {
-      writeFileSync(configLayerFile, layer);
-      return planFleet({
-        root: repoRoot,
-        minify: false,
-        cache: { version: 1, records: {} },
-        source: {
-          webEntries: [],
-          deferredPaths: new Set<string>(),
-          registryFile,
-          configLayerFile,
-          registrySlug: "web-registry-cfg",
-        },
-      });
-    };
-    const a = await plan("export const gitLayer = {};\n");
-    const b = await plan('export const gitLayer = { "x/y.jsonc": 1 };\n');
-    expect(a.registryTarget.dirName).not.toBe(b.registryTarget.dirName);
   });
 });
 
