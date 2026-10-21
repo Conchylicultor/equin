@@ -188,10 +188,10 @@ function LiveThread<D extends ThreadResultDef>({
               conversationId={conversation.id}
               turn={turn}
               agentStarting={status === "starting"}
-              renderEcho={renderEcho}
+                renderEcho={renderEcho}
             />
-          ))}
-          {pending.status === "error" && (
+            ))}
+            {pending.status === "error" && (
             <ResourceErrorInline
               variant="inline"
               subject="the sent messages"
