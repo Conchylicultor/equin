@@ -26,6 +26,13 @@ export interface OverflowPanelProps {
    * stamps only what differs from these, so the dock must carry the rest.
    */
   dockAttrs: PortalForwardedAttrs;
+  /**
+   * Whether an occupant parked in the panel has a popup of its own open (a
+   * popover its button opened). That popup is the innermost layer: it owns Esc
+   * and outside presses until it closes, so the panel never dismisses under it
+   * — dismissing would hide the popup's trigger and strand it unanchored.
+   */
+  hasOpenChildPopup: () => boolean;
   onDismiss: () => void;
 }
 
@@ -63,6 +70,7 @@ export function OverflowPanel({
   label,
   dockRef,
   dockAttrs,
+  hasOpenChildPopup,
   onDismiss,
 }: OverflowPanelProps): ReactElement {
   const [floatingEl, setFloatingEl] = useState<HTMLElement | null>(null);
@@ -91,15 +99,20 @@ export function OverflowPanel({
 
   // Esc and outside-press close. Both are document-level and capture-phase so
   // they still fire for a press that lands inside a relocated widget's own
-  // popover, which lives in the top layer above everything.
+  // popover, which lives in the top layer above everything — and that is why
+  // both first defer to an open child popup: it is the innermost layer, so the
+  // press or Esc is its to handle (it closes itself), and the panel only
+  // dismisses on the NEXT one. Read at event time: the popup's open state lives
+  // in the bar's ledger, not in React state this effect could depend on.
   useEffect(() => {
     if (!open) return;
     function onKeyDown(e: KeyboardEvent): void {
-      if (e.key === "Escape") onDismiss();
+      if (e.key === "Escape" && !hasOpenChildPopup()) onDismiss();
     }
     function onPointerDown(e: PointerEvent): void {
       const target = e.target as Node | null;
       if (target === null) return;
+      if (hasOpenChildPopup()) return;
       if (floatingEl?.contains(target) === true) return;
       if (anchor?.contains(target) === true) return;
       onDismiss();
@@ -111,7 +124,7 @@ export function OverflowPanel({
       document.removeEventListener("keydown", onKeyDown, true);
       document.removeEventListener("pointerdown", onPointerDown, true);
     };
-  }, [open, onDismiss, floatingEl, anchor]);
+  }, [open, onDismiss, hasOpenChildPopup, floatingEl, anchor]);
 
   return (
     <ViewportOverlay

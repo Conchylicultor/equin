@@ -14252,13 +14252,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `JsonlRowActions.Item` "timestamp" → `TimestampAction`
               - `JsonlRowActions.Item` "raw-json" → `RawJsonAction`
-            - Uses: 52 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Uses: 51 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `primitives/live-state` ×7
               - `primitives/dom/auto-scroll` ×5
               - `primitives/collapsible` ×4
               - `conversations/conversation-view/jsonl-viewer/row-actions` ×3
               - `conversations/conversation-view/pending-turn` ×3
-              - `primitives/css/ui-kit` ×3
+              - `primitives/css/ui-kit` ×2
               - `primitives/css/working-dots` ×2
               - `primitives/relative-time` ×2
               - `primitives/slot-render` ×2
@@ -14278,7 +14278,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
               - `primitives/overlay/image-viewer.ImageGallery`
-              - `primitives/overlay/imperative-dialog.openDialog`
+              - `primitives/overlay/popover.InlinePopover`
               - `primitives/row-actions.rowActionsAnchor`
               - `primitives/scope/dom-scope.defineDomScope`
               - `primitives/scope/surface-id.useSurfaceTabId`
@@ -40658,7 +40658,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/home/app-cards`
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/sonata/transcription`
-              - `conversations/conversation-view/jsonl-viewer`
               - `primitives/overlay/imperative-dialog/confirm`
               - `ui/theme-engine/theme-gallery`
           - Plugins:
@@ -40708,11 +40707,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlinePopoverProps`
             - Exports (values): `InlinePopover`
           - Cross-plugin:
-            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
+            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
               - `page` ×6
               - `primitives` ×5
               - `apps` ×4
-              - `conversations` ×2
+              - `conversations` ×3
               - `fields` ×2
               - `reorder` ×2
               - `shell` ×2

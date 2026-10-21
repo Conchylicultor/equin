@@ -1829,6 +1829,13 @@ function AdaptiveBarShell({
             label={label}
             dockRef={setPanelDock}
             dockAttrs={regionAttrs}
+            hasOpenChildPopup={() =>
+              [...entriesRef.current.values()].some(
+                (entry) =>
+                  entry.popupOpen &&
+                  panelDock?.contains(entry.container) === true,
+              )
+            }
             onDismiss={() => setPanelOpen(false)}
           />
         </BarFormsContext.Provider>

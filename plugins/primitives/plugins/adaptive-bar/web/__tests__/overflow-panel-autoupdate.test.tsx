@@ -41,6 +41,7 @@ function panel(open: boolean, anchor: HTMLElement) {
       label="More"
       dockRef={() => {}}
       dockAttrs={{}}
+      hasOpenChildPopup={() => false}
       onDismiss={() => {}}
     />
   );

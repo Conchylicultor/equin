@@ -541,6 +541,12 @@ and Tab drops the user into an invisible control.
 The panel closes on the trigger, `Esc`, an outside pointer-down, and **becoming
 empty**. A resize never closes it.
 
+While a parked occupant has a popup of its own open (a popover its button
+opened), that popup is the innermost layer: `Esc` and outside presses are its to
+handle, and the panel only dismisses on the next one. Dismissing under it would
+hide the popup's trigger and strand the popup unanchored — which is how a
+"View raw JSON" behind a row's `⋯` once had to be a modal dialog instead.
+
 ## Two locks, neither of which anyone opts into
 
 React synthetic events bubble the **fiber** tree, not the DOM tree, so the bar's
