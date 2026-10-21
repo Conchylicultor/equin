@@ -2684,7 +2684,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 109 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 111 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
     - `primitives/css/ui-kit` ×14
     - `primitives/data-view/view-core` ×8
@@ -2694,6 +2694,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/tree` ×3
     - `config_v2` ×2
     - `primitives/collapsible` ×2
+    - `primitives/css/fill` ×2
     - `primitives/css/overlay` ×2
     - `primitives/css/row` ×2
     - `primitives/css/spacing` ×2
@@ -2711,9 +2712,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ids.IdKinds`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
-    - `primitives/css/fill.fillClasses`
     - `primitives/css/inline.Inline`
     - `primitives/css/layer.Layer`
+    - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`

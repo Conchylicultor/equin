@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ResourceErrorInline,
   ResourceView,
@@ -21,6 +21,7 @@ import {
   usePendingTurns,
   type PendingTurn,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
+import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { useMarkConversationViewed } from "@plugins/conversations/plugins/hibernation/web";
 import { useConversation } from "@plugins/conversations/web";
 import type { ConversationEntry } from "@plugins/conversations/core";
@@ -34,7 +35,11 @@ import {
   useThreadTranscript,
   useVisibleTranscript,
 } from "../internal/use-thread";
-import { AgentThreadView, type RenderThreadResult } from "./agent-thread-view";
+import {
+  AgentThreadView,
+  type RenderThreadResult,
+  type ResultWords,
+} from "./agent-thread-view";
 import { ThreadComposer } from "./composer";
 
 export interface AgentThreadProps<D extends ThreadResultDef> {
@@ -44,6 +49,12 @@ export interface AgentThreadProps<D extends ThreadResultDef> {
   renderResult: RenderThreadResult<D>;
   /** The composer's placeholder. */
   placeholder?: string;
+  /** Leading in the header — who the thread is with ("✦ Sonnet"). */
+  title?: ReactNode;
+  /** How the header counts the newest turn's results ("3 picks"); default "3 results". */
+  resultWords?: ResultWords;
+  /** In the header after Open conversation — the host's own control (a close). */
+  headerAction?: ReactNode;
 }
 
 /** Open the full conversation in the Agent Manager (it crosses apps by itself). */
@@ -68,10 +79,15 @@ function OpenConversation({ conversationId }: { conversationId: string }) {
  * this thread is on screen and has something newer than the last view. Only
  * then, because marking viewed also resumes a hibernated conversation — a
  * thread restored with nothing new to show must not wake its agent.
+ *
+ * On screen is the thread's own box intersecting the viewport (`onScreen`) in
+ * a visible page — not merely mounted: a host may keep the thread mounted
+ * while it hides it (a closed popover), and a hidden answer is not a seen one.
  */
 function useMarkViewedWhileVisible(
   conversation: ConversationEntry,
   outputAt: number | null,
+  onScreen: boolean,
 ): void {
   const markViewed = useMarkConversationViewed();
   const viewedAt = conversation.lastViewedAt?.getTime() ?? null;
@@ -80,7 +96,7 @@ function useMarkViewedWhileVisible(
   const id = conversation.id;
   const hibernatedAt = conversation.hibernatedAt;
   useEffect(() => {
-    if (!unseen) return;
+    if (!unseen || !onScreen) return;
     const mark = () => {
       if (document.visibilityState !== "visible") return;
       void markViewed({ id, hibernatedAt });
@@ -88,7 +104,7 @@ function useMarkViewedWhileVisible(
     mark();
     document.addEventListener("visibilitychange", mark);
     return () => document.removeEventListener("visibilitychange", mark);
-  }, [unseen, id, hibernatedAt, markViewed]);
+  }, [unseen, onScreen, id, hibernatedAt, markViewed]);
 }
 
 function LiveThread<D extends ThreadResultDef>({
@@ -98,6 +114,7 @@ function LiveThread<D extends ThreadResultDef>({
   results,
   renderResult,
   placeholder,
+  header,
 }: {
   conversation: ConversationEntry;
   events: readonly JsonlEvent[];
@@ -106,6 +123,7 @@ function LiveThread<D extends ThreadResultDef>({
   results: readonly D[];
   renderResult: RenderThreadResult<D>;
   placeholder: string;
+  header: ThreadHeaderParts;
 }) {
   const status = useOptimisticConversationStatus(conversation);
   const turnRunning = useTurnRunning(conversation);
@@ -121,7 +139,10 @@ function LiveThread<D extends ThreadResultDef>({
   // cards it last held.
   const pendingTurns =
     pending.status === "ready" ? pending.data : (pending.stale ?? []);
-  useMarkViewedWhileVisible(conversation, latestOutputAt(turns));
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [onScreen, setOnScreen] = useState(false);
+  useInView(boxRef, (entry) => setOnScreen(entry.isIntersecting));
+  useMarkViewedWhileVisible(conversation, latestOutputAt(turns), onScreen);
   // A message on its way with no running turn to show the agent busy (it is
   // starting, or idle): one dots line under the cards, which draw none.
   const awaitingAgent =
@@ -129,11 +150,22 @@ function LiveThread<D extends ThreadResultDef>({
     turns.at(-1)?.state !== "running";
 
   return (
+    // The box whose intersection says the thread is on screen.
+    <div ref={boxRef} className="h-full">
     <AgentThreadView
       turns={turns}
       state={state}
       renderResult={renderResult}
-      headerAction={<OpenConversation conversationId={conversation.id} />}
+        title={header.title}
+        {...(header.resultWords === undefined
+          ? {}
+          : { resultWords: header.resultWords })}
+        headerAction={
+          <>
+            <OpenConversation conversationId={conversation.id} />
+            {header.headerAction}
+          </>
+        }
       followKey={pendingTurns.length}
       trailing={
         <>
@@ -171,7 +203,15 @@ function LiveThread<D extends ThreadResultDef>({
         />
       }
     />
+    </div>
   );
+}
+
+/** The host's parts of the thread's header. */
+interface ThreadHeaderParts {
+  title: ReactNode;
+  resultWords: ResultWords | undefined;
+  headerAction: ReactNode;
 }
 
 type AnsweredPending = Exclude<
@@ -208,6 +248,9 @@ export function AgentThread<D extends ThreadResultDef>({
   results,
   renderResult,
   placeholder = "Reply…",
+  title,
+  resultWords,
+  headerAction,
 }: AgentThreadProps<D>) {
   const raw = useThreadTranscript(conversationId);
   const events = useVisibleTranscript(raw);
@@ -249,6 +292,7 @@ export function AgentThread<D extends ThreadResultDef>({
             results={results}
             renderResult={renderResult}
             placeholder={placeholder}
+            header={{ title, resultWords, headerAction }}
           />
         )
       }

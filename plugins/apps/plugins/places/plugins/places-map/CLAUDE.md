@@ -206,7 +206,7 @@ pick, or pick mode; closing keeps the query (the filter and the ghosts stay).
 
 ## Plugin reference
 
-- Description: The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving), the selected place's card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it) and the Google result's ghost pin.
+- Description: The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown in the panel as a thread, its picks as Google cards with why they fit and as numbered pins, its progress as a pill in the bar), the selected place's card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, and the thread's step labels for the Ask Sonnet tools.
 - Web:
   - Slots: `places-map.actions`
   - Slot contributors: `places-map.actions` ← `primitives.pane`
@@ -215,14 +215,18 @@ pick, or pick mode; closing keeps the query (the filter and the ghosts stay).
     - `FieldPresentation.Register` "entity:places"
     - `GeoMap.Pin` → `SavedPlacePin`
     - `GeoMap.Pin` → `GoogleResultPin`
-  - Uses: 92 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `GeoMap.Pin` → `AskPickPin`
+    - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
+    - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
+  - Uses: 103 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×9
+    - `conversations/agent-thread` ×7
     - `map` ×7
     - `primitives/data-view` ×7
+    - `network/live` ×5
     - `primitives/collapsible` ×5
     - `primitives/css/ui-kit` ×4
     - `primitives/live-state` ×4
-    - `network/live` ×3
     - `primitives/persistent-draft` ×3
     - `ui/icons` ×3
     - `apps/places/tag-manager` ×2
@@ -251,6 +255,7 @@ pick, or pick mode; closing keeps the query (the filter and the ghosts stay).
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
+    - `primitives/css/status-dot.StatusDot`
     - `primitives/css/surface.Surface`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/data-view/floating-toolbar.floatingToolbar`
@@ -262,6 +267,7 @@ pick, or pick mode; closing keeps the query (the filter and the ghosts stay).
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+    - `primitives/overlay/tooltip.Kbd`
     - `primitives/relative-time.useNow`
     - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`

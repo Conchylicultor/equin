@@ -69,6 +69,7 @@ allowlisting a copy.
 - Cross-plugin:
   - Imported by:
     - `apps/website/pages/foundations`
+    - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer`
     - `primitives/css/working-dots`
     - `primitives/cursor-pagination`

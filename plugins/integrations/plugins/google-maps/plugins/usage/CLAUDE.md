@@ -32,7 +32,7 @@ hard stop if this count is ever wrong.
 
 ## Plugin reference
 
-- Description: Registers the Google Maps usage budgets (per-SKU monthly call budgets inside Google's free allowance) for Settings → Config, and reads them against this month's live counts (useMapsBudget). Owns google_maps_usage: every Places call counted per billing month (Pacific time, as Google bills) and SKU, by placesMeter — the meter every server-side PlacesClient carries — and served live as this month's counts (google-maps.usage), which a caller holds against the per-SKU budgets (the google-maps-usage config: Google's free allowance minus a margin) to step down to a cheaper call before it is billed.
+- Description: Registers the Google Maps usage budgets (per-SKU monthly call budgets inside Google's free allowance) for Settings → Config, and reads them against this month's live counts (useMapsBudget). Owns google_maps_usage: every Places call counted per billing month (Pacific time, as Google bills) and SKU, by placesMeter — the meter every server-side PlacesClient carries — and served live as this month's counts (google-maps.usage), which a caller holds against the per-SKU budgets (the google-maps-usage config: Google's free allowance minus a margin) to step down to a cheaper call before it is billed; mapsBudgetNow is the same check read on the server (for a caller with no live value, an agent's tool).
 - Web:
   - Contributes: `ConfigV2.WebRegister` "google-maps-usage"
   - Uses:
@@ -50,11 +50,13 @@ hard stop if this count is ever wrong.
     - `resource.declare` "google-maps.usage"
   - Uses:
     - `config_v2.ConfigV2`
+    - `config_v2.getConfig`
     - `database.db`
     - `network/live.serveValue`
   - DB schema: `plugins/integrations/plugins/google-maps/plugins/usage/server/internal/tables.ts`
   - Exports (values):
     - `_googleMapsUsage`
+    - `mapsBudgetNow`
     - `placesMeter`
   - Resources: `google-maps.usage` (push)
 - Core:
@@ -76,6 +78,7 @@ hard stop if this count is ever wrong.
     - `withinBudget`
 - Cross-plugin:
   - Imported by:
+    - `apps/places/ask`
     - `apps/places/places-map`
     - `integrations/google-maps`
 

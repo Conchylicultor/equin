@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import {
   foldResource,
   mapResource,
+  readyResource,
   useCombinedResources,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
@@ -50,7 +51,7 @@ export function useVisibleTranscript(
  * keyed deltas.
  */
 export function useThreadTranscript(
-  conversationId: string,
+  conversationId: string | null,
 ): ResourceResult<JsonlEvent[]> {
   const window = useTranscriptWindow(conversationId, {
     limit: JSONL_EVENTS_MAX,
@@ -87,10 +88,11 @@ export interface ThreadSnapshot<D extends ThreadResultDef> {
 
 /**
  * The thread of conversation `conversationId`: loading until both its row and
- * its transcript are in, a ready `null` when no such conversation exists.
+ * its transcript are in, a ready `null` when no such conversation exists — or
+ * when the id is `null` (a host with no run yet), from the first render.
  */
 export function useThread<D extends ThreadResultDef>(
-  conversationId: string,
+  conversationId: string | null,
   results: readonly D[],
 ): ResourceResult<ThreadSnapshot<D> | null> {
   const events = useVisibleTranscript(useThreadTranscript(conversationId));
@@ -101,14 +103,16 @@ export function useThread<D extends ThreadResultDef>(
     ready: (data) => data,
   });
   const status = useOptimisticConversationStatus({
-    id: conversationId,
+    id: conversationId ?? "",
     ...(loadedRow ?? NOT_LOADED),
   });
   const defs = useStableResults(results);
   const both = useCombinedResources({ events, row });
   return useMemo(
     () =>
-      mapResource(both, ({ events: visible, row: conversation }) =>
+      conversationId === null
+        ? readyResource<ThreadSnapshot<D> | null>(null)
+        : mapResource(both, ({ events: visible, row: conversation }) =>
         conversation === null
           ? null
           : {
@@ -120,13 +124,13 @@ export function useThread<D extends ThreadResultDef>(
               }),
             },
       ),
-    [both, status, defs],
+    [conversationId, both, status, defs],
   );
 }
 
-/** The thread's turns — see `groupThread`. A ready `null`: no such conversation. */
+/** The thread's turns — see `groupThread`. A ready `null`: no such conversation (or a `null` id). */
 export function useThreadTurns<D extends ThreadResultDef>(
-  conversationId: string,
+  conversationId: string | null,
   results: readonly D[],
 ): ResourceResult<ThreadTurn<D>[] | null> {
   const thread = useThread(conversationId, results);
@@ -143,7 +147,7 @@ export function useThreadTurns<D extends ThreadResultDef>(
  * renders, so their calls count as results rather than steps.
  */
 export function useThreadProgress<D extends ThreadResultDef>(
-  conversationId: string,
+  conversationId: string | null,
   results: readonly D[],
 ): ResourceResult<ThreadProgress | null> {
   const thread = useThread(conversationId, results);
@@ -167,7 +171,7 @@ export function useThreadProgress<D extends ThreadResultDef>(
  * `null` until the agent delivered one (or when no such conversation exists).
  */
 export function useLatestResult<T>(
-  conversationId: string,
+  conversationId: string | null,
   def: ThreadResultDef<T>,
 ): ResourceResult<{ payload: T; at: string } | null> {
   const results = useMemo(() => [def], [def]);

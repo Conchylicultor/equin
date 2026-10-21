@@ -46,9 +46,10 @@ const GONE_COUNT = { count: true } as const;
 // A read, not a nullable row: `loading` until the server answers, `error` if
 // the read failed (its last-seen row as `stale`), and a ready `null` only when
 // no conversation has this id — so "not loaded yet" and "failed" never reach a
-// caller as "no such conversation".
+// caller as "no such conversation". A `null` id (nothing to look up yet) is a
+// ready `null` from the first render.
 export function useConversation(
-  id: string,
+  id: string | null,
 ): ResourceResult<ConversationEntry | null> {
   const row = useLiveRow(conversationsById, id);
   return useMemo(() => mapRow(row, (r): ConversationEntry | null => r), [row]);

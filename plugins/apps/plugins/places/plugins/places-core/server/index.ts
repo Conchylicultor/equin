@@ -37,6 +37,7 @@ export {
   type InsertPlaceExtras,
   type InsertPlaceResult,
 } from "./internal/places-repo";
+export { searchPlaces } from "./internal/places-repo";
 export { replaceAllPlaces, type ImportedPlace } from "./internal/replace-all";
 export type { SeedTagKey } from "./internal/seed-tags";
 

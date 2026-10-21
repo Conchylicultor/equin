@@ -98,6 +98,7 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
     - `WorkspaceSpecSchema`
 - Cross-plugin:
   - Imported by:
+    - `apps/places/ask`
     - `apps/sonata/transcription`
     - `conversations`
     - `conversations/workspace/launch-option`

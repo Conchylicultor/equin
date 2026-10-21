@@ -698,6 +698,10 @@
       "name": "@singularity/plugin-apps-places",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/places/plugins/ask": {
+      "name": "@singularity/plugin-apps-places-ask",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/places/plugins/mapstr-import": {
       "name": "@singularity/plugin-apps-places-mapstr-import",
       "version": "0.0.1",
@@ -7265,6 +7269,8 @@
     "@singularity/plugin-apps-pages-welcome-recent-pages": ["@singularity/plugin-apps-pages-welcome-recent-pages@workspace:plugins/apps/plugins/pages/plugins/welcome/plugins/recent-pages"],
 
     "@singularity/plugin-apps-places": ["@singularity/plugin-apps-places@workspace:plugins/apps/plugins/places"],
+
+    "@singularity/plugin-apps-places-ask": ["@singularity/plugin-apps-places-ask@workspace:plugins/apps/plugins/places/plugins/ask"],
 
     "@singularity/plugin-apps-places-mapstr-import": ["@singularity/plugin-apps-places-mapstr-import@workspace:plugins/apps/plugins/places/plugins/mapstr-import"],
 

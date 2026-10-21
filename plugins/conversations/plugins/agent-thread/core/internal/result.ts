@@ -15,21 +15,50 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 export interface ThreadResultDef<T = unknown> {
   readonly tool: string;
   readonly schema: ZodParser<T>;
+  /**
+   * How many things one accepted payload delivers — what the thread's header
+   * and a host's pill count ("8 picks" from one call holding eight). Default 1.
+   */
+  // Method syntax: a def of a narrower payload is still a ThreadResultDef.
+  count?(payload: T): number;
 }
 
 /** Declare a result kind — see {@link ThreadResultDef}. */
 export function defineThreadResult<T>(def: {
   tool: string;
   schema: ZodParser<T>;
+  count?: (payload: T) => number;
 }): ThreadResultDef<T> {
   if (def.tool.startsWith("mcp__")) {
     throw new Error(
       `defineThreadResult: "${def.tool}" is a transcript name — pass the tool's own name (the part after mcp__<server>__)`,
     );
   }
-  return { tool: def.tool, schema: def.schema };
+  return {
+    tool: def.tool,
+    schema: def.schema,
+    ...(def.count === undefined ? {} : { count: def.count }),
+  };
 }
 
 /** The payload type a result kind parses to. */
 export type ThreadResultPayload<D> =
   D extends ThreadResultDef<infer T> ? T : never;
+
+/**
+ * How many things a turn's results deliver: each accepted payload by its
+ * kind's `count` (one when it has none); an invalid result delivers nothing.
+ */
+export function resultCountOf(
+  results: readonly (
+    | { kind: "accepted"; def: ThreadResultDef; payload: unknown }
+    | { kind: "invalid" }
+  )[],
+): number {
+  let n = 0;
+  for (const r of results) {
+    if (r.kind !== "accepted") continue;
+    n += r.def.count === undefined ? 1 : r.def.count(r.payload);
+  }
+  return n;
+}

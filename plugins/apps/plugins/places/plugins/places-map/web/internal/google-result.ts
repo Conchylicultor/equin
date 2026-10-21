@@ -1,4 +1,5 @@
-import type { MapPin } from "@plugins/map/core";
+import type { MapBounds, MapPin } from "@plugins/map/core";
+import type { PlaceCandidate } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   autoTagsFor,
@@ -6,6 +7,7 @@ import {
   tagPath,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
+import type { GoogleHit } from "../components/google-result-card";
 import { fallbackIcon, tagIcon } from "./place-visual";
 
 /** The pin type of a Google result proposed on the map (`GeoMap.Pin` key). */
@@ -67,4 +69,34 @@ export function readGoogleResultVisual(pin: MapPin): GoogleResultVisual {
     );
   }
   return data as GoogleResultVisual;
+}
+
+function inView(bounds: MapBounds, lat: number, lng: number): boolean {
+  const inLng =
+    bounds.west <= bounds.east
+      ? lng >= bounds.west && lng <= bounds.east
+      : lng >= bounds.west || lng <= bounds.east; // across the antimeridian
+  return lat >= bounds.south && lat <= bounds.north && inLng;
+}
+
+/**
+ * One Google candidate as a card shows it: "Sichuan restaurant · 184 Rue
+ * Saint-Martin", its would-be look, and whether it lies outside the map's
+ * view (`bounds`; `null` — the view not known yet — is in view).
+ */
+export function candidateHit(
+  r: PlaceCandidate,
+  bounds: MapBounds | null,
+  tags: readonly PlaceTag[],
+): GoogleHit {
+  return {
+    placeId: r.placeId,
+    name: r.name,
+    line:
+      [r.category, r.address].filter((p) => p !== undefined).join(" · ") ||
+      undefined,
+    result: r,
+    visual: googleResultVisual(r.types, tags),
+    offMap: bounds !== null && !inView(bounds, r.lat, r.lng),
+  };
 }

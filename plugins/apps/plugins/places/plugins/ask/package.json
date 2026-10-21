@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-places-ask",
+  "description": "Ask Sonnet in the Places search bar: the places.ask scratch profile, its Google search and picks tools, the Google candidates each run has seen, and the Places task category the runs are filed under.",
+  "private": true,
+  "version": "0.0.1"
+}

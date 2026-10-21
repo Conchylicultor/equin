@@ -28,7 +28,11 @@ import type {
   ThreadState,
   ThreadTurn,
 } from "../../core";
+import { resultCountOf } from "../../core";
 import { StepList } from "./step-list";
+import { defaultResultWords, type ResultWords } from "./result-words";
+
+export type { ResultWords } from "./result-words";
 
 /** How a host draws one accepted result; `latest` is true in the newest turn. */
 export type RenderThreadResult<D extends ThreadResultDef> = (
@@ -43,7 +47,11 @@ const STATE_DOT: Record<ThreadState, StatusDotPaint> = {
   failed: { colorClass: "bg-destructive" },
 };
 
-function stateWords(state: ThreadState, resultCount: number): string {
+function stateWords(
+  state: ThreadState,
+  resultCount: number,
+  resultWords: ResultWords,
+): string {
   switch (state) {
     case "working":
       return "Working…";
@@ -52,30 +60,33 @@ function stateWords(state: ThreadState, resultCount: number): string {
     case "failed":
       return "Failed";
     case "done":
-      return resultCount === 0
-        ? "Done"
-        : `${resultCount} result${resultCount === 1 ? "" : "s"}`;
+      return resultCount === 0 ? "Done" : resultWords(resultCount);
   }
 }
 
 function ThreadHeader({
   state,
   resultCount,
+  resultWords,
+  title,
   action,
 }: {
   state: ThreadState;
   resultCount: number;
+  resultWords: ResultWords;
+  title?: ReactNode;
   action?: ReactNode;
 }) {
   return (
     <Line className="gap-sm border-b border-border px-md py-xs">
+      {title}
       <StatusDot {...STATE_DOT[state]} />
       <Fill>
         <Text
           variant="label"
           tone={state === "failed" ? "destructive" : "default"}
         >
-          {stateWords(state, resultCount)}
+          {stateWords(state, resultCount, resultWords)}
         </Text>
       </Fill>
       {action}
@@ -107,10 +118,12 @@ function TurnView<D extends ThreadResultDef>({
   turn,
   latest,
   renderResult,
+  resultWords,
 }: {
   turn: ThreadTurn<D>;
   latest: boolean;
   renderResult: RenderThreadResult<D>;
+  resultWords: ResultWords;
 }) {
   // The agent is between tools (thinking, writing): say it is still on it.
   const thinking =
@@ -118,7 +131,7 @@ function TurnView<D extends ThreadResultDef>({
   return (
     <Stack gap="sm">
       <UserBubble text={turn.user.text} />
-      <StepList turn={turn} />
+      <StepList turn={turn} resultWords={resultWords} />
       {thinking && <BouncingDots />}
       {turn.answer && (
         <Text as="div" variant="body">
@@ -148,7 +161,11 @@ export interface AgentThreadViewProps<D extends ThreadResultDef> {
   turns: readonly ThreadTurn<D>[];
   state: ThreadState;
   renderResult: RenderThreadResult<D>;
-  /** Trailing in the header — the Open conversation link. */
+  /** Leading in the header — who the thread is with ("✦ Sonnet"). */
+  title?: ReactNode;
+  /** How the header counts the newest turn's results; default "N results". */
+  resultWords?: ResultWords;
+  /** Trailing in the header — the Open conversation link, a host's close. */
   headerAction?: ReactNode;
   /** After the last turn, inside the scroller: a pending question, sent-turn echoes. */
   trailing?: ReactNode;
@@ -167,6 +184,8 @@ export function AgentThreadView<D extends ThreadResultDef>({
   turns,
   state,
   renderResult,
+  title,
+  resultWords = defaultResultWords,
   headerAction,
   trailing,
   composer,
@@ -181,8 +200,7 @@ export function AgentThreadView<D extends ThreadResultDef>({
     [scrollRef],
   );
   const last = turns.at(-1);
-  const resultCount =
-    last?.results.filter((r) => r.kind === "accepted").length ?? 0;
+  const resultCount = resultCountOf(last?.results ?? []);
 
   return (
     <Column
@@ -191,6 +209,8 @@ export function AgentThreadView<D extends ThreadResultDef>({
         <ThreadHeader
           state={state}
           resultCount={resultCount}
+          resultWords={resultWords}
+          title={title}
           action={headerAction}
         />
       }
@@ -219,6 +239,7 @@ export function AgentThreadView<D extends ThreadResultDef>({
                     turn={turn}
                     latest={i === turns.length - 1}
                     renderResult={renderResult}
+                    resultWords={resultWords}
                   />
                 ))
               )}

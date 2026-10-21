@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type ReactNode, useCallback, useRef } from "react";
+import { type KeyboardEvent, type ReactNode, useCallback, useRef } from "react";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -8,6 +8,8 @@ import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
@@ -74,6 +76,10 @@ export interface DataViewToolbarProps {
   searchPlaceholder?: string;
   /** The panel under the search field (`DataViewSearch.suggestions`). */
   searchSuggestions?: DataViewSearchSuggestions;
+  /** Beside the search field (`DataViewSearch.trailing`). */
+  searchTrailing?: ReactNode;
+  /** Enter in the search field (`DataViewSearch.onSubmit`). */
+  onSearchSubmit?: (query: string, opts: { mod: boolean }) => void;
   /** `ToolbarParts.asideInset`: how far the surface's aside reaches from the
    *  left edge, as a CSS length; default `"0px"` (no aside, or one in its own
    *  column beside the band). */
@@ -111,6 +117,8 @@ export function DataViewToolbar({
   arrangement = barArrangement,
   searchPlaceholder = "Search…",
   searchSuggestions,
+  searchTrailing,
+  onSearchSubmit,
   asideInset = "0px",
 }: DataViewToolbarProps): ReactNode {
   const [measureRef, { width }] = useElementSize();
@@ -155,6 +163,15 @@ export function DataViewToolbar({
       ref={searchRef}
       value={query}
       onChange={(e) => onQueryChange(e.target.value)}
+      {...(onSearchSubmit === undefined
+        ? {}
+        : {
+            onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => {
+              if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+              e.preventDefault();
+              onSearchSubmit(query, { mod: e.metaKey || e.ctrlKey });
+            },
+          })}
       placeholder={searchPlaceholder}
       appearance={compact ? "field" : forms.search}
       // Wide field: a fixed lane in the inline row — wider when it searches
@@ -168,12 +185,21 @@ export function DataViewToolbar({
       }
     />
   );
-  const searchInput =
-    searchSuggestions === undefined ? (
+  const fieldWithTrailing =
+    searchTrailing === undefined ? (
       field
     ) : (
+      <Line className="gap-xs">
+        <Fill>{field}</Fill>
+        {searchTrailing}
+      </Line>
+    );
+  const searchInput =
+    searchSuggestions === undefined ? (
+      fieldWithTrailing
+    ) : (
       <SearchWithSuggestions
-        input={field}
+        input={fieldWithTrailing}
         inputRef={searchRef}
         suggestions={searchSuggestions}
       />

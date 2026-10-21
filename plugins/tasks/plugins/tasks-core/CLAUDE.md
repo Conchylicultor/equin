@@ -524,13 +524,13 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 72 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×30
     - `tasks` ×17
     - `active-data` ×5
     - `debug` ×4
+    - `apps` ×3
     - `page` ×3
-    - `apps` ×2
     - `infra` ×2
     - `stats` ×2
     - `backup/sources/transcripts`
@@ -541,6 +541,7 @@ serves them.
     - `review/plugin-changes`
   - Extended by:
     - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
+    - `apps/places/ask` (table `conversations_ext_places_ask`)
     - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)
     - `conversations/conversation-progress` (table `conversations_ext_progress`)
     - `conversations/conversations-view/queue` (table `conversations_ext_queue`)

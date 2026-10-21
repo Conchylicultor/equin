@@ -95,6 +95,7 @@ is correct here — do not "fix" it later.
 - Description: Stateless typed Google Places API (New) client: places:autocomplete, places:searchText (pro, or rich with rating, price and this week's hours; biased to a circle or a box), place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot / PlaceCandidate shapes. Every call takes a PlacesClient — the key and the meter it is counted on, its SKU derived from its field mask (skuFor) — and never touches auth or storage.
 - Cross-plugin:
   - Imported by:
+    - `apps/places/ask`
     - `apps/places/place-details`
     - `apps/places/places-core`
     - `page/place/google`

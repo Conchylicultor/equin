@@ -10,7 +10,7 @@ import type { ResourceError } from "@plugins/primitives/plugins/live-state/web";
 import { useMapsBudget } from "@plugins/integrations/plugins/google-maps/plugins/usage/web";
 import { usePlaceSearch } from "@plugins/apps/plugins/places/plugins/places-core/web";
 import type { GoogleHit } from "../components/google-result-card";
-import { googleResultVisual } from "./google-result";
+import { candidateHit, googleResultVisual } from "./google-result";
 import { useDebouncedValue } from "./use-debounced-value";
 
 /** How long typing must pause before Google is asked. */
@@ -50,19 +50,11 @@ export type GoogleSearchState =
 const round = (n: number) => Number(n.toFixed(BIAS_DECIMALS));
 
 /** The map's view as the search's bias box, rounded ({@link BIAS_DECIMALS}). */
-function biasOf(bounds: MapBounds): PlaceBounds {
+export function biasOf(bounds: MapBounds): PlaceBounds {
   return {
     low: { lat: round(bounds.south), lng: round(bounds.west) },
     high: { lat: round(bounds.north), lng: round(bounds.east) },
   };
-}
-
-function inView(bounds: MapBounds, lat: number, lng: number): boolean {
-  const inLng =
-    bounds.west <= bounds.east
-      ? lng >= bounds.west && lng <= bounds.east
-      : lng >= bounds.west || lng <= bounds.east; // across the antimeridian
-  return lat >= bounds.south && lat <= bounds.north && inLng;
 }
 
 function hitsOf(
@@ -81,16 +73,7 @@ function hitsOf(
       offMap: false,
     }));
   }
-  const hits = answer.results.map((r) => ({
-    placeId: r.placeId,
-    name: r.name,
-    line:
-      [r.category, r.address].filter((p) => p !== undefined).join(" · ") ||
-      undefined,
-    result: r,
-    visual: googleResultVisual(r.types, tags),
-    offMap: !inView(bounds, r.lat, r.lng),
-  }));
+  const hits = answer.results.map((r) => candidateHit(r, bounds, tags));
   // Stable: Google's order within each half.
   return [...hits.filter((h) => !h.offMap), ...hits.filter((h) => h.offMap)];
 }

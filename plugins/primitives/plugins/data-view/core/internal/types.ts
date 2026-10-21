@@ -1779,6 +1779,17 @@ export interface DataViewSearch {
    * elsewhere (a click on a result's pin) or close it (a pick).
    */
   suggestions?: DataViewSearchSuggestions;
+  /**
+   * Beside the field, inside the search's own box: a status the query started
+   * (a background search's progress pill). The host's — the toolbar only
+   * places it.
+   */
+  trailing?: ReactNode;
+  /**
+   * Enter in the field (`mod`: with ⌘ / Ctrl) — the query handed on as a
+   * question rather than a filter. Absent → Enter does nothing.
+   */
+  onSubmit?: (query: string, opts: { mod: boolean }) => void;
 }
 
 /** The search field's panel — see {@link DataViewSearch.suggestions}. */

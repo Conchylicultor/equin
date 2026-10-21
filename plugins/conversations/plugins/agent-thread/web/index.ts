@@ -30,6 +30,7 @@ export { AgentThreadView } from "./components/agent-thread-view";
 export type {
   AgentThreadViewProps,
   RenderThreadResult,
+  ResultWords,
 } from "./components/agent-thread-view";
 export { StepLabel } from "./components/step-list";
 export {

@@ -1551,6 +1551,12 @@ function DataViewBodyInner<TRow>(
                 {...(search?.suggestions === undefined
                   ? {}
                   : { searchSuggestions: search.suggestions })}
+                {...(search?.trailing === undefined
+                  ? {}
+                  : { searchTrailing: search.trailing })}
+                {...(search?.onSubmit === undefined
+                  ? {}
+                  : { onSearchSubmit: search.onSubmit })}
                 asideInset={asideInset}
               />
             )}

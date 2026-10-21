@@ -1,5 +1,5 @@
 import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import type { ThreadResultDef } from "./result";
+import { resultCountOf, type ThreadResultDef } from "./result";
 import type { ThreadConversation, ThreadTurn } from "./group-thread";
 
 /**
@@ -85,8 +85,7 @@ export function threadProgressOf<D extends ThreadResultDef>(
     state: threadStateOf(turns, conversation),
     stepsDone: steps.filter((s) => s.state !== "running").length,
     currentStep: steps.findLast((s) => s.state === "running")?.event ?? null,
-    resultCount: (last?.results ?? []).filter((r) => r.kind === "accepted")
-      .length,
+    resultCount: resultCountOf(last?.results ?? []),
     unseen:
       output !== null &&
       (conversation.lastViewedAt === null ||

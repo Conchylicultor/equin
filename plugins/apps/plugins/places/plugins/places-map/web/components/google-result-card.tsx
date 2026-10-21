@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -15,6 +16,7 @@ import { OpenNowLine, RatingLine } from "./place-facts";
 const saveIcon = symbol("add");
 const savedIcon = symbol("check");
 const offMapIcon = symbol("north-east");
+const whyIcon = symbol("auto-awesome");
 
 /** One Google hit as a card shows it, whatever rung of the search gave it. */
 export interface GoogleHit {
@@ -43,6 +45,7 @@ export function GoogleResultCard({
   saved,
   onSave,
   onOpenSaved,
+  pick,
 }: {
   hit: GoogleHit;
   highlighted: boolean;
@@ -50,6 +53,12 @@ export function GoogleResultCard({
   saved: boolean;
   onSave: () => Promise<void>;
   onOpenSaved: () => void;
+  /**
+   * One of Sonnet's picks: its rank on the icon (the number its pin carries)
+   * and why it fits, in place of the open-now line — the reason names the
+   * hours it checked.
+   */
+  pick?: { n: number; why: string };
 }): ReactNode {
   const { result, visual } = hit;
   return (
@@ -63,18 +72,27 @@ export function GoogleResultCard({
       )}
     >
       <Stack direction="row" gap="sm" align="start">
-        <Center
-          aria-hidden
-          className="size-14 rounded-md"
-          style={{ backgroundColor: paleTint(visual.mainColor) }}
-        >
-          <Icon
-            icon={visual.icon}
-            active
-            className="size-7"
-            style={{ color: washInk(visual.mainColor) }}
-          />
-        </Center>
+        <div className="relative">
+          <Center
+            aria-hidden
+            className="size-14 rounded-md"
+            style={{ backgroundColor: paleTint(visual.mainColor) }}
+          >
+            <Icon
+              icon={visual.icon}
+              active
+              className="size-7"
+              style={{ color: washInk(visual.mainColor) }}
+            />
+          </Center>
+          {pick === undefined ? null : (
+            <Pin to="top-right" offset="xs" outset decorative>
+              <Center className="size-5 rounded-full bg-primary text-primary-foreground ring-2 ring-background">
+                <Text variant="count">{pick.n}</Text>
+              </Center>
+            </Pin>
+          )}
+        </div>
         <Fill>
           <Stack gap="2xs">
             <Line className="gap-sm">
@@ -110,7 +128,19 @@ export function GoogleResultCard({
                 {hit.line}
               </Text>
             )}
-            {result === undefined && !hit.offMap ? null : (
+            {pick === undefined ? null : (
+              <Stack
+                direction="row"
+                gap="xs"
+                align="start"
+                className="rounded-md bg-primary/10 px-sm py-2xs text-primary-text"
+              >
+                <Icon icon={whyIcon} className="size-3.5" />
+                <Text variant="caption">{pick.why}</Text>
+              </Stack>
+            )}
+            {pick !== undefined ||
+            (result === undefined && !hit.offMap) ? null : (
               <Line className="gap-sm">
                 {result === undefined ? null : <OpenNowLine details={result} />}
                 <Fill />

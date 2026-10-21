@@ -27,13 +27,23 @@ import {
   type Place,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
+import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { placeSearchText } from "../internal/fields";
+import { looksLikeQuestion } from "../internal/question";
 import { placeVisual } from "../internal/place-visual";
 import type { GoogleSearchState } from "../internal/use-google-search";
 import { GoogleResultCard, type GoogleHit } from "./google-result-card";
 import { PlaceGlyph } from "./place-glyph";
 
 const customPinIcon = symbol("push-pin");
+const sonnetIcon = symbol("auto-awesome");
+
+/** What Ask Sonnet offers with nothing typed: questions it answers well. */
+const EXAMPLE_QUESTIONS = [
+  "chinese restaurant open tuesday",
+  "coffee to work from, quiet, with wifi",
+  "cheap dinner for 6 with kids tonight",
+] as const;
 
 /** Your places listed by name; the rest are on the map. */
 const PLACES_SHOWN = 4;
@@ -57,6 +67,10 @@ export interface UniversalSearchPanelProps {
   /** A save said Google Maps is not set up. */
   saveNotConfigured: boolean;
   onDropCustom: (name: string) => void;
+  /** Hand a question to Sonnet, as a background run. */
+  onAsk: (question: string) => void;
+  /** Why Sonnet cannot be asked now (no computer, the map not placed yet); null when it can. */
+  askBlocked: string | null;
 }
 
 /**
@@ -66,21 +80,56 @@ export interface UniversalSearchPanelProps {
  * ghost pin. Its last row drops a custom pin, for a place Google does not know.
  */
 export function UniversalSearchPanel(props: UniversalSearchPanelProps) {
-  const { query, onDropCustom } = props;
+  const { query, onDropCustom, onAsk, askBlocked } = props;
   const typed = query.trim();
+  const question = looksLikeQuestion(typed);
   return (
     <ControlPanel aria-label="Search or add places">
       {typed === "" ? (
-        <ControlPanel.Section>
-          <ControlPanel.Empty>
-            Search your places, or find new ones on Google — a name, a kind of
-            place, an address. Saving tags it from its Google type.
-          </ControlPanel.Empty>
-        </ControlPanel.Section>
+        <>
+          <ControlPanel.Section>
+            <ControlPanel.Empty>
+              Search your places, or find new ones on Google — a name, a kind of
+              place, an address. Saving tags it from its Google type.
+            </ControlPanel.Empty>
+          </ControlPanel.Section>
+          <ControlPanel.Section
+            label={
+              <Line className="gap-xs">
+                Ask Sonnet
+                <Text variant="caption" tone="muted">
+                  · describe what you want, in words
+                </Text>
+              </Line>
+            }
+          >
+            {EXAMPLE_QUESTIONS.map((q) => (
+              <ControlPanel.Row
+                key={q}
+                icon={<Icon icon={sonnetIcon} className="text-primary-text" />}
+                disabled={askBlocked !== null}
+                onSelect={() => onAsk(q)}
+              >
+                {q}
+              </ControlPanel.Row>
+            ))}
+          </ControlPanel.Section>
+        </>
       ) : (
         <>
+          {question ? (
+            <AskRow query={typed} hot blocked={askBlocked} onAsk={onAsk} />
+          ) : null}
           <YourPlaces {...props} />
           <GoogleSection {...props} />
+          {question ? null : (
+            <AskRow
+              query={typed}
+              hot={false}
+              blocked={askBlocked}
+              onAsk={onAsk}
+            />
+          )}
         </>
       )}
       <ControlPanel.Section>
@@ -93,6 +142,40 @@ export function UniversalSearchPanel(props: UniversalSearchPanelProps) {
         </ControlPanel.Row>
       </ControlPanel.Section>
     </ControlPanel>
+  );
+}
+
+/**
+ * "Ask Sonnet “…”": the query handed to Sonnet as a background run. It leads
+ * the panel when the query reads like a question (`hot`: Enter asks), and
+ * closes it otherwise (⌘Enter asks).
+ */
+function AskRow({
+  query,
+  hot,
+  blocked,
+  onAsk,
+}: {
+  query: string;
+  hot: boolean;
+  blocked: string | null;
+  onAsk: (question: string) => void;
+}) {
+  return (
+    <ControlPanel.Section>
+      <ControlPanel.Row
+        icon={<Icon icon={sonnetIcon} className="text-primary-text" />}
+        description={
+          blocked ??
+          `${hot ? "Looks like a question — " : ""}searches Google, reads hours and ratings, picks for you · runs in the background`
+        }
+        trailing={<Kbd>{hot ? "⏎" : "⌘⏎"}</Kbd>}
+        disabled={blocked !== null}
+        onSelect={() => onAsk(query)}
+      >
+        {`Ask Sonnet “${query}”`}
+      </ControlPanel.Row>
+    </ControlPanel.Section>
   );
 }
 

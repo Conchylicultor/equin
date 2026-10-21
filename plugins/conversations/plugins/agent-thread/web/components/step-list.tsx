@@ -9,7 +9,13 @@ import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import type { ThreadStep, ThreadStepState, ThreadTurn } from "../../core";
+import {
+  resultCountOf,
+  type ThreadStep,
+  type ThreadStepState,
+  type ThreadTurn,
+} from "../../core";
+import type { ResultWords } from "./result-words";
 import { AgentThreadSlots } from "../slots";
 
 const doneIcon = symbol("check");
@@ -70,10 +76,10 @@ function plural(n: number, one: string): string {
  * "4 steps · 2 results · 1 failed" — a finished turn's steps, folded. A step
  * that erred is counted, so the fold never hides that something went wrong.
  */
-function summaryOf(turn: ThreadTurn): string {
+function summaryOf(turn: ThreadTurn, resultWords: ResultWords): string {
   const parts = [plural(turn.steps.length, "step")];
-  if (turn.results.length > 0)
-    parts.push(plural(turn.results.length, "result"));
+  const results = resultCountOf(turn.results);
+  if (results > 0) parts.push(resultWords(results));
   const failed = turn.steps.filter((s) => s.state === "error").length;
   if (failed > 0) parts.push(`${failed} failed`);
   return parts.join(" · ");
@@ -84,7 +90,14 @@ function summaryOf(turn: ThreadTurn): string {
  * once it is done (a failed turn stays open, so its red step shows). The
  * button re-opens it.
  */
-export function StepList({ turn }: { turn: ThreadTurn }) {
+export function StepList({
+  turn,
+  resultWords,
+}: {
+  turn: ThreadTurn;
+  /** How the fold counts the turn's results ("8 picks"). */
+  resultWords: ResultWords;
+}) {
   const [override, setOverride] = useState<boolean | null>(null);
   if (turn.steps.length === 0) return null;
   const foldable = turn.state === "done";
@@ -100,7 +113,7 @@ export function StepList({ turn }: { turn: ThreadTurn }) {
             onClick={() => setOverride(!open)}
           >
             <Icon icon={doneIcon} className="icon-auto" aria-hidden />
-            {summaryOf(turn)}
+            {summaryOf(turn, resultWords)}
             <Icon
               icon={open ? collapseIcon : expandIcon}
               className="icon-auto"

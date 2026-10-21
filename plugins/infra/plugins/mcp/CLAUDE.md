@@ -93,6 +93,7 @@ client sees them at connect (Claude Code connects once per conversation).
     - `McpCatalogToolSchema`
 - Cross-plugin:
   - Imported by:
+    - `apps/places/ask`
     - `apps/sonata/transcription`
     - `conversations/conversation-view/push-and-exit`
     - `conversations/summary`

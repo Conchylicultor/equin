@@ -5201,6 +5201,54 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --line-height-caption`
     - **`places`** — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
       - Plugins:
+        - **`ask`** — Ask Sonnet in the Places search bar, server half: the Places task category, the places.ask scratch profile (CLAUDE.md = the map's area and the user's clock; no shell, no exit_clean, so the run stays repliable), its places_search_text tool (Google Text Search biased to the launch's map area, on the search bar's downgrade ladder read server-side) and places_show_picks (the thread's result, refusing any id the run's searches never returned), and the conversations_ext_places_ask side-table of the Google candidates each run has seen, served lookup-only as places.ask.candidates (what a pick's card is drawn from).
+          - Server:
+            - Contributes:
+              - `taskCategory` "places"
+              - `resource.declare` "places.ask.candidates:rows"
+            - Uses:
+              - `apps/places/places-core.searchPlaces`
+              - `conversations/workspace.defineScratchProfile`
+              - `conversations/workspace.ScratchProfile`
+              - `conversations/workspace.workspaceOfConversation`
+              - `database.db`
+              - `infra/entity-extensions.defineExtension`
+              - `infra/mcp.Mcp`
+              - `integrations/google-maps/usage.mapsBudgetNow`
+              - `network/live.serveCollection`
+              - `tasks/task-category.TaskCategory`
+              - `tasks/tasks-core._conversations`
+            - DB schema: `plugins/apps/plugins/places/plugins/ask/server/internal/tables.ts`
+            - Entity extension of: `tasks/tasks-core` (table `conversations_ext_places_ask`)
+            - Register:
+              - `mcpTool('places_search_text')`
+              - `mcpTool('places_show_picks')`
+            - Resources: `places.ask.candidates:rows` (keyed, point)
+          - Core:
+            - Uses:
+              - `apps/places/places-core.PlaceBoundsSchema`
+              - `conversations/agent-thread.defineThreadResult`
+              - `fields/json/config.jsonField`
+              - `infra/entity-extensions.defineExtensionShape`
+              - `integrations/google-maps/places-api.PlaceCandidateSchema`
+              - `network/live.liveCollection`
+            - Exports (types):
+              - `PlacesAskInput`
+              - `PlacesPicks`
+            - Exports (values):
+              - `askCandidates`
+              - `AskCandidatesSchema`
+              - `askCandidatesShape`
+              - `MAX_PICKS`
+              - `PICKS_TOOL`
+              - `PLACES_ASK_PROFILE`
+              - `PLACES_CATEGORY_ID`
+              - `PlacesAskInputSchema`
+              - `placesPicks`
+              - `PlacesPicksSchema`
+              - `SEARCH_TOOL`
+              - `searchCountLine`
+              - `searchCountOf`
         - **`mapstr-import`** — `./singularity places import-mapstr <export>` — matches a Mapstr export's places to Google places (Text Search, scored by name, distance and area extent; hand decisions via --overrides and the search-place lookup verb) into a reviewable mapstr-matches.json, then with --apply replaces every place and tag with the seed tree and the matched places (Mapstr tags mapped onto seed tags, comments as notes, original save dates), in one transaction.
           - Cli:
             - Uses: `framework/server-core.runExec`
@@ -5308,6 +5356,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `insertPlace`
               - `replaceAllPlaces`
+              - `searchPlaces`
             - Register:
               - `defineJob('places.icon.generate')`
               - `defineJob('places.refresh-details')`
@@ -5415,10 +5464,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `wouldCycle`
           - Cross-plugin:
             - Imported by:
+              - `apps/places/ask`
               - `apps/places/place-details`
               - `apps/places/places-map`
               - `apps/places/tag-manager`
-        - **`places-map`** — The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving), the selected place's card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it) and the Google result's ghost pin.
+        - **`places-map`** — The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown in the panel as a thread, its picks as Google cards with why they fit and as numbered pins, its progress as a pill in the bar), the selected place's card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, and the thread's step labels for the Ask Sonnet tools.
           - Web:
             - Slots: `places-map.actions`
             - Slot contributors: `places-map.actions` ← `primitives.pane`
@@ -5427,14 +5477,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FieldPresentation.Register` "entity:places"
               - `GeoMap.Pin` → `SavedPlacePin`
               - `GeoMap.Pin` → `GoogleResultPin`
-            - Uses: 92 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+              - `GeoMap.Pin` → `AskPickPin`
+              - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
+              - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
+            - Uses: 103 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×9
+              - `conversations/agent-thread` ×7
               - `map` ×7
               - `primitives/data-view` ×7
+              - `network/live` ×5
               - `primitives/collapsible` ×5
               - `primitives/css/ui-kit` ×4
               - `primitives/live-state` ×4
-              - `network/live` ×3
               - `primitives/persistent-draft` ×3
               - `ui/icons` ×3
               - `apps/places/tag-manager` ×2
@@ -5463,6 +5517,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/spinner.Spinner`
+              - `primitives/css/status-dot.StatusDot`
               - `primitives/css/surface.Surface`
               - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/data-view/floating-toolbar.floatingToolbar`
@@ -5474,6 +5529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/overlay/tooltip.Kbd`
               - `primitives/relative-time.useNow`
               - `primitives/search.SearchInput`
               - `primitives/shortcuts.useSurfaceShortcuts`
@@ -12714,7 +12770,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`agent-thread`** — Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the AgentThreadSlots.StepLabel dispatch, its answer, the host's own result cards, a composer that resumes an ended conversation), the hooks a host's other surfaces read (useThreadTurns, useThreadProgress, useLatestResult), generic step labels for the common built-in tools, and useThreadRuns (a host's recent runs under its scratch profile). Serves `agent-thread.runs` — the recent conversations launched in a scratch workspace, newest first, filterable by profile — over `_conversations` with the attempt joined (routed: a conversation write refills its own row).
       - Web:
         - Slots: `AgentThreadSlots.StepLabel`
-        - Slot contributors: `AgentThreadSlots.StepLabel` ← `conversations.agent-thread`
+        - Slot contributors:
+          - `AgentThreadSlots.StepLabel` ← `apps.places.places-map`
+          - `AgentThreadSlots.StepLabel` ← `conversations.agent-thread`
         - Contributes:
           - `AgentThreadSlots.StepLabel` "Read" → `PathStepLabel`
           - `AgentThreadSlots.StepLabel` "Write" → `PathStepLabel`
@@ -12728,9 +12786,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
           - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
           - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-        - Uses: 56 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
+        - Uses: 58 symbols — full list in [`plugins/conversations/plugins/agent-thread/REFERENCE.md`](../plugins/conversations/plugins/agent-thread/REFERENCE.md)
           - `conversations/conversation-view/pending-turn` ×7
-          - `primitives/live-state` ×6
+          - `primitives/live-state` ×7
           - `conversations/conversation-view/jsonl-viewer` ×3
           - `conversations/conversation-view/user-message` ×2
           - `conversations/conversation-view` ×2
@@ -12755,6 +12813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/spinner.Spinner`
           - `primitives/css/text.Text`
+          - `primitives/dom/in-view.useInView`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/launch.useTaskLaunch`
@@ -12769,6 +12828,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentThreadProps`
           - `AgentThreadViewProps`
           - `RenderThreadResult`
+          - `ResultWords`
           - `StartThreadOptions`
           - `StartThreadRequest`
           - `StartThreadResult`
@@ -12827,6 +12887,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `groupThread`
           - `latestOutputAt`
           - `latestResultOf`
+          - `resultCountOf`
           - `THREAD_RUNS_DEFAULT_LIMIT`
           - `threadProgressOf`
           - `threadRuns`
@@ -12843,6 +12904,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
+        - Imported by:
+          - `apps/places/ask`
+          - `apps/places/places-map`
     - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations: the agents roster and launches (tables, live collections, CRUD and move routes), portable; the launch route itself is the desktop-only machine half.
       - Web:
         - Slots:
@@ -18145,6 +18209,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WorkspaceSpecSchema`
       - Cross-plugin:
         - Imported by:
+          - `apps/places/ask`
           - `apps/sonata/transcription`
           - `conversations`
           - `conversations/workspace/launch-option`
@@ -18287,8 +18352,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
   - Cross-plugin:
-    - Imported by: 120 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×32
+    - Imported by: 121 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×33
       - `page` ×15
       - `conversations` ×14
       - `infra` ×13
@@ -22874,8 +22939,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 26 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
-              - `apps` ×4
+            - Imported by: 27 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+              - `apps` ×5
               - `debug` ×4
               - `infra` ×4
               - `conversations` ×3
@@ -26931,8 +26996,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
-          - `apps` ×16
+        - Imported by: 41 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+          - `apps` ×17
           - `tasks` ×11
           - `conversations` ×9
           - `page` ×3
@@ -28313,6 +28378,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpCatalogToolSchema`
       - Cross-plugin:
         - Imported by:
+          - `apps/places/ask`
           - `apps/sonata/transcription`
           - `conversations/conversation-view/push-and-exit`
           - `conversations/summary`
@@ -29541,6 +29607,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete, places:searchText (pro, or rich with rating, price and this week's hours; biased to a circle or a box), place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot / PlaceCandidate shapes. Every call takes a PlacesClient — the key and the meter it is counted on, its SKU derived from its field mask (skuFor) — and never touches auth or storage.
           - Cross-plugin:
             - Imported by:
+              - `apps/places/ask`
               - `apps/places/place-details`
               - `apps/places/places-core`
               - `page/place/google`
@@ -29586,7 +29653,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlaceSnapshotSchema`
               - `PlaceSuggestionSchema`
               - `skuFor`
-        - **`usage`** — Registers the Google Maps usage budgets (per-SKU monthly call budgets inside Google's free allowance) for Settings → Config, and reads them against this month's live counts (useMapsBudget). Owns google_maps_usage: every Places call counted per billing month (Pacific time, as Google bills) and SKU, by placesMeter — the meter every server-side PlacesClient carries — and served live as this month's counts (google-maps.usage), which a caller holds against the per-SKU budgets (the google-maps-usage config: Google's free allowance minus a margin) to step down to a cheaper call before it is billed.
+        - **`usage`** — Registers the Google Maps usage budgets (per-SKU monthly call budgets inside Google's free allowance) for Settings → Config, and reads them against this month's live counts (useMapsBudget). Owns google_maps_usage: every Places call counted per billing month (Pacific time, as Google bills) and SKU, by placesMeter — the meter every server-side PlacesClient carries — and served live as this month's counts (google-maps.usage), which a caller holds against the per-SKU budgets (the google-maps-usage config: Google's free allowance minus a margin) to step down to a cheaper call before it is billed; mapsBudgetNow is the same check read on the server (for a caller with no live value, an agent's tool).
           - Web:
             - Contributes: `ConfigV2.WebRegister` "google-maps-usage"
             - Uses:
@@ -29604,11 +29671,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "google-maps.usage"
             - Uses:
               - `config_v2.ConfigV2`
+              - `config_v2.getConfig`
               - `database.db`
               - `network/live.serveValue`
             - DB schema: `plugins/integrations/plugins/google-maps/plugins/usage/server/internal/tables.ts`
             - Exports (values):
               - `_googleMapsUsage`
+              - `mapsBudgetNow`
               - `placesMeter`
             - Resources: `google-maps.usage` (push)
           - Core:
@@ -29630,6 +29699,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `withinBudget`
           - Cross-plugin:
             - Imported by:
+              - `apps/places/ask`
               - `apps/places/places-map`
               - `integrations/google-maps`
     - **`hooktheory`** — Hooktheory (TheoryTab) API client: getTrendNodes / getTrendSongs (signed-in account, token read from auth/central) and getTheorytabSection (public), every body zod-parsed at the fetch boundary; plus GET /api/hooktheory/{trends/nodes,trends/songs,sections/:id} wrappers. Core adds pure readers: sectionFromHookpadDoc (a Hookpad document to a section) and hookpadChordSound (a chord to its root pitch class and intervals, ported from Sheet Sage and checked against its whole dataset).
@@ -30460,8 +30530,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 259 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×70
+        - Imported by: 260 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×71
           - `conversations` ×49
           - `debug` ×27
           - `tasks` ×27
@@ -36165,10 +36235,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 114 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 115 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×32
+              - `primitives` ×18
               - `conversations` ×17
-              - `primitives` ×17
               - `debug` ×8
               - `page` ×6
               - `ui` ×6
@@ -36614,8 +36684,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --status-dot-md`
               - `ui/tokens/density --status-dot-sm`
               - `ui/tokens/density --status-dot-xs`
-            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
-              - `apps` ×11
+            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
+              - `apps` ×12
               - `conversations` ×10
               - `debug` ×8
               - `active-data` ×3
@@ -37285,7 +37355,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 109 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 111 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×18
           - `primitives/css/ui-kit` ×14
           - `primitives/data-view/view-core` ×8
@@ -37295,6 +37365,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/tree` ×3
           - `config_v2` ×2
           - `primitives/collapsible` ×2
+          - `primitives/css/fill` ×2
           - `primitives/css/overlay` ×2
           - `primitives/css/row` ×2
           - `primitives/css/spacing` ×2
@@ -37312,9 +37383,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.IdKinds`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
-          - `primitives/css/fill.fillClasses`
           - `primitives/css/inline.Inline`
           - `primitives/css/layer.Layer`
+          - `primitives/css/line.Line`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
@@ -38406,6 +38477,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/website/pages/foundations`
+              - `conversations/agent-thread`
               - `conversations/conversation-view/jsonl-viewer`
               - `primitives/css/working-dots`
               - `primitives/cursor-pagination`
@@ -40712,27 +40784,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-2xs`
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --line-height-2xs`
-            - Imported by:
-              - `apps/chord/trainer`
-              - `apps/desktop/launcher`
-              - `apps/prototypes/present`
-              - `page/formatting/bold`
-              - `page/formatting/code`
-              - `page/formatting/italic`
-              - `page/formatting/link`
-              - `page/formatting/strikethrough`
-              - `page/formatting/underline`
-              - `primitives/action-presentation`
-              - `primitives/command-palette`
-              - `primitives/icon-button`
-              - `primitives/overlay/image-viewer`
-              - `primitives/overlay/imperative-dialog/confirm`
-              - `primitives/search`
-              - `primitives/text-editor/composer`
-              - `primitives/ui-context/element-picker`
-              - `tasks/launch-options`
-              - `tasks/task-description`
-              - `tasks/task-draft-form`
+            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
+              - `primitives` ×8
+              - `page` ×6
+              - `apps` ×4
+              - `tasks` ×3
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
@@ -45919,8 +45975,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `task-categories:rows` (keyed, point)
           - `task-category.registry` (push, fixed)
       - Cross-plugin:
-        - Imported by: 22 plugins — full list in [`plugins/tasks/plugins/task-category/REFERENCE.md`](../plugins/tasks/plugins/task-category/REFERENCE.md)
-          - `apps` ×5
+        - Imported by: 23 plugins — full list in [`plugins/tasks/plugins/task-category/REFERENCE.md`](../plugins/tasks/plugins/task-category/REFERENCE.md)
+          - `apps` ×6
           - `tasks` ×4
           - `conversations` ×2
           - `page` ×2
@@ -46919,13 +46975,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 71 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 72 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×30
           - `tasks` ×17
           - `active-data` ×5
           - `debug` ×4
+          - `apps` ×3
           - `page` ×3
-          - `apps` ×2
           - `infra` ×2
           - `stats` ×2
           - `backup/sources/transcripts`
@@ -46936,6 +46992,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes`
         - Extended by:
           - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
+          - `apps/places/ask` (table `conversations_ext_places_ask`)
           - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)
           - `conversations/conversation-progress` (table `conversations_ext_progress`)
           - `conversations/conversations-view/queue` (table `conversations_ext_queue`)

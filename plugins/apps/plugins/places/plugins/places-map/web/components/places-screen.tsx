@@ -46,6 +46,12 @@ import {
   googlePlaceIdOfPin,
 } from "../internal/google-result";
 import { useGoogleSearch } from "../internal/use-google-search";
+import { ASK_PICK_PIN_TYPE } from "../internal/ask-pick";
+import { useLatestAskPicks } from "../internal/ask-picks";
+import { looksLikeQuestion } from "../internal/question";
+import { useAsk } from "../internal/use-ask";
+import { AskPill } from "./ask-pill";
+import { AskThreadPanel } from "./ask-thread";
 import type { GoogleHit } from "./google-result-card";
 import { UniversalSearchPanel } from "./universal-search";
 import { PLACE_CARD_WIDTH, PlaceCard } from "./place-card";
@@ -147,7 +153,17 @@ function PlacesSurface({
     null,
   );
   const [saveNotConfigured, setSaveNotConfigured] = useState(false);
-  const google = useGoogleSearch({ text: query, bounds, session, tags });
+  // Ask Sonnet: the question's background run, shown in the panel as a thread
+  // (in place of the search) and in the bar as a pill; its picks are the
+  // map's proposals while it is open.
+  const ask = useAsk(bounds);
+  const google = useGoogleSearch({
+    text: ask.conversationId === null ? query : "",
+    bounds,
+    session,
+    tags,
+  });
+  const askPicks = useLatestAskPicks(ask.conversationId, bounds, tags);
   const savedByGoogleId = useMemo(
     () =>
       new Map(
@@ -158,11 +174,28 @@ function PlacesSurface({
     [places],
   );
   // Each hit not saved yet is proposed on the map; a saved one is its own pin.
+  // While Sonnet's thread is open, its picks are the proposals instead.
   const ghostPins = useMemo(
     (): MapPin[] =>
-      google.kind !== "answer"
-        ? []
-        : google.hits.flatMap((hit) =>
+      ask.conversationId !== null
+        ? askPicks.flatMap((p) =>
+            savedByGoogleId.has(p.hit.placeId) || p.hit.result === undefined
+              ? []
+              : [
+                  {
+                    kind: "pin",
+                    id: googlePinId(p.hit.placeId),
+                    position: { lat: p.hit.result.lat, lng: p.hit.result.lng },
+                    pinType: ASK_PICK_PIN_TYPE,
+                    label: p.hit.name,
+                    data: { n: p.n },
+                    frame: false,
+                  },
+                ],
+          )
+        : google.kind !== "answer"
+          ? []
+          : google.hits.flatMap((hit) =>
             hit.result === undefined || savedByGoogleId.has(hit.placeId)
               ? []
               : [
@@ -178,7 +211,7 @@ function PlacesSurface({
                   },
                 ],
           ),
-    [google, savedByGoogleId],
+    [ask.conversationId, askPicks, google, savedByGoogleId],
   );
 
   const extraFields = useMemo(() => placeExtraFields(tags), [tags]);
@@ -340,6 +373,17 @@ function PlacesSurface({
     });
   };
 
+  const askQuestion = (q: string) => {
+    const question = q.trim();
+    if (question === "") return;
+    void ask.start(question).then((started) => {
+      if (!started) return;
+      // The question is the thread's first bubble now, not a filter.
+      setQuery("");
+      setSearchOpen(true);
+    });
+  };
+
   const newTag = useCallback(async () => {
     const tag = await createTag({ body: { name: "New tag", parentId: null } });
     setManager({ focusTagId: tag.id });
@@ -371,11 +415,43 @@ function PlacesSurface({
         searchPlaceholder="Search or add places"
         search={{
           query,
-          onQueryChange: setQuery,
+          onQueryChange: (next) => {
+            // Typing goes back to the search: the run goes on in the
+            // background (and in the Agent Manager).
+            if (ask.conversationId !== null) ask.close();
+            setQuery(next);
+          },
+          onSubmit: (q, { mod }) => {
+            if (ask.conversationId === null && (mod || looksLikeQuestion(q)))
+              askQuestion(q);
+          },
+          ...(ask.conversationId === null || searchOpen
+            ? {}
+            : {
+                trailing: (
+                  <AskPill
+                    conversationId={ask.conversationId}
+                    onOpen={() => setSearchOpen(true)}
+                  />
+                ),
+              }),
           suggestions: {
             open: searchOpen && pinPick === null,
             onOpenChange: setSearchOpen,
-            content: (
+            content:
+              ask.conversationId !== null ? (
+                <AskThreadPanel
+                  conversationId={ask.conversationId}
+                  tags={tags}
+                  bounds={bounds}
+                  savedByGoogleId={savedByGoogleId}
+                  hoveredGoogleId={hoveredGoogleId}
+                  onHoverGoogle={setHoveredGoogleId}
+                  onSave={saveHit}
+                  onOpenPlace={openPlace}
+                  onClose={ask.close}
+                />
+              ) : (
               <UniversalSearchPanel
                 places={places}
                 tags={tags}
@@ -392,6 +468,8 @@ function PlacesSurface({
                   setSearchOpen(false);
                   setPinPick({ kind: "drop", name });
                 }}
+                  onAsk={askQuestion}
+                  askBlocked={ask.blocked}
               />
             ),
           },

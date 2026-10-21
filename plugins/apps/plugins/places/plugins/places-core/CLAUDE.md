@@ -92,6 +92,7 @@
   - Exports (values):
     - `insertPlace`
     - `replaceAllPlaces`
+    - `searchPlaces`
   - Register:
     - `defineJob('places.icon.generate')`
     - `defineJob('places.refresh-details')`
@@ -199,6 +200,7 @@
     - `wouldCycle`
 - Cross-plugin:
   - Imported by:
+    - `apps/places/ask`
     - `apps/places/place-details`
     - `apps/places/places-map`
     - `apps/places/tag-manager`

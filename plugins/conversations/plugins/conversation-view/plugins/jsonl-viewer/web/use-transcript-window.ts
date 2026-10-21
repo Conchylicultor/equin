@@ -68,7 +68,8 @@ function windowOf(
  * reads its own server-side value instead.
  */
 export function useTranscriptWindow(
-  conversationId: string,
+  /** `null`: no conversation to read yet — the window stays loading. */
+  conversationId: string | null,
   options?: {
     /**
      * Events in the first page (default: one page). A surface that draws a
@@ -78,12 +79,13 @@ export function useTranscriptWindow(
     limit?: number;
   },
 ): ResourceResult<TranscriptWindow> {
+  const params = conversationId === null ? null : { id: conversationId };
   const rows = useLive(
     jsonlEvents,
-    { id: conversationId },
+    params,
     options?.limit === undefined ? undefined : { limit: options.limit },
   );
-  const meta = useLive(jsonlEvents.meta, { id: conversationId });
+  const meta = useLive(jsonlEvents.meta, params);
   // The window is drawn once both have landed: which folds open the session
   // depends on whether the agent answered before the window (the meta).
   const both = useCombinedResources({ rows, meta });
