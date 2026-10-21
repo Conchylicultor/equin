@@ -206,7 +206,7 @@ pick, or pick mode; closing keeps the query (the filter and the ghosts stay).
 
 ## Plugin reference
 
-- Description: The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown in the panel as a thread, its picks as Google cards with why they fit and as numbered pins, its progress as a pill in the bar), the selected place's card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, and the thread's step labels for the Ask Sonnet tools.
+- Description: The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown in the panel as a thread, its picks as Google cards with why they fit and as numbered pins, its progress as a pill in the bar), the selected place's card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked).
 - Web:
   - Slots: `places-map.actions`
   - Slot contributors: `places-map.actions` ← `primitives.pane`
@@ -218,10 +218,11 @@ pick, or pick mode; closing keeps the query (the filter and the ghosts stay).
     - `GeoMap.Pin` → `AskPickPin`
     - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
     - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
-  - Uses: 103 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
+  - Uses: 109 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×9
+    - `map` ×8
     - `conversations/agent-thread` ×7
-    - `map` ×7
     - `primitives/data-view` ×7
     - `network/live` ×5
     - `primitives/collapsible` ×5
@@ -230,12 +231,14 @@ pick, or pick mode; closing keeps the query (the filter and the ghosts stay).
     - `primitives/persistent-draft` ×3
     - `ui/icons` ×3
     - `apps/places/tag-manager` ×2
+    - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
     - `integrations/google-maps` ×2
     - `primitives/css/control-panel` ×2
     - `primitives/css/text` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/pane` ×2
     - `apps/places/place-details.usePlaceDetails`
+    - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
     - `integrations/google-maps/usage.useMapsBudget`
     - `primitives/app-shell.AppShellBrand`
     - `primitives/copy-to-clipboard.CopyButton`
@@ -246,6 +249,7 @@ pick, or pick mode; closing keeps the query (the filter and the ghosts stay).
     - `primitives/css/column.Column`
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
+    - `primitives/css/grid.Grid`
     - `primitives/css/layer.Layer`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
@@ -258,6 +262,7 @@ pick, or pick mode; closing keeps the query (the filter and the ghosts stay).
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/surface.Surface`
     - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/css/yield.yieldClass`
     - `primitives/data-view/floating-toolbar.floatingToolbar`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/scroll-reveal.revealElement`

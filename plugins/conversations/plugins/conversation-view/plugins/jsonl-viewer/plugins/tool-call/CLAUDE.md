@@ -10,6 +10,7 @@
     - `JsonlViewerTool.Renderer`
     - `JsonlViewerTool.Footer`
   - Slot contributors:
+    - `JsonlViewerTool.Renderer` ← `apps.places.places-map`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.agent`
     - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
@@ -74,6 +75,7 @@
     - `ui/tokens/type-scale --font-weight-tag-strong`
     - `ui/tokens/type-scale --line-height-tag`
   - Imported by:
+    - `apps/places/places-map`
     - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`

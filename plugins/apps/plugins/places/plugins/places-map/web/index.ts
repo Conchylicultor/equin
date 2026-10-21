@@ -18,10 +18,13 @@ import {
   PICKS_TOOL,
   SEARCH_TOOL,
 } from "@plugins/apps/plugins/places/plugins/ask/core";
+import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { agentToolName } from "@plugins/infra/plugins/mcp/core";
+import { PicksToolView } from "./components/picks-tool-view";
 
 export default {
   description:
-    "The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the \"Search or add places\" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown in the panel as a thread, its picks as Google cards with why they fit and as numbered pins, its progress as a pill in the bar), the selected place's card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, and the thread's step labels for the Ask Sonnet tools.",
+    "The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the \"Search or add places\" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown in the panel as a thread, its picks as Google cards with why they fit and as numbered pins, its progress as a pill in the bar), the selected place's card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked).",
   contributions: [
     Pane.Register({ pane: placesMapPane }),
     placePresentation,
@@ -47,6 +50,10 @@ export default {
     AgentThreadSlots.StepLabel({
       match: PICKS_TOOL,
       component: PicksStepLabel,
+    }),
+    JsonlViewerTool.Renderer({
+      match: agentToolName(PICKS_TOOL),
+      component: PicksToolView,
     }),
   ],
   slots: { "places-map": placesMapPane },

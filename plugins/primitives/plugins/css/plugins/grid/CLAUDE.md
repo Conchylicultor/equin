@@ -71,8 +71,8 @@ Shared (both paths):
   - Exports (types): `GridProps`
   - Exports (values): `Grid`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×17
+  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×18
     - `primitives` ×9
     - `ui` ×3
     - `conversations` ×2

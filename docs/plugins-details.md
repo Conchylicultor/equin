@@ -5468,7 +5468,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/places/place-details`
               - `apps/places/places-map`
               - `apps/places/tag-manager`
-        - **`places-map`** — The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown in the panel as a thread, its picks as Google cards with why they fit and as numbered pins, its progress as a pill in the bar), the selected place's card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, and the thread's step labels for the Ask Sonnet tools.
+        - **`places-map`** — The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown in the panel as a thread, its picks as Google cards with why they fit and as numbered pins, its progress as a pill in the bar), the selected place's card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked).
           - Web:
             - Slots: `places-map.actions`
             - Slot contributors: `places-map.actions` ← `primitives.pane`
@@ -5480,10 +5480,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GeoMap.Pin` → `AskPickPin`
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
-            - Uses: 103 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+              - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
+            - Uses: 109 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×9
+              - `map` ×8
               - `conversations/agent-thread` ×7
-              - `map` ×7
               - `primitives/data-view` ×7
               - `network/live` ×5
               - `primitives/collapsible` ×5
@@ -5492,12 +5493,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/persistent-draft` ×3
               - `ui/icons` ×3
               - `apps/places/tag-manager` ×2
+              - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
               - `integrations/google-maps` ×2
               - `primitives/css/control-panel` ×2
               - `primitives/css/text` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/pane` ×2
               - `apps/places/place-details.usePlaceDetails`
+              - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
               - `integrations/google-maps/usage.useMapsBudget`
               - `primitives/app-shell.AppShellBrand`
               - `primitives/copy-to-clipboard.CopyButton`
@@ -5508,6 +5511,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/column.Column`
               - `primitives/css/coords.Placed`
               - `primitives/css/fill.Fill`
+              - `primitives/css/grid.Grid`
               - `primitives/css/layer.Layer`
               - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
@@ -5520,6 +5524,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/surface.Surface`
               - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/css/yield.yieldClass`
               - `primitives/data-view/floating-toolbar.floatingToolbar`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/scroll-reveal.revealElement`
@@ -14367,9 +14372,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 45 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+            - Imported by: 46 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
               - `conversations` ×43
-              - `apps/agent-manager/demo`
+              - `apps` ×2
               - `tasks/outcome-report`
           - Exemptions:
             - Exempts itself from: `no-raw-websocket` — `e2e/no-op-frames.ts` (sanctioned)
@@ -15522,6 +15527,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `JsonlViewerTool.Renderer`
                   - `JsonlViewerTool.Footer`
                 - Slot contributors:
+                  - `JsonlViewerTool.Renderer` ← `apps.places.places-map`
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.agent`
                   - `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`
@@ -15586,6 +15592,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-weight-tag-strong`
                   - `ui/tokens/type-scale --line-height-tag`
                 - Imported by:
+                  - `apps/places/places-map`
                   - `conversations/agent-thread`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -36093,8 +36100,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `GridProps`
             - Exports (values): `Grid`
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
-              - `apps` ×17
+            - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
+              - `apps` ×18
               - `primitives` ×9
               - `ui` ×3
               - `conversations` ×2
@@ -37215,8 +37222,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
-              - `apps` ×8
+            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+              - `apps` ×9
               - `primitives` ×8
               - `conversations` ×5
               - `debug` ×4
