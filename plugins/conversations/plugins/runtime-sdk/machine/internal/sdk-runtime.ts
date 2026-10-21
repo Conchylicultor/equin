@@ -42,6 +42,7 @@ import {
   forgetAgentProcess,
   killAgentProcess,
   startAgentProcess,
+  type StartedAgent,
 } from "./agent-process";
 import { recountAgentProcesses } from "./agent-processes";
 import { handOverLegacyAgents } from "./legacy-handover";
@@ -154,6 +155,79 @@ async function inspectAgents(
   return out;
 }
 
+/**
+ * Wait until the agent answers on its socket. Each new event line (the
+ * process's `started`) is the push to look again.
+ */
+async function waitForHello(
+  id: string,
+  signal: AbortSignal,
+): Promise<"ready" | "timeout"> {
+  const deadline = Date.now() + READY_TIMEOUT_MS;
+  while (!signal.aborted && Date.now() < deadline) {
+    const seen = (await readAgentRow(id))?.cursorSeq ?? 0;
+    if (await answersHello(id)) return "ready";
+    try {
+      await waitForProjection(
+        id,
+        (s) => s.cursorSeq > seen,
+        Math.max(1, deadline - Date.now()),
+        "the agent's start",
+      );
+    } catch (err) {
+      if (err instanceof ProjectionTimeoutError) return "timeout";
+      throw err;
+    }
+  }
+  return "timeout";
+}
+
+/** The agent process exited before it answered on its socket. */
+class AgentStartError extends Error {
+  constructor(
+    readonly conversationId: string,
+    readonly exitReason: string,
+    readonly output: string,
+  ) {
+    super(
+      `The agent process exited during startup (${exitReason})` +
+        (output.trim() ? `: ${lastErrorLine(output)}` : " without any output"),
+    );
+    this.name = "AgentStartError";
+  }
+}
+
+/**
+ * The line that says what went wrong: Bun prints a crash as a code frame and
+ * then `error: <message>`, so the last line naming an error, else the last line.
+ */
+function lastErrorLine(output: string): string {
+  const lines = output
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const named = lines.findLast((l) => /^(\w*error\b|uncaught\b)/i.test(l));
+  return named ?? lines.at(-1) ?? "";
+}
+
+/**
+ * Hold the launch until the agent answers, so an agent that dies on start
+ * fails it with its own output, rather than leaving the row `starting` for the
+ * status sweep to call stuck. A slow start is not a failure: one still coming
+ * up at the deadline is left to the readiness waiters, as before.
+ */
+async function awaitStart(id: string, started: StartedAgent): Promise<void> {
+  const stopWaiting = new AbortController();
+  const outcome = await Promise.race([
+    waitForHello(id, stopWaiting.signal).then((r) => ({ kind: r })),
+    started.exited.then((reason) => ({ kind: "exited" as const, reason })),
+  ]);
+  stopWaiting.abort();
+  if (outcome.kind === "exited") {
+    throw new AgentStartError(id, outcome.reason, started.output());
+  }
+}
+
 async function sendTurn(id: string, text: string): Promise<TypedTurn> {
   await commandAgent(id, { type: "turn", turnId: null, text }, TurnReplySchema);
   // The agent queued it; the ledger confirms it on the `turn_started` event.
@@ -217,7 +291,7 @@ export const sdkRuntime: ConversationRuntime = {
     if (fresh) forgetPosition(id);
     adoptAgent(id);
     writeOptions(id, options);
-    await startAgentProcess(id, options);
+    await awaitStart(id, await startAgentProcess(id, options));
   },
 
   async delete(id: string) {
@@ -283,28 +357,9 @@ export const sdkRuntime: ConversationRuntime = {
     return sendTurn(id, text);
   },
 
-  async waitUntilReady(id: string, signal: AbortSignal) {
-    // Ready = the agent's socket answers: it queues turns from then on, so
-    // nothing waits on the CLI's initialize. Until then, each new event line
-    // (the process's `started`) is the push to look again.
-    const deadline = Date.now() + READY_TIMEOUT_MS;
-    while (!signal.aborted && Date.now() < deadline) {
-      const seen = (await readAgentRow(id))?.cursorSeq ?? 0;
-      if (await answersHello(id)) return "ready";
-      try {
-        await waitForProjection(
-          id,
-          (s) => s.cursorSeq > seen,
-          Math.max(1, deadline - Date.now()),
-          "the agent's start",
-        );
-      } catch (err) {
-        if (err instanceof ProjectionTimeoutError) return "timeout";
-        throw err;
-      }
-    }
-    return "timeout";
-  },
+  // Ready = the agent's socket answers: it queues turns from then on, so
+  // nothing waits on the CLI's initialize.
+  waitUntilReady: waitForHello,
 
   watchPartial: watchPartialMessage,
 };

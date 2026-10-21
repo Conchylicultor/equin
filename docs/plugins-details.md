@@ -12503,15 +12503,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-spawn-failed"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 74 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 75 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×25
       - `conversations/turn-ledger` ×11
       - `conversations/transcript-watcher` ×7
+      - `conversations/spawn-failure` ×3
       - `conversations/workspace` ×3
       - `infra/claude-cli/availability` ×3
       - `reports` ×3
       - `conversations/session-chain` ×2
-      - `conversations/spawn-failure` ×2
       - `database` ×2
       - `infra/endpoints` ×2
       - `infra/events` ×2

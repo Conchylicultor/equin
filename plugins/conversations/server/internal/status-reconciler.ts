@@ -10,6 +10,8 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { recordReport } from "@plugins/reports/server";
+import { spawnFailures } from "@plugins/conversations/plugins/spawn-failure/server";
+import { describeSpawnFailure } from "@plugins/conversations/plugins/spawn-failure/core";
 import { isTransientDbError } from "@plugins/database/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
@@ -246,16 +248,26 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
       // pane vanished before the first reconcile, a future path that bypassed
       // handle-create's wrapper). The originating exception — if any — was
       // already reported by process-hooks; this is a separate signal that the
-      // safety net actually fired. Dedup keeps repeats collapsed into one task
-      // with a growing count.
+      // safety net actually fired.
+      //
+      // Its identity is its cause. When the spawn job recorded why the launch
+      // failed, that sentence leads the message and no errorType is set, so
+      // the crash fingerprint is the normalized message (ids and numbers
+      // stripped): one report per distinct cause, each counting its own
+      // repeats. Without a recorded cause, the declared StuckStartingError
+      // type keeps every such sweep on the one report it has always had.
       if (plan.stuckStartingMs !== null) {
+        const stuckFor = `${Math.round(plan.stuckStartingMs / 1000)}s`;
+        const failure = await spawnFailures.get(id);
         // eslint-disable-next-line promise-safety/no-bare-catch
         await recordReport({
           kind: "crash",
           source: "server-caught",
-          message: `Conversation ${id} stuck in "starting" for ${Math.round(plan.stuckStartingMs / 1000)}s with no live session and nothing to resume — sweeping to gone`,
+          message: failure
+            ? `Conversation never started — ${describeSpawnFailure(failure)} (${id} swept from "starting" to gone after ${stuckFor})`
+            : `Conversation ${id} stuck in "starting" for ${stuckFor} with no live session and nothing to resume, and its spawn recorded no failure — sweeping to gone`,
           data: {
-            errorType: "StuckStartingError",
+            errorType: failure ? null : "StuckStartingError",
             label: "conversations.status.startingTimeout",
           },
         }).catch((e) => {

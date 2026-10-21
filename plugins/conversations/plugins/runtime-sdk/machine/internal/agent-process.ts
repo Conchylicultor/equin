@@ -1,4 +1,12 @@
-import { closeSync, mkdirSync, openSync, rmSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { userInfo } from "node:os";
 import {
   agentSessionEnv,
@@ -51,6 +59,21 @@ function shellWord(value: string): string {
   return `'${value.replaceAll("'", `'\\''`)}'`;
 }
 
+/** One launch of an agent process, as `startAgentProcess` hands it back. */
+export interface StartedAgent {
+  /**
+   * Settles, with the reason, once this launch's process is gone — it exited
+   * (a crash on start included) or its record was dropped. Never rejects.
+   */
+  readonly exited: Promise<string>;
+  /** What this launch has written to `agent.log` so far (stdout and stderr). */
+  output(): string;
+}
+
+// The output a failure carries: enough for a stack trace or a usage error,
+// bounded however much the process printed.
+const MAX_OUTPUT_CHARS = 4_000;
+
 /**
  * Start the agent process for `id`, from the options file already written in
  * its directory. Its stdout and stderr (the human log, the SDK's and the CLI's
@@ -59,7 +82,7 @@ function shellWord(value: string): string {
 export async function startAgentProcess(
   id: string,
   options: AgentLaunchOptions,
-): Promise<void> {
+): Promise<StartedAgent> {
   // A record left by an agent that exited: the declaration holds one instance
   // per key.
   await forget(id);
@@ -87,7 +110,14 @@ export async function startAgentProcess(
     claudeBin: options.claudeBin,
     command,
   });
-  const log = openSync(agentLogPath(id), "a");
+  const logPath = agentLogPath(id);
+  // `agent.log` appends across launches: this launch's output starts here.
+  const logOffset = existsSync(logPath) ? statSync(logPath).size : 0;
+  let settle!: (reason: string) => void;
+  const exited = new Promise<string>((resolve) => {
+    settle = resolve;
+  });
+  const log = openSync(logPath, "a");
   try {
     instances.set(
       id,
@@ -98,11 +128,24 @@ export async function startAgentProcess(
         cwd: options.cwd,
         pidFile: agentPidPath(id),
         outputFd: log,
+        onState: (t) => {
+          if (t.state === "exited") settle(t.lastError ?? "exited");
+          else if (t.state === "stopped") settle("stopped");
+        },
       }),
     );
   } finally {
     closeSync(log);
   }
+  return {
+    exited,
+    output: () => {
+      const text = readFileSync(logPath).subarray(logOffset).toString("utf8");
+      return text.length > MAX_OUTPUT_CHARS
+        ? `…${text.slice(-MAX_OUTPUT_CHARS)}`
+        : text;
+    },
+  };
 }
 
 /**
