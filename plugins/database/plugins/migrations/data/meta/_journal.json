@@ -2339,6 +2339,13 @@
       "tag": "20261020_204613_891a0e61__merged_20261020_2046",
       "hash": "891a0e61",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1792573200000,
+      "tag": "20261021_090000_90bf3912__retire_orphan_ledger_rows",
+      "hash": "90bf3912",
+      "breakpoints": true
     }
   ]
 }

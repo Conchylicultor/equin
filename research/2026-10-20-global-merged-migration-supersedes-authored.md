@@ -140,4 +140,4 @@ Every loud failure in §2 and §3 names this command. Update the `db` group's de
 ## Follow-ups (not in this change)
 
 - **A regen that emits nothing.** If the branch's delta landed on main through someone else's migration, the regen produces no file, and main's migration then hits the same duplicate DDL. §3's message and `--replace` cover it; a structural fix is out of scope.
-- **Fixture hashes in the worktree ledger.** That worktree's ledger also holds `a1b2c3d4` and `b2c3d4e5`. These look like test-fixture hashes written into a real worktree DB, which suggests a test drove the live ledger. Worth a separate task.
+- **Fixture-looking hashes in the worktree ledger.** That worktree's ledger also holds `a1b2c3d4` and `b2c3d4e5`. They are not test leaks: 8b757d7b29 (2026-05-16) hand-wrote two schema migrations under placeholder hashes, main applied them, and 0baacfc43c deleted the files (with `39a1ca33`). Main's ledger, and every fork of it, kept the three rows; the `retire_orphan_ledger_rows` data migration (2026-10-21) deletes them.
