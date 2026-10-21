@@ -7,13 +7,14 @@ import {
   prototypeStatuses,
   statusOf,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { usePrototypeDetail } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
+import {
+  TitleActionButton,
+  usePrototypeDetail,
+} from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { PrototypeGalleryRow } from "../slots";
 import { useSetPrototypeStatus } from "./set-status";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
-const checkBoxIcon = symbol("check-box");
-const checkBoxOutlineBlankIcon = symbol("check-box-outline-blank");
 const checkCircleIcon = symbol("check-circle");
 const radioButtonUncheckedIcon = symbol("radio-button-unchecked");
 
@@ -47,10 +48,10 @@ export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
 }
 
 /**
- * The detail pane header's Done toggle: a checkbox icon beside the copy-id
- * icon, a same-size glyph in both states so ticking it never moves the header.
- * Disabled until the statuses are known, rather than claiming "not done";
- * a failed read is the error icon, whose click retries.
+ * The detail pane header's Done toggle, beside the pin: the done circle in both
+ * states — the accent ink once done, as the pin is once pinned — so ticking it
+ * never moves the header. Disabled until the statuses are known, rather than
+ * claiming "not done"; a failed read is the error icon, whose click retries.
  */
 export function DoneHeaderAction() {
   const { name } = usePrototypeDetail();
@@ -58,18 +59,14 @@ export function DoneHeaderAction() {
   const { pending, setStatus } = useSetPrototypeStatus();
   if (statuses.status === "loading") {
     return (
-      <IconButton
-        icon={checkBoxOutlineBlankIcon}
-        label="Mark as done"
-        disabled
-      />
+      <TitleActionButton icon={checkCircleIcon} label="Mark as done" disabled />
     );
   }
   if (statuses.status === "error") {
     return (
       <ResourceErrorInline
         variant="icon"
-        icon={checkBoxOutlineBlankIcon}
+        icon={checkCircleIcon}
         subject="the Done status"
         error={statuses.error}
         refetch={statuses.refetch}
@@ -78,12 +75,12 @@ export function DoneHeaderAction() {
   }
   const done = statusOf(statuses.data, name).done;
   return (
-    <IconButton
-      icon={done ? checkBoxIcon : checkBoxOutlineBlankIcon}
+    <TitleActionButton
+      icon={checkCircleIcon}
+      on={done}
       label={done ? "Done — click to reopen" : "Mark as done"}
       aria-pressed={done}
       loading={pending}
-      className={done ? "text-success" : undefined}
       onClick={() => setStatus(name, { done: !done })}
     />
   );

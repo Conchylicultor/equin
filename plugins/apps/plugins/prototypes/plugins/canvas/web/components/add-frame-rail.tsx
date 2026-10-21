@@ -13,11 +13,15 @@ import {
   compareWithLabel,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 import { usePrototypeDetail } from "../context";
+import { railButtonClass } from "../internal/rail-button";
 import { FrameSource, type FrameResolution } from "../slots";
 import type { CanvasAddAction } from "../internal/canvas-model";
 
 const addIcon = symbol("add");
 const compareIcon = symbol("compare");
+
+/** The tooltips name what the button adds, as the viewer mock words them. */
+const ADD_TIP = "Add a frame";
 
 /** What one of the rail's buttons does when pressed: a click, or a link's gestures. */
 export type AddFrameHandlers = Partial<
@@ -60,12 +64,10 @@ export function AddFrameRail({
       <Stack direction="col" gap="xs" align="center">
         <IconButton
           variant="floating"
+          className={railButtonClass}
           icon={addIcon}
           label={ADD_FRAME_LABEL}
-          tooltip={
-            disabled ??
-            "Add a frame to compare — a copy of the last one, to change its variant or version"
-          }
+          tooltip={disabled ?? ADD_TIP}
           disabled={disabled !== undefined}
           {...handlers({ type: "addPrototype" })}
         />
@@ -89,6 +91,7 @@ export function AddFrameRail({
                   return (
                     <IconButton
                       variant="floating"
+                      className={railButtonClass}
                       icon={compareIcon}
                       label={compareWithLabel(source.addLabel)}
                       tooltip={reason}
@@ -105,6 +108,7 @@ export function AddFrameRail({
                 const trigger = (
                   <IconButton
                     variant="floating"
+                    className={railButtonClass}
                     icon={compareIcon}
                     label={compareWithLabel(source.addLabel)}
                     tooltip={

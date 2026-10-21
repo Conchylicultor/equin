@@ -3,7 +3,10 @@ import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -23,19 +26,21 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 const warningIcon = symbol("warning");
 
 /**
- * The detail pane: the prototype's canvas of frames. Its header controls (copy
- * id, Done, the layout switch, the add buttons) are NOT rendered here — they
- * are contributions to `prototypeDetailPane.Actions`, so any plugin can add to
- * the header. The state they share lives in {@link PrototypeDetailProvider},
- * which wraps `PaneChrome` so the header renders inside it. The canvas is
- * remembered for this pane instance, so a reload reopens it as it was.
+ * The detail pane: the prototype's canvas of frames, running edge to edge under
+ * its header — drawn as a floating card over the canvas's top-left corner
+ * (`PaneChrome header="card"`). The header's controls (copy id, pin, Done)
+ * are NOT rendered here — they are contributions to
+ * `prototypeDetailPane.Actions`, so any plugin can add to the header. The state
+ * they share lives in {@link PrototypeDetailProvider}, which wraps `PaneChrome`
+ * so the header renders inside it. The canvas is remembered for this pane
+ * instance, so a reload reopens it as it was.
  */
 export function PrototypeDetail(): ReactElement {
   const { name } = prototypeDetailPane.useParams();
   const instance = prototypeDetailPane.useRouteEntry()?.uuid;
   return (
     <PrototypeDetailProvider name={name} remember={instance}>
-      <PaneChrome pane={prototypeDetailPane}>
+      <PaneChrome pane={prototypeDetailPane} header="card">
         <PrototypeCanvas />
       </PaneChrome>
     </PrototypeDetailProvider>
@@ -43,23 +48,46 @@ export function PrototypeDetail(): ReactElement {
 }
 
 /**
- * The pane's header name: the prototype's own `<title>` — never `name`, a
- * minted id that says nothing to a person. Loading while the list is unknown;
- * the id, monospaced, only when there is no such folder (the one case it is the
- * only true thing left to say).
+ * The pane's header name, as a trail: `Prototypes / <title>` — the app in the
+ * faint ink, a fainter `/`, then the prototype's own `<title>` at the title's
+ * weight, the one part that ellipsizes. The app and the `/` step aside on a
+ * narrow window (the title keeps the room). Never `name`, a minted id that says
+ * nothing to a person: loading while the list is unknown, and the id,
+ * monospaced, only when there is no such folder (the one case it is the only
+ * true thing left to say).
  */
 export function PrototypeTitle(): ReactNode {
   const { name } = prototypeDetailPane.useParams();
   const result = useLive(prototypesList);
   const unknown = <span className="font-mono">{name}</span>;
-  return matchResource(result, {
-    loading: () => <Loading variant="text" />,
-    error: () => unknown,
-    ready: (rows) => {
-      const meta = rows.find((p) => p.name === name);
-      return meta ? <>{meta.title}</> : unknown;
-    },
-  });
+  return (
+    <Stack
+      direction="row"
+      gap="sm"
+      align="center"
+      className={cn(yieldClass("x"), "px-xs")}
+    >
+      <span className="font-normal text-faint-foreground max-[1150px]:hidden">
+        Prototypes
+      </span>
+      <span
+        aria-hidden
+        className="font-normal text-faint-foreground/55 max-[1150px]:hidden"
+      >
+        /
+      </span>
+      <Text>
+        {matchResource(result, {
+          loading: () => <Loading variant="text" />,
+          error: () => unknown,
+          ready: (rows) => {
+            const meta = rows.find((p) => p.name === name);
+            return meta ? meta.title : unknown;
+          },
+        })}
+      </Text>
+    </Stack>
+  );
 }
 
 /**
@@ -79,43 +107,47 @@ function PrototypeCanvas(): ReactNode {
         );
       }
       return (
-        <Column
-          className="h-full"
-          header={<ProblemBanner meta={meta} />}
-          body={<Canvas meta={meta} />}
-          scrollBody={false}
-        />
+        // positioning host for the problem card floated over the canvas's corner
+        <div className="relative h-full">
+          <Canvas meta={meta} />
+          <ProblemBanner meta={meta} />
+        </div>
       );
     },
   });
 }
 
 /**
- * What is wrong with this prototype's folder, above the canvas. Prototypes are
- * user content, not code, so the self-contained contract is enforced when the
+ * What is wrong with this prototype's folder, floated over the canvas's
+ * bottom-left corner (the header card holds the top). Prototypes are user
+ * content, not code, so the self-contained contract is enforced when the
  * folder is read and reported here — in front of the person who just wrote it.
  */
 function ProblemBanner({ meta }: { meta: PrototypeMeta }): ReactElement | null {
   if (meta.problems.length === 0) return null;
   return (
-    <Inset pad="sm">
-      <Stack direction="col" gap="2xs">
-        <Badge variant="warning" icon={<Icon icon={warningIcon} />}>
-          {meta.problems.length === 1
-            ? "1 problem with this folder"
-            : `${String(meta.problems.length)} problems with this folder`}
-        </Badge>
-        {meta.problems.map((p) => (
-          <Text
-            key={`${p.path}:${p.detail}`}
-            as="div"
-            variant="caption"
-            tone="muted"
-          >
-            {p.path === "" ? p.detail : `${p.path} — ${p.detail}`}
-          </Text>
-        ))}
-      </Stack>
-    </Inset>
+    <Pin to="bottom-left" offset="md">
+      <Surface level="float">
+        <Inset pad="sm">
+          <Stack direction="col" gap="2xs">
+            <Badge variant="warning" icon={<Icon icon={warningIcon} />}>
+              {meta.problems.length === 1
+                ? "1 problem with this folder"
+                : `${String(meta.problems.length)} problems with this folder`}
+            </Badge>
+            {meta.problems.map((p) => (
+              <Text
+                key={`${p.path}:${p.detail}`}
+                as="div"
+                variant="caption"
+                tone="muted"
+              >
+                {p.path === "" ? p.detail : `${p.path} — ${p.detail}`}
+              </Text>
+            ))}
+          </Stack>
+        </Inset>
+      </Surface>
+    </Pin>
   );
 }

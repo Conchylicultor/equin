@@ -209,6 +209,33 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     default: "var(--selected)",
     label: "Popover row hover",
   },
+  // A slider's knob (`css/slider`) and the halo ring drawn round it. Defaults
+  // = the primary knob with no halo it always wore; a theme sets a text-colour
+  // knob in a soft accent ring. The track and fill stay `border` / `primary`.
+  sliderKnob: {
+    default: "var(--primary)",
+    label: "Slider knob",
+  },
+  sliderKnobRing: {
+    default: "transparent",
+    label: "Slider knob ring",
+  },
+  // A switch (`css/switch`): its OFF track, and its knob off and on (the ON
+  // track is `primary`). Defaults = the `input` track (at 80% in dark mode),
+  // `background` knob and `primary-foreground` on-knob it always wore.
+  switchTrack: {
+    default: "var(--input)",
+    darkDefault: "color-mix(in oklab, var(--input) 80%, transparent)",
+    label: "Switch track (off)",
+  },
+  switchKnob: {
+    default: "var(--background)",
+    label: "Switch knob (off)",
+  },
+  switchKnobOn: {
+    default: "var(--primary-foreground)",
+    label: "Switch knob (on)",
+  },
   // A text field's fill (Input, Textarea, SearchInput); its outline is
   // `input`. Default = the fill it always wore.
   field: {

@@ -17,7 +17,7 @@
 // (plugins/primitives/plugins/surface/lint) bans open-coding these bundles so
 // every surface routes through `<Surface>` / `<Card>` / the overlay primitives.
 
-export type SurfaceLevel = "sunken" | "base" | "raised" | "overlay";
+export type SurfaceLevel = "sunken" | "base" | "raised" | "overlay" | "float";
 
 // Each role also co-publishes its background as `--chrome-mask` (the arbitrary
 // `[--chrome-mask:…]` property), so a sticky bar pinned inside a surface masks
@@ -67,4 +67,16 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
     // theme that sets them — while `--popover`, which the mask and a sticky
     // header paint, stays opaque.
     "rounded-popover bg-popover-fill backdrop-popover text-popover-foreground shadow-popover ring-1 ring-popover-border [--chrome-mask:var(--popover)] [--hover-fill:var(--popover-hover)] [--field-fill:var(--popover-field)] [--field-outline:var(--popover-field-border)]",
+  // Floating CHROME over content — a toolbar card, a dock, a button floated
+  // over a canvas — never a menu (that is `overlay`). Glass: the material
+  // group's `--float-fill` (default the card at 86%) under its
+  // `--float-backdrop` (default a 20px, 1.5× saturated blur), so what it
+  // floats over shows through its edges, softened; closed by a real 1px
+  // border in the popover's outline colour (inside the box, so a 42px card
+  // is 42px), with the popover's corners and its own shadow tier
+  // (`--shadow-float`, default the popover's). It hovers to `--accent`, the
+  // tone a menu row highlights with; the mask is the card, the opaque tone
+  // its fill is mixed from.
+  float:
+    "rounded-popover border border-popover-border bg-float-fill backdrop-float text-popover-foreground shadow-float [--chrome-mask:var(--card)] [--hover-fill:var(--accent)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
 };

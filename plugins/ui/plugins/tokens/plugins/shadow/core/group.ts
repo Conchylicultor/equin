@@ -44,6 +44,13 @@ export const shadowGroup = defineTokenGroup("shadow", {
     default: "var(--shadow-md)",
     label: "Shadow popover",
   },
+  // Floating chrome's shadow (`Surface level="float"`: a toolbar card or dock
+  // over content). Default = the popover's, so the two float alike unless a
+  // theme sets them apart.
+  "shadow-float": {
+    default: "var(--shadow-popover)",
+    label: "Shadow float",
+  },
 });
 
 export type ShadowTokenValues = {

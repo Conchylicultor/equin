@@ -61,6 +61,10 @@ export const densityGroup = defineTokenGroup("density", {
   controlIconSm: { default: "1rem", label: "Control icon SM" },
   controlIconMd: { default: "1rem", label: "Control icon MD" },
   controlIconLg: { default: "1rem", label: "Control icon LG" },
+  // A slider's geometry (`css/slider`): the track's thickness and the knob's
+  // diameter. Defaults = the 3px track and 11px knob it always drew.
+  sliderTrackH: { default: "0.1875rem", label: "Slider track height" },
+  sliderKnobSize: { default: "0.6875rem", label: "Slider knob size" },
   // A rendered document's reading inset (the file viewer's Markdown body).
   // Defaults = the `py-md` / `px-lg` it always had; a theme (or a document
   // sub-theme) sets them to give the page its own margins.
@@ -126,6 +130,11 @@ export const densityGroup = defineTokenGroup("density", {
     default: "17.5rem",
     label: "Described-menu popover width",
   },
+  // A popover's own inset — the `panel` padding role (`rail-panel`), the
+  // default of `PopoverContent` / `OverlayPanel`. A call site that names a
+  // step (a menu's `xs`, a dialog's `lg`) keeps it. Default = the `md` step
+  // every popover always had.
+  popoverPad: { default: "var(--space-md)", label: "Popover padding" },
   // A control panel's geometry (`ControlPanel`): the panel's own inset — which
   // also spaces its bands — and its row height. Defaults = the `xs` step and
   // the `md` control height it always used, so a panel row is as tall as a

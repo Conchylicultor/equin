@@ -52,6 +52,8 @@ export function buildShadowTiers(p: ShadowParams): ShadowTokenValues {
     // Not a tier of its own: a floating panel wears the `md` tier unless a
     // theme sets it apart.
     "shadow-popover": "var(--shadow-md)",
+    // Nor this: floating chrome wears the popover's shadow.
+    "shadow-float": "var(--shadow-popover)",
   };
 }
 

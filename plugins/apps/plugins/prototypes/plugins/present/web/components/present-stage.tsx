@@ -7,6 +7,8 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {
   Button,
   ControlSizeProvider,
@@ -165,6 +167,7 @@ function PresentedFrame({
       letter={letterOf(index)}
       wholePage={canvas.wholePage}
       pageHeight={pageHeight}
+      bare
       onPageExtent={(next) =>
         setPage((prev) =>
           prev?.id === frame.id && sameExtent(prev.extent, next)
@@ -244,9 +247,6 @@ function PresentedFrame({
   );
 }
 
-/** The frame tag's card look (the overlay's Exit button beside it is `variant="floating"`). */
-const CHROME = "rounded-md border border-border bg-background shadow-md";
-
 /**
  * The frame's tag: its name, what it shows (the version stepper for
  * the prototype, the source's tag otherwise), and — with more than one frame —
@@ -275,70 +275,70 @@ function FrameTag({
   const names = useFrameNames(meta);
   return (
     <ControlSizeProvider size="xs">
-      <Stack
-        direction="row"
-        gap="sm"
-        align="center"
-        className={cn(CHROME, "h-8 pr-2xs", leading ? "pl-2xs" : "pl-xs")}
-      >
-        {leading}
-        <Text variant="label" className="whitespace-nowrap">
-          {names(frame)}
-        </Text>
-        {frame.kind === "prototype" ? (
-          <VersionStepper
-            name={meta.name}
-            shown={frame.version}
-            show={(version) =>
-              dispatch({ type: "setVersion", id: frame.id, version })
-            }
-          />
-        ) : resolution?.status === "found" ? (
-          <Badge variant="success">{resolution.tag}</Badge>
-        ) : null}
-        {count > 1 ? (
-          <Stack direction="row" gap="none" align="center">
-            <Text
-              variant="caption"
-              tone="faint"
-              className={cn("whitespace-nowrap", onFlip ? "pr-2xs" : "pr-xs")}
-            >
-              {index + 1} of {count}
-            </Text>
-            {onFlip ? (
-              <>
-                <IconButton
-                  icon={previousIcon}
-                  label="Previous frame"
-                  shortcut="ArrowLeft"
-                  onClick={() => onFlip(-1)}
-                />
-                <IconButton
-                  icon={nextIcon}
-                  label="Next frame"
-                  shortcut="ArrowRight"
-                  onClick={() => onFlip(1)}
-                />
-              </>
-            ) : null}
-          </Stack>
-        ) : null}
-      </Stack>
+      <Surface level="float">
+        <Line className={cn("h-8 gap-sm pr-2xs", leading ? "pl-2xs" : "pl-xs")}>
+          {leading}
+          <Text variant="group" tone="muted" className="whitespace-nowrap">
+            {names(frame)}
+          </Text>
+          {frame.kind === "prototype" ? (
+            <VersionStepper
+              name={meta.name}
+              shown={frame.version}
+              show={(version) =>
+                dispatch({ type: "setVersion", id: frame.id, version })
+              }
+            />
+          ) : resolution?.status === "found" ? (
+            <Badge variant="success">{resolution.tag}</Badge>
+          ) : null}
+          {count > 1 ? (
+            <Stack direction="row" gap="none" align="center">
+              <Text
+                variant="caption"
+                tone="faint"
+                className={cn("whitespace-nowrap", onFlip ? "pr-2xs" : "pr-xs")}
+              >
+                {index + 1} of {count}
+              </Text>
+              {onFlip ? (
+                <>
+                  <IconButton
+                    icon={previousIcon}
+                    label="Previous frame"
+                    shortcut="ArrowLeft"
+                    onClick={() => onFlip(-1)}
+                  />
+                  <IconButton
+                    icon={nextIcon}
+                    label="Next frame"
+                    shortcut="ArrowRight"
+                    onClick={() => onFlip(1)}
+                  />
+                </>
+              ) : null}
+            </Stack>
+          ) : null}
+        </Line>
+      </Surface>
     </ControlSizeProvider>
   );
 }
 
+/** Exit, on the glass the rest of the presentation's chrome floats on. */
 function ExitButton({ onExit }: { onExit: () => void }): ReactElement {
   return (
-    <Button
-      variant="floating"
-      className="rounded-md"
-      aria-label="Exit presentation (Esc)"
-      onClick={onExit}
-    >
-      Exit
-      <Kbd>Esc</Kbd>
-    </Button>
+    <Surface level="float">
+      <Button
+        variant="ghost"
+        className="rounded-popover"
+        aria-label="Exit presentation (Esc)"
+        onClick={onExit}
+      >
+        Exit
+        <Kbd>Esc</Kbd>
+      </Button>
+    </Surface>
   );
 }
 

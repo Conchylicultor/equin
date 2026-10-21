@@ -7,7 +7,10 @@ import {
   prototypeStatuses,
   statusOf,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { usePrototypeDetail } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
+import {
+  TitleActionButton,
+  usePrototypeDetail,
+} from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { PrototypeGalleryRow } from "../slots";
 import { useSetPrototypeStatus } from "./set-status";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -46,16 +49,17 @@ export function PinCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {
 }
 
 /**
- * The detail pane header's pin, beside the Done toggle. Disabled until the
- * statuses are known, rather than claiming "not pinned"; a failed read is the
- * error icon, whose click retries.
+ * The detail pane header's pin, beside the Done toggle: one glyph in both
+ * states, the accent ink while pinned. Disabled until the statuses are known,
+ * rather than claiming "not pinned"; a failed read is the error icon, whose
+ * click retries.
  */
 export function PinHeaderAction() {
   const { name } = usePrototypeDetail();
   const statuses = useLive(prototypeStatuses);
   const { pending, setStatus } = useSetPrototypeStatus();
   if (statuses.status === "loading") {
-    return <IconButton icon={keepIcon} label="Pin" disabled />;
+    return <TitleActionButton icon={keepIcon} label="Pin" disabled />;
   }
   if (statuses.status === "error") {
     return (
@@ -70,13 +74,12 @@ export function PinHeaderAction() {
   }
   const pinned = statusOf(statuses.data, name).pinned;
   return (
-    <IconButton
+    <TitleActionButton
       icon={keepIcon}
-      active={pinned}
+      on={pinned}
       label={pinned ? "Pinned — click to unpin" : "Pin"}
       aria-pressed={pinned}
       loading={pending}
-      className={pinned ? "text-primary-text" : undefined}
       onClick={() => setStatus(name, { pinned: !pinned })}
     />
   );

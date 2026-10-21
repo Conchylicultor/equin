@@ -1,5 +1,8 @@
 import { useCallback, useImperativeHandle, useRef } from "react";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  useMenuSurface,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {
   RowActions,
@@ -293,8 +296,14 @@ export function Row({
   // of an `items-center` line — can never reach. `focus-ring-within` is
   // deliberately not what this uses: it would also fire when a row ACTION takes
   // focus, stacking the row's ring on top of that button's own.
+  // A row in a floating panel (a popover, a menu) is a PANEL row: its corners
+  // are the shape group's `radiusPanelRow` — the same role a control-panel row
+  // (`cp-row`) wears, defaulting to this `rounded-md` step — so a theme rounds
+  // every row in its popovers at once.
+  const onPanel = useMenuSurface();
   const chromeClass = cn(
-    "group w-full rounded-md p-row text-left transition-colors [&_svg:not([class*='size-'])]:icon-auto",
+    "group w-full p-row text-left transition-colors [&_svg:not([class*='size-'])]:icon-auto",
+    onPanel ? "rounded-panel-row" : "rounded-md",
     "focus-ring focus-ring-from",
     rowActionsAnchor,
     "disabled:pointer-events-none disabled:opacity-50",
@@ -421,7 +430,13 @@ export function Row({
         >
           {icon}
           {children}
-          <span aria-hidden className="absolute inset-0 z-under rounded-md" />
+          <span
+            aria-hidden
+            className={cn(
+              "absolute inset-0 z-under",
+              onPanel ? "rounded-panel-row" : "rounded-md",
+            )}
+          />
         </Tag>
         {actionsCluster}
       </Line>

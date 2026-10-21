@@ -66,7 +66,6 @@ export const ICON_MANIFEST: {
     "chat-bubble",
     "check",
     "check-box",
-    "check-box-outline-blank",
     "check-circle",
     "checklist",
     "chevron-left",

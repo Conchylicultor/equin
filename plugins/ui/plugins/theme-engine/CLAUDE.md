@@ -173,11 +173,11 @@ without its own theme document is the `""` entry exactly.
     - `ThemeEngine.SubTheme`
     - `ThemeEngine.FixedTheme`
     - `ThemeEngine.ThemeSource`
-  - Slot contributors: 40 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ThemeEngine.TokenGroup` ×17
-    - `ThemeEngine.Theme` ×10
+  - Slot contributors: 43 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ThemeEngine.TokenGroup` ×18
+    - `ThemeEngine.Theme` ×11
     - `ThemeEngine.VariantGroup` ×6
-    - `ThemeEngine.SubTheme` ×4
+    - `ThemeEngine.SubTheme` ×5
     - `ThemeEngine.ThemeSource` ×2
     - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
   - Contributes:
@@ -300,15 +300,15 @@ without its own theme document is the `""` entry exactly.
     - `tokenVarName`
     - `transformValues`
 - Cross-plugin:
-  - Uses tokens: 44 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/color-palette` ×19
+  - Uses tokens: 48 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×22
     - `ui/tokens/density` ×18
     - `ui/tokens/type-scale` ×4
-    - `ui/tokens/shadow` ×2
+    - `ui/tokens/shadow` ×3
     - `ui/tokens/shape --radius`
-  - Imported by: 42 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui` ×27
-    - `apps` ×12
+  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui` ×28
+    - `apps` ×14
     - `apps-core/chrome-theme`
     - `plugin-meta/token-usage`
     - `reports/theme-resolution`

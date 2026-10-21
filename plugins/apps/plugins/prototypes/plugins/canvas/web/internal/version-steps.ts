@@ -1,6 +1,10 @@
-import type {
-  PrototypeHistory,
-  PrototypeVersion,
+import {
+  pickedValue,
+  resolvePicks,
+  type OptionPicks,
+  type PrototypeHistory,
+  type PrototypeOption,
+  type PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 /**
@@ -99,4 +103,24 @@ export function stepLabel(step: VersionStep, newestN: number): string {
   if (step.kind === "unsaved") return "Live · unsaved";
   if (step.live) return `v${step.version.n} · Latest`;
   return `v${step.version.n} of ${newestN}`;
+}
+
+/**
+ * Whether a document declaring `options` can show the variant `picks` names:
+ * it declares every picked option, each with the picked value among its
+ * values. A pick equal to that document's default counts (it is what the
+ * document shows unpicked); a value it does not declare — or an option it
+ * lacks — would open at something else. The version list's "This variant".
+ */
+export function declaresVariant(
+  options: readonly PrototypeOption[],
+  picks: OptionPicks,
+): boolean {
+  return Object.entries(picks).every(([name, value]) => {
+    const option = options.find((o) => o.name === name);
+    if (option === undefined) return false;
+    return (
+      pickedValue(option, resolvePicks([option], { [name]: value })) === value
+    );
+  });
 }

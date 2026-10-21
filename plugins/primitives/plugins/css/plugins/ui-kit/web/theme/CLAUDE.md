@@ -138,7 +138,7 @@ immediate codegen-step build error, not a silent post-build check miss). `<ref>`
   group (single-property utilities whose property maps 1:1 to one group). Gives
   order-independent mutual conflict and lifts the class out of any wrong fallback
   group (e.g. a `text-*` role out of text-color). Allowed `<builtin>` ids:
-  `font-size font-weight z h w size min-h p px py pt pr pb pl gap gap-x gap-y rounded border-w-b`.
+  `font-size font-weight z h w size min-h p px py pt pr pb pl gap gap-x gap-y rounded shadow animate border-w-b` (and the `backdrop-*` groups).
 - `<sg-id>` — a synthetic group id, for multi-property utilities (e.g. `h`+`w`) or a
   property covered by several built-in groups (`height` → both `h` and `size`).
   Declare the group **once** in the section-header comment as

@@ -54,6 +54,7 @@ export function FullScreenAction({
     <IconButton
       icon={fullscreenIcon}
       label="Full screen"
+      tooltip="Full screen (Esc to leave)"
       shortcut="f"
       onClick={present}
     />

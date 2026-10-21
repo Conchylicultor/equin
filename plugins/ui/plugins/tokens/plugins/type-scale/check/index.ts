@@ -40,7 +40,12 @@ import { typeScaleGroup } from "../core";
  *      sub-scale (it is the only guidance most authors read);
  *   5. no `.ts(x)` outside the text and type-scale plugins reads a raw
  *      `var(--font-size-*)` / `var(--line-height-*)` (it would skip the scale —
- *      `typeVar()` is the sanctioned spelling).
+ *      `typeVar()` is the sanctioned spelling);
+ *   6. the tooltip's role picker (a token whose VALUE names a role,
+ *      `--tooltip-role`, applied by one style-query class per role in ui-kit's
+ *      tooltip, which cannot import the ladder) covers exactly the ladder: each
+ *      role's own `text-<role>`, and `font-<role>-strong` under
+ *      `--tooltip-emphasis: strong` for exactly the roles with a strong step.
  *
  * This check is the ONE authority for (1): the group carries no load-time
  * assertion of its own.
@@ -55,6 +60,31 @@ const TYPE_SCALE_GROUP =
 const THIS_CHECK =
   "plugins/ui/plugins/tokens/plugins/type-scale/check/index.ts";
 const TYPE_SCALE_GROUP_ID = "type-scale";
+const TOOLTIP =
+  "plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/tooltip.tsx";
+
+/**
+ * The roles a role-picker source applies: `[@container_style(--<v>:<role>)]:text-<utility>`
+ * pairs, and the `…_and_style(--<emphasis>:strong)]:font-<utility>-strong` ones.
+ */
+export function rolePickerPairs(
+  src: string,
+  roleVar: string,
+  emphasisVar: string,
+): { roles: Array<[string, string]>; strong: Array<[string, string]> } {
+  const role = new RegExp(
+    String.raw`\[@container_style\(--${roleVar}:([a-z]+)\)\]:text-([a-z-]+)`,
+    "g",
+  );
+  const strong = new RegExp(
+    String.raw`\[@container_style\(--${roleVar}:([a-z]+)\)_and_style\(--${emphasisVar}:strong\)\]:font-([a-z]+)-strong`,
+    "g",
+  );
+  return {
+    roles: [...src.matchAll(role)].map((m) => [m[1]!, m[2]!]),
+    strong: [...src.matchAll(strong)].map((m) => [m[1]!, m[2]!]),
+  };
+}
 
 /**
  * Spelling a raw type var in TS is exempted for the ladder's two owners (the
@@ -283,6 +313,38 @@ const check: Check = {
             .filter(Boolean)
             .join("; "),
         "The message is what an author reads when the rule fires; list every TYPE_ROLES role and TEXT_TREATMENTS treatment, and the text-2xs / text-3xs sub-scale.",
+      );
+    }
+
+    // (6) The tooltip's role picker covers exactly the ladder.
+    const picker = rolePickerPairs(
+      readFileSync(join(root, TOOLTIP), "utf8"),
+      "tooltip-role",
+      "tooltip-emphasis",
+    );
+    const ladder = Object.keys(TYPE_ROLES).sort();
+    const strongRoles = Object.entries(TYPE_ROLES)
+      .filter(([, spec]) => "strong" in spec && spec.strong)
+      .map(([r]) => r)
+      .sort();
+    const picked = picker.roles.map(([r]) => r).sort();
+    const pickedStrong = picker.strong.map(([r]) => r).sort();
+    const mismatched = [...picker.roles, ...picker.strong]
+      .filter(([r, u]) => r !== u)
+      .map(([r, u]) => `${r} → ${u}`);
+    if (
+      picked.join() !== ladder.join() ||
+      pickedStrong.join() !== strongRoles.join() ||
+      mismatched.length > 0
+    ) {
+      report(
+        `${TOOLTIP}: the tooltip's role picker (TOOLTIP_ROLE_CLASS) is out of step with the ladder — ` +
+          `picks [${picked.join(", ")}] (ladder: ${ladder.join(", ")}), strong [${pickedStrong.join(", ")}] (ladder: ${strongRoles.join(", ")})` +
+          (mismatched.length > 0
+            ? `, wrong utility: ${mismatched.join(", ")}`
+            : ""),
+        "Give every TYPE_ROLES role one `[@container_style(--tooltip-role:<role>)]:text-<role>` entry, and every role with a strong step a " +
+          "`[@container_style(--tooltip-role:<role>)_and_style(--tooltip-emphasis:strong)]:font-<role>-strong` one — written literally, so Tailwind sees it.",
       );
     }
 

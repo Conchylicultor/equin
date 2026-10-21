@@ -81,7 +81,7 @@ const HEADER_PIN_STYLE = { top: "calc(-1 * var(--rail-block-start, 0px))" };
 export interface OverlayPanelProps extends Passthrough<HTMLDivElement> {
   /** Closed width role; default size-to-content. */
   width?: PopoverWidth;
-  /** Padding role; default `md`. */
+  /** Padding role; default `panel` — the theme's popover inset (`md` unless a theme sets `popoverPad`). */
   padding?: PopoverPadding;
   /** Comfort cap on top of the unconditional viewport fit; default `viewport`. */
   maxHeight?: PopoverMaxHeight;
@@ -107,7 +107,7 @@ export interface OverlayPanelProps extends Passthrough<HTMLDivElement> {
 
 export function OverlayPanel({
   width = "content",
-  padding = "md",
+  padding = "panel",
   maxHeight = "viewport",
   scroll = true,
   header,
@@ -174,13 +174,13 @@ export function OverlayPanel({
       data-fade-bottom={bottom ? "" : undefined}
       className={cn(
         SURFACE_LEVELS.overlay,
-        // The union of what the five surfaces each animated with. `inline-start`
-        // / `inline-end` are the logical sides base-ui's Menu resolves a submenu
-        // to, and `data-closed:overflow-hidden` suppresses the scrollbar flash
-        // while a panel zooms out. Both are inert `data-*` selectors on a surface
-        // that never sets those attributes, so the superset costs nothing and
-        // keeps the blob a single shared definition rather than a per-surface one.
-        "z-popover origin-(--transform-origin) duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95",
+        // The entry is the theme's (`overlay-enter`, app.css: the overlay
+        // token group's duration / easing / offset / scale — instant by
+        // default, off under reduced motion). There is no exit animation: a
+        // closing panel unmounts at once. `data-closed:overflow-hidden`
+        // suppresses a scrollbar flash while it goes; `duration-100` times a
+        // consumer's own `transition-*` (it arms nothing by itself).
+        "z-popover origin-(--transform-origin) duration-100 outline-none data-open:overlay-enter data-closed:overflow-hidden",
         POPOVER_WIDTH[width],
         POPOVER_PADDING[padding],
         scroll && [

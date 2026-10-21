@@ -89,7 +89,6 @@ toggle, silently resetting any child component state (e.g. an inner
   - Imported by:
     - `apps/chord/curriculum`
     - `apps/mail/search`
-    - `apps/prototypes/canvas`
     - `code-explorer/commit-detail`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversations-view/data-view`

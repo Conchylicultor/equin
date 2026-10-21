@@ -61,6 +61,7 @@ export type BuiltinGroupId =
   | "gap-y"
   | "rounded"
   | "shadow"
+  | "animate"
   | "border-w-b"
   | "backdrop-filter"
   | "backdrop-blur"

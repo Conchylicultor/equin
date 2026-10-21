@@ -2,14 +2,12 @@ import { useMemo, useState, type ReactElement } from "react";
 import {
   Button,
   ControlSizeProvider,
-  cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import {
-  SectionLabel,
-  Text,
-} from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -19,24 +17,24 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import {
-  ActionFormShield,
-  useActionForm,
-} from "@plugins/primitives/plugins/action-presentation/web";
+import { ActionFormShield } from "@plugins/primitives/plugins/action-presentation/web";
 import {
   prototypeHistory,
   restorePrototypeVersion,
+  type OptionPicks,
   type PrototypeHistory,
   type PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { isPastStep, type VersionStep } from "../internal/version-steps";
 import { useVersionStepping } from "../internal/use-version-stepping";
+import { frameChipsTheme } from "../internal/sub-themes";
 import { VersionList, VersionListFrameContext } from "./version-list";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const chevronLeftIcon = symbol("chevron-left");
 const chevronRightIcon = symbol("chevron-right");
+const chevronDownIcon = symbol("keyboard-arrow-down");
 const historyIcon = symbol("history");
 
 /** Which version a stepper moves: the pair, so every frame steps on its own. */
@@ -48,92 +46,98 @@ export interface VersionStepperProps {
   show: (version: PrototypeVersion | null) => void;
   /** Open `version` in a new frame beside this one (a list row action). */
   compare?: (version: PrototypeVersion) => void;
+  /**
+   * The frame's picks (defaults left out): the version list's "This variant"
+   * filter keeps the versions that declare them. Absent → no filter.
+   */
+  picks?: OptionPicks;
+  /** The narrow form (a frame under 440px): no age beside the number. */
+  narrow?: boolean;
 }
 
 /**
- * `‹ v14 · latest ›` — one frame's version. The arrows step; the label opens
- * the version list, which on a past version ends with **Make vN the latest**.
+ * `‹ v24 latest ⌄ ›` — one frame's version (the mockup's `.vstep`). The arrows
+ * step; the label opens the version list under it, which on a past version
+ * ends with **Make vN the latest**.
  *
- * The arrows never move: the label keeps one width in every state, so
- * stepping never slides the › out from under the pointer.
+ * The arrows never move: the label keeps one width in every state (a floor
+ * wide enough for every form), so stepping never slides the › out from under
+ * the pointer.
  *
  * Pending history renders disabled arrows over a loading label — never a "v0"
  * that is really "not loaded yet".
  *
- * In a bar that runs out of room (a narrow canvas frame's header) it shrinks to
- * its compact form: the bare `v14` label, still opening the version list, with
- * no arrows and no floor — `[` / `]` still step the selected frame. It gives up
- * room late, after its neighbours, since it is what a frame's header is for.
+ * Its controls are the frame box's own 22px / 20px chips (`frameChipsTheme`),
+ * worn here so the stepper looks the same wherever it is mounted.
  */
 export function VersionStepper(props: VersionStepperProps): ReactElement {
   const history = useLive(prototypeHistory, { name: props.name });
-  const compact =
-    useActionForm({ shrinksTo: ["compact"], yields: "late" }) === "compact";
-  // The stepper's own ladder is its item's: its ‹ › and label are parts of
-  // it, not occupants that may each declare a form of their own.
+  const narrow = props.narrow ?? false;
+  // The stepper's ‹ › and label are parts of it, not occupants of a bar it
+  // may sit in that each declare a form of their own.
   return (
-    <ControlSizeProvider size="xs">
-      <ActionFormShield>
+    <ActionFormShield>
+      <Theme
+        name={subThemeScope(frameChipsTheme)}
+        surface="none"
+        as={Line}
+        role="group"
+        aria-label="Version"
+      >
         {matchResource(history, {
-          loading: () => <PendingStepper compact={compact} />,
+          loading: () => <PendingStepper narrow={narrow} />,
           error: (err) => (
             <Text variant="caption" tone="destructive" title={err.message}>
               History unavailable
             </Text>
           ),
-          ready: (h) => (
-            <ReadyStepper history={h} compact={compact} {...props} />
-          ),
+          ready: (h) => <ReadyStepper history={h} {...props} narrow={narrow} />,
         })}
-      </ActionFormShield>
+      </Theme>
+    </ActionFormShield>
+  );
+}
+
+/**
+ * The label's floor: wide enough for every form (`v24 latest ⌄`, `v24 6d ago
+ * ⌄`, `Live unsaved ⌄`; narrow: `v124 ⌄`), so the arrows never move.
+ */
+const labelFloor = (narrow: boolean) => (narrow ? "min-w-14" : "min-w-25");
+
+/** The ‹ / › — 20px, dimmed to .3 at either end. */
+function Arrow({
+  side,
+  onClick,
+  disabled,
+}: {
+  side: "prev" | "next";
+  onClick?: () => void;
+  disabled: boolean;
+}): ReactElement {
+  return (
+    <ControlSizeProvider size="xs">
+      <IconButton
+        icon={side === "prev" ? chevronLeftIcon : chevronRightIcon}
+        label={side === "prev" ? "Previous version" : "Next version"}
+        disabled={disabled}
+        onClick={onClick}
+        className="disabled:opacity-30"
+      />
     </ControlSizeProvider>
   );
 }
 
-/** The label's floor: wide enough for every form, so the arrows never move. */
-const LABEL_WIDTH = "min-w-24";
-
-function Pill({
-  past,
-  children,
-}: {
-  past: boolean;
-  children: ReactElement | ReactElement[];
-}): ReactElement {
+function PendingStepper({ narrow }: { narrow: boolean }): ReactElement {
   return (
-    <Stack
-      direction="row"
-      gap="none"
-      align="center"
-      role="group"
-      aria-label="Version"
-      className={cn(
-        "rounded-full border",
-        past ? "border-warning/50" : "border-border",
-      )}
-    >
-      {children}
-    </Stack>
-  );
-}
-
-function PendingStepper({ compact }: { compact: boolean }): ReactElement {
-  const label = (
-    <Button
-      variant="ghost"
-      disabled
-      className={compact ? undefined : LABEL_WIDTH}
-    >
-      <Loading variant="block" className={compact ? "h-3 w-6" : "h-3 w-12"} />
-    </Button>
-  );
-  if (compact) return <Pill past={false}>{label}</Pill>;
-  return (
-    <Pill past={false}>
-      <IconButton icon={chevronLeftIcon} label="Previous version" disabled />
-      {label}
-      <IconButton icon={chevronRightIcon} label="Next version" disabled />
-    </Pill>
+    <>
+      <Arrow side="prev" disabled />
+      <ControlSizeProvider size="sm">
+        <Button variant="ghost" disabled className={labelFloor(narrow)}>
+          <Loading variant="block" className="h-3 w-12" />
+        </Button>
+      </ControlSizeProvider>
+      <Arrow side="next" disabled />
+    </>
   );
 }
 
@@ -143,16 +147,15 @@ function ReadyStepper({
   shown,
   show,
   compare,
-  compact,
+  picks,
+  narrow,
 }: VersionStepperProps & {
   history: PrototypeHistory;
-  /** The bare label: no arrows, no floor, no `· latest` suffix. */
-  compact: boolean;
+  narrow: boolean;
 }): ReactElement {
   const [open, setOpen] = useState(false);
   const { model, current, prev, next, go, stepBack, stepForward } =
     useVersionStepping(history, { shown, show });
-  const past = current === null || isPastStep(current);
   // The version a past stop shows — what "Make vN the latest" restores.
   const restorable =
     current?.kind === "version" && isPastStep(current) ? current.version : null;
@@ -173,114 +176,117 @@ function ReadyStepper({
     [shownSha, compare],
   );
 
-  const list = (
-    <InlinePopover
-      open={open}
-      onOpenChange={setOpen}
-      align="start"
-      width="lg"
-      maxHeight="xl"
-      tooltip={<StepTooltip step={current} />}
-      trigger={
-        <Button
-          variant="ghost"
-          className={cn(!compact && LABEL_WIDTH, "rounded-full")}
-        >
-          <StepLabel step={current} compact={compact} />
-        </Button>
-      }
-    >
-      <Stack gap="xs">
-        <SectionLabel>Versions</SectionLabel>
-        <VersionListFrameContext value={listFrame}>
-          <VersionList
-            history={history}
-            selected={shownSha}
-            onPick={(version) => {
-              const step = model.steps.find(
-                (s) => s.kind === "version" && s.version.sha === version.sha,
-              );
-              go(step ?? null);
-              setOpen(false);
-            }}
-          />
-        </VersionListFrameContext>
-        {restorable !== null ? (
-          <Button
-            variant="secondary"
-            className="text-warning"
-            onClick={() => {
-              setOpen(false);
-              confirmRestore(name, restorable, show);
-            }}
-          >
-            <Icon icon={historyIcon} />
-            Make v{restorable.n} the latest
-          </Button>
-        ) : null}
-      </Stack>
-    </InlinePopover>
-  );
-  if (compact) return <Pill past={past}>{list}</Pill>;
   return (
-    <Pill past={past}>
-      <IconButton
-        icon={chevronLeftIcon}
-        label="Previous version"
-        disabled={prev === null}
-        onClick={stepBack}
-      />
-      {list}
-      <IconButton
-        icon={chevronRightIcon}
-        label="Next version"
-        disabled={next === null}
-        onClick={stepForward}
-      />
-    </Pill>
+    <>
+      <Arrow side="prev" disabled={prev === null} onClick={stepBack} />
+      {/* The label is a 22px `sm` chip (the popup leaves the sub-theme, so
+          the list's own `sm` controls are the app's). */}
+      <ControlSizeProvider size="sm">
+        <InlinePopover
+          open={open}
+          onOpenChange={setOpen}
+          side="bottom"
+          align="center"
+          width="described"
+          // Every open starts from the top of the list's state — the current
+          // version scrolled into view, the variant filter on.
+          resetOnClose
+          tooltip={<StepTooltip step={current} />}
+          trigger={
+            <Button variant="ghost" className={labelFloor(narrow)}>
+              <StepLabel step={current} narrow={narrow} />
+              <Icon
+                icon={chevronDownIcon}
+                className="size-2.75 text-faint-foreground"
+              />
+            </Button>
+          }
+        >
+          <Stack gap="2xs">
+            <VersionListFrameContext value={listFrame}>
+              <VersionList
+                history={history}
+                picks={picks}
+                selected={shownSha}
+                onPick={(version) => {
+                  const step = model.steps.find(
+                    (s) =>
+                      s.kind === "version" && s.version.sha === version.sha,
+                  );
+                  go(step ?? null);
+                  setOpen(false);
+                }}
+              />
+            </VersionListFrameContext>
+            {restorable !== null ? (
+              <Button
+                variant="ghost"
+                className="text-warning"
+                onClick={() => {
+                  setOpen(false);
+                  confirmRestore(name, restorable, show);
+                }}
+              >
+                <Icon icon={historyIcon} />
+                Make v{restorable.n} the latest
+              </Button>
+            ) : null}
+          </Stack>
+        </InlinePopover>
+      </ControlSizeProvider>
+      <Arrow side="next" disabled={next === null} onClick={stepForward} />
+    </>
   );
 }
 
 /**
- * `v14 · latest` (the suffix dimmed) — or `v11` in the past-version colour.
- * Compact drops the suffix: `v14`, `Live`.
+ * `v24` (mono 500) and, dimmed, `latest` / `6d ago` — or `Live unsaved` past
+ * the newest version. The narrow form drops the dimmed half.
  */
 function StepLabel({
   step,
-  compact,
+  narrow,
 }: {
   step: VersionStep | null;
-  compact: boolean;
+  narrow: boolean;
 }): ReactElement {
   if (step === null) {
-    return <span className="text-warning">Unknown</span>;
-  }
-  if (compact) {
-    return step.kind === "unsaved" ? (
-      <span>Live</span>
-    ) : (
-      <span className={cn("tabular-nums", !step.live && "text-warning")}>
-        v{step.version.n}
-      </span>
-    );
-  }
-  if (step.kind === "unsaved") {
     return (
-      <Line>
-        <span>Live</span>
-        <span className="whitespace-pre text-muted-foreground"> · unsaved</span>
-      </Line>
+      <Text variant="tag" className="text-warning">
+        Unknown
+      </Text>
     );
   }
-  if (step.live) {
-    return (
-      <Line>
-        <span className="tabular-nums">v{step.version.n}</span>
-        <span className="whitespace-pre text-muted-foreground"> · latest</span>
-      </Line>
-    );
-  }
-  return <span className="tabular-nums text-warning">v{step.version.n}</span>;
+  const [number, age] =
+    step.kind === "unsaved"
+      ? [
+          <Text key="n" variant="tag" className="font-medium text-foreground">
+            Live
+          </Text>,
+          "unsaved",
+        ]
+      : [
+          <Text
+            key="n"
+            variant="code"
+            className="font-medium text-foreground tabular-nums"
+          >
+            {`v${String(step.version.n)}`}
+          </Text>,
+          step.live ? (
+            "latest"
+          ) : (
+            <RelativeTime date={new Date(step.version.at)} format="ago" />
+          ),
+        ];
+  return (
+    <>
+      {number}
+      {narrow ? null : (
+        <span className="text-2xs text-faint-foreground">{age}</span>
+      )}
+    </>
+  );
 }
 
 /**

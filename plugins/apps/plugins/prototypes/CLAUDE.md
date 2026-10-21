@@ -31,7 +31,11 @@ other content lives in sub-plugins:
 - **`checkpoints`** — the end-of-turn job: when an agent turn ends, records a
   version of every prototype that turn's tool calls named, labelled with the
   turn's request. Its own plugin so `files` never depends on `conversations`.
-- **`shell`** — the `Apps.App` rail entry, the app layout, and pane registration.
+- **`shell`** — the `Apps.App` rail entry, the app layout, pane registration,
+  and the app's own `prototypes` theme.
+- **`icons`** — the app's icon family (`prototypesIcons`): the viewer mockup's
+  line glyphs, drawn for the Material names the app writes in its scope, plus
+  app-only glyphs (`prototypesIcons.icon("compare")`).
 - **`gallery`** — the gallery list pane (a card per prototype, Done checkbox,
   grouped by status) and New prototype. Also owns the launch prompt — the
   always-taken path by which prototype agents are launched, and therefore where
@@ -71,7 +75,7 @@ whose app surface still stands).
 - Core:
   - Exports (values): `PROTOTYPES_CATEGORY_ID`
 - Sub-plugins:
-  - **`canvas`** — The prototype detail pane as a canvas of frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options…
+  - **`canvas`** — The prototype detail pane as a canvas of frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own options chip and version stepper…
   - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named…
   - **`compare`** — The prototype canvas's "Real app" frame: the real app thing a prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), resolved through the open Counterpart.Kind registry and…
     - Plugins:
@@ -80,6 +84,7 @@ whose app surface still stands).
   - **`copy-id`** — Copy prototype ID button in the prototype detail header: copies the open prototype's id (its minted folder name) to the clipboard.
   - **`files`** [exempt] — Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by…
   - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, grouped (Pinned / In progress / Done) and filterable by a pin and a Done checkbox on every card (and in the detail…
+  - **`icons`** — Contributes the prototypes icon family (prototypesIcons) to Icons.Family, so a scope whose iconFamily is prototypes — the Prototypes theme's — draws its glyphs.
   - **`present`** — Two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href)…
   - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) full-surface: opening a prototype replaces the gallery…
   - **`thumbnails`** [exempt] — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the…

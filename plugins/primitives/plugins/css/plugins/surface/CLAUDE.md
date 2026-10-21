@@ -20,6 +20,7 @@ re-themes all surfaces of a role at once.
 | `base`    | `bg-background`                                           | page / pane canvas, toolbar bands, sticky headers |
 | `raised`  | `rounded-card border border-border bg-card shadow-sm`    | a card lifted one step above base               |
 | `overlay` | `rounded-popover bg-popover-fill backdrop-popover text-popover-foreground shadow-popover ring-1 ring-popover-border` (+ `--hover-fill: var(--popover-hover)`, default `--selected`) | floats above all: popovers, menus, floating panels |
+| `float`   | `rounded-popover border border-popover-border bg-float-fill backdrop-float text-popover-foreground shadow-float` (+ `--hover-fill: var(--accent)`) | floating chrome over content: a toolbar card, a dock, a button floated over a canvas — never a menu |
 
 `overlay`'s material is the [`material`](../../../../../ui/plugins/tokens/plugins/material/CLAUDE.md)
 token group's — `--popover-fill` (default `var(--popover)`) and
@@ -27,6 +28,16 @@ token group's — `--popover-fill` (default `var(--popover)`) and
 Desktop's frosted glass) turns every popover, menu, select and dialog opened in
 its scope into glass at once. Never hand-roll `bg-popover/90 backdrop-blur-*`:
 the lint flags it.
+
+`float` is glass for **chrome**, not menus: its material is the material
+group's second pair — `--float-fill` (default the card at 86%) and
+`--float-backdrop` (default `blur(20px) saturate(1.5)`) — with the popover's
+corners and outline colour (a real 1px `border`, inside the box) and its own
+shadow tier (`--shadow-float`, default the popover's). A menu stays `overlay`
+(solid: nothing behind it may compete with what is in it); a bar or a dock
+floating over a canvas only needs to stay readable. First consumer: the
+Prototypes canvas viewer (its header card, bottom dock and add rail), whose
+`prototypes` theme sets the three tokens.
 
 `raised`'s corners are the shape group's `radiusCard` token (`rounded-card`),
 which defaults to the `rounded-md` step, so a theme can round its cards without
@@ -118,7 +129,7 @@ never be clobbered.
 
 ## Plugin reference
 
-- Description: Semantic surface elevation primitive: <Surface level> bundles background + border + radius + shadow into a closed set of roles (sunken/base/raised/overlay), plus the no-adhoc-surface lint rule.
+- Description: Semantic surface elevation primitive: <Surface level> bundles background + border + radius + shadow into a closed set of roles (sunken/base/raised/overlay, and float — glass for floating chrome), plus the no-adhoc-surface lint rule.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
@@ -131,9 +142,9 @@ never be clobbered.
   - Exports (values): `Surface`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×11
-    - `primitives` ×6
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×13
+    - `primitives` ×7
     - `page` ×4
     - `infra` ×2
     - `map` ×2

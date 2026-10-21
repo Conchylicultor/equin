@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-ui-tokens-overlay",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Overlay token group: how a floating panel enters (instant by default) and the tooltip's chrome."
+}

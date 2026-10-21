@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-prototypes-icons",
+  "description": "The Prototypes app's own icon family: the viewer mockup's 24-unit line glyphs (stroke 1.6), drawn for the Material names the app and its shared chrome use in a prototypes-themed scope (falling back to Lucide), plus viewer glyphs Material has no name for (prototypesIcons.icon(\"compare\")).",
+  "private": true,
+  "version": "0.0.1"
+}

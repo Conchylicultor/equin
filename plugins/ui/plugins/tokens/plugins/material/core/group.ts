@@ -23,6 +23,21 @@ export const materialGroup = defineTokenGroup("material", {
     default: "none",
     label: "Popover backdrop filter",
   },
+  // Floating CHROME's material (`Surface level="float"`: a toolbar card, a
+  // dock, a button floated over content — never a menu): barely translucent,
+  // so what it floats over shows through its edges, softened. Its own pair,
+  // not the popover's: a menu must stay solid (nothing behind it competes
+  // with what is in it), a piece of chrome only needs to stay readable.
+  // Default = the card at 86% (`bg-float-fill`) under a 20px, 1.5× saturated
+  // blur (`backdrop-float`).
+  floatFill: {
+    default: "color-mix(in oklab, var(--card) 86%, transparent)",
+    label: "Floating chrome fill",
+  },
+  floatBackdrop: {
+    default: "blur(20px) saturate(1.5)",
+    label: "Floating chrome backdrop filter",
+  },
 });
 
 export type MaterialTokenValues = {

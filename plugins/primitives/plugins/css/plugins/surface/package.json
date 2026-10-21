@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-primitives-css-surface",
-  "description": "Semantic surface elevation primitive: <Surface level> bundles background + border + radius + shadow into a closed set of roles (sunken/base/raised/overlay), plus the no-adhoc-surface lint rule.",
+  "description": "Semantic surface elevation primitive: <Surface level> bundles background + border + radius + shadow into a closed set of roles (sunken/base/raised/overlay, and float — glass for floating chrome), plus the no-adhoc-surface lint rule.",
   "private": true,
   "version": "0.0.1"
 }

@@ -1,7 +1,14 @@
 # slider
 
 The thin-track slider — a themed `<input type="range">`, 3px track and an 11px
-thumb, the quiet secondary control rather than a form widget.
+thumb by default, the quiet secondary control rather than a form widget.
+
+Its look is the theme's, never the call site's: the track's thickness and the
+knob's diameter are density tokens (`sliderTrackH`, `sliderKnobSize`), the
+knob's colour and a 3px halo round it color-palette tokens (`sliderKnob`,
+default `primary`; `sliderKnobRing`, default transparent). The track and fill
+stay `border` / `primary`. The Prototypes theme uses them for its 4px track and
+text-colour knob in an accent-soft ring.
 
 It exists because that look was **copied CSS**. The master volume in Sonata's
 toolbar and the click volume in its metronome panel each carried their own
@@ -84,6 +91,10 @@ rendered whether or not there is a detent, so that routing never moves.
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --ring`
+    - `ui/tokens/color-palette --slider-knob`
+    - `ui/tokens/color-palette --slider-knob-ring`
+    - `ui/tokens/density --slider-knob-size`
+    - `ui/tokens/density --slider-track-h`
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/chord/piano`

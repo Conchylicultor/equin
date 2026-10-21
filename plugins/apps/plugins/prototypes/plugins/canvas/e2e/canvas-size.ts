@@ -1,4 +1,4 @@
-// Verifies the canvas-wide size & zoom chip: the canvas opens at Fit at the
+// Verifies the canvas-wide size dock: the canvas opens at Fit at the
 // size the prototype declares (`<meta name="prototype-viewport">`); Responsive
 // lays the page out at the room's own size; a device preset lays every frame's page out at that device's size; Fit
 // shrinks the frame to the room while 100% and the zoom slider set the scale
@@ -82,11 +82,27 @@ await withBrowser(async (h) => {
       : declared.kind === "window"
         ? "This window"
         : "Responsive";
-  const opened = await chipText(page);
+  // The dock's device button for the declared size is lit (a preset other
+  // than Phone has none), and the Size popover's Fit is pressed.
+  const deviceButton =
+    declared.kind === "responsive" ||
+    declared.kind === "window" ||
+    (declared.kind === "preset" && declared.preset === "Phone")
+      ? page.getByRole("button", { name: declaredName, exact: true })
+      : null;
+  await openSizeMenu(page);
+  const fitPressed = await page
+    .getByRole("button", { name: "Fit", exact: true })
+    .getAttribute("aria-pressed");
+  await dismiss(page);
+  const lit =
+    deviceButton === null
+      ? "n/a"
+      : await deviceButton.getAttribute("aria-pressed");
   r.ok(
     `opens at the declared size (${declaredName}) at Fit`,
-    opened.startsWith(declaredName) && /Fit · \d+%/.test(opened),
-    opened,
+    fitPressed === "true" && (lit === "n/a" || lit === "true"),
+    `fit=${String(fitPressed)} device=${String(lit)}`,
   );
   if (declared.kind === "preset") {
     const size = SIZE_PRESETS.find((p) => p.name === declared.preset)!;
@@ -135,8 +151,8 @@ await withBrowser(async (h) => {
     JSON.stringify(phone.value),
   );
   r.ok(
-    "the chip names the preset",
-    /^Phone 390 × 844/.test(await chipText(page)),
+    "the dock reads the preset's size",
+    /^390 × 844/.test(await chipText(page)),
     await chipText(page),
   );
 
@@ -160,8 +176,8 @@ await withBrowser(async (h) => {
     JSON.stringify(actual.value),
   );
   r.ok(
-    "the chip reads 100%",
-    / 100%$/.test(await chipText(page)),
+    "the dock shows no zoom at 100%",
+    !/%/.test(await chipText(page)),
     await chipText(page),
   );
 
@@ -178,7 +194,7 @@ await withBrowser(async (h) => {
     JSON.stringify(ninety.value),
   );
   r.ok(
-    "the chip reads 90%",
+    "the dock reads 90%",
     / 90%$/.test(await chipText(page)),
     await chipText(page),
   );

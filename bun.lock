@@ -762,6 +762,10 @@
       "name": "@singularity/plugin-apps-prototypes-gallery",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/prototypes/plugins/icons": {
+      "name": "@singularity/plugin-apps-prototypes-icons",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/prototypes/plugins/present": {
       "name": "@singularity/plugin-apps-prototypes-present",
       "version": "0.0.1",
@@ -6217,6 +6221,10 @@
       "name": "@singularity/plugin-ui-tokens-material",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/overlay": {
+      "name": "@singularity/plugin-ui-tokens-overlay",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/place-palette": {
       "name": "@singularity/plugin-ui-tokens-place-palette",
       "version": "0.0.1",
@@ -7317,6 +7325,8 @@
     "@singularity/plugin-apps-prototypes-files": ["@singularity/plugin-apps-prototypes-files@workspace:plugins/apps/plugins/prototypes/plugins/files"],
 
     "@singularity/plugin-apps-prototypes-gallery": ["@singularity/plugin-apps-prototypes-gallery@workspace:plugins/apps/plugins/prototypes/plugins/gallery"],
+
+    "@singularity/plugin-apps-prototypes-icons": ["@singularity/plugin-apps-prototypes-icons@workspace:plugins/apps/plugins/prototypes/plugins/icons"],
 
     "@singularity/plugin-apps-prototypes-present": ["@singularity/plugin-apps-prototypes-present@workspace:plugins/apps/plugins/prototypes/plugins/present"],
 
@@ -9897,6 +9907,8 @@
     "@singularity/plugin-ui-tokens-icons": ["@singularity/plugin-ui-tokens-icons@workspace:plugins/ui/plugins/tokens/plugins/icons"],
 
     "@singularity/plugin-ui-tokens-material": ["@singularity/plugin-ui-tokens-material@workspace:plugins/ui/plugins/tokens/plugins/material"],
+
+    "@singularity/plugin-ui-tokens-overlay": ["@singularity/plugin-ui-tokens-overlay@workspace:plugins/ui/plugins/tokens/plugins/overlay"],
 
     "@singularity/plugin-ui-tokens-place-palette": ["@singularity/plugin-ui-tokens-place-palette@workspace:plugins/ui/plugins/tokens/plugins/place-palette"],
 

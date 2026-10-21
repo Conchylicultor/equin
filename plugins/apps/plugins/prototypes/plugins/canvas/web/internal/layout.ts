@@ -20,14 +20,18 @@ import type { CanvasSize, CanvasZoom } from "./canvas-model";
  */
 
 /**
- * The board's padding and the gaps between frames, in px (inline geometry).
- * `x` leaves room for the half of the add rail that overhangs the last frame's
- * right edge, so revealing it never makes the board scroll.
+ * The room the canvas's floating chrome leaves the frames, in px (inline
+ * geometry): `top` clears the header card (12px inset + 42px card + 12px), and
+ * `bottom` the size dock; `right` is wider than `left` by the half of the add
+ * rail that overhangs the last frame's right edge, so revealing it never makes
+ * the board scroll. Every frame's header sits in `FRAME_HEAD` above its screen.
  */
-export const BOARD_PAD = { top: 16, x: 20, bottom: 16 } as const;
-export const FRAME_GAP = 12;
-/** A frame's header row, plus the gap under it. */
+export const BOARD_PAD = { top: 66, right: 24, bottom: 76, left: 16 } as const;
+export const FRAME_GAP = 20;
+/** A frame's header row, plus the room around it, above its screen. */
 export const FRAME_HEAD = 34;
+/** How far a frame's header sits above its screen, px. */
+export const FRAME_HEAD_GAP = 6;
 
 /** The Width slider's range. */
 export const MIN_WIDTH = 360;
@@ -53,9 +57,59 @@ export function roomPerFrame(canvas: Room, n: number): Room {
   return {
     w: Math.max(
       1,
-      (canvas.w - 2 * BOARD_PAD.x - FRAME_GAP * (count - 1)) / count,
+      (canvas.w - BOARD_PAD.left - BOARD_PAD.right - FRAME_GAP * (count - 1)) /
+        count,
     ),
     h: Math.max(1, canvas.h - BOARD_PAD.top - BOARD_PAD.bottom - FRAME_HEAD),
+  };
+}
+
+/** Where one frame's SCREEN sits on the board, px from the board's top-left. */
+export interface FrameBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * Place `n` frames of one on-screen size (`frame`, px) on a canvas whose scroll
+ * viewport is `canvas`: each frame gets its share of the room (`roomPerFrame`)
+ * and sits centred in it, its header in the `FRAME_HEAD` band above. A frame
+ * bigger than its share (a zoom past Fit, Whole page) widens or heightens every
+ * share to it instead, and the board — `extent` — grows past the viewport, so
+ * the canvas scrolls rather than overlapping or clipping frames.
+ *
+ * Pure: the canvas measures, this turns it into boxes.
+ */
+export function placeFrames(
+  canvas: Room,
+  n: number,
+  frame: Room,
+): { boxes: FrameBox[]; extent: Room } {
+  const count = Math.max(1, n);
+  const share = roomPerFrame(canvas, count);
+  const slotW = Math.max(share.w, frame.w);
+  const slotH = Math.max(share.h, frame.h);
+  const top = BOARD_PAD.top + FRAME_HEAD;
+  const boxes = Array.from({ length: count }, (_, i) => ({
+    x: BOARD_PAD.left + i * (slotW + FRAME_GAP) + (slotW - frame.w) / 2,
+    y: top + (slotH - frame.h) / 2,
+    w: frame.w,
+    h: frame.h,
+  }));
+  return {
+    boxes,
+    extent: {
+      w: Math.max(
+        canvas.w,
+        BOARD_PAD.left +
+          count * slotW +
+          FRAME_GAP * (count - 1) +
+          BOARD_PAD.right,
+      ),
+      h: Math.max(canvas.h, top + slotH + BOARD_PAD.bottom),
+    },
   };
 }
 

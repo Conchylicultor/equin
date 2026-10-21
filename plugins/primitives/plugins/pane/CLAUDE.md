@@ -347,12 +347,14 @@ whenever the target is already somewhere in the route:
 ## Chrome
 
 **Every pane wraps its body in `<PaneChrome pane={…}>`** — there is no opt-out:
-`PaneChrome` ALWAYS renders a header `Bar` plus exactly one body scroll
-(`PaneScroll`), so a pane can never strand its own scrolling. The header is one
+`PaneChrome` ALWAYS renders a header `Bar` (or, with `header="card"`, the same
+row as a floating card — below) plus exactly one body scroll (`PaneScroll`), so
+a pane can never strand its own scrolling. The header is one
 overflow-collapsing bar rendering the pane's ONE header slot (`pane.Actions`),
 then promote and × close — which only show when `depth > 0`.
 
-There is no second kind of header. A pane that needs a **rich** one (transport /
+There is no second kind of header CONTENT (`header="card"` is the same row,
+drawn elsewhere). A pane that needs a **rich** one (transport /
 view-switcher / volume) is the ordinary case with more items in it: the title is
 a contribution of the same slot, so a rich header collapses into the `⋯` like
 any other, and what separates a leading group from a trailing one is a `spacer`
@@ -485,6 +487,26 @@ The page may change it as it scrolls; the bar masks with that theme's own
 background, which the pane republishes as `--chrome-mask` on the bar.
 `headerGlass` frosts the mask (`<Sticky mask="glass">`: the background at 72%,
 what scrolls under it blurred) instead of painting it opaque.
+
+### `header="card"` — the header as a floating card
+
+`<PaneChrome header="card">` draws the SAME header row — the leading control,
+Back, the one `Actions` slot (title included), promote and close — as a
+content-sized `<Surface level="float">` card pinned over the body's top-left
+corner (`offset="md"`), and gives the body the pane's whole height: for a
+canvas that runs edge to edge under its chrome (the prototype viewer). The row
+is the bar's own height and insets (`h-chrome-pane`, `px-chrome-pane`) at a
+`2xs` gap, so a theme sizes the card through the density group, and the card's
+1px border sits outside that row (a 40px row is a 42px card). It is capped at
+the pane's width less its inset on both sides.
+
+A card has no width of its own to run out of, so it is not an `AdaptiveBar`:
+there is no `⋯`, each item is its own box (`SlotItemLayout orientation="host-owned"`,
+so an item that hides itself leaves no gap), and the title's `cell: "yield"`
+is the one box that gives — it ellipsizes once the card reaches its cap. An
+item that should drop out on a narrow window hides itself. `header="card"`
+excludes `floatingHeader` / `headerTheme` / `headerGlass` (a type error), and
+the body plus any `overlay` sit under the card in one `relative isolate` host.
 
 ### The header slot (`Actions`)
 
@@ -979,21 +1001,25 @@ See "Open questions" in the design doc.
     - `welcomePane.Actions` "title" → `PaneTitleItem`
     - `workflow-node.actions` "title" → `PaneTitleItem`
     - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×3
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×4
+    - `primitives/slot-render` ×4
     - `primitives/live-state` ×3
-    - `primitives/slot-render` ×3
     - `primitives/css/scroll` ×2
     - `primitives/link-gesture` ×2
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
+    - `primitives/css/line.Line`
+    - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/sticky.Sticky`
+    - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
+    - `primitives/css/yield.yieldClass`
     - `primitives/dom/in-view.useInView`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/icon-button.IconButton`
@@ -1095,7 +1121,12 @@ See "Open questions" in the design doc.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --toolbar-foreground`
+    - `ui/tokens/density --chrome-pane-h`
     - `ui/tokens/density --chrome-pane-pad-end`
+    - `ui/tokens/density --chrome-pane-pad-start`
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
   - Imported by: 171 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×62

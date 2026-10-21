@@ -11,8 +11,8 @@ and look. Design: `research/2026-09-23-apps-prototypes-frame-canvas.md`
 A frame shows one of two things:
 
 - **the prototype** — one recorded version (or the live folder) under one set
-  of option picks. Each prototype frame has its own version stepper in its
-  header and its own options pill over its screen;
+  of option picks. Each prototype frame's header holds its own options chip
+  and version stepper;
 - **a frame source** — something that is not the prototype, contributed to
   the `FrameSource` slot (below). `compare` contributes the **Real app**: the
   real screen the prototype declares it mocks.
@@ -121,12 +121,17 @@ not declare is dropped from its URL.
     The canvas names no source. Adding one switches the canvas
     to Swipe (when that makes two frames) at Responsive size — a source frame
     is there to be compared against.
-- **The options pill** ("Mist · Home +3") opens on click into "Options":
-  one row per declared option — value chips for a choice; for a color, one
+- **The options chip** in the frame's header box (`OptionsChip`: sliders
+  glyph, the frame's name, a mono `+N` for the options the name leaves out, a
+  chevron) opens "Options · <frame name>" under it: one row per declared
+  option (84px label | value pills | link and spread icons at .4 until the row
+  is hovered, the accent while on) — value pills for a choice; for a color, one
   swatch per suggestion and a trailing custom swatch (the color on screen,
   ringed when it is no suggestion) that opens the color picker in its own
-  popover above the swatch. The pill writes a color as a dot and its suggestion's
-  name, or its hex. Options the page declares under a group
+  popover above the swatch. "Reset to defaults" sits in the header while the
+  frame has a pick. (A presentation, which has no frame header, keeps the
+  floating `OptionsPill` — the same popover, opening above it — which writes a
+  color as a dot and its suggestion's name, or its hex.) Options the page declares under a group
   (`<meta name="prototype-option-group">`, `files`' `groupOptions`) sit in one
   collapsible section per group — folded, its header lists the group's picks —
   and a grouped row drops the group's prefix from its label (`optionLabel`;
@@ -139,10 +144,8 @@ not declare is dropped from its URL.
     of it with that one value changed); toggled again, it gathers back into
     that frame. A pick of the spread option breaks the spread. A color with
     nothing to spread over offers no spread.
-  The pill is app DOM over the frame, never inside the prototype's page — that
-  is what keeps switchers out of the designs. Like the size & zoom chip, it can
-  be dragged off what it covers (`Movable`, bounded by the canvas; a
-  double-click on its surface sends it home) — the same as in a presentation.
+  The chip is app DOM over the frame, never inside the prototype's page — that
+  is what keeps switchers out of the designs.
 - **Keep only** closes every other frame, with an Undo toast.
 - **Close** removes one frame. The canvas never goes empty: with one frame
   left, Keep only and Close are not offered.
@@ -178,22 +181,33 @@ never does — a drag would reload the page on every move. Instead:
 
 ## Versions
 
-Each prototype frame's header has `‹ v14 · latest ›` (`version-stepper.tsx`),
+Each prototype frame's header has `‹ v14 latest ⌄ ›` (`version-stepper.tsx`;
+a past version reads its age, `v12 6d ago`),
 over `files`' per-prototype history resource. It moves only its own frame. The
 stops are derived on every render from the history (`version-steps.ts`): the
 recorded versions oldest first, the newest one being the live folder when it
 is clean, plus a last "Live · unsaved" stop when the folder has changes no
-version holds yet. The label opens the version list ("Versions", a
-`DataView` whose row actions are the `PrototypeVersionActions` slot — the
+version holds yet. The label opens the version list under it (`25 versions`,
+a `DataView` with a hosted header — the count, its search behind the
+hover-revealed options trigger, and the **This variant** chip — whose rows draw
+themselves `v12 · request · when`, the current one scrolled into view on open,
+and whose row actions are the `PrototypeVersionActions` slot — the
 canvas ships **Compare in a new frame** (a copy of this frame, same picks,
 showing that version; the stepper hands the frame to its row actions through
 `VersionListFrameContext`) and "open the conversation that recorded it"), and on a past version
 it ends with **Make vN the latest** (confirm, restore, back to live; the store
 saves the current state first, so nothing is lost).
 
+**This variant** (on by default) keeps the versions that can show what the
+frame shows: those whose own page declares every option the frame picked, with
+the picked value among its values (`declaresVariant`, `version-steps.ts` —
+each version carries its own declared options). A version lacking one would
+open at that option's default, a different variant. Offered only while the
+frame has a pick: a frame on every default has nothing to filter by.
+
 **The arrows never move**: the label has a floor wide enough for every form,
 so stepping never slides › out from under the pointer (`canvas-version.ts`
-asserts it). Known gap: the stepper sits after the frame's name, and a version
+asserts it). Known gap: the stepper sits after the options chip, and a version
 that declares different options gets a different name, so stepping onto it can
 shift the whole stepper (the script notes it rather than failing). A recorded version is a frozen document with no cache-bust; the
 live folder is cache-busted by its `PrototypeMeta.rev` (a hash of that
@@ -207,8 +221,16 @@ the reader scrolls, or 5 s), so a reload keeps the reader's place. Script state
 
 ## Size, zoom, Whole page
 
-One chip in the canvas's bottom-right corner — "This window 1728 × 990 | Fit ·
-62%" (`size-chip.tsx`) — opens the menu for all three:
+One glass dock centred 12px above the canvas's bottom edge (`SizeDock` →
+`SizeChip`, `size-chip.tsx`; fixed, not draggable — it is small and centred,
+and the board's bottom pad leaves room for it): three device buttons
+(**Responsive**, **This window**, **Phone** — the size in force lit, tooltips
+above), a hairline, and the size button — `838 × 724` in mono, then the zoom
+(`62%`) only while the frames are shown scaled below 100% — which opens the
+**Size** popover above the dock (anchored to the dock, right-aligned, 10px up)
+for all three. The popover is the mockup's own markup on primitives (a check
+slot · glyph · name · dims list, then hairline bands), not a `ControlPanel`,
+whose fixed row grid has no two-leading-cell form:
 
 - **Size** is the logical size every frame's page lays out at: **Responsive**
   (a frame IS its share of the canvas, measured in page pixels at the current
@@ -226,13 +248,14 @@ One chip in the canvas's bottom-right corner — "This window 1728 × 990 | Fit 
   happens to have. The presets and that tag's parser are one list, owned by
   `files/core` (`SIZE_PRESETS`, `parseViewport`); the provider waits for the
   prototype list before the canvas exists, so it never opens at a stand-in.
-- **The Width slider** in the same menu resizes EVERY frame (the size is
+- **The Width slider** in the same popover (its `838px` readout above it) resizes EVERY frame (the size is
   canvas-wide), in 360–2560 px, snapping onto a preset it moves within 28 px
   of. Only a move toward a preset snaps, so an arrow key can step off one.
 - **Zoom** is **Fit** (the default: the largest scale at which the whole frame
   is visible; at Responsive that is 100%) or a fixed scale from the 10–200%
-  slider (with a detent at 100%). The value box beside the slider jumps to
-  100%. Zoom never changes what the page lays out at — only how big it is
+  slider (with a detent at 100%); − / + step to the next multiple of 10%. The
+  band's `100%` readout is a button, **Actual size**, that jumps to 100%. Zoom
+  never changes what the page lays out at — only how big it is
   painted (`transform: scale()`).
 - **Whole page** shows each page's entire content instead of one screen: a
   frame is as tall as its document (measured once loaded,
@@ -258,17 +281,33 @@ The layout is computed once by the canvas (`layoutFrames`) and handed to the
 chip, so the chip and the frames can never disagree. Layout uses inline styles
 only for this dynamic scaling geometry.
 
+## The board
+
+The pane's header is a floating card over the canvas's top-left corner
+(`PaneChrome header="card"`), so the canvas runs edge to edge under its chrome
+on a fixed ground: a 28px hairline grid under a vignette (`CANVAS_GROUND`).
+`placeFrames` (pure, `internal/layout.ts`) puts every frame's SCREEN at an
+absolute box: the room left by the chrome (`BOARD_PAD` — top 66 for the header
+card, bottom 76 for the size dock, left 16, right 24 for the add rail's
+overhang), `FRAME_HEAD` (34) above each screen for its header (drawn
+`FRAME_HEAD_GAP` above it), `FRAME_GAP` (20) between frames; each frame
+centred in its equal share. A frame bigger than its share (a zoom past Fit,
+Whole page) widens every share instead, and the board grows past the viewport,
+so the canvas scrolls. Each box and its screen glide to a new layout
+(`GEOMETRY_MOTION`: left/top/width/height and the corners, .35s, none under
+reduced motion); scrolling moves nothing. A screen is `rounded-xl`, a phone's
+`rounded-4xl`, a tablet's `rounded-3xl`, ringed in the border hairline over
+the deep `shadow-2xl`; `CanvasFrameView bare` (Present) draws it unframed.
+
 ## Swipe, selection, keyboard
 
-With exactly two frames, a floating pill sits in the gap between them —
-**Swipe** (`LayoutToggle`, a canvas control like the add rail's `+`, so every
+With exactly two frames, a glass button sits in the gap between them —
+**Swipe** (`LayoutToggle`, the add rail's family: `railButtonClass`, so every
 canvas has it, header or not). Swipe paints the two frames in one box, B under A, A clipped at a
-divider you drag; the divider carries the way back, a **Side by side** pill
-at its top. Each prototype frame keeps its options pill while swiped,
-bottom-centre of its own half — A's on the left, the side A shows on. Adding or closing a frame
-while swiping goes back to side by side.
+divider you drag; the divider carries the way back, a **Side by side** button
+at its top. Adding or closing a frame while swiping goes back to side by side.
 
-Clicking a frame selects it (an accent ring; a new or changed frame becomes
+Clicking a frame selects it (it draws nothing; a new or changed frame becomes
 selected). The selection is what the keys act on, registered once for the
 canvas as surface-scoped plain keys (silent while a text field has focus):
 
@@ -280,10 +319,18 @@ canvas as surface-scoped plain keys (silent while a text field has focus):
 
 A selected frame shows its header actions; the others reveal them on hover.
 
-A frame's header is as wide as its screen, so on a crowded canvas it runs out
-of room. It is an `AdaptiveBar`: the name ellipsizes to its floor, the version
-stepper shrinks to its bare `v14` label (the list still opens; `[` / `]` still
-step), and the actions that still do not fit move behind a `⋯`. The hover
+A frame's header (`frame-header.tsx`, 26px, `FRAME_HEAD_GAP` above its
+screen) is ONE box on the left — the options chip | the version stepper, on the
+card at 70% inside a 1px line (a prototype with no options: the stepper alone)
+— or, for a source frame, a dashed tag naming it ("Real app", what it resolved
+to as its tooltip); and the frame actions on the right, revealed on hover. The
+box's 22px chips and 20px arrows are drawn by the `frameChipsTheme` sub-theme
+(`internal/sub-themes.ts`; the Options rows and the version rows have theirs —
+sizes the app's rungs do not draw).
+
+It is as wide as its screen, so on a crowded canvas it runs out of room. It is
+an `AdaptiveBar`: the actions that do not fit move behind a `⋯`, and the box
+gives up room late, to its narrow form (no `+N`, no age, no chip chevron). The hover
 reveal hides an action only while it sits in the row
 (`hoverRevealTargetInAnchor`), so one in the `⋯` panel is visible there.
 
@@ -297,10 +344,13 @@ other.
 
 ## Extension points
 
-- **`prototypeDetailPane.Actions`** — the pane header IS the action bar. The
-  canvas contributes nothing there (its controls are drawn on the canvas, so
-  every canvas has them); `copy-id` the copy button; `gallery` the Done
-  toggle. Order: `config/apps/prototypes/canvas/`.
+- **`prototypeDetailPane.Actions`** — the pane header (the floating card:
+  launcher, Back, the `Prototypes / <title>` trail, then these) IS the action
+  bar. The canvas contributes nothing there (its controls are drawn on the
+  canvas, so every canvas has them); `copy-id` the copy button; `gallery` the
+  pin and Done toggles — each drawn as a `TitleActionButton` (compact, a step
+  quieter, the accent while on, hidden under 900px). Order:
+  `config/apps/prototypes/canvas/`.
 - **`PrototypeFrameActions`** — a frame's header actions, handed
   `{ frame, meta }`. The canvas ships Keep only and Close; `present`
   adds Open in a new tab and Full screen.
@@ -318,7 +368,8 @@ For surfaces that show a frame outside the pane (Present, its new-tab page)
 the barrel exports `PrototypeDetailProvider` (standalone for one frame, with
 `initialVersion` / `initialPicks`), `openCanvasInApp` (above),
 `usePrototypeDetail`, `CanvasFrameView`
-(the very same frame screen), `OptionsPill`, `VersionStepper`, `SizeChip`,
+(the very same frame screen), `OptionsPill` (the floating options trigger a
+presentation uses), `VersionStepper`, `SizeChip`,
 `AddFrameRail` (its buttons' actions handed over by `extend`),
 `layoutFrames` and `useFrameNames`.
 
@@ -327,8 +378,8 @@ the barrel exports `PrototypeDetailProvider` (standalone for one frame, with
 Every frame's screen carries `data-canvas-frame="<letter>"`,
 `data-canvas-frame-kind` (`prototype`, or the source's id — the canvas
 publishes the id it was given) and `data-canvas-frame-status` (`loading` /
-`unresolved` / `found`). Side by side, each frame's card (header, screen,
-options pill) carries `data-canvas-card="<letter>"`; the canvas root carries
+`unresolved` / `found`). Side by side, each frame's card (header, screen)
+carries `data-canvas-card="<letter>"`; the canvas root carries
 `data-canvas-layout` (`side` / `swipe`, as drawn). Swiped (what adding a
 source frame does) there are no cards, so a flow needing a card or one screen
 alone calls the driver's `setLayout(page, "side")` first (it presses the
@@ -364,7 +415,7 @@ navigation, so it starts from nothing remembered.
 
 ## Plugin reference
 
-- Description: The prototype detail pane as a canvas of frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own version stepper and options pill, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a Width slider that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered per pane for the browser tab's session, so a reload reopens it as it was left while a new pane starts fresh.
+- Description: The prototype detail pane as a canvas of frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own options chip and version stepper in its header, beside frames from contributed sources (FrameSource — the real app, from compare); one canvas-wide size & zoom chip (Responsive / device presets / custom, Fit or 10–200%, Whole page), a Width slider that resizes every frame and snaps to the presets, side-by-side or swipe, keep-only with Undo, link and spread across frames; the whole canvas is remembered per pane for the browser tab's session, so a reload reopens it as it was left while a new pane starts fresh.
 - Web:
   - Slots:
     - `prototypeDetailPane.Actions`
@@ -383,20 +434,21 @@ navigation, so it starts from nothing remembered.
     - `PrototypeVersionActions` ← `apps.prototypes.canvas`
   - Contributes:
     - `Pane.Register` "prototypes-detail"
+    - `ThemeEngine.SubTheme` "Prototype frame chips"
+    - `ThemeEngine.SubTheme` "Prototype option rows"
+    - `ThemeEngine.SubTheme` "Prototype version rows"
     - `PrototypeFrameActions` "keep-only" → `KeepOnlyFrameAction`
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×8
+  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×6
     - `primitives/collapsible` ×5
     - `primitives/hover-reveal` ×3
     - `primitives/persistent-draft` ×3
     - `primitives/action-presentation` ×2
-    - `primitives/css/control-panel` ×2
     - `primitives/css/spacing` ×2
-    - `primitives/css/text` ×2
     - `primitives/dom/auto-scroll` ×2
     - `primitives/dom/element-size` ×2
     - `primitives/icon-button` ×2
@@ -413,18 +465,22 @@ navigation, so it starts from nothing remembered.
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/color-picker.ColorPicker`
-    - `primitives/css/column.Column`
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/layer.layerClasses`
     - `primitives/css/line.Line`
+    - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
+    - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/slider.Slider`
-    - `primitives/css/sticky.Sticky`
-    - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/dom/movable.Movable`
+    - `primitives/css/surface.Surface`
+    - `primitives/css/switch.SwitchIndicator`
+    - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.Theme`
+    - `primitives/css/yield.yieldClass`
+    - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/embed.isEmbeddedDocument`
     - `primitives/error-boundary.PluginErrorBoundary`
@@ -437,6 +493,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `shell/toast.showToast`
     - `ui/icons.Icon`
+    - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `AddFrameHandlers`
     - `CanvasAction`
@@ -483,6 +540,7 @@ navigation, so it starts from nothing remembered.
     - `roomPerFrame`
     - `sameExtent`
     - `SizeChip`
+    - `TitleActionButton`
     - `useFrameNames`
     - `useFramePicks`
     - `useFrameSrc`
@@ -490,21 +548,13 @@ navigation, so it starts from nothing remembered.
     - `useWindowSize`
     - `VersionStepper`
 - Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --background`
-    - `ui/tokens/color-palette --border`
-    - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --muted`
-    - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/color-palette --primary-text`
-    - `ui/tokens/color-palette --ring`
-    - `ui/tokens/color-palette --warning`
-    - `ui/tokens/density --space-lg`
-    - `ui/tokens/density --space-xs`
+  - Uses tokens: 37 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×12
+    - `ui/tokens/type-scale` ×12
+    - `ui/tokens/density` ×6
+    - `ui/tokens/shape` ×4
+    - `ui/tokens/shadow` ×2
     - `ui/tokens/font-family --font-mono`
-    - `ui/tokens/shape --radius`
-    - `ui/tokens/shape --spacing`
   - Imported by:
     - `active-data/prototype`
     - `apps/prototypes/compare`

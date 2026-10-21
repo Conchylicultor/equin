@@ -5,10 +5,11 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import {
-  SectionLabel,
-  Text,
-} from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import {
   Collapsible,
   CollapsibleChevron,
@@ -16,7 +17,6 @@ import {
   CollapsibleTrigger,
   useCollapsibleContext,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import {
   Button,
   ControlSizeProvider,
@@ -25,7 +25,6 @@ import {
   WithTooltip,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { ColorPicker } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
 import {
   Popover,
@@ -46,6 +45,7 @@ import {
   type PrototypeOption,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { documentOptions, useFramePicks, usePrototypeDetail } from "../context";
+import { frameChipsTheme, optionRowsTheme } from "../internal/sub-themes";
 import {
   previewedValue,
   prototypeFrames,
@@ -60,40 +60,142 @@ const linkIcon = symbol("link");
 const tuneIcon = symbol("tune");
 const viewColumnIcon = symbol("view-column");
 const paletteIcon = symbol("palette");
+const chevronDownIcon = symbol("keyboard-arrow-down");
+
+/** Which frame's options a popover edits, and how it is named in its header. */
+interface OptionsTarget {
+  frame: PrototypeFrame;
+  meta: PrototypeMeta;
+}
 
 /**
- * One prototype frame's options, as a pill ("Mist · Home +3") that opens the
- * options popover: one row per declared option — value chips for a choice,
- * suggestion swatches plus a custom swatch (which opens a color picker in its
- * own popover beside it) for a color — plus per row a link (keep it the same in every
- * frame) and a spread (one frame per value, or per suggestion). Options the
- * page declares under a group (`<meta name="prototype-option-group">`) sit in
- * one collapsible section per group, which names its picks when folded.
+ * A frame header's options chip (the mockup's `.vchip`): the sliders glyph,
+ * the frame's name ("Empty · Dark"), a dimmed mono `+N` for the options the
+ * name leaves out, and a chevron — opening the Options popover under it.
+ * Narrow (a frame under 440px) it drops `+N` and the chevron.
  *
- * A color drag previews (`previewPick`: the frame repaints every move, nothing
- * is written) and its end commits (`setPick`: one write). The pill and the
- * swatches show the preview too, so they move with the frame.
- *
- * App DOM, never inside the prototype's page — that is what keeps switchers
- * out of the designs. It always edits ITS frame, so nothing needs
- * disambiguating. Renders nothing for a document with no options. The frame's
- * picks are always known here: the canvas does not exist until they load.
+ * Renders nothing for a document with no options: the frame header's box then
+ * holds the version stepper alone. Its 22px look is the frame box's
+ * (`frameChipsTheme`).
+ */
+export function OptionsChip({
+  frame,
+  meta,
+  name,
+  named,
+  narrow,
+}: OptionsTarget & {
+  /** The frame's name ("Empty · Dark"). */
+  name: string;
+  /** How many options `name` spells; `+N` counts the rest. */
+  named: number;
+  narrow: boolean;
+}): ReactElement | null {
+  const options = documentOptions(meta, frame.version);
+  if (options.length === 0) return null;
+  const rest = options.length - named;
+  return (
+    <Theme name={subThemeScope(frameChipsTheme)} surface="none">
+      <ControlSizeProvider size="sm">
+        <OptionsPopover
+          frame={frame}
+          meta={meta}
+          title={`Options · ${name}`}
+          side="bottom"
+          trigger={
+            <Button
+              variant="ghost"
+              aria-label="Prototype options"
+              className="text-muted-foreground"
+            >
+              <Icon icon={tuneIcon} className="text-faint-foreground" />
+              <Text variant="group">{name}</Text>
+              {!narrow && rest > 0 ? (
+                <span className="font-mono text-2xs text-faint-foreground">
+                  +{String(rest)}
+                </span>
+              ) : null}
+              {narrow ? null : (
+                <Icon
+                  icon={chevronDownIcon}
+                  className="text-faint-foreground"
+                />
+              )}
+            </Button>
+          }
+        />
+      </ControlSizeProvider>
+    </Theme>
+  );
+}
+
+/**
+ * One prototype frame's options as a floating pill ("Mist · Home +3") — a
+ * presentation's, which has no frame header to hold the chip. Opens the same
+ * Options popover, above it.
  */
 export function OptionsPill({
   frame,
   meta,
-}: {
-  frame: PrototypeFrame;
-  meta: PrototypeMeta;
-}): ReactElement | null {
-  const [open, setOpen] = useState(false);
-  const { canvas, dispatch } = usePrototypeDetail();
+}: OptionsTarget): ReactElement | null {
+  const { canvas } = usePrototypeDetail();
   const options = documentOptions(meta, frame.version);
   const picks = useFramePicks(frame, meta);
   if (options.length === 0) return null;
   const shown = shownPicks(canvas, frame, options, picks);
   return (
-    <InlinePopover
+    <OptionsPopover
+      frame={frame}
+      meta={meta}
+      title="Options"
+      side="top"
+      trigger={
+        <Button variant="floating" shape="pill" aria-label="Prototype options">
+          <Icon icon={tuneIcon} />
+          <PillSummary options={options} picks={shown} />
+        </Button>
+      }
+    />
+  );
+}
+
+/**
+ * The Options popover (the mockup's `.pop.options`), opened from `trigger`:
+ * a header naming the frame, then one row per declared option — value pills
+ * for a choice, suggestion swatches plus a custom swatch (which opens a color
+ * picker in its own popover beside it) for a color — plus per row a link (keep
+ * it the same in every frame) and a spread (one frame per value, or per
+ * suggestion), at .4 until the row is hovered. Options the page declares under
+ * a group (`<meta name="prototype-option-group">`) sit in one collapsible
+ * section per group, which names its picks when folded.
+ *
+ * A color drag previews (`previewPick`: the frame repaints every move, nothing
+ * is written) and its end commits (`setPick`: one write). The swatches (and the
+ * floating pill) show the preview too, so they move with the frame.
+ *
+ * App DOM, never inside the prototype's page — that is what keeps switchers
+ * out of the designs. It always edits ITS frame, so nothing needs
+ * disambiguating. The frame's picks are always known here: the canvas does not
+ * exist until they load.
+ */
+function OptionsPopover({
+  frame,
+  meta,
+  title,
+  side,
+  trigger,
+}: OptionsTarget & {
+  title: string;
+  side: "top" | "bottom";
+  trigger: ReactElement;
+}): ReactElement {
+  const [open, setOpen] = useState(false);
+  const { canvas, dispatch } = usePrototypeDetail();
+  const options = documentOptions(meta, frame.version);
+  const picks = useFramePicks(frame, meta);
+  const shown = shownPicks(canvas, frame, options, picks);
+  return (
+    <Popover
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
@@ -101,72 +203,69 @@ export function OptionsPill({
         // A drag cut short by the popover closing is dropped, not picked.
         if (canvas.preview?.id === frame.id) dispatch({ type: "clearPreview" });
       }}
-      side="top"
-      align="center"
-      width="builder"
-      trigger={
-        <Button variant="floating" shape="pill" aria-label="Prototype options">
-          <Icon icon={tuneIcon} />
-          <PillSummary options={options} picks={shown} />
-        </Button>
-      }
     >
-      <ControlSizeProvider size="xs">
-        <Stack gap="sm" role="group" aria-label="Options">
-          <PopoverHeading />
-          {groupOptions(options).map((group, i) => {
-            const rows = group.options.map((option) => (
-              <OptionRow
-                key={option.name}
-                frame={frame}
-                option={option}
-                value={pickedValue(option, picks)}
-                shownValue={pickedValue(option, shown)}
-                onPick={(value) =>
-                  dispatch({
-                    type: "setPick",
-                    id: frame.id,
-                    option: option.name,
-                    value,
-                  })
+      <WithTooltip content="Options">
+        <PopoverTrigger render={trigger} />
+      </WithTooltip>
+      <PopoverContent side={side} align="center" sideOffset={8} width="builder">
+        <ControlSizeProvider size="sm">
+          <Theme name={subThemeScope(optionRowsTheme)} surface="none">
+            <Stack gap="none" role="group" aria-label="Options">
+              <PopoverHeading
+                title={title}
+                onReset={
+                  Object.keys(picks).length > 0
+                    ? () => dispatch({ type: "resetPicks", id: frame.id })
+                    : null
                 }
-                onClose={() => setOpen(false)}
               />
-            ));
-            // A run is keyed by its place: two runs may share a label.
-            const key = `${String(i)}:${group.label ?? ""}`;
-            return group.label === null ? (
-              <Stack key={key} gap="sm">
-                {rows}
-              </Stack>
-            ) : (
-              <OptionGroupSection
-                key={key}
-                label={group.label}
-                summary={group.options
-                  .map((o) => valueLabel(pickedValue(o, shown)))
-                  .join(" · ")}
-              >
-                {rows}
-              </OptionGroupSection>
-            );
-          })}
-          {Object.keys(picks).length > 0 ? (
-            <Button
-              variant="ghost"
-              onClick={() => dispatch({ type: "resetPicks", id: frame.id })}
-            >
-              Reset to defaults
-            </Button>
-          ) : null}
-        </Stack>
-      </ControlSizeProvider>
-    </InlinePopover>
+              {groupOptions(options).map((group, i) => {
+                const rows = group.options.map((option) => (
+                  <OptionRow
+                    key={option.name}
+                    frame={frame}
+                    option={option}
+                    value={pickedValue(option, picks)}
+                    shownValue={pickedValue(option, shown)}
+                    onPick={(value) =>
+                      dispatch({
+                        type: "setPick",
+                        id: frame.id,
+                        option: option.name,
+                        value,
+                      })
+                    }
+                    onClose={() => setOpen(false)}
+                  />
+                ));
+                // A run is keyed by its place: two runs may share a label.
+                const key = `${String(i)}:${group.label ?? ""}`;
+                return group.label === null ? (
+                  <Stack key={key} gap="none">
+                    {rows}
+                  </Stack>
+                ) : (
+                  <OptionGroupSection
+                    key={key}
+                    label={group.label}
+                    summary={group.options
+                      .map((o) => valueLabel(pickedValue(o, shown)))
+                      .join(" · ")}
+                  >
+                    {rows}
+                  </OptionGroupSection>
+                );
+              })}
+            </Stack>
+          </Theme>
+        </ControlSizeProvider>
+      </PopoverContent>
+    </Popover>
   );
 }
 
 /**
- * The picks a frame's pill shows: its resolved picks, with a color being
+ * The picks a frame's popover shows: its resolved picks, with a color being
  * dragged on it (or on a linked frame) in place of its pick.
  */
 function shownPicks(
@@ -220,6 +319,36 @@ function PillSummary({
   );
 }
 
+/** The popover's header row (`.ph`): `Options · <frame>`, and Reset when picked. */
+function PopoverHeading({
+  title,
+  onReset,
+}: {
+  title: string;
+  onReset: (() => void) | null;
+}): ReactElement {
+  return (
+    <Line className="gap-sm p-row">
+      <Fill>
+        <Text as="h5" variant="group" tone="muted">
+          {title}
+        </Text>
+      </Fill>
+      {onReset !== null ? (
+        <ControlSizeProvider size="xs">
+          <Button
+            variant="ghost"
+            className="text-faint-foreground"
+            onClick={onReset}
+          >
+            Reset to defaults
+          </Button>
+        </ControlSizeProvider>
+      ) : null}
+    </Line>
+  );
+}
+
 /**
  * One group's options, under a header that folds them: the group's label and
  * a rule while open; folded, the picks it holds ("Status · Flat · Button").
@@ -235,18 +364,16 @@ function OptionGroupSection({
 }): ReactElement {
   return (
     <Collapsible defaultOpen>
-      <Stack gap="xs">
-        <CollapsibleTrigger className="gap-xs text-muted-foreground hover:text-foreground">
-          <CollapsibleChevron className="size-3" />
-          <SectionLabel as="span" className={rigidClass()}>
-            {label}
-          </SectionLabel>
-          <GroupHeaderTail summary={summary} />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <Stack gap="sm">{children}</Stack>
-        </CollapsibleContent>
-      </Stack>
+      <CollapsibleTrigger className="w-full gap-xs rounded-panel-row p-row text-muted-foreground hover:text-foreground">
+        <Text as="span" variant="group" className={rigidClass()}>
+          {label}
+        </Text>
+        <GroupHeaderTail summary={summary} />
+        <CollapsibleChevron className="size-3 text-faint-foreground" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <Stack gap="none">{children}</Stack>
+      </CollapsibleContent>
     </Collapsible>
   );
 }
@@ -270,26 +397,10 @@ function GroupHeaderTail({ summary }: { summary: string }): ReactElement {
   );
 }
 
-/** "Options" and the legend for the row actions. */
-function PopoverHeading(): ReactElement {
-  const { canvas } = usePrototypeDetail();
-  const multi = prototypeFrames(canvas.frames).length > 1;
-  return (
-    <Stack direction="row" gap="sm" align="center">
-      <Text variant="label">Options</Text>
-      <Fill />
-      <Text variant="caption" tone="faint">
-        {multi
-          ? "link: same everywhere · columns: spread"
-          : "columns: one frame per value"}
-      </Text>
-    </Stack>
-  );
-}
-
 /**
- * One option: its name, its values (chips for a choice, swatches for a
- * color), and the row's link and spread.
+ * One option (`.orow`): its name (84px, muted), its values (pills for a
+ * choice, swatches for a color), and the row's link and spread — dimmed to .4
+ * until the row is hovered, in the accent while on.
  */
 function OptionRow({
   frame,
@@ -323,28 +434,33 @@ function OptionRow({
   };
 
   return (
-    <Stack gap="xs">
-      <Stack direction="row" gap="sm" align="center">
-        <Text
-          variant="caption"
-          tone="muted"
-          className={cn(rigidClass(), "w-20")}
-        >
-          {shownLabel}
-        </Text>
+    // A row of the popover: its inset, hover and corners are `Row`'s (the
+    // option-rows sub-theme's 6px 10px; a panel row's radius). Not activating —
+    // a plain container, so it holds the pills.
+    <Row>
+      {/* 86px + the 8px gap = the mockup's 84px label track and 10px gap. */}
+      <Text tone="muted" className={cn(rigidClass(), "w-21.5")}>
+        {shownLabel}
+      </Text>
+      <ControlSizeProvider size="xs">
         <Fill>
           {option.kind === "choice" ? (
             <Cluster gap="xs" role="radiogroup" aria-label={label}>
               {option.values.map((v) => (
-                <ToggleChip
+                <Button
                   key={v}
+                  variant="ghost"
                   role="radio"
                   aria-checked={v === value}
-                  active={v === value}
                   onClick={() => pick(v)}
+                  className={cn(
+                    "text-muted-foreground",
+                    v === value &&
+                      "border-primary/45 bg-primary/14 text-foreground hover:bg-primary/14",
+                  )}
                 >
                   {humanizeToken(v)}
-                </ToggleChip>
+                </Button>
               ))}
             </Cluster>
           ) : (
@@ -368,7 +484,7 @@ function OptionRow({
                   : "Keep the same in every frame"
               }
               aria-pressed={linked}
-              className={linked ? "bg-primary/15 text-primary-text" : undefined}
+              className={rowActionClass(linked)}
               onClick={() =>
                 dispatch({ type: "toggleLink", id: frame.id, option })
               }
@@ -385,7 +501,7 @@ function OptionRow({
                     : `One frame per ${label.toLowerCase()}`
               }
               aria-pressed={spread}
-              className={spread ? "bg-primary/15 text-primary-text" : undefined}
+              className={rowActionClass(spread)}
               onClick={() => {
                 onClose();
                 dispatch({ type: "toggleSpread", id: frame.id, option });
@@ -393,9 +509,16 @@ function OptionRow({
             />
           ) : null}
         </Stack>
-      </Stack>
-    </Stack>
+      </ControlSizeProvider>
+    </Row>
   );
+}
+
+/** A row's link / spread: .4 until its row is hovered (or it is on, in the accent). */
+function rowActionClass(on: boolean): string {
+  return on
+    ? "text-primary-text"
+    : "opacity-40 transition-opacity group-hover:opacity-100 focus-visible:opacity-100";
 }
 
 /**

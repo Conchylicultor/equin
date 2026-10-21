@@ -297,6 +297,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `Icons.Root` ← `ui.icons`
     - `Icons.Root` ← `ui.icons.sprites`
     - `Icons.Root` ← `ui.tokens.icons`
+    - `Icons.Family` ← `apps.prototypes.icons`
     - `Icons.Family` ← `apps.sonata.primitives.icons`
     - `Icons.Family` ← `ui.icons`
   - Contributes:
@@ -329,8 +330,8 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - Uses tokens:
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
-  - Imported by: 308 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×70
+  - Imported by: 309 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×71
     - `conversations` ×57
     - `primitives` ×42
     - `page` ×40

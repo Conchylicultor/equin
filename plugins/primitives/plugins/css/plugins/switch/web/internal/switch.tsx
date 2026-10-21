@@ -35,7 +35,10 @@ export function SwitchIndicator({
       data-state={checked ? "checked" : "unchecked"}
       className={cn(
         "relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors",
-        checked ? "bg-primary" : "bg-input dark:bg-input/80",
+        // The off track and both knob tones are color-palette tokens
+        // (`switchTrack` / `switchKnob` / `switchKnobOn`), so a theme restyles
+        // every switch at once; the on track is `primary`.
+        checked ? "bg-primary" : "bg-switch-track",
         disabled && "opacity-50",
         className,
       )}
@@ -46,7 +49,7 @@ export function SwitchIndicator({
           // travel distance is `track - knob - 2×inset` in one place instead of
           // a padding on the track that a flex direction could reinterpret.
           "absolute top-0.5 left-0.5 size-3 rounded-full shadow-sm transition-transform",
-          checked ? "translate-x-3 bg-primary-foreground" : "bg-background",
+          checked ? "translate-x-3 bg-switch-knob-on" : "bg-switch-knob",
         )}
       />
     </span>

@@ -20,6 +20,8 @@ export interface SurfaceProps extends Passthrough {
    *   - `base`    — page / pane canvas, toolbar bands (tone only)
    *   - `raised`  — a card lifted above base (bg + border + radius + shadow)
    *   - `overlay` — floats above everything: popovers, menus, floating panels
+   *   - `float`   — floating chrome over content (a toolbar card, a dock):
+   *                 translucent glass, the material group's float tokens
    */
   level: SurfaceLevel;
   /**

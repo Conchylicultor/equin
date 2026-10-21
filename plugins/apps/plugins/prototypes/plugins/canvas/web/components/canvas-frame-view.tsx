@@ -23,7 +23,10 @@ import type {
 import type { FrameLayout } from "../internal/layout";
 import type { PageExtent } from "../internal/page-extent";
 import { FrameSource, type FrameResolution } from "../slots";
-import { useFrameColorVars, useFrameSrc } from "../context";
+import { useFrameColorVars, useFrameSrc, usePrototypeDetail } from "../context";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { CanvasSize } from "../internal/canvas-model";
+import { GEOMETRY_MOTION } from "../internal/geometry-motion";
 import { PrototypeFrame } from "./prototype-frame";
 
 /** Everything the frame view is sized by, and the letter it publishes. */
@@ -39,6 +42,12 @@ export interface CanvasFrameViewProps {
   pageHeight?: number | null;
   /** This frame's extent, when Whole page is on (see `PageExtent`). */
   onPageExtent?: (extent: PageExtent) => void;
+  /**
+   * Draw the screen with no frame of its own — square, unringed, no drop — for
+   * a surface where it IS the whole view (a full-screen presentation).
+   * Default false: the canvas's framed screen.
+   */
+  bare?: boolean;
   /**
    * Wrap the screen in chrome that needs what a source frame resolved to (its
    * tag): the canvas's frame header, Present's hover tag. Defaults to the
@@ -71,6 +80,7 @@ function PrototypeFrameView({
   wholePage = false,
   pageHeight = null,
   onPageExtent = ignoreExtent,
+  bare = false,
   children = justScreen,
 }: CanvasFrameViewProps & { frame: PrototypeFrameModel }): ReactElement {
   const src = useFrameSrc(frame, meta);
@@ -81,6 +91,7 @@ function PrototypeFrameView({
       letter={letter}
       kind={PROTOTYPE_FRAME_KIND}
       status="found"
+      bare={bare}
     >
       <PrototypeFrame
         src={src}
@@ -103,6 +114,7 @@ function SourceFrameView({
   meta,
   layout,
   letter,
+  bare = false,
   children = justScreen,
 }: CanvasFrameViewProps & { frame: SourceFrame }): ReactElement {
   return (
@@ -114,6 +126,7 @@ function SourceFrameView({
             letter={letter}
             kind={frame.source}
             status={resolution.status}
+            bare={bare}
           >
             <SourceBody resolution={resolution} layout={layout} />
           </Screen>,
@@ -186,25 +199,45 @@ function SourceBody({
 }
 
 /**
- * The screen box: the canvas's size at its scale, rounded and ringed, clipping
- * what it shows. The box a driver photographs (`data-canvas-frame*`).
+ * A framed screen's corners: a device's own (a phone's deep curve, a
+ * tablet's), else the canvas frame's `rounded-xl`.
+ */
+function frameCorners(size: CanvasSize): string {
+  if (size.kind === "preset" && size.preset === "Phone") return "rounded-4xl";
+  if (size.kind === "preset" && size.preset === "Tablet") return "rounded-3xl";
+  return "rounded-xl";
+}
+
+/**
+ * The screen box: the canvas's size at its scale, clipping what it shows —
+ * framed (the size's corners, a hairline ring and the frame's deep drop) or
+ * `bare`. Its size and corners glide with the layout (`GEOMETRY_MOTION`), in
+ * step with the frame box around it. The box a driver photographs
+ * (`data-canvas-frame*`).
  */
 function Screen({
   layout,
   letter,
   kind,
   status,
+  bare,
   children,
 }: {
   layout: FrameLayout;
   letter: string;
   kind: string;
   status: CanvasFrameStatus;
+  bare: boolean;
   children: ReactNode;
 }): ReactElement {
+  const { canvas } = usePrototypeDetail();
   return (
     <div
-      className="relative rounded-md bg-background ring-1 ring-border"
+      className={cn(
+        "relative bg-background",
+        GEOMETRY_MOTION,
+        !bare && [frameCorners(canvas.size), "shadow-2xl ring-1 ring-border"],
+      )}
       style={{
         width: layout.width * layout.scale,
         height: layout.visibleHeight * layout.scale,

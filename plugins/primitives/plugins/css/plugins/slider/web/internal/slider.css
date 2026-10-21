@@ -4,7 +4,10 @@
  * with a small (11px) thumb, which reads as a quiet secondary control rather
  * than a form widget.
  *
- * The filled portion is theme `--primary`, the rest `--border`. WebKit has no
+ * The filled portion is theme `--primary`, the rest `--border`. The geometry
+ * (`--slider-track-h`, `--slider-knob-size`, density) and the knob's paint
+ * (`--slider-knob`, its halo `--slider-knob-ring`, color-palette) are theme
+ * tokens, so an app restyles every slider through its theme. WebKit has no
  * "progress" pseudo-element, so the fill is a hard-stop gradient driven by the
  * `--slider-fill` custom property (0-100, written inline by the component from
  * the value normalized against its own min/max). Firefox has a real
@@ -15,8 +18,10 @@
   display: flex;
   align-items: center;
 
-  --slider-track: 3px;
-  --slider-thumb: 11px;
+  --slider-track: var(--slider-track-h);
+  --slider-thumb: var(--slider-knob-size);
+  /* The halo: a 3px ring in the knob-ring colour (transparent by default). */
+  --slider-halo: 0 0 0 3px var(--slider-knob-ring);
 }
 
 .slider-input {
@@ -65,7 +70,8 @@
   width: var(--slider-thumb);
   margin-top: calc((var(--slider-track) - var(--slider-thumb)) / 2);
   border-radius: 9999px;
-  background: var(--primary);
+  background: var(--slider-knob);
+  box-shadow: var(--slider-halo);
   transition: transform 0.1s ease;
 }
 .slider-input:hover::-webkit-slider-thumb {
@@ -88,7 +94,8 @@
   width: var(--slider-thumb);
   border: none;
   border-radius: 9999px;
-  background: var(--primary);
+  background: var(--slider-knob);
+  box-shadow: var(--slider-halo);
   transition: transform 0.1s ease;
 }
 .slider-input:hover::-moz-range-thumb {

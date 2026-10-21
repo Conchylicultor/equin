@@ -7,6 +7,7 @@ import {
   type CanvasLayout,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
 import { usePrototypeDetail } from "../context";
+import { railButtonClass } from "../internal/rail-button";
 
 const ICONS = {
   swipe: symbol("swipe"),
@@ -15,7 +16,8 @@ const ICONS = {
 
 /**
  * The switch between the two layouts of a two-frame canvas, drawn ON the
- * canvas rather than in the header — a floating pill like the add rail's `+`:
+ * canvas rather than in the header — a glass button of the add rail's family
+ * (`railButtonClass`), so it reads as the canvas's own chrome:
  * side by side it sits in the gap between the two frames and swipes them; swiped
  * it sits on the divider and puts them back side by side. Placed by the caller.
  */
@@ -25,6 +27,7 @@ export function LayoutToggle({ to }: { to: CanvasLayout }): ReactElement {
     <ControlSizeProvider size="sm">
       <IconButton
         variant="floating"
+        className={railButtonClass}
         icon={ICONS[to]}
         label={layoutToggleLabel(to)}
         onClick={() => dispatch({ type: "setLayout", layout: to })}

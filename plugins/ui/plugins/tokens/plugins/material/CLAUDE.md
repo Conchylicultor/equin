@@ -1,6 +1,6 @@
 # material
 
-What a floating panel is made of. Two tokens, read by the ui-kit's overlay
+What a floating panel is made of. Two tokens read by the ui-kit's overlay
 surface role (`SURFACE_LEVELS.overlay`, so every popover, menu, select and
 dialog):
 
@@ -8,6 +8,14 @@ dialog):
   background. Default `var(--popover)`.
 - `popoverBackdrop` (`--popover-backdrop`, `backdrop-popover`) — a CSS
   `backdrop-filter` on what shows through. Default `none`.
+
+A second pair, read by the `float` surface role (`SURFACE_LEVELS.float`:
+floating chrome over content — a toolbar card, a dock — never a menu):
+
+- `floatFill` (`--float-fill`, `bg-float-fill`) — default
+  `color-mix(in oklab, var(--card) 86%, transparent)`.
+- `floatBackdrop` (`--float-backdrop`, `backdrop-float`) — default
+  `blur(20px) saturate(1.5)`.
 
 A frosted theme (the Desktop's) sets the fill to a `color-mix` of the popover
 with transparent and the backdrop to `blur(…) saturate(…)`; every overlay
@@ -41,6 +49,7 @@ buttons, `--chrome-mask`).
   - Exports (values): `materialGroup`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --card`
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/shape --spacing`
   - Tokens used by:

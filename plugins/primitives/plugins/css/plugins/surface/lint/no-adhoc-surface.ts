@@ -63,8 +63,9 @@ const createRule = ESLintUtils.RuleCreator(
 const ROUNDED = /^rounded(-(sm|md|lg|xl|2xl|3xl|4xl))?$/;
 // surface backgrounds — the dedicated card / popover tokens (NOT bg-muted/bg-background).
 const BG_CARD = /^bg-card$/;
-// The popover tone or the overlay fill, opaque or at an alpha (`bg-popover/90`).
-const BG_POPOVER = /^bg-popover(-fill)?(\/\d+)?$/;
+// The popover tone, the overlay fill or the floating-chrome fill, opaque or at
+// an alpha (`bg-popover/90`, `bg-float-fill`).
+const BG_POPOVER = /^bg-(popover(-fill)?|float-fill)(\/\d+)?$/;
 // A backdrop blur — with a popover background, a hand-rolled glass overlay
 // even without the shadow + radius (its material is the material group's).
 const BACKDROP_BLUR = /^backdrop-blur/;
@@ -109,7 +110,7 @@ export default function buildRule({
         adhocOverlay:
           "Ad-hoc overlay-surface recipe (the `bg-popover` token + a shadow + rounded, or + a backdrop blur) — " +
           "flagged on any host element (intrinsic, layout component, or member tag). " +
-          'Route through `<Surface level="overlay">` from ' +
+          'Route through `<Surface level="overlay">` (a menu / panel) or `<Surface level="float">` (floating chrome over content) from ' +
           "`@plugins/primitives/plugins/css/plugins/surface/web` (or `PopoverContent`/`DropdownMenuContent`), which " +
           "freeze the overlay bundle. If intentionally bespoke, " +
           "`// eslint-disable-next-line surface/no-adhoc-surface -- <reason>`.",

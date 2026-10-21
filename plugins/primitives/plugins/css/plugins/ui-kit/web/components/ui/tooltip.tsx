@@ -10,6 +10,52 @@ import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/
 import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel";
 import { usePinOnClick } from "./use-pin-on-click";
 
+/**
+ * The closed type-role ladder, spelled here because ui-kit cannot import the
+ * text plugin (which builds on ui-kit). The `type-scale:closed-role-ladder`
+ * check pins the map below to `TYPE_ROLES`, so a role added there fails until
+ * it is added here.
+ */
+type TooltipTypeRole =
+  | "display"
+  | "title"
+  | "heading"
+  | "subheading"
+  | "body"
+  | "label"
+  | "group"
+  | "caption"
+  | "control"
+  | "tag"
+  | "code";
+
+/**
+ * The tooltip's words wear the type ROLE the theme names (`--tooltip-role`,
+ * overlay token group, default `caption`) at the weight it picks
+ * (`--tooltip-emphasis`: `regular` | `strong`). CSS cannot build a var name
+ * from a value, so each role is one literal style query applying that role's
+ * own utility — one entry per role of the ladder (tsc demands each; the
+ * closed-role-ladder check pins the list to `TYPE_ROLES`). Sizes, leading and weights stay the
+ * type-scale group's; the token only chooses among them. Strong exists only for
+ * the roles with a strong step (`control`, `tag`). A browser without style
+ * queries draws the base `text-caption`.
+ */
+const TOOLTIP_ROLE_CLASS: Record<TooltipTypeRole, string> = {
+  display: "[@container_style(--tooltip-role:display)]:text-display",
+  title: "[@container_style(--tooltip-role:title)]:text-title",
+  heading: "[@container_style(--tooltip-role:heading)]:text-heading",
+  subheading: "[@container_style(--tooltip-role:subheading)]:text-subheading",
+  body: "[@container_style(--tooltip-role:body)]:text-body",
+  label: "[@container_style(--tooltip-role:label)]:text-label",
+  group: "[@container_style(--tooltip-role:group)]:text-group",
+  caption: "[@container_style(--tooltip-role:caption)]:text-caption",
+  control:
+    "[@container_style(--tooltip-role:control)]:text-control [@container_style(--tooltip-role:control)_and_style(--tooltip-emphasis:strong)]:font-control-strong",
+  tag: "[@container_style(--tooltip-role:tag)]:text-tag [@container_style(--tooltip-role:tag)_and_style(--tooltip-emphasis:strong)]:font-tag-strong",
+  code: "[@container_style(--tooltip-role:code)]:text-code",
+};
+const TOOLTIP_TYPE = Object.values(TOOLTIP_ROLE_CLASS).join(" ");
+
 function TooltipProvider({
   delay = 0,
   ...props
@@ -34,7 +80,9 @@ function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
 function TooltipContent({
   className,
   side = "top",
-  sideOffset = 4,
+  // The theme's distance is the popup's `tooltip-offset` margin (overlay
+  // group, default 4px); a `sideOffset` adds to it.
+  sideOffset = 0,
   align = "center",
   alignOffset = 0,
   children,
@@ -61,13 +109,18 @@ function TooltipContent({
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
           className={cn(
-            "z-popover inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-xs rounded-md bg-popover px-md py-xs text-caption text-popover-foreground shadow-md ring-1 ring-foreground/10 has-data-[slot=kbd]:pr-xs data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-popover **:data-[slot=kbd]:rounded-sm data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            // The chrome is the theme's (overlay token group: fill, ink, ring,
+            // corners, padding, shadow, distance, arrow — app.css); the words
+            // are the theme's role (`TOOLTIP_ROLE_CLASS`). It appears at
+            // once: no entry animation.
+            "z-popover inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-xs rounded-tooltip bg-tooltip p-tooltip text-caption text-tooltip-foreground shadow-tooltip ring-1 ring-tooltip-border tooltip-offset has-data-[slot=kbd]:pr-xs **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-popover **:data-[slot=kbd]:rounded-sm",
+            TOOLTIP_TYPE,
             className,
           )}
           {...props}
         >
           <OverlayBoundary>{children}</OverlayBoundary>
-          <TooltipPrimitive.Arrow className="z-popover size-2.5 translate-y-[calc(-50%-2px)] rotate-45 rounded-sm bg-popover fill-popover data-[side=bottom]:top-1 data-[side=inline-end]:top-1/2! data-[side=inline-end]:-left-1 data-[side=inline-end]:-translate-y-1/2 data-[side=inline-start]:top-1/2! data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-y-1/2 data-[side=left]:top-1/2! data-[side=left]:-right-1 data-[side=left]:-translate-y-1/2 data-[side=right]:top-1/2! data-[side=right]:-left-1 data-[side=right]:-translate-y-1/2 data-[side=top]:-bottom-2.5" />
+          <TooltipPrimitive.Arrow className="z-popover tooltip-arrow translate-y-[calc(-50%-2px)] rotate-45 rounded-sm bg-tooltip fill-tooltip data-[side=bottom]:top-1 data-[side=inline-end]:top-1/2! data-[side=inline-end]:-left-1 data-[side=inline-end]:-translate-y-1/2 data-[side=inline-start]:top-1/2! data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-y-1/2 data-[side=left]:top-1/2! data-[side=left]:-right-1 data-[side=left]:-translate-y-1/2 data-[side=right]:top-1/2! data-[side=right]:-left-1 data-[side=right]:-translate-y-1/2 data-[side=top]:-bottom-2.5" />
         </TooltipPrimitive.Popup>
       </TooltipPrimitive.Positioner>
     </TooltipPrimitive.Portal>

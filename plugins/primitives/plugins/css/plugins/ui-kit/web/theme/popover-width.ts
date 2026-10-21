@@ -109,7 +109,12 @@ export type PopoverWidth =
   | "2xl"
   | "3xl"
   | "4xl";
-export type PopoverPadding = "none" | "2xs" | "xs" | "sm" | "md" | "lg";
+// `panel` is the theme's popover inset (density `popoverPad`, default the `md`
+// step) and the default of `PopoverContent` / `OverlayPanel`: a call site that
+// says nothing about padding is padded as its theme pads popovers. A named step
+// is a call site's own decision (a menu's `xs`, a dialog's `lg`) and keeps it.
+export type PopoverPadding =
+  "none" | "2xs" | "xs" | "sm" | "md" | "lg" | "panel";
 
 export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
   content: "",
@@ -167,6 +172,7 @@ export const POPOVER_PADDING: Record<PopoverPadding, string> = {
   sm: "rail-sm",
   md: "rail-md",
   lg: "rail-lg",
+  panel: "rail-panel",
 };
 
 // Max-height is its own axis, co-located with width/padding. The contract in one

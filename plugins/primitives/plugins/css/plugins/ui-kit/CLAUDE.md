@@ -263,14 +263,20 @@ structurally unrepresentable.
 
 `web/components/overlay-panel.tsx` is **the** floating panel: the
 `SURFACE_LEVELS.overlay` paint (not via `Surface`, which imports *from* ui-kit →
-cycle), the animation blob, the width/padding/max-height roles, the sticky
+cycle), the entry animation (`data-open:overlay-enter` — the `overlay` token
+group's duration / easing / offset / scale, instant by default, off under
+reduced motion; no exit animation), the width/padding/max-height roles (padding
+defaults to `panel`, the theme's `popoverPad`), the sticky
 `header`, and the content-context resets (`SingleLineProvider value={false}` +
 `OverlayBoundary`). `PopoverContent`, `DropdownMenuContent`, `SelectContent`,
 `DialogContent` and `primitives/overlay/floating-surface` all *contain* it — they stay
 separate only because they are different state machines (base-ui listbox / menu /
 dialog, plus one focus-less Floating-UI surface). `TooltipContent` deliberately
 does not: a one-line label with its own chrome, where a height clamp is
-meaningless. It is hand-authored, hence outside `components/ui/` (shadcn-owned).
+meaningless. That chrome is the `overlay` token group's too (`bg-tooltip`,
+`text-tooltip-foreground`, `ring-tooltip-border`, `rounded-tooltip`,
+`p-tooltip`, `shadow-tooltip`, `tooltip-offset`, `tooltip-arrow`; defaults = the
+popover-toned label with an arrow, 4px off its trigger), so a theme can invert it. It is hand-authored, hence outside `components/ui/` (shadcn-owned).
 
 Four props, all optional, all visual: `width` · `padding` · `maxHeight` ·
 `header`. **Two things are invariants, not props** — a call site cannot forget
@@ -581,18 +587,19 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useSingleLine`
     - `WithTooltip`
 - Cross-plugin:
-  - Uses tokens: 235 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×70
-    - `ui/tokens/color-palette` ×57
+  - Uses tokens: 255 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×71
+    - `ui/tokens/color-palette` ×60
     - `ui/tokens/type-scale` ×42
+    - `ui/tokens/overlay` ×13
     - `ui/tokens/shape` ×13
     - `ui/tokens/sidebar-metrics` ×12
     - `ui/tokens/categorical` ×11
-    - `ui/tokens/shadow` ×9
+    - `ui/tokens/shadow` ×10
     - `ui/tokens/sidebar-palette` ×9
     - `ui/tokens/chart` ×5
     - `ui/tokens/font-family` ×4
-    - `ui/tokens/material` ×2
+    - `ui/tokens/material` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
   - Imported by: 420 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×109

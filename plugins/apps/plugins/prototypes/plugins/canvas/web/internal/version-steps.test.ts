@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type {
   PrototypeHistory,
+  PrototypeOption,
   PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
+  declaresVariant,
   isPastStep,
   versionForStep,
   stepBy,
@@ -112,5 +114,54 @@ describe("versionSteps", () => {
 
   test("an empty history is a broken store, not zero versions", () => {
     expect(() => versionSteps({ versions: [], dirty: false }, null)).toThrow();
+  });
+});
+
+describe("declaresVariant", () => {
+  const theme: PrototypeOption = {
+    kind: "choice",
+    name: "theme",
+    values: ["dark", "light"],
+    default: "dark",
+    group: null,
+  };
+  const fill: PrototypeOption = {
+    kind: "choice",
+    name: "fill",
+    values: ["empty", "filled"],
+    default: "empty",
+    group: null,
+  };
+  const accent: PrototypeOption = {
+    kind: "color",
+    name: "accent",
+    suggestions: [{ name: "sage", color: "#a3c4a0" }],
+    default: "#e0ad80",
+    group: null,
+  };
+
+  test("no picks: every document shows the default variant", () => {
+    expect(declaresVariant([], {})).toBe(true);
+  });
+
+  test("every picked value declared", () => {
+    expect(declaresVariant([theme, fill], { theme: "light" })).toBe(true);
+    expect(declaresVariant([accent], { accent: "sage" })).toBe(true);
+    expect(declaresVariant([accent], { accent: "#123456" })).toBe(true);
+  });
+
+  test("a picked option the document lacks", () => {
+    expect(declaresVariant([fill], { theme: "light" })).toBe(false);
+  });
+
+  test("a picked value the document does not declare", () => {
+    const twoThemes: PrototypeOption = { ...theme, values: ["dark", "dim"] };
+    expect(declaresVariant([twoThemes], { theme: "light" })).toBe(false);
+    expect(declaresVariant([accent], { accent: "ember" })).toBe(false);
+  });
+
+  test("a pick equal to the document's own default", () => {
+    const lightFirst: PrototypeOption = { ...theme, default: "light" };
+    expect(declaresVariant([lightFirst], { theme: "light" })).toBe(true);
   });
 });

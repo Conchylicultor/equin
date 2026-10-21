@@ -38,10 +38,10 @@
 // At most one spacer per slot.
 //
 // A frame's hover actions, at the right end of its header, read left to
-// right: the one that reshapes the canvas around THIS frame (keep only
-// it), then the two that show it alone (Open in a new tab, and Full
-// screen), and Close on the outer edge —
-// the one that removes something, where a stray click is least likely.
+// right (the viewer mock's order): the two that show it alone (Open in a
+// new tab, and Full screen), then the two that take frames off the canvas —
+// Close others (keep only this one), and Close on the outer edge, where a
+// stray click is least likely.
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -49,9 +49,9 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "apps.prototypes.canvas:keep-only",
     "apps.prototypes.present:open-new-tab",
     "apps.prototypes.present:full-screen",
+    "apps.prototypes.canvas:keep-only",
     "apps.prototypes.canvas:close"
   ]
 }

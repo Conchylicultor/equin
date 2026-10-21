@@ -203,6 +203,7 @@ the code:
     - `apps-core/theme-scope`
     - `apps/desktop/windows`
     - `apps/file-explorer/browser`
+    - `apps/prototypes/canvas`
     - `apps/prototypes/compare/exhibit`
     - `apps/website/pages/apps`
     - `apps/website/shell`

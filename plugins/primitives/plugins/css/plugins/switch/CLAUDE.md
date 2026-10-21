@@ -18,6 +18,11 @@ One fixed size (28×16 track, 12 knob), mirroring `selection-indicator`'s single
 `size-3` box: a switch that came in sizes would eventually disagree with the
 checkbox beside it.
 
+Its colours are color-palette tokens, so a theme restyles every switch at once:
+`switchTrack` (the off track; default `input`, at 80% in dark mode),
+`switchKnob` (off; default `background`) and `switchKnobOn` (on; default
+`primary-foreground`). The on track is `primary`.
+
 `Switch` spreads whatever else it is handed **before** its own attributes, so
 nothing from outside can take over the role, the `aria-checked` or the click that
 flips it. That matters the moment a render-prop host wraps one — a tooltip
@@ -46,16 +51,17 @@ padding on the track that a flex direction could reinterpret.
     - `SwitchIndicator`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --background`
-    - `ui/tokens/color-palette --input`
     - `ui/tokens/color-palette --primary`
-    - `ui/tokens/color-palette --primary-foreground`
     - `ui/tokens/color-palette --ring`
+    - `ui/tokens/color-palette --switch-knob`
+    - `ui/tokens/color-palette --switch-knob-on`
+    - `ui/tokens/color-palette --switch-track`
     - `ui/tokens/shadow --shadow-sm`
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/events/sources`
+    - `apps/prototypes/canvas`
     - `apps/sonata/recording`
     - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/rhythm-controls`

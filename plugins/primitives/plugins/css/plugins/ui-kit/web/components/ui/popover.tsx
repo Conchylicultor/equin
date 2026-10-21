@@ -108,7 +108,7 @@ function PopoverContent({
   anchor,
   collisionAvoidance,
   width = "content",
-  padding = "md",
+  padding = "panel",
   maxHeight = "viewport",
   header,
   resetOnClose = false,
@@ -135,7 +135,7 @@ function PopoverContent({
     className?: string;
     /** Closed width role; default size-to-content. */
     width?: PopoverWidth;
-    /** Padding role; default `md` (the previously baked-in padding). */
+    /** Padding role; default `panel` — the theme's popover inset (`md` unless a theme sets `popoverPad`). */
     padding?: PopoverPadding;
     /**
      * Max-height COMFORT CAP on top of the unconditional viewport fit; default

@@ -36,6 +36,7 @@ Extend this primitive rather than hand-rolling `scrollIntoView` again.
     - `apps-core/tab-bar`
     - `apps/desktop/launcher`
     - `apps/places/places-map`
+    - `apps/prototypes/canvas`
     - `apps/sonata/chord-chart`
     - `apps/sonata/lyrics-hud`
     - `apps/sonata/songsheet`

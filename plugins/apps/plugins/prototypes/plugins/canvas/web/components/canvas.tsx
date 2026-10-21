@@ -1,7 +1,6 @@
 import { useState, type ReactElement, type ReactNode } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -11,7 +10,6 @@ import {
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Movable } from "@plugins/primitives/plugins/dom/plugins/movable/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   CANVAS_CARD_ATTR,
@@ -29,12 +27,14 @@ import {
   type FrameId,
 } from "../internal/canvas-model";
 import {
-  BOARD_PAD,
-  FRAME_GAP,
+  FRAME_HEAD_GAP,
   layoutFrames,
+  placeFrames,
   roomPerFrame,
+  type FrameBox,
   type FrameLayout,
 } from "../internal/layout";
+import { GEOMETRY_MOTION } from "../internal/geometry-motion";
 import { useWindowSize } from "../internal/use-window-size";
 import {
   pageHeightOf,
@@ -43,25 +43,32 @@ import {
 } from "../internal/page-extent";
 import { frameName, letterOf, type NamedFrame } from "../internal/frame-name";
 import { CanvasFrameView } from "./canvas-frame-view";
-import { FrameHeader, FRAME_HEADER_GAP } from "./frame-header";
-import { OptionsPill } from "./options-pill";
-import { SizeChip } from "./size-chip";
+import { FrameHeader } from "./frame-header";
+import { SizeDock } from "./size-chip";
 import { CanvasShortcuts } from "./canvas-shortcuts";
 import { AddFrameRail } from "./add-frame-rail";
 import { LayoutToggle } from "./layout-toggle";
 
 /**
- * The canvas: every frame, side by side and centred (scrolling when they are
- * bigger than the pane), all at one size and zoom — or, with exactly two frames
- * and the Swipe layout, one swiped over the other. The size & zoom chip sits in
- * its bottom-right corner, and the add rail (`+`, Compare) on the last frame's
- * right edge, revealed by hovering it — the same chrome a presentation shows. The chip and every
- * options pill can be dragged off what they cover, anywhere in the canvas.
+ * The ground the frames sit on: a 28px grid of hairlines in the foreground ink
+ * at 3.6%, under a vignette that darkens to the background at the edges — the
+ * viewer mock's `.canvas`. It does not scroll: the frames move over it.
+ */
+const CANVAS_GROUND =
+  "bg-background bg-[image:radial-gradient(ellipse_90%_85%_at_50%_50%,transparent_55%,var(--background)_100%),linear-gradient(color-mix(in_oklab,var(--foreground)_3.6%,transparent)_1px,transparent_1px),linear-gradient(90deg,color-mix(in_oklab,var(--foreground)_3.6%,transparent)_1px,transparent_1px)] bg-[size:100%_100%,28px_28px,28px_28px] bg-[position:0_0,-1px_-1px,-1px_-1px]";
+
+/**
+ * The canvas: every frame side by side, each centred in its share of the room
+ * the floating chrome leaves (scrolling when they are bigger than it), all at
+ * one size and zoom — or, with exactly two frames and the Swipe layout, one
+ * swiped over the other. Frames are placed by runtime numbers (`placeFrames`),
+ * so a layout change glides each one to its new box (`GEOMETRY_MOTION`). The
+ * size & zoom chip floats over the bottom, the add rail (`+`, Compare) sits on
+ * the last frame's right edge, revealed by hovering it — the same chrome a
+ * presentation shows.
  */
 export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
   const { canvas } = usePrototypeDetail();
-  // The box the chrome is dragged around inside (`null` until it mounts).
-  const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const [roomRef, room] = useElementSize<HTMLDivElement>();
   const browserWindow = useWindowSize();
   // Each prototype frame's extent, for Whole page: the frames are fitted to
@@ -75,10 +82,9 @@ export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
     );
 
   const swipe = canvas.layout === "swipe" && canvas.frames.length === 2;
-  const per = roomPerFrame(
-    { w: room.width, h: room.height },
-    swipe ? 1 : canvas.frames.length,
-  );
+  const slots = swipe ? 1 : canvas.frames.length;
+  const viewport = { w: room.width, h: room.height };
+  const per = roomPerFrame(viewport, slots);
   const tallest = canvas.wholePage
     ? canvas.frames.reduce<number | null>((max, f) => {
         const e = extents.get(f.id);
@@ -100,62 +106,71 @@ export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
     wholePage: canvas.wholePage,
     pageHeight: tallest,
   });
+  const { boxes, extent } = placeFrames(viewport, slots, {
+    w: layout.width * layout.scale,
+    h: layout.visibleHeight * layout.scale,
+  });
   const names = useFrameNames(meta);
   const measured = room.width > 0 && room.height > 0;
   // The layout drawn, not the one asked for: Swipe needs exactly two frames.
   const drawn: CanvasLayout = swipe ? "swipe" : "side";
+  const [first, second] = boxes;
 
   return (
     <div
-      ref={setRoot}
-      className="relative h-full bg-muted/40"
+      className={cn("relative h-full", CANVAS_GROUND)}
       {...{ [CANVAS_LAYOUT_ATTR]: drawn }}
     >
       <CanvasShortcuts />
       <Scroll ref={roomRef} axis="both" className="h-full">
         {measured ? (
-          <Stack
-            direction="row"
-            gap="none"
-            align="start"
-            style={{
-              gap: FRAME_GAP,
-              padding: `${String(BOARD_PAD.top)}px ${String(BOARD_PAD.x)}px ${String(BOARD_PAD.bottom)}px`,
-              minWidth: "max-content",
-              minHeight: "100%",
-            }}
+          // The board: as big as the frames need, at least the viewport.
+          <div
+            className="relative"
+            style={{ width: extent.w, height: extent.h }}
           >
-            {swipe ? (
+            {swipe && first ? (
               <SwipeFrames
                 meta={meta}
                 layout={layout}
                 names={names}
-                bounds={root}
+                box={first}
               />
             ) : (
-              canvas.frames.map((frame, index) => (
-                <FrameCard
-                  key={frame.id}
-                  frame={frame}
-                  index={index}
-                  first={index === 0}
-                  last={index === canvas.frames.length - 1}
-                  swipeToggle={index === 1 && canvas.frames.length === 2}
-                  meta={meta}
-                  layout={layout}
-                  name={names(frame)}
-                  pageHeight={pageHeightOf(extents.get(frame.id))}
-                  onPageExtent={reportExtent(frame.id)}
-                  bounds={root}
-                />
-              ))
+              canvas.frames.map((frame, index) => {
+                const box = boxes[index];
+                return box ? (
+                  <FrameCard
+                    key={frame.id}
+                    frame={frame}
+                    index={index}
+                    last={index === canvas.frames.length - 1}
+                    meta={meta}
+                    layout={layout}
+                    box={box}
+                    name={names(frame)}
+                    pageHeight={pageHeightOf(extents.get(frame.id))}
+                    onPageExtent={reportExtent(frame.id)}
+                  />
+                ) : null;
+              })
             )}
-          </Stack>
+            {!swipe && canvas.frames.length === 2 && first && second ? (
+              // Centred on the gap between the two frames, outside either
+              // screen so pressing it never selects one.
+              <Placed
+                x={{ center: (first.x + first.w + second.x) / 2 }}
+                y={{ center: second.y + second.h / 2 }}
+                layer="raised"
+                className={GEOMETRY_MOTION}
+              >
+                <LayoutToggle to="swipe" />
+              </Placed>
+            ) : null}
+          </div>
         ) : null}
       </Scroll>
-      <Movable at={{ pin: "bottom-right", offset: "md" }} bounds={root}>
-          <SizeChip layout={layout} noWholePage={noWholePage} />
-      </Movable>
+      <SizeDock layout={layout} noWholePage={noWholePage} />
     </div>
   );
 }
@@ -189,50 +204,41 @@ export function useFrameNames(
 }
 
 /**
- * One frame on the board: header, screen and the options pill. Centred by auto margins (not `justify-content: center`), so
- * frames bigger than the canvas scroll instead of clipping.
+ * One frame on the board, at its box: the screen fills it, the header sits
+ * `FRAME_HEAD_GAP` above it, and the box is the hover-reveal anchor of both
+ * (the header's actions, the add rail on the last frame).
  */
 function FrameCard({
   frame,
   index,
-  first,
   last,
   meta,
   layout,
+  box,
   name,
   pageHeight,
   onPageExtent,
-  bounds,
-  swipeToggle,
 }: {
   frame: CanvasFrame;
   index: number;
-  first: boolean;
   last: boolean;
-  /** The second of exactly two frames: the Swipe toggle sits in the gap before it. */
-  swipeToggle: boolean;
   meta: PrototypeMeta;
   layout: FrameLayout;
+  /** Where the screen sits on the board (`placeFrames`). */
+  box: FrameBox;
   name: string;
   pageHeight: number | null;
   onPageExtent: (extent: PageExtent) => void;
-  /** The canvas: what the options pill can be dragged around inside. */
-  bounds: HTMLElement | null;
 }): ReactElement {
   const { canvas, dispatch } = usePrototypeDetail();
   const selected = canvas.selected === frame.id;
-  const screenWidth = layout.width * layout.scale;
 
   return (
-    <div
-      className={cn("relative", hoverRevealGroup)}
+    <Placed
+      x={{ start: box.x, size: box.w }}
+      y={{ start: box.y, size: box.h }}
+      className={cn(hoverRevealGroup, GEOMETRY_MOTION)}
       {...{ [CANVAS_CARD_ATTR]: letterOf(index) }}
-      style={{
-        width: screenWidth,
-        marginBlock: "auto",
-        marginLeft: first ? "auto" : undefined,
-        marginRight: last ? "auto" : undefined,
-      }}
     >
       <CanvasFrameView
         frame={frame}
@@ -244,54 +250,35 @@ function FrameCard({
         onPageExtent={onPageExtent}
       >
         {(screen, resolution) => (
-          <Stack gap="none" style={{ gap: FRAME_HEADER_GAP }}>
-            <FrameHeader
-              frame={frame}
-              meta={meta}
-              name={name}
-              resolution={resolution}
-            />
+          <>
+            <HeaderBand>
+              <FrameHeader
+                frame={frame}
+                meta={meta}
+                name={name}
+                resolution={resolution}
+              />
+            </HeaderBand>
             <SelectableScreen
               selected={selected}
               onSelect={() => dispatch({ type: "select", id: frame.id })}
             >
               {screen}
-              {frame.kind === "prototype" ? (
-                // Sticks to the bottom of the view while its frame runs taller
-                // than the canvas; revealed on hover. Zero height, inside the
-                // screen's box, so it adds nothing to the frame's height.
-                <Sticky edge="bottom" offset="md" className="h-0">
-                  <div className="relative">
-                    <Movable
-                      at={{
-                        pin: screenWidth < 480 ? "bottom-left" : "bottom",
-                        offset: "md",
-                      }}
-                      bounds={bounds}
-                      className={hoverRevealTarget}
-                    >
-                      <OptionsPill frame={frame} meta={meta} />
-                    </Movable>
-                  </div>
-                </Sticky>
-              ) : null}
             </SelectableScreen>
-          </Stack>
+          </>
         )}
       </CanvasFrameView>
       {last ? <EdgeRail meta={meta} /> : null}
-      {swipeToggle ? (
-        // Centred on the gap between the two frames, outside either screen so
-        // pressing it never selects one.
-        <Placed
-          x={{ start: -FRAME_GAP / 2, shift: "-50%" }}
-          y={{ center: "50%" }}
-          layer="raised"
-        >
-          <LayoutToggle to="swipe" />
-        </Placed>
-      ) : null}
-    </div>
+    </Placed>
+  );
+}
+
+/** A frame's header band: as wide as its screen, `FRAME_HEAD_GAP` above it. */
+function HeaderBand({ children }: { children: ReactNode }): ReactElement {
+  return (
+    <Placed x="fill" y={{ end: `calc(100% + ${String(FRAME_HEAD_GAP)}px)` }}>
+      {children}
+    </Placed>
   );
 }
 
@@ -312,7 +299,7 @@ function SelectableScreen({
 }): ReactElement {
   return (
     <div
-      className={cn("rounded-md", !selected && "cursor-pointer")}
+      className={cn(!selected && "cursor-pointer")}
       // A click inside a frame's iframe never reaches this document, but the
       // iframe taking focus does (focusin on the iframe element).
       onPointerDownCapture={selected ? undefined : onSelect}
@@ -340,40 +327,34 @@ function EdgeRail({ meta }: { meta: PrototypeMeta }): ReactElement {
   );
 }
 
-/**
- * How far a swiped frame's options pill sits above the box's bottom edge, and
- * the divider's Side by side pill below its top edge, px.
- */
+/** How far the divider's Side by side switch sits below the box's top edge, px. */
 const SWIPE_PILL_INSET = 12;
 
 /**
  * Swipe: the two frames in ONE box, B under A, A clipped at the divider — drag
  * the divider to wipe one design over the other. The divider carries the way
- * back to side by side at its top, and each prototype frame keeps its options pill,
- * bottom-centre of its own half.
+ * back to side by side at its top.
  */
 function SwipeFrames({
   meta,
   layout,
   names,
-  bounds,
+  box,
 }: {
   meta: PrototypeMeta;
   layout: FrameLayout;
   names: (frame: CanvasFrame) => string;
-  /** The canvas: what the options pills can be dragged around inside. */
-  bounds: HTMLElement | null;
+  /** Where the swipe box sits on the board (`placeFrames`, one slot). */
+  box: FrameBox;
 }): ReactElement | null {
   const { canvas, dispatch } = usePrototypeDetail();
   const [dragging, setDragging] = useState(false);
   const [a, b] = canvas.frames;
   if (a === undefined || b === undefined) return null;
-  const width = layout.width * layout.scale;
-  const height = layout.visibleHeight * layout.scale;
   const at = canvas.swipeAt;
 
-  const moveTo = (clientX: number, box: HTMLElement) => {
-    const rect = box.getBoundingClientRect();
+  const moveTo = (clientX: number, el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
     dispatch({ type: "setSwipeAt", at: (clientX - rect.left) / rect.width });
   };
 
@@ -389,105 +370,80 @@ function SwipeFrames({
           letter={letterOf(0)}
         >
           {(screenA, resolutionA) => (
-            <Stack
-              gap="none"
-              style={{
-                gap: FRAME_HEADER_GAP,
-                width,
-                marginBlock: "auto",
-                marginInline: "auto",
-              }}
+            <Placed
+              x={{ start: box.x, size: box.w }}
+              y={{ start: box.y, size: box.h }}
+              className={cn(hoverRevealGroup, GEOMETRY_MOTION)}
             >
-              <Stack direction="row" gap="lg" align="center">
-                <Fill>
-                  <FrameHeader
-                    frame={a}
-                    meta={meta}
-                    name={names(a)}
-                    resolution={resolutionA}
-                  />
-                </Fill>
-                <Text
-                  variant="caption"
-                  tone="faint"
-                  className="whitespace-nowrap"
-                >
-                  ← drag →
-                </Text>
-                <Fill>
-                  <FrameHeader
-                    frame={b}
-                    meta={meta}
-                    name={names(b)}
-                    resolution={resolutionB}
-                  />
-                </Fill>
-              </Stack>
-              <div
-                className={cn("relative", hoverRevealGroup)}
-                style={{ width, height }}
+              <HeaderBand>
+                <Stack direction="row" gap="lg" align="center">
+                  <Fill>
+                    <FrameHeader
+                      frame={a}
+                      meta={meta}
+                      name={names(a)}
+                      resolution={resolutionA}
+                    />
+                  </Fill>
+                  <Text
+                    variant="caption"
+                    tone="faint"
+                    className="whitespace-nowrap"
+                  >
+                    ← drag →
+                  </Text>
+                  <Fill>
+                    <FrameHeader
+                      frame={b}
+                      meta={meta}
+                      name={names(b)}
+                      resolution={resolutionB}
+                    />
+                  </Fill>
+                </Stack>
+              </HeaderBand>
+              {screenB}
+              <Placed
+                x="fill"
+                y="fill"
+                style={{
+                  clipPath: `inset(0 ${String((1 - at) * 100)}% 0 0)`,
+                }}
               >
-                {screenB}
-                <Placed
-                  x="fill"
-                  y="fill"
-                  style={{
-                    clipPath: `inset(0 ${String((1 - at) * 100)}% 0 0)`,
-                  }}
-                >
-                  {screenA}
-                </Placed>
-                <Placed
-                  x={{ start: `${String(at * 100)}%`, size: 2, shift: "-50%" }}
-                  y="fill"
-                  role="separator"
-                  aria-orientation="vertical"
-                  aria-label="Drag to swipe between the two frames"
-                  className={cn(
-                    "cursor-ew-resize touch-none",
-                    dragging ? "bg-primary" : "bg-foreground",
-                  )}
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    e.currentTarget.setPointerCapture(e.pointerId);
-                    setDragging(true);
-                  }}
-                  onPointerMove={(e) => {
-                    if (!dragging) return;
-                    const box = e.currentTarget.parentElement;
-                    if (box) moveTo(e.clientX, box);
-                  }}
-                  onPointerUp={() => setDragging(false)}
-                  onPointerCancel={() => setDragging(false)}
-                />
-                <Placed
-                  x={{ start: `${String(at * 100)}%`, shift: "-50%" }}
-                  y={{ start: SWIPE_PILL_INSET }}
-                  layer="raised"
-                >
-                  <LayoutToggle to="side" />
-                </Placed>
-                <EdgeRail meta={meta} />
-                {[a, b].map((f, i) =>
-                  f.kind === "prototype" ? (
-                    // Bottom-centre of its own half: A's on the left, the
-                    // side A shows on — clear of the size chip's corner.
-                    <Movable
-                      key={f.id}
-                      at={{
-                        x: { center: i === 0 ? "25%" : "75%" },
-                        y: { end: SWIPE_PILL_INSET },
-                        layer: "raised",
-                      }}
-                      bounds={bounds}
-                      className={hoverRevealTarget}
-                    >
-                      <OptionsPill frame={f} meta={meta} />
-                    </Movable>
-                  ) : null,
+                {screenA}
+              </Placed>
+              <Placed
+                x={{ start: `${String(at * 100)}%`, size: 2, shift: "-50%" }}
+                y="fill"
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Drag to swipe between the two frames"
+                className={cn(
+                  "cursor-ew-resize touch-none",
+                  dragging ? "bg-primary" : "bg-foreground",
                 )}
-              </div>
-            </Stack>
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                  setDragging(true);
+                }}
+                onPointerMove={(e) => {
+                  if (!dragging) return;
+                  const el = e.currentTarget.parentElement;
+                  if (el) moveTo(e.clientX, el);
+                }}
+                onPointerUp={() => setDragging(false)}
+                onPointerCancel={() => setDragging(false)}
+              />
+              <Placed
+                x={{ start: `${String(at * 100)}%`, shift: "-50%" }}
+                y={{ start: SWIPE_PILL_INSET }}
+                layer="raised"
+              >
+                <LayoutToggle to="side" />
+              </Placed>
+              <EdgeRail meta={meta} />
+            </Placed>
           )}
         </CanvasFrameView>
       )}

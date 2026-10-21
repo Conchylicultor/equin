@@ -1,0 +1,17 @@
+// @hash 81ba03048557
+{
+  // Prototypes paints its own designed theme, `prototypes` (the canvas-viewer
+  // mockup proto-1792527153-l4fzh8 in its neutral tone: near-black greys, the
+  // apricot accent, Geist, the floating chrome's glass and the mockup's own
+  // icons), contributed by the Prototypes shell
+  // (`plugins/apps/plugins/prototypes/plugins/shell/web/internal/theme.ts`) —
+  // never the desktop's runtime choice. This one selection is the whole
+  // per-app theme: a group `prototypes` does not mention paints its schema
+  // defaults.
+  //
+  // `colorMode` is deliberately absent: light/dark is a single global setting
+  // today (`COLOR_MODE_SCOPE_ID` in `theme-engine/web/use-color-mode.ts`), so a
+  // value here would claim something that is not true. The theme is dark only
+  // by writing the same values for both modes instead.
+  "theme": "prototypes"
+}

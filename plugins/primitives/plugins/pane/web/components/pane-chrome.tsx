@@ -4,7 +4,15 @@ import { useContext, useMemo, type ReactNode } from "react";
 import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import { SlotItemLayout } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { PaneScroll } from "./pane-scroll";
 import { FloatingHeaderScroll } from "./floating-header-scroll";
@@ -21,7 +29,55 @@ import { navIcons, symbol } from "@plugins/ui/plugins/icons/core";
 const closeIcon = symbol("close");
 const arrowBackIcon = symbol("arrow-back");
 
-interface PaneChromeProps {
+/**
+ * How the header is drawn. `"bar"` (the default) is the full-width header row
+ * above the body (or, with `floatingHeader`, pinned over the top of it).
+ * `"card"` draws the SAME row — the same slot, title, leading control, Back,
+ * promote and close — as a content-sized floating card (the `float` surface)
+ * over the body's top-left corner, and gives the body the pane's whole height:
+ * for a canvas that runs edge to edge under its chrome (the prototype viewer).
+ * A card has no width to run out of, so it has no `⋯`: its title is the one
+ * cell that gives, ellipsizing once the card reaches the pane's width.
+ */
+type HeaderPresentation =
+  | {
+      header?: "bar";
+      /**
+       * Float the header over the TOP of the body instead of above it: the bar is
+       * the first thing in the pane's one scroll, pinned to its top edge,
+       * see-through with no rule while the body sits at its top, and masking what
+       * scrolls under it — rule drawn — once anything does.
+       *
+       * For a page whose opening band is designed to run up behind its header (the
+       * website hero's glow), which a header above the scroll can never show. At
+       * rest the bar still takes its height in flow, so nothing moves until the
+       * body scrolls. Default false.
+       */
+      floatingHeader?: boolean;
+      /**
+       * With `floatingHeader`: the theme scope the header wears — for a page whose
+       * own picture runs under the header in another palette than the page (the
+       * website's iceberg: a white sky, then black water), so the header's ink
+       * reads on it. The page may change it as it scrolls. The bar masks with that
+       * theme's background. A scope name, as `<Theme name>` takes it
+       * (`subThemeScope(…)`).
+       */
+      headerTheme?: string;
+      /**
+       * With `floatingHeader`: once content scrolls under it, frost the bar (its
+       * background at 72%, the content blurred) instead of masking it opaque.
+       * Default false.
+       */
+      headerGlass?: boolean;
+    }
+  | {
+      header: "card";
+      floatingHeader?: never;
+      headerTheme?: never;
+      headerGlass?: never;
+    };
+
+type PaneChromeProps = HeaderPresentation & {
   /**
    * The pane this chrome is for. Its header title comes from HERE — the
    * pane's `Pane.define({ title })` — and nowhere else: `PaneChrome` accepts no
@@ -53,35 +109,8 @@ interface PaneChromeProps {
    * same tree it always was.
    */
   overlay?: ReactNode;
-  /**
-   * Float the header over the TOP of the body instead of above it: the bar is
-   * the first thing in the pane's one scroll, pinned to its top edge,
-   * see-through with no rule while the body sits at its top, and masking what
-   * scrolls under it — rule drawn — once anything does.
-   *
-   * For a page whose opening band is designed to run up behind its header (the
-   * website hero's glow), which a header above the scroll can never show. At
-   * rest the bar still takes its height in flow, so nothing moves until the
-   * body scrolls. Default false.
-   */
-  floatingHeader?: boolean;
-  /**
-   * With `floatingHeader`: the theme scope the header wears — for a page whose
-   * own picture runs under the header in another palette than the page (the
-   * website's iceberg: a white sky, then black water), so the header's ink
-   * reads on it. The page may change it as it scrolls. The bar masks with that
-   * theme's background. A scope name, as `<Theme name>` takes it
-   * (`subThemeScope(…)`).
-   */
-  headerTheme?: string;
-  /**
-   * With `floatingHeader`: once content scrolls under it, frost the bar (its
-   * background at 72%, the content blurred) instead of masking it opaque.
-   * Default false.
-   */
-  headerGlass?: boolean;
   children: ReactNode;
-}
+};
 
 /**
  * The standard pane header: ONE overflow-collapsing bar rendering the pane's
@@ -100,6 +129,7 @@ export function PaneChrome({
   pane,
   titleOnly,
   overlay,
+  header: presentation = "bar",
   floatingHeader = false,
   headerTheme,
   headerGlass = false,
@@ -185,6 +215,70 @@ export function PaneChrome({
     </Bar>
   );
   const content = <ContentScope>{children}</ContentScope>;
+  if (presentation === "card") {
+    return (
+      // positioning host for the card and the overlay: the scroll's PARENT, so neither scrolls away with the body
+      <div className="relative isolate h-full">
+        <PaneScroll>{content}</PaneScroll>
+        {overlay}
+        <Pin
+          to="top-left"
+          offset="md"
+          className="max-w-[calc(100%-2*var(--space-md))]"
+        >
+          <Surface level="float">
+            {/* The card's row: the bar's own height and insets (density
+                `chromePaneH`, `chromePanePad*`), the theme's toolbar ink, and
+                no rule — the card's edge is its border. */}
+            <Line
+              className={cn(
+                "h-chrome-pane gap-2xs px-chrome-pane text-toolbar-foreground",
+                hoverRevealGroup,
+              )}
+              onDoubleClick={layoutCtx?.onDoubleClickHeader}
+            >
+              <ControlSizeProvider size="sm">
+                {showLeading && leadingControl}
+                {ancestorsHidden && chrome.close && doBack && (
+                  <PaneIconAction
+                    label="Back"
+                    icon={arrowBackIcon}
+                    onClick={doBack}
+                  />
+                )}
+                <PaneTitleContext.Provider value={titleValue}>
+                  {/* Each item is its own box (a hidden one leaves no gap). */}
+                  <SlotItemLayout orientation="host-owned">
+                    <pane.Actions.Render>
+                      {(item) => renderCardItem(item, titleOnly)}
+                    </pane.Actions.Render>
+                  </SlotItemLayout>
+                </PaneTitleContext.Provider>
+                {showPromote && promote && (
+                  <PaneIconAction
+                    label={
+                      promote.kind === "cross-app"
+                        ? `Open in ${promote.app.name}`
+                        : "Expand pane"
+                    }
+                    icon={navIcons.expand}
+                    {...linkProps(promote)}
+                  />
+                )}
+                {!ancestorsHidden && chrome.close && doClose && (
+                  <PaneIconAction
+                    label="Close"
+                    icon={closeIcon}
+                    onClick={doClose}
+                  />
+                )}
+              </ControlSizeProvider>
+            </Line>
+          </Surface>
+        </Pin>
+      </div>
+    );
+  }
   const scroll = floatingHeader ? (
     <FloatingHeaderScroll
       header={header}
@@ -218,6 +312,28 @@ export function PaneChrome({
       }
     />
   );
+}
+
+/**
+ * One header contribution as a child of a `card` header's row. No fit ledger
+ * and no `⋯`: an ordinary item is itself, and the yielding cell (the title) is
+ * the one box that gives, so the card ellipsizes its title at the pane's width.
+ */
+function renderCardItem(
+  item: PaneHeaderItem & { id: string },
+  titleOnly?: boolean,
+): ReactNode {
+  if (item.cell === "yield") {
+    return (
+      <div className={yieldClass("x")}>
+        <InsidePaneTitleContext.Provider value={true}>
+          <PaneHeaderCell {...item} />
+        </InsidePaneTitleContext.Provider>
+      </div>
+    );
+  }
+  if (titleOnly) return null;
+  return <PaneHeaderCell {...item} />;
 }
 
 /**

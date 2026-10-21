@@ -86,6 +86,15 @@
        overlay surface role's background. Default = `--popover`; a frosted
        theme makes it translucent while `--popover` stays opaque. */
     --color-popover-fill: var(--popover-fill);
+    /* Floating chrome's fill (material group, `bg-float-fill`) — the float
+       surface role's background: the card, barely translucent by default. */
+    --color-float-fill: var(--float-fill);
+    /* The one-line tooltip's fill, ink and ring (overlay group) —
+       `bg-tooltip`, `text-tooltip-foreground`, `ring-tooltip-border`. Defaults
+       = the popover's fill and ink and the foreground at 10%. */
+    --color-tooltip: var(--tooltip-fill);
+    --color-tooltip-foreground: var(--tooltip-foreground);
+    --color-tooltip-border: var(--tooltip-border);
     --color-card-foreground: var(--card-foreground);
     --color-card: var(--card);
     --color-foreground: var(--foreground);
@@ -115,6 +124,11 @@
     --color-row-meta: var(--row-meta, var(--muted-foreground));
     --color-group-foreground: var(--group-foreground);
     --color-popover-border: var(--popover-border);
+    /* A switch's off track and its knob off / on (color-palette group) —
+       `bg-switch-track`, `bg-switch-knob`, `bg-switch-knob-on`. */
+    --color-switch-track: var(--switch-track);
+    --color-switch-knob: var(--switch-knob);
+    --color-switch-knob-on: var(--switch-knob-on);
     /* The sticky-chrome mask color — the background a pinned bar paints to hide
        content scrolling under it. `bg-chrome-mask` resolves to `--chrome-mask`,
        which every surface co-publishes with its own background (see `:root`
@@ -351,6 +365,53 @@
  * `--popover-fill` / `--popover-backdrop`, which keeps fill and filter paired.
  * @twmerge group sg-backdrop excludes: backdrop-filter backdrop-blur backdrop-brightness backdrop-contrast backdrop-grayscale backdrop-hue-rotate backdrop-invert backdrop-opacity backdrop-saturate backdrop-sepia */
 @utility backdrop-popover { -webkit-backdrop-filter: var(--popover-backdrop); backdrop-filter: var(--popover-backdrop); } /* twmerge: sg-backdrop */
+/* Floating chrome (`SURFACE_LEVELS.float`: a toolbar card, a dock, a button
+ * floated over content): its shadow (`--shadow-float`, default the popover's)
+ * and its backdrop filter (`--float-backdrop`, the material group's, default a
+ * 20px 1.5× saturated blur) — the overlay's pair, spelled the same way and for
+ * the same reasons. */
+@utility shadow-float { --tw-shadow: var(--shadow-float); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
+@utility backdrop-float { -webkit-backdrop-filter: var(--float-backdrop); backdrop-filter: var(--float-backdrop); } /* twmerge: sg-backdrop */
+
+/* How a floating panel ENTERS (`OverlayPanel` wears `data-open:overlay-enter`):
+ * from transparent, offset by `--overlay-enter-translate` (a `translate` value)
+ * and scaled by `--overlay-enter-scale`, over `--overlay-enter-duration` along
+ * `--overlay-enter-easing` — the overlay token group's, default 0ms (instant,
+ * as panels always appeared). The individual `translate` / `scale` properties,
+ * not `transform`, so nothing a panel transforms with is overwritten. Never
+ * under `prefers-reduced-motion: reduce`, whatever the theme asks. It writes
+ * the whole `animation`, as every `animate-*` class does, so they replace
+ * each other in `cn()` (a Select aligned over its trigger turns it off with
+ * `animate-none`). */
+@keyframes overlay-enter {
+  from { opacity: 0; translate: var(--overlay-enter-translate); scale: var(--overlay-enter-scale); }
+}
+@utility overlay-enter {
+  animation: overlay-enter var(--overlay-enter-duration) var(--overlay-enter-easing);
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+} /* twmerge: extend animate */
+/* The one-line tooltip's chrome (`TooltipContent`), the overlay group's: its
+ * corners (`--tooltip-radius`, default the `rounded-md` step), padding
+ * (`--tooltip-pad-y` / `-x`, default the `xs` / `md` steps), drop shadow
+ * (`--tooltip-shadow`, default the `md` tier — Tailwind's own `shadow-*`
+ * composition, so its `ring-1` still draws beside it) and arrow square
+ * (`--tooltip-arrow-size`, default 10px; `0px` draws none). */
+@utility rounded-tooltip { border-radius: var(--tooltip-radius); } /* twmerge: extend rounded */
+@utility p-tooltip { padding: var(--tooltip-pad-y) var(--tooltip-pad-x); } /* twmerge: extend p */
+@utility shadow-tooltip { --tw-shadow: var(--tooltip-shadow); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
+/* @twmerge group sg-tooltip-arrow excludes: size h w */
+@utility tooltip-arrow { width: var(--tooltip-arrow-size); height: var(--tooltip-arrow-size); } /* twmerge: sg-tooltip-arrow */
+/* …and how far it sits off its trigger (`--tooltip-offset`, default 4px): a
+ * margin on the popup's side facing the trigger (base-ui stamps `data-side`),
+ * so the positioner's box — what Floating UI places and flips — includes the
+ * gap, exactly as a `sideOffset` did. A margin, not a `translate`, so an entry
+ * animation cannot drop it. */
+@utility tooltip-offset {
+  &[data-side="top"] { margin-bottom: var(--tooltip-offset); }
+  &[data-side="bottom"] { margin-top: var(--tooltip-offset); }
+  &[data-side="left"], &[data-side="inline-start"] { margin-right: var(--tooltip-offset); }
+  &[data-side="right"], &[data-side="inline-end"] { margin-left: var(--tooltip-offset); }
+} /* twmerge: standalone -- margins keyed on data-side only; no tooltip margin class to collide with */
 
 /* Single-line region invariant — the shared base for horizontal chrome strips
  * (the Bar primitive), interactive rows (Row), and chips. Bakes the two-class
@@ -858,6 +919,9 @@
 @utility rail-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg);  --rail-block-start: var(--space-lg);  --rail-block-end: var(--space-lg);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 @utility rail-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl);  --rail-block-start: var(--space-xl);  --rail-block-end: var(--space-xl);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 @utility rail-2xl  { --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-block-start: var(--space-2xl); --rail-block-end: var(--space-2xl); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+/* The `panel` padding role (`PopoverContent` / `OverlayPanel`'s default): the
+ * theme's popover inset (`--popover-pad`, density group, default the `md` step). */
+@utility rail-panel { --rail-start: var(--popover-pad); --rail-end: var(--popover-pad); --rail-block-start: var(--popover-pad); --rail-block-end: var(--popover-pad); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 /* The inline axis on its own — the rail proper, and the member almost every
  * region actually wants (a pane opens a horizontal region; its vertical rhythm
  * is a different decision). */

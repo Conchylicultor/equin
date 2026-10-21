@@ -56,6 +56,7 @@ const BUILTIN_GROUP_IDS = new Set([
   "gap-y",
   "rounded",
   "shadow",
+  "animate",
   "border-w-b",
   "backdrop-filter",
   "backdrop-blur",

@@ -178,6 +178,7 @@ genuine transient-chrome list escapes with
     - `primitives/collapsible.useCollapsibleContext`
     - `primitives/css/line.Line`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.useMenuSurface`
     - `primitives/hover-reveal.hoverRevealClass`
     - `primitives/hover-reveal.useHoverReveal`
     - `primitives/row-actions.RowActions`
@@ -194,14 +195,14 @@ genuine transient-chrome list escapes with
     - `Row`
     - `SectionHeaderRow`
 - Cross-plugin:
-  - Uses tokens: 25 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 26 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/type-scale` ×11
     - `ui/tokens/color-palette` ×8
     - `ui/tokens/density` ×4
-    - `ui/tokens/shape` ×2
-  - Imported by: 63 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×15
-    - `ui` ×12
+    - `ui/tokens/shape` ×3
+  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×16
+    - `ui` ×13
     - `page` ×10
     - `primitives` ×9
     - `conversations` ×5

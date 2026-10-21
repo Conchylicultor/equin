@@ -728,8 +728,8 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/shape` ×2
     - `ui/tokens/shadow --shadow`
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×15
+  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×14
     - `page` ×5
     - `primitives` ×4
     - `tasks` ×3

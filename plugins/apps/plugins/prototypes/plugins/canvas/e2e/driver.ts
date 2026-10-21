@@ -373,7 +373,7 @@ export async function dismiss(page: Page): Promise<void> {
   await page.mouse.move(2, 2);
 }
 
-/** The canvas-wide size & zoom chip. */
+/** The size button of the canvas-wide size dock (it opens the Size popover). */
 export function sizeChip(page: Page): Locator {
   return page.getByRole("button", { name: "Size and zoom" });
 }

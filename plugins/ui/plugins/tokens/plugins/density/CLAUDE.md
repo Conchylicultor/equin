@@ -29,13 +29,13 @@
   - Uses tokens:
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Tokens used by: 317 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×66
+  - Tokens used by: 319 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×67
     - `apps` ×65
     - `conversations` ×48
     - `debug` ×28
     - `page` ×20
-    - `ui` ×16
+    - `ui` ×17
     - `plugin-meta` ×13
     - `fields` ×7
     - `reorder` ×7
