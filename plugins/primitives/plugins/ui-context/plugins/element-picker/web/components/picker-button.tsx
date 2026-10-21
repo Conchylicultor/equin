@@ -4,6 +4,7 @@ import {
 } from "@plugins/primitives/plugins/icon-button/web";
 import { TooltipDoc } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import type { UiContextMeta } from "@plugins/primitives/plugins/ui-context/core";
+import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { ElementPicker } from "./element-picker";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -18,12 +19,15 @@ const adsClickIcon = symbol("ads-click");
 export function PickerButton({
   onPick,
   label = "Pick UI element",
-  description = "Click any element on screen to attach it as context: the agent is told which component, plugin and source file drew it.",
+  description = `Click an element to attach it. ${formatShortcutLabel("mod")}-click to use the app, Esc to stop.`,
   variant,
 }: {
   onPick: (meta: UiContextMeta) => void;
   label?: string;
-  /** What picking does, under the label in the hover tooltip. */
+  /**
+   * How to pick, under the label in the hover tooltip — the only place it is
+   * said: the armed overlay draws no instructions over the page.
+   */
   description?: string;
   /** The button's look — ghost by default; `frame` as a segment of a split pill. */
   variant?: IconButtonProps["variant"];
@@ -31,7 +35,6 @@ export function PickerButton({
   return (
     <ElementPicker
       onPick={onPick}
-      hint="Click an element to attach it as context"
       trigger={({ armed, arm }) => (
         // Disabled while picking — and therefore `pointer-events:none`, i.e. NOT
         // hit-testable. That is deliberate: `resolveTarget` resolves elements the

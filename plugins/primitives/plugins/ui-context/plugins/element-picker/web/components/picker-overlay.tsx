@@ -1,26 +1,14 @@
-import {
-  Button,
-  cn,
-  ControlSizeProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   Placed,
   placedClasses,
   placedStyle,
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { useEffect, useState } from "react";
-import {
-  Inset,
-  Stack,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
-import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { collectLineage } from "@plugins/primitives/plugins/ui-context/web";
-import {
-  formatShortcutLabel,
-  isModHeld,
-} from "@plugins/primitives/plugins/shortcuts/web";
+import { isModHeld } from "@plugins/primitives/plugins/shortcuts/web";
 import { resolveTarget } from "../internal/resolve-target";
 
 interface Highlight {
@@ -32,12 +20,9 @@ interface Highlight {
 export function PickerOverlay({
   onPick,
   onCancel,
-  hint,
 }: {
   onPick: (el: Element) => void;
   onCancel: () => void;
-  /** The instruction pill at the bottom of the screen; none when omitted. */
-  hint?: string;
 }) {
   const [highlight, setHighlight] = useState<Highlight | null>(null);
 
@@ -75,15 +60,10 @@ export function PickerOverlay({
     // the popover (and moves focus out of it) before the chip is injected.
     // preventDefault also keeps focus on the popover so no focus-out dismissal
     // fires. The actual pick happens on the subsequent `click`.
-    //
-    // A press on the overlay's OWN chrome (the hint pill's Cancel) is swallowed
-    // the same way, for the same popover's sake — but only the press: its
-    // `click` still reaches the button, because `resolveTarget` answers null over
-    // the chrome and `onClick` below lets a null through.
     const onDown = (e: MouseEvent) => {
       if (isModHeld(e)) return;
       const el = resolveTarget(e.clientX, e.clientY);
-      if (!el && !isPickerChrome(e.target)) return;
+      if (!el) return;
       e.preventDefault();
       e.stopPropagation();
     };
@@ -163,39 +143,6 @@ export function PickerOverlay({
           </Inset>
         </>
       )}
-
-      {hint !== undefined && (
-        // The one hit-testable part of the overlay, so its Cancel is clickable.
-        // Still inside the chrome attribute, so a pointer over it resolves no
-        // target — hovering the pill clears the highlight rather than picking
-        // what is under it.
-        <Pin to="bottom" offset="lg" className="pointer-events-auto">
-          <Inset
-            x="sm"
-            y="2xs"
-            className="bg-background/95 border-border text-foreground rounded-md border text-label shadow-lg backdrop-blur"
-          >
-            <ControlSizeProvider size="sm">
-              <Stack direction="row" gap="sm" align="center">
-                <span>{hint}</span>
-                <Kbd>{formatShortcutLabel("mod")} click</Kbd>
-                <span className="text-muted-foreground">to use the app</span>
-                <Kbd>Esc</Kbd>
-                <Button variant="ghost" onClick={onCancel}>
-                  Cancel
-                </Button>
-              </Stack>
-            </ControlSizeProvider>
-          </Inset>
-        </Pin>
-      )}
     </ViewportOverlay>
-  );
-}
-
-function isPickerChrome(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element &&
-    target.closest("[data-element-picker]") !== null
   );
 }

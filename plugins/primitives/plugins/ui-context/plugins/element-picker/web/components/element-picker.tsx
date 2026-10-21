@@ -15,11 +15,6 @@ export interface ElementPickerProps {
    * whole page is pickable).
    */
   onArmedChange?: (armed: boolean) => void;
-  /**
-   * The instruction shown at the bottom of the screen while armed, beside
-   * "Esc" and a Cancel button. Omitted, the overlay shows no pill at all.
-   */
-  hint?: string;
   /** The control that arms the picker. `armed` is true while the overlay is up. */
   trigger: (state: { armed: boolean; arm: () => void }) => ReactNode;
 }
@@ -32,13 +27,14 @@ export interface ElementPickerProps {
  * is easy to get half-wrong (arm it, forget to mount the overlay), and here
  * there is nothing to forget.
  *
- * Esc and the hint's Cancel button share one cancel path; a pick disarms before
- * `onPick` runs, so the host sees the overlay already on its way out.
+ * The overlay draws nothing but the highlight — no instruction pill, which
+ * would hide what sits under it; the trigger's tooltip says how to pick. Esc
+ * cancels; a pick disarms before `onPick` runs, so the host sees the overlay
+ * already on its way out.
  */
 export function ElementPicker({
   onPick,
   onArmedChange,
-  hint,
   trigger,
 }: ElementPickerProps) {
   const [armed, setArmed] = useState(false);
@@ -64,7 +60,6 @@ export function ElementPicker({
       {trigger({ armed, arm: () => setArmed(true) })}
       {armed && (
         <PickerOverlay
-          hint={hint}
           onPick={(el) => {
             // Read the element before anything re-renders around it.
             const meta = collectMeta(el);

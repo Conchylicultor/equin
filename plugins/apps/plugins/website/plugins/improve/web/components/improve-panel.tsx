@@ -238,7 +238,6 @@ function ComposeView({
             (see ImproveNavItem) and the pick lands as a chip at the caret. */}
         <Stack direction="row" gap="none">
           <ElementPicker
-            hint="Click the part you'd change"
             onArmedChange={onPickingChange}
             onPick={onPick}
             trigger={({ arm }) => (

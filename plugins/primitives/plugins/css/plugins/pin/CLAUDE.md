@@ -104,8 +104,8 @@ offsets expressible on the semantic ramp.
     - `pinClasses`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×18
+  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×17
     - `apps` ×15
     - `page` ×9
     - `conversations` ×4

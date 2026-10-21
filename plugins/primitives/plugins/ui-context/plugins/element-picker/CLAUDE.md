@@ -17,7 +17,6 @@ now just the action-bar and task-draft buttons on top of `PickerButton`).
 <ElementPicker
   onPick={(meta: UiContextMeta) => …}      // after the picker has disarmed
   onArmedChange={(armed) => …}             // optional: mirrors "overlay is up"
-  hint="Click the part you mean"           // optional: the bottom pill
   trigger={({ armed, arm }) => <Button onClick={arm}>…</Button>}
 />
 ```
@@ -46,11 +45,9 @@ mid-pick — a host that hid itself for the pick is never left hidden.
   A picker armed from inside a popover holds it open meanwhile
   (`useHoldPopoverOpen(armed)` from `ui-kit`) — the pass-through click lands
   outside it, and closing it would take the picker with it.
-- **The hint pill** is the overlay's one hit-testable part (`pointer-events-auto`)
-  and sits inside `[data-element-picker]`, so the pointer over it resolves no
-  target: no highlight, and its Cancel's `click` passes through untouched. Its
-  `pointerdown` is swallowed like a pick's, for the same popover's sake. Esc and
-  Cancel share one cancel path.
+- **No on-screen instructions.** The overlay draws only the highlight — a hint
+  pill would cover (and block picking) whatever sits under it. How to pick
+  (click, ⌘-click to use the app, Esc) lives in `PickerButton`'s tooltip.
 - **Hit-testing ignores `pointer-events`** (`internal/resolve-target.ts`).
   `elementFromPoint` answers "what would receive a click here?" — the app's
   interactivity policy — but picking is inspection. Disabled controls, icon
@@ -111,23 +108,22 @@ every build — including a composition this plugin is not in.
     - `InlineChip.Tag` "ui-context" → `UiContextTag`
     - `SlotRender.ItemAttrs`
     - `SlotRender.ItemMiddleware`
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×6
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/ui-context` ×5
+    - `primitives/css/ui-kit` ×4
     - `primitives/css/coords` ×3
     - `primitives/css/fill` ×2
     - `primitives/css/spacing` ×2
     - `primitives/icon-button` ×2
-    - `primitives/overlay/tooltip` ×2
     - `primitives/shortcuts` ×2
     - `primitives/text-editor/inline-chip` ×2
     - `primitives/css/link-chip.LinkChip`
-    - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/overlay/tooltip.TooltipDoc`
     - `primitives/slot-render.SlotRender`
     - `ui/icons.Icon`
   - Exports (types): `ElementPickerProps`
@@ -136,22 +132,15 @@ every build — including a composition this plugin is not in.
     - `PickerButton`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --background`
-    - `ui/tokens/color-palette --border`
-    - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-foreground`
-    - `ui/tokens/shadow --shadow-lg`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`
     - `ui/tokens/type-scale --font-size-caption`
-    - `ui/tokens/type-scale --font-size-label`
-    - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-    - `ui/tokens/type-scale --line-height-label`
   - Imported by:
     - `apps/website/improve`
     - `improve/element-picker`

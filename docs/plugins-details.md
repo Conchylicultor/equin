@@ -36371,8 +36371,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pinClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
-              - `primitives` ×18
+            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+              - `primitives` ×17
               - `apps` ×15
               - `page` ×9
               - `conversations` ×4
@@ -42597,23 +42597,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `InlineChip.Tag` "ui-context" → `UiContextTag`
               - `SlotRender.ItemAttrs`
               - `SlotRender.ItemMiddleware`
-            - Uses: 35 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
-              - `primitives/css/ui-kit` ×6
+            - Uses: 31 symbols — full list in [`plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md`](../plugins/primitives/plugins/ui-context/plugins/element-picker/REFERENCE.md)
               - `primitives/ui-context` ×5
+              - `primitives/css/ui-kit` ×4
               - `primitives/css/coords` ×3
               - `primitives/css/fill` ×2
               - `primitives/css/spacing` ×2
               - `primitives/icon-button` ×2
-              - `primitives/overlay/tooltip` ×2
               - `primitives/shortcuts` ×2
               - `primitives/text-editor/inline-chip` ×2
               - `primitives/css/link-chip.LinkChip`
-              - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
               - `primitives/css/viewport-overlay.ViewportOverlay`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/overlay/popover.InlinePopover`
+              - `primitives/overlay/tooltip.TooltipDoc`
               - `primitives/slot-render.SlotRender`
               - `ui/icons.Icon`
             - Exports (types): `ElementPickerProps`
@@ -42622,22 +42621,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PickerButton`
           - Cross-plugin:
             - Uses tokens:
-              - `ui/tokens/color-palette --background`
-              - `ui/tokens/color-palette --border`
-              - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/color-palette --primary-foreground`
-              - `ui/tokens/shadow --shadow-lg`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-scale`
               - `ui/tokens/type-scale --font-size-caption`
-              - `ui/tokens/type-scale --font-size-label`
-              - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-caption`
-              - `ui/tokens/type-scale --line-height-label`
             - Imported by:
               - `apps/website/improve`
               - `improve/element-picker`
@@ -48644,9 +48636,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 66 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 65 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×27
-              - `primitives` ×17
+              - `primitives` ×16
               - `framework` ×5
               - `ui` ×4
               - `apps-core` ×2
