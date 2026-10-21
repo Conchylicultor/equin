@@ -3,6 +3,7 @@ import { ClaudeCodeDetail } from "@plugins/infra/plugins/claude-cli/plugins/avai
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { rampClass } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -75,10 +76,11 @@ function AgentsElsewhere({ agents }: { agents: AgentProcesses }) {
         Agents in other worktrees
       </Text>
       {agents.elsewhere.map((e) => (
-        <Line key={e.namespace}>
+        // A flex row drops a trailing space, so the gap separates the words.
+        <Line key={e.namespace} className={rampClass("gap", "xs")}>
           <Rigid>
             <Text variant="caption" tone="muted">
-              {plural(e.running, "agent")} in{" "}
+              {plural(e.running, "agent")} in
             </Text>
           </Rigid>
           <Fill>
