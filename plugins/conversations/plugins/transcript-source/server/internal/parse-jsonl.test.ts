@@ -78,3 +78,57 @@ describe("buildJsonlEvents — a call the session ended on", () => {
     expect(events.map((e) => e.kind)).toEqual(["tool-call", "assistant-text"]);
   });
 });
+
+// The launch preprompt is appended to the system prompt; the CLI records the
+// system prompt in a `prompt_snapshot` attachment written after the first turn.
+describe("buildJsonlEvents — the launch preprompt", () => {
+  const prompt = (uuid: string, content: string, at = AT) => ({
+    type: "user",
+    uuid,
+    parentUuid: null,
+    timestamp: at,
+    message: { role: "user", content },
+  });
+  const snapshot = (uuid: string, last: string) => ({
+    type: "attachment",
+    uuid,
+    parentUuid: "u1",
+    timestamp: "2026-10-20T22:05:24.000Z",
+    attachment: {
+      type: "prompt_snapshot",
+      systemPrompt: ["You are Claude Code.", last],
+    },
+  });
+  const BLOCK = "<special_instructions>\nBe terse.\n</special_instructions>";
+
+  test("a system-prompt preprompt heads the conversation, before its first prompt", async () => {
+    const events = await buildJsonlEvents(
+      [prompt("u1", "hi"), snapshot("s1", BLOCK), snapshot("s2", BLOCK)],
+      noImages,
+    );
+    expect(events.map((e) => e.kind)).toEqual([
+      "preprompt",
+      "user-text",
+      "attachment",
+      "attachment",
+    ]);
+    expect(events[0]).toEqual({ kind: "preprompt", at: AT, text: "Be terse." });
+  });
+
+  test("a system prompt that does not end in the block carries none", async () => {
+    const events = await buildJsonlEvents(
+      [prompt("u1", "hi"), snapshot("s1", "Some other section.")],
+      noImages,
+    );
+    expect(events.some((e) => e.kind === "preprompt")).toBe(false);
+  });
+
+  test("a preprompt baked into the first turn (older launches) is lifted once", async () => {
+    const events = await buildJsonlEvents(
+      [prompt("u1", `${BLOCK}\n\nhi`), snapshot("s1", BLOCK)],
+      noImages,
+    );
+    expect(events.filter((e) => e.kind === "preprompt")).toHaveLength(1);
+    expect(events[1]).toMatchObject({ kind: "user-text", text: "hi" });
+  });
+});

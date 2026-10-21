@@ -7,9 +7,9 @@ import { RequestShapeChangeSchema, RequestShapeSchema } from "./request-shape";
 // internal event kind stays `preprompt`; the UI label is "Instructions". This
 // constant is the SINGLE SOURCE OF TRUTH shared by the launch (lifecycle.ts),
 // which appends the wrapped block to the agent's system prompt, and the
-// transcript parser (parse-jsonl.ts), which lifts the block out of the first
-// user turn of a conversation launched before that — when it was baked into
-// the turn instead.
+// transcript parser (parse-jsonl.ts), which finds it there (the system prompt
+// the CLI records in `prompt_snapshot`) — or in the first user turn of a
+// conversation launched before that, when it was baked into the turn instead.
 export const PREPROMPT_TAG = "special_instructions";
 
 /** Wrap preprompt text as the block the agent's system prompt is given. */

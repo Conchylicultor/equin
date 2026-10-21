@@ -280,6 +280,39 @@ function extractQuestionAnswer(
 }
 
 /**
+ * The preprompt a `prompt_snapshot` attachment's system prompt carries: the
+ * <special_instructions> block the launch appends as the prompt's last segment
+ * (`systemPrompt.append`), or null when it ends in anything else.
+ */
+function snapshotPreprompt(att: Record<string, unknown>): string | null {
+  const segments = att.systemPrompt;
+  if (!Array.isArray(segments)) return null;
+  const last: unknown = segments.at(-1);
+  if (typeof last !== "string") return null;
+  return extractPreprompt(last).preprompt;
+}
+
+/**
+ * The preprompt as the head of the conversation: just before its first user
+ * prompt, which the snapshot recording it follows. With no prompt yet, at the
+ * end, stamped with the snapshot's time.
+ */
+function insertBeforeFirstPrompt(
+  events: JsonlEvent[],
+  text: string,
+  ts: string,
+): void {
+  const i = events.findIndex(
+    (e) => e.kind === "user-text" || e.kind === "user-image",
+  );
+  if (i === -1) {
+    events.push({ kind: "preprompt", at: ts, text });
+    return;
+  }
+  events.splice(i, 0, { kind: "preprompt", at: events[i]!.at, text });
+}
+
+/**
  * The transcript's events, from its merged chain lines (`mergeChainLines`):
  * the live branch only, tool calls paired with their results, prompts'
  * referenced images inlined through `readImage`.
@@ -309,10 +342,13 @@ export async function buildJsonlEvents(
   // ended mid-call (`toolDenialKind: "interrupted"`): the synthetic reply it
   // appends to such a line ("No response requested.") is skipped below.
   const sessionEndedResultLines = new Set<string>();
-  // A conversation launched before preprompts moved to the system prompt has
-  // its preprompt baked into the first user turn (wrapped in
-  // <special_instructions>). Lift it out into a dedicated `preprompt` event so
-  // it renders as a collapsed Instructions card, not as raw user text. Only
+  // The launch preprompt (wrapped in <special_instructions>) becomes a
+  // dedicated `preprompt` event, rendered as a collapsed Instructions card at
+  // the head of the conversation. It is found where the agent was given it:
+  // appended to the system prompt, which the CLI records in its
+  // `prompt_snapshot` attachments (`preprompt-from-snapshot`) — or, for a
+  // conversation launched before that, baked into the first user turn, where
+  // it is lifted out so it does not render as raw user text. Only
   // ever appears once; set true on a real hit so a later turn can't re-trigger.
   // Scoped to one parse of the whole chain: a chained tail that re-injects
   // <special_instructions> would emit a second `preprompt` event. Not observed;
@@ -667,6 +703,13 @@ export async function buildJsonlEvents(
           if (file) {
             compaction.files.push(file);
             continue;
+          }
+        }
+        if (subtype === "prompt_snapshot" && !seenPreprompt) {
+          const preprompt = snapshotPreprompt(att as Record<string, unknown>);
+          if (preprompt) {
+            seenPreprompt = true;
+            insertBeforeFirstPrompt(events, preprompt, ts);
           }
         }
         events.push({ kind: "attachment", at: ts, subtype, attachment: att });
