@@ -1,7 +1,6 @@
 import { useState, type ReactElement, type ReactNode } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
@@ -154,11 +153,9 @@ export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
           </Stack>
         ) : null}
       </Scroll>
-      <Pin to="bottom-right" offset="md">
-        <Movable bounds={root}>
+      <Movable at={{ pin: "bottom-right", offset: "md" }} bounds={root}>
           <SizeChip layout={layout} noWholePage={noWholePage} />
         </Movable>
-      </Pin>
     </div>
   );
 }
@@ -265,15 +262,9 @@ function FrameCard({
                 // screen's box, so it adds nothing to the frame's height.
                 <Sticky edge="bottom" offset="md" className="h-0">
                   <div className="relative">
-                    <Pin
-                      to={screenWidth < 480 ? "bottom-left" : "bottom"}
-                      offset="md"
-                      className={hoverRevealTarget}
-                    >
-                      <Movable bounds={bounds}>
+                    <Movable at={{ pin: screenWidth < 480 ? "bottom-left" : "bottom", offset: "md" }} bounds={bounds} className={hoverRevealTarget}>
                         <OptionsPill frame={frame} meta={meta} />
                       </Movable>
-                    </Pin>
                   </div>
                 </Sticky>
               ) : null}
@@ -474,17 +465,18 @@ function SwipeFrames({
                   f.kind === "prototype" ? (
                     // Bottom-centre of its own half: A's on the left, the
                     // side A shows on — clear of the size chip's corner.
-                    <Placed
+                    <Movable
                       key={f.id}
-                      x={{ center: i === 0 ? "25%" : "75%" }}
-                      y={{ end: SWIPE_PILL_INSET }}
-                      layer="raised"
+                      at={{
+                        x: { center: i === 0 ? "25%" : "75%" },
+                        y: { end: SWIPE_PILL_INSET },
+                        layer: "raised",
+                      }}
+                      bounds={bounds}
                       className={hoverRevealTarget}
                     >
-                      <Movable bounds={bounds}>
                         <OptionsPill frame={f} meta={meta} />
                       </Movable>
-                    </Placed>
                   ) : null,
                 )}
               </div>

@@ -105,8 +105,8 @@ offsets expressible on the semantic ramp.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×17
-    - `apps` ×16
+    - `primitives` ×18
+    - `apps` ×15
     - `page` ×9
     - `conversations` ×4
     - `tasks` ×2

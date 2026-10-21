@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Movable } from "@plugins/primitives/plugins/dom/plugins/movable/web";
 import { PrototypeCanvas } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import { usePresentChrome, usePresentRoot } from "./present-box";
@@ -17,9 +16,9 @@ export function CanvasStage({ exit }: { exit: ReactElement }): ReactElement {
   return (
     <>
       <PrototypeCanvas />
-      <Pin to="bottom-left" offset="md" {...chrome}>
-        <Movable bounds={root}>{exit}</Movable>
-      </Pin>
+      <Movable at={{ pin: "bottom-left", offset: "md" }} bounds={root} {...chrome}>
+        {exit}
+      </Movable>
     </>
   );
 }

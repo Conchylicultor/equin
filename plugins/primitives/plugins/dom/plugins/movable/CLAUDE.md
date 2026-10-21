@@ -1,6 +1,6 @@
 # movable
 
-`<Movable bounds>` — drag-to-move for a floating piece of chrome (a pinned
+`<Movable at bounds>` — drag-to-move for a floating piece of chrome (a pinned
 pill, a tag, a chip) that covers what the user wants to see.
 
 - **Grab anywhere.** On the bare surface the drag starts at once; on a button
@@ -10,9 +10,14 @@ pill, a tag, a chip) that covers what the user wants to see.
 - **Pointer captured at drag start, not at press** — captured from the press,
   the release would land on the wrapper and the button's click would never fire;
   captured once moving, the drag keeps following over an iframe.
-- **The offset is a `transform` on the wrapper**, so whatever places the piece
-  (a `Pin`'s anchor and its `translate` centring) is untouched. Wrap the Pin's
-  child, never the Pin.
+- **It is the positioned element itself**: `at` places it — a `Pin` step
+  (`at={{ pin: "bottom", offset: "lg" }}`) or `Placed` coordinates
+  (`at={{ x, y, layer }}`) — and the drag offset is a `transform` on that one
+  element, composing with the placement's `translate` centring. It used to wrap
+  a Pin's (or Placed's) child, which left that positioned box empty at home
+  after a drag — still hit-tested, so it swallowed the clicks of whatever the
+  piece had moved off. With the placement taken as a prop, that leftover box
+  has no spelling.
 - **Stays inside `bounds`**, measured from where the piece sits at home, and is
   pulled back in when `bounds` resizes. A double-click on its surface sends it
   home.
@@ -22,13 +27,20 @@ pill, a tag, a chip) that covers what the user wants to see.
 
 ## Plugin reference
 
-- Description: Drag-to-move floating chrome: <Movable bounds> wraps a floating piece (a pinned pill, a tag, a chip) so the user can pull it off whatever it covers — grabbed by its surface, or by one of its buttons once the pointer travels (a plain press stays a click, and the release after a drag never clicks). It stays inside `bounds`, is pulled back in when bounds shrink, and a double-click on its surface sends it home.
+- Description: Drag-to-move floating chrome: <Movable at bounds> is a placed floating piece (a pill, a tag, a chip — `at` places it as a Pin step or Placed coordinates and it IS that positioned element, so nothing is left at home after a drag) the user can pull off whatever it covers — grabbed by its surface, or by one of its buttons once the pointer travels (a plain press stays a click, and the release after a drag never clicks). It stays inside `bounds`, is pulled back in when bounds shrink, and a double-click on its surface sends it home.
 - Web:
   - Uses:
+    - `primitives/css/coords.Extent`
+    - `primitives/css/coords.Placed`
+    - `primitives/css/coords.PlacedOptions`
+    - `primitives/css/pin.Pin`
+    - `primitives/css/pin.PinAnchor`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/latest-ref.useLatestRef`
-  - Exports (types): `MovableProps`
+  - Exports (types):
+    - `MovableAt`
+    - `MovableProps`
   - Exports (values): `Movable`
 - Cross-plugin:
   - Imported by:

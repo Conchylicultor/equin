@@ -192,8 +192,7 @@ function PresentedFrame({
               </Stack>
             ) : null}
           </Scroll>
-          <Pin to="top-left" offset="md" {...chrome}>
-            <Movable bounds={root}>
+          <Movable at={{ pin: "top-left", offset: "md" }} bounds={root} {...chrome}>
               <FrameTag
                   frame={frame}
                   index={index}
@@ -208,31 +207,24 @@ function PresentedFrame({
                   }
               />
             </Movable>
-          </Pin>
           {frame.kind === "prototype" ? (
             <Pin to="right" offset="md" {...chrome}>
               <ExtendActions meta={meta} onExtend={onExtend} />
             </Pin>
           ) : null}
           {onExit !== undefined ? (
-            <Pin to="top-right" offset="md" {...chrome}>
-              <Movable bounds={root}>
+            <Movable at={{ pin: "top-right", offset: "md" }} bounds={root} {...chrome}>
                 <ExitButton onExit={onExit} />
               </Movable>
-            </Pin>
           ) : null}
           {frame.kind === "prototype" ? (
-            <Pin to="bottom" offset="lg" {...chrome}>
-              <Movable bounds={root}>
+            <Movable at={{ pin: "bottom", offset: "lg" }} bounds={root} {...chrome}>
                 <OptionsPill frame={frame} meta={meta} />
               </Movable>
-            </Pin>
           ) : null}
-          <Pin to="bottom-right" offset="md" {...chrome}>
-            <Movable bounds={root}>
+          <Movable at={{ pin: "bottom-right", offset: "md" }} bounds={root} {...chrome}>
               <SizeChip layout={layout} noWholePage={noWholePage} />
             </Movable>
-          </Pin>
         </>
       )}
     </CanvasFrameView>

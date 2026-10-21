@@ -5573,7 +5573,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 81 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 80 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
@@ -5605,7 +5605,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/inline.Inline`
               - `primitives/css/layer.layerClasses`
               - `primitives/css/line.Line`
-              - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/slider.Slider`
@@ -35984,9 +35983,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+            - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
               - `apps` ×18
-              - `primitives` ×8
+              - `primitives` ×9
               - `debug` ×3
               - `page` ×2
               - `screenshot` ×2
@@ -36268,8 +36267,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
-              - `primitives` ×17
-              - `apps` ×16
+              - `primitives` ×18
+              - `apps` ×15
               - `page` ×9
               - `conversations` ×4
               - `tasks` ×2
@@ -38433,13 +38432,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `flowAxis`
               - `layoutHost`
-        - **`movable`** — Drag-to-move floating chrome: <Movable bounds> wraps a floating piece (a pinned pill, a tag, a chip) so the user can pull it off whatever it covers — grabbed by its surface, or by one of its buttons once the pointer travels (a plain press stays a click, and the release after a drag never clicks). It stays inside `bounds`, is pulled back in when bounds shrink, and a double-click on its surface sends it home.
+        - **`movable`** — Drag-to-move floating chrome: <Movable at bounds> is a placed floating piece (a pill, a tag, a chip — `at` places it as a Pin step or Placed coordinates and it IS that positioned element, so nothing is left at home after a drag) the user can pull off whatever it covers — grabbed by its surface, or by one of its buttons once the pointer travels (a plain press stays a click, and the release after a drag never clicks). It stays inside `bounds`, is pulled back in when bounds shrink, and a double-click on its surface sends it home.
           - Web:
             - Uses:
+              - `primitives/css/coords.Extent`
+              - `primitives/css/coords.Placed`
+              - `primitives/css/coords.PlacedOptions`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/pin.PinAnchor`
               - `primitives/css/ui-kit.cn`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/latest-ref.useLatestRef`
-            - Exports (types): `MovableProps`
+            - Exports (types):
+              - `MovableAt`
+              - `MovableProps`
             - Exports (values): `Movable`
           - Cross-plugin:
             - Imported by:
