@@ -230,7 +230,6 @@ function FrameCard({
               meta={meta}
               name={name}
               resolution={resolution}
-              revealActions={!selected}
             />
             <SelectableScreen
               selected={selected}
@@ -263,8 +262,9 @@ function FrameCard({
 
 /**
  * The screen; clicking an unselected one selects it (what `[` `]` and `0` then
- * act on). Selection draws no ring — it shows only as the header's actions
- * staying visible, so the last-clicked frame never wears a distracting border.
+ * act on). Selection draws nothing — no ring, and its header's actions reveal
+ * on hover like every other frame's — so the last-clicked frame never stands
+ * out.
  */
 function SelectableScreen({
   selected,

@@ -26,16 +26,16 @@ export const FRAME_HEADER_GAP = FRAME_HEAD - FRAME_HEADER_HEIGHT;
  * The header is exactly as wide as the frame's screen, which on a crowded
  * canvas is narrow — so it is an adaptive bar: the name ellipsizes down to its
  * floor, the stepper shrinks to its bare label, and the actions that still do
- * not fit move behind a `⋯`. `revealActions` hides the actions until the frame
- * is hovered, but only while they sit in the row — one relocated into the
- * `⋯` panel is shown there as itself.
+ * not fit move behind a `⋯`. The actions stay hidden until the frame (the
+ * nearest hover-reveal anchor) is hovered, but only while they sit in the row —
+ * one relocated into the `⋯` panel is shown there as itself, and a header
+ * outside any anchor (the swipe layout's) shows them always.
  */
 export function FrameHeader({
   frame,
   meta,
   name,
   resolution,
-  revealActions = false,
 }: {
   frame: CanvasFrame;
   meta: PrototypeMeta;
@@ -43,8 +43,6 @@ export function FrameHeader({
   name: string;
   /** What a source frame resolved to — `null` for a prototype frame. */
   resolution: FrameResolution | null;
-  /** Show the actions in the row only while the frame is hovered. */
-  revealActions?: boolean;
 }): ReactElement {
   const row = { frame, meta };
   return (
@@ -68,9 +66,7 @@ export function FrameHeader({
               return (
                 <AdaptiveBar.Item
                   id={item.id}
-                  className={
-                    revealActions ? hoverRevealTargetInAnchor : undefined
-                  }
+                  className={hoverRevealTargetInAnchor}
                 >
                   <Action row={row} hasChildren={false} />
                 </AdaptiveBar.Item>
