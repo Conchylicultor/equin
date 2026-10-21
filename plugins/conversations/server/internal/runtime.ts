@@ -8,7 +8,7 @@ import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugi
 import { readTurnsFromChain, type Turn } from "./claude-transcript";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import type { ConversationRuntimeId } from "@plugins/conversations/plugins/runtime-catalog/core";
-import type { PartialMessage } from "../../core";
+import type { ContextReading, PartialMessage } from "../../core";
 
 export type { Turn };
 
@@ -151,6 +151,12 @@ export interface ConversationRuntime {
     conversationId: string,
     onChange: (message: PartialMessage | null) => void,
   ): () => void;
+  /**
+   * What fills the agent's context window now, as the harness measures it.
+   * `unavailable` when no agent process is running or it cannot be asked;
+   * throws when the agent was asked and failed.
+   */
+  contextUsage(conversationId: string): Promise<ContextReading>;
 }
 
 const registry = new Map<string, ConversationRuntime>();

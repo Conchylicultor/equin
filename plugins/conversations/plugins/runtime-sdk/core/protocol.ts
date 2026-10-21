@@ -18,7 +18,8 @@ import { z } from "zod";
 //
 // Additions that an older peer can ignore do not bump the version (every
 // running agent would then refuse every command): an agent advertises them in
-// `hello` (`stream`), and a backend uses them only when advertised.
+// `hello` (`stream`, `contextUsage`), and a backend uses them only when
+// advertised.
 export const PROTOCOL_VERSION = 2;
 
 /**
@@ -64,6 +65,12 @@ export const AgentCommandSchema = z.discriminatedUnion("type", [
    * Only sent to an agent whose `hello` says `stream: true`.
    */
   z.object({ type: z.literal("subscribe") }),
+  /**
+   * What fills the context window now: the SDK's `getContextUsage()` (its
+   * cheap `summary` detail), relayed unchanged. Only sent to an agent whose
+   * `hello` says `contextUsage: true`.
+   */
+  z.object({ type: z.literal("contextUsage") }),
 ]);
 export type AgentCommand = z.infer<typeof AgentCommandSchema>;
 
@@ -96,6 +103,8 @@ export const HelloReplySchema = z.object({
   openRequests: z.array(OpenRequestSchema),
   /** The agent takes `subscribe`. Absent from an agent started before it existed. */
   stream: z.literal(true).optional(),
+  /** The agent takes `contextUsage`. Absent from an agent started before it existed. */
+  contextUsage: z.literal(true).optional(),
 });
 export type HelloReply = z.infer<typeof HelloReplySchema>;
 

@@ -83,6 +83,7 @@ export const ICON_MANIFEST: {
     "comment",
     "commit",
     "compare",
+    "compress",
     "computer",
     "content-copy",
     "content-cut",

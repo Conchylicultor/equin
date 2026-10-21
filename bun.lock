@@ -1965,6 +1965,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-context",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/token-budget": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-token-budget",
       "version": "0.0.1",
@@ -7911,6 +7915,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-write": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-write@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/write"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-context": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-context@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-token-budget": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-token-budget@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/token-budget"],
 

@@ -1,4 +1,4 @@
-// @hash e031439e1306
+// @hash be8a4b19b664
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -22,6 +22,9 @@
     "conversations.conversation-view.jsonl-viewer.transcript-stats.usage:usage",
     // After the usage chip: its total adds the sub-agents' output to the
     // conversation's own, which the usage chip beside it counts alone.
-    "conversations.conversation-view.running-agents:agents"
+    "conversations.conversation-view.running-agents:agents",
+    // Last, right of every token count: the context ring that opens the
+    // breakdown and the Compact action.
+    "conversations.conversation-view.jsonl-viewer.transcript-stats.context:context"
   ]
 }

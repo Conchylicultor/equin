@@ -396,6 +396,7 @@ async function run(cmd: AgentCommand): Promise<unknown> {
         cliVersion,
         openRequests: [...openRequests.values()],
         stream: true,
+        contextUsage: true,
       };
       return reply;
     }
@@ -419,6 +420,8 @@ async function run(cmd: AgentCommand): Promise<unknown> {
       return session.setModel(cmd.model);
     case "rewindFiles":
       return session.rewindFiles(cmd.userMessageId);
+    case "contextUsage":
+      return session.getContextUsage({ detail: "summary" });
     case "shutdown":
       setTimeout(() => shutdown("shutdown command"), 0);
       return;

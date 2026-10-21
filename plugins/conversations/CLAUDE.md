@@ -18,6 +18,7 @@
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
     - `report-kind` "held-turn-undelivered"
+    - `resource.declare` "conversations.context-usage"
     - `resource.declare` "conversations.partial-message"
   - Uses: 78 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×25
@@ -86,7 +87,9 @@
     - `defineJob('conversations.deliver-held-turns')`
     - `defineTriggerEvent('conversation.turn-completed')`
     - `defineJob('conversations.status-sweep')`
-  - Resources: `conversations.partial-message` (push, notified)
+  - Resources:
+    - `conversations.context-usage` (push, notified)
+    - `conversations.partial-message` (push, notified)
   - Routes:
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
@@ -134,6 +137,9 @@
     - `tasks/tasks-core.ConversationSchema`
   - Exports (types):
     - `BackgroundWork`
+    - `ContextCategory`
+    - `ContextReading`
+    - `ContextUsage`
     - `ConversationEntry`
     - `CreateConversationBody`
     - `CutLosses`
@@ -153,6 +159,10 @@
     - `BackgroundWorkSchema`
     - `canSendTurn`
     - `closeConversation`
+    - `ContextCategorySchema`
+    - `ContextReadingSchema`
+    - `ContextUsageSchema`
+    - `conversationContextUsage`
     - `conversationPartialMessage`
     - `conversationRoute`
     - `CONVERSATIONS_CATEGORY_ID`
@@ -271,6 +281,7 @@
           - **`tool-call`** [exempt] [17 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
           - **`transcript-stats`** — The transcript's status strip: the readings pinned at the foot of the conversation, and the TranscriptStats.Item slot they come from. Owns the reading position — the strip reports the transcript as…
             - Plugins:
+              - **`context`** — The context window as a transcript stat: a ring at the end of the strip showing how full the agent's window is against where the harness compacts it (the harness's own measure…
               - **`token-budget`** — The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports…
               - **`usage`** — Context and output token usage as a transcript stat: the current context window and the output produced, folded from each message's own usage record up to the reading position. Serves the usage…
           - **`user-image`** — Renders inline image thumbnails for user-image events.

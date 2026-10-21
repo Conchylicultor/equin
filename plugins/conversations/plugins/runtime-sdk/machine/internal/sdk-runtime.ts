@@ -6,6 +6,7 @@ import type {
   RuntimeSignal,
   TypedTurn,
 } from "@plugins/conversations/server";
+import { ContextUsageSchema } from "@plugins/conversations/core";
 import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
@@ -362,4 +363,23 @@ export const sdkRuntime: ConversationRuntime = {
   waitUntilReady: waitForHello,
 
   watchPartial: watchPartialMessage,
+
+  async contextUsage(id: string) {
+    try {
+      // An agent started before the command existed keeps running until its
+      // next relaunch; it simply cannot be asked.
+      if (!(await helloAgent(id)).contextUsage)
+        return { kind: "unavailable", reason: "unsupported" };
+      const usage = await commandAgent(
+        id,
+        { type: "contextUsage" },
+        ContextUsageSchema,
+      );
+      return { kind: "ready", usage };
+    } catch (err) {
+      if (err instanceof AgentNotRunningError)
+        return { kind: "unavailable", reason: "not-running" };
+      throw err;
+    }
+  },
 };

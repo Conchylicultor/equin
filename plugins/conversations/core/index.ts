@@ -58,3 +58,14 @@ export {
   PartialMessageSchema,
 } from "./partial-message";
 export type { PartialBlock, PartialMessage } from "./partial-message";
+export {
+  ContextCategorySchema,
+  ContextReadingSchema,
+  ContextUsageSchema,
+  conversationContextUsage,
+} from "./context-usage";
+export type {
+  ContextCategory,
+  ContextReading,
+  ContextUsage,
+} from "./context-usage";

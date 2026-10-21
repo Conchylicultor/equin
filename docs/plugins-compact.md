@@ -65,7 +65,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`config_v2`** [test helpers] [exempt] [7 sub-plugins] — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the…
 
-- **`conversations`** [load-bearing] [test helpers] [exempt] [167 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
+- **`conversations`** [load-bearing] [test helpers] [exempt] [168 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 
 - **`database`** [load-bearing] [exempt] — Core database infrastructure: the app's `db` over the host's DatabaseDriver, DB readiness and the boot schema layer.
   - Plugins:

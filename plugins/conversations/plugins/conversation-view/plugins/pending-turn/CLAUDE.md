@@ -150,6 +150,7 @@ render (`reports/turn-unconfirmed`).
     - `conversations/all-conversations`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats/context`
     - `conversations/conversation-view/prompt-input`
     - `conversations/conversation-view/prompt-templates`
     - `conversations/conversation-view/push-and-exit`

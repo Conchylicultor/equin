@@ -98,6 +98,7 @@ export const LUCIDE_MAP = {
   comment: "message-square-text",
   commit: "git-commit-horizontal",
   compare: "git-compare",
+  compress: "shrink",
   computer: "monitor",
   "content-copy": "copy",
   "content-cut": "scissors",

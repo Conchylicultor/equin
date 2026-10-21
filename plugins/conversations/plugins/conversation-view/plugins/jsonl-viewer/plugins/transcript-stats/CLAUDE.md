@@ -8,6 +8,7 @@
 - Web:
   - Slots: `TranscriptStats.Item`
   - Slot contributors:
+    - `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.context`
     - `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`
     - `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.usage`
     - `TranscriptStats.Item` ← `conversations.conversation-view.running-agents`
@@ -55,6 +56,7 @@
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --measure-reading`
   - Imported by:
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats/context`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats/token-budget`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats/usage`
     - `conversations/conversation-view/running-agents`
@@ -64,6 +66,7 @@
     - `foldEvents`
     - `TRANSCRIPT_FOLD_PARAMS`
 - Sub-plugins:
+  - **`context`** — The context window as a transcript stat: a ring at the end of the strip showing how full the agent's window is against where the harness compacts it (the harness's own measure…
   - **`token-budget`** — The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports…
   - **`usage`** — Context and output token usage as a transcript stat: the current context window and the output produced, folded from each message's own usage record up to the reading position. Serves the usage…
 

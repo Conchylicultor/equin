@@ -60,6 +60,7 @@ needs an axis, because `min-width: 0` and `min-height: 0` are two properties.
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/compaction`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats/context`
     - `debug/profiling`
     - `debug/queue`
     - `debug/timeline`

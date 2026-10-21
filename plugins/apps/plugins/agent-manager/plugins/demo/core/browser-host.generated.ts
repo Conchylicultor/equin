@@ -166,6 +166,7 @@ export const browserHost = {
     "conversations.conversation-view.jsonl-viewer.tool-call.workflow",
     "conversations.conversation-view.jsonl-viewer.tool-call.write",
     "conversations.conversation-view.jsonl-viewer.transcript-stats",
+    "conversations.conversation-view.jsonl-viewer.transcript-stats.context",
     "conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget",
     "conversations.conversation-view.jsonl-viewer.transcript-stats.usage",
     "conversations.conversation-view.jsonl-viewer.user-image",
