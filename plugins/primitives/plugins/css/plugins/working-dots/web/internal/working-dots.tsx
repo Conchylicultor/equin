@@ -6,12 +6,10 @@ import {
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
-import { createDotsEngine, type WorkingMood } from "./engine";
+import { createDotsEngine } from "./engine";
 import "./working-dots.css";
 
 export interface WorkingDotsProps extends DensityControlled {
-  /** What the agent is doing; retunes the motion live. Default `working`. */
-  mood?: WorkingMood;
   className?: string;
 }
 
@@ -29,14 +27,13 @@ const DOTS = [0, 1, 2];
 
 /**
  * Three dots that say "working", moving organically: varied passes, springs,
- * holds with a breath, and a style mix set by `mood`. See CLAUDE.md.
+ * holds with a breath, and every style in turn. See CLAUDE.md.
  */
-export function WorkingDots({ mood = "working", className }: WorkingDotsProps) {
+export function WorkingDots({ className }: WorkingDotsProps) {
   const size = useControlSize();
   const filterId = `working-dots-goo-${useId().replace(/:/g, "")}`;
   const rowRef = useRef<HTMLSpanElement>(null);
   const engineRef = useRef<ReturnType<typeof createDotsEngine> | null>(null);
-  const moodRef = useRef(mood);
 
   useEffect(() => {
     const row = rowRef.current;
@@ -44,7 +41,7 @@ export function WorkingDots({ mood = "working", className }: WorkingDotsProps) {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const dots = [...row.querySelectorAll<HTMLElement>(".working-dots-dot")];
     const halos = [...row.querySelectorAll<HTMLElement>(".working-dots-halo")];
-    const engine = createDotsEngine({ dots, halos }, moodRef.current);
+    const engine = createDotsEngine({ dots, halos });
     engineRef.current = engine;
     return () => {
       engine.stop();
@@ -62,11 +59,6 @@ export function WorkingDots({ mood = "working", className }: WorkingDotsProps) {
     },
     { deps: [filterId] },
   );
-
-  useEffect(() => {
-    moodRef.current = mood;
-    engineRef.current?.setMood(mood);
-  }, [mood]);
 
   return (
     <span

@@ -17,10 +17,6 @@ import {
   WorkingText,
 } from "@plugins/primitives/plugins/css/plugins/working-dots/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { conversationPartialMessage } from "@plugins/conversations/core";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { useLive } from "@plugins/network/plugins/live/web";
-import { workingActivityOf } from "../working-activity";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
@@ -37,7 +33,6 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { EchoRow } from "./echo-row";
 import { StreamingMessage } from "./streaming-message";
-import { standInsOf } from "../streaming-blocks";
 import { JsonlViewer } from "../slots";
 import type { TranscriptSubject } from "./transcript-subject-context";
 
@@ -55,41 +50,25 @@ const renderEcho: RenderEcho = (turn, status) => (
 
 /**
  * The transcript's one activity line, at its foot under the queued messages:
- * what the agent is doing — starting, or working on a turn (read from the
- * transcript's tail: writing, the tool it is running, thinking) — with how long
- * it has been at it. A message on its way says so itself, under its echo.
+ * the agent is starting, or working on a turn, with how long it has been at
+ * it. A message on its way says so itself, under its echo.
  */
 function TranscriptActivity({
   phase,
   startAt,
-  conversationId,
-  events,
 }: {
   phase: "starting" | "working";
   startAt: number | null;
-  conversationId: string;
-  events: readonly JsonlEvent[];
 }) {
-  const partial = useLive(conversationPartialMessage, { id: conversationId });
-  // Not known yet, unavailable or failed: nothing is being written — the label
-  // then reads what the transcript itself says the agent is doing. Otherwise
-  // the blocks still being written are the transcript's tail (their stamp is
-  // never read here).
-  const standIns =
-    partial.status === "ready" && partial.data
-      ? standInsOf(partial.data, events, "").map((s) => s.event)
-      : [];
-  const writing = standIns.at(-1)?.kind === "assistant-text";
-  const working = workingActivityOf([...events, ...standIns], writing);
   return (
     // px-md: the same inset as the transcript's text rows, so the dots start
     // on the column the agent's words and the tool cards' contents start on.
     <Stack direction="row" align="center" gap="sm" className="px-md py-xs">
-      <WorkingDots mood={phase === "working" ? working.mood : "working"} />
+      <WorkingDots />
       <Line>
         <Text as="span" variant="caption">
           <WorkingText>
-            {phase === "starting" ? "Starting the agent" : working.label}
+            {phase === "starting" ? "Starting the agent" : "Working"}
           </WorkingText>
         </Text>
       </Line>
@@ -269,12 +248,7 @@ function JsonlPaneInner({
         />
       ))}
       {activity !== null && !isStarting && (
-        <TranscriptActivity
-          phase={activity}
-          startAt={workingStartAt}
-          conversationId={conversation.id}
-          events={events}
-        />
+        <TranscriptActivity phase={activity} startAt={workingStartAt} />
       )}
       {pending.status === "error" && (
         <ResourceErrorInline

@@ -1,6 +1,6 @@
 # working-dots
 
-`<WorkingDots mood? />` — three dots that say "an agent is working", moving the
+`<WorkingDots />` — three dots that say "an agent is working", moving the
 way something alive does rather than looping a keyframe.
 
 ## Design
@@ -18,11 +18,9 @@ way something alive does rather than looping a keyframe.
   fast dots stretch along their path; between passes it holds for a varying
   time with a faint out-of-step breath. Rhythms are keyed to where a dot IS,
   not which element it is, so leap's hand-over never pops.
-- **Mood** picks the style weights and the energy (speed, amplitude, hold
-  length): `thinking` calm, `writing` lively, `tool` medium, `working`
-  (default) calm. A change of mood lifts the energy briefly and hands the next
-  pass to the new mood's styles. Never the same style twice in a row; a style
-  repeats 1–3 times (orbit once).
+- **One mix, no modes.** Every style is in the pool, picked uniformly at one
+  fixed energy (speed, amplitude, hold length). Never the same style twice in
+  a row; a style repeats 1–3 times (orbit once).
 - **One rendering for every style.** The dots always draw through the goo
   filter (blur + alpha threshold), which also shaves a small dot's edge — so a
   style drawn without it would show bigger dots. Halos sit on their own
@@ -46,7 +44,7 @@ truncation.
 
 ## Plugin reference
 
-- Description: Three-dot working indicator with organic motion: <WorkingDots mood> varies each pass (duration, amplitude, lag) through smooth noise, carries the dots on springs with a faint overshoot and stretch, holds between passes with a breath, and draws its style mix (gooey, wave, leap, orbit, glow) and energy from the mood (working / thinking / writing / tool). Sized from the ambient ControlSize; pauses off screen; still under reduced motion. <WorkingText> is the label beside it: a highlight sweeping across the words, each new label sliding in.
+- Description: Three-dot working indicator with organic motion: <WorkingDots> varies each pass (duration, amplitude, lag) through smooth noise, carries the dots on springs with a faint overshoot and stretch, holds between passes with a breath, and cycles through every style (gooey, wave, leap, orbit, glow). Sized from the ambient ControlSize; pauses off screen; still under reduced motion. <WorkingText> is the label beside it: a highlight sweeping across the words, each new label sliding in.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`
@@ -56,7 +54,6 @@ truncation.
     - `primitives/dom/in-view.useInView`
   - Exports (types):
     - `WorkingDotsProps`
-    - `WorkingMood`
     - `WorkingTextProps`
   - Exports (values):
     - `WorkingDots`

@@ -7,18 +7,9 @@ import {
   type DotStyleName,
 } from "./shapes";
 
-/** What the agent is doing: picks which styles the dots draw from, and how much energy. */
-export type WorkingMood = "working" | "thinking" | "writing" | "tool";
-
-const MOODS: Record<
-  WorkingMood,
-  { energy: number; weights: Partial<Record<DotStyleName, number>> }
-> = {
-  thinking: { energy: 0.25, weights: { wave: 3, glow: 3, gooey: 1 } },
-  writing: { energy: 0.85, weights: { gooey: 3, wave: 2, leap: 2, glow: 1 } },
-  tool: { energy: 0.55, weights: { orbit: 2, leap: 2, glow: 2, gooey: 1 } },
-  working: { energy: 0.4, weights: { glow: 2, wave: 2, gooey: 1 } },
-};
+/** How lively the motion is (speed, amplitude, hold length), 0 calm → 1 lively. */
+const ENERGY = 0.5;
+const STYLE_NAMES = Object.keys(DOT_STYLES) as DotStyleName[];
 
 const BASE_MS = 2000;
 /** Breath and stretch periods, deliberately incommensurate with a pass. */
@@ -65,16 +56,11 @@ interface DotState {
 
 /**
  * Drives the dots: one rAF loop writing transforms straight to the elements.
- * `start` / `stop` gate the loop (visibility); `setMood` retunes it live.
+ * `start` / `stop` gate the loop (visibility).
  */
-export function createDotsEngine(
-  target: DotsEngineTarget,
-  initialMood: WorkingMood,
-) {
+export function createDotsEngine(target: DotsEngineTarget) {
   const { dots, halos } = target;
   const noise = valueNoise();
-  let mood = MOODS[initialMood];
-  let burst = 0;
   let style: DotStyleName | null = null;
   let repsLeft = 0;
   let passN = 0;
@@ -91,13 +77,10 @@ export function createDotsEngine(
   let raf = 0;
   let last = 0;
 
+  /** Any style but the current one, uniformly. */
   function pickStyle(): DotStyleName {
-    const pool = (
-      Object.entries(mood.weights) as [DotStyleName, number][]
-    ).filter(([n]) => n !== style);
-    let r = Math.random() * pool.reduce((t, [, w]) => t + w, 0);
-    for (const [n, w] of pool) if ((r -= w) <= 0) return n;
-    return pool[0]![0];
+    const pool = STYLE_NAMES.filter((n) => n !== style);
+    return pool[Math.floor(Math.random() * pool.length)]!;
   }
 
   function startPass(now: number) {
@@ -109,7 +92,7 @@ export function createDotsEngine(
     repsLeft--;
     // Offsets are authored for a 6-wide dot; follow the rendered size (density).
     unit = (dots[0]?.offsetWidth ?? DOT_UNITS) / DOT_UNITS;
-    const e = clamp01(mood.energy + burst);
+    const e = ENERGY;
     const n = passN++ * 0.61;
     const dur = BASE_MS * lerp(1.15, 0.92, e) * lerp(0.92, 1.08, noise(n + 11));
     const lagStep = lerp(60, 140, noise(n + 53));
@@ -143,7 +126,6 @@ export function createDotsEngine(
   function frame(now: number) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    burst *= Math.exp(-dt / 2);
     if (!pass && now >= hold.until) startPass(now);
 
     if (pass) {
@@ -221,12 +203,6 @@ export function createDotsEngine(
     stop() {
       cancelAnimationFrame(raf);
       raf = 0;
-    },
-    setMood(next: WorkingMood) {
-      if (MOODS[next] === mood) return;
-      mood = MOODS[next];
-      burst = 0.2; // a change of activity lands as a short lift in energy…
-      repsLeft = 0; // …and the next pass draws from the new mood
     },
   };
 }
