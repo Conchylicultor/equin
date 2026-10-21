@@ -96,6 +96,10 @@ func serveStaticFile(w http.ResponseWriter, r *http.Request, file string) {
 		h.Add("Vary", "Accept-Encoding")
 		h.Set("Content-Type", contentTypeOf(file))
 		h.Set("Content-Encoding", enc.token)
+		// ServeContent leaves Content-Length unset on an encoded body (it
+		// cannot know the encoding is the whole file); this one is, so the
+		// browser knows the download's size. A 304 still drops it.
+		h.Set("Content-Length", strconv.FormatInt(info.Size(), 10))
 		http.ServeContent(w, r, filepath.Base(file), info.ModTime(), f)
 		return
 	}

@@ -79,6 +79,9 @@ func TestArtifactServesBrotliSidecar(t *testing.T) {
 	if h.Get("Vary") != "Accept-Encoding" {
 		t.Fatalf("Vary = %q", h.Get("Vary"))
 	}
+	if h.Get("Content-Length") != "7" {
+		t.Fatalf("Content-Length = %q, want the sidecar's size", h.Get("Content-Length"))
+	}
 	if !strings.Contains(h.Get("Cache-Control"), "immutable") {
 		t.Fatalf("Cache-Control = %q, want immutable", h.Get("Cache-Control"))
 	}
