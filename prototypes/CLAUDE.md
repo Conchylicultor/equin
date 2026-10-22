@@ -75,7 +75,8 @@ never create a `.git` inside a prototype folder.
   name: `phone`, `tablet`, `laptop`, `desktop`, `wide` or `window`. Not pixels.
 - `mocks`: what real app thing this is a mockup of, so the canvas shows it
   alongside. `exhibit:<id>` is one component, `route:/path` one screen,
-  `app:/path` the whole app with its chrome. Most prototypes leave it out.
+  `app:/path` the whole app with its chrome. Declare it by default whenever
+  the prototype redesigns something that already exists in the app.
 
 ## Options
 
