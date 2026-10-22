@@ -453,10 +453,13 @@ describe("planSchemaSteps over a merged history", () => {
     "000001",
     "33333333",
     "merge_snapshot",
-    renderMergeSnapshotMigration([
-      "11111111-1111-4111-8111-111111111111",
-      "22222222-2222-4222-8222-222222222222",
-    ]),
+    renderMergeSnapshotMigration({
+      id: "33333333-3333-5333-8333-333333333333",
+      parents: [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222",
+      ],
+    }),
   );
   const history = [dU, dP, sU, sP, merge];
 

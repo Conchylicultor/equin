@@ -1,6 +1,7 @@
 #!/bin/sh
 # Merge driver for drizzle migration files
-# (server/src/db/migrations/*.sql, meta/_journal.json, meta/*_snapshot.json).
+# (plugins/database/plugins/migrations/data/*.sql, meta/_journal.json,
+# meta/schema.snapshot.json, and the pre-cutover meta/*_snapshot.json).
 # args: %O %A %B %P
 #
 # Take the upstream side (leave %A untouched). Drop a marker so the normalize

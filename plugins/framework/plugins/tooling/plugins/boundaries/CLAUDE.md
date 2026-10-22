@@ -180,7 +180,7 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
     - `database/client-tools` (1 debt)
     - `database/connection` (2 debt)
     - `database/embedded` (1 debt)
-    - `database/migrations` (4 debt)
+    - `database/migrations` (6 debt)
     - `database/pgbouncer` (1 debt)
     - `database/query` (1 debt)
     - `debug/broadcasts` (3 debt)

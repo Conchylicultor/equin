@@ -36,7 +36,7 @@ is destructive in exactly two ways:
 - **A hand-edited branch-local migration.** Every migration's filename embeds a
   sha256 prefix of its own SQL, so content that no longer matches the name is
   proof someone edited it — and regenerating would discard those edits without
-  a word. Data migrations (the snapshot-less ones) are exempt: their SQL is
+  a word. Data migrations (the ones without a snapshot lineage) are exempt: their SQL is
   hand-written by design and their hash self-heals on every build.
 - **A published migration changed in the working tree** — deleted, renamed,
   edited, or carrying a filename hash that is not its content's. Published

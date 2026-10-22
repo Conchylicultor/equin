@@ -1,7 +1,13 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+import { renderPhasedMigration, renderSnapshotHeader } from "./phases";
 import {
   analyzeSnapshotDag,
   NULL_SNAPSHOT_ID,
+  readSnapshotNodes,
+  schemaSnapshotState,
   snapshotAncestors,
   type SnapshotNode,
 } from "./snapshot-dag";
@@ -11,7 +17,13 @@ const node = (
   id: string,
   prevId: string,
   mergeParents: string[] | null = null,
-): SnapshotNode => ({ file, id, prevId, mergeParents });
+): SnapshotNode => ({
+  file,
+  id,
+  prevId,
+  mergeParents,
+  lineage: mergeParents ? "header" : "legacy",
+});
 
 const kinds = (nodes: SnapshotNode[]) =>
   analyzeSnapshotDag(nodes).problems.map((p) => p.kind);
@@ -101,5 +113,99 @@ describe("analyzeSnapshotDag", () => {
         node("3", "c", "b"),
       ]),
     ).toContain("cycle");
+  });
+});
+
+describe("readSnapshotNodes / schemaSnapshotState", () => {
+  const A = "11111111-1111-4111-8111-111111111111";
+  const B = "22222222-2222-4222-8222-222222222222";
+  const C = "33333333-3333-4333-8333-333333333333";
+  const D = "44444444-4444-4444-8444-444444444444";
+  const empty = renderPhasedMigration({
+    expand: "",
+    contract: "",
+    claims: [],
+    supersedes: null,
+  });
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "snapshot-dag-"));
+    mkdirSync(join(dir, "meta"));
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  const head = (id: string, prevId: string) =>
+    JSON.stringify({ id, prevId, tables: {} }, null, 2);
+
+  test("legacy entries, an unfolded legacy file and headers form one DAG; data migrations are not nodes", async () => {
+    writeFileSync(join(dir, "20260101_000000_aaaaaaaa__a.sql"), "SELECT 1;");
+    writeFileSync(join(dir, "20260102_000000_bbbbbbbb__b.sql"), "SELECT 1;");
+    writeFileSync(
+      join(dir, "meta", "legacy-snapshots.json"),
+      JSON.stringify({
+        "20260101_000000_aaaaaaaa__a": { id: A, prevId: NULL_SNAPSHOT_ID },
+      }),
+    );
+    // Not yet folded: read from its own head.
+    writeFileSync(
+      join(dir, "meta", "20260102_000000_bbbbbbbb__b_snapshot.json"),
+      head(B, A),
+    );
+    writeFileSync(
+      join(dir, "20260103_000000_cccccccc__data.sql"),
+      "UPDATE t SET x = 1;",
+    );
+    writeFileSync(
+      join(dir, "20260104_000000_dddddddd__c.sql"),
+      renderSnapshotHeader({ id: C, parents: [B] }) + empty,
+    );
+
+    const nodes = await readSnapshotNodes(dir);
+    expect(
+      nodes
+        .map((n) => [n.file, n.id, n.prevId, n.lineage])
+        .sort((a, b) => a[0]!.localeCompare(b[0]!)),
+    ).toEqual([
+      ["20260101_000000_aaaaaaaa__a.sql", A, NULL_SNAPSHOT_ID, "legacy"],
+      ["20260102_000000_bbbbbbbb__b.sql", B, A, "legacy"],
+      ["20260104_000000_dddddddd__c.sql", C, B, "header"],
+    ]);
+    const dag = analyzeSnapshotDag(nodes);
+    expect(dag.problems).toEqual([]);
+
+    expect(schemaSnapshotState(dir, dag)).toEqual({
+      ok: false,
+      message: expect.stringContaining("is missing"),
+    });
+    writeFileSync(join(dir, "meta", "schema.snapshot.json"), head(B, A));
+    expect(schemaSnapshotState(dir, dag)).toEqual({
+      ok: false,
+      message: expect.stringContaining(
+        `is snapshot ${B}, but the snapshot DAG's tip is`,
+      ),
+    });
+    writeFileSync(join(dir, "meta", "schema.snapshot.json"), head(C, B));
+    expect(schemaSnapshotState(dir, dag)).toEqual({ ok: true });
+  });
+
+  test("a merge header's parents are the node's edges, its last parent its prevId", async () => {
+    writeFileSync(
+      join(dir, "meta", "legacy-snapshots.json"),
+      JSON.stringify({
+        "20260101_000000_aaaaaaaa__a": { id: A, prevId: NULL_SNAPSHOT_ID },
+        "20260102_000000_bbbbbbbb__b": { id: B, prevId: A },
+        "20260102_000000_cccccccc__c": { id: C, prevId: A },
+      }),
+    );
+    writeFileSync(
+      join(dir, "20260103_000000_dddddddd__merge_snapshot.sql"),
+      renderSnapshotHeader({ id: D, parents: [B, C] }) + empty,
+    );
+    const nodes = await readSnapshotNodes(dir);
+    const merge = nodes.find((n) => n.id === D)!;
+    expect(merge).toMatchObject({ prevId: C, mergeParents: [B, C] });
+    const dag = analyzeSnapshotDag(nodes);
+    expect(dag.problems).toEqual([]);
+    expect(dag.tips.map((t) => t.id)).toEqual([D]);
   });
 });

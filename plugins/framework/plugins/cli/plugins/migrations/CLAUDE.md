@@ -32,12 +32,32 @@ an adoption file naming it. See `database/migrations/CLAUDE.md`
 → **Supersession**.
 
 Before drizzle-kit runs, `joinSnapshotTips` (`snapshot-join.ts`, merging with
-the pure `snapshot-merge.ts`) joins a snapshot DAG with several published tips —
+the pure 3-way merge and `foldMergeParents` of the migrations core) joins a snapshot DAG with several published tips —
 an upstream update's fork — with a no-op **merge node**, or fails naming the
 conflicting schema paths. drizzle-kit itself generates into the migrations
 plugin's staged out-dir (`stageDrizzleOut`: journal + the single tip), because
-it aborts silently on any merged history; what it emits is moved back into
+it aborts silently on any merged history; the `.sql` it emits is moved back into
 `data/`. See `database/migrations/CLAUDE.md` → **Merge nodes**.
+
+Only the tip snapshot is on disk (`data/meta/schema.snapshot.json`); see
+`database/migrations/CLAUDE.md` → **Snapshots**. One `snapshotBodies` resolver
+per `generateMigration` run serves every body the join and the reset proofs
+read (working tree, else git), so a body read before the reset or the join
+overwrites the tip stays answerable. The run then:
+
+- `settleSnapshotFiles` (`snapshot-files.ts`) — after the join, before staging:
+  the tip's body into `schema.snapshot.json`, and the **cutover** (fold every
+  per-migration `<tag>_snapshot.json` into `legacy-snapshots.json`, delete it)
+  when any is left. A no-op on a tree in shape.
+- holds drizzle-kit's emitted snapshot in memory; `phaseGeneratedMigrations`
+  stamps the `-- singularity:snapshot id=… parents=…` header (before
+  `renameMigrations` hashes the file), and the body is written to
+  `schema.snapshot.json` only once the schema migration is kept. A
+  `--custom-migration` never writes it, and a discarded generation has nothing
+  to restore.
+- on a reset, restores `schema.snapshot.json` from `merge-base(HEAD, main)`
+  along with deleting the branch's own schema migrations (and their
+  `legacy-snapshots.json` entries, for a branch from before the cutover).
 
 Never run `drizzle-kit generate` or the migration runner by hand — always go
 through `./singularity build`.

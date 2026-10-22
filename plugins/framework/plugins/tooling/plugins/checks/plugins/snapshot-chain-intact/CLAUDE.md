@@ -1,12 +1,26 @@
 # snapshot-chain-intact
 
-Fails unless the drizzle snapshots under `plugins/database/plugins/migrations/data/meta`
-form one DAG with a single root and a single tip. Edges are each snapshot's
-`prevId` plus, for a merge node, the parents its `.sql` header names — both read
-through the migrations plugin's `core` (`readSnapshotNodes` / `analyzeSnapshotDag`,
-which only reads the start of each file), the same definition the CLI's tip join
-uses. Also flagged: duplicate ids, a missing parent, several roots, a cycle, an
-orphan branch, and a merge node whose `prevId` is not one of its parents.
+Fails unless the schema migrations under `plugins/database/plugins/migrations/data`
+form one snapshot DAG with a single root and a single tip. Each node's lineage is
+its `.sql`'s `-- singularity:snapshot id=… parents=…` header or, for a migration
+from before the snapshot cutover, its `meta/legacy-snapshots.json` entry — both
+read through the migrations plugin's `core` (`readSnapshotNodes` /
+`analyzeSnapshotDag`, which reads no snapshot body), the same definition the
+CLI's tip join uses. Also flagged: duplicate ids, a missing parent, several
+roots, a cycle, an orphan branch, and a merge node whose `prevId` is not one of
+its parents.
+
+On a healthy DAG it then asserts the two facts about `data/meta/`: no
+per-migration `<tag>_snapshot.json` is left unfolded, and
+`meta/schema.snapshot.json` is the tip's body (`schemaSnapshotState`: its `id` is
+the tip's). `./singularity build` repairs both.
+
+Last, every header id that must have a body resolves to one through
+`snapshotBodies`: every merge node (recomputed from its parents — never read
+from git), every published header node (git) and the tip (the working tree).
+A branch-local ordinary node below the tip is skipped: push's regen
+consolidates it into the one migration whose body is committed as the tip. The
+cache signature folds in the published refs.
 
 A fork with several tips gets one of two hints. If a tip is branch-local, it is a
 rebase Y-fork: use `--reset-migration`. If every tip is published, two `main`s

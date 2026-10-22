@@ -15,27 +15,31 @@
  * derived from the parents and its timestamp from the latest migration on disk.
  * So push's normalize — which resets it as branch-local and runs this again —
  * writes it back byte-identical.
+ *
+ * Only the DAG's lineage is on disk; the tips' and their ancestor's bodies come
+ * from `SnapshotBodies` (the working tree, else git). The node's `.sql` carries
+ * its lineage in its snapshot header, and its body becomes
+ * `meta/schema.snapshot.json`.
  */
 import { createHash } from "crypto";
-import { readdirSync, readFileSync, writeFileSync } from "fs";
+import { readdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import {
   analyzeSnapshotDag,
+  foldMergeParents,
+  formatSnapshotConflict,
   LOCAL_MAIN_REF,
+  mergeNodeSnapshotText,
   migrationContentHash,
   readSnapshotNodes,
   renderMergeSnapshotMigration,
-  snapshotAncestors,
+  schemaSnapshotPath,
+  type Snapshot,
+  type SnapshotBodies,
+  type SnapshotConflict,
   type SnapshotDag,
   type SnapshotNode,
 } from "@plugins/database/plugins/migrations/core";
-import {
-  EMPTY_SNAPSHOT_META,
-  formatSnapshotConflict,
-  mergeSnapshots,
-  type Snapshot,
-  type SnapshotConflict,
-} from "./snapshot-merge";
 
 const MIGRATION_TS_RE = /^(\d{8})_(\d{6})_[0-9a-f]{8}__.+\.sql$/;
 
@@ -104,35 +108,11 @@ function describeProblems(dag: SnapshotDag): string {
     .join("\n");
 }
 
-/** The nearest common ancestor of two ancestor sets (each including its tip). */
-function nearestCommonAncestor(
-  dag: SnapshotDag,
-  a: ReadonlySet<string>,
-  b: ReadonlySet<string>,
-  describe: () => string,
-): string {
-  const common = [...a].filter((id) => b.has(id));
-  // Nearest = not a strict ancestor of another common ancestor.
-  const strictAncestorsOfCommon = new Set<string>();
-  for (const c of common) {
-    for (const x of snapshotAncestors(dag, c))
-      if (x !== c) strictAncestorsOfCommon.add(x);
-  }
-  const nearest = common.filter((c) => !strictAncestorsOfCommon.has(c));
-  if (nearest.length !== 1) {
-    throw new SnapshotJoinError(
-      `cannot join ${describe()}: they have ${nearest.length === 0 ? "no common ancestor" : `${nearest.length} nearest common ancestors (a criss-cross history)`} — a 3-way snapshot merge needs exactly one.\n\n` +
-        "AGENT: Stop here and report this to the user verbatim. Never edit, delete or rename a\n" +
-        "published migration file.",
-    );
-  }
-  return nearest[0]!;
-}
-
 /**
  * Join every tip of the snapshot DAG under `migrationsDir` with one merge node.
  * 0–1 tips is a no-op. `origins` is `publishedMigrationOrigins`: each
- * published basename → the `main` refs holding it. Every tip must be published (the reset already
+ * published basename → the `main` refs holding it. `bodies` resolves the
+ * snapshot bodies the 3-way merge reads. Every tip must be published (the reset already
  * consolidated branch-local ones); a branch-local tip beside a published one is
  * a rebase Y-fork, resolved by `--reset-migration`, never by a merge node.
  *
@@ -143,6 +123,7 @@ function nearestCommonAncestor(
 export async function joinSnapshotTips(
   migrationsDir: string,
   origins: ReadonlyMap<string, readonly string[]>,
+  bodies: SnapshotBodies,
 ): Promise<JoinResult> {
   const nodes = await readSnapshotNodes(migrationsDir);
   const dag = analyzeSnapshotDag(nodes);
@@ -162,9 +143,7 @@ export async function joinSnapshotTips(
     throw new SnapshotJoinError(
       `snapshot chain Y-fork: ${tips.length} tips, and this branch's own migration is one of them:\n` +
         tips
-          .map(
-            (t) => `  meta/${t.file}${published(t) ? "" : "  (branch-local)"}`,
-          )
+          .map((t) => `  ${t.file}${published(t) ? "" : "  (branch-local)"}`)
           .join("\n") +
         "\nRebase onto `main`, then re-run\n" +
         "  ./singularity build --reset-migration --migration-name <slug>\n" +
@@ -172,11 +151,7 @@ export async function joinSnapshotTips(
     );
   }
 
-  const read = (n: SnapshotNode): Snapshot =>
-    JSON.parse(
-      readFileSync(join(migrationsDir, "meta", n.file), "utf8"),
-    ) as Snapshot;
-  const tag = (n: SnapshotNode) => n.file.slice(0, -"_snapshot.json".length);
+  const tag = (n: SnapshotNode) => n.file.slice(0, -".sql".length);
 
   // Fold the tips pairwise, local `main`'s tip first: "ours" is always this
   // checkout's trunk, as in git, because the user decides from these labels.
@@ -195,24 +170,32 @@ export async function joinSnapshotTips(
   };
   const folded = [...tips.filter(onTrunk), ...tips.filter((t) => !onTrunk(t))];
 
-  let ours = read(folded[0]!);
-  let oursAncestors = snapshotAncestors(dag, folded[0]!.id);
-  let oursLabel = side(folded[0]!);
-  for (const t of folded.slice(1)) {
-    const theirsAncestors = snapshotAncestors(dag, t.id);
-    const baseId = nearestCommonAncestor(
-      dag,
-      oursAncestors,
-      theirsAncestors,
-      () => `${oursLabel} and ${side(t)}`,
+  // The body is the merge node's pure function of its parents (migrations
+  // core, `foldMergeParents`) — the same one the body resolver recomputes it
+  // with, so it never has to be committed.
+  const fold = await foldMergeParents(
+    dag,
+    folded.map((t) => t.id),
+    async (id) => (await bodies.body(id)) as Snapshot,
+  );
+  if (!fold.ok) {
+    const byId = (id: string) => dag.byId.get(id)!;
+    const oursLabel = fold.ours
+      .map((id) => side(byId(id)))
+      .reduce((acc, l) => `the join of ${acc} and ${l}`);
+    const describe = `${oursLabel} and ${side(byId(fold.theirs))}`;
+    if (fold.kind === "ancestor")
+      throw new SnapshotJoinError(
+        `cannot join ${describe}: they have ${fold.nearest === 0 ? "no common ancestor" : `${fold.nearest} nearest common ancestors (a criss-cross history)`} — a 3-way snapshot merge needs exactly one.\n\n` +
+          "AGENT: Stop here and report this to the user verbatim. Never edit, delete or rename a\n" +
+          "published migration file.",
+      );
+    throw conflictError(
+      fold.conflicts,
+      oursLabel,
+      side(byId(fold.theirs)),
+      tag(byId(fold.base)),
     );
-    const base = dag.byId.get(baseId)!;
-    const result = mergeSnapshots(read(base), ours, read(t));
-    if (!result.ok)
-      throw conflictError(result.conflicts, oursLabel, side(t), tag(base));
-    ours = result.merged;
-    oursAncestors = new Set([...oursAncestors, ...theirsAncestors]);
-    oursLabel = `the join of ${oursLabel} and ${side(t)}`;
   }
 
   // Write the node: stamped one second after the latest migration on disk, so
@@ -222,22 +205,15 @@ export async function joinSnapshotTips(
   // Parents in snapshot-file order (never fold order), so the header, the
   // content hash and the derived id do not depend on which side is "ours".
   const parents = tips.map((t) => t.id);
+  const id = mergeSnapshotId(parents);
   const latest = latestMigrationTimestamp(readdirSync(migrationsDir));
   const ts = formatMigrationTimestamp((latest ?? Date.now()) + 1000);
-  const sql = renderMergeSnapshotMigration(parents);
+  const sql = renderMergeSnapshotMigration({ id, parents });
   const nodeTag = `${ts}_${migrationContentHash(sql)}__${MERGE_NODE_SLUG}`;
-  const snapshot: Snapshot = {
-    id: mergeSnapshotId(parents),
-    // drizzle-kit's single-parent field: the parent that sorts last.
-    prevId: tips[tips.length - 1]!.id,
-    ...ours,
-    _meta: EMPTY_SNAPSHOT_META,
-  };
+  const text = mergeNodeSnapshotText(id, parents, fold.merged);
   writeFileSync(join(migrationsDir, `${nodeTag}.sql`), sql);
-  writeFileSync(
-    join(migrationsDir, "meta", `${nodeTag}_snapshot.json`),
-    JSON.stringify(snapshot, null, 2),
-  );
+  writeFileSync(schemaSnapshotPath(migrationsDir), text);
+  bodies.remember(id, text);
   return { kind: "joined", file: `${nodeTag}.sql`, parents };
 }
 

@@ -23,18 +23,32 @@
 // minus the content hash, because a branch-local data migration is re-hashed on
 // every build while its timestamp and slug never change.
 //
-// A MERGE NODE (research/2026-09-30-global-clone-migrations-published-set.md
-// §3) is a phased file with empty sections and no claims, preceded by one
-// header line naming the snapshot ids it joins:
+// SNAPSHOT LINEAGE (research/2026-10-22-global-single-live-migration-snapshot.md).
+// Every schema migration written since the snapshot cutover names its drizzle
+// snapshot on its first line: the snapshot's id and its parent ids.
 //
-//   -- singularity:merge-snapshot parents=<snapshotIdA>,<snapshotIdB>
+//   -- singularity:snapshot id=<uuid> parents=<uuid>            (ordinary)
+//   -- singularity:snapshot id=<uuid> parents=<uuidA>,<uuidB>   (merge node)
+//   -- singularity:phase expand
+//   ...
+//
+// The header is the schema-migration marker (a file with it is a schema
+// migration; before the cutover, `meta/legacy-snapshots.json` says so) and the
+// one record of the snapshot DAG's edges: only the TIP's body is on disk
+// (`meta/schema.snapshot.json`), older ones are read from git. A root names the
+// null id as its one parent.
+//
+// A MERGE NODE (research/2026-09-30-global-clone-migrations-published-set.md
+// §3) is a header with two or more parents over an empty phased migration with
+// no claims:
+//
+//   -- singularity:snapshot id=<derived> parents=<snapshotIdA>,<snapshotIdB>
 //   -- singularity:phase expand
 //   -- singularity:phase contract
 //   -- singularity:claims
 //
 // Its SQL does nothing — each side's own migrations already apply that side's
-// DDL — and its snapshot is the 3-way merge of the parents. The header is the
-// one place a snapshot DAG edge beyond `prevId` is recorded.
+// DDL — and its snapshot is the 3-way merge of the parents.
 //
 // SUPERSESSION (research/2026-10-20-global-merged-migration-supersedes-authored.md).
 // A reset (push's regen, `--reset-migration`) deletes the branch's own schema
@@ -70,9 +84,9 @@
 // Where the lineage is fully applied, the runner records the adopted files
 // without running their DDL; anywhere else the file is a no-op record.
 
-const MERGE_HEADER = "-- singularity:merge-snapshot";
-const MERGE_HEADER_RE =
-  /^-- singularity:merge-snapshot parents=([0-9a-f-]+(?:,[0-9a-f-]+)+)$/;
+const SNAPSHOT_HEADER = "-- singularity:snapshot";
+const SNAPSHOT_HEADER_RE =
+  /^-- singularity:snapshot id=([0-9a-f-]+) parents=([0-9a-f-]+(?:,[0-9a-f-]+)*)$/;
 const SNAPSHOT_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -132,21 +146,38 @@ export function renderPhasedMigration(m: PhasedMigration): string {
   );
 }
 
-// The body of a merge node joining `parents` (snapshot ids, in snapshot-file
-// order): the header, then an empty phased migration.
-export function renderMergeSnapshotMigration(
-  parents: readonly string[],
-): string {
-  if (parents.length < 2)
+/** A schema migration's snapshot id and the snapshot ids it descends from. */
+export interface SnapshotLineage {
+  id: string;
+  /** One parent for an ordinary migration (the null id for a root), two or more for a merge node. */
+  parents: readonly string[];
+}
+
+function assertSnapshotId(id: string, line: string): void {
+  if (!SNAPSHOT_ID_RE.test(id))
+    throw new Error(`malformed snapshot id "${id}" in: ${line}`);
+}
+
+// The header line (newline included) a schema migration starts with.
+export function renderSnapshotHeader(l: SnapshotLineage): string {
+  const line = `${SNAPSHOT_HEADER} id=${l.id} parents=${l.parents.join(",")}`;
+  if (l.parents.length === 0)
+    throw new Error(`header names no parent: ${line}`);
+  for (const id of [l.id, ...l.parents]) assertSnapshotId(id, line);
+  if (new Set(l.parents).size !== l.parents.length || l.parents.includes(l.id))
+    throw new Error(`header repeats a snapshot id: ${line}`);
+  return `${line}\n`;
+}
+
+// The body of a merge node with snapshot `id` joining `parents` (snapshot ids,
+// in snapshot-file order): the header, then an empty phased migration.
+export function renderMergeSnapshotMigration(l: SnapshotLineage): string {
+  if (l.parents.length < 2)
     throw new Error(
-      `a merge node joins at least two snapshots, got ${parents.length}`,
+      `a merge node joins at least two snapshots, got ${l.parents.length}`,
     );
-  for (const p of parents) {
-    if (!SNAPSHOT_ID_RE.test(p))
-      throw new Error(`malformed snapshot id in merge node: "${p}"`);
-  }
   return (
-    `${MERGE_HEADER} parents=${parents.join(",")}\n` +
+    renderSnapshotHeader(l) +
     renderPhasedMigration({
       expand: "",
       contract: "",
@@ -276,35 +307,35 @@ function takeSupersession(sql: string): {
   return { supersedes, body: lines.slice(i).join("\n") };
 }
 
-// The snapshot ids a merge node joins, read from its first line; null for any
-// other migration. A first line that starts like the header but does not parse
-// throws — a merge edge must never be silently dropped from the DAG.
-export function mergeSnapshotParents(sql: string): string[] | null {
+// The snapshot lineage a schema migration's first line names; null for a file
+// without the header (a data migration, an adoption file, or a schema
+// migration from before the cutover). A first line that starts like the header
+// but does not parse throws — a DAG edge must never be silently dropped.
+export function snapshotLineage(sql: string): SnapshotLineage | null {
   const eol = sql.indexOf("\n");
   const first = (eol === -1 ? sql : sql.slice(0, eol)).trimEnd();
-  if (!first.startsWith(MERGE_HEADER)) return null;
-  const m = MERGE_HEADER_RE.exec(first);
-  if (!m) throw new Error(`malformed merge-snapshot header: ${first}`);
-  const parents = m[1]!.split(",");
-  for (const p of parents) {
-    if (!SNAPSHOT_ID_RE.test(p))
-      throw new Error(`malformed snapshot id in merge-snapshot header: "${p}"`);
-  }
-  return parents;
+  if (!first.startsWith(SNAPSHOT_HEADER)) return null;
+  const m = SNAPSHOT_HEADER_RE.exec(first);
+  if (!m) throw new Error(`malformed snapshot header: ${first}`);
+  const lineage = { id: m[1]!, parents: m[2]!.split(",") };
+  // The renderer's own validation: what parses is exactly what it writes.
+  if (renderSnapshotHeader(lineage) !== `${first}\n`)
+    throw new Error(`malformed snapshot header: ${first}`);
+  return lineage;
 }
 
 // Parse a migration file body. A file whose first line is not the expand marker
 // is legacy. A file that starts phased but is malformed throws — never degrades
-// to legacy, which would silently apply contract before its data. A merge
-// node's header line is skipped; what follows it must be phased. Leading
+// to legacy, which would silently apply contract before its data. A snapshot
+// header line is skipped; what follows it must be phased. Leading
 // supersedes lines are the lineage; what follows them must be phased too.
 export function parseMigration(sql: string): ParsedMigration {
-  if (mergeSnapshotParents(sql) !== null) {
+  if (snapshotLineage(sql) !== null) {
     const eol = sql.indexOf("\n");
     const parsed = eol === -1 ? null : parseMigration(sql.slice(eol + 1));
     if (parsed?.kind !== "phased")
       throw new Error(
-        `a merge-snapshot migration must be phased after its header line`,
+        `a migration with a snapshot header must be phased after its header line`,
       );
     return parsed;
   }

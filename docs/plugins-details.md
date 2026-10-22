@@ -19025,6 +19025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ContractOp`
           - `DrizzleGenerateOptions`
           - `DrizzleStage`
+          - `EmittedSnapshot`
           - `ExpandOp`
           - `ParsedMigration`
           - `PhasedMigration`
@@ -19034,8 +19035,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PublishedRef`
           - `RejectOp`
           - `SchemaLoadFailure`
+          - `Snapshot`
+          - `SnapshotBodies`
+          - `SnapshotConflict`
           - `SnapshotDag`
           - `SnapshotDagProblem`
+          - `SnapshotLineage`
           - `SnapshotNode`
           - `Statement`
           - `StatementClass`
@@ -19047,10 +19052,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `declaredParents`
           - `DRIZZLE_CONFIG_PATH`
           - `drizzleGenerateArgv`
+          - `equivalentSnapshots`
           - `findPublishedMigrationViolations`
+          - `foldMergeParents`
           - `formatPublishedMigrationViolations`
+          - `formatSnapshotConflict`
+          - `isSchemaMigration`
+          - `legacySnapshotFiles`
+          - `legacySnapshotsPath`
           - `LOCAL_MAIN_REF`
-          - `mergeSnapshotParents`
+          - `mergeNodeSnapshotText`
+          - `mergeSnapshots`
           - `migrationClaimId`
           - `migrationContentHash`
           - `MIGRATIONS_DATA_DIR`
@@ -19064,14 +19076,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `publishedMigrationOrigins`
           - `publishedMigrationRefs`
           - `publishedMigrationRefsSignature`
+          - `readLegacySnapshots`
+          - `readSnapshotHead`
           - `readSnapshotNodes`
           - `renderAdoptionMigration`
+          - `renderLegacySnapshots`
           - `renderMergeSnapshotMigration`
           - `renderPhasedMigration`
+          - `renderSnapshotHeader`
           - `renderStatements`
+          - `SCHEMA_SNAPSHOT_FILE`
           - `schemaGlobFiles`
           - `schemaLoadFailures`
+          - `schemaMigrationFiles`
+          - `schemaSnapshotPath`
+          - `schemaSnapshotState`
           - `snapshotAncestors`
+          - `snapshotBodies`
+          - `snapshotLineage`
           - `splitStatements`
           - `stageDrizzleOut`
           - `UnjoinedSnapshotTipsError`
@@ -19082,7 +19104,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/snapshot-dag.ts` (debt)
+          - `boundaries/no-platform-api` — `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/snapshot-dag.ts` (debt)
         - Exempted by: `database/migrations` (0 debt)
       - Machine:
         - Exports (values):
@@ -24778,7 +24800,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/client-tools` (1 debt)
               - `database/connection` (2 debt)
               - `database/embedded` (1 debt)
-              - `database/migrations` (4 debt)
+              - `database/migrations` (6 debt)
               - `database/pgbouncer` (1 debt)
               - `database/query` (1 debt)
               - `debug/broadcasts` (3 debt)

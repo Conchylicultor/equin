@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { existsSync, readdirSync, readFileSync } from "fs";
+import { readFileSync } from "fs";
 import { join } from "path";
 import {
   classifyStatement,
@@ -8,6 +8,7 @@ import {
   type StatementClass,
 } from "./classify";
 import { parseMigration } from "./phases";
+import { schemaMigrationFiles } from "./schema-snapshot";
 import { splitStatements } from "./statements";
 
 // Spelled in two pieces: the imperative-create-table-allowlisted check flags
@@ -241,16 +242,12 @@ describe("phaseStatements", () => {
   });
 });
 
-// Every schema migration on disk (those carrying a drizzle snapshot) — pins
+// Every schema migration on disk (`schemaMigrationFiles`) — pins
 // drizzle's real output shapes, including one-line `…;CREATE …` merges and the
 // DO $$ foreign-key form.
 describe("every schema migration on disk", () => {
   const dataDir = join(import.meta.dir, "../../data");
-  const metaDir = join(dataDir, "meta");
-  const schemaFiles = readdirSync(dataDir)
-    .filter((f) => f.endsWith(".sql"))
-    .filter((f) => existsSync(join(metaDir, `${f.slice(0, -4)}_snapshot.json`)))
-    .sort();
+  const schemaFiles = [...schemaMigrationFiles(dataDir)].sort();
 
   // Files before this date include hand-edited schema migrations carrying DML
   // (the last on 2026-06-01) and drizzle-emitted view DDL (the last on

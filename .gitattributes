@@ -24,5 +24,6 @@ config/**/*.origin.jsonc                      merge=regen-generated
 # Database migrations (separate: hand-edit safety check before regen)
 plugins/database/plugins/migrations/data/*.sql                merge=regen-migrations
 plugins/database/plugins/migrations/data/meta/_journal.json   merge=regen-migrations
+plugins/database/plugins/migrations/data/meta/schema.snapshot.json merge=regen-migrations
 plugins/database/plugins/migrations/data/meta/*_snapshot.json merge=regen-migrations
 plugins/database/plugins/migrations/data/meta/*_answers.json  merge=regen-migrations

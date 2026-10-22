@@ -1,6 +1,7 @@
 /**
  * drizzle-kit's view of `data/`: a throwaway out-dir holding only the journal
- * and the snapshot DAG's single tip.
+ * and the snapshot DAG's single tip — `meta/schema.snapshot.json`, staged under
+ * the per-migration name drizzle-kit expects (`<tip tag>_snapshot.json`).
  *
  * drizzle-kit must never read `data/` directly. Its `prepareMigrationFolder`
  * groups every `meta/*.json` by `prevId` and, when two snapshots share one,
@@ -21,13 +22,23 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "fs";
 import { join, relative, resolve } from "path";
 import { DRIZZLE_CONFIG_PATH } from "./drizzle-cli";
-import { analyzeSnapshotDag, readSnapshotNodes } from "./snapshot-dag";
+import {
+  analyzeSnapshotDag,
+  readSnapshotNodes,
+  schemaSnapshotState,
+} from "./snapshot-dag";
+import {
+  legacySnapshotFileOf,
+  parseSnapshotHead,
+  schemaSnapshotPath,
+} from "./schema-snapshot";
 
 /** The prefix of a stage dir under the migrations plugin dir (gitignored). */
 export const DRIZZLE_STAGE_PREFIX = ".drizzle-stage-";
@@ -35,14 +46,30 @@ export const DRIZZLE_STAGE_PREFIX = ".drizzle-stage-";
 /** The snapshot DAG has more than one tip, so drizzle-kit has nothing single to diff against. */
 export class UnjoinedSnapshotTipsError extends Error {}
 
+/** The snapshot drizzle-kit wrote beside a new migration: its head and exact text. */
+export interface EmittedSnapshot {
+  id: string;
+  prevId: string;
+  text: string;
+}
+
 /** A staged out-dir for one `drizzle-kit generate` run. */
 export interface DrizzleStage {
   /** `--config` for `drizzleGenerateArgv`, relative to the plugin dir (the cwd). */
   configPath: string;
   /** What drizzle-kit wrote: new `.sql` basenames and new `meta/` snapshot basenames. */
   emitted(): { sql: string[]; snapshots: string[] };
-  /** Move everything emitted into `dataDir`, refusing to overwrite. Returns the `.sql` basenames. */
-  moveEmittedInto(dataDir: string): string[];
+  /**
+   * Move every emitted `.sql` into `dataDir`, refusing to overwrite, and hand
+   * back the snapshot drizzle-kit wrote beside it (null when it wrote none).
+   * The snapshot itself is NOT moved: the caller writes it to
+   * `meta/schema.snapshot.json` once it keeps the migration (a schema one), or
+   * drops it (a `--custom` data migration, or a discarded generation).
+   */
+  moveEmittedInto(dataDir: string): {
+    sql: string[];
+    snapshot: EmittedSnapshot | null;
+  };
   /** Remove the stage. Always call it (`finally`). */
   dispose(): void;
 }
@@ -53,7 +80,9 @@ export interface DrizzleStage {
  *
  * Throws when the snapshot DAG has more than one tip: which one drizzle should
  * diff against is exactly the question a merge node answers, and the CLI writes
- * one (`joinSnapshotTips`) before it stages.
+ * one (`joinSnapshotTips`) before it stages. Throws too when
+ * `meta/schema.snapshot.json` is not the tip's body — drizzle-kit would diff
+ * `schema.ts` against the wrong schema.
  */
 export async function stageDrizzleOut(
   pluginDir: string,
@@ -68,6 +97,12 @@ export async function stageDrizzleOut(
     );
   }
 
+  const state = schemaSnapshotState(dataDir, dag);
+  if (!state.ok)
+    throw new Error(
+      `${state.message}\nRun \`./singularity build\` (it rewrites the tip snapshot); drizzle-kit must diff against the tip.`,
+    );
+
   const stage = mkdtempSync(join(pluginDir, DRIZZLE_STAGE_PREFIX));
   const out = join(stage, "data");
   const meta = join(out, "meta");
@@ -75,7 +110,9 @@ export async function stageDrizzleOut(
   const journal = join(dataDir, "meta", "_journal.json");
   if (existsSync(journal)) copyFileSync(journal, join(meta, "_journal.json"));
   const tip = dag.tips[0];
-  if (tip) copyFileSync(join(dataDir, "meta", tip.file), join(meta, tip.file));
+  const stagedTip = tip ? legacySnapshotFileOf(tip.file) : null;
+  if (stagedTip !== null)
+    copyFileSync(schemaSnapshotPath(dataDir), join(meta, stagedTip));
 
   const config = join(stage, "drizzle.config.ts");
   writeFileSync(
@@ -87,7 +124,7 @@ export async function stageDrizzleOut(
       `export default { ...base, out: ${JSON.stringify(`./${relative(pluginDir, out)}`)} };\n`,
   );
 
-  const staged = new Set(tip ? [tip.file] : []);
+  const staged = new Set(stagedTip !== null ? [stagedTip] : []);
   const emitted = () => ({
     sql: readdirSync(out)
       .filter((f) => f.endsWith(".sql"))
@@ -102,18 +139,24 @@ export async function stageDrizzleOut(
     emitted,
     moveEmittedInto(target) {
       const { sql, snapshots } = emitted();
-      const moves = [
-        ...sql.map((f) => [join(out, f), join(target, f)] as const),
-        ...snapshots.map(
-          (f) => [join(meta, f), join(target, "meta", f)] as const,
-        ),
-      ];
-      for (const [, to] of moves) {
-        if (existsSync(to))
-          throw new Error(`drizzle-kit emitted ${to}, which already exists`);
+      if (snapshots.length > 1)
+        throw new Error(
+          `drizzle-kit emitted ${snapshots.length} snapshots (${snapshots.join(", ")}); one generate writes one`,
+        );
+      let snapshot: EmittedSnapshot | null = null;
+      if (snapshots.length === 1) {
+        const path = join(meta, snapshots[0]!);
+        const text = readFileSync(path, "utf8");
+        snapshot = { ...parseSnapshotHead(text, path), text };
       }
-      for (const [from, to] of moves) renameSync(from, to);
-      return sql;
+      for (const f of sql) {
+        if (existsSync(join(target, f)))
+          throw new Error(
+            `drizzle-kit emitted ${join(target, f)}, which already exists`,
+          );
+      }
+      for (const f of sql) renameSync(join(out, f), join(target, f));
+      return { sql, snapshot };
     },
     dispose() {
       rmSync(stage, { recursive: true, force: true });

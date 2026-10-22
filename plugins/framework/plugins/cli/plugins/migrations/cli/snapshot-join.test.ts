@@ -11,15 +11,16 @@ import { tmpdir } from "os";
 import { join } from "path";
 import {
   analyzeSnapshotDag,
-  mergeSnapshotParents,
   migrationContentHash,
   NULL_SNAPSHOT_ID,
   parseMigration,
   readSnapshotNodes,
+  snapshotBodies,
+  snapshotLineage,
 } from "@plugins/database/plugins/migrations/core";
 import {
   formatMigrationTimestamp,
-  joinSnapshotTips,
+  joinSnapshotTips as joinWith,
   latestMigrationTimestamp,
   mergeSnapshotId,
   SnapshotJoinError,
@@ -41,6 +42,15 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
+// The fixture's tips and ancestors are pre-cutover per-migration snapshots on
+// disk, so every body resolves from the working tree (no git needed); the node
+// the join writes is the new shape — a headed .sql and meta/schema.snapshot.json.
+const joinSnapshotTips = (
+  migrationsDir: string,
+  origins: ReadonlyMap<string, readonly string[]>,
+) => joinWith(migrationsDir, origins, snapshotBodies(dir, migrationsDir));
+const TIP = () => join(dir, "meta", "schema.snapshot.json");
+
 const table = (name: string, columns: Record<string, unknown> = {}) => ({
   [`public.${name}`]: {
     name,
@@ -52,7 +62,7 @@ const table = (name: string, columns: Record<string, unknown> = {}) => ({
   },
 });
 
-/** Write one schema migration (.sql + snapshot) and return its basename. */
+/** Write one pre-cutover schema migration (.sql + its own snapshot) and return its basename. */
 function write(
   ts: string,
   slug: string,
@@ -148,7 +158,10 @@ describe("joinSnapshotTips", () => {
     );
     const sql = readFileSync(join(dir, result.file), "utf8");
     expect(result.file.slice(16, 24)).toBe(migrationContentHash(sql));
-    expect(mergeSnapshotParents(sql)).toEqual([P1, U1]);
+    expect(snapshotLineage(sql)).toEqual({
+      id: mergeSnapshotId([P1, U1]),
+      parents: [P1, U1],
+    });
     expect(parseMigration(sql)).toEqual({
       kind: "phased",
       expand: "",
@@ -158,12 +171,7 @@ describe("joinSnapshotTips", () => {
       adopts: [],
     });
 
-    const snapshot = JSON.parse(
-      readFileSync(
-        join(dir, "meta", `${result.file.slice(0, -4)}_snapshot.json`),
-        "utf8",
-      ),
-    );
+    const snapshot = JSON.parse(readFileSync(TIP(), "utf8"));
     expect(snapshot.id).toBe(mergeSnapshotId([P1, U1]));
     expect(snapshot.prevId).toBe(U1); // the parent that sorts last
     expect(Object.keys(snapshot.tables).sort()).toEqual([
@@ -179,6 +187,17 @@ describe("joinSnapshotTips", () => {
     expect(dag.problems).toEqual([]);
     expect(dag.tips.map((t) => t.id)).toEqual([snapshot.id]);
 
+    // The body is a pure function of the parents: once the tip file has moved
+    // on, a fresh resolver recomputes it byte-identical (it is never read
+    // from git, so a push that commits another migration on top loses nothing).
+    const written = readFileSync(TIP(), "utf8");
+    writeFileSync(
+      TIP(),
+      JSON.stringify({ id: "moved-on", prevId: snapshot.id }),
+    );
+    expect(await snapshotBodies(dir, dir).text(snapshot.id)).toBe(written);
+    writeFileSync(TIP(), written);
+
     // A second join finds the single tip.
     expect(await joinSnapshotTips(dir, published())).toEqual({
       kind: "single-tip",
@@ -190,19 +209,18 @@ describe("joinSnapshotTips", () => {
     const pub = published();
     const first = await joinSnapshotTips(dir, pub);
     if (first.kind !== "joined") throw new Error("expected a join");
-    const tag = first.file.slice(0, -4);
     const bytes = [
       readFileSync(join(dir, first.file), "utf8"),
-      readFileSync(join(dir, "meta", `${tag}_snapshot.json`), "utf8"),
+      readFileSync(TIP(), "utf8"),
     ];
     rmSync(join(dir, first.file));
-    rmSync(join(dir, "meta", `${tag}_snapshot.json`));
+    rmSync(TIP());
 
     const second = await joinSnapshotTips(dir, pub);
     expect(second).toEqual(first);
     expect([
       readFileSync(join(dir, first.file), "utf8"),
-      readFileSync(join(dir, "meta", `${tag}_snapshot.json`), "utf8"),
+      readFileSync(TIP(), "utf8"),
     ]).toEqual(bytes);
   });
 
@@ -267,9 +285,10 @@ describe("joinSnapshotTips", () => {
     expect(second).toMatchObject({ kind: "joined" });
     const dag = analyzeSnapshotDag(await readSnapshotNodes(dir));
     expect(dag.problems).toEqual([]);
-    const tip = JSON.parse(
-      readFileSync(join(dir, "meta", dag.tips[0]!.file), "utf8"),
-    );
+    expect(dag.tips.map((t) => t.file)).toEqual([
+      (second as { file: string }).file,
+    ]);
+    const tip = JSON.parse(readFileSync(TIP(), "utf8"));
     // Base was P1: user's `mine` survives, upstream's `later` arrives.
     expect(Object.keys(tip.tables).sort()).toEqual([
       "public.base",
@@ -325,11 +344,7 @@ describe("joinSnapshotTips: fold order", () => {
   async function joinBytes(place: Placement): Promise<string[]> {
     const r = await joinSnapshotTips(dir, published(place));
     if (r.kind !== "joined") throw new Error("expected a join");
-    const tag = r.file.slice(0, -4);
-    const files = [
-      join(dir, r.file),
-      join(dir, "meta", `${tag}_snapshot.json`),
-    ];
+    const files = [join(dir, r.file), TIP()];
     const bytes = files.map((f) => readFileSync(f, "utf8"));
     for (const f of files) rmSync(f);
     return [r.file, ...bytes];

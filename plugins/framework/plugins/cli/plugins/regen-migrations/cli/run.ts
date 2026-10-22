@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
 import {
   findPublishedMigrationViolations,
@@ -7,6 +7,7 @@ import {
   MIGRATIONS_DATA_DIR,
   PUBLISHED_MIGRATION_HINT,
   publishedMigrationBasenames,
+  schemaMigrationFiles,
 } from "@plugins/database/plugins/migrations/core";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { generateMigration } from "@plugins/framework/plugins/cli/plugins/migrations/cli";
@@ -21,20 +22,16 @@ async function assertNoHandEditedBranchLocalMigrations(
 ): Promise<void> {
   const migrationsDir = resolve(root, MIGRATIONS_DATA_DIR);
   const published = await publishedMigrationBasenames(root);
+  const schema = schemaMigrationFiles(migrationsDir);
   const offenders: { file: string; expected: string; actual: string }[] = [];
   for (const f of readdirSync(migrationsDir)) {
     if (!f.endsWith(".sql")) continue;
     if (published.has(f)) continue;
-    // Data migrations (snapshot-less) are exempt: their SQL is hand-written by
-    // design and their filename hash is self-healed on every build (see
+    // Data migrations are exempt: their SQL is hand-written by design and
+    // their filename hash is self-healed on every build (see
     // rehashBranchLocalDataMigrations in migrations.ts). Only schema migrations —
     // whose SQL must match the snapshot's DDL — trigger the hand-edit abort.
-    if (
-      !existsSync(
-        join(migrationsDir, "meta", `${f.slice(0, -4)}_snapshot.json`),
-      )
-    )
-      continue;
+    if (!schema.has(f)) continue;
     const m = f.match(/^\d{8}_\d{6}_([0-9a-f]{8})__/);
     if (!m) continue;
     const expected = m[1]!;
@@ -58,7 +55,7 @@ async function assertNoHandEditedBranchLocalMigrations(
 }
 
 // Published migrations are immutable by contract — their hashes are recorded in
-// deployed DBs' `__singularity_migrations`, and their snapshots are links of the
+// deployed DBs' `__singularity_migrations`, and their lineage is a link of the
 // chain. The rule is the migrations plugin's (`findPublishedMigrationViolations`,
 // also the `published-migrations-immutable` check), asserted here before the
 // destructive reset because the regeneration would bake a violation in.

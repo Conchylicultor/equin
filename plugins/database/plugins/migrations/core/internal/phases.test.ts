@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
-  mergeSnapshotParents,
   migrationClaimId,
   parseMigration,
   renderAdoptionMigration,
   renderMergeSnapshotMigration,
   renderPhasedMigration,
+  renderSnapshotHeader,
+  snapshotLineage,
 } from "./phases";
 
 describe("phased migration grammar", () => {
@@ -73,30 +74,54 @@ describe("phased migration grammar", () => {
   });
 });
 
-describe("merge-snapshot header", () => {
+describe("snapshot header", () => {
   const A = "11111111-1111-4111-8111-111111111111";
   const B = "22222222-2222-4222-8222-222222222222";
+  const M = "33333333-3333-5333-8333-333333333333";
+  const NULL_ID = "00000000-0000-0000-0000-000000000000";
+  const empty = {
+    kind: "phased" as const,
+    expand: "",
+    contract: "",
+    claims: [],
+    supersedes: null,
+    adopts: [],
+  };
 
-  test("a merge node is an empty phased migration behind its header", () => {
-    const sql = renderMergeSnapshotMigration([A, B]);
-    expect(sql.split("\n")[0]).toBe(
-      `-- singularity:merge-snapshot parents=${A},${B}`,
-    );
-    expect(mergeSnapshotParents(sql)).toEqual([A, B]);
-    expect(parseMigration(sql)).toEqual({
-      kind: "phased",
-      expand: "",
+  test("an ordinary schema migration: header, then its phased body", () => {
+    const body = renderPhasedMigration({
+      expand: 'ALTER TABLE "t" ADD COLUMN "c" text;',
       contract: "",
       claims: [],
-      supersedes: null,
-      adopts: [],
+      supersedes: { direct: ["38bc8c97"], inherited: [] },
     });
+    const sql = renderSnapshotHeader({ id: B, parents: [A] }) + body;
+    expect(sql.split("\n")[0]).toBe(
+      `-- singularity:snapshot id=${B} parents=${A}`,
+    );
+    expect(snapshotLineage(sql)).toEqual({ id: B, parents: [A] });
+    expect(parseMigration(sql)).toEqual(parseMigration(body));
   });
 
-  test("any other migration has no merge parents", () => {
-    expect(mergeSnapshotParents("SELECT 1;")).toBeNull();
+  test("a root names the null snapshot as its parent", () => {
     expect(
-      mergeSnapshotParents(
+      snapshotLineage(renderSnapshotHeader({ id: A, parents: [NULL_ID] })),
+    ).toEqual({ id: A, parents: [NULL_ID] });
+  });
+
+  test("a merge node is an empty phased migration behind a two-parent header", () => {
+    const sql = renderMergeSnapshotMigration({ id: M, parents: [A, B] });
+    expect(sql.split("\n")[0]).toBe(
+      `-- singularity:snapshot id=${M} parents=${A},${B}`,
+    );
+    expect(snapshotLineage(sql)).toEqual({ id: M, parents: [A, B] });
+    expect(parseMigration(sql)).toEqual(empty);
+  });
+
+  test("any other migration has no lineage", () => {
+    expect(snapshotLineage("SELECT 1;")).toBeNull();
+    expect(
+      snapshotLineage(
         renderPhasedMigration({
           expand: "",
           contract: "",
@@ -109,26 +134,34 @@ describe("merge-snapshot header", () => {
 
   test("a malformed header throws rather than dropping the edge", () => {
     expect(() =>
-      mergeSnapshotParents(`-- singularity:merge-snapshot parents=${A}\n`),
+      snapshotLineage(`-- singularity:snapshot parents=${A}\n`),
     ).toThrow(/malformed/);
     expect(() =>
-      mergeSnapshotParents("-- singularity:merge-snapshot parents=x,y\n"),
+      snapshotLineage(`-- singularity:snapshot id=${M} parents=x,y\n`),
     ).toThrow(/malformed/);
+    expect(() =>
+      snapshotLineage(`-- singularity:snapshot id=${M} parents=${A},${A}\n`),
+    ).toThrow(/repeats/);
+    expect(() =>
+      snapshotLineage(`-- singularity:snapshot id=${M} parents=${A} \n`),
+    ).not.toThrow();
   });
 
   test("a header over a legacy body throws", () => {
     expect(() =>
       parseMigration(
-        `-- singularity:merge-snapshot parents=${A},${B}\nSELECT 1;\n`,
+        `-- singularity:snapshot id=${M} parents=${A},${B}\nSELECT 1;\n`,
       ),
     ).toThrow(/must be phased/);
     expect(() =>
-      parseMigration(`-- singularity:merge-snapshot parents=${A},${B}`),
+      parseMigration(`-- singularity:snapshot id=${M} parents=${A},${B}`),
     ).toThrow(/must be phased/);
   });
 
-  test("fewer than two parents cannot be rendered", () => {
-    expect(() => renderMergeSnapshotMigration([A])).toThrow(/at least two/);
+  test("a merge node of fewer than two parents cannot be rendered", () => {
+    expect(() => renderMergeSnapshotMigration({ id: M, parents: [A] })).toThrow(
+      /at least two/,
+    );
   });
 });
 

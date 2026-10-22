@@ -3,28 +3,48 @@
  * generate pipeline (which joins tips with a merge node and stages drizzle-kit's
  * view of it) and by the `snapshot-chain-intact` / `migrations-in-sync` checks.
  *
- * Every schema migration carries `meta/<tag>_snapshot.json`. A snapshot's parent
- * is its `prevId`, except a MERGE NODE's, whose parents are the snapshot ids its
- * `.sql` header names (`mergeSnapshotParents`, `./phases`). A healthy history is
- * a DAG with exactly one root and exactly one tip: a checkout that merged
- * another `main` (an upstream update) forks at the merge base and re-joins at
- * the merge node. See research/2026-09-30-global-clone-migrations-published-set.md §3.
+ * Every schema migration is one node, identified by its `.sql` basename. Its
+ * lineage comes from the `.sql`'s snapshot header (`snapshotLineage`,
+ * `./phases`) or, for a migration from before the snapshot cutover, from
+ * `meta/legacy-snapshots.json` (or a not-yet-folded `meta/<tag>_snapshot.json`)
+ * — see `./schema-snapshot`. No snapshot BODY is read here. A node's parent is
+ * its `prevId`, except a MERGE NODE's, whose parents are all the ids its header
+ * names. A healthy history is a DAG with exactly one root and exactly one tip:
+ * a checkout that merged another `main` (an upstream update) forks at the merge
+ * base and re-joins at the merge node. See
+ * research/2026-09-30-global-clone-migrations-published-set.md §3 and
+ * research/2026-10-22-global-single-live-migration-snapshot.md.
  */
-import { open, readdir } from "fs/promises";
+import { readdirSync } from "fs";
 import { join } from "path";
-import { mergeSnapshotParents } from "./phases";
+import {
+  legacySnapshotFiles,
+  legacySnapshotSql,
+  readLegacySnapshots,
+  readSnapshotHead,
+  readSnapshotLineage,
+  SCHEMA_SNAPSHOT_FILE,
+  schemaSnapshotPath,
+} from "./schema-snapshot";
 
 /** drizzle's `prevId` of the first snapshot. */
 export const NULL_SNAPSHOT_ID = "00000000-0000-0000-0000-000000000000";
 
 /** One snapshot, as far as the DAG is concerned. */
 export interface SnapshotNode {
-  /** The snapshot basename: `<tag>_snapshot.json`. */
+  /** The schema migration's `.sql` basename. */
   file: string;
   id: string;
+  /** drizzle's single parent: a merge node's parent that sorts last. */
   prevId: string;
-  /** The merge header's parents when the sibling `.sql` is a merge node. */
+  /** Every parent, when the migration is a merge node. */
   mergeParents: readonly string[] | null;
+  /**
+   * Where its lineage is recorded: its own `.sql` header, or (written before
+   * the snapshot cutover) `legacy-snapshots.json` / a `<tag>_snapshot.json`.
+   * Says where its BODY lives in git (`./snapshot-bodies`).
+   */
+  lineage: "header" | "legacy";
 }
 
 /** Why a set of snapshots is not a single-root, single-tip DAG. */
@@ -170,65 +190,72 @@ export function snapshotAncestors(dag: SnapshotDag, id: string): Set<string> {
 }
 
 /**
- * How much of a file's start is read. drizzle-kit writes `id` then `prevId` as
- * a snapshot's first two keys, and a merge node's header is its `.sql`'s first
- * line — both fit well inside this.
- */
-const HEAD_BYTES = 1024;
-
-/** The first two keys of a snapshot, anchored at the start of the file. */
-const HEAD_RE = /^\{\s*"id":\s*"([^"]+)",\s*"prevId":\s*"([^"]+)"/;
-
-async function readStart(path: string): Promise<string | null> {
-  let handle;
-  try {
-    handle = await open(path, "r");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
-  try {
-    const buf = Buffer.alloc(HEAD_BYTES);
-    const { bytesRead } = await handle.read(buf, 0, HEAD_BYTES, 0);
-    return buf.toString("utf8", 0, bytesRead);
-  } finally {
-    await handle.close();
-  }
-}
-
-/**
- * Every snapshot in `<dataDir>/meta` as a DAG node. A snapshot is the whole
- * schema (~250 KB, hundreds of them), so only the start of each file — and of
- * its sibling `.sql`, for a merge header — is read. A snapshot whose start is
- * not `{ "id": …, "prevId": … }` throws, naming it: a changed drizzle layout
- * must fail here, not pass unchecked. A snapshot with no sibling `.sql` has no
- * merge parents (`migration-metadata-consistent` owns that orphan).
+ * Every schema migration under `dataDir` as a DAG node: one per `.sql` with a
+ * snapshot header, one per `legacy-snapshots.json` entry, and one per
+ * not-yet-folded `meta/<tag>_snapshot.json` whose tag is not already a legacy
+ * key. Only the start of each file is read. A legacy entry whose `.sql` is gone
+ * is still a node (`migration-metadata-consistent` owns that orphan).
  */
 export async function readSnapshotNodes(
   dataDir: string,
 ): Promise<SnapshotNode[]> {
-  const metaDir = join(dataDir, "meta");
-  const files = (await readdir(metaDir))
-    .filter((f) => f.endsWith("_snapshot.json"))
-    .sort();
-  return Promise.all(
-    files.map(async (file) => {
-      const path = join(metaDir, file);
-      const match = HEAD_RE.exec((await readStart(path)) ?? "");
-      if (!match) {
-        throw new Error(
-          `${path} does not start with "id" then "prevId" — the drizzle snapshot layout changed; update readSnapshotNodes`,
-        );
-      }
-      const sql = await readStart(
-        join(dataDir, `${file.slice(0, -"_snapshot.json".length)}.sql`),
-      );
-      return {
-        file,
-        id: match[1]!,
-        prevId: match[2]!,
-        mergeParents: sql === null ? null : mergeSnapshotParents(sql),
-      };
-    }),
-  );
+  const nodes: SnapshotNode[] = [];
+  const legacy = readLegacySnapshots(dataDir);
+  for (const [tag, head] of legacy ?? []) {
+    nodes.push({
+      file: `${tag}.sql`,
+      ...head,
+      mergeParents: null,
+      lineage: "legacy",
+    });
+  }
+  for (const file of legacySnapshotFiles(dataDir)) {
+    const sql = legacySnapshotSql(file);
+    if (legacy?.has(sql.slice(0, -".sql".length))) continue;
+    const head = readSnapshotHead(join(dataDir, "meta", file))!;
+    nodes.push({ file: sql, ...head, mergeParents: null, lineage: "legacy" });
+  }
+  for (const file of readdirSync(dataDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()) {
+    const lineage = readSnapshotLineage(dataDir, file);
+    if (lineage === null) continue;
+    nodes.push({
+      file,
+      id: lineage.id,
+      prevId: lineage.parents[lineage.parents.length - 1]!,
+      mergeParents: lineage.parents.length > 1 ? lineage.parents : null,
+      lineage: "header",
+    });
+  }
+  return nodes;
+}
+
+/** Whether `schema.snapshot.json` is the body of the DAG's single tip. */
+export type SchemaSnapshotState = { ok: true } | { ok: false; message: string };
+
+/**
+ * The invariant every drizzle-kit run rests on: `meta/schema.snapshot.json` is
+ * the body of the DAG's single tip — its `id` is the tip's id (and it exists
+ * whenever the DAG has a node). Not judged on a multi-tip DAG: that is its own
+ * problem (`analyzeSnapshotDag`), and the join rewrites the file anyway.
+ */
+export function schemaSnapshotState(
+  dataDir: string,
+  dag: SnapshotDag,
+): SchemaSnapshotState {
+  if (dag.tips.length !== 1) return { ok: true };
+  const tip = dag.tips[0]!;
+  const head = readSnapshotHead(schemaSnapshotPath(dataDir));
+  if (head === null)
+    return {
+      ok: false,
+      message: `meta/${SCHEMA_SNAPSHOT_FILE} is missing; the snapshot DAG's tip is ${tip.file} (${tip.id}).`,
+    };
+  if (head.id !== tip.id)
+    return {
+      ok: false,
+      message: `meta/${SCHEMA_SNAPSHOT_FILE} is snapshot ${head.id}, but the snapshot DAG's tip is ${tip.file} (${tip.id}).`,
+    };
+  return { ok: true };
 }

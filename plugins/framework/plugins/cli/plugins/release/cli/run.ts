@@ -1244,14 +1244,15 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   });
 
   // Migration SQL files: the runner reads them from disk at boot (they are
-  // not bundled into the compiled backend). Vendor the whole data/ tree;
-  // launch.ts points SINGULARITY_MIGRATIONS_DIR at it.
+  // not bundled into the compiled backend). Vendor the data/ tree's `.sql`
+  // files; launch.ts points SINGULARITY_MIGRATIONS_DIR at it. `meta/` (the
+  // journal, snapshots, answers) is generator input the runner never reads.
   console.log("  • migration data");
-  cpSync(
-    join(root, "plugins/database/plugins/migrations/data"),
-    join(out, "migrations", "data"),
-    { recursive: true },
-  );
+  const migrationsSrc = join(root, "plugins/database/plugins/migrations/data");
+  cpSync(migrationsSrc, join(out, "migrations", "data"), {
+    recursive: true,
+    filter: (src) => src !== join(migrationsSrc, "meta"),
+  });
 
   // Web dist (follow the symlink).
   console.log("  • web dist");

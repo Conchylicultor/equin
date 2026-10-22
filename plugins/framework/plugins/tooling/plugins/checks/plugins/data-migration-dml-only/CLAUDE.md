@@ -1,12 +1,14 @@
 # data-migration-dml-only
 
 Enforces that **data/backfill migrations are DML-only**. A data migration is a
-`.sql` in `plugins/database/plugins/migrations/data` with **no** sibling
-`meta/<tag>_snapshot.json` (created via `./singularity build --custom-migration`).
+`.sql` in `plugins/database/plugins/migrations/data` that is **not** a schema
+migration — no `-- singularity:snapshot` header and no
+`meta/legacy-snapshots.json` entry (`isSchemaMigration`, migrations `core`;
+created via `./singularity build --custom-migration`).
 Such migrations are intentionally decoupled from the drizzle snapshot chain so
 they never Y-fork against schema migrations on main — but that also means drizzle
 does not validate them. This check is the guardrail: every statement in a
-snapshot-less migration must begin with an allowlisted DML keyword
+data migration must begin with an allowlisted DML keyword
 (`UPDATE/INSERT/DELETE/WITH/SELECT`, or `SET LOCAL`). The allowlist is
 default-deny, so schema-changing DDL (including `CREATE EXTENSION`, `DO $$…$$`,
 `EXECUTE`, `CREATE TABLE AS`) cannot slip through and silently drift the database

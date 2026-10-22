@@ -146,7 +146,7 @@ const check: Check = {
       );
       hintParts.push(
         "Remove the BRANCH-LOCAL copies only — never a published one (published migrations are " +
-          "immutable). A branch-local data migration (no meta/<tag>_snapshot.json): delete its " +
+          "immutable). A branch-local data migration (no snapshot header): delete its " +
           ".sql; `./singularity build` regenerates the journal. A branch-local schema migration: " +
           "rebase onto `main` and re-run `./singularity build --reset-migration --migration-name " +
           "<slug>`. If every copy is branch-local, keep the earliest-timestamp one.",

@@ -244,18 +244,58 @@ describe("findPublishedMigrationViolations", () => {
     ]);
   });
 
-  test("an edited published snapshot fails; the journal is not covered", async () => {
+  test("a published legacy-snapshots.json entry is pinned; the tip snapshot, the journal and a per-migration snapshot are not", async () => {
     const root = await repo();
     const f = migration(root, "20260101_000000", "snap");
-    write(root, `${MIGRATIONS_DATA_DIR}/meta/_journal.json`, "{}\n");
+    const g = migration(root, "20260101_000001", "gone");
+    const meta = `${MIGRATIONS_DATA_DIR}/meta`;
+    const legacy = `${meta}/legacy-snapshots.json`;
+    const entries = (o: Record<string, [string, string]>) =>
+      JSON.stringify(
+        Object.fromEntries(
+          Object.entries(o).map(([k, [id, prevId]]) => [k, { id, prevId }]),
+        ),
+      );
+    const tag = (file: string) => file.replace(/\.sql$/, "");
+    write(
+      root,
+      legacy,
+      entries({ [tag(f)]: ["a", "0"], [tag(g)]: ["b", "a"] }),
+    );
+    write(root, `${meta}/schema.snapshot.json`, `{"id":"b","prevId":"a"}\n`);
+    write(root, `${meta}/_journal.json`, "{}\n");
     await commit(root, "published");
     await git(root, "checkout", "-q", "-b", "task");
-    const snap = `${MIGRATIONS_DATA_DIR}/meta/${f.replace(/\.sql$/, "")}_snapshot.json`;
-    write(root, snap, `{"id":"changed"}\n`);
-    write(root, `${MIGRATIONS_DATA_DIR}/meta/_journal.json`, "{ }\n");
 
+    // Free to change: the tip body, the journal, a per-migration snapshot,
+    // and a key the published file did not have.
+    write(root, `${meta}/schema.snapshot.json`, `{"id":"c","prevId":"b"}\n`);
+    write(root, `${meta}/_journal.json`, "{ }\n");
+    rmSync(join(root, `${meta}/${tag(f)}_snapshot.json`));
+    write(
+      root,
+      legacy,
+      entries({ [tag(f)]: ["a", "0"], [tag(g)]: ["b", "a"], new: ["c", "b"] }),
+    );
+    expect(await findPublishedMigrationViolations(root)).toEqual([]);
+
+    // Not free: a published entry rewritten or dropped.
+    write(root, legacy, entries({ [tag(f)]: ["a", "x"] }));
     expect(await findPublishedMigrationViolations(root)).toEqual([
-      { kind: "modified", path: snap, refs: ["refs/heads/main"] },
+      {
+        kind: "legacy-entry",
+        path: legacy,
+        tag: tag(f),
+        refs: ["refs/heads/main"],
+        now: "changed",
+      },
+      {
+        kind: "legacy-entry",
+        path: legacy,
+        tag: tag(g),
+        refs: ["refs/heads/main"],
+        now: "missing",
+      },
     ]);
   });
 

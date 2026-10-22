@@ -2,8 +2,17 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { renderPhasedMigration } from "@plugins/database/plugins/migrations/core";
-import { readResetPrior, resetAdoption, resetLineage } from "./reset-lineage";
+import {
+  renderPhasedMigration,
+  type Snapshot,
+  snapshotBodies,
+} from "@plugins/database/plugins/migrations/core";
+import {
+  readResetPrior as readPrior,
+  resetAdoption as adoption,
+  resetLineage as lineageOf,
+  type ResetPrior,
+} from "./reset-lineage";
 
 const NULL_ID = "00000000-0000-0000-0000-000000000000";
 const A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -25,13 +34,26 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-function snapshot(
-  tag: string,
+// The fixture is pre-cutover per-migration snapshots on disk, so every body
+// resolves from the working tree. One resolver per test, as one generate run
+// holds one: the deleted tip's body stays answerable after the reset.
+let bodies: ReturnType<typeof snapshotBodies>;
+beforeEach(() => {
+  bodies = snapshotBodies(dir, dir);
+});
+const readResetPrior = (d: string, published: ReadonlySet<string>) =>
+  readPrior(d, published, bodies);
+const resetLineage = (d: string, prior: ResetPrior, fresh: Snapshot) =>
+  lineageOf(d, prior, fresh, bodies);
+const resetAdoption = (d: string, prior: ResetPrior) =>
+  adoption(d, prior, bodies);
+
+function snapshotBody(
   id: string,
   prevId: string,
   tables: Record<string, string[]>,
-): void {
-  const body = {
+): Snapshot {
+  return {
     id,
     prevId,
     tables: Object.fromEntries(
@@ -42,9 +64,17 @@ function snapshot(
     ),
     _meta: { columns: {}, schemas: {}, tables: {} },
   };
+}
+
+function snapshot(
+  tag: string,
+  id: string,
+  prevId: string,
+  tables: Record<string, string[]>,
+): void {
   writeFileSync(
     join(dir, "meta", `${tag}_snapshot.json`),
-    JSON.stringify(body),
+    JSON.stringify(snapshotBody(id, prevId, tables)),
   );
 }
 
@@ -82,19 +112,19 @@ function reset(): void {
   }
 }
 
-// drizzle-kit's fresh output, diffed against `prevId`.
-function fresh(prevId: string, tables: Record<string, string[]>): string {
+// drizzle-kit's fresh output, diffed against `prevId`: the .sql in data/, its
+// snapshot handed over in memory.
+function fresh(prevId: string, tables: Record<string, string[]>): Snapshot {
   writeFileSync(
     join(dir, "0002_merged.sql"),
     "ALTER TABLE t ADD COLUMN c1 text;",
   );
-  snapshot("0002", D, prevId, tables);
-  return join(dir, "meta", "0002_snapshot.json");
+  return snapshotBody(D, prevId, tables);
 }
 
 describe("reset lineage", () => {
   test("a regen of the same schema supersedes every deleted hash", async () => {
-    const prior = readResetPrior(dir, branchHistory());
+    const prior = await readResetPrior(dir, branchHistory());
     expect(prior.deleted.map((d) => d.hash)).toEqual(["38bc8c97", "f09303fa"]);
     expect(prior.schema).toMatchObject({ kind: "known", baseId: A });
     reset();
@@ -115,7 +145,7 @@ describe("reset lineage", () => {
     migration(P1);
     snapshot(P1, E, A, { t: [], u: [] });
     published.add(`${P1}.sql`);
-    const prior = readResetPrior(dir, published);
+    const prior = await readResetPrior(dir, published);
     reset();
     const lineage = await resetLineage(
       dir,
@@ -126,7 +156,7 @@ describe("reset lineage", () => {
   });
 
   test("schema.ts changed after the last generation: no header, and why", async () => {
-    const prior = readResetPrior(dir, branchHistory());
+    const prior = await readResetPrior(dir, branchHistory());
     reset();
     const lineage = await resetLineage(
       dir,
@@ -145,7 +175,7 @@ describe("reset lineage", () => {
     const M1 = "20261020_115443_a1a1a1a1__merged_1";
     migration(M1, { direct: ["38bc8c97", "f09303fa"], inherited: [] });
     snapshot(M1, B, A, { t: ["c1"] });
-    const prior = readResetPrior(
+    const prior = await readResetPrior(
       dir,
       new Set([`${BASE}.sql`, `${BASE}_snapshot.json`]),
     );
@@ -164,7 +194,7 @@ describe("reset lineage", () => {
   test("nothing branch-local: nothing to supersede, nothing to warn about", async () => {
     migration(BASE);
     snapshot(BASE, A, NULL_ID, { t: [] });
-    const prior = readResetPrior(dir, new Set([`${BASE}.sql`]));
+    const prior = await readResetPrior(dir, new Set([`${BASE}.sql`]));
     expect(await resetLineage(dir, prior, fresh(A, { t: ["c1"] }))).toEqual({
       kind: "none",
       reason: null,
@@ -190,7 +220,7 @@ describe("reset adoption", () => {
       snapshot(tag, id, prevId, tables);
       published.add(`${tag}.sql`);
     }
-    const prior = readResetPrior(dir, published);
+    const prior = await readResetPrior(dir, published);
     reset();
     return resetAdoption(dir, prior);
   }
@@ -249,7 +279,7 @@ describe("reset adoption", () => {
   test("nothing branch-local: nothing to adopt, nothing to warn about", async () => {
     migration(BASE);
     snapshot(BASE, A, NULL_ID, { t: [] });
-    const prior = readResetPrior(dir, new Set([`${BASE}.sql`]));
+    const prior = await readResetPrior(dir, new Set([`${BASE}.sql`]));
     expect(await resetAdoption(dir, prior)).toEqual({
       kind: "none",
       reason: null,

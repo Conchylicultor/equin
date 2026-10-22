@@ -25,22 +25,20 @@
  * whose combined delta is the deleted one, and the reset writes an adoption
  * file naming them (research/2026-10-21-global-reset-adopts-published-migration.md).
  */
-import { existsSync, readdirSync, readFileSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import {
   analyzeSnapshotDag,
-  mergeSnapshotParents,
+  equivalentSnapshots,
+  mergeSnapshots,
   parseMigration,
   readSnapshotNodes,
+  type Snapshot,
   snapshotAncestors,
+  type SnapshotBodies,
   type SnapshotNode,
   type Supersession,
 } from "@plugins/database/plugins/migrations/core";
-import {
-  equivalentSnapshots,
-  mergeSnapshots,
-  type Snapshot,
-} from "./snapshot-merge";
 
 const NEW_FORMAT = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 
@@ -64,38 +62,34 @@ export interface ResetPrior {
     | { kind: "unknown"; reason: string };
 }
 
-function readSnapshot(path: string): Snapshot {
-  return JSON.parse(readFileSync(path, "utf8")) as Snapshot;
-}
-
 /**
  * Read what a reset of `migrationsDir` will delete: every branch-local (not
- * `published`) schema migration — a NEW_FORMAT `.sql` with a sibling snapshot,
- * the same set `resetBranchLocalMigrations` removes — with its hash, its own
- * lineage, and the schema the set ends at. Call BEFORE the reset.
+ * `published`) schema migration — a NEW_FORMAT node of the snapshot DAG, the
+ * same set `resetBranchLocalMigrations` removes — with its hash, its own
+ * lineage, and the schema the set ends at (its tip's body, from `bodies`).
+ * Call BEFORE the reset.
  */
-export function readResetPrior(
+export async function readResetPrior(
   migrationsDir: string,
   published: ReadonlySet<string>,
-): ResetPrior {
-  const metaDir = join(migrationsDir, "meta");
+  bodies: SnapshotBodies,
+): Promise<ResetPrior> {
   const deleted: DeletedMigration[] = [];
-  const snapshots = new Map<string, Snapshot>();
+  const own = new Map<string, SnapshotNode>();
   let mergeNode: string | null = null;
-  for (const f of readdirSync(migrationsDir).sort()) {
-    const m = NEW_FORMAT.exec(f);
-    if (!m || published.has(f)) continue;
-    const snapPath = join(metaDir, `${f.slice(0, -4)}_snapshot.json`);
-    if (!existsSync(snapPath)) continue;
-    const sql = readFileSync(join(migrationsDir, f), "utf8");
-    const parsed = parseMigration(sql);
-    const snap = readSnapshot(snapPath);
-    if (typeof snap.id !== "string" || typeof snap.prevId !== "string")
-      throw new Error(`${snapPath} has no string id / prevId`);
-    snapshots.set(snap.id, snap);
-    if (mergeSnapshotParents(sql) !== null) mergeNode = f;
+  const nodes = (await readSnapshotNodes(migrationsDir)).sort((a, b) =>
+    a.file.localeCompare(b.file),
+  );
+  for (const n of nodes) {
+    const m = NEW_FORMAT.exec(n.file);
+    if (!m || published.has(n.file)) continue;
+    const parsed = parseMigration(
+      readFileSync(join(migrationsDir, n.file), "utf8"),
+    );
+    own.set(n.id, n);
+    if (n.mergeParents !== null) mergeNode = n.file;
     deleted.push({
-      file: f,
+      file: n.file,
       hash: m[3]!,
       supersedes: parsed.kind === "phased" ? parsed.supersedes : null,
     });
@@ -111,10 +105,8 @@ export function readResetPrior(
       },
     };
 
-  const referenced = new Set(
-    [...snapshots.values()].map((s) => s.prevId as string),
-  );
-  const tips = [...snapshots.keys()].filter((id) => !referenced.has(id));
+  const referenced = new Set([...own.values()].map((n) => n.prevId));
+  const tips = [...own.keys()].filter((id) => !referenced.has(id));
   if (tips.length !== 1)
     return {
       deleted,
@@ -123,18 +115,21 @@ export function readResetPrior(
         reason: `the branch's own snapshots end in ${tips.length} tips, not one`,
       },
     };
-  const tip = snapshots.get(tips[0]!)!;
-  let at = tip;
+  let at = own.get(tips[0]!)!;
   const seen = new Set<string>();
-  while (snapshots.has(at.prevId as string)) {
-    if (seen.has(at.id as string))
-      throw new Error(`branch-local snapshot chain loops at ${String(at.id)}`);
-    seen.add(at.id as string);
-    at = snapshots.get(at.prevId as string)!;
+  while (own.has(at.prevId)) {
+    if (seen.has(at.id))
+      throw new Error(`branch-local snapshot chain loops at ${at.id}`);
+    seen.add(at.id);
+    at = own.get(at.prevId)!;
   }
   return {
     deleted,
-    schema: { kind: "known", tip, baseId: at.prevId as string },
+    schema: {
+      kind: "known",
+      tip: (await bodies.body(tips[0]!)) as Snapshot,
+      baseId: at.prevId,
+    },
   };
 }
 
@@ -145,7 +140,8 @@ export type ResetLineage =
 
 /**
  * The `supersedes` header for the migration this reset just generated (its
- * snapshot at `freshSnapshotPath`), from what the reset deleted (`prior`).
+ * snapshot `fresh`, as drizzle-kit emitted it), from what the reset deleted
+ * (`prior`).
  *
  * A deleted hash back on disk is not superseded — the reset wrote the same
  * bytes again (a merge node is regenerated byte-identical). `reason` is null
@@ -156,7 +152,8 @@ export type ResetLineage =
 export async function resetLineage(
   migrationsDir: string,
   prior: ResetPrior,
-  freshSnapshotPath: string,
+  fresh: Snapshot,
+  bodies: SnapshotBodies,
 ): Promise<ResetLineage> {
   const onDisk = new Set(
     readdirSync(migrationsDir)
@@ -168,23 +165,17 @@ export async function resetLineage(
   if (prior.schema.kind === "unknown")
     return { kind: "none", reason: prior.schema.reason };
 
-  const fresh = readSnapshot(freshSnapshotPath);
   const nodes = await readSnapshotNodes(migrationsDir);
-  const pathOf = (id: string): string | null => {
-    const node = nodes.find((n) => n.id === id);
-    return node ? join(migrationsDir, "meta", node.file) : null;
-  };
-  const basePath = pathOf(prior.schema.baseId);
-  const theirsPath = pathOf(fresh.prevId as string);
-  if (basePath === null || theirsPath === null)
+  const isNode = (id: string) => nodes.some((n) => n.id === id);
+  if (!isNode(prior.schema.baseId) || !isNode(fresh.prevId as string))
     return {
       kind: "none",
-      reason: `the snapshot the branch forked from (${prior.schema.baseId}) or the one the new migration diffs against (${String(fresh.prevId)}) is not on disk`,
+      reason: `the snapshot the branch forked from (${prior.schema.baseId}) or the one the new migration diffs against (${String(fresh.prevId)}) is not a migration on disk`,
     };
   const merged = mergeSnapshots(
-    readSnapshot(basePath),
+    (await bodies.body(prior.schema.baseId)) as Snapshot,
     prior.schema.tip,
-    readSnapshot(theirsPath),
+    (await bodies.body(fresh.prevId as string)) as Snapshot,
   );
   if (!merged.ok)
     return {
@@ -252,6 +243,7 @@ export type ResetAdoption =
 export async function resetAdoption(
   migrationsDir: string,
   prior: ResetPrior,
+  bodies: SnapshotBodies,
 ): Promise<ResetAdoption> {
   if (prior.deleted.length === 0) return { kind: "none", reason: null };
   if (prior.schema.kind === "unknown")
@@ -266,28 +258,23 @@ export async function resetAdoption(
       kind: "none",
       reason: `the snapshot the branch forked from (${baseId}) is not on disk`,
     };
-  const cache = new Map<string, Snapshot>();
-  const load = (n: SnapshotNode): Snapshot => {
-    let snap = cache.get(n.id);
-    if (snap === undefined) {
-      snap = readSnapshot(join(migrationsDir, "meta", n.file));
-      cache.set(n.id, snap);
-    }
-    return snap;
-  };
-  const base = load(baseNode);
+  // Bodies come from the working tree or git (`bodies` caches them).
+  const load = async (n: SnapshotNode): Promise<Snapshot> =>
+    (await bodies.body(n.id)) as Snapshot;
+  const base = await load(baseNode);
   if (equivalentSnapshots(base, ours)) return { kind: "none", reason: null };
 
   // A node a run may hold: a phased schema migration (the runner adopts no
   // other kind), not a merge node, published after the fork.
+  const onDisk = new Set(readdirSync(migrationsDir));
   const runnableHash = (n: SnapshotNode): string | null => {
     if (n.mergeParents !== null) return null;
-    const tag = n.file.slice(0, -"_snapshot.json".length);
-    const m = NEW_FORMAT.exec(`${tag}.sql`);
+    const m = NEW_FORMAT.exec(n.file);
     if (!m) return null;
-    const sqlPath = join(migrationsDir, `${tag}.sql`);
-    if (!existsSync(sqlPath)) return null;
-    const parsed = parseMigration(readFileSync(sqlPath, "utf8"));
+    if (!onDisk.has(n.file)) return null;
+    const parsed = parseMigration(
+      readFileSync(join(migrationsDir, n.file), "utf8"),
+    );
     if (parsed.kind !== "phased" || parsed.adopts.length > 0) return null;
     return m[3]!;
   };
@@ -308,12 +295,13 @@ export async function resetAdoption(
 
   // The branch's delta replayed onto a snapshot, per snapshot id.
   const replayed = new Map<string, Snapshot | null>();
-  const replayOnto = (prev: SnapshotNode): Snapshot | null => {
+  const replayOnto = async (prev: SnapshotNode): Promise<Snapshot | null> => {
     if (!replayed.has(prev.id)) {
-      const r = mergeSnapshots(base, ours, load(prev));
+      const prevBody = await load(prev);
+      const r = mergeSnapshots(base, ours, prevBody);
       replayed.set(
         prev.id,
-        r.ok && !equivalentSnapshots(r.merged, load(prev)) ? r.merged : null,
+        r.ok && !equivalentSnapshots(r.merged, prevBody) ? r.merged : null,
       );
     }
     return replayed.get(prev.id)!;
@@ -330,8 +318,8 @@ export async function resetAdoption(
       run.unshift(at);
       const prev = dag.byId.get(at.prevId);
       if (prev === undefined) break;
-      const merged = replayOnto(prev);
-      if (merged !== null && equivalentSnapshots(merged, load(end)))
+      const merged = await replayOnto(prev);
+      if (merged !== null && equivalentSnapshots(merged, await load(end)))
         candidates.push([...run]);
       at = prev;
     }
@@ -344,9 +332,7 @@ export async function resetAdoption(
     };
   candidates.sort((a, b) => a.length - b.length);
   const chosen = candidates[0]!;
-  const files = chosen.map(
-    (n) => `${n.file.slice(0, -"_snapshot.json".length)}.sql`,
-  );
+  const files = chosen.map((n) => n.file);
   return {
     kind: "adopts",
     files,

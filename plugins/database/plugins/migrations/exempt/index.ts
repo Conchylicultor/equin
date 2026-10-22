@@ -14,6 +14,8 @@ export default [
       "core/internal/drizzle-stage.ts",
       "core/internal/published-immutable.ts",
       "core/internal/schema-load-probe.ts",
+      "core/internal/schema-snapshot.ts",
+      "core/internal/snapshot-bodies.ts",
       "core/internal/snapshot-dag.ts",
     ],
     kind: "debt",

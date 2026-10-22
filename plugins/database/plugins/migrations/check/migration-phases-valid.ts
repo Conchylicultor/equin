@@ -1,11 +1,12 @@
-import { existsSync, readdirSync, readFileSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import {
   classifyStatement,
-  mergeSnapshotParents,
   parseMigration,
   publishedMigrationBasenames,
   publishedMigrationRefsSignature,
+  schemaMigrationFiles,
+  snapshotLineage,
   splitStatements,
 } from "@plugins/database/plugins/migrations/core";
 // The runner's own planner validates the claims, so this check cannot drift
@@ -27,7 +28,6 @@ type Check = {
 };
 
 const DATA_DIR = join(import.meta.dir, "..", "data");
-const META_DIR = join(DATA_DIR, "meta");
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 
@@ -35,7 +35,7 @@ const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 export interface MigrationFile {
   file: string;
   sql: string;
-  /** True when a sibling `meta/<tag>_snapshot.json` exists. */
+  /** True when it is a schema migration (`isSchemaMigration`). */
   isSchema: boolean;
 }
 
@@ -50,12 +50,12 @@ export interface MigrationFile {
  *   expand statement as expand, a contract statement as contract. That is what
  *   the generator wrote, so a mismatch is a hand-edit or a stale file.
  *
- * - A merge node (a `merge-snapshot` header) must be a no-op: empty sections,
+ * - A merge node (a snapshot header with two or more parents) must be a no-op: empty sections,
  *   no claims and no supersedes. Its snapshot is a merge, not a diff, so any SQL
  *   in it would apply DDL no snapshot accounts for.
  *
  * And, over EVERY file (published too): an adoption file (an `adopts` header)
- * is snapshot-less and adopts only schema migrations (the runner's planner
+ * is not a schema migration and adopts only schema migrations (the runner's planner
  * checks each names an earlier phased file); a hash a `supersedes` header names must
  * not be a file on disk. A reset deletes what it supersedes; a superseded file
  * still present would run its DDL AND let the superseding file be adopted.
@@ -83,7 +83,7 @@ export function findPhaseErrors(
       continue;
     }
     if (
-      mergeSnapshotParents(m.sql) !== null &&
+      (snapshotLineage(m.sql)?.parents.length ?? 0) > 1 &&
       (parsed.expand !== "" ||
         parsed.contract !== "" ||
         parsed.claims.length > 0 ||
@@ -126,12 +126,12 @@ export function findPhaseErrors(
     if (parsed.adopts.length > 0) {
       if (m.isSchema)
         errors.push(
-          `${m.file}: an adoption file has no snapshot — it records, it changes no schema`,
+          `${m.file}: an adoption file is not a schema migration (no snapshot) — it records, it changes no schema`,
         );
       for (const h of parsed.adopts) {
         if (isSchemaByHash.get(h) === false)
           errors.push(
-            `${m.file}: adopts ${fileByHash.get(h)}, which is not a schema migration (it has no snapshot)`,
+            `${m.file}: adopts ${fileByHash.get(h)}, which is not a schema migration`,
           );
       }
     }
@@ -163,14 +163,13 @@ const check: Check = {
     const root = await getWorktreeRoot();
     const tracked = await publishedMigrationBasenames(root);
 
+    const schema = schemaMigrationFiles(DATA_DIR);
     const files = readdirSync(DATA_DIR)
       .filter((f) => MIGRATION_RE.test(f))
       .map((file) => ({
         file,
         sql: readFileSync(join(DATA_DIR, file), "utf8"),
-        isSchema: existsSync(
-          join(META_DIR, `${file.slice(0, -4)}_snapshot.json`),
-        ),
+        isSchema: schema.has(file),
       }));
     const errors = findPhaseErrors(files, tracked);
     // Claims: each resolves to exactly one earlier data migration, claimed once.

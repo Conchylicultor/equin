@@ -82,7 +82,7 @@ describe("upstreamMergeInstructions", () => {
     const text = upstreamMergeInstructions(base);
     // The build writes a merge node; the agent must not mistake it for noise.
     expect(text).toContain("merge node");
-    expect(text).toContain("singularity:merge-snapshot");
+    expect(text).toContain("singularity:snapshot id=");
     // Stop and report, verbatim, on either failure mode.
     expect(text).toContain("snapshot merge conflict");
     expect(text).toContain("migration-applies-clean");

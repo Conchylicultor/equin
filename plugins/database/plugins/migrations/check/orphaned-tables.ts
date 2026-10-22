@@ -6,6 +6,7 @@ import {
   IMPERATIVE_PUBLIC_TABLE_NAMES,
   MIGRATIONS_TABLE_NAME,
 } from "@plugins/database/plugins/derived-views/core";
+import { SCHEMA_SNAPSHOT_FILE } from "@plugins/database/plugins/migrations/core";
 import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { z } from "zod";
@@ -84,17 +85,13 @@ export function pendingMigrationFiles(
     .sort((a, b) => a.localeCompare(b));
 }
 
-// Read the latest drizzle snapshot (lexicographically-greatest *_snapshot.json,
-// timestamp-prefixed) and parse out the declared table-name set.
+// Read the head drizzle snapshot (meta/schema.snapshot.json, the snapshot
+// DAG's tip — snapshot-chain-intact pins it) and parse out the declared
+// table-name set.
 function loadDeclaredTables(): Set<string> {
-  const snapshots = readdirSync(META_DIR)
-    .filter((f) => f.endsWith("_snapshot.json"))
-    .sort();
-  const latest = snapshots.at(-1);
-  if (!latest) {
-    throw new Error(`no *_snapshot.json found in ${META_DIR}`);
-  }
-  const parsed = JSON.parse(readFileSync(join(META_DIR, latest), "utf8"));
+  const parsed = JSON.parse(
+    readFileSync(join(META_DIR, SCHEMA_SNAPSHOT_FILE), "utf8"),
+  );
   return declaredTablesFromSnapshot(parsed);
 }
 

@@ -1,5 +1,10 @@
 import { readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
+import {
+  MIGRATIONS_DATA_DIR,
+  readLegacySnapshots,
+  readSnapshotNodes,
+} from "@plugins/database/plugins/migrations/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -8,46 +13,64 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 // ---------------------------------------------------------------------------
 // Pure classifier (no fs/git) — exported for unit testing.
 //
-// The migration store is three artifact families keyed by the same <tag>:
+// The migration store keys three things by the same <tag>:
 //   J = journal tags (meta/_journal.json entries[].tag)
 //   S = .sql tags    (data/*.sql, minus .sql)
-//   N = snapshot tags (data/meta/*_snapshot.json, minus _snapshot.json)
+//   L = legacy tags  (meta/legacy-snapshots.json keys: pre-cutover schema
+//                     migrations, whose lineage lives there)
+// plus the snapshot ids new schema migrations name in their headers.
 //
 // Invariants asserted:
 //   - J === S : every journal entry has a backing .sql, and every .sql has a
 //     journal entry. Reported as two diffs:
 //       orphanSql     = S \ J  (.sql with no journal entry)
 //       orphanJournal = J \ S  (journal entry with no .sql)
-//   - N ⊆ J   : every snapshot maps to a real migration:
-//       orphanSnapshot = N \ J  (snapshot with no journal entry / no .sql)
+//   - L ⊆ S   : every legacy entry maps to a real migration:
+//       orphanLegacy  = L \ S
+//   - every header id is unique:
+//       duplicateHeaderIds = ids two or more .sql headers name
 //
-// Intentionally NOT asserted: J ⊆ N. Data/backfill migrations legitimately
-// carry no snapshot (that contract is owned by data-migration-dml-only), so a
-// .sql without a snapshot must never be flagged.
+// Intentionally NOT asserted: S ⊆ L ∪ headers. Data/backfill migrations
+// legitimately carry no lineage (that contract is owned by
+// data-migration-dml-only), so a .sql without one must never be flagged.
 // ---------------------------------------------------------------------------
 export function classifyMigrationMetadata(
   journalTags: Iterable<string>,
   sqlTags: Iterable<string>,
-  snapshotTags: Iterable<string>,
-): { orphanSql: string[]; orphanJournal: string[]; orphanSnapshot: string[] } {
+  legacyTags: Iterable<string>,
+  headerIds: Iterable<{ tag: string; id: string }>,
+): {
+  orphanSql: string[];
+  orphanJournal: string[];
+  orphanLegacy: string[];
+  duplicateHeaderIds: { id: string; tags: string[] }[];
+} {
   const J = new Set(journalTags);
   const S = new Set(sqlTags);
-  const N = new Set(snapshotTags);
+  const L = new Set(legacyTags);
 
   const orphanSql = [...S].filter((t) => !J.has(t)).sort();
   const orphanJournal = [...J].filter((t) => !S.has(t)).sort();
-  const orphanSnapshot = [...N].filter((t) => !J.has(t)).sort();
+  const orphanLegacy = [...L].filter((t) => !S.has(t)).sort();
 
-  return { orphanSql, orphanJournal, orphanSnapshot };
+  const byId = new Map<string, string[]>();
+  for (const { tag, id } of headerIds)
+    byId.set(id, [...(byId.get(id) ?? []), tag]);
+  const duplicateHeaderIds = [...byId]
+    .filter(([, tags]) => tags.length > 1)
+    .map(([id, tags]) => ({ id, tags: tags.sort() }))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+
+  return { orphanSql, orphanJournal, orphanLegacy, duplicateHeaderIds };
 }
 
 const check: Check = {
   id: "migration-metadata-consistent",
   description:
-    "journal entries, .sql files, and meta snapshots cross-reference each other",
+    "journal entries, .sql files, legacy snapshot entries and snapshot headers cross-reference each other",
   async run() {
     const root = await getWorktreeRoot();
-    const dir = resolve(root, "plugins/database/plugins/migrations/data");
+    const dir = resolve(root, MIGRATIONS_DATA_DIR);
     const metaDir = join(dir, "meta");
 
     const journal = JSON.parse(readFileSync(join(metaDir, "_journal.json"), "utf8"));
@@ -57,17 +80,20 @@ const check: Check = {
       .filter((f) => f.endsWith(".sql"))
       .map((f) => f.slice(0, -".sql".length));
 
-    const snapshotTags = readdirSync(metaDir)
-      .filter((f) => f.endsWith("_snapshot.json"))
-      .map((f) => f.slice(0, -"_snapshot.json".length));
+    const legacyTags = [...(readLegacySnapshots(dir)?.keys() ?? [])];
+    const headerIds = (await readSnapshotNodes(dir))
+      .filter((n) => n.lineage === "header")
+      .map((n) => ({ tag: n.file.slice(0, -".sql".length), id: n.id }));
 
-    const { orphanSql, orphanJournal, orphanSnapshot } = classifyMigrationMetadata(
-      journalTags,
-      sqlTags,
-      snapshotTags,
-    );
+    const { orphanSql, orphanJournal, orphanLegacy, duplicateHeaderIds } =
+      classifyMigrationMetadata(journalTags, sqlTags, legacyTags, headerIds);
 
-    if (orphanSql.length === 0 && orphanJournal.length === 0 && orphanSnapshot.length === 0) {
+    if (
+      orphanSql.length === 0 &&
+      orphanJournal.length === 0 &&
+      orphanLegacy.length === 0 &&
+      duplicateHeaderIds.length === 0
+    ) {
       return { ok: true };
     }
 
@@ -84,17 +110,27 @@ const check: Check = {
           orphanJournal.map((t) => `  ${t}`).join("\n"),
       );
     }
-    if (orphanSnapshot.length > 0) {
+    if (orphanLegacy.length > 0) {
       sections.push(
-        "meta snapshots with no journal entry / no .sql:\n" +
-          orphanSnapshot.map((t) => `  meta/${t}_snapshot.json`).join("\n"),
+        "meta/legacy-snapshots.json entries with no .sql file:\n" +
+          orphanLegacy.map((t) => `  ${t}`).join("\n"),
+      );
+    }
+    if (duplicateHeaderIds.length > 0) {
+      sections.push(
+        "snapshot ids named by more than one migration header:\n" +
+          duplicateHeaderIds
+            .map(
+              (d) => `  ${d.id}: ${d.tags.map((t) => `${t}.sql`).join(", ")}`,
+            )
+            .join("\n"),
       );
     }
 
     return {
       ok: false,
       message:
-        "migration metadata is inconsistent (journal ↔ .sql ↔ snapshot must cross-reference):\n" +
+        "migration metadata is inconsistent (journal ↔ .sql ↔ snapshot lineage must cross-reference):\n" +
         sections.join("\n\n"),
       hint:
         "Migration metadata must stay mutually consistent. For an orphan .sql or " +
@@ -102,9 +138,9 @@ const check: Check = {
         "the journal is derived from the .sql filenames and is regenerated unconditionally " +
         "on every run, so a plain build repairs both. Do NOT reach for " +
         "`--reset-migration` — it drops branch-local SCHEMA migrations and does not " +
-        "repair an orphan .sql. For an orphan snapshot, delete the " +
-        "meta/<tag>_snapshot.json and relink the next snapshot's prevId to the deleted " +
-        "snapshot's prevId so the chain stays linear (see snapshot-chain-intact).",
+        "repair an orphan .sql. A legacy entry without its .sql, or two headers naming " +
+        "one snapshot, means a published migration was deleted or a header hand-edited: " +
+        "restore the files from git (see published-migrations-immutable).",
     };
   },
 };

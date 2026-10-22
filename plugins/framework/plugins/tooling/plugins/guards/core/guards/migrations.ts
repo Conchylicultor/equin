@@ -38,7 +38,7 @@ export const migrationsGuard = defineGuard<BashInput>({
     if (rmMigration) {
       return {
         blocked: "Refusing to delete migration files directly.",
-        why: "Migration SQL files and snapshots are managed exclusively by `./singularity build` — never by hand. Deleting them manually breaks the snapshot chain for every downstream agent and leaves the DB schema in an inconsistent state.",
+        why: "Migration SQL files and their snapshot lineage (meta/schema.snapshot.json, meta/legacy-snapshots.json, each schema migration's snapshot header) are managed exclusively by `./singularity build` — never by hand. Deleting them manually breaks the snapshot chain for every downstream agent and leaves the DB schema in an inconsistent state.",
         hint: "To remove a table or plugin that has a DB migration:\n  1. Remove the table(s) from the plugin's schema.ts.\n  2. Run: ./singularity build --migration-name remove_<plugin_name>\n     Drizzle will generate a DROP TABLE migration automatically and keep the snapshot chain intact.\n\nIf you hit a snapshot-chain Y-fork after rebasing onto main, run:\n  ./singularity build --reset-migration --migration-name <slug>\nThat drops this branch's schema migration files (anything not yet on a published main — local main or <remote>/main) and regenerates them against the new tip.\n\nNever edit, delete or rename a published migration: the published-migrations-immutable check fails the build on it.",
       };
     }

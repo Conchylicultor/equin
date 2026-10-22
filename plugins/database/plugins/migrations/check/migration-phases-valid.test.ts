@@ -66,16 +66,19 @@ describe("findPhaseErrors", () => {
   });
 
   test("a merge node (empty phased file behind its header) is valid", () => {
-    const merge = renderMergeSnapshotMigration([
-      "11111111-1111-4111-8111-111111111111",
-      "22222222-2222-4222-8222-222222222222",
-    ]);
+    const merge = renderMergeSnapshotMigration({
+      id: "33333333-3333-5333-8333-333333333333",
+      parents: [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222",
+      ],
+    });
     expect(findPhaseErrors([schema(SCHEMA, merge)], new Set())).toEqual([]);
   });
 
   test("a merge node carrying SQL is refused", () => {
     const merge =
-      "-- singularity:merge-snapshot parents=11111111-1111-4111-8111-111111111111,22222222-2222-4222-8222-222222222222\n" +
+      "-- singularity:snapshot id=33333333-3333-5333-8333-333333333333 parents=11111111-1111-4111-8111-111111111111,22222222-2222-4222-8222-222222222222\n" +
       phased('ALTER TABLE "agents" ADD COLUMN "icon" text;', "", []);
     expect(findPhaseErrors([schema(SCHEMA, merge)], new Set())).toEqual([
       expect.stringContaining("a merge node must be a no-op"),
@@ -130,7 +133,9 @@ describe("findPhaseErrors — adoption files", () => {
         [data(DATA), schema(SCHEMA, GOOD), adoption("eeeeeeee", true)],
         new Set(),
       ),
-    ).toEqual([expect.stringContaining("an adoption file has no snapshot")]);
+    ).toEqual([
+      expect.stringContaining("an adoption file is not a schema migration"),
+    ]);
     expect(
       findPhaseErrors([data(DATA), adoption("dddddddd", false)], new Set()),
     ).toEqual([expect.stringContaining("which is not a schema migration")]);

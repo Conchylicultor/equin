@@ -60,6 +60,8 @@ export type Check = (label: string, ok: boolean, detail?: string) => void;
 const DATA = "plugins/database/plugins/migrations/data";
 const META = `${DATA}/meta`;
 const JOURNAL = "_journal.json";
+/** The live tip snapshot: rewritten (never added) by every schema migration. */
+const TIP = `${META}/schema.snapshot.json`;
 
 /** Probe schema files: matched by drizzle.config's `tables-*.ts` glob. */
 const UPSTREAM_PROBE =
@@ -200,6 +202,12 @@ function added(
 
 const sqlOf = (files: Map<string, string>): string[] =>
   [...files.keys()].filter((p) => p.endsWith(".sql")).sort();
+
+/** Whether the tip snapshot differs between two file maps (a new schema tip). */
+const retipped = (
+  before: Map<string, string>,
+  after: Map<string, string>,
+): boolean => after.has(TIP) && before.get(TIP) !== after.get(TIP);
 
 const basename = (p: string): string => p.split("/").pop()!;
 
@@ -558,10 +566,13 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
     throw new HarnessError(`upstream's generate failed:${tail(upGen)}`);
   }
   await commitAll(upWt, "upstream: e2e_upstream_probe");
-  const upstreamPublished = added(baseFiles, await filesAt(upWt, "main"));
+  const upMain = await filesAt(upWt, "main");
+  const upstreamPublished = added(baseFiles, upMain);
   check(
-    "upstream published exactly one schema migration",
-    sqlOf(upstreamPublished).length === 1 && upstreamPublished.size === 2,
+    "upstream published exactly one schema migration (one .sql added, the tip snapshot rewritten)",
+    sqlOf(upstreamPublished).length === 1 &&
+      upstreamPublished.size === 1 &&
+      retipped(baseFiles, upMain),
     [...upstreamPublished.keys()].map(basename).join(", "),
   );
 
@@ -580,10 +591,13 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
   const own = await push(ctx, "clone-own");
   if (own.exitCode !== 0)
     throw new HarnessError(`clone-own's push failed:${tail(own)}`);
-  const cloneLanded = added(baseFiles, await filesAt(cloneWt, "main"));
+  const cloneMain = await filesAt(cloneWt, "main");
+  const cloneLanded = added(baseFiles, cloneMain);
   check(
-    "exactly one clone schema migration landed on local main",
-    sqlOf(cloneLanded).length === 1 && cloneLanded.size === 2,
+    "exactly one clone schema migration landed on local main (one .sql added, the tip snapshot rewritten)",
+    sqlOf(cloneLanded).length === 1 &&
+      cloneLanded.size === 1 &&
+      retipped(baseFiles, cloneMain),
     [...cloneLanded.keys()].map(basename).join(", "),
   );
   console.log(`    landed: ${sqlOf(cloneLanded).map(basename).join(", ")}`);
@@ -656,14 +670,15 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
     const r = await cli(ctx, cloneWt, ["check", id]);
     check(`\`check ${id}\` passes`, r.exitCode === 0, tail(r));
   }
-  const fresh = added(
-    new Map([...mainFiles, ...originFiles]),
-    await filesOnDisk(cloneWt),
-  );
+  const onDisk = await filesOnDisk(cloneWt);
+  const fresh = added(new Map([...mainFiles, ...originFiles]), onDisk);
   const freshSql = sqlOf(fresh);
   check(
-    "exactly one new migration (with its snapshot)",
-    freshSql.length === 1 && fresh.size === 2,
+    "exactly one new migration (and the tip snapshot rewritten as the merge)",
+    freshSql.length === 1 &&
+      fresh.size === 1 &&
+      retipped(mainFiles, onDisk) &&
+      retipped(originFiles, onDisk),
     [...fresh.keys()].map(basename).join(", ") || "(none)",
   );
   if (freshSql.length === 1) {
@@ -672,8 +687,8 @@ async function journey(ctx: Ctx, pristine: boolean): Promise<void> {
       .split("\n")
       .filter((l) => l.trim() && !l.trimStart().startsWith("--"));
     check(
-      "the merge node's SQL is the no-op merge-snapshot header",
-      /--\s*singularity:merge-snapshot parents=/.test(sql) &&
+      "the merge node's SQL is the no-op two-parent snapshot header",
+      /^-- singularity:snapshot id=\S+ parents=\S+,\S+$/m.test(sql) &&
         statements.length === 0,
       `\n      ${sql.split("\n").join("\n      ")}`,
     );

@@ -285,6 +285,10 @@ describe("phaseGeneratedMigrations", () => {
   const OLD_DATA = "20260901_000000_bbbbbbbb__claimed_already";
   const PRIOR_SCHEMA = "20260901_000100_cccccccc__prior_schema";
   const NEW_DATA = "20260902_000000_dddddddd__remap_icons";
+  const LINEAGE = {
+    id: "22222222-2222-4222-8222-222222222222",
+    parents: ["11111111-1111-4111-8111-111111111111"],
+  };
 
   function withDataDir(run: (dir: string) => void): void {
     const dir = mkdtempSync(join(tmpdir(), "sing-phase-"));
@@ -296,9 +300,14 @@ describe("phaseGeneratedMigrations", () => {
     }
   }
 
+  // A schema migration from before the snapshot cutover: its lineage is a
+  // meta/legacy-snapshots.json entry, not a header.
   function schemaFile(dir: string, tag: string, body: string): void {
     writeFileSync(join(dir, `${tag}.sql`), body);
-    writeFileSync(join(dir, "meta", `${tag}_snapshot.json`), "{}");
+    writeFileSync(
+      join(dir, "meta", "legacy-snapshots.json"),
+      JSON.stringify({ [tag]: { id: "x", prevId: "y" } }),
+    );
   }
 
   test("phases the fresh file and claims only unclaimed branch-local data migrations", () => {
@@ -315,10 +324,16 @@ describe("phaseGeneratedMigrations", () => {
         'ALTER TABLE "agents" ADD COLUMN "icon" text NOT NULL;--> statement-breakpoint\nALTER TABLE "agents" DROP COLUMN IF EXISTS "icon_svg_nodes";';
       writeFileSync(join(dir, "0NaN_swap_icons.sql"), fresh);
 
-      phaseGeneratedMigrations(dir, new Set([`${MAIN_DATA}.sql`]), null);
+      phaseGeneratedMigrations(
+        dir,
+        new Set([`${MAIN_DATA}.sql`]),
+        null,
+        LINEAGE,
+      );
 
       expect(readFileSync(join(dir, "0NaN_swap_icons.sql"), "utf8")).toBe(
         [
+          `-- singularity:snapshot id=${LINEAGE.id} parents=${LINEAGE.parents[0]}`,
           "-- singularity:phase expand",
           'ALTER TABLE "agents" ADD COLUMN "icon" text;',
           "-- singularity:phase contract",
@@ -335,7 +350,7 @@ describe("phaseGeneratedMigrations", () => {
   test("leaves every already-named file untouched", () => {
     withDataDir((dir) => {
       writeFileSync(join(dir, `${NEW_DATA}.sql`), "UPDATE a SET b = 3;\n");
-      phaseGeneratedMigrations(dir, new Set(), null);
+      phaseGeneratedMigrations(dir, new Set(), null, LINEAGE);
       expect(readFileSync(join(dir, `${NEW_DATA}.sql`), "utf8")).toBe(
         "UPDATE a SET b = 3;\n",
       );
@@ -346,9 +361,9 @@ describe("phaseGeneratedMigrations", () => {
     withDataDir((dir) => {
       const fresh = 'DROP VIEW "public"."agents_v";';
       writeFileSync(join(dir, "0NaN_bad.sql"), fresh);
-      expect(() => phaseGeneratedMigrations(dir, new Set(), null)).toThrow(
-        /DROP VIEW "public"\."agents_v"/,
-      );
+      expect(() =>
+        phaseGeneratedMigrations(dir, new Set(), null, LINEAGE),
+      ).toThrow(/DROP VIEW "public"\."agents_v"/);
       expect(readFileSync(join(dir, "0NaN_bad.sql"), "utf8")).toBe(fresh);
     });
   });

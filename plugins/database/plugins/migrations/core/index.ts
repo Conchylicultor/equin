@@ -28,12 +28,13 @@ export type { DrizzleGenerateOptions } from "./internal/drizzle-cli";
 // The phased-migration file grammar, shared by the generator (cli) and the
 // runner (server). See research/2026-09-29-global-phased-migrations.md.
 export {
-  mergeSnapshotParents,
   migrationClaimId,
   parseMigration,
   renderAdoptionMigration,
   renderMergeSnapshotMigration,
   renderPhasedMigration,
+  renderSnapshotHeader,
+  snapshotLineage,
 } from "./internal/phases";
 // The snapshot DAG (prevId edges + merge-node parents): one definition of its
 // edges for the CLI's tip join and the snapshot-chain-intact check, and the
@@ -45,6 +46,7 @@ export {
   declaredParents,
   NULL_SNAPSHOT_ID,
   readSnapshotNodes,
+  schemaSnapshotState,
   snapshotAncestors,
 } from "./internal/snapshot-dag";
 export type {
@@ -52,14 +54,43 @@ export type {
   SnapshotDagProblem,
   SnapshotNode,
 } from "./internal/snapshot-dag";
+// The files under data/meta/ that record the chain — the live tip body
+// (`schema.snapshot.json`), the frozen pre-cutover lineage
+// (`legacy-snapshots.json`) — and THE schema-migration predicate every
+// consumer asks instead of looking for a sibling snapshot. See
+// research/2026-10-22-global-single-live-migration-snapshot.md.
+export {
+  isSchemaMigration,
+  legacySnapshotFiles,
+  legacySnapshotsPath,
+  readLegacySnapshots,
+  readSnapshotHead,
+  renderLegacySnapshots,
+  SCHEMA_SNAPSHOT_FILE,
+  schemaMigrationFiles,
+  schemaSnapshotPath,
+} from "./internal/schema-snapshot";
+// The 3-way snapshot merge, and a merge node's body as a pure function of its
+// parents: the CLI's tip join writes it, the body resolver recomputes it.
+export {
+  equivalentSnapshots,
+  formatSnapshotConflict,
+  mergeSnapshots,
+} from "./internal/snapshot-merge";
+export type { Snapshot, SnapshotConflict } from "./internal/snapshot-merge";
+export { foldMergeParents, mergeNodeSnapshotText } from "./internal/merge-node";
+// Historical snapshot bodies, from the working tree, a merge node's parents, or git.
+export { snapshotBodies } from "./internal/snapshot-bodies";
+export type { SnapshotBodies } from "./internal/snapshot-bodies";
 export {
   stageDrizzleOut,
   UnjoinedSnapshotTipsError,
 } from "./internal/drizzle-stage";
-export type { DrizzleStage } from "./internal/drizzle-stage";
+export type { DrizzleStage, EmittedSnapshot } from "./internal/drizzle-stage";
 export type {
   ParsedMigration,
   PhasedMigration,
+  SnapshotLineage,
   Supersession,
 } from "./internal/phases";
 // The one statement splitter for migration SQL (comment/literal/dollar-quote

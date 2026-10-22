@@ -8,8 +8,13 @@
  * behind R": a stale branch has every file of its merge-base untouched.
  *
  * Covered: every `.sql` (its sha8 is the runner's ledger key in every deployed
- * DB) and every `meta/*_snapshot.json` (a link of someone's snapshot chain).
+ * DB, and a schema migration's snapshot header — its lineage — is inside those
+ * bytes), and every entry of `meta/legacy-snapshots.json` (the lineage of a
+ * pre-cutover schema migration): each `<tag>` present at the merge-base must be
+ * in the working tree's file with the same `id` / `prevId`.
  * Not covered:
+ * - `meta/schema.snapshot.json` — the live tip body, rewritten by every new
+ *   schema migration; its id is pinned to the DAG tip by `snapshot-chain-intact`.
  * - `meta/_journal.json` — derived from the `.sql` names and regenerated on
  *   every build, so it legitimately changes whenever a migration is added.
  * - `meta/_*_answers.json` — create-vs-rename history for a migration's
@@ -24,11 +29,17 @@
 import { createHash } from "crypto";
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import {
   MIGRATIONS_DATA_DIR,
   migrationTreeAt,
   publishedMergeBases,
 } from "./published";
+import {
+  LEGACY_SNAPSHOTS_FILE,
+  parseLegacySnapshots,
+  readLegacySnapshots,
+} from "./schema-snapshot";
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 
@@ -65,6 +76,15 @@ export type PublishedMigrationViolation =
   | { kind: "missing"; path: string; refs: string[] }
   | { kind: "modified"; path: string; refs: string[] }
   | {
+      kind: "legacy-entry";
+      /** `meta/legacy-snapshots.json`, repo-relative. */
+      path: string;
+      tag: string;
+      refs: string[];
+      /** What the working tree has for `tag` instead: another lineage, or nothing. */
+      now: "changed" | "missing";
+    }
+  | {
       kind: "hash-mismatch";
       path: string;
       refs: string[];
@@ -72,12 +92,16 @@ export type PublishedMigrationViolation =
       contentHash: string;
     };
 
-// Repo-relative path → is it one of the immutable kinds (see the docblock).
+// Repo-relative path → is it an immutable file (see the docblock).
 function isImmutablePath(path: string): boolean {
   const rel = path.slice(MIGRATIONS_DATA_DIR.length + 1);
-  if (!rel.includes("/")) return rel.endsWith(".sql");
-  return rel.startsWith("meta/") && rel.endsWith("_snapshot.json");
+  return !rel.includes("/") && rel.endsWith(".sql");
 }
+
+const LEGACY_PATH = `${MIGRATIONS_DATA_DIR}/meta/${LEGACY_SNAPSHOTS_FILE}`;
+
+// Wedge-breaker for one local `git show`.
+const GIT_TIMEOUT_MS = 60_000;
 
 // git's blob id of `bytes`, in the repo's object format (sha1: 40 hex chars,
 // sha256: 64) — computed in-process rather than one `git hash-object` per file.
@@ -115,8 +139,16 @@ export async function findPublishedMigrationViolations(
     string,
     { path: string; blob: string; refs: Set<string> }
   >();
+  // tag → its published lineage (`id prevId`) → refs; a legacy-snapshots.json
+  // blob is read once however many bases share it.
+  const legacyExpected = new Map<string, Map<string, Set<string>>>();
+  const legacyBlobs = new Map<string, string[]>();
   for (const { mergeBase, refs } of await publishedMergeBases(root)) {
     for (const { path, blob } of await migrationTreeAt(root, mergeBase)) {
+      if (path === LEGACY_PATH) {
+        legacyBlobs.set(blob, [...(legacyBlobs.get(blob) ?? []), ...refs]);
+        continue;
+      }
       if (!isImmutablePath(path)) continue;
       const key = `${path}\0${blob}`;
       const entry = expected.get(key) ?? { path, blob, refs: new Set() };
@@ -158,8 +190,48 @@ export async function findPublishedMigrationViolations(
   const violations = verdicts.filter(
     (v): v is PublishedMigrationViolation => v !== null,
   );
+
+  for (const [blob, refs] of legacyBlobs) {
+    const text = (
+      await spawnExpectOk(["git", "cat-file", "blob", blob], {
+        cwd: root,
+        timeoutMs: GIT_TIMEOUT_MS,
+      })
+    ).stdout;
+    for (const [tag, head] of parseLegacySnapshots(
+      text,
+      `${LEGACY_PATH}@${blob}`,
+    )) {
+      const lineage = `${head.id} ${head.prevId}`;
+      const byLineage =
+        legacyExpected.get(tag) ?? new Map<string, Set<string>>();
+      const set = byLineage.get(lineage) ?? new Set<string>();
+      for (const r of refs) set.add(r);
+      byLineage.set(lineage, set);
+      legacyExpected.set(tag, byLineage);
+    }
+  }
+  if (legacyExpected.size > 0) {
+    const now = readLegacySnapshots(join(root, MIGRATIONS_DATA_DIR));
+    for (const [tag, byLineage] of legacyExpected) {
+      const head = now?.get(tag);
+      for (const [lineage, refs] of byLineage) {
+        if (head !== undefined && `${head.id} ${head.prevId}` === lineage)
+          continue;
+        violations.push({
+          kind: "legacy-entry",
+          path: LEGACY_PATH,
+          tag,
+          refs: [...refs],
+          now: head === undefined ? "missing" : "changed",
+        });
+      }
+    }
+  }
+  const key = (v: PublishedMigrationViolation) =>
+    v.kind === "legacy-entry" ? `${v.path}#${v.tag}` : v.path;
   return violations.sort((a, b) =>
-    a.path < b.path ? -1 : a.path > b.path ? 1 : 0,
+    key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0,
   );
 }
 
@@ -180,6 +252,8 @@ export function formatPublishedMigrationViolations(
           return `  modified ${v.path} ${on}`;
         case "hash-mismatch":
           return `  hash     ${v.path} ${on}: filename sha8 ${v.filenameHash}, content sha8 ${v.contentHash}`;
+        case "legacy-entry":
+          return `  lineage  ${v.path} "${v.tag}" ${v.now === "missing" ? "removed" : "changed"} ${on}`;
       }
     })
     .join("\n");
@@ -188,7 +262,8 @@ export function formatPublishedMigrationViolations(
 /** The fix, stated once for every surface that reports a violation. */
 export const PUBLISHED_MIGRATION_HINT =
   "A migration on any `main` this checkout knows of (local `main` or `<remote>/main`) is published:\n" +
-  "deployed databases record its sha8, and its snapshot is a link of the chain. Never edit, delete\n" +
-  "or rename one. Restore the listed files from the named ref, e.g.\n" +
+  "deployed databases record its sha8, and its lineage (its .sql's snapshot header, or its\n" +
+  "meta/legacy-snapshots.json entry) is a link of the chain. Never edit, delete or rename one.\n" +
+  "Restore the listed files from the named ref, e.g.\n" +
   `  git checkout main -- ${MIGRATIONS_DATA_DIR}/<file>\n` +
   "and change the schema with a NEW migration instead (edit schema.ts, then ./singularity build).";

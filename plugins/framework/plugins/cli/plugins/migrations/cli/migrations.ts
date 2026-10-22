@@ -29,20 +29,31 @@ import { join, resolve } from "path";
 // data/ is this branch's own.
 import {
   drizzleGenerateArgv,
+  type EmittedSnapshot,
+  isSchemaMigration,
+  LOCAL_MAIN_REF,
   migrationClaimId,
-  MIGRATIONS_DATA_DIR,
   migrationContentHash,
+  MIGRATIONS_DATA_DIR,
   MIGRATIONS_PLUGIN_DIR,
   parseMigration,
   phaseStatements,
   publishedMigrationOrigins,
   renderAdoptionMigration,
   renderPhasedMigration,
+  renderSnapshotHeader,
   renderStatements,
+  SCHEMA_SNAPSHOT_FILE,
   schemaLoadFailures,
+  schemaMigrationFiles,
+  schemaSnapshotPath,
+  type Snapshot,
+  snapshotBodies,
+  type SnapshotLineage,
   stageDrizzleOut,
   type Supersession,
 } from "@plugins/database/plugins/migrations/core";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   promptKey,
   runDrizzleKitWithPrompts,
@@ -61,6 +72,7 @@ import {
   resetLineage,
   type ResetPrior,
 } from "./reset-lineage";
+import { dropLegacyEntries, settleSnapshotFiles } from "./snapshot-files";
 
 // The interactive drizzle-kit runner (the CLI's one sanctioned streaming-stdio
 // child) and its prompt model live in ./migrations-interactive.ts; re-exported
@@ -314,6 +326,11 @@ export async function generateMigration(opts: {
   const origins = await publishedMigrationOrigins(root);
   const published: ReadonlySet<string> = new Set(origins.keys());
 
+  // Snapshot bodies by id: only the tip is on disk, older ones are in git.
+  // One resolver for the whole run, so a body read before the reset (or
+  // before a join overwrites the tip) stays answerable after it.
+  const bodies = snapshotBodies(root, migrationsDir);
+
   // Regen mode (resetMigration with no positional answers) replays the persisted
   // create-vs-rename decisions. Read the branch-local sidecars NOW — before the
   // reset below deletes them — so a re-emitted prompt resolves by entity identity.
@@ -327,8 +344,8 @@ export async function generateMigration(opts: {
   // so a database that applied them adopts it instead of re-running its DDL.
   let resetPrior: ResetPrior | null = null;
   if (resetMigration) {
-    resetPrior = readResetPrior(migrationsDir, published);
-    resetBranchLocalMigrations(migrationsDir, published);
+    resetPrior = await readResetPrior(migrationsDir, published, bodies);
+    await resetBranchLocalMigrations(root, migrationsDir, published);
   }
 
   // Self-heal the filename-hash == content-hash invariant for branch-local data
@@ -345,7 +362,7 @@ export async function generateMigration(opts: {
   // diff against the join. A branch-local tip (a rebase Y-fork) or a real
   // conflict stops here with the resolution, having written nothing.
   try {
-    const joined = await joinSnapshotTips(migrationsDir, origins);
+    const joined = await joinSnapshotTips(migrationsDir, origins, bodies);
     if (joined.kind === "joined") {
       console.log(
         `  wrote merge node ${joined.file} (joins snapshots ${joined.parents.join(", ")})`,
@@ -357,6 +374,19 @@ export async function generateMigration(opts: {
     console.error(`\nError: ${err.message}\n`);
     process.exit(1);
   }
+
+  // data/meta/ in its one shape: the tip's body in schema.snapshot.json, no
+  // per-migration snapshot left (the cutover, when there are — see
+  // ./snapshot-files.ts). After the join, so the tip is single.
+  const settled = await settleSnapshotFiles(migrationsDir, bodies);
+  if (settled.folded.length > 0)
+    console.log(
+      `  folded ${settled.folded.length} per-migration snapshot(s) into meta/legacy-snapshots.json`,
+    );
+  if (settled.wroteTip !== null)
+    console.log(
+      `  wrote meta/${SCHEMA_SNAPSHOT_FILE} (the snapshot DAG's tip, ${settled.wroteTip})`,
+    );
 
   // Re-establish journal↔filename consistency before anything else runs. Two
   // paths get NO other regen: every abort between here and `renameMigrations`
@@ -405,6 +435,10 @@ export async function generateMigration(opts: {
   });
 
   let result: Awaited<ReturnType<typeof runDrizzleKitWithPrompts>>;
+  // What drizzle-kit wrote beside a new migration. Held in memory, never put
+  // in data/ until the migration is kept: every discard below then has no
+  // snapshot to restore.
+  let emitted: EmittedSnapshot | null;
   try {
     result = await runDrizzleKitWithPrompts({
       cmd,
@@ -422,7 +456,7 @@ export async function generateMigration(opts: {
       keyedAnswers,
       echo: true,
     });
-    stage.moveEmittedInto(migrationsDir);
+    emitted = stage.moveEmittedInto(migrationsDir).snapshot;
   } finally {
     stage.dispose();
   }
@@ -557,7 +591,7 @@ export async function generateMigration(opts: {
     // ones has not run. Name them in an adoption file, so such a database
     // records them instead of redoing their DDL.
     if (resetPrior !== null) {
-      const adoption = await resetAdoption(migrationsDir, resetPrior);
+      const adoption = await resetAdoption(migrationsDir, resetPrior, bodies);
       if (adoption.kind === "adopts") {
         const file = writeAdoptionMigration(
           migrationsDir,
@@ -603,13 +637,21 @@ export async function generateMigration(opts: {
   // matches the phased body. A --custom data migration is never phased: it is
   // what gets claimed.
   if (!customMigration) {
+    if (emitted === null) {
+      discardGenerated(migrationsDir, added);
+      console.error(
+        `\nError: drizzle-kit generated ${added.join(", ")} but no snapshot beside it — nothing to record as the new tip.\n` +
+          "AGENT: Stop here and report this to the user.",
+      );
+      process.exit(1);
+    }
     let supersedes: Supersession | null = null;
-    const fresh = freshSchemaMigration(migrationsDir);
-    if (resetPrior !== null && fresh !== null) {
+    if (resetPrior !== null) {
       const lineage = await resetLineage(
         migrationsDir,
         resetPrior,
-        join(migrationsDir, "meta", fresh.snapshot),
+        JSON.parse(emitted.text) as Snapshot,
+        bodies,
       );
       if (lineage.kind === "supersedes") {
         supersedes = lineage.supersedes;
@@ -621,7 +663,10 @@ export async function generateMigration(opts: {
       }
     }
     try {
-      phaseGeneratedMigrations(migrationsDir, published, supersedes);
+      phaseGeneratedMigrations(migrationsDir, published, supersedes, {
+        id: emitted.id,
+        parents: [emitted.prevId],
+      });
     } catch (err) {
       discardGenerated(migrationsDir, added);
       console.error(`\nError: ${(err as Error).message}\n`);
@@ -639,34 +684,27 @@ export async function generateMigration(opts: {
     console.log(`  ${r.from} → ${r.to}`);
   }
 
-  // Data/backfill migrations (--custom) carry no schema delta, so they must NOT
-  // join the drizzle snapshot chain — otherwise they Y-fork against any schema
-  // migration main adds concurrently, and pushing them becomes impossible outside
-  // a quiet window. Drop the snapshot drizzle emitted; the migration stays a .sql
-  // + journal entry, applied by the runner via filename hash. drizzle bases the
-  // next migration on the last *schema* snapshot, which is correct since this one
-  // changed no schema. (The 3 oldest backfills on main already have no snapshot.)
-  if (customMigration) {
-    const metaDir = join(migrationsDir, "meta");
-    for (const r of renameResult.renamed) {
-      const snap = join(metaDir, `${r.to.slice(0, -4)}_snapshot.json`);
-      if (existsSync(snap)) {
-        rmSync(snap, { force: true });
-        console.log(`  dropped snapshot for data migration ${r.to}`);
-      }
-    }
+  // The kept schema migration's snapshot is the new tip. Data/backfill
+  // migrations (--custom) carry no schema delta, so they must NOT join the
+  // drizzle snapshot chain — otherwise they Y-fork against any schema migration
+  // main adds concurrently, and pushing them becomes impossible outside a quiet
+  // window. Their emitted snapshot is simply never written: the migration stays
+  // a .sql + journal entry, applied by the runner via filename hash, and the
+  // tip stays the last *schema* snapshot, which is correct since this one
+  // changed no schema.
+  if (!customMigration) {
+    writeFileSync(schemaSnapshotPath(migrationsDir), emitted!.text);
   }
 
   // Persist the create-vs-rename decision alongside the migration so a later
   // regen (which re-emits a consolidated migration) replays it instead of
   // re-prompting and aborting the push. Only schema migrations that actually
-  // showed prompts get a sidecar — find the single renamed entry whose snapshot
-  // exists (the schema migration; data/custom ones have their snapshot dropped
-  // above and never prompt).
+  // showed prompts get a sidecar — the single renamed entry that is a schema
+  // migration (data/custom ones carry no snapshot header and never prompt).
   if (result.detectedPrompts.length > 0) {
     const metaDir = join(migrationsDir, "meta");
     const schemaRename = renameResult.renamed.find((r) =>
-      existsSync(join(metaDir, `${r.to.slice(0, -4)}_snapshot.json`)),
+      isSchemaMigration(migrationsDir, r.to),
     );
     if (schemaRename) {
       const schemaTag = schemaRename.to.slice(0, -4);
@@ -691,12 +729,12 @@ export async function generateMigration(opts: {
 
 /**
  * Re-derive the filename hash from current content for branch-local data
- * migrations — NEW_FORMAT .sql files with no sibling snapshot that are not
- * published. Keeps filename-hash == content-hash so the runner (which
+ * migrations — NEW_FORMAT .sql files that are not schema migrations
+ * (`isSchemaMigration`) and not published. Keeps filename-hash == content-hash so the runner (which
  * identifies migrations by filename hash) never silently skips hand-edited
  * backfill SQL. Preserves the timestamp (and thus ordering); only the hash token
- * changes. Schema migrations keep their snapshot and are left untouched — their
- * SQL must match the snapshot's DDL and must never be silently re-hashed.
+ * changes. Schema migrations are left untouched — their SQL
+ * must match the snapshot's DDL and must never be silently re-hashed.
  * Published files are immutable (their hash is recorded in deployed DBs).
  *
  * Does NOT touch the journal: its caller regenerates unconditionally right
@@ -708,15 +746,15 @@ function rehashBranchLocalDataMigrations(
   migrationsDir: string,
   published: ReadonlySet<string>,
 ): void {
-  const metaDir = join(migrationsDir, "meta");
+  const schema = schemaMigrationFiles(migrationsDir);
 
   for (const f of readdirSync(migrationsDir)) {
     const m = NEW_FORMAT.exec(f);
     if (!m) continue;
     if (published.has(f)) continue; // published — immutable
     const [, date, time, oldHash, name] = m;
-    // Snapshot present => schema migration; skip (its SQL is snapshot-bound).
-    if (existsSync(join(metaDir, `${f.slice(0, -4)}_snapshot.json`))) continue;
+    // A schema migration; skip (its SQL is snapshot-bound).
+    if (schema.has(f)) continue;
     const sql = readFileSync(join(migrationsDir, f), "utf8");
     const newHash = migrationContentHash(sql);
     if (newHash === oldHash) continue;
@@ -737,25 +775,34 @@ function rehashBranchLocalDataMigrations(
  * migration — the author's, the user's own landed one, or upstream's after an
  * update — cannot be removed by accident.
  *
+ * The tip body goes back with them: `meta/schema.snapshot.json` is restored
+ * from `merge-base(HEAD, main)` — the published tip this branch grew from. A
+ * rebase in which only the branch touched that file raises no conflict, so no
+ * merge driver ever resets it; this is the one place that does. (A merge-base
+ * from before the snapshot cutover has no such file: it is removed, and
+ * `settleSnapshotFiles` writes the tip's body.)
+ *
  * Does NOT touch the journal: its caller regenerates unconditionally right
  * after. Regenerating here only when something was actually removed is how a
  * branch carrying only a (deliberately preserved) data migration took the
  * early return below and left a stale journal behind.
  */
-function resetBranchLocalMigrations(
+async function resetBranchLocalMigrations(
+  root: string,
   migrationsDir: string,
   published: ReadonlySet<string>,
-): void {
+): Promise<void> {
   const metaDir = join(migrationsDir, "meta");
+  const schema = schemaMigrationFiles(migrationsDir);
 
   const removed: string[] = [];
   for (const f of readdirSync(migrationsDir)) {
     if (!f.endsWith(".sql")) continue;
     if (published.has(f)) continue;
-    // Preserve data migrations (snapshot-less): plain drizzle generate can't
-    // recreate their hand-written SQL, so deleting them here would lose the
-    // backfill. They never join the snapshot chain, so they don't need resetting.
-    if (!existsSync(join(metaDir, `${f.slice(0, -4)}_snapshot.json`))) continue;
+    // Preserve data migrations: plain drizzle generate can't recreate their
+    // hand-written SQL, so deleting them here would lose the backfill. They
+    // never join the snapshot chain, so they don't need resetting.
+    if (!schema.has(f)) continue;
     rmSync(join(migrationsDir, f), { force: true });
     removed.push(f);
     // Drop the answers sidecar too — regen reads it before this reset runs, so
@@ -763,12 +810,18 @@ function resetBranchLocalMigrations(
     // for the consolidated migration after generate.
     rmSync(join(metaDir, answersSidecarName(f.slice(0, -4))), { force: true });
   }
+  // A branch from before the snapshot cutover: its own per-migration
+  // snapshots, and the entries the cutover folded them into.
   for (const f of readdirSync(metaDir)) {
     if (!f.endsWith("_snapshot.json")) continue;
     if (published.has(f)) continue;
     rmSync(join(metaDir, f), { force: true });
     removed.push(`meta/${f}`);
   }
+  dropLegacyEntries(
+    migrationsDir,
+    removed.filter((f) => f.endsWith(".sql")).map((f) => f.slice(0, -4)),
+  );
 
   if (removed.length === 0) {
     console.log(
@@ -778,6 +831,45 @@ function resetBranchLocalMigrations(
   }
 
   for (const f of removed) console.log(`  removed ${f}`);
+  await restorePublishedTip(root, migrationsDir);
+}
+
+// Put back `meta/schema.snapshot.json` as it is at merge-base(HEAD, main), or
+// remove it when that commit has none (see resetBranchLocalMigrations).
+async function restorePublishedTip(
+  root: string,
+  migrationsDir: string,
+): Promise<void> {
+  const git = async (args: string[]) => {
+    const r = await spawnCaptured(["git", ...args], {
+      cwd: root,
+      timeoutMs: 120_000,
+    });
+    if (r.timedOut) throw new Error(`git ${args.join(" ")} timed out`);
+    return r;
+  };
+  const base = await git(["merge-base", "HEAD", LOCAL_MAIN_REF]);
+  if (base.exitCode !== 0)
+    throw new Error(
+      `git merge-base HEAD ${LOCAL_MAIN_REF} failed (exit ${base.exitCode}): ${base.stderr.trim()}`,
+    );
+  const sha = base.stdout.trim();
+  const rel = `${MIGRATIONS_DATA_DIR}/meta/${SCHEMA_SNAPSHOT_FILE}`;
+  const listed = await git(["ls-tree", "--name-only", sha, "--", rel]);
+  if (listed.exitCode !== 0)
+    throw new Error(`git ls-tree ${sha} failed: ${listed.stderr.trim()}`);
+  const path = schemaSnapshotPath(migrationsDir);
+  if (listed.stdout.trim() === "") {
+    rmSync(path, { force: true });
+    return;
+  }
+  const shown = await git(["show", `${sha}:${rel}`]);
+  if (shown.exitCode !== 0)
+    throw new Error(`git show ${sha}:${rel} failed: ${shown.stderr.trim()}`);
+  writeFileSync(path, shown.stdout);
+  console.log(
+    `  restored meta/${SCHEMA_SNAPSHOT_FILE} from ${sha.slice(0, 12)} (merge-base with main)`,
+  );
 }
 
 export interface RenameResult {
@@ -785,7 +877,6 @@ export interface RenameResult {
 }
 
 export function renameMigrations(migrationsDir: string): RenameResult {
-  const metaDir = join(migrationsDir, "meta");
   const renamed: RenameResult["renamed"] = [];
 
   const files = readdirSync(migrationsDir)
@@ -796,7 +887,7 @@ export function renameMigrations(migrationsDir: string): RenameResult {
     if (NEW_FORMAT.test(file)) continue;
     const m = DRIZZLE_FORMAT.exec(file);
     if (!m) continue;
-    const [, idx, name] = m;
+    const [, , name] = m;
 
     const sqlPath = join(migrationsDir, file);
     // Now — but never at or before an existing migration: a merge node is
@@ -822,10 +913,6 @@ export function renameMigrations(migrationsDir: string): RenameResult {
 
     renameSync(sqlPath, join(migrationsDir, newName));
 
-    const oldSnap = join(metaDir, `${idx}_snapshot.json`);
-    const newSnap = join(metaDir, `${ts}_${hash}__${name}_snapshot.json`);
-    if (existsSync(oldSnap)) renameSync(oldSnap, newSnap);
-
     renamed.push({ from: file, to: newName, hash });
   }
 
@@ -841,12 +928,16 @@ export function renameMigrations(migrationsDir: string): RenameResult {
  * contract by the migrations plugin's closed statement table, plus the claims
  * the runner resolves into `expand → claimed data migrations → contract`.
  *
- * It claims every BRANCH-LOCAL data migration (a snapshot-less NEW_FORMAT
- * `.sql` absent from `published`) that no other branch-local
+ * It claims every BRANCH-LOCAL data migration (a NEW_FORMAT `.sql` that is
+ * not a schema migration, absent from `published`) that no other branch-local
  * phased schema migration already claims. They all sort before it: the new file
  * is only stamped by `renameMigrations`, after this, with the current time.
  * After push's `regen-migrations` the single merged file therefore claims all of
  * the branch's data migrations — one push, one explicit group.
+ *
+ * The file starts with its snapshot header (`lineage`: the id drizzle-kit gave
+ * the snapshot it emitted, and the tip it diffed against) — which is what
+ * makes it a schema migration from then on.
  *
  * Throws, naming the statement, when the table rejects or does not recognise a
  * statement; the caller discards the generation. `published` is the set of
@@ -856,14 +947,14 @@ export function phaseGeneratedMigrations(
   migrationsDir: string,
   published: ReadonlySet<string>,
   supersedes: Supersession | null,
+  lineage: SnapshotLineage,
 ): void {
-  const metaDir = join(migrationsDir, "meta");
   const files = readdirSync(migrationsDir).sort();
   const fresh = freshSchemaMigration(migrationsDir);
   if (fresh === null) return;
 
-  const hasSnapshot = (f: string) =>
-    existsSync(join(metaDir, `${f.slice(0, -4)}_snapshot.json`));
+  const schema = schemaMigrationFiles(migrationsDir);
+  const hasSnapshot = (f: string) => schema.has(f);
   const branchLocal = files.filter(
     (f) => NEW_FORMAT.test(f) && !published.has(f),
   );
@@ -884,10 +975,11 @@ export function phaseGeneratedMigrations(
     .map(migrationClaimId)
     .filter((id) => !claimed.has(id));
 
-  const sqlPath = join(migrationsDir, fresh.sql);
+  const sqlPath = join(migrationsDir, fresh);
   const phased = phaseStatements(readFileSync(sqlPath, "utf8"));
   writeFileSync(
     sqlPath,
+    renderSnapshotHeader(lineage) +
     renderPhasedMigration({
       expand: renderStatements(phased.expand),
       contract: renderStatements(phased.contract),
@@ -899,12 +991,10 @@ export function phaseGeneratedMigrations(
 
 /**
  * The schema migration drizzle-kit just generated (named in its own `NNNN_`
- * format until `renameMigrations` stamps it) and its snapshot's file name in
- * `meta/`, or null when it generated none. Throws on more than one.
+ * format until `renameMigrations` stamps it), or null when it generated none.
+ * Throws on more than one.
  */
-export function freshSchemaMigration(
-  migrationsDir: string,
-): { sql: string; snapshot: string } | null {
+export function freshSchemaMigration(migrationsDir: string): string | null {
   const fresh = readdirSync(migrationsDir)
     .sort()
     .filter(
@@ -917,8 +1007,7 @@ export function freshSchemaMigration(
       `expected one freshly generated schema migration, found ${fresh.length}: ${fresh.join(", ")}`,
     );
   }
-  const sql = fresh[0]!;
-  return { sql, snapshot: `${DRIZZLE_FORMAT.exec(sql)![1]}_snapshot.json` };
+  return fresh[0]!;
 }
 
 // Write the adoption file for `adopts` (published hashes) and the lineage that
@@ -953,6 +1042,11 @@ function warnUnsuperseded(prior: ResetPrior, reason: string): void {
   );
 }
 
+/**
+ * Remove generated `.sql` files and their answers sidecars. Their snapshot was
+ * never written to `data/` (`generateMigration` holds it in memory until it
+ * keeps the migration), so there is none to remove or restore.
+ */
 export function removeGeneratedFiles(
   migrationsDir: string,
   files: string[],
@@ -961,12 +1055,6 @@ export function removeGeneratedFiles(
   for (const f of files) {
     if (!f.endsWith(".sql")) continue;
     rmSync(join(migrationsDir, f), { force: true });
-    // Drizzle snapshot name is <prefix>_snapshot.json where <prefix> is the
-    // filename up to the first underscore (the NNNN or 0NaN token).
-    const idxMatch = /^([^_]+)_/.exec(f);
-    if (idxMatch) {
-      rmSync(join(metaDir, `${idxMatch[1]}_snapshot.json`), { force: true });
-    }
     // Drop any answers sidecar keyed to this migration's tag (the .sql basename).
     rmSync(join(metaDir, answersSidecarName(f.slice(0, -4))), { force: true });
   }
@@ -979,8 +1067,8 @@ export function removeGeneratedFiles(
  * The second half is not optional. drizzle-kit's `writeResult` appends to
  * `meta/_journal.json` and writes it BEFORE the `.sql`, so by the time we decide
  * to reject a generation the journal already carries a `0NaN_<name>` row.
- * `removeGeneratedFiles` deletes the `.sql`, the snapshot and the answers
- * sidecar — it has no way to know about that row, and left behind it fails
+ * `removeGeneratedFiles` deletes the `.sql` and the answers sidecar — it has
+ * no way to know about that row, and left behind it fails
  * `migration-metadata-consistent` as an orphanJournal entry. Every caller below
  * then exits the process, so this is their only chance to leave a consistent
  * tree.
