@@ -13707,8 +13707,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xl`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/type-scale --measure-reading`
-        - Imported by: 60 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
-          - `conversations` ×49
+        - Imported by: 61 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+          - `conversations` ×50
           - `active-data` ×5
           - `tasks` ×2
           - `debug/profiling/ops`
@@ -14450,6 +14450,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.EventLine`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+                  - `infra/endpoints.useFetchEndpoint`
+                  - `network/live.useLiveRow`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
                   - `ui/icons.Icon`
               - Cross-plugin:
                 - Uses tokens:
@@ -17688,14 +17693,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CONVERSATION_RUNTIMES`
           - `ConversationRuntimeIdSchema`
           - `DEFAULT_CONVERSATION_RUNTIME`
-    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file.
+    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.limit-stopped collection (active conversations whose agent stopped at its account's usage limit).
       - Web:
         - Contributes: `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
-        - Uses: 32 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
+        - Uses: 37 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
           - `infra/claude-cli/availability` ×4
           - `infra/endpoints` ×4
           - `primitives/css/ui-kit` ×4
           - `primitives/setup-steps` ×4
+          - `primitives/data-view` ×3
+          - `conversations/conversation-view.conversationPane`
           - `network/live.useLive`
           - `primitives/avatar.Avatar`
           - `primitives/css/clip.Clip`
@@ -17708,21 +17715,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/text.Text`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.combineResources`
+          - `primitives/pane.useOpenPane`
           - `primitives/relative-time.useNow`
           - `primitives/text-editor/inline-chip.renderInlineChip`
           - `shell/health-report.HealthReport`
           - `ui/icons.Icon`
       - Server:
         - Contributes:
-          - `trigger` "runtime-sdk.attempt-ended"
           - `resource.declare` "runtime-sdk.agent-processes"
           - `resource.declare` "runtime-sdk.bundled-cli"
           - `resource.declare` "runtime-sdk.claude-usage"
+          - `resource.declare` "runtime-sdk.limit-stopped"
+          - `resource.declare` "runtime-sdk.limit-stopped:groups"
+          - `resource.declare` "runtime-sdk.limit-stopped:rows"
+          - `trigger` "runtime-sdk.attempt-ended"
         - Uses:
           - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
           - `conversations/agent-launch.mergeLaunchSettings`
           - `database.db`
           - `infra/entity-extensions.defineExtension`
+          - `network/live.serveCollection`
+          - `network/live.ServeCollectionOptions`
           - `tasks/tasks-core._conversations`
         - DB schema: `plugins/conversations/plugins/runtime-sdk/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
@@ -17730,6 +17743,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtime-sdk.agent-processes` (push, notified)
           - `runtime-sdk.bundled-cli` (push, fixed)
           - `runtime-sdk.claude-usage` (push, notified)
+          - `runtime-sdk.limit-stopped` (keyed, window)
+          - `runtime-sdk.limit-stopped:groups` (push)
+          - `runtime-sdk.limit-stopped:rows` (keyed, point)
       - Machine:
         - Uses:
           - `conversations/question-relay.holdQuestion`
@@ -17742,11 +17758,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineFileWatcher('runtime-sdk.events')`
           - `defineDaemon('runtime-sdk.agent')`
           - `defineJob('runtime-sdk.attempt-ended')`
-        - Routes: `POST /api/claude-usage/refresh`
+        - Routes:
+          - `POST /api/claude-usage/refresh`
+          - `POST /api/runtime-sdk/resume-limited`
       - Core:
         - Uses:
+          - `fields.nullable`
+          - `fields/date/config.dateField`
+          - `fields/text/config.textField`
           - `infra/endpoints.defineEndpoint`
+          - `network/live.liveCollection`
+          - `network/live.LiveRowsCollection`
           - `network/live.liveValue`
+          - `tasks/tasks-core.conversationsEntityRef`
         - Exports (types):
           - `AgentAnswer`
           - `AgentCommand`
@@ -17760,9 +17784,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ClaudeUsageWindow`
           - `CommandReply`
           - `HelloReply`
+          - `LimitStoppedConversation`
           - `OpenRequest`
           - `PartialFrame`
           - `PartialMessage`
+          - `ResumeLimitedResult`
           - `UsageLevel`
           - `UsageWindowId`
           - `UsageWindowView`
@@ -17789,12 +17815,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HelloReplySchema`
           - `launchAccount`
           - `limitReached`
+          - `limitStoppedConversations`
           - `OpenRequestSchema`
           - `partialFrameOf`
           - `PartialFrameSchema`
           - `PartialStreamLineSchema`
           - `PROTOCOL_VERSION`
           - `refreshClaudeUsage`
+          - `RESUME_TURN_TEXT`
+          - `resumeLimitedConversations`
+          - `ResumeLimitedResultSchema`
           - `roomiestAccount`
           - `sameMajorMinor`
           - `sdkAgentProcesses`
@@ -22126,10 +22156,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×27
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 100 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 101 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×50
       - `apps` ×11
-      - `conversations` ×7
+      - `conversations` ×8
       - `debug` ×5
       - `infra` ×5
       - `tasks` ×4
@@ -22465,9 +22495,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 44 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 45 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×9
-              - `conversations` ×8
+              - `conversations` ×9
               - `debug` ×5
               - `infra` ×5
               - `page` ×4
@@ -23713,9 +23743,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 65 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 66 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×16
-              - `conversations` ×14
+              - `conversations` ×15
               - `tasks` ×8
               - `debug` ×5
               - `infra` ×5
@@ -27010,9 +27040,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 220 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 221 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×55
-          - `conversations` ×31
+          - `conversations` ×32
           - `page` ×20
           - `infra` ×19
           - `debug` ×18
@@ -30750,9 +30780,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 272 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 273 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×73
-          - `conversations` ×49
+          - `conversations` ×50
           - `debug` ×27
           - `tasks` ×27
           - `infra` ×16
@@ -37064,9 +37094,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 378 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 379 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×105
-              - `conversations` ×72
+              - `conversations` ×73
               - `primitives` ×43
               - `debug` ×36
               - `page` ×23
@@ -37351,10 +37381,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 423 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 424 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
               - `apps` ×95
-              - `conversations` ×54
+              - `conversations` ×55
               - `page` ×25
               - `debug` ×23
               - `ui` ×21
@@ -37591,8 +37621,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 79 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×71
+        - Contributes: 80 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×72
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -37809,8 +37839,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 73 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×71
+        - Contributes: 74 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×72
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -37954,12 +37984,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×5
           - `ui/tokens/shape` ×2
           - `ui/tokens/shadow --shadow`
-        - Imported by: 100 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 101 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
           - `apps` ×23
           - `debug` ×13
           - `primitives` ×9
-          - `conversations` ×7
+          - `conversations` ×8
           - `tasks` ×4
           - `infra` ×3
           - `apps-core/app-launcher`
@@ -41330,9 +41360,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 171 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 172 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×62
-          - `conversations` ×29
+          - `conversations` ×30
           - `debug` ×26
           - `active-data` ×10
           - `tasks` ×9

@@ -1,6 +1,6 @@
 {
-  "id": "4ee37412-44b1-4161-9867-b0103bd0c18f",
-  "prevId": "493325f8-8282-437b-94df-4d473c50c8a3",
+  "id": "9fe1ee25-1a1d-4559-a3b4-b6d00a9aa2fd",
+  "prevId": "4ee37412-44b1-4161-9867-b0103bd0c18f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -6445,6 +6445,18 @@
         "rewind_anchor_uuid": {
           "name": "rewind_anchor_uuid",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "account": {
+          "name": "account",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "limit_hit_at": {
+          "name": "limit_hit_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },

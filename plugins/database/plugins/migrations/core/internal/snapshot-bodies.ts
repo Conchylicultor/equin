@@ -17,7 +17,13 @@
  *    only the latter's body;
  * 5. git: for an ordinary header node, `schema.snapshot.json` at the commit that added
  *    its `.sql` (else the commit that introduced the id into that file); for a
- *    legacy node, its `<tag>_snapshot.json` at the commit that added it.
+ *    legacy node, its `<tag>_snapshot.json` at the commit that added it;
+ * 6. for a header node, the tip file at each commit this checkout's HEAD
+ *    reflog names (newest first): a rebase replays a branch-local migration's
+ *    `.sql` but its merge driver keeps main's tip file, so the rebased history
+ *    no longer holds the body — the pre-rebase commit, still in the reflog,
+ *    does. Only the commits the reflog itself names are read (no history walk:
+ *    a `--reflog` log over this repo's history takes minutes).
  *
  * Every answer is checked against the id asked for. Anything that cannot be
  * answered throws, naming the id and what to do (a shallow clone has to fetch
@@ -154,6 +160,22 @@ export function snapshotBodies(root: string, dataDir: string): SnapshotBodies {
           return text;
         tried.push(`${c}:${tipPath}`);
       }
+      // Rewritten away by a rebase (the merge driver kept main's tip file):
+      // the pre-rewrite commit is still in this checkout's reflog.
+      const reflog = await spawnCaptured(["git", "reflog", "--format=%H"], {
+        cwd: root,
+        timeoutMs: GIT_TIMEOUT_MS,
+      });
+      if (reflog.timedOut) throw new Error("git reflog timed out");
+      const seen = new Set<string>();
+      for (const c of reflog.stdout.split("\n").filter(Boolean)) {
+        if (seen.has(c)) continue;
+        seen.add(c);
+        const text = await show(c, tipPath);
+        if (text !== null && headId(text, `${c}:${tipPath}`) === node.id)
+          return text;
+      }
+      tried.push(`the tip file at ${seen.size} reflog commit(s)`);
     }
     throw new Error(
       `no body for snapshot ${node.id} (${node.file}): it is not in the working tree, and git has it nowhere ` +

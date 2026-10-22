@@ -11,7 +11,7 @@
     - `conversations/conversation-view/jsonl-viewer.EventLine`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLiveRow`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`

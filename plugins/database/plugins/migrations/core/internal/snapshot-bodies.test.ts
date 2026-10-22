@@ -129,6 +129,43 @@ describe("snapshotBodies", () => {
   });
 });
 
+describe("snapshotBodies: a body a rebase rewrote away", () => {
+  const R = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+  test("is read from the pre-rewrite commit HEAD's reflog still names", async () => {
+    const repo = join(root, "rebase-repo");
+    const at = (rel: string, content: string) => {
+      const abs = join(repo, DATA, rel);
+      mkdirSync(dirname(abs), { recursive: true });
+      writeFileSync(abs, content);
+    };
+    await gitIn(root, "init", "-q", "-b", "main", repo);
+    at(
+      "20260101_000000_aaaaaaaa__base.sql",
+      renderSnapshotHeader({ id: A, parents: [NULL_SNAPSHOT_ID] }) + empty,
+    );
+    at("meta/schema.snapshot.json", body(A, NULL_SNAPSHOT_ID, "a"));
+    await gitIn(repo, "add", "-A");
+    await gitIn(repo, "commit", "-q", "-m", "base");
+    // The branch's own migration R, committed with its body as the tip...
+    at(
+      "20260102_000000_bbbbbbbb__own.sql",
+      renderSnapshotHeader({ id: R, parents: [A] }) + empty,
+    );
+    at("meta/schema.snapshot.json", body(R, A, "r"));
+    await gitIn(repo, "add", "-A");
+    await gitIn(repo, "commit", "-q", "-m", "own");
+    // ...then rewritten the way a rebase's merge driver leaves it: the .sql
+    // replayed, the tip file upstream's.
+    at("meta/schema.snapshot.json", body(A, NULL_SNAPSHOT_ID, "a"));
+    await gitIn(repo, "add", "-A");
+    await gitIn(repo, "commit", "-q", "--amend", "-m", "own (rebased)");
+
+    const bodies = snapshotBodies(repo, join(repo, DATA));
+    expect(await bodies.text(R)).toBe(body(R, A, "r"));
+  });
+});
+
 describe("snapshotBodies: a merge node's body is never needed in git", () => {
   const P = "55555555-5555-4555-8555-555555555555";
   const U = "66666666-6666-4666-8666-666666666666";

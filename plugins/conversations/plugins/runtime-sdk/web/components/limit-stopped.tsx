@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   DataView,
   defineDataView,
@@ -55,6 +55,7 @@ export function LimitStoppedBanner({
   now: number;
 }): ReactElement | null {
   const openPane = useOpenPane();
+  const fetchEndpoint = useFetchEndpoint();
   const [failed, setFailed] = useState<{ id: string; message: string }[]>([]);
   if (stopped.length === 0) return null;
   const reading = usage.byAccount[launchAccountId];

@@ -114,14 +114,16 @@ Gotchas the spike hit:
 
 ## Plugin reference
 
-- Description: The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file.
+- Description: The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.limit-stopped collection (active conversations whose agent stopped at its account's usage limit).
 - Web:
   - Contributes: `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/claude-cli/availability` ×4
     - `infra/endpoints` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/setup-steps` ×4
+    - `primitives/data-view` ×3
+    - `conversations/conversation-view.conversationPane`
     - `network/live.useLive`
     - `primitives/avatar.Avatar`
     - `primitives/css/clip.Clip`
@@ -134,21 +136,27 @@ Gotchas the spike hit:
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.combineResources`
+    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.useNow`
     - `primitives/text-editor/inline-chip.renderInlineChip`
     - `shell/health-report.HealthReport`
     - `ui/icons.Icon`
 - Server:
   - Contributes:
-    - `trigger` "runtime-sdk.attempt-ended"
     - `resource.declare` "runtime-sdk.agent-processes"
     - `resource.declare` "runtime-sdk.bundled-cli"
     - `resource.declare` "runtime-sdk.claude-usage"
+    - `resource.declare` "runtime-sdk.limit-stopped"
+    - `resource.declare` "runtime-sdk.limit-stopped:groups"
+    - `resource.declare` "runtime-sdk.limit-stopped:rows"
+    - `trigger` "runtime-sdk.attempt-ended"
   - Uses:
     - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
     - `conversations/agent-launch.mergeLaunchSettings`
     - `database.db`
     - `infra/entity-extensions.defineExtension`
+    - `network/live.serveCollection`
+    - `network/live.ServeCollectionOptions`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/runtime-sdk/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
@@ -156,6 +164,9 @@ Gotchas the spike hit:
     - `runtime-sdk.agent-processes` (push, notified)
     - `runtime-sdk.bundled-cli` (push, fixed)
     - `runtime-sdk.claude-usage` (push, notified)
+    - `runtime-sdk.limit-stopped` (keyed, window)
+    - `runtime-sdk.limit-stopped:groups` (push)
+    - `runtime-sdk.limit-stopped:rows` (keyed, point)
 - Machine:
   - Uses:
     - `conversations/question-relay.holdQuestion`
@@ -168,11 +179,19 @@ Gotchas the spike hit:
     - `defineFileWatcher('runtime-sdk.events')`
     - `defineDaemon('runtime-sdk.agent')`
     - `defineJob('runtime-sdk.attempt-ended')`
-  - Routes: `POST /api/claude-usage/refresh`
+  - Routes:
+    - `POST /api/claude-usage/refresh`
+    - `POST /api/runtime-sdk/resume-limited`
 - Core:
   - Uses:
+    - `fields.nullable`
+    - `fields/date/config.dateField`
+    - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
+    - `network/live.liveCollection`
+    - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
+    - `tasks/tasks-core.conversationsEntityRef`
   - Exports (types):
     - `AgentAnswer`
     - `AgentCommand`
@@ -186,9 +205,11 @@ Gotchas the spike hit:
     - `ClaudeUsageWindow`
     - `CommandReply`
     - `HelloReply`
+    - `LimitStoppedConversation`
     - `OpenRequest`
     - `PartialFrame`
     - `PartialMessage`
+    - `ResumeLimitedResult`
     - `UsageLevel`
     - `UsageWindowId`
     - `UsageWindowView`
@@ -215,12 +236,16 @@ Gotchas the spike hit:
     - `HelloReplySchema`
     - `launchAccount`
     - `limitReached`
+    - `limitStoppedConversations`
     - `OpenRequestSchema`
     - `partialFrameOf`
     - `PartialFrameSchema`
     - `PartialStreamLineSchema`
     - `PROTOCOL_VERSION`
     - `refreshClaudeUsage`
+    - `RESUME_TURN_TEXT`
+    - `resumeLimitedConversations`
+    - `ResumeLimitedResultSchema`
     - `roomiestAccount`
     - `sameMajorMinor`
     - `sdkAgentProcesses`

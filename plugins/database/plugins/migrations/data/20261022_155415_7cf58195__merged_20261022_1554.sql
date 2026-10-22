@@ -1,4 +1,6 @@
--- singularity:snapshot id=a7a42ca0-259a-4d36-b1af-6d92ff33b2b0 parents=493325f8-8282-437b-94df-4d473c50c8a3
+-- singularity:snapshot id=9fe1ee25-1a1d-4559-a3b4-b6d00a9aa2fd parents=4ee37412-44b1-4161-9867-b0103bd0c18f
+-- singularity:supersedes e8426a6b
+-- singularity:supersedes e8426a6b <- 869feeac
 -- singularity:phase expand
 ALTER TABLE "conversations_ext_sdk_agent" ADD COLUMN "account" text;
 ALTER TABLE "conversations_ext_sdk_agent" ADD COLUMN "limit_hit_at" timestamp with time zone;
