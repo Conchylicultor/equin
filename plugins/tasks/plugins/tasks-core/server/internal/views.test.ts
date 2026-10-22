@@ -47,6 +47,7 @@ import { installRollups } from "@plugins/database/plugins/derived-tables/server/
 import { attemptConvAgg, attemptPushAgg } from "./rollup-spec";
 import { eq } from "drizzle-orm";
 import { attempts, taskBlocking, tasks } from "./views";
+import { isSettled, TaskStatusSchema } from "../../core";
 
 let t: TestDb;
 
@@ -317,6 +318,94 @@ describe("task_blocking_v — a held dependency keeps blocking", () => {
 
     expect(await isBlocked(dependent)).toBe(true);
   });
+});
+
+describe("task_blocking_v — a dropped dependency with a running agent keeps blocking", () => {
+  test("dropped while its agent still runs: the dependent stays blocked", async () => {
+    // The reported shape: a new conversation was started on the task, then
+    // closing the OLD one dropped it. Its status is `in_progress` (a running
+    // agent outranks the drop), so it is not settled — and an armed dependent
+    // launched beside the agent it was meant to follow.
+    const dep = await seedTask({ dropped: true });
+    await seedConversation(await seedAttempt(dep), "working");
+    const dependent = await seedTask();
+    await seedDependency(dependent, dep);
+
+    expect((await taskStatus(dep)).status).toBe("in_progress");
+    expect(await isBlocked(dependent)).toBe(true);
+    expect((await taskStatus(dependent)).status).toBe("blocked");
+  });
+
+  test("once that agent stops, the dropped dependency stops blocking", async () => {
+    const dep = await seedTask({ dropped: true });
+    const convId = await seedConversation(await seedAttempt(dep), "working");
+    const dependent = await seedTask();
+    await seedDependency(dependent, dep);
+
+    await t.db.execute(
+      sql`UPDATE conversations SET status = 'done', ended_at = now() WHERE id = ${convId}`,
+    );
+    expect((await taskStatus(dep)).status).toBe("dropped");
+    expect(await isBlocked(dependent)).toBe(false);
+  });
+});
+
+// ── the blocking rule agrees with the status, everywhere ─────────────────────
+//
+// `depIsBlocking` re-derives "settled" from raw columns (it cannot read the
+// status without a cycle), so nothing but this table keeps it in step with
+// `taskDerived`'s arm order. Every (held, dropped, attempt shape) cell: the
+// dependency blocks iff its own status is not settled (`isSettled`, core).
+
+describe("task_blocking_v agrees with isSettled(tasks_v.status) over every cell", () => {
+  const SHAPES: { name: string; seed: (taskId: string) => Promise<void> }[] = [
+    { name: "no attempt", seed: async () => {} },
+    { name: "pushed and closed", seed: seedPushedAndClosed },
+    {
+      name: "working, no push",
+      seed: async (id) => {
+        await seedConversation(await seedAttempt(id), "working");
+      },
+    },
+    {
+      name: "working, pushed",
+      seed: async (id) => {
+        const a = await seedAttempt(id);
+        await seedConversation(a, "working");
+        await seedPush(a);
+      },
+    },
+    {
+      name: "closed, no push",
+      seed: async (id) => {
+        await seedConversation(await seedAttempt(id), "done");
+      },
+    },
+    {
+      name: "attempt with no conversation yet",
+      seed: async (id) => {
+        await seedAttempt(id);
+      },
+    },
+  ];
+
+  for (const held of [false, true]) {
+    for (const dropped of [false, true]) {
+      for (const shape of SHAPES) {
+        test(`held=${held} dropped=${dropped} ${shape.name}`, async () => {
+          const dep = await seedTask({ held, dropped });
+          await shape.seed(dep);
+          const dependent = await seedTask();
+          await seedDependency(dependent, dep);
+
+          const { status } = await taskStatus(dep);
+          expect(await isBlocked(dependent)).toBe(
+            !isSettled(TaskStatusSchema.parse(status)),
+          );
+        });
+      }
+    }
+  }
 });
 
 // ── the two blocked statuses ─────────────────────────────────────────────────

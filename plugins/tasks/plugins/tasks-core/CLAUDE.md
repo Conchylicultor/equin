@@ -333,6 +333,7 @@ serves them.
     - `CreateAttemptInput`
     - `CreateTaskInput`
     - `DbExecutor`
+    - `DropTaskTreeResult`
     - `InsertConversationInput`
     - `InsertPushInput`
     - `OrphanedAttempt`
@@ -372,7 +373,7 @@ serves them.
     - `deleteAttempt`
     - `deleteConversationRow`
     - `dropTaskIfNoActiveSibling`
-    - `dropTaskTree`
+    - `dropTaskTreeIfNoActiveSibling`
     - `findNextRankInFolder`
     - `getAttempt`
     - `getAttemptRow`

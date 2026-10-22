@@ -135,7 +135,6 @@ export {
   createTask,
   updateTask,
   updateTaskTitle,
-  dropTaskTree,
   addTaskDependency,
   removeTaskDependency,
 } from "./internal/mutations/tasks";
@@ -233,7 +232,11 @@ export type { OrphanedAttempt } from "./internal/sweep-orphaned-attempts";
 
 export type { DbExecutor } from "./internal/status-batch";
 
-export { dropTaskIfNoActiveSibling } from "./internal/mutations/cross-table";
+export {
+  dropTaskIfNoActiveSibling,
+  dropTaskTreeIfNoActiveSibling,
+} from "./internal/mutations/cross-table";
+export type { DropTaskTreeResult } from "./internal/mutations/cross-table";
 
 export default {
   portable: true,

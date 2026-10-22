@@ -20,12 +20,22 @@ export function DropDependentsItem({
 
   const { mutate, isPending } = useEndpointMutation(dropDependents, {
     onSuccess: (data) => {
-      toast({
-        type: "conversation",
-        title: "Dependents dropped",
-        description: `Dropped ${data.dropped} task(s) and closed conversation`,
-        variant: "success",
-      });
+      toast(
+        data.kind === "dropped"
+          ? {
+              type: "conversation",
+              title: "Dependents dropped",
+              description: `Dropped ${data.count} task(s) and closed conversation`,
+              variant: "success",
+            }
+          : {
+              type: "conversation",
+              title: "Task kept",
+              description:
+                "Another conversation is still working on this task, so only this conversation closed — nothing was dropped",
+              variant: "info",
+            },
+      );
     },
     onError: (err) =>
       toast({

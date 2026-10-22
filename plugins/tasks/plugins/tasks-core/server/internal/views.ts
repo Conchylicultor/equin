@@ -142,11 +142,16 @@ export const attempts = pgView("attempts_v").as((qb) => {
     .leftJoin(_attemptPushAgg, eq(_attemptPushAgg.attemptId, _attempts.id));
 });
 
-// "Some attempt of task `taskId` is completed", for the views' blocking rule —
-// read off `attempts_v`, whose status is `attemptDerived`'s.
+// "Some attempt of task `taskId` is completed" / "is active", for the views'
+// blocking rule — read off `attempts_v`, whose status and active flag are
+// `attemptDerived`'s.
 const hasCompletedAttempt = (taskId: SQL): SQL => sql`EXISTS (
         SELECT 1 FROM ${attempts} att
          WHERE att.task_id = ${taskId} AND att.status = 'completed'
+      )`;
+const hasActiveAttempt = (taskId: SQL): SQL => sql`EXISTS (
+        SELECT 1 FROM ${attempts} att
+         WHERE att.task_id = ${taskId} AND att.active
       )`;
 
 // The single-hop frontier (queries/tasks.ts) interpolates the blocking rule
@@ -157,6 +162,7 @@ export const directDepIsBlocking = (dependsOnTaskId: SQL): SQL =>
     droppedAt: _tasks.droppedAt,
     heldAt: _tasks.heldAt,
     hasCompleted: hasCompletedAttempt(dependsOnTaskId),
+    hasActive: hasActiveAttempt(dependsOnTaskId),
   });
 
 // Transitive dependency-blocking, computed once as a shared derived view so the
@@ -198,6 +204,7 @@ export const taskBlocking = pgView("task_blocking_v", {
              droppedAt: sql`dep.dropped_at`,
              heldAt: sql`dep.held_at`,
              hasCompleted: hasCompletedAttempt(sql`dep.id`),
+             hasActive: hasActiveAttempt(sql`dep.id`),
            })}) AS has_blocking_dep
       FROM ancestors a
       JOIN ${_tasks} dep ON dep.id = a.ancestor_id

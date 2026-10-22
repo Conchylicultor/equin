@@ -216,21 +216,27 @@ export function taskDerived(f: TaskFacts): {
  * It re-derives "settled" from raw columns rather than reading a task's
  * status (the status depends on this rule — reading it would be circular), so
  * it must stay in agreement with `isSettled` (core/task-graph.ts) and
- * `taskDerived`'s status:
+ * `taskDerived`'s status — `views.test.ts` asserts it over the whole truth
+ * table. Read off `taskDerived`'s arm order:
  *   settled ⇔ status ∈ {done, dropped}
- *   dropped ⇔ dropped_at IS NOT NULL
- *   done    ⇔ has a completed attempt AND NOT held  ← hold outranks `done`
+ *   done    ⇔ has a completed attempt AND NOT held   ← hold outranks `done`
+ *   dropped ⇔ dropped_at IS NOT NULL AND NOT active  ← a running agent
+ *                                                      outranks `dropped`
  *
- * That last clause is why `held_at` appears here at all. Without it, a task
- * that had pushed and was then held kept the completed-attempt exemption,
- * stopped blocking, and auto-launched its armed dependents — the "Hold &
- * close marked the task done and started the next one" bug.
+ * Each clause is a bug it fixed. Without `held_at`, a task that had pushed and
+ * was then held kept the completed-attempt exemption, stopped blocking, and
+ * auto-launched its armed dependents — the "Hold & close marked the task done
+ * and started the next one" bug. Without `hasActive`, a task dropped while an
+ * agent was still running on it (status `in_progress`) stopped blocking, and
+ * its armed dependent launched beside the agent it was meant to follow.
  */
 export function depIsBlocking(dep: {
   droppedAt: SqlOperand;
   heldAt: SqlOperand;
   /** Some attempt of the dependency is `completed` (never NULL). */
   hasCompleted: SqlOperand;
+  /** Some attempt of the dependency is `active` — an agent running (never NULL). */
+  hasActive: SqlOperand;
 }): SQL {
-  return sql`(${dep.droppedAt} IS NULL AND (${dep.heldAt} IS NOT NULL OR NOT ${dep.hasCompleted}))`;
+  return sql`((${dep.droppedAt} IS NULL OR ${dep.hasActive}) AND (${dep.heldAt} IS NOT NULL OR NOT ${dep.hasCompleted}))`;
 }

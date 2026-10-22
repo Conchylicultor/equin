@@ -109,20 +109,23 @@ const att = childrenJoin({
   },
 });
 
-// Each transitive prerequisite's own attempts: is one of them completed?
+// Each transitive prerequisite's own attempts: is one of them completed, is
+// one of them active?
 const ancestorAtt = childrenJoin({
   alias: "att",
   table: _attempts,
   fk: _attempts.taskId,
   rollups: [conv, push],
-  aggregates: (c) => ({
-    completed: flag(
-      taskAttemptAggregates({
-        ...attemptFacts(c),
-        hasWaitingConv: c.conv.hasWaitingConv,
-      }).hasCompleted,
-    ),
-  }),
+  aggregates: (c) => {
+    const a = taskAttemptAggregates({
+      ...attemptFacts(c),
+      hasWaitingConv: c.conv.hasWaitingConv,
+    });
+    return {
+      completed: flag(a.hasCompleted),
+      active: flag(a.hasActive),
+    };
+  },
 });
 
 const deps = childrenJoin({
@@ -155,6 +158,7 @@ const blocking = closureJoin({
         droppedAt: c.anc.droppedAt,
         heldAt: c.anc.heldAt,
         hasCompleted: c.att.completed,
+        hasActive: c.att.active,
       })})`,
     ),
   }),

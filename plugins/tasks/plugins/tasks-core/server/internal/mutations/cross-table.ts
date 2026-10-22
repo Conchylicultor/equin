@@ -1,6 +1,6 @@
 import type { Conversation } from "../schema";
 import { listActiveConversations } from "../queries/conversations";
-import { updateTask } from "./tasks";
+import { dropTaskTree, updateTask } from "./tasks";
 
 // ONE HALF of the exit-drop policy, and named for exactly the half it is: does
 // any sibling conversation on this task remain active? If one does, another
@@ -24,12 +24,32 @@ import { updateTask } from "./tasks";
 export async function dropTaskIfNoActiveSibling(
   conversation: Conversation,
 ): Promise<boolean> {
-  const activeConversations = await listActiveConversations();
-  const hasOtherActive = activeConversations.some(
-    (c) => c.taskId === conversation.taskId && c.id !== conversation.id,
-  );
-
-  if (hasOtherActive) return false;
+  if (await hasActiveSibling(conversation)) return false;
   await updateTask(conversation.taskId, { drop: true });
   return true;
+}
+
+export type DropTaskTreeResult =
+  | { kind: "dropped"; count: number }
+  | { kind: "kept"; reason: "active-sibling" };
+
+// The same sibling rule for the closing conversation's "drop the task and
+// every active dependent" sweep. It is the ONLY drop-tree entry point the
+// barrel publishes, so a conversation-driven sweep cannot skip the check: one
+// skipped it, and closing an old conversation dropped a task whose new
+// conversation was still working — and, with it, 19 dependents.
+export async function dropTaskTreeIfNoActiveSibling(
+  conversation: Conversation,
+): Promise<DropTaskTreeResult> {
+  if (await hasActiveSibling(conversation)) {
+    return { kind: "kept", reason: "active-sibling" };
+  }
+  return { kind: "dropped", count: await dropTaskTree(conversation.taskId) };
+}
+
+async function hasActiveSibling(conversation: Conversation): Promise<boolean> {
+  const activeConversations = await listActiveConversations();
+  return activeConversations.some(
+    (c) => c.taskId === conversation.taskId && c.id !== conversation.id,
+  );
 }

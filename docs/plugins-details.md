@@ -14242,7 +14242,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations.deleteConversation`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
-              - `tasks/tasks-core.dropTaskTree`
+              - `tasks/tasks-core.dropTaskTreeIfNoActiveSibling`
               - `tasks/tasks-core.getConversation`
               - `tasks/tasks-core.markConversationClosed`
             - Routes: `POST /api/conversations/:id/drop-dependents`
@@ -47088,6 +47088,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CreateAttemptInput`
           - `CreateTaskInput`
           - `DbExecutor`
+          - `DropTaskTreeResult`
           - `InsertConversationInput`
           - `InsertPushInput`
           - `OrphanedAttempt`
@@ -47127,7 +47128,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteAttempt`
           - `deleteConversationRow`
           - `dropTaskIfNoActiveSibling`
-          - `dropTaskTree`
+          - `dropTaskTreeIfNoActiveSibling`
           - `findNextRankInFolder`
           - `getAttempt`
           - `getAttemptRow`

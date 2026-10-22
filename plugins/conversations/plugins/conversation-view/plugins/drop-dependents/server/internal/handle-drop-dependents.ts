@@ -2,7 +2,7 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { deleteConversation } from "@plugins/conversations/server";
 import {
   getConversation,
-  dropTaskTree,
+  dropTaskTreeIfNoActiveSibling,
   markConversationClosed,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { dropDependents } from "../../shared/endpoints";
@@ -15,10 +15,13 @@ export const handleDropDependents = implement(dropDependents, async ({ params })
     throw new HttpError(404, "Conversation not found");
   }
 
-  const dropped = await dropTaskTree(conversation.taskId);
+    // Closing one conversation never drops a task another conversation is
+    // still working on — nor, with it, that task's dependents.
+    const result = await dropTaskTreeIfNoActiveSibling(conversation);
 
   await markConversationClosed(id);
   await deleteConversation(id);
 
-  return { ok: true, dropped };
-});
+    return result;
+  },
+);

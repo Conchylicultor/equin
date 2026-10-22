@@ -20,7 +20,7 @@
     - `conversations.deleteConversation`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `tasks/tasks-core.dropTaskTree`
+    - `tasks/tasks-core.dropTaskTreeIfNoActiveSibling`
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.markConversationClosed`
   - Routes: `POST /api/conversations/:id/drop-dependents`
