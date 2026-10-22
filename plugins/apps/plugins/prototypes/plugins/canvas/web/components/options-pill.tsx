@@ -4,7 +4,6 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -74,8 +73,8 @@ interface OptionsTarget {
  * name leaves out, and a chevron — opening the Options popover under it.
  * Narrow (a frame under 440px) it drops `+N` and the chevron.
  *
- * Renders nothing for a document with no options: the frame header's box then
- * holds the version stepper alone. Its 22px look is the frame box's
+ * Renders nothing for a document with no options: the frame box then holds
+ * the version stepper alone. Its 22px look is the frame box's
  * (`frameChipsTheme`).
  */
 export function OptionsChip({
@@ -101,7 +100,6 @@ export function OptionsChip({
           frame={frame}
           meta={meta}
           title={`Options · ${name}`}
-          side="bottom"
           trigger={
             <Button
               variant="ghost"
@@ -130,36 +128,6 @@ export function OptionsChip({
 }
 
 /**
- * One prototype frame's options as a floating pill ("Mist · Home +3") — a
- * presentation's, which has no frame header to hold the chip. Opens the same
- * Options popover, above it.
- */
-export function OptionsPill({
-  frame,
-  meta,
-}: OptionsTarget): ReactElement | null {
-  const { canvas } = usePrototypeDetail();
-  const options = documentOptions(meta, frame.version);
-  const picks = useFramePicks(frame, meta);
-  if (options.length === 0) return null;
-  const shown = shownPicks(canvas, frame, options, picks);
-  return (
-    <OptionsPopover
-      frame={frame}
-      meta={meta}
-      title="Options"
-      side="top"
-      trigger={
-        <Button variant="floating" shape="pill" aria-label="Prototype options">
-          <Icon icon={tuneIcon} />
-          <PillSummary options={options} picks={shown} />
-        </Button>
-      }
-    />
-  );
-}
-
-/**
  * The Options popover (the mockup's `.pop.options`), opened from `trigger`:
  * a header naming the frame, then one row per declared option — value pills
  * for a choice, suggestion swatches plus a custom swatch (which opens a color
@@ -170,8 +138,8 @@ export function OptionsPill({
  * section per group, which names its picks when folded.
  *
  * A color drag previews (`previewPick`: the frame repaints every move, nothing
- * is written) and its end commits (`setPick`: one write). The swatches (and the
- * floating pill) show the preview too, so they move with the frame.
+ * is written) and its end commits (`setPick`: one write). The swatches show
+ * the preview too, so they move with the frame.
  *
  * App DOM, never inside the prototype's page — that is what keeps switchers
  * out of the designs. It always edits ITS frame, so nothing needs
@@ -182,11 +150,9 @@ function OptionsPopover({
   frame,
   meta,
   title,
-  side,
   trigger,
 }: OptionsTarget & {
   title: string;
-  side: "top" | "bottom";
   trigger: ReactElement;
 }): ReactElement {
   const [open, setOpen] = useState(false);
@@ -207,7 +173,12 @@ function OptionsPopover({
       <WithTooltip content="Options">
         <PopoverTrigger render={trigger} />
       </WithTooltip>
-      <PopoverContent side={side} align="center" sideOffset={8} width="builder">
+      <PopoverContent
+        side="bottom"
+        align="center"
+        sideOffset={8}
+        width="builder"
+      >
         <ControlSizeProvider size="sm">
           <Theme name={subThemeScope(optionRowsTheme)} surface="none">
             <Stack gap="none" role="group" aria-label="Options">
@@ -281,42 +252,9 @@ function shownPicks(
   return picks;
 }
 
-/** A value as the pill writes it: a token humanized, a custom color as its hex. */
+/** A value as a folded group header writes it: a token humanized, a custom color as its hex. */
 function valueLabel(value: string): string {
   return value.startsWith("#") ? value : humanizeToken(value);
-}
-
-/**
- * "Mist · Home" and a dimmed "+3" for the options not named. A color option
- * reads as a dot of its color and its suggestion's name (or its hex).
- */
-function PillSummary({
-  options,
-  picks,
-}: {
-  options: readonly PrototypeOption[];
-  picks: OptionPicks;
-}): ReactElement {
-  const named = options.slice(0, 2);
-  const rest = options.length - named.length;
-  return (
-    <>
-      <Inline as="span" gap="xs" className="tabular-nums">
-        {named.map((o, i) => (
-          <Inline as="span" gap="xs" key={o.name}>
-            {i > 0 ? <span aria-hidden>·</span> : null}
-            {o.kind === "color" ? (
-              <ColorDot color={pickedColor(o, picks)} />
-            ) : null}
-            {valueLabel(pickedValue(o, picks))}
-          </Inline>
-        ))}
-      </Inline>
-      {rest > 0 ? (
-        <span className="text-muted-foreground">+{String(rest)}</span>
-      ) : null}
-    </>
-  );
 }
 
 /** The popover's header row (`.ph`): `Options · <frame>`, and Reset when picked. */
@@ -693,17 +631,6 @@ function hexOf(css: string): string {
   const parsed = parseOptionColor(css);
   if (!parsed.ok) throw new Error(`color picker emitted ${parsed.reason}`);
   return parsed.hex;
-}
-
-/** A color dot in the pill. */
-function ColorDot({ color }: { color: string }): ReactElement {
-  return (
-    <span
-      aria-hidden
-      className={cn("size-3 rounded-full ring-1 ring-border", rigidClass())}
-      style={{ background: color }}
-    />
-  );
 }
 
 const swatchClass = cn(

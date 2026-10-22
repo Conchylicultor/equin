@@ -1,6 +1,6 @@
 // Verifies a prototype frame's two frame actions. Full screen takes frame A
 // over the whole screen with its chrome (the tag with its version stepper, the
-// options pill, the size chip), ← / → flip to the other frame in place,
+// options chip, the size chip), ← / → flip to the other frame in place,
 // leaving full screen brings it back, and `F` presents the selected
 // frame; Open in a new tab opens the chromeless present page at the
 // Responsive size, filling the tab. Manual only — nothing runs this
@@ -119,7 +119,7 @@ await withBrowser(async (h) => {
     );
     if (option) {
       r.ok(
-        `the options pill is on the ${where} presentation`,
+        `the options chip is on the ${where} presentation`,
         (await dialog.getByLabel("Prototype options").count()) === 1,
       );
     }
@@ -157,7 +157,7 @@ await withBrowser(async (h) => {
   await dialog.hover();
   r.ok(
     "the tag says 1 of 2",
-    await dialog.getByText("1 of 2 · ← →").isVisible(),
+    await dialog.getByText("1 of 2", { exact: true }).isVisible(),
   );
   await chromeIsThere("full-screen");
   await snap(page, out, "full-screen");
@@ -166,10 +166,10 @@ await withBrowser(async (h) => {
   await page.mouse.move(10, 10);
   await page.mouse.move(20, 20);
   // Keys go to the app document, not the prototype's iframe.
-  await dialog.getByText("1 of 2 · ← →").click();
+  await dialog.getByText("1 of 2", { exact: true }).click();
   await page.keyboard.press("ArrowRight");
   const flipped = await dialog
-    .getByText("2 of 2 · ← →")
+    .getByText("2 of 2", { exact: true })
     .waitFor({ state: "visible", timeout: 5000 })
     .then(
       () => true,
@@ -182,7 +182,7 @@ await withBrowser(async (h) => {
   );
   await page.keyboard.press("ArrowLeft");
   const back = await dialog
-    .getByText("1 of 2 · ← →")
+    .getByText("1 of 2", { exact: true })
     .waitFor({ state: "visible", timeout: 5000 })
     .then(
       () => true,
@@ -191,7 +191,7 @@ await withBrowser(async (h) => {
   r.ok("← flips back to frame A", back);
   await page.keyboard.press("ArrowRight");
   await dialog
-    .getByText("2 of 2 · ← →")
+    .getByText("2 of 2", { exact: true })
     .waitFor({ state: "visible", timeout: 5000 });
 
   await leaveFullScreen();
@@ -222,7 +222,7 @@ await withBrowser(async (h) => {
 
   // --- Full screen keeps its popups working -------------------------------
   await fullScreenA();
-  // The load-bearing one: the options pill still WORKS inside the
+  // The load-bearing one: the options chip still WORKS inside the
   // fullscreened element — its popover opens there, and a chip reloads the
   // frame on the picked variant.
   if (option && otherValue !== undefined) {
@@ -255,7 +255,7 @@ await withBrowser(async (h) => {
     .getByRole("group", { name: "Version" })
     .getByRole("button", { name: /^(v\d+|Live|Unknown)/ });
   await versionLabel.click();
-  const list = dialog.getByText("Versions", { exact: true });
+  const list = dialog.getByText(/^(\d+ of )?\d+ versions?$/);
   const listShown = await list
     .waitFor({ state: "visible", timeout: 5000 })
     .then(
@@ -306,7 +306,7 @@ await withBrowser(async (h) => {
     await tab.locator(canvasFrameSelector({ letter: "A" })).hover();
     const tabPicker = tab.getByLabel("Prototype options");
     await tabPicker.waitFor({ state: "visible", timeout: 15_000 });
-    r.ok("the options pill is on the new-tab page", true);
+    r.ok("the options chip is on the new-tab page", true);
     await snap(tab, out, "new-tab");
     // The full-screen step above left `otherValue` picked: switch back.
     await tabPicker.click();

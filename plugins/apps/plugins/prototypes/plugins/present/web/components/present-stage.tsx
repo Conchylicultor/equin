@@ -6,9 +6,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {
   Button,
   ControlSizeProvider,
@@ -30,9 +28,8 @@ import {
 import {
   AddFrameRail,
   CanvasFrameView,
-  OptionsPill,
+  FrameShowsBox,
   SizeChip,
-  VersionStepper,
   frameA,
   layoutFrames,
   useWindowSize,
@@ -57,9 +54,9 @@ import { usePresentChrome, usePresentRoot } from "./present-box";
  * computed for the room the presentation has (so "Phone at Fit" is a phone
  * filling the screen, "Responsive at Fit" the page at the screen's own width).
  *
- * Hovering shows the chrome: the frame's tag (name, version stepper,
- * and "i of n · ← →" when there are more frames), Exit, the options pill
- * (bottom centre) and the size & zoom chip (bottom right). Each piece can be
+ * Hovering shows the chrome: the frame's tag (the canvas frame header's own
+ * box — options chip | version stepper — and "i of n · ← →" when there are
+ * more frames), Exit and the size & zoom chip (bottom right). Each piece can be
  * dragged off what it covers in the frame (double-click its surface to send it
  * home).
  */
@@ -204,6 +201,7 @@ function PresentedFrame({
               meta={meta}
               resolution={resolution}
               onFlip={onFlip}
+              onExtend={onExtend}
               leading={
                 onExit === undefined ? (
                   <LeaveToCanvasButton name={meta.name} />
@@ -225,15 +223,6 @@ function PresentedFrame({
               <ExitButton onExit={onExit} />
             </Movable>
           ) : null}
-          {frame.kind === "prototype" ? (
-            <Movable
-              at={{ pin: "bottom", offset: "lg" }}
-              bounds={root}
-              {...chrome}
-            >
-              <OptionsPill frame={frame} meta={meta} />
-            </Movable>
-          ) : null}
           <Movable
             at={{ pin: "bottom-right", offset: "md" }}
             bounds={root}
@@ -248,9 +237,10 @@ function PresentedFrame({
 }
 
 /**
- * The frame's tag: its name, what it shows (the version stepper for
- * the prototype, the source's tag otherwise), and — with more than one frame —
- * where it sits among them and the keys that flip through them.
+ * The frame's tag: the very box the canvas's frame header shows
+ * (`FrameShowsBox` — the options chip | the version stepper, or the source's
+ * name), floated, with — when there are more frames — where this one sits
+ * among them and the keys that flip through them.
  */
 function FrameTag({
   frame,
@@ -259,6 +249,7 @@ function FrameTag({
   meta,
   resolution,
   onFlip,
+  onExtend,
   leading,
 }: {
   frame: CanvasFrame;
@@ -268,59 +259,57 @@ function FrameTag({
   resolution: FrameResolution | null;
   /** Flip to the previous / next frame (the ‹ › beside "i of n"). */
   onFlip: ((delta: -1 | 1) => void) | undefined;
+  /** The overlay's way to add a frame — the version list's Compare. */
+  onExtend: ((action: CanvasAddAction) => void) | undefined;
   /** A control at the pill's start (the present page's Exit). */
   leading?: ReactNode;
 }): ReactElement {
-  const { dispatch } = usePrototypeDetail();
   const names = useFrameNames(meta);
   return (
     <ControlSizeProvider size="xs">
-      <Surface level="float">
-        <Line className={cn("h-8 gap-sm pr-2xs", leading ? "pl-2xs" : "pl-xs")}>
-          {leading}
-          <Text variant="group" tone="muted" className="whitespace-nowrap">
-            {names(frame)}
-          </Text>
-          {frame.kind === "prototype" ? (
-            <VersionStepper
-              name={meta.name}
-              shown={frame.version}
-              show={(version) =>
-                dispatch({ type: "setVersion", id: frame.id, version })
-              }
-            />
-          ) : resolution?.status === "found" ? (
-            <Badge variant="success">{resolution.tag}</Badge>
-          ) : null}
-          {count > 1 ? (
-            <Stack direction="row" gap="none" align="center">
-              <Text
-                variant="caption"
-                tone="faint"
-                className={cn("whitespace-nowrap", onFlip ? "pr-2xs" : "pr-xs")}
-              >
-                {index + 1} of {count}
-              </Text>
-              {onFlip ? (
-                <>
-                  <IconButton
-                    icon={previousIcon}
-                    label="Previous frame"
-                    shortcut="ArrowLeft"
-                    onClick={() => onFlip(-1)}
-                  />
-                  <IconButton
-                    icon={nextIcon}
-                    label="Next frame"
-                    shortcut="ArrowRight"
-                    onClick={() => onFlip(1)}
-                  />
-                </>
-              ) : null}
-            </Stack>
-          ) : null}
-        </Line>
-      </Surface>
+      <FrameShowsBox
+        frame={frame}
+        meta={meta}
+        name={names(frame)}
+        resolution={resolution}
+        compare={
+          onExtend === undefined
+            ? undefined
+            : (version) =>
+                onExtend({ type: "addPrototype", from: frame.id, version })
+        }
+        floating={{
+          leading,
+          trailing:
+            count > 1 ? (
+              <Stack direction="row" gap="none" align="center">
+                <Text
+                  variant="caption"
+                  tone="faint"
+                  className={cn("whitespace-nowrap px-xs", onFlip && "pr-2xs")}
+                >
+                  {index + 1} of {count}
+                </Text>
+                {onFlip ? (
+                  <>
+                    <IconButton
+                      icon={previousIcon}
+                      label="Previous frame"
+                      shortcut="ArrowLeft"
+                      onClick={() => onFlip(-1)}
+                    />
+                    <IconButton
+                      icon={nextIcon}
+                      label="Next frame"
+                      shortcut="ArrowRight"
+                      onClick={() => onFlip(1)}
+                    />
+                  </>
+                ) : null}
+              </Stack>
+            ) : undefined,
+        }}
+      />
     </ControlSizeProvider>
   );
 }

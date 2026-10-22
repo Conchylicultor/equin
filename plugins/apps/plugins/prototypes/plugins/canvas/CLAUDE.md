@@ -129,9 +129,8 @@ not declare is dropped from its URL.
   swatch per suggestion and a trailing custom swatch (the color on screen,
   ringed when it is no suggestion) that opens the color picker in its own
   popover above the swatch. "Reset to defaults" sits in the header while the
-  frame has a pick. (A presentation, which has no frame header, keeps the
-  floating `OptionsPill` — the same popover, opening above it — which writes a
-  color as a dot and its suggestion's name, or its hex.) Options the page declares under a group
+  frame has a pick. (A presentation's tag is the very same box,
+  `FrameShowsBox`, so its chip and stepper are these.) Options the page declares under a group
   (`<meta name="prototype-option-group">`, `files`' `groupOptions`) sit in one
   collapsible section per group — folded, its header lists the group's picks —
   and a grouped row drops the group's prefix from its label (`optionLabel`;
@@ -320,8 +319,9 @@ canvas as surface-scoped plain keys (silent while a text field has focus):
 A selected frame shows its header actions; the others reveal them on hover.
 
 A frame's header (`frame-header.tsx`, 26px, `FRAME_HEAD_GAP` above its
-screen) is ONE box on the left — the options chip | the version stepper, on the
-card at 70% inside a 1px line (a prototype with no options: the stepper alone)
+screen) is ONE box on the left (`frame-box.tsx`, `FrameShowsBox` — a
+presentation's tag is the same component, floated) — the options chip | the
+version stepper, on the card at 70% inside a 1px line (a prototype with no options: the stepper alone)
 — or, for a source frame, a dashed tag naming it ("Real app", what it resolved
 to as its tooltip); and the frame actions on the right, revealed on hover. The
 box's 22px chips and 20px arrows are drawn by the `frameChipsTheme` sub-theme
@@ -368,8 +368,9 @@ For surfaces that show a frame outside the pane (Present, its new-tab page)
 the barrel exports `PrototypeDetailProvider` (standalone for one frame, with
 `initialVersion` / `initialPicks`), `openCanvasInApp` (above),
 `usePrototypeDetail`, `CanvasFrameView`
-(the very same frame screen), `OptionsPill` (the floating options trigger a
-presentation uses), `VersionStepper`, `SizeChip`,
+(the very same frame screen), `FrameShowsBox` (the frame header's box —
+options chip | version stepper, or a source's name — which a presentation
+floats as its tag, with its own controls around it), `SizeChip`,
 `AddFrameRail` (its buttons' actions handed over by `extend`),
 `layoutFrames` and `useFrameNames`.
 
@@ -441,7 +442,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×6
     - `primitives/collapsible` ×5
@@ -467,7 +468,6 @@ navigation, so it starts from nothing remembered.
     - `primitives/css/color-picker.ColorPicker`
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
-    - `primitives/css/inline.Inline`
     - `primitives/css/layer.layerClasses`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
@@ -517,18 +517,17 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrame`
     - `Room`
     - `SourceFrame`
-    - `VersionStepperProps`
   - Exports (values):
     - `AddFrameRail`
     - `CanvasFrameView`
     - `canvasWith`
     - `documentOptions`
     - `frameA`
+    - `FrameShowsBox`
     - `FrameSource`
     - `layoutFrames`
     - `letterOf`
     - `openCanvasInApp`
-    - `OptionsPill`
     - `pageHeightOf`
     - `prototypeDetailPane`
     - `PrototypeDetailProvider`
@@ -546,7 +545,6 @@ navigation, so it starts from nothing remembered.
     - `useFrameSrc`
     - `usePrototypeDetail`
     - `useWindowSize`
-    - `VersionStepper`
 - Cross-plugin:
   - Uses tokens: 37 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×12

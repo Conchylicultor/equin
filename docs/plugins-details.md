@@ -5673,7 +5673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 83 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 82 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
@@ -5699,7 +5699,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/color-picker.ColorPicker`
               - `primitives/css/coords.Placed`
               - `primitives/css/fill.Fill`
-              - `primitives/css/inline.Inline`
               - `primitives/css/layer.layerClasses`
               - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
@@ -5749,18 +5748,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrame`
               - `Room`
               - `SourceFrame`
-              - `VersionStepperProps`
             - Exports (values):
               - `AddFrameRail`
               - `CanvasFrameView`
               - `canvasWith`
               - `documentOptions`
               - `frameA`
+              - `FrameShowsBox`
               - `FrameSource`
               - `layoutFrames`
               - `letterOf`
               - `openCanvasInApp`
-              - `OptionsPill`
               - `pageHeightOf`
               - `prototypeDetailPane`
               - `PrototypeDetailProvider`
@@ -5778,7 +5776,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useFrameSrc`
               - `usePrototypeDetail`
               - `useWindowSize`
-              - `VersionStepper`
           - Cross-plugin:
             - Uses tokens: 37 vars — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `ui/tokens/color-palette` ×12
@@ -6078,7 +6075,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `ui/icons.defineIconFamily`
             - Exports (types): `PrototypesGlyph`
             - Exports (values): `prototypesIcons`
-        - **`present`** — Two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href) and Full screen (F, which presents the selected frame; the browser's Fullscreen API). While presenting, hovering shows the frame's tag with its version stepper and 'i of n', Exit, the options pill and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both adding the frame and leaving to the prototype's canvas in the app — and the left and right arrow keys flip through the canvas's frames. The new tab is present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas; its + / Compare open the app's canvas on the frame plus the new one.
+        - **`present`** — Two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href) and Full screen (F, which presents the selected frame; the browser's Fullscreen API). While presenting, hovering shows the frame's tag (the canvas frame header's own box: options chip | version stepper) and 'i of n', Exit and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both adding the frame and leaving to the prototype's canvas in the app — and the left and right arrow keys flip through the canvas's frames. The new tab is present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas; its + / Compare open the app's canvas on the frame plus the new one.
           - Web:
             - Slots: `prototypes-present.actions`
             - Slot contributors: `prototypes-present.actions` ← `primitives.pane`
@@ -6087,16 +6084,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeDetailWrap` → `PresentationHost`
               - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
               - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
-            - Uses: 56 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
-              - `apps/prototypes/canvas` ×26
+            - Uses: 53 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
+              - `apps/prototypes/canvas` ×25
               - `primitives/css/ui-kit` ×3
               - `primitives/hover-reveal` ×2
               - `primitives/latest-ref` ×2
               - `primitives/pane` ×2
               - `apps-core/tabs.useSurfaceFocused`
               - `network/live.useLive`
-              - `primitives/css/badge.Badge`
-              - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -6119,10 +6114,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --background`
               - `ui/tokens/density --space-2xs`
               - `ui/tokens/density --space-lg`
-              - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --radius-popover`
-              - `ui/tokens/shape --spacing`
         - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (the gallery, and the canvas of frames) full-surface: opening a prototype replaces the gallery, whose header leads with Back. Contributes the app's own theme (prototypes: the viewer mockup's neutral greys, apricot accent, Geist, its radii and shadows, the floating-chrome glass and the prototypes icon family).
           - Web:
             - Contributes:
@@ -35944,8 +35937,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 165 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
-              - `apps` ×38
+            - Imported by: 164 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+              - `apps` ×37
               - `debug` ×35
               - `conversations` ×24
               - `reports` ×12
@@ -36359,8 +36352,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
-              - `apps` ×17
+            - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+              - `apps` ×16
               - `debug` ×14
               - `reports` ×13
               - `conversations` ×9
@@ -36448,8 +36441,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 118 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
-              - `apps` ×33
+            - Imported by: 117 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+              - `apps` ×32
               - `primitives` ×19
               - `conversations` ×18
               - `debug` ×8

@@ -41,7 +41,7 @@ other content lives in sub-plugins:
   always-taken path by which prototype agents are launched, and therefore where
   "start from the blank template, never read a sibling" has to be said.
 - **`canvas`** — the detail pane: the prototype as a canvas of lettered
-  frames (A, B, C…), each with its own version stepper and options pill (frame
+  frames (A, B, C…), each with its own options chip and version stepper (frame
   A reads and writes the shared picks, the others hold their own), one
   canvas-wide size & zoom chip, link / spread / keep only, swipe — all
   remembered per pane for the tab's session. Owns the `FrameSource`, frame-actions and detail-wrap slots.
