@@ -45,6 +45,8 @@ export interface DrainDeps {
   recordFailure(error: Error, entryName: string): Promise<void>;
   /** Whether main registers a `ReportKind` for `kind` — see UNKNOWN_KIND_TTL_MS. */
   isKnownKind(kind: string): boolean;
+  /** This repository (`repositoryOf`), compared with an entry's `writer.repo`. */
+  repo: string;
   /** The staleness rule — see staleness.ts. Throws when it cannot tell. */
   checkStaleness(code: OutboxCode): Promise<StalenessVerdict>;
   log(line: string): void;
@@ -149,27 +151,70 @@ async function settleEntry(
     return "expired";
   }
 
-  const staleness = entry.code
-    ? await deps.checkStaleness(entry.code)
-    : ({ kind: "current" } as const);
-  if (staleness.kind === "foreign") {
-    deps.log(
-      `[report-outbox] dropped a "${entry.kind}" report from ${entry.writer.checkout} ` +
-        `(pid ${entry.writer.pid}): its branch point ${entry.code?.mergeBase.slice(0, 12)} ` +
-        "is not a commit of this repository, so it is about another repository's code",
+  // Another repository's report (an e2e's temp clone, a second clone: the
+  // outbox is host-global). Main cannot judge its code against its own
+  // history, so it is filed unjudged — never dropped — and its message says so.
+  const writerRepo = entry.writer.repo;
+  if (writerRepo !== undefined && writerRepo !== deps.repo) {
+    await deps.record(
+      withOriginNote(
+        entry,
+        `filed from ${entry.writer.checkout} in ${writerRepo}`,
+      ),
     );
-    return "dropped";
+    return "filed";
+  }
+  if (!entry.code) {
+    await deps.record(entry);
+    return "filed";
+  }
+  const code = entry.code;
+
+  const staleness = await deps.checkStaleness(code);
+  if (staleness.kind === "unknown-commit") {
+    // The writer said it is this repository, yet its branch point is not
+    // here: a broken assumption, never a verdict.
+    if (writerRepo !== undefined) {
+      throw new Error(
+        `its writer ${entry.writer.checkout} (pid ${entry.writer.pid}) is a checkout of this ` +
+          `repository, yet its branch point ${code.mergeBase} is not a commit here`,
+      );
+    }
+    // An entry from a writer older than `writer.repo`: the missing commit is
+    // the only sign it came from another repository.
+    await deps.record(
+      withOriginNote(
+        entry,
+        `filed from ${entry.writer.checkout}, whose branch point ` +
+          `${code.mergeBase.slice(0, 12)} is not a commit of this repository`,
+      ),
+    );
+    return "filed";
   }
   if (staleness.kind === "stale") {
     deps.log(
       `[report-outbox] dropped a "${entry.kind}" report from ${entry.writer.checkout} ` +
         `(pid ${entry.writer.pid}): main changed ${staleness.changed.join(", ")} ` +
-        `since its branch point ${entry.code?.mergeBase.slice(0, 12)}, so it may already be fixed`,
+        `since its branch point ${code.mergeBase.slice(0, 12)}, so it may already be fixed`,
     );
     return "dropped";
   }
   await deps.record(entry);
   return "filed";
+}
+
+/**
+ * An entry about another repository's code, its message saying where it came
+ * from and that it was filed without the staleness rule. The message, not
+ * `data`: each kind owns its payload's schema, and the message is the line
+ * every list and notification shows. A kind fingerprints `data`, so the note
+ * does not split a report's row.
+ */
+function withOriginNote(entry: OutboxEntry, origin: string): OutboxEntry {
+  return {
+    ...entry,
+    message: `${entry.message} [${origin} — another repository, so not checked for staleness]`,
+  };
 }
 
 /** Remove temp files a dead writer left behind — see ABANDONED_TEMP_MS. */

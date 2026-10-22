@@ -11,12 +11,12 @@ export type StalenessVerdict =
   /** Main changed these of the entry's files since its branch point: drop it. */
   | { kind: "stale"; changed: string[] }
   /**
-   * The branch point is not a commit of this repository, so the writer's
-   * `main` is another repository's (an e2e's temp clone, a second clone on the
-   * machine — the outbox is host-global): drop it. Main can judge, and fix,
-   * only its own code.
+   * The branch point is not a commit of this repository, so there is nothing
+   * to diff. Main's history never loses a commit and every worktree shares
+   * main's refs, so it was read in ANOTHER repository — what that means is the
+   * drain's call, which knows whether the writer said so (`writer.repo`).
    */
-  | { kind: "foreign" };
+  | { kind: "unknown-commit" };
 
 /**
  * The staleness rule: has main changed any of `code.paths` between the writer's
@@ -32,9 +32,9 @@ export type StalenessVerdict =
  * an older branch file, until that branch rebases — the rule errs toward
  * reporting, never toward silence.
  *
- * A merge-base this repository does not have is not "cannot tell": main's
- * history never loses a commit and every worktree shares main's refs, so it was
- * read in ANOTHER repository — `foreign`, decided before the diff.
+ * A merge-base this repository does not have is answered as `unknown-commit`,
+ * decided before the diff, rather than thrown: it is a fact about the entry,
+ * and the drain decides what it means.
  *
  * `--name-only` rather than `--quiet`: the same question, and the answer names
  * the files a drop is logged with. Any other failure — a git error, a timeout —
@@ -47,7 +47,8 @@ export async function checkStaleness(
   // No paths name no code: nothing to compare. (An empty pathspec would diff
   // the whole tree, and drop nearly everything.)
   if (code.paths.length === 0) return { kind: "current" };
-  if (!(await hasObject(code.mergeBase, repo.root))) return { kind: "foreign" };
+  if (!(await hasObject(code.mergeBase, repo.root)))
+    return { kind: "unknown-commit" };
   const argv = [
     "git",
     "diff",

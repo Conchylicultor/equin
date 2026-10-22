@@ -44028,7 +44028,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `optimisticRejectionFingerprint`
           - `OptimisticRejectionPayloadSchema`
-    - **`outbox`** — Report outbox drain: on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged, as is one whose branch point is not a commit of this repository (written from another clone); an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
+    - **`outbox`** — Report outbox drain: on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; one from another repository (the writer stamps its own) is filed without that check, its message saying where it came from; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
       - Server:
         - Uses:
           - `infra/file-watcher.defineFileWatcher`
@@ -44039,6 +44039,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `infra/paths.REPO_ROOT`
+          - `infra/spawn.getMainRepoRoot`
           - `infra/spawn.spawnCaptured`
         - Exports (types):
           - `FileReportOutcome`
@@ -44054,6 +44055,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OUTBOX_MAX_PENDING`
           - `OutboxCodeSchema`
           - `OutboxEntrySchema`
+          - `repositoryOf`
       - Cross-plugin:
         - Imported by: `framework/tooling/checks`
       - Exemptions:

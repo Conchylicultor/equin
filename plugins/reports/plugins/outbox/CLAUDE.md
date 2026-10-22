@@ -24,6 +24,11 @@ await fileReportFromProcess({ kind, message, data, code? });
   That happens when main has been down a long time. Entries waiting for an
   unmerged kind (see the drain below) count toward the cap too, for up to 14
   days each.
+- **Stamps its repository** (`writer.repo`, `repositoryOf`: the realpath of the
+  writer's main checkout). The outbox is host-global, so another clone on the
+  machine writes into it too — `upstream`'s migration-journey e2e runs
+  `./singularity check` in a temp clone — and the drain must know whose code an
+  entry names.
 - Node-only and DB-free, so the check runner (`core → core`) can import it.
 - `kind` should be a `ReportKind` registered on main, and `data` must pass that
   kind's schema — both are checked at the drain, not here.
@@ -46,9 +51,15 @@ For each entry, oldest first (`server/internal/drain.ts`):
    Once it is older than `UNKNOWN_KIND_TTL_MS` (14 days), the branch is taken
    as abandoned: the entry is deleted with a log line naming the kind and the
    writer's checkout, and no report is filed.
-3. Apply the **staleness rule** when it carries `code`.
-4. `recordReport({ kind, source: "cli", message, data, occurredAt })`.
-5. Delete the file.
+3. **Another repository's entry** (`writer.repo` is not main's) is filed
+   WITHOUT the staleness rule — main cannot judge another repository's code
+   against its own history — and its message is suffixed with where it came
+   from and that it was not checked. Never dropped: an issue is never silenced.
+   (The note goes in the message, not `data`: each kind owns its payload's
+   schema, and kinds fingerprint `data`, so it does not split a row.)
+4. Otherwise apply the **staleness rule** when it carries `code`.
+5. `recordReport({ kind, source: "cli", message, data, occurredAt })`.
+6. Delete the file.
 
 **An entry that cannot be filed** — bad JSON, a shape the envelope schema
 rejects, a payload a KNOWN kind's schema rejects, a staleness check that cannot
@@ -71,12 +82,12 @@ report is about. Main runs `git diff --name-only <mergeBase> main -- <paths>`:
   regression a report should name.
 - **Something changed** → dropped, with one log line naming the files: main may
   already have fixed it.
-- **The merge-base is not a commit of this repository** → dropped, with one log
-  line. Main's history never loses a commit and every worktree shares main's
-  refs, so the writer's `main` was another repository's: the outbox is
-  host-global, and a temp clone (`upstream`'s migration-journey e2e runs
-  `./singularity check` in one) or a second clone writes into it too. Main can
-  judge, and fix, only its own code. Checked first (`git cat-file -e`).
+- **The merge-base is not a commit of this repository** (`git cat-file -e`,
+  checked first) → depends on the writer. One stamped as THIS repository: a
+  broken assumption, so a crash-style report. One unstamped (a writer older
+  than `writer.repo`): main's history never loses a commit and every worktree
+  shares main's refs, so it came from another repository — filed with the
+  same origin note, naming the missing commit.
 - **git fails** otherwise (a git error, a timeout) → a crash-style report.
   "Cannot tell" is never evidence for either verdict.
 - **Empty `paths`** → filed. No code is named, so there is nothing to compare.
@@ -92,7 +103,7 @@ pass the same `code` field.
 
 ## Plugin reference
 
-- Description: Report outbox drain: on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged, as is one whose branch point is not a commit of this repository (written from another clone); an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
+- Description: Report outbox drain: on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; one from another repository (the writer stamps its own) is filed without that check, its message saying where it came from; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
 - Server:
   - Uses:
     - `infra/file-watcher.defineFileWatcher`
@@ -103,6 +114,7 @@ pass the same `code` field.
 - Core:
   - Uses:
     - `infra/paths.REPO_ROOT`
+    - `infra/spawn.getMainRepoRoot`
     - `infra/spawn.spawnCaptured`
   - Exports (types):
     - `FileReportOutcome`
@@ -118,6 +130,7 @@ pass the same `code` field.
     - `OUTBOX_MAX_PENDING`
     - `OutboxCodeSchema`
     - `OutboxEntrySchema`
+    - `repositoryOf`
 - Cross-plugin:
   - Imported by: `framework/tooling/checks`
 - Exemptions:

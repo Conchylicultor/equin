@@ -9,6 +9,7 @@ import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { isReportKindRegistered } from "@plugins/reports/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
+import { repositoryOf } from "../../core";
 import { reportOutboxDir } from "../../data-dirs";
 import { drainOutbox, type DrainDeps } from "./drain";
 import { checkStaleness } from "./staleness";
@@ -26,6 +27,7 @@ async function productionDeps(): Promise<DrainDeps> {
   const root = await getMainRepoRoot(REPO_ROOT);
   return {
     dir: reportOutboxDir.path,
+    repo: await repositoryOf(REPO_ROOT),
     record: async (entry) => {
       await recordReport({
         kind: entry.kind,

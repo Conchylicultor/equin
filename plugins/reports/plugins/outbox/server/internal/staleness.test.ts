@@ -90,13 +90,13 @@ describe("checkStaleness", () => {
     });
   });
 
-  test("a merge-base this repository does not have → foreign, never a diff", async () => {
+  test("a merge-base this repository does not have → unknown-commit, never a diff", async () => {
     expect(
       await checkStaleness(
         { mergeBase: "c".repeat(40), paths: ["stack.ts"] },
         repo(),
       ),
-    ).toEqual({ kind: "foreign" });
+    ).toEqual({ kind: "unknown-commit" });
   });
 
   test("a git failure → throws, never a verdict", async () => {

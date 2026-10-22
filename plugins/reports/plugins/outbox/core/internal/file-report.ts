@@ -1,6 +1,7 @@
-import { mkdir, readdir, rename, writeFile } from "node:fs/promises";
+import { mkdir, readdir, realpath, rename, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { reportOutboxDir } from "../../data-dirs";
 import {
   OutboxEntrySchema,
@@ -18,6 +19,16 @@ import {
  * say. Refusing keeps the directory bounded by construction.
  */
 export const OUTBOX_MAX_PENDING = 1_000;
+
+/**
+ * Which repository `root` is a checkout of: the realpath of its main checkout,
+ * so every worktree of one clone answers the same and a symlinked path (macOS
+ * `/tmp`) cannot make one repository look like two. Stamped by the writer and
+ * compared by the drain.
+ */
+export async function repositoryOf(root: string): Promise<string> {
+  return realpath(await getMainRepoRoot(root));
+}
 
 /** What became of one `fileReportFromProcess` call. */
 export type FileReportOutcome =
@@ -68,7 +79,11 @@ export async function fileReportFromProcess(
       data: report.data,
       code: report.code,
       occurredAt: now,
-      writer: { pid: process.pid, checkout: basename(REPO_ROOT) },
+      writer: {
+        pid: process.pid,
+        checkout: basename(REPO_ROOT),
+        repo: await repositoryOf(REPO_ROOT),
+      },
     });
     const name = newOutboxEntryName(now, process.pid);
     const temp = join(dir, outboxTempName(name));

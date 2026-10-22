@@ -39,8 +39,19 @@ export const OutboxEntrySchema = z.object({
   code: OutboxCodeSchema.optional(),
   /** When the reported event happened (epoch ms) — not when main drained it. */
   occurredAt: z.number(),
-  /** Who wrote it: for the drain's log lines, never for the report itself. */
-  writer: z.object({ pid: z.number().int(), checkout: z.string() }),
+  /** Who wrote it: for the drain's log lines and a foreign report's note. */
+  writer: z.object({
+    pid: z.number().int(),
+    checkout: z.string(),
+    /**
+     * The writer's repository (`repositoryOf`): the realpath of its main
+     * checkout, the same for every worktree of one clone. The outbox is
+     * host-global, so another clone on the machine — an e2e's temp clone —
+     * writes into it too, and the drain must know whose code `code` names.
+     * Absent only on entries from writers older than the field.
+     */
+    repo: z.string().min(1).optional(),
+  }),
 });
 export type OutboxEntry = z.infer<typeof OutboxEntrySchema>;
 
