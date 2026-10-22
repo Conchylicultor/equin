@@ -10,7 +10,7 @@ import { implementMachine } from "@plugins/infra/plugins/endpoints/machine";
 import { pickHostEnv } from "@plugins/infra/plugins/launcher/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
   claudeUsageOfReply,
   refreshClaudeUsage,

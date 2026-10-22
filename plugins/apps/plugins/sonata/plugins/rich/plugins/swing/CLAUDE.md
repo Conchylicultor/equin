@@ -17,7 +17,7 @@
     - `primitives/css/ui-kit` ×3
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLiveRow`
     - `primitives/css/fill.Fill`
     - `primitives/css/slider.Slider`
