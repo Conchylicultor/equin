@@ -5,6 +5,10 @@ import {
   pidAlive,
   readPidFile,
 } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
+import {
+  asNamespace,
+  namespaceParts,
+} from "@plugins/infra/plugins/namespace/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { sdkAgentProcesses, type AgentProcesses } from "../../core";
@@ -22,16 +26,54 @@ function entries(dir: string): string[] {
   }
 }
 
-/** The conversation ids of `namespace`'s agents whose pid file names a live pid. */
-export function liveAgentIds(namespace: string): string[] {
+/** `namespace`'s agents whose pid file names a live pid. */
+function liveAgents(namespace: string): { id: string; pid: number }[] {
   const dir = join(agentPidsRoot(), namespace);
   return entries(dir)
     .filter((name) => name.endsWith(PID_SUFFIX))
-    .filter((name) => {
+    .flatMap((name) => {
       const read = readPidFile(join(dir, name));
-      return read.kind === "pid" && pidAlive(read.pid);
-    })
-    .map((name) => name.slice(0, -PID_SUFFIX.length));
+      return read.kind === "pid" && pidAlive(read.pid)
+        ? [{ id: name.slice(0, -PID_SUFFIX.length), pid: read.pid }]
+        : [];
+    });
+}
+
+/** The conversation ids of `namespace`'s agents whose pid file names a live pid. */
+export function liveAgentIds(namespace: string): string[] {
+  return liveAgents(namespace).map((a) => a.id);
+}
+
+/** Whether `namespace` is served from the worktree checkout named `checkout`, in any composition. */
+function servedFrom(namespace: string, checkout: string): boolean {
+  const parts = namespaceParts(asNamespace(namespace));
+  return (parts.kind === "label" ? parts.label : parts.checkout) === checkout;
+}
+
+/**
+ * Stop every agent a backend served from the worktree checkout `checkout`
+ * launched — the one cross-namespace command, so it goes by pid, not by socket
+ * (paths.ts spells only this backend's own). SIGTERM is the agent's clean exit:
+ * it writes its `exited` event and removes its pid file, so that backend, when
+ * it next runs, reads an agent that exited.
+ */
+export function stopCheckoutAgents(checkout: string): void {
+  if (servedFrom(runtimeNamespace(), checkout)) {
+    throw new Error(
+      `refusing to stop the agents of ${checkout}: this backend is served from it`,
+    );
+  }
+  for (const namespace of entries(agentPidsRoot())) {
+    if (!servedFrom(namespace, checkout)) continue;
+    for (const { pid } of liveAgents(namespace)) {
+      try {
+        process.kill(pid, "SIGTERM");
+      } catch (err) {
+        // Exited between the liveness read and the signal: the goal.
+        if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
+      }
+    }
+  }
 }
 
 function countAgents(): AgentProcesses {

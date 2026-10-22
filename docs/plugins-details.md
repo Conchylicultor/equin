@@ -17806,6 +17806,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
       - Server:
         - Contributes:
+          - `trigger` "runtime-sdk.attempt-ended"
           - `resource.declare` "runtime-sdk.agent-processes"
           - `resource.declare` "runtime-sdk.bundled-cli"
           - `resource.declare` "runtime-sdk.claude-usage"
@@ -17829,6 +17830,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register:
           - `defineFileWatcher('runtime-sdk.events')`
           - `defineDaemon('runtime-sdk.agent')`
+          - `defineJob('runtime-sdk.attempt-ended')`
       - Core:
         - Uses: `network/live.liveValue`
         - Exports (types):

@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { EMPTY_PROJECTION, type AgentProjection } from "./reducer";
@@ -108,4 +108,31 @@ export async function writeProjection(
   state: AgentProjection,
 ): Promise<void> {
   await sdkAgents.update(id, state);
+}
+
+/** The attempt conversation `id` belongs to. Throws for an unknown conversation. */
+export async function attemptOfConversation(id: string): Promise<string> {
+  const [row] = await db
+    .select({ attemptId: _conversations.attemptId })
+    .from(_conversations)
+    .where(eq(_conversations.id, id));
+  if (!row) throw new Error(`Unknown conversation "${id}"`);
+  return row.attemptId;
+}
+
+/** Whether any conversation of `attemptId` is still open (not closed: `done`). */
+export async function attemptHasOpenConversation(
+  attemptId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: _conversations.id })
+    .from(_conversations)
+    .where(
+      and(
+        eq(_conversations.attemptId, attemptId),
+        ne(_conversations.status, "done"),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
 }

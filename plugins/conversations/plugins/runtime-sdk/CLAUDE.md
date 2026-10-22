@@ -18,7 +18,12 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   `subscribe` connection per watched conversation, reconnected when the
   consumer sees the agent's `ready`). `agent-processes.ts` serves
   `runtime-sdk.agent-processes`, the agents running here and in every other
-  namespace (one watch of the pid files).
+  namespace (one watch of the pid files). `attempt-ended-job.ts` (main
+  only): when an attempt's last conversation is closed (`done`), SIGTERMs
+  every agent its worktree's backends launched — the conversations an agent
+  started in its own build while testing, which nothing else reaps once that
+  backend stops (`stopCheckoutAgents`, the one cross-namespace command: by pid,
+  never by socket).
 - **Every agent path is under the launching backend's namespace**
   (`machine/internal/paths.ts`, which reads `runtimeNamespace()` itself): a
   worktree's DB is a fork of main's, and with paths keyed by conversation id
@@ -109,6 +114,7 @@ Gotchas the spike hit:
     - `ui/icons.Icon`
 - Server:
   - Contributes:
+    - `trigger` "runtime-sdk.attempt-ended"
     - `resource.declare` "runtime-sdk.agent-processes"
     - `resource.declare` "runtime-sdk.bundled-cli"
     - `resource.declare` "runtime-sdk.claude-usage"
@@ -132,6 +138,7 @@ Gotchas the spike hit:
   - Register:
     - `defineFileWatcher('runtime-sdk.events')`
     - `defineDaemon('runtime-sdk.agent')`
+    - `defineJob('runtime-sdk.attempt-ended')`
 - Core:
   - Uses: `network/live.liveValue`
   - Exports (types):
