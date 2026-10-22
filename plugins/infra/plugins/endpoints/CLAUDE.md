@@ -95,7 +95,7 @@ await callEndpoint(secretsSet, {}, { origin, body });          // void endpoint 
 const s = await callEndpoint(queueHealthSummaryEndpoint, {}, { origin: namespaceUrl(ns) });
 ```
 
-Params, body, query and the decoded answer come from the contract, so a contract change is a tsc error at the caller (the bug class: `secretsSet` went 204 while its caller still parsed `{ ok: true }`). No answer → fetch's `TypeError`; a non-2xx → `EndpointError` whose message names the request and the reply. Retry / offline policy is the caller's, over those two. Both clients share one fetch-free request core in `core/request.ts` (`endpointRequest` / `readEndpointResponse`), which a module that cannot import `server/` (a `shared/` helper run by a host process) composes around its own sanctioned `fetch`. A hand-written `/api/…` path or a `fetch` to an endpoint's `.path` off the page is the `endpoints/no-raw-endpoint-call` lint; a genuine exception (a reply read across code generations, a hook process that must not load zod) is an inline disable with the reason.
+Params, body, query and the decoded answer come from the contract, so a contract change is a tsc error at the caller (the bug class: `secretsSet` went 204 while its caller still parsed `{ ok: true }`). No answer → fetch's `TypeError`; a non-2xx → `EndpointError` whose message names the request and the reply. Retry / offline policy is the caller's, over those two. Both clients share one fetch-free request core in `core/request.ts` (`endpointRequest` / `readEndpointResponse`), which a module that cannot import `server/` (a `shared/` helper run by a host process) composes around its own sanctioned `fetch`. A hand-written `/api/…` path or a `fetch` to an endpoint's `.path` off the page is the `endpoints/no-raw-endpoint-call` lint; a genuine exception (a hook process that must not load zod) is an inline disable with the reason. A URL handed to someone else rather than fetched (an agent's MCP URL) is built with `endpointPath(endpoint, params)`. A reply read across code generations (any worktree's backend, through the gateway) is not an exception: its contract defaults every field added since (`.default(…)`), so an older backend's reply parses — `profiling/runtime`'s schemas are the example.
 
 **Endpoints are for writes, and for reads sanctioned to stay request/response.** A server read a surface renders is a live resource — a `liveValue` (`params`, a typed `query`, or cursor-`paged`) or a `liveCollection`, read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`). The `live/no-endpoint-read` lint flags, in `web/` code, `useEndpoint`, `useEndpointResource`, TanStack's `useQuery` family, `fetchEndpoint` inside a `queryFn`, a GET `fetchEndpoint` / `readNdjson` that render, a hook or an effect runs, and `invalidateQueries` / `refetchQueries` over an endpoint read's key; imperative `fetchEndpoint` (a mutation, a handler) is untouched. The read hooks below remain for the existing sites — the rule's debt burndown (`./singularity exempt list --rule live/no-endpoint-read --debt`) — never for new code.
 
@@ -399,6 +399,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `defineEndpoint`
     - `EndpointAgentWriteRefusedError`
     - `EndpointError`
+    - `endpointPath`
     - `endpointRequest`
     - `extractMethod`
     - `extractPath`
@@ -415,12 +416,12 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 221 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 222 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×55
     - `conversations` ×32
     - `page` ×20
+    - `debug` ×19
     - `infra` ×19
-    - `debug` ×18
     - `tasks` ×17
     - `primitives` ×16
     - `build` ×8

@@ -10,7 +10,7 @@ import {
   getFlightWindow,
   getRuntimeProfile,
   resetRuntimeProfile,
-} from "../shared/endpoints";
+} from "../core";
 
 export default {
   description:

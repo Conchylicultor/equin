@@ -81,7 +81,9 @@ client sees them at connect (Claude Code connects once per conversation).
   - Resources: `mcp.catalog` (push, fixed)
   - Routes: `POST /api/mcp/:conversationId`
 - Core:
-  - Uses: `network/live.liveValue`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `network/live.liveValue`
   - Exports (types):
     - `McpCatalog`
     - `McpCatalogInstructions`
@@ -93,6 +95,7 @@ client sees them at connect (Claude Code connects once per conversation).
     - `McpCatalogInstructionsSchema`
     - `McpCatalogSchema`
     - `McpCatalogToolSchema`
+    - `mcpRequest`
 - Cross-plugin:
   - Imported by:
     - `apps/places/ask`
@@ -107,9 +110,6 @@ client sees them at connect (Claude Code connects once per conversation).
     - `infra/mcp/browser`
     - `page/annotations/agent-access`
     - `plugin-meta/plugin-health`
-  - Endpoint callers: `scratch`
-- Shared:
-  - Exports (values): `mcpRequest`
 - Sub-plugins:
   - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (what each is for — its task's title — its tab count, and how long until it closes if left idle), a…
 

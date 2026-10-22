@@ -6,7 +6,7 @@ import { SPAN_KINDS, type FlightWindow } from "@plugins/infra/plugins/runtime-pr
 // parses the (opaque) `snapshot.events.spans` back out with it. `runtime-profiler/core`
 // is zero-dependency by contract, so the mirror cannot live there; `shared/` is
 // plugin-private DRY between our own web and server — exactly its purpose.
-// (Precedent: `debug/profiling/plugins/runtime/shared/endpoints.ts`.)
+// (Precedent: `debug/profiling/plugins/runtime/core/endpoints.ts`.)
 //
 // Derived from SPAN_KINDS, NEVER hand-written. The two hand-mirrors this file
 // replaces both hardcoded a 7-kind enum and omitted `cascade`, so any cascade span

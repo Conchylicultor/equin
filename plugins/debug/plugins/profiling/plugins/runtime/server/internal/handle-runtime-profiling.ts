@@ -7,7 +7,7 @@ import { serveValue } from "@plugins/network/plugins/live/server";
 import {
   getRuntimeProfile as getRuntimeProfileEndpoint,
   resetRuntimeProfile as resetRuntimeProfileEndpoint,
-} from "../../shared/endpoints";
+} from "../../core";
 import { runtimeProfile } from "../../shared/resources";
 
 function measureRuntimeProfile() {

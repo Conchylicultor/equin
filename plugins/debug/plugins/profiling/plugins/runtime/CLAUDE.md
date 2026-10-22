@@ -25,6 +25,7 @@
 - Server:
   - Contributes: `resource.declare` "runtime-profiler.profile"
   - Uses:
+    - `infra/endpoints.callEndpoint`
     - `infra/endpoints.implement`
     - `infra/mcp.Mcp`
     - `network/live.serveValue`
@@ -35,6 +36,23 @@
     - `GET /api/debug/profiling/runtime`
     - `POST /api/debug/profiling/runtime/reset`
     - `GET /api/debug/profiling/flight-window`
+- Core:
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `infra/runtime-profiler.SPAN_KINDS`
+    - `infra/runtime-profiler.SPAN_MEASURES`
+    - `infra/runtime-profiler.SpanKind`
+    - `infra/runtime-profiler.SpanMeasure`
+  - Exports (values):
+    - `FLIGHT_WINDOW_MS_DEFAULT`
+    - `FLIGHT_WINDOW_MS_MAX`
+    - `FLIGHT_WINDOW_MS_MIN`
+    - `flightWindowQuerySchema`
+    - `flightWindowResponseSchema`
+    - `getFlightWindow`
+    - `getRuntimeProfile`
+    - `resetRuntimeProfile`
+    - `runtimeProfileSchema`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

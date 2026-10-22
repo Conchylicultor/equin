@@ -19562,7 +19562,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-3xs`
           - `ui/tokens/type-scale --line-height-caption`
-        - Endpoint callers: `sentinel`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/broadcasts-file.ts`, `server/internal/entries-served.ts`, `server/internal/handle-write.ts` (debt)
       - Shared:
@@ -20719,6 +20718,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `resource.declare` "runtime-profiler.profile"
             - Uses:
+              - `infra/endpoints.callEndpoint`
               - `infra/endpoints.implement`
               - `infra/mcp.Mcp`
               - `network/live.serveValue`
@@ -20729,6 +20729,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GET /api/debug/profiling/runtime`
               - `POST /api/debug/profiling/runtime/reset`
               - `GET /api/debug/profiling/flight-window`
+          - Core:
+            - Uses:
+              - `infra/endpoints.defineEndpoint`
+              - `infra/runtime-profiler.SPAN_KINDS`
+              - `infra/runtime-profiler.SPAN_MEASURES`
+              - `infra/runtime-profiler.SpanKind`
+              - `infra/runtime-profiler.SpanMeasure`
+            - Exports (values):
+              - `FLIGHT_WINDOW_MS_DEFAULT`
+              - `FLIGHT_WINDOW_MS_MAX`
+              - `FLIGHT_WINDOW_MS_MIN`
+              - `flightWindowQuerySchema`
+              - `flightWindowResponseSchema`
+              - `getFlightWindow`
+              - `getRuntimeProfile`
+              - `resetRuntimeProfile`
+              - `runtimeProfileSchema`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
@@ -21190,7 +21207,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "sentinel.status"
           - `resource.declare` "sentinel.vitals"
           - `ConfigV2.Register` "sentinel"
-        - Uses: 39 symbols — full list in [`plugins/debug/plugins/sentinel/REFERENCE.md`](../plugins/debug/plugins/sentinel/REFERENCE.md)
+        - Uses: 40 symbols — full list in [`plugins/debug/plugins/sentinel/REFERENCE.md`](../plugins/debug/plugins/sentinel/REFERENCE.md)
           - `infra/host/duress/latch` ×8
           - `debug/sentinel/status-file` ×7
           - `infra/spawn/daemon` ×5
@@ -21199,6 +21216,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/embedded` ×3
           - `debug/trace/engine` ×2
           - `infra/file-watcher` ×2
+          - `infra/endpoints.callEndpoint`
           - `infra/paths.isHostSingleton`
           - `network/live.serveValue`
           - `primitives/log-channels.defineLogSink`
@@ -27035,6 +27053,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineEndpoint`
           - `EndpointAgentWriteRefusedError`
           - `EndpointError`
+          - `endpointPath`
           - `endpointRequest`
           - `extractMethod`
           - `extractPath`
@@ -27051,12 +27070,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 221 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 222 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×55
           - `conversations` ×32
           - `page` ×20
+          - `debug` ×19
           - `infra` ×19
-          - `debug` ×18
           - `tasks` ×17
           - `primitives` ×16
           - `build` ×8
@@ -28590,7 +28609,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources: `mcp.catalog` (push, fixed)
         - Routes: `POST /api/mcp/:conversationId`
       - Core:
-        - Uses: `network/live.liveValue`
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
         - Exports (types):
           - `McpCatalog`
           - `McpCatalogInstructions`
@@ -28602,6 +28623,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpCatalogInstructionsSchema`
           - `McpCatalogSchema`
           - `McpCatalogToolSchema`
+          - `mcpRequest`
       - Cross-plugin:
         - Imported by:
           - `apps/places/ask`
@@ -28616,9 +28638,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/mcp/browser`
           - `page/annotations/agent-access`
           - `plugin-meta/plugin-health`
-        - Endpoint callers: `scratch`
-      - Shared:
-        - Exports (values): `mcpRequest`
       - Plugins:
         - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (what each is for — its task's title — its tab count, and how long until it closes if left idle), a recent failure the host hit on its own, and a host that died without closing them — read from the agent-browser.status push value. Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) forwarded to one detached host process per machine that owns the shared headless Chromium — an isolated session per conversation targeted at that conversation's own worktree build, tabs that stay open across calls and across backend restarts, frozen between calls — plus the agent-browser.status value (host, sessions, tabs, deadlines) pushed from the host's status file.
           - Web:
@@ -29140,6 +29159,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`runtime-profiler`**
       - Cross-plugin:
         - Imported by:
+          - `debug/profiling/runtime`
           - `debug/slow-ops`
           - `infra/endpoints`
       - Exemptions:

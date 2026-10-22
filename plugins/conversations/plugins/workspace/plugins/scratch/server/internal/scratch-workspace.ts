@@ -1,3 +1,5 @@
+import { endpointPath } from "@plugins/infra/plugins/endpoints/core";
+import { mcpRequest } from "@plugins/infra/plugins/mcp/core";
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -56,8 +58,10 @@ export function createScratchWorkspace(deps: {
 
     launch({ spec }, { conversationId }) {
       return scratchLaunchFragment({
-        // eslint-disable-next-line endpoints/no-raw-endpoint-call -- handed to the Claude CLI as its MCP server URL, never fetched here
-        mcpUrl: namespaceUrl(runtimeNamespace(), `/api/mcp/${conversationId}`),
+        mcpUrl: namespaceUrl(
+          runtimeNamespace(),
+          endpointPath(mcpRequest, { conversationId }),
+        ),
         permissions: ScratchProfile.get(spec.profile).permissions,
       });
     },

@@ -2,6 +2,8 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { defineTraceEventClass } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
+import { getFlightWindow } from "@plugins/debug/plugins/profiling/plugins/runtime/core";
 import {
   asNamespace,
   namespaceUrl,
@@ -25,10 +27,10 @@ const FANOUT_CONCURRENCY = 4;
 const PER_BACKEND_TIMEOUT_MS = 3_000;
 const FLIGHT_WINDOW_MS = 15_000;
 
-// Loose validation by design: each backend already zod-validates its own
-// response, and the pane renders this section via the generic lane. Pinning
-// the full FlightSpan shape here would break the fan-out on any backend
-// running older/newer profiler code (fan-outs must tolerate mixed generations).
+// The STORED section's shape. The wire reply is decoded by the flight-window
+// contract (which tolerates older backends itself); `window` stays opaque here
+// because traces persisted under earlier profiler code are read back through
+// this schema, and the pane renders the section via the generic lane.
 const FleetFlightCellSchema = z.discriminatedUnion("ok", [
   z.object({
     ok: z.literal(true),
@@ -47,31 +49,23 @@ const GatewayWorktreeSchema = z.object({
 
 async function fetchFlightWindow(name: Namespace): Promise<FleetFlightCell> {
   try {
-    const res = await fetch(
-      namespaceUrl(
-        name,
-        // Not callEndpoint: the fan-out reads every backend, on whatever code
-        // it runs, so only `wallAnchor` is checked (see FleetFlightCellSchema)
-        // — the contract's full schema would fail a mixed generation.
-        // eslint-disable-next-line endpoints/no-raw-endpoint-call -- tolerates backends on older/newer profiler code
-        `/api/debug/profiling/flight-window?windowMs=${FLIGHT_WINDOW_MS}`,
-      ),
-      { signal: AbortSignal.timeout(PER_BACKEND_TIMEOUT_MS) },
+    // Older backends' replies parse too: the contract defaults what they
+    // predate (profiling/runtime core/endpoints.ts).
+    const { wallAnchor, window } = await callEndpoint(
+      getFlightWindow,
+      {},
+      {
+        origin: namespaceUrl(name),
+        query: { windowMs: FLIGHT_WINDOW_MS },
+        signal: AbortSignal.timeout(PER_BACKEND_TIMEOUT_MS),
+      },
     );
-    if (!res.ok) return { ok: false, error: `http ${res.status}` };
-    const body = (await res.json()) as {
-      wallAnchor?: unknown;
-      window?: unknown;
-    };
-    const anchor = z
-      .object({ atMs: z.number(), wallTime: z.string() })
-      .safeParse(body.wallAnchor);
-    if (!anchor.success) return { ok: false, error: "malformed wallAnchor" };
-    return { ok: true, wallAnchor: anchor.data, window: body.window };
+    return { ok: true, wallAnchor, window };
   } catch (err) {
     // The discriminated per-backend failure cell (the cluster fan-out pattern):
-    // one wedged/timed-out backend yields an error cell in the section, never
-    // aborting the whole onset enrich.
+    // one wedged/timed-out backend — or one whose reply the contract rejects —
+    // yields an error cell in the section, never aborting the whole onset
+    // enrich.
     return { ok: false, error: String(err) };
   }
 }

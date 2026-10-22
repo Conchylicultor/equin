@@ -54,9 +54,9 @@ error.
 | `infra/secrets/server/internal/operations.ts` | `secrets*` | `callEndpoint`; 502–504 / gateway-404 → `SecretsMainOfflineError` |
 | `auth/server/internal/get-token.ts` | `getToken` | `callEndpoint`; same offline mapping |
 | `debug/queue-health/machine/internal/mcp-tool.ts` | `queueHealthSummaryEndpoint` | `callEndpoint` |
-| `debug/profiling/runtime/server/internal/mcp-tools.ts` | `getRuntimeProfile` | stays raw (stale-profile backfill runs before the schema) — inline-disabled with reason; path from the endpoint |
+| `debug/profiling/runtime/server/internal/mcp-tools.ts` | `getRuntimeProfile` | `callEndpoint`; the stale-backend backfill moved into the schema (`.default(…)`), contract moved `shared/` → `core/` |
 | `debug/profiling/boot-bench/server/internal/mcp-tools.ts` | `bootBenchRun` | `callEndpoint` |
-| `debug/sentinel/server/internal/fleet-flights.ts` | `getFlightWindow` | stays loose on purpose (fleet on mixed code) — inline-disabled with reason |
+| `debug/sentinel/server/internal/fleet-flights.ts` | `getFlightWindow` | `callEndpoint` with the typed query; mixed generations tolerated by the contract's defaults; a rejected reply is that backend's error cell |
 | `cli/db/cli/fork.ts` | `getForkExclusions` | `callEndpoint` |
 | `cli/deploy/cli/internal/target.ts` | `listDeployments`, `createDeployment` | the file's private `callEndpoint` replaced by the core one |
 | `infra/mcp/browser/shared/revert.ts` | `revertAgentWrites` | `shared/` cannot import `server/`: composes `endpointRequest` + its sanctioned `fetch` + `readEndpointResponse` |
@@ -75,3 +75,17 @@ socket RPC (not a `defineEndpoint`), third-party APIs, e2e scripts (`agentFetch`
   `post("/api/secrets/set", …)`.
 - `./singularity build`, then add/remove a secret path (Settings → Accounts) on the
   worktree build.
+
+## Follow-up: exceptions removed at the cause
+
+Three of the first pass's exceptions were symptoms of two issues, now fixed:
+
+- **Cross-plugin contracts in a private `shared/`.** `getRuntimeProfile` /
+  `getFlightWindow` (profiling/runtime) and `mcpRequest` (infra/mcp) move to
+  `core/`, so sentinel and the scratch workspace name them instead of
+  retyping their paths. The scratch MCP URL is `endpointPath(mcpRequest,
+  { conversationId })` (a typed path builder in `endpoints/core`).
+- **Replies read across code generations.** The runtime-profile and
+  flight-window schemas default every field / span kind added since
+  (`.default(0)` / `.default([])`), replacing the MCP tool's hand-written
+  backfill and sentinel's partial parse. A retyped field still fails loudly.

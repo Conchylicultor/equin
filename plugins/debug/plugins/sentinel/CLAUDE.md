@@ -276,8 +276,10 @@ mid-incident would amplify the incident), skips main itself (its flight window
 is already the trace's `spans` section), and fans out to each backend's
 `GET /api/debug/profiling/flight-window` under a 4-slot semaphore with a 3 s
 per-backend abort — a wedged backend yields an `{ok:false}` cell, never a
-stalled enrich. Cell payloads are validated loosely on purpose: fan-outs must
-tolerate backends on older/newer profiler code.
+stalled enrich. Each reply is read through the `getFlightWindow` contract
+(`callEndpoint`); backends on older profiler code still parse because the
+contract defaults the fields they predate, and a reply it rejects is that
+backend's `{ok:false}` cell.
 
 ## Config
 
@@ -340,7 +342,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `resource.declare` "sentinel.status"
     - `resource.declare` "sentinel.vitals"
     - `ConfigV2.Register` "sentinel"
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/host/duress/latch` ×8
     - `debug/sentinel/status-file` ×7
     - `infra/spawn/daemon` ×5
@@ -349,6 +351,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `database/embedded` ×3
     - `debug/trace/engine` ×2
     - `infra/file-watcher` ×2
+    - `infra/endpoints.callEndpoint`
     - `infra/paths.isHostSingleton`
     - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`

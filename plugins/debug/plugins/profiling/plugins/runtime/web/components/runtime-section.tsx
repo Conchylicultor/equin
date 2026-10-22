@@ -16,7 +16,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { formatDuration } from "@plugins/debug/plugins/profiling/web";
-import { resetRuntimeProfile } from "../../shared/endpoints";
+import { resetRuntimeProfile } from "../../core";
 import { runtimeProfile } from "../../shared/resources";
 import {
   SPAN_KINDS,

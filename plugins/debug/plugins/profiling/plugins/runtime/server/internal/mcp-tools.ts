@@ -13,52 +13,12 @@ import {
   asNamespace,
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
-import {
-  getRuntimeProfile,
-  runtimeProfileSchema,
-} from "../../shared/endpoints";
+import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
+import { getRuntimeProfile } from "../../core";
 
 // The filter enum is SPAN_KINDS + the "all" sentinel, derived from the single
 // source so a new kind never drifts out of the tool's filter (see SPAN_KINDS).
 const KIND_FILTER = [...SPAN_KINDS, "all"] as const;
-
-// This tool proxies to arbitrary worktree backends, which may still run code
-// predating the wall-clock-decomposition fields. Backfill the missing numerics
-// with 0 (never fabricated from other fields) so the shared wire schema still
-// parses instead of crashing the tool on a stale target. A stale target also
-// lacks any span kind added since (e.g. `route`/`membership`): those get an
-// empty list — it recorded none, which is exactly what an empty list says.
-const STALE_AGG_FIELDS = [
-  "waitTotalMs",
-  "childTotalMs",
-  "selfTotalMs",
-  "recentMaxMs",
-  "maxAgeMs",
-] as const;
-const STALE_SPAN_FIELDS = ["waitMs", "childMs", "selfMs"] as const;
-
-function backfillStaleProfile(raw: unknown): unknown {
-  if (typeof raw !== "object" || raw === null) return raw;
-  const profile = raw as {
-    aggregates?: Record<string, Record<string, unknown>[]>;
-    slowest?: Record<string, Record<string, unknown>[]>;
-  };
-  for (const byKind of [profile.aggregates, profile.slowest]) {
-    if (!byKind) continue;
-    for (const k of SPAN_KINDS) byKind[k] ??= [];
-  }
-  for (const rows of Object.values(profile.aggregates ?? {})) {
-    for (const agg of rows) {
-      for (const field of STALE_AGG_FIELDS) agg[field] ??= 0;
-    }
-  }
-  for (const rows of Object.values(profile.slowest ?? {})) {
-    for (const span of rows) {
-      for (const field of STALE_SPAN_FIELDS) span[field] ??= 0;
-    }
-  }
-  return raw;
-}
 
 export const runtimeProfileTool = Mcp.tool({
   name: "get_runtime_profile",
@@ -110,18 +70,12 @@ Default: profiles the current conversation's worktree server. Pass \`worktree\` 
     // the worktree's live backend (`w.active`). Reading this process's own
     // in-memory recorder would silently report a stale/orphaned process
     // generation after a hot-swap restart.
-    const url = namespaceUrl(worktreeName, getRuntimeProfile.path);
-    // Not callEndpoint: a stale target's reply is backfilled BEFORE the schema
-    // parses it (backfillStaleProfile), which a decoded answer cannot express.
-    // eslint-disable-next-line endpoints/no-raw-endpoint-call -- backfills a stale backend's reply before the contract's schema parses it
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(
-        `runtime profile fetch failed (${res.status}) for worktree "${worktreeName}"`,
-      );
-    }
-    const profile = runtimeProfileSchema.parse(
-      backfillStaleProfile(await res.json()),
+    // Older backends' replies parse too: the contract defaults what they
+    // predate (core/endpoints.ts).
+    const profile = await callEndpoint(
+      getRuntimeProfile,
+      {},
+      { origin: namespaceUrl(worktreeName) },
     );
     const targetKinds: readonly SpanKind[] =
       kind === "all" ? SPAN_KINDS : [kind as SpanKind];

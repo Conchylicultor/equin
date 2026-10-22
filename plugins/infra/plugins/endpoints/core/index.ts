@@ -12,7 +12,7 @@ export type {
 export type { ExtractParams } from "./route-params";
 export { extractMethod, extractPath, interpolatePath } from "./route-params";
 export { implement, rawEndpointHandler, HttpError } from "./implement";
-export { endpointRequest, readEndpointResponse } from "./request";
+export { endpointPath, endpointRequest, readEndpointResponse } from "./request";
 export type { EndpointAnswer, EndpointRequestOpts } from "./request";
 export {
   EndpointError,

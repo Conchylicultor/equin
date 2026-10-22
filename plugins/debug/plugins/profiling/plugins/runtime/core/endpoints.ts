@@ -16,6 +16,15 @@ import {
 // tsc but rejected `cascade` at runtime — the failure mode this derivation ends).
 const spanKindSchema = z.enum(SPAN_KINDS);
 
+// Read across code generations: an MCP tool or a fleet fan-out reads ANY
+// worktree's backend through the gateway, and each runs its own commit. So a
+// field or span kind added to these replies is defaulted, never required — an
+// older backend's reply still parses, reading what it never recorded as
+// recorded-nothing (0 / an empty list), never as a value fabricated from other
+// fields. A field the contract cannot default (a renamed or retyped one) is a
+// breaking change: the reader's parse fails loudly on the older backend.
+const sinceAdded = z.number().default(0);
+
 const spanRefSchema = z.object({
   kind: spanKindSchema,
   label: z.string(),
@@ -56,13 +65,13 @@ const aggregateSchema = z.object({
   // record they decompose the wall-clock: waitMs (union of gate waits at any
   // subtree depth) + childMs (union of direct-child executions, overlapping
   // waits) and selfMs = wall − union(waits ∪ children).
-  waitTotalMs: z.number(),
-  childTotalMs: z.number(),
-  selfTotalMs: z.number(),
+  waitTotalMs: sinceAdded,
+  childTotalMs: sinceAdded,
+  selfTotalMs: sinceAdded,
   // Max duration within the rolling ~5-min window (0 if idle past it), vs the
   // since-boot maxMs whose age is maxAgeMs — so a stale peak reads as stale.
-  recentMaxMs: z.number(),
-  maxAgeMs: z.number(),
+  recentMaxMs: sinceAdded,
+  maxAgeMs: sinceAdded,
   byParent: z.array(parentBreakdownSchema),
   waits: waitBreakdownSchema.optional(),
   measuresMax: spanMeasuresSchema.optional(),
@@ -81,20 +90,20 @@ const slowSpanSchema = z.object({
   parent: spanRefSchema.nullable(),
   waits: waitBreakdownSchema.optional(),
   // Per-span wall-clock decomposition (unions; leaves are 0/0/durationMs).
-  waitMs: z.number(),
-  childMs: z.number(),
-  selfMs: z.number(),
+  waitMs: sinceAdded,
+  childMs: sinceAdded,
+  selfMs: sinceAdded,
   detail: spanDetailSchema.optional(),
 });
 
 // One array per span kind, derived from SPAN_KINDS so a new kind cannot drift
-// out of the response schema.
+// out of the response schema — defaulted, since an older backend has no list
+// for a kind added after it (it recorded none, which an empty list says).
 const byKind = <T extends z.ZodTypeAny>(item: T) =>
   z.object(
-    Object.fromEntries(SPAN_KINDS.map((k) => [k, z.array(item)])) as Record<
-      SpanKind,
-      z.ZodArray<T>
-    >,
+    Object.fromEntries(
+      SPAN_KINDS.map((k) => [k, z.array(item).default([])]),
+    ) as Record<SpanKind, z.ZodDefault<z.ZodArray<T>>>,
   );
 
 export const runtimeProfileSchema = z.object({
@@ -153,9 +162,9 @@ const flightSpanSchema = z.object({
   // null => still open at capture.
   t1: z.number().nullable(),
   ageMs: z.number(),
-  waitMs: z.number(),
-  childMs: z.number(),
-  selfMs: z.number(),
+  waitMs: sinceAdded,
+  childMs: sinceAdded,
+  selfMs: sinceAdded,
   waits: waitBreakdownSchema.optional(),
   waitBands: z.array(waitBandSchema).optional(),
 });

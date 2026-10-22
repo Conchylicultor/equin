@@ -1,6 +1,6 @@
 import { captureFlightWindow } from "@plugins/infra/plugins/runtime-profiler/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { getFlightWindow } from "../../shared/endpoints";
+import { getFlightWindow } from "../../core";
 
 export const handleFlightWindow = implement(getFlightWindow, ({ query }) => {
   const windowMs = query.windowMs;

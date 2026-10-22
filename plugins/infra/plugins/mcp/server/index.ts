@@ -2,7 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
 import { mcpCatalogServed } from "./internal/catalog";
 import { handleMcpRequest } from "./internal/handle-mcp";
-import { mcpRequest } from "../shared/endpoints";
+import { mcpRequest } from "../core";
 
 export { Mcp } from "./internal/mcp";
 export type {

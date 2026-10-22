@@ -1,5 +1,5 @@
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { runtimeProfileSchema } from "./endpoints";
+import { runtimeProfileSchema } from "../core";
 
 /**
  * This backend's in-memory runtime profile (the recorder's

@@ -320,6 +320,7 @@ remaining allocations are one flat band array per completed entry span, and what
 - Load-bearing: yes
 - Cross-plugin:
   - Imported by:
+    - `debug/profiling/runtime`
     - `debug/slow-ops`
     - `infra/endpoints`
 - Exemptions:

@@ -36,6 +36,42 @@ export type EndpointAnswer<TResponse> = TResponse extends void
   : TResponse;
 
 /**
+ * An endpoint's path, built from its contract: the route's params interpolated
+ * (typed by the route) and the query appended. For a URL handed to someone
+ * else rather than fetched here — an agent's MCP URL, a link — so it cannot
+ * drift from the route either.
+ */
+export function endpointPath<
+  Route extends string,
+  TParams,
+  TBody,
+  TResponse,
+  TQuery,
+>(
+  endpoint: AnyEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  params: TParams,
+  query?: TQuery,
+): string {
+  let path = interpolatePath(
+    endpoint.path,
+    (params ?? {}) as Record<string, string>,
+  );
+  if (query != null) {
+    const searchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(
+      query as Record<string, unknown>,
+    )) {
+      if (value !== undefined && value !== null) {
+        searchParams.set(key, String(value));
+      }
+    }
+    const qs = searchParams.toString();
+    if (qs) path += `?${qs}`;
+  }
+  return path;
+}
+
+/**
  * One request to an endpoint, built from its contract: the path with params
  * interpolated and the query appended, and the init — the route's method, the
  * body through its codec (content type from the codec only, so multipart stays
@@ -52,22 +88,11 @@ export function endpointRequest<
   params: TParams,
   opts?: EndpointRequestOpts<TBody, TQuery>,
 ): { path: string; init: RequestInit } {
-  let path = interpolatePath(
-    endpoint.path,
-    (params ?? {}) as Record<string, string>,
+  const path = endpointPath(
+    endpoint,
+    params,
+    opts && "query" in opts ? (opts.query as TQuery) : undefined,
   );
-  if (opts && "query" in opts && opts.query != null) {
-    const searchParams = new URLSearchParams();
-    for (const [key, value] of Object.entries(
-      opts.query as Record<string, unknown>,
-    )) {
-      if (value !== undefined && value !== null) {
-        searchParams.set(key, String(value));
-      }
-    }
-    const qs = searchParams.toString();
-    if (qs) path += `?${qs}`;
-  }
 
   const headers: Record<string, string> = { ...opts?.headers };
   // Advisory only (the server reads the endpoint's declaration): tells the
