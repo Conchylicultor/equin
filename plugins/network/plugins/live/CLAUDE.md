@@ -1579,8 +1579,9 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
     registers it on any runtime (tests use their own).
   - **`throttleMs`** (db, and external `"notified"`): at most one flush per window — the first
     change arms a trailing timer later changes do not re-arm (the runtime's
-    `debounceMs`, which was always a throttle). A flush already happening
-    drains it early.
+    `debounceMs`, which was always a throttle). Only the window releases it:
+    a flush another value triggers inside it, or a `recomputeOn` cascade,
+    leaves it held — so the bound holds on a busy server.
   - **`recomputeOn: [served, { value: served, params: (up) => P }]`** (db, and
     external `"notified"`; an upstream is a `"notified"` value): upstream served values whose change recomputes this one. A bare
     served value recomputes **every currently-subscribed tuple** of this value

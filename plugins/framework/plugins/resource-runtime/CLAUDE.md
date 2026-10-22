@@ -45,8 +45,12 @@ a cascade merged into a strictly-deeper downstream has settled before that
 downstream drains, and a slow loader cannot head-of-line-block an unrelated entry
 at the same or earlier depth
 (`research/2026-06-19-global-parallel-flush-notifies.md`). `drainEntry` opens with
-a synchronous snapshot+clear of pending and a debounce-timer cancel, and keeps its
-per-pk loop sequential so versions/snapshots stay monotonic. A `flushRunning`
+a synchronous snapshot+clear of pending, and keeps its per-pk loop sequential so
+versions/snapshots stay monotonic. A `debounceMs` entry (a served value's
+`throttleMs`) drains only when its own window elapsed (`debounceDue`): a flush
+another entry triggers leaves its pending held, and a cascade into it arms its
+window — at most one drain per window, whatever else flushes (pinned by
+`runtime-throttle.test.ts`; `research/2026-10-22-global-live-throttle-holds.md`). A `flushRunning`
 mutex + `flushAgain` rerun flag guarantee two flushes never overlap: a notify
 landing mid-flush sets `flushAgain` and is re-drained by the live flush. Pinned by
 `runtime.test.ts` §"flushNotifies — level-parallel".

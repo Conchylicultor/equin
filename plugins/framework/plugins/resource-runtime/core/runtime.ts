@@ -401,9 +401,12 @@ export interface ResourceDefinition<
    * continuously-ticking source still flushes at least every `debounceMs`. The
    * merge into `pendingNotifies` is unchanged, so all coalescing keeps working —
    * the debounce only delays *when* the accumulated pending map drains.
-   * Piggyback: if any other (non-debounced) resource triggers a flush during the
-   * window, that flush drains this entry's pending too and cancels the timer, so
-   * debounced data never adds latency beyond an already-happening flush.
+   * The window is a real throttle: ONLY its own timer releases the entry's
+   * pending — a flush another resource triggers inside the window leaves it
+   * held (no piggyback; on a busy server one would drain it on every change),
+   * and a cascade into the entry arms its window like a notify does. So the
+   * entry recomputes at most once per `debounceMs`, whatever else flushes.
+   * See research/2026-10-22-global-live-throttle-holds.md.
    * Do NOT use on keyed resources driving optimistic-mutation delta-sync —
    * debounce the *source* instead. See
    * research/2026-06-15-global-live-state-cascade-contention.md.
@@ -1263,10 +1266,16 @@ interface RegistryEntry {
   debounceMs?: number;
   /**
    * Armed debounce timer handle, or undefined when not armed. Set when the first
-   * notify in a window arrives; cleared on fire (which schedules a flush) or when
-   * `flushNotifies` drains this entry's pending out from under it (piggyback).
+   * notify in a window arrives; cleared on fire (which marks `debounceDue` and
+   * schedules a flush).
    */
   debounceTimer?: ReturnType<typeof setTimeout>;
+  /**
+   * The window elapsed and a flush is scheduled for it: the only state in which
+   * `drainEntry` drains a debounced entry. Cleared by that drain, so the next
+   * change opens a fresh window; a change landing while due rides the due drain.
+   */
+  debounceDue?: boolean;
   /** Global subscriber refcount per params-tuple (across all sockets). */
   subCounts: Map<string, number>;
   /**
@@ -4586,11 +4595,13 @@ export function createResourceRuntime(
       return await fn();
     } finally {
       batchDepth--;
-      if (batchDepth === 0 && !flushScheduled) {
+      if (batchDepth === 0) {
+        // Every entry with work gets its own release: the immediate flush, or
+        // a debounced entry's window (never the immediate flush, which would
+        // leave it held with no timer to release it).
         for (const entry of registry.values()) {
           if (entry.pendingNotifies.size > 0 || entry.pendingAcks.size > 0) {
-            scheduleFlush();
-            break;
+            armFlush(entry);
           }
         }
       }
@@ -4709,11 +4720,13 @@ export function createResourceRuntime(
     if (batchDepth > 0) return;
     // Debounced entries do not ride the immediate flush: arm a per-entry
     // fixed-window timer (only if not already armed — never re-armed within a
-    // window, so a continuously-ticking source still flushes every debounceMs).
+    // window, so a continuously-ticking source still flushes every debounceMs —
+    // and not while due: the scheduled due drain takes this change too).
     if (entry.debounceMs) {
-      if (entry.debounceTimer === undefined) {
+      if (entry.debounceTimer === undefined && !entry.debounceDue) {
         entry.debounceTimer = setTimeout(() => {
           entry.debounceTimer = undefined;
+          entry.debounceDue = true;
           scheduleFlush();
         }, entry.debounceMs);
       }
@@ -5225,6 +5238,10 @@ export function createResourceRuntime(
           changedAt,
         );
       }
+      // A non-debounced downstream drains at its (deeper) level of this very
+      // cycle; a debounced one waits for its own window, which the cascade
+      // arms like a notify would.
+      if (derived.length > 0 && down.debounceMs) armFlush(down);
     }
   }
 
@@ -5758,6 +5775,14 @@ export function createResourceRuntime(
   // next (deeper) level reads it. The per-pk loop stays sequential — the version
   // and keyed snapshot for a single (key,pk) must advance monotonically.
   async function drainEntry(entry: RegistryEntry): Promise<void> {
+    // A debounced entry drains only when its own window elapsed: a flush some
+    // other resource scheduled leaves its pending (and owed acks) held, or a
+    // busy server would drain it on every change and the declared throttle
+    // would bound nothing.
+    if (entry.debounceMs) {
+      if (!entry.debounceDue) return;
+      entry.debounceDue = false;
+    }
     if (entry.pendingNotifies.size === 0 && entry.pendingAcks.size === 0) {
       return;
     }
@@ -5765,13 +5790,6 @@ export function createResourceRuntime(
     entry.pendingNotifies.clear();
     const owedAcks = Array.from(entry.pendingAcks.values());
     entry.pendingAcks.clear();
-    // Piggyback: this entry's pending is being drained now (possibly by a flush
-    // some other resource scheduled), so cancel any armed debounce timer — it
-    // would otherwise fire redundantly on an already-empty pending map.
-    if (entry.debounceTimer !== undefined) {
-      clearTimeout(entry.debounceTimer);
-      entry.debounceTimer = undefined;
-    }
     // The acks owed to skipped tuples (see `PendingAck`): folded into the
     // tuple's real pending when this drain has one — its frame (or its own ack)
     // then carries them — and otherwise sent right here, as a standalone ack,
